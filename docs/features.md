@@ -20,12 +20,12 @@ Splash → Onboarding (first launch) → Auth → Main App
 ---
 
 ## 1. Splash Screen
-- [ ] Animated "V" logo with gradient morph effect
-- [ ] Tagline "FIT • FUN • LIFE" with stagger animation
-- [ ] Auto-advance after 2s or tap to skip
-- [ ] Check authentication state
-- [ ] Preload critical assets and fonts
-- [ ] Platform-specific: Use Capacitor Splash Screen plugin for native
+- [x] Animated "V" logo with gradient morph effect
+- [x] Tagline "FIT • FUN • LIFE" with stagger animation
+- [x] Auto-advance after 2s or tap to skip
+- [x] Check authentication state
+- [x] Preload critical assets and fonts
+- [x] Platform-specific: Use Capacitor Splash Screen plugin for native
 
 ## 2. Onboarding (First Launch Only)
 - [ ] 4-screen horizontal carousel
@@ -43,7 +43,7 @@ Splash → Onboarding (first launch) → Auth → Main App
 - [ ] Phone number input with country code picker (default +39 Italy)
 - [ ] "Send OTP" button
 - [ ] Divider "oppure"
-- [ ] Social login buttons: Google, Apple (iOS only), Facebook
+- [x] Social login buttons: Google, Apple (iOS only), Facebook
 - [ ] "Non hai un account? Registrati" link
 - [ ] Terms & Privacy links at bottom
 
