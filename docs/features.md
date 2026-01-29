@@ -28,15 +28,15 @@ Splash → Onboarding (first launch) → Auth → Main App
 - [x] Platform-specific: Use Capacitor Splash Screen plugin for native
 
 ## 2. Onboarding (First Launch Only)
-- [ ] 4-screen horizontal carousel
+- [x] 4-screen horizontal carousel
   - Screen 1: Welcome + app intro
   - Screen 2: VFit features highlight
-  - Screen 3: VFun features highlight  
+  - Screen 3: VFun features highlight
   - Screen 4: VLife features highlight
-- [ ] Skip button (top right)
-- [ ] Progress dots
-- [ ] "Get Started" CTA on last screen
-- [ ] Store `hasOnboarded` flag in localStorage/AsyncStorage
+- [x] Skip button (top right)
+- [x] Progress dots
+- [x] "Get Started" CTA on last screen
+- [x] Store `hasOnboarded` flag in localStorage/AsyncStorage
 
 ## 3. Authentication
 ### 3.1 Login Screen
