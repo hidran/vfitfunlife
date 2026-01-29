@@ -55,13 +55,13 @@ Splash → Onboarding (first launch) → Auth → Main App
 - [x] Error handling with shake animation
 
 ### 3.3 Registration (if new user)
-- [ ] Full name input
-- [ ] Email input (optional)
-- [ ] Date of birth picker
-- [ ] Avatar upload (camera/gallery)
-- [ ] Section preference (FIT/FUN/LIFE priority)
-- [ ] Terms & Privacy checkbox (required)
-- [ ] "Completa Registrazione" CTA
+- [x] Full name input
+- [x] Email input (optional)
+- [x] Date of birth picker
+- [x] Avatar upload (camera/gallery)
+- [x] Section preference (FIT/FUN/LIFE priority)
+- [x] Terms & Privacy checkbox (required)
+- [x] "Completa Registrazione" CTA
 
 ### 3.4 Permissions (after registration)
 - [ ] Location permission request with explanation
