@@ -64,9 +64,9 @@ Splash → Onboarding (first launch) → Auth → Main App
 - [x] "Completa Registrazione" CTA
 
 ### 3.4 Permissions (after registration)
-- [ ] Location permission request with explanation
-- [ ] Push notification permission request
-- [ ] Skip option for each
+- [x] Location permission request with explanation
+- [x] Push notification permission request
+- [x] Skip option for each
 
 ---
 
