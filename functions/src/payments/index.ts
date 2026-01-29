@@ -193,29 +193,29 @@ export const stripeWebhook = functions.https.onRequest(async (req, res) => {
 
   try {
     switch (event.type) {
-      case "payment_intent.succeeded":
-        await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent);
-        break;
+    case "payment_intent.succeeded":
+      await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent);
+      break;
 
-      case "payment_intent.payment_failed":
-        await handlePaymentIntentFailed(event.data.object as Stripe.PaymentIntent);
-        break;
+    case "payment_intent.payment_failed":
+      await handlePaymentIntentFailed(event.data.object as Stripe.PaymentIntent);
+      break;
 
-      case "customer.subscription.created":
-      case "customer.subscription.updated":
-        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
-        break;
+    case "customer.subscription.created":
+    case "customer.subscription.updated":
+      await handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
+      break;
 
-      case "customer.subscription.deleted":
-        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
-        break;
+    case "customer.subscription.deleted":
+      await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
+      break;
 
-      case "invoice.payment_succeeded":
-        await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice);
-        break;
+    case "invoice.payment_succeeded":
+      await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice);
+      break;
 
-      default:
-        functions.logger.info(`Unhandled event type: ${event.type}`);
+    default:
+      functions.logger.info(`Unhandled event type: ${event.type}`);
     }
 
     res.json({ received: true });
@@ -314,9 +314,9 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     isVip: isActive,
     vipPlanId: isActive ? planId : null,
     stripeSubscriptionId: subscription.id,
-    vipExpiresAt: isActive
-      ? admin.firestore.Timestamp.fromMillis(subscription.current_period_end * 1000)
-      : null,
+    vipExpiresAt: isActive ?
+      admin.firestore.Timestamp.fromMillis(subscription.current_period_end * 1000) :
+      null,
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   });
 }

@@ -20,7 +20,7 @@ export const updateProfile = functions.https.onCall(async (data, context) => {
     "notificationsEnabled",
   ];
 
-  const updates: Record<string, any> = {};
+  const updates: Record<string, unknown> = {};
 
   for (const field of allowedFields) {
     if (data[field] !== undefined) {
@@ -181,7 +181,7 @@ export const deleteAddress = functions.https.onCall(async (data, context) => {
 /**
  * Get leaderboard
  */
-export const getLeaderboard = functions.https.onCall(async (data, context) => {
+export const getLeaderboard = functions.https.onCall(async (data) => {
   const { type = "points", limit = 10 } = data;
 
   let query;

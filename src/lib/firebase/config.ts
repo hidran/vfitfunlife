@@ -6,20 +6,14 @@ import { getFunctions, Functions, connectFunctionsEmulator } from "firebase/func
 import { getAnalytics, Analytics, isSupported } from "firebase/analytics";
 import { getMessaging, Messaging, isSupported as isMessagingSupported } from "firebase/messaging";
 
-const env = (typeof import.meta !== "undefined" ? import.meta.env : {}) as
-  | Record<string, string | undefined>
-  | undefined;
-
 const firebaseConfig = {
-  apiKey: env?.VITE_FIREBASE_API_KEY ?? process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: env?.VITE_FIREBASE_AUTH_DOMAIN ?? process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: env?.VITE_FIREBASE_PROJECT_ID ?? process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: env?.VITE_FIREBASE_STORAGE_BUCKET ?? process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId:
-    env?.VITE_FIREBASE_MESSAGING_SENDER_ID ??
-    process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: env?.VITE_FIREBASE_APP_ID ?? process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  measurementId: env?.VITE_FIREBASE_MEASUREMENT_ID ?? process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
 // Initialize Firebase

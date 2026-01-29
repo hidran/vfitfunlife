@@ -1,6 +1,6 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
-import { subHours, addDays, startOfDay, endOfDay, isBefore } from "date-fns";
+import { subHours, addDays, startOfDay, endOfDay } from "date-fns";
 import { sendPushToUser } from "../notifications";
 
 const db = admin.firestore();
@@ -11,7 +11,7 @@ const db = admin.firestore();
 export const sendBookingReminders = functions.pubsub
   .schedule("0 * * * *")
   .timeZone("Europe/Rome")
-  .onRun(async (context) => {
+  .onRun(async () => {
     const now = new Date();
     const reminderWindow = {
       start: admin.firestore.Timestamp.fromDate(addDays(now, 0)),
@@ -63,7 +63,7 @@ export const sendBookingReminders = functions.pubsub
 export const processCompletedBookings = functions.pubsub
   .schedule("*/30 * * * *")
   .timeZone("Europe/Rome")
-  .onRun(async (context) => {
+  .onRun(async () => {
     const now = new Date();
     const cutoffTime = admin.firestore.Timestamp.fromDate(subHours(now, 2));
 
@@ -106,7 +106,7 @@ export const processCompletedBookings = functions.pubsub
 export const expireVipSubscriptions = functions.pubsub
   .schedule("0 0 * * *")
   .timeZone("Europe/Rome")
-  .onRun(async (context) => {
+  .onRun(async () => {
     const now = admin.firestore.Timestamp.now();
 
     const expiredVips = await db
@@ -147,7 +147,7 @@ export const expireVipSubscriptions = functions.pubsub
 export const expirePromotions = functions.pubsub
   .schedule("0 1 * * *")
   .timeZone("Europe/Rome")
-  .onRun(async (context) => {
+  .onRun(async () => {
     const now = admin.firestore.Timestamp.now();
 
     const expiredPromos = await db
@@ -172,7 +172,7 @@ export const expirePromotions = functions.pubsub
 export const aggregateDailyStats = functions.pubsub
   .schedule("0 2 * * *")
   .timeZone("Europe/Rome")
-  .onRun(async (context) => {
+  .onRun(async () => {
     const yesterday = startOfDay(addDays(new Date(), -1));
     const yesterdayEnd = endOfDay(yesterday);
 
@@ -227,7 +227,7 @@ export const aggregateDailyStats = functions.pubsub
 export const cleanupOldNotifications = functions.pubsub
   .schedule("0 3 * * 0")
   .timeZone("Europe/Rome")
-  .onRun(async (context) => {
+  .onRun(async () => {
     const thirtyDaysAgo = admin.firestore.Timestamp.fromDate(addDays(new Date(), -30));
 
     // Get all users
@@ -261,7 +261,7 @@ export const cleanupOldNotifications = functions.pubsub
  */
 export const updateChallengeProgress = functions.firestore
   .document("bookings/{bookingId}")
-  .onUpdate(async (change, context) => {
+  .onUpdate(async (change) => {
     const before = change.before.data();
     const after = change.after.data();
 
@@ -293,13 +293,13 @@ export const updateChallengeProgress = functions.firestore
 
         // Update progress based on challenge type
         switch (challenge.challengeType) {
-          case "total_classes":
-            newProgress += 1;
-            break;
-          case "streak":
-            // Streak logic would need date tracking
-            newProgress = userChallenge.currentProgress + 1;
-            break;
+        case "total_classes":
+          newProgress += 1;
+          break;
+        case "streak":
+          // Streak logic would need date tracking
+          newProgress = userChallenge.currentProgress + 1;
+          break;
         }
 
         // Check if completed

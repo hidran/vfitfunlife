@@ -2,6 +2,8 @@ import * as ngeohash from "ngeohash";
 
 /**
  * Generate a unique referral code for a user
+ * @param {string} userId - The user ID
+ * @return {string} The generated referral code
  */
 export function generateReferralCode(userId: string): string {
   const prefix = "VFIT";
@@ -12,6 +14,10 @@ export function generateReferralCode(userId: string): string {
 
 /**
  * Calculate geohash from coordinates
+ * @param {number} latitude - Latitude coordinate
+ * @param {number} longitude - Longitude coordinate
+ * @param {number} precision - Geohash precision (default: 9)
+ * @return {string} The calculated geohash
  */
 export function calculateGeohash(latitude: number, longitude: number, precision = 9): string {
   return ngeohash.encode(latitude, longitude, precision);
@@ -19,6 +25,10 @@ export function calculateGeohash(latitude: number, longitude: number, precision 
 
 /**
  * Get geohash bounds for a radius search
+ * @param {number} latitude - Latitude coordinate
+ * @param {number} longitude - Longitude coordinate
+ * @param {number} radiusKm - Search radius in kilometers
+ * @return {string[]} Array of geohashes covering the radius
  */
 export function getGeohashesForRadius(
   latitude: number,
@@ -41,6 +51,11 @@ export function getGeohashesForRadius(
 
 /**
  * Calculate distance between two points in km (Haversine formula)
+ * @param {number} lat1 - First point latitude
+ * @param {number} lon1 - First point longitude
+ * @param {number} lat2 - Second point latitude
+ * @param {number} lon2 - Second point longitude
+ * @return {number} Distance in kilometers
  */
 export function calculateDistance(
   lat1: number,
@@ -65,6 +80,8 @@ function toRad(deg: number): number {
 
 /**
  * Format currency in EUR
+ * @param {number} amount - Amount to format
+ * @return {string} Formatted currency string
  */
 export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("it-IT", {
@@ -75,6 +92,8 @@ export function formatCurrency(amount: number): string {
 
 /**
  * Sanitize user input
+ * @param {string} input - Input string to sanitize
+ * @return {string} Sanitized string
  */
 export function sanitizeString(input: string): string {
   return input.trim().replace(/<[^>]*>/g, "");
@@ -82,6 +101,7 @@ export function sanitizeString(input: string): string {
 
 /**
  * Generate a random booking confirmation code
+ * @return {string} 8-character confirmation code
  */
 export function generateBookingCode(): string {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -94,6 +114,8 @@ export function generateBookingCode(): string {
 
 /**
  * Validate Italian phone number
+ * @param {string} phone - Phone number to validate
+ * @return {boolean} True if valid Italian phone number
  */
 export function isValidItalianPhone(phone: string): boolean {
   // Remove spaces and dashes
@@ -107,6 +129,8 @@ export function isValidItalianPhone(phone: string): boolean {
 
 /**
  * Validate email format
+ * @param {string} email - Email address to validate
+ * @return {boolean} True if valid email format
  */
 export function isValidEmail(email: string): boolean {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -115,6 +139,8 @@ export function isValidEmail(email: string): boolean {
 
 /**
  * Calculate points value in EUR
+ * @param {number} points - Points to convert
+ * @return {number} EUR value
  */
 export function pointsToEur(points: number): number {
   const pointsRate = 0.01; // 1 point = €0.01
@@ -123,6 +149,8 @@ export function pointsToEur(points: number): number {
 
 /**
  * Calculate points from EUR amount
+ * @param {number} eur - EUR amount to convert
+ * @return {number} Points earned
  */
 export function eurToPoints(eur: number): number {
   return Math.floor(eur); // 1 EUR = 1 point earned

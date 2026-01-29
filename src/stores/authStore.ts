@@ -32,12 +32,13 @@ interface AuthState {
   loginWithGoogle: () => Promise<void>;
   loginWithApple: () => Promise<void>;
   initPhoneAuth: (buttonId: string) => void;
-  sendPhoneOtp: (phoneNumber: string) => Promise<void>;
+  sendPhoneOtp: (phoneNumber: string) => Promise<boolean>;
   verifyPhoneOtp: (code: string) => Promise<void>;
   logout: () => Promise<void>;
   clearError: () => void;
   setUser: (user: User | null) => void;
   loadUserData: (uid: string) => Promise<void>;
+  refreshUserProfile: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -92,6 +93,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isLoading: false,
         isInitialized: true
       });
+    }
+  },
+
+  // Refresh user profile
+  refreshUserProfile: async () => {
+    const { firebaseUser } = get();
+    if (firebaseUser) {
+      await get().loadUserData(firebaseUser.uid);
     }
   },
 
@@ -160,7 +169,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     if (!recaptchaVerifier) {
       set({ error: 'Phone authentication not initialized' });
-      return;
+      return false;
     }
 
     set({ isLoading: true, error: null, phoneNumber });
@@ -168,6 +177,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       await sendOtp(phoneNumber, recaptchaVerifier);
       set({ isOtpSent: true, isLoading: false });
+      return true;
     } catch (error: any) {
       console.error('Send OTP error:', error);
       set({
@@ -175,6 +185,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isLoading: false,
         isOtpSent: false
       });
+      return false;
     }
   },
 

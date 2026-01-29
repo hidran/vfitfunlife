@@ -117,27 +117,46 @@ export function onAuthChange(callback: (user: User | null) => void): () => void 
  * Check if user profile is complete
  */
 export async function isProfileComplete(userId: string): Promise<boolean> {
-  const userDoc = await getDoc(doc(db, "users", userId));
+  try {
+    const userDoc = await getDoc(doc(db, "users", userId));
 
-  if (!userDoc.exists()) {
-    return false;
+    if (!userDoc.exists()) {
+      return false;
+    }
+
+    const data = userDoc.data();
+    return Boolean(data.fullName && data.fullName.trim().length > 0);
+  } catch (error: any) {
+    // If offline or network error, assume profile is incomplete to redirect to registration
+    if (error.code === 'unavailable' || error.message?.includes('offline')) {
+      console.warn('Firestore offline during profile check, assuming incomplete');
+      return false;
+    }
+    throw error;
   }
-
-  const data = userDoc.data();
-  return Boolean(data.fullName && data.fullName.trim().length > 0);
 }
 
 /**
  * Update user's last login timestamp
  */
 async function updateUserLastLogin(userId: string): Promise<void> {
-  const userRef = doc(db, "users", userId);
-  const userDoc = await getDoc(userRef);
+  try {
+    const userRef = doc(db, "users", userId);
+    const userDoc = await getDoc(userRef);
 
-  if (userDoc.exists()) {
-    await updateDoc(userRef, {
-      lastLoginAt: serverTimestamp(),
-    });
+    if (userDoc.exists()) {
+      await updateDoc(userRef, {
+        lastLoginAt: serverTimestamp(),
+      });
+    }
+  } catch (error: any) {
+    // Silently fail if offline - this is non-critical
+    if (error.code === 'unavailable' || error.message?.includes('offline')) {
+      console.warn('Firestore offline, skipping last login update');
+      return;
+    }
+    // Don't throw - last login update shouldn't block authentication
+    console.error('Failed to update last login:', error);
   }
 }
 
@@ -155,19 +174,29 @@ export async function completeRegistration(
 ): Promise<void> {
   const userRef = doc(db, "users", userId);
 
-  await updateDoc(userRef, {
+  await setDoc(userRef, {
     fullName: data.fullName,
     email: data.email || null,
     dateOfBirth: data.dateOfBirth || null,
     preferredSection: data.preferredSection || "fit",
     updatedAt: serverTimestamp(),
-  });
+    createdAt: serverTimestamp(), // Add createdAt for new users
+  }, { merge: true });
 }
 
 /**
  * Get user data from Firestore
  */
 export async function getUserData(userId: string) {
-  const userDoc = await getDoc(doc(db, "users", userId));
-  return userDoc.exists() ? userDoc.data() : null;
+  try {
+    const userDoc = await getDoc(doc(db, "users", userId));
+    return userDoc.exists() ? userDoc.data() : null;
+  } catch (error: any) {
+    // If offline, return null - the app should handle this gracefully
+    if (error.code === 'unavailable' || error.message?.includes('offline')) {
+      console.warn('Firestore offline during user data fetch');
+      return null;
+    }
+    throw error;
+  }
 }

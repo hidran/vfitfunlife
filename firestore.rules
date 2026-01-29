@@ -14,11 +14,13 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in ['admin', 'superadmin'];
     }
 
     function isVenueStaff(venueId) {
       return isAuthenticated() &&
+        exists(/databases/$(database)/documents/venueStaff/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/venueStaff/$(request.auth.uid)).data.venueId == venueId;
     }
 

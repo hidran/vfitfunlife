@@ -13,6 +13,9 @@ interface NotificationPayload {
 
 /**
  * Send push notification to a specific user
+ * @param {string} userId - The ID of the user to send the notification to
+ * @param {NotificationPayload} notification - The notification payload
+ * @return {Promise<void>}
  */
 export async function sendPushToUser(
   userId: string,
@@ -92,6 +95,9 @@ export async function sendPushToUser(
 
 /**
  * Send notification to multiple users
+ * @param {string[]} userIds - Array of user IDs to send the notification to
+ * @param {NotificationPayload} notification - The notification payload
+ * @return {Promise<void>}
  */
 export async function sendPushToUsers(
   userIds: string[],
@@ -104,7 +110,7 @@ export async function sendPushToUsers(
 /**
  * Send notification to all VIP users
  */
-export const sendVipNotification = functions.https.onCall(async (data, context) => {
+export const sendVipNotification = functions.https.onCall(async (data) => {
   // Admin check would go here
   const { title, body, imageUrl } = data;
 
@@ -245,31 +251,31 @@ export const onBookingStatusChange = functions.firestore
     let notification: NotificationPayload | null = null;
 
     switch (after.status) {
-      case "confirmed":
-        notification = {
-          title: "Prenotazione confermata",
-          body: `La tua prenotazione per ${after.serviceName} è stata confermata`,
-          data: { bookingId, type: "booking_confirmed" },
-        };
-        break;
+    case "confirmed":
+      notification = {
+        title: "Prenotazione confermata",
+        body: `La tua prenotazione per ${after.serviceName} è stata confermata`,
+        data: { bookingId, type: "booking_confirmed" },
+      };
+      break;
 
-      case "cancelled":
-        if (after.cancelledBy !== "user") {
-          notification = {
-            title: "Prenotazione cancellata",
-            body: `La tua prenotazione per ${after.serviceName} è stata cancellata`,
-            data: { bookingId, type: "booking_cancelled" },
-          };
-        }
-        break;
-
-      case "completed":
+    case "cancelled":
+      if (after.cancelledBy !== "user") {
         notification = {
-          title: "Sessione completata",
-          body: `Hai guadagnato ${after.pointsEarned} punti! Lascia una recensione.`,
-          data: { bookingId, type: "booking_completed" },
+          title: "Prenotazione cancellata",
+          body: `La tua prenotazione per ${after.serviceName} è stata cancellata`,
+          data: { bookingId, type: "booking_cancelled" },
         };
-        break;
+      }
+      break;
+
+    case "completed":
+      notification = {
+        title: "Sessione completata",
+        body: `Hai guadagnato ${after.pointsEarned} punti! Lascia una recensione.`,
+        data: { bookingId, type: "booking_completed" },
+      };
+      break;
     }
 
     if (notification) {

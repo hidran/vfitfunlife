@@ -1,6 +1,6 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
-import { addMinutes, isBefore, subHours } from "date-fns";
+import { addMinutes } from "date-fns";
 
 const db = admin.firestore();
 
@@ -297,7 +297,7 @@ export const cancelBooking = functions.https.onCall(async (data, context) => {
       type: "refund",
       source: "booking",
       sourceId: bookingId,
-      description: `Rimborso punti - prenotazione cancellata`,
+      description: "Rimborso punti - prenotazione cancellata",
       balanceAfter: (userData?.pointsBalance || 0) + booking.pointsUsed,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });

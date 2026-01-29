@@ -230,7 +230,7 @@ export default function LoginPage() {
           {/* Social Login Divider */}
           {!isOtpSent && (
             <>
-              <Divider className="my-6">oppure</Divider>
+              <Divider className="my-6" text="oppure" />
 
               {/* Social Login Buttons */}
               <div className="space-y-3">
