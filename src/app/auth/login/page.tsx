@@ -33,6 +33,7 @@ export default function LoginPage() {
   const [countryCode, setCountryCode] = useState('+39');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otpCode, setOtpCode] = useState('');
+  const [countdown, setCountdown] = useState(0);
 
   // Initialize reCAPTCHA on mount
   useEffect(() => {
@@ -51,6 +52,14 @@ export default function LoginPage() {
     }
   }, [user, firebaseUser, router]);
 
+  // Countdown timer for OTP resend
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown]);
+
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     clearError();
@@ -60,7 +69,24 @@ export default function LoginPage() {
     }
 
     const fullPhoneNumber = `${countryCode}${phoneNumber}`;
-    await sendPhoneOtp(fullPhoneNumber);
+    const success = await sendPhoneOtp(fullPhoneNumber);
+
+    if (success) {
+      setCountdown(60); // Start 60 second countdown
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (countdown > 0) return;
+
+    clearError();
+    const fullPhoneNumber = `${countryCode}${phoneNumber}`;
+    const success = await sendPhoneOtp(fullPhoneNumber);
+
+    if (success) {
+      setCountdown(60); // Restart countdown
+      setOtpCode(''); // Clear OTP input
+    }
   };
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
@@ -157,6 +183,7 @@ export default function LoginPage() {
                   type="button"
                   onClick={() => {
                     clearError();
+                    setCountdown(0);
                     window.location.reload();
                   }}
                   className="text-primary text-sm hover:underline"
@@ -179,6 +206,24 @@ export default function LoginPage() {
               >
                 {isLoading ? <Spinner size="sm" /> : 'Verifica Codice'}
               </Button>
+
+              {/* Resend OTP Button */}
+              <div className="text-center">
+                {countdown > 0 ? (
+                  <p className="text-text-secondary text-sm">
+                    Richiedi nuovo codice tra {countdown}s
+                  </p>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleResendOtp}
+                    disabled={isLoading}
+                    className="text-primary text-sm font-medium hover:underline disabled:opacity-50"
+                  >
+                    Invia di nuovo il codice
+                  </button>
+                )}
+              </div>
             </form>
           )}
 

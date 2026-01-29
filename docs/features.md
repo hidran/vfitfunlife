@@ -49,8 +49,8 @@ Splash → Onboarding (first launch) → Auth → Main App
 
 ### 3.2 OTP Verification
 - [x] 6-digit code input with auto-focus advance
-- [ ] Countdown timer (60s) for resend
-- [ ] "Resend Code" button (disabled during countdown)
+- [x] Countdown timer (60s) for resend
+- [x] "Resend Code" button (disabled during countdown)
 - [x] Auto-submit on complete
 - [x] Error handling with shake animation
 
