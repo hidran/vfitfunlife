@@ -3,6 +3,8 @@ import {
   PhoneAuthProvider,
   signInWithCredential,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider,
   OAuthProvider,
   signOut as firebaseSignOut,
@@ -11,6 +13,7 @@ import {
   RecaptchaVerifier,
   ConfirmationResult,
 } from "firebase/auth";
+import { Capacitor } from "@capacitor/core";
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "./config";
 
@@ -66,30 +69,62 @@ export async function verifyOtp(code: string): Promise<User> {
 
 /**
  * Sign in with Google
+ * Uses redirect flow on web (avoids COOP issues) and popup on native
  */
-export async function signInWithGoogle(): Promise<User> {
+export async function signInWithGoogle(): Promise<User | null> {
   const provider = new GoogleAuthProvider();
   provider.addScope("email");
   provider.addScope("profile");
 
-  const result = await signInWithPopup(auth, provider);
-  await updateUserLastLogin(result.user.uid);
+  // On native platforms, use popup (works better with Capacitor)
+  if (Capacitor.isNativePlatform()) {
+    const result = await signInWithPopup(auth, provider);
+    await updateUserLastLogin(result.user.uid);
+    return result.user;
+  }
 
-  return result.user;
+  // On web, use redirect to avoid COOP issues
+  await signInWithRedirect(auth, provider);
+  return null; // Redirect will reload the page
+}
+
+/**
+ * Handle redirect result after Google/Apple sign-in redirect
+ * Call this on app initialization
+ */
+export async function handleAuthRedirect(): Promise<User | null> {
+  try {
+    const result = await getRedirectResult(auth);
+    if (result?.user) {
+      await updateUserLastLogin(result.user.uid);
+      return result.user;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error handling auth redirect:", error);
+    throw error;
+  }
 }
 
 /**
  * Sign in with Apple
+ * Uses redirect flow on web (avoids COOP issues) and popup on native
  */
-export async function signInWithApple(): Promise<User> {
+export async function signInWithApple(): Promise<User | null> {
   const provider = new OAuthProvider("apple.com");
   provider.addScope("email");
   provider.addScope("name");
 
-  const result = await signInWithPopup(auth, provider);
-  await updateUserLastLogin(result.user.uid);
+  // On native platforms, use popup (works better with Capacitor)
+  if (Capacitor.isNativePlatform()) {
+    const result = await signInWithPopup(auth, provider);
+    await updateUserLastLogin(result.user.uid);
+    return result.user;
+  }
 
-  return result.user;
+  // On web, use redirect to avoid COOP issues
+  await signInWithRedirect(auth, provider);
+  return null; // Redirect will reload the page
 }
 
 /**

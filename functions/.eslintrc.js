@@ -21,6 +21,7 @@ module.exports = {
     "/lib/**/*",
     "/node_modules/**/*",
     ".eslintrc.js",
+    "src/**/*.d.ts",
   ],
   plugins: [
     "@typescript-eslint",
@@ -33,5 +34,7 @@ module.exports = {
     "max-len": ["error", { "code": 120 }],
     "object-curly-spacing": ["error", "always"],
     "require-jsdoc": 0,
+    "valid-jsdoc": 0,
+    "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
   },
 };

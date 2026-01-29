@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>V-Challenges &amp; Leaderboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0df246",
+                        "accent-orange": "#f97316",
+                        "accent-purple": "#a855f7",
+                        "background-light": "#f5f8f6",
+                        "background-dark": "#102214",
+                        "surface-dark": "#1b271e",
+                        "surface-highlight": "#28392c",
+                    },
+                    fontFamily: {
+                        "display": ["Spline Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for horizontal scrolling */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        .neon-glow {
+            box-shadow: 0 0 10px rgba(13, 242, 70, 0.3);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display antialiased text-gray-900 dark:text-white pb-20">
+<!-- Header -->
+<div class="sticky top-0 z-50 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-b border-gray-200 dark:border-white/5">
+<div class="flex items-center p-4 justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" style="font-size: 28px;">emoji_events</span>
+<h2 class="text-xl font-bold leading-tight tracking-tight">V-Challenges</h2>
+</div>
+<button class="flex items-center justify-center rounded-full size-10 hover:bg-black/5 dark:hover:bg-white/10 transition-colors relative">
+<span class="material-symbols-outlined text-gray-700 dark:text-gray-200">notifications</span>
+<span class="absolute top-2 right-2 size-2 bg-red-500 rounded-full"></span>
+</button>
+</div>
+<!-- Segmented Control -->
+<div class="px-4 pb-4">
+<div class="flex h-12 w-full items-center justify-center rounded-xl bg-gray-200 dark:bg-surface-highlight p-1">
+<label class="flex cursor-pointer h-full flex-1 items-center justify-center overflow-hidden rounded-lg px-2 has-[:checked]:bg-white dark:has-[:checked]:bg-[#111813] has-[:checked]:shadow-sm text-gray-600 dark:text-[#9cbaa3] dark:has-[:checked]:text-primary has-[:checked]:text-primary font-bold transition-all">
+<span class="truncate">My Challenges</span>
+<input checked="" class="invisible w-0 absolute" name="view-toggle" type="radio" value="Challenges"/>
+</label>
+<label class="flex cursor-pointer h-full flex-1 items-center justify-center overflow-hidden rounded-lg px-2 has-[:checked]:bg-white dark:has-[:checked]:bg-[#111813] has-[:checked]:shadow-sm text-gray-600 dark:text-[#9cbaa3] dark:has-[:checked]:text-primary has-[:checked]:text-primary font-bold transition-all">
+<span class="truncate">Leaderboard</span>
+<input class="invisible w-0 absolute" name="view-toggle" type="radio" value="Leaderboard"/>
+</label>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-6 w-full max-w-md mx-auto">
+<!-- Active Challenges Section -->
+<section class="flex flex-col px-4 pt-2">
+<div class="flex justify-between items-end mb-4">
+<h2 class="text-2xl font-bold tracking-tight">Active Goals</h2>
+<a class="text-primary text-sm font-semibold hover:opacity-80" href="#">View History</a>
+</div>
+<!-- Card 1: VFit -->
+<div class="group relative overflow-hidden rounded-2xl bg-white dark:bg-surface-dark shadow-sm border border-gray-100 dark:border-white/5 mb-4">
+<div class="absolute top-0 left-0 w-1 h-full bg-primary neon-glow"></div>
+<div class="p-4">
+<div class="flex justify-between items-start mb-3">
+<div class="flex gap-3">
+<div class="size-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">directions_run</span>
+</div>
+<div>
+<h3 class="font-bold text-lg leading-tight">10k Steps Daily</h3>
+<p class="text-xs font-medium text-gray-500 dark:text-gray-400 mt-0.5 uppercase tracking-wide">VFit • Cardio</p>
+</div>
+</div>
+<div class="px-2 py-1 rounded bg-primary/20 text-primary text-xs font-bold">
+                            Day 28/30
+                        </div>
+</div>
+<div class="flex flex-col gap-2 mt-2">
+<div class="flex justify-between text-sm">
+<span class="text-gray-600 dark:text-gray-300 font-medium">8,432 / 10,000 steps today</span>
+<span class="text-primary font-bold">84%</span>
+</div>
+<div class="h-2.5 w-full bg-gray-100 dark:bg-surface-highlight rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full neon-glow" style="width: 84%"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 2: VLife (Purple Accent) -->
+<div class="group relative overflow-hidden rounded-2xl bg-white dark:bg-surface-dark shadow-sm border border-gray-100 dark:border-white/5 mb-4">
+<div class="absolute top-0 left-0 w-1 h-full bg-accent-purple"></div>
+<div class="p-4">
+<div class="flex justify-between items-start mb-3">
+<div class="flex gap-3">
+<div class="size-10 rounded-lg bg-accent-purple/10 flex items-center justify-center text-accent-purple">
+<span class="material-symbols-outlined">self_improvement</span>
+</div>
+<div>
+<h3 class="font-bold text-lg leading-tight">Mindful Meditation</h3>
+<p class="text-xs font-medium text-gray-500 dark:text-gray-400 mt-0.5 uppercase tracking-wide">VLife • Wellness</p>
+</div>
+</div>
+<div class="px-2 py-1 rounded bg-accent-purple/20 text-accent-purple text-xs font-bold">
+                            Session 3/7
+                        </div>
+</div>
+<div class="flex flex-col gap-2 mt-2">
+<div class="flex justify-between text-sm">
+<span class="text-gray-600 dark:text-gray-300 font-medium">15 mins completed</span>
+<span class="text-accent-purple font-bold">42%</span>
+</div>
+<div class="h-2.5 w-full bg-gray-100 dark:bg-surface-highlight rounded-full overflow-hidden">
+<div class="h-full bg-accent-purple rounded-full" style="width: 42%"></div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Discover / New Challenges Carousel -->
+<section class="flex flex-col pt-2 pb-6">
+<div class="px-4 mb-3 flex items-center justify-between">
+<h2 class="text-xl font-bold tracking-tight">Discover New</h2>
+<div class="flex gap-1">
+<button class="size-7 rounded-full bg-surface-highlight flex items-center justify-center text-gray-400 hover:text-white">
+<span class="material-symbols-outlined text-sm">arrow_back</span>
+</button>
+<button class="size-7 rounded-full bg-surface-highlight flex items-center justify-center text-gray-400 hover:text-white">
+<span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+</div>
+<div class="flex overflow-x-auto gap-4 px-4 pb-4 scrollbar-hide snap-x snap-mandatory">
+<!-- Discover Card 1: VFun (Orange) -->
+<div class="snap-center shrink-0 w-[280px] rounded-2xl bg-surface-highlight dark:bg-[#1f2e22] overflow-hidden flex flex-col relative group border border-white/5">
+<div class="h-32 w-full bg-cover bg-center relative" data-alt="Energetic group dancing in a studio" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA0akR22vumhbrEHgNfOPqd5_yMj61o_wziLcapa6Q4ZkV0XPrfA_R71J_dozpx1tG50R75-ieUKhtbCLpN2bU9JE_kLI341MKc2UJfbaqh0nasysDjA522pTGvim7uPUbqNBHLX-dCgFpFF4FrweR8CzqfCBLlf3a2FkYDEkxOy7mCiylTg2ittSXymJN_GVnsTIvibJARgmtyHkq_hVoCnJkJ9woTZDhjqnF0VQYfDTt4ECxNDwj4ey5JrM0gw1icKXFrXC0NmPwZ');">
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+<div class="absolute bottom-3 left-3 right-3 flex justify-between items-end">
+<span class="px-2 py-1 rounded-md bg-accent-orange/90 text-white text-xs font-bold backdrop-blur-sm">VFun</span>
+<span class="text-white text-xs font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">group</span> 1.2k joined
+                            </span>
+</div>
+</div>
+<div class="p-4 flex flex-col gap-3 flex-1">
+<div>
+<h3 class="font-bold text-white text-lg">Weekend Dance Off</h3>
+<p class="text-gray-400 text-sm mt-1 line-clamp-2">Complete a 30-min dance cardio session this weekend to earn the badge.</p>
+</div>
+<div class="mt-auto">
+<div class="flex items-center gap-2 mb-3">
+<span class="text-accent-orange text-xs font-bold bg-accent-orange/10 px-2 py-1 rounded">+500 Points</span>
+<span class="text-gray-400 text-xs">Ends in 2 days</span>
+</div>
+<button class="w-full h-10 rounded-lg bg-accent-orange hover:bg-orange-600 text-white font-bold text-sm transition-colors flex items-center justify-center gap-2">
+                                Join Challenge <span class="material-symbols-outlined text-sm">add_circle</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Discover Card 2: VFit (Green) -->
+<div class="snap-center shrink-0 w-[280px] rounded-2xl bg-surface-highlight dark:bg-[#1f2e22] overflow-hidden flex flex-col relative group border border-white/5">
+<div class="h-32 w-full bg-cover bg-center relative" data-alt="Person lifting weights in a gym with neon lights" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCfttQDW1vaZ_J9Eb7XSlqTtfpC82Er4ZciFAjXG99OpTca-JnZwuIAiVwYxqtIcBW_LYXf5ULX1FW0R3rsk3xepaTq5OuCkGm7t6aAo76io8AIYXNl6onrXSvmeITzK3oM3N4B59rGvz2mgdzM80M-ER_R2nJLIVEm62u4REfotpZa7N7ZCsSgewjLMZYbh_0cr9h0yiwtuRVFU4ak5o6g5qiebrnLlZ7YOkGcKxrPbXphKLT4yJeW9bkUG39y6Eim9I6cnOsxfH30');">
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+<div class="absolute bottom-3 left-3 right-3 flex justify-between items-end">
+<span class="px-2 py-1 rounded-md bg-primary/90 text-black text-xs font-bold backdrop-blur-sm">VFit</span>
+</div>
+</div>
+<div class="p-4 flex flex-col gap-3 flex-1">
+<div>
+<h3 class="font-bold text-white text-lg">Iron Grip Strength</h3>
+<p class="text-gray-400 text-sm mt-1 line-clamp-2">Increase your deadlift by 5% over the next 4 weeks.</p>
+</div>
+<div class="mt-auto">
+<div class="flex items-center gap-2 mb-3">
+<span class="text-primary text-xs font-bold bg-primary/10 px-2 py-1 rounded">+1000 Points</span>
+</div>
+<button class="w-full h-10 rounded-lg bg-primary hover:bg-green-400 text-black font-bold text-sm transition-colors flex items-center justify-center gap-2">
+                                Join Challenge <span class="material-symbols-outlined text-sm">add_circle</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Leaderboard Snippet (Teaser) -->
+<section class="px-4 pb-20">
+<h2 class="text-xl font-bold tracking-tight mb-4">Top Performers</h2>
+<div class="bg-white dark:bg-surface-dark rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-white/5">
+<!-- Top 3 Podium Visual -->
+<div class="flex items-end justify-center gap-4 mb-6 pt-4 h-32">
+<!-- Rank 2 -->
+<div class="flex flex-col items-center gap-2 w-1/3 group">
+<div class="relative size-12 rounded-full border-2 border-gray-300 p-0.5">
+<img alt="Avatar of GymRat99" class="w-full h-full rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDAWCjizpE0FAwIwfu9HEpTIKmHaPBm3CL5wAK6KZ5N0PpY8j07GcSJk0nlIINez43A8rgPvo_RItD24mvh4ig80k2Kno4TM5KfKK4TpgNhA0YI7JFuOSod3WfAiE4daZEsl5-oVSYy1hSwZcIpR8G2peqyKM1AL8CZ_twsO2JL9OseRSLhsDuEVhVwinV3y5EfBOuK7TdteHnBLoRjQedqQ3skEAv-nHS6P2UNTlLkbj3F34GVrABP3QS6LZVLqAE9bz-dpWSAz1WF"/>
+<div class="absolute -bottom-2 bg-gray-300 text-black text-[10px] font-bold px-1.5 py-0.5 rounded-full">2</div>
+</div>
+<div class="text-center">
+<p class="text-xs font-bold truncate max-w-[80px]">GymRat99</p>
+<p class="text-[10px] text-gray-500 dark:text-gray-400">11,200 pts</p>
+</div>
+<div class="w-full h-12 bg-gray-300/20 rounded-t-lg mt-1 relative overflow-hidden">
+<div class="absolute bottom-0 w-full h-1 bg-gray-300"></div>
+</div>
+</div>
+<!-- Rank 1 -->
+<div class="flex flex-col items-center gap-2 w-1/3 relative z-10">
+<div class="absolute -top-6 text-yellow-400 animate-bounce">
+<span class="material-symbols-outlined">crown</span>
+</div>
+<div class="relative size-16 rounded-full border-2 border-yellow-400 p-0.5 shadow-[0_0_15px_rgba(250,204,21,0.3)]">
+<img alt="Avatar of Sarah_G" class="w-full h-full rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBmqYX5UubfSDUdJBAIFgRT2iLkl2LqXA0mTptD6zjqVRr1cPwvySDTOSyy9UOZ7q5t8f6LCu7EU7RD2eHBEwKSWmVFiPhFU5jtc1G_ac76Hvfq-daQXncbvT75qGES3i9Q1tbhB1WRbpixQ8aeoY9V-ORNypl5krdLO4A3pF1XAQ114tXXyto1S8uhq9VdiyEZtyOwcpA6N-H5XHZfCBd1UfqHluktqSH-AbW38tkSN0xwLwD_3oRBPfDYTKcruPKydzaMQZ-KJa64"/>
+<div class="absolute -bottom-2 bg-yellow-400 text-black text-xs font-bold px-2 py-0.5 rounded-full border border-black">1</div>
+</div>
+<div class="text-center">
+<p class="text-sm font-bold text-yellow-500 truncate max-w-[90px]">Sarah_G</p>
+<p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold">12,500 pts</p>
+</div>
+<div class="w-full h-20 bg-yellow-400/20 rounded-t-lg mt-1 relative overflow-hidden border-t border-yellow-400/30">
+<div class="absolute bottom-0 w-full h-1 bg-yellow-400"></div>
+</div>
+</div>
+<!-- Rank 3 -->
+<div class="flex flex-col items-center gap-2 w-1/3">
+<div class="relative size-12 rounded-full border-2 border-orange-700 p-0.5">
+<img alt="Avatar of ZenMaster" class="w-full h-full rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA7MohRC2yISFPT3TOH8296X-xo8p66rmgqv4yOcPhLjWhvPkdUvozDTht-7Q_nx1gPeY19T0LYNLRc00vQWYF1mtBAbTGlOXvSicQ05mzi_vKdyHEpsUDAZ0pz1dPlwo9PSU0_KRhA8PQDcPjIS_khy8zLZBgMBPbJjTRGTJDhTTSV-pUUVSOj12iKg40qMm_5fVIKzhCKEYKhXyLSK1ezAXns2ve9g260hsf4hNMAmPN4mrjPCXztR9mDuhmjy7tTVJXmwGOkr3gu"/>
+<div class="absolute -bottom-2 bg-orange-700 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">3</div>
+</div>
+<div class="text-center">
+<p class="text-xs font-bold truncate max-w-[80px]">ZenMaster</p>
+<p class="text-[10px] text-gray-500 dark:text-gray-400">10,850 pts</p>
+</div>
+<div class="w-full h-8 bg-orange-700/20 rounded-t-lg mt-1 relative overflow-hidden">
+<div class="absolute bottom-0 w-full h-1 bg-orange-700"></div>
+</div>
+</div>
+</div>
+<!-- Your Rank -->
+<div class="mt-2 pt-3 border-t border-gray-100 dark:border-white/10">
+<div class="flex items-center justify-between p-2 rounded-lg bg-surface-highlight/50 border border-primary/20">
+<div class="flex items-center gap-3">
+<span class="text-sm font-bold w-6 text-center text-gray-400">42</span>
+<div class="size-8 rounded-full bg-gray-700 overflow-hidden">
+<img alt="My avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBLlo45LffbnxiX7hVA87eYKQv12jenZboRnWNkbV-R9oMgjTFYBwWDMUdyAyzj16bnNzYepeUf4eOXHXDwhXEYDE6gad2Za0rBc25g03bJziTVxYO_zLqlrDtJG_qRHNYjw4rd7q7y0KWeQWC1v0Md-iiFbNc1-WZicbxWUZsS_YxMJhYAAT5faFZIlAMXKC3Kwom1YNkvSVUTd8oQV3y57ofyyglVvp0iVR3UiYe3Ut7Qz8quaZyasvGwZErM-VyxkQRXILYfSAG_"/>
+</div>
+<span class="font-bold text-sm text-white">You</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-primary text-sm font-bold">4,250 pts</span>
+<span class="material-symbols-outlined text-green-500 text-xs">arrow_upward</span>
+</div>
+</div>
+<button class="w-full mt-3 text-center text-xs font-medium text-gray-400 hover:text-white transition-colors">View Full Leaderboard</button>
+</div>
+</div>
+</section>
+</div>
+<!-- Floating Action Button -->
+<button class="fixed bottom-24 right-5 z-40 size-14 rounded-full bg-primary text-black shadow-lg shadow-primary/30 flex items-center justify-center hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-3xl">add</span>
+</button>
+<!-- Bottom Navigation -->
+<nav class="fixed bottom-0 w-full bg-background-light dark:bg-background-dark border-t border-gray-200 dark:border-white/5 pb-5 pt-3 px-6 z-50 backdrop-blur-lg bg-opacity-90 dark:bg-opacity-95">
+<ul class="flex justify-between items-center max-w-md mx-auto">
+<li>
+<a class="flex flex-col items-center gap-1 text-gray-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px] font-medium">Home</span>
+</a>
+</li>
+<li>
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined filled">emoji_events</span>
+<span class="text-[10px] font-bold">Challenges</span>
+</a>
+</li>
+<li>
+<a class="flex flex-col items-center gap-1 text-gray-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px] font-medium">Profile</span>
+</a>
+</li>
+<li>
+<a class="flex flex-col items-center gap-1 text-gray-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-[10px] font-medium">Settings</span>
+</a>
+</li>
+</ul>
+</nav>
+</body></html>

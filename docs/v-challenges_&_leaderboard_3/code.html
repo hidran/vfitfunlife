@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>V-Community Social Feed</title>
+<link href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0df246",
+                        "accent-orange": "#f97316",
+                        "accent-purple": "#a855f7",
+                        "background-light": "#f5f8f6",
+                        "background-dark": "#102214",
+                        "surface-dark": "#1b271e",
+                        "surface-highlight": "#28392c",
+                    },
+                    fontFamily: {
+                        "display": ["Spline Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>.scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .neon-glow {
+            box-shadow: 0 0 10px rgba(13, 242, 70, 0.3);
+        }
+        .story-ring-live {
+            background: conic-gradient(from 0deg, #ef4444, #b91c1c, #ef4444);
+        }
+        .story-ring-active {
+            background: conic-gradient(from 0deg, #0df246, #a855f7, #f97316, #0df246);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display antialiased text-gray-900 dark:text-white pb-24">
+<div class="sticky top-0 z-50 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-b border-gray-200 dark:border-white/5">
+<div class="flex items-center px-4 py-3 justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" style="font-size: 28px;">diversity_3</span>
+<h2 class="text-xl font-bold leading-tight tracking-tight">V-Community</h2>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center justify-center rounded-full size-10 hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-gray-700 dark:text-gray-200">search</span>
+</button>
+<button class="flex items-center justify-center rounded-full size-10 hover:bg-black/5 dark:hover:bg-white/10 transition-colors relative">
+<span class="material-symbols-outlined text-gray-700 dark:text-gray-200">notifications</span>
+<span class="absolute top-2 right-2 size-2 bg-red-500 rounded-full"></span>
+</button>
+</div>
+</div>
+</div>
+<div class="flex flex-col w-full max-w-md mx-auto">
+<section class="pt-4 pb-2 border-b border-gray-200 dark:border-white/5">
+<div class="flex overflow-x-auto gap-4 px-4 scrollbar-hide pb-2">
+<div class="flex flex-col items-center gap-1 shrink-0 cursor-pointer group">
+<div class="relative size-[72px] p-[3px]">
+<div class="absolute inset-0 rounded-full border border-gray-300 dark:border-gray-600"></div>
+<img alt="My avatar" class="rounded-full w-full h-full object-cover border-2 border-background-light dark:border-background-dark" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBLlo45LffbnxiX7hVA87eYKQv12jenZboRnWNkbV-R9oMgjTFYBwWDMUdyAyzj16bnNzYepeUf4eOXHXDwhXEYDE6gad2Za0rBc25g03bJziTVxYO_zLqlrDtJG_qRHNYjw4rd7q7y0KWeQWC1v0Md-iiFbNc1-WZicbxWUZsS_YxMJhYAAT5faFZIlAMXKC3Kwom1YNkvSVUTd8oQV3y57ofyyglVvp0iVR3UiYe3Ut7Qz8quaZyasvGwZErM-VyxkQRXILYfSAG_"/>
+<div class="absolute bottom-0 right-0 bg-primary text-black rounded-full p-1 border-2 border-background-light dark:border-background-dark shadow-sm">
+<span class="material-symbols-outlined text-xs font-bold block">add</span>
+</div>
+</div>
+<span class="text-xs font-medium text-gray-600 dark:text-gray-400 group-hover:text-primary transition-colors">My Story</span>
+</div>
+<div class="flex flex-col items-center gap-1 shrink-0 cursor-pointer group">
+<div class="relative size-[72px] p-[3px] rounded-full story-ring-live animate-pulse">
+<img alt="Avatar of Sarah_G" class="rounded-full w-full h-full object-cover border-2 border-background-light dark:border-background-dark" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBmqYX5UubfSDUdJBAIFgRT2iLkl2LqXA0mTptD6zjqVRr1cPwvySDTOSyy9UOZ7q5t8f6LCu7EU7RD2eHBEwKSWmVFiPhFU5jtc1G_ac76Hvfq-daQXncbvT75qGES3i9Q1tbhB1WRbpixQ8aeoY9V-ORNypl5krdLO4A3pF1XAQ114tXXyto1S8uhq9VdiyEZtyOwcpA6N-H5XHZfCBd1UfqHluktqSH-AbW38tkSN0xwLwD_3oRBPfDYTKcruPKydzaMQZ-KJa64"/>
+<div class="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-red-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-sm shadow-md tracking-wider">
+                        LIVE
+                    </div>
+</div>
+<span class="text-xs font-medium text-gray-600 dark:text-gray-400">Sarah_G</span>
+</div>
+<div class="flex flex-col items-center gap-1 shrink-0 cursor-pointer group">
+<div class="relative size-[72px] p-[3px] rounded-full story-ring-active">
+<img alt="Avatar of GymRat99" class="rounded-full w-full h-full object-cover border-2 border-background-light dark:border-background-dark" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDAWCjizpE0FAwIwfu9HEpTIKmHaPBm3CL5wAK6KZ5N0PpY8j07GcSJk0nlIINez43A8rgPvo_RItD24mvh4ig80k2Kno4TM5KfKK4TpgNhA0YI7JFuOSod3WfAiE4daZEsl5-oVSYy1hSwZcIpR8G2peqyKM1AL8CZ_twsO2JL9OseRSLhsDuEVhVwinV3y5EfBOuK7TdteHnBLoRjQedqQ3skEAv-nHS6P2UNTlLkbj3F34GVrABP3QS6LZVLqAE9bz-dpWSAz1WF"/>
+</div>
+<span class="text-xs font-medium text-gray-600 dark:text-gray-400">GymRat99</span>
+</div>
+<div class="flex flex-col items-center gap-1 shrink-0 cursor-pointer group">
+<div class="relative size-[72px] p-[3px] rounded-full story-ring-active">
+<img alt="Avatar of ZenMaster" class="rounded-full w-full h-full object-cover border-2 border-background-light dark:border-background-dark" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA7MohRC2yISFPT3TOH8296X-xo8p66rmgqv4yOcPhLjWhvPkdUvozDTht-7Q_nx1gPeY19T0LYNLRc00vQWYF1mtBAbTGlOXvSicQ05mzi_vKdyHEpsUDAZ0pz1dPlwo9PSU0_KRhA8PQDcPjIS_khy8zLZBgMBPbJjTRGTJDhTTSV-pUUVSOj12iKg40qMm_5fVIKzhCKEYKhXyLSK1ezAXns2ve9g260hsf4hNMAmPN4mrjPCXztR9mDuhmjy7tTVJXmwGOkr3gu"/>
+</div>
+<span class="text-xs font-medium text-gray-600 dark:text-gray-400">ZenMaster</span>
+</div>
+<div class="flex flex-col items-center gap-1 shrink-0 cursor-pointer group">
+<div class="relative size-[72px] p-[3px] rounded-full bg-gray-300 dark:bg-gray-700">
+<img alt="Avatar placeholder" class="rounded-full w-full h-full object-cover border-2 border-background-light dark:border-background-dark opacity-80" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAodsR8s4KIqF9vzbOjjzHLcJqpj1sRRO9C4vgFutcWVF5fPLkYAxeR1qi_amxmULNsahT-Gw9avlLQTtglid6qqJi9ocQL9ortBJK-1-rN42cQzqhO9WJfUjUwgR6DFNNi7j3MJNXAWdhVwpDi2zo9Q8GubzujpL7Yxk92zftrdR_NRly7tc7aCY3dCDK_flbydpj9IoJbE5elVaZlbzz9pHR4kBbJEvMCqzjFHGFe8a8WZc71uEhy3liasrDkPg_qJUI8oR0mAw-x"/>
+</div>
+<span class="text-xs font-medium text-gray-500">Alex_M</span>
+</div>
+</div>
+</section>
+<section class="px-4 py-4">
+<div class="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/5 shadow-sm">
+<img alt="My avatar" class="size-10 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBLlo45LffbnxiX7hVA87eYKQv12jenZboRnWNkbV-R9oMgjTFYBwWDMUdyAyzj16bnNzYepeUf4eOXHXDwhXEYDE6gad2Za0rBc25g03bJziTVxYO_zLqlrDtJG_qRHNYjw4rd7q7y0KWeQWC1v0Md-iiFbNc1-WZicbxWUZsS_YxMJhYAAT5faFZIlAMXKC3Kwom1YNkvSVUTd8oQV3y57ofyyglVvp0iVR3UiYe3Ut7Qz8quaZyasvGwZErM-VyxkQRXILYfSAG_"/>
+<button class="flex-1 text-left px-4 py-2.5 rounded-lg bg-gray-100 dark:bg-surface-highlight text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-[#344639] transition-colors">
+                Share your workout journey...
+            </button>
+<button class="flex items-center justify-center p-2 rounded-lg text-primary hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined">add_a_photo</span>
+</button>
+</div>
+</section>
+<section class="flex flex-col gap-5 pb-6">
+<article class="bg-white dark:bg-surface-dark border-y border-gray-100 dark:border-white/5 sm:rounded-2xl sm:mx-4 sm:border sm:shadow-sm overflow-hidden">
+<div class="flex items-center justify-between p-4">
+<div class="flex items-center gap-3">
+<div class="relative">
+<img alt="Avatar of Sarah_G" class="size-10 rounded-full object-cover border border-gray-100 dark:border-white/10" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBmqYX5UubfSDUdJBAIFgRT2iLkl2LqXA0mTptD6zjqVRr1cPwvySDTOSyy9UOZ7q5t8f6LCu7EU7RD2eHBEwKSWmVFiPhFU5jtc1G_ac76Hvfq-daQXncbvT75qGES3i9Q1tbhB1WRbpixQ8aeoY9V-ORNypl5krdLO4A3pF1XAQ114tXXyto1S8uhq9VdiyEZtyOwcpA6N-H5XHZfCBd1UfqHluktqSH-AbW38tkSN0xwLwD_3oRBPfDYTKcruPKydzaMQZ-KJa64"/>
+<span class="absolute -bottom-1 -right-1 material-symbols-outlined filled text-blue-500 bg-white dark:bg-surface-dark rounded-full text-[14px]">verified</span>
+</div>
+<div>
+<div class="flex items-center gap-1">
+<h3 class="font-bold text-sm text-gray-900 dark:text-gray-100">Sarah_G</h3>
+<span class="text-xs text-gray-400">•</span>
+<span class="text-xs text-primary font-medium">Instructor</span>
+</div>
+<p class="text-xs text-gray-500">2 hours ago • San Francisco Gym</p>
+</div>
+</div>
+<button class="text-gray-400 hover:text-white"><span class="material-symbols-outlined">more_horiz</span></button>
+</div>
+<div class="w-full bg-gray-900 relative">
+<img alt="Person lifting weights in a gym" class="w-full h-auto object-cover max-h-[450px]" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCfttQDW1vaZ_J9Eb7XSlqTtfpC82Er4ZciFAjXG99OpTca-JnZwuIAiVwYxqtIcBW_LYXf5ULX1FW0R3rsk3xepaTq5OuCkGm7t6aAo76io8AIYXNl6onrXSvmeITzK3oM3N4B59rGvz2mgdzM80M-ER_R2nJLIVEm62u4REfotpZa7N7ZCsSgewjLMZYbh_0cr9h0yiwtuRVFU4ak5o6g5qiebrnLlZ7YOkGcKxrPbXphKLT4yJeW9bkUG39y6Eim9I6cnOsxfH30"/>
+<div class="absolute bottom-4 left-4">
+<span class="px-2.5 py-1 rounded-md bg-black/60 backdrop-blur-md text-primary text-xs font-bold border border-primary/20 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">fitness_center</span> VFit Challenge
+                    </span>
+</div>
+</div>
+<div class="p-4">
+<div class="flex items-center justify-between mb-3">
+<div class="flex items-center gap-5">
+<button class="group flex items-center gap-1 text-gray-600 dark:text-gray-300 hover:text-red-500 transition-colors">
+<span class="material-symbols-outlined group-hover:filled text-[26px]">favorite</span>
+</button>
+<button class="flex items-center gap-1 text-gray-600 dark:text-gray-300 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[26px]">chat_bubble</span>
+</button>
+<button class="flex items-center gap-1 text-gray-600 dark:text-gray-300 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[26px]">send</span>
+</button>
+</div>
+<button class="text-gray-600 dark:text-gray-300 hover:text-white">
+<span class="material-symbols-outlined text-[26px]">bookmark</span>
+</button>
+</div>
+<div class="flex flex-col gap-1.5">
+<div class="text-sm font-bold text-gray-900 dark:text-gray-100">842 likes</div>
+<div class="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
+<span class="font-bold mr-1 text-gray-900 dark:text-white">Sarah_G</span>
+                        Crushed a new personal best on deadlifts today! 🏋️‍♀️ The 30-day strength program is no joke. Who else is pushing their limits this week? Let's go team! 💪
+                        <div class="mt-1 flex flex-wrap gap-x-2 text-blue-500 dark:text-blue-400 font-medium">
+<a href="#">#VFit</a> <a href="#">#StrengthTraining</a> <a href="#">#IronGrip</a>
+</div>
+</div>
+<button class="text-xs text-gray-500 font-medium text-left mt-1">View all 48 comments</button>
+</div>
+</div>
+</article>
+<article class="bg-white dark:bg-surface-dark border-y border-gray-100 dark:border-white/5 sm:rounded-2xl sm:mx-4 sm:border sm:shadow-sm overflow-hidden">
+<div class="flex items-center justify-between p-4">
+<div class="flex items-center gap-3">
+<div class="relative">
+<div class="size-10 rounded-full bg-accent-orange/20 flex items-center justify-center text-accent-orange border border-accent-orange/30">
+<span class="material-symbols-outlined">celebration</span>
+</div>
+</div>
+<div>
+<h3 class="font-bold text-sm text-gray-900 dark:text-gray-100">VFun Official</h3>
+<p class="text-xs text-gray-500">5 hours ago • Upcoming Event</p>
+</div>
+</div>
+<button class="text-gray-400 hover:text-white"><span class="material-symbols-outlined">more_horiz</span></button>
+</div>
+<div class="w-full bg-gray-900 relative">
+<img alt="Energetic group dancing in a studio" class="w-full h-auto object-cover max-h-[450px]" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA0akR22vumhbrEHgNfOPqd5_yMj61o_wziLcapa6Q4ZkV0XPrfA_R71J_dozpx1tG50R75-ieUKhtbCLpN2bU9JE_kLI341MKc2UJfbaqh0nasysDjA522pTGvim7uPUbqNBHLX-dCgFpFF4FrweR8CzqfCBLlf3a2FkYDEkxOy7mCiylTg2ittSXymJN_GVnsTIvibJARgmtyHkq_hVoCnJkJ9woTZDhjqnF0VQYfDTt4ECxNDwj4ey5JrM0gw1icKXFrXC0NmPwZ"/>
+<div class="absolute bottom-4 left-4">
+<span class="px-2.5 py-1 rounded-md bg-accent-orange/90 backdrop-blur-md text-white text-xs font-bold shadow-lg flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">local_activity</span> Trending Event
+                    </span>
+</div>
+</div>
+<div class="p-4">
+<div class="flex items-center justify-between mb-3">
+<div class="flex items-center gap-5">
+<button class="group flex items-center gap-1 text-gray-600 dark:text-gray-300 hover:text-red-500 transition-colors">
+<span class="material-symbols-outlined text-[26px]">favorite</span>
+</button>
+<button class="flex items-center gap-1 text-gray-600 dark:text-gray-300 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[26px]">chat_bubble</span>
+</button>
+<button class="flex items-center gap-1 text-gray-600 dark:text-gray-300 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[26px]">send</span>
+</button>
+</div>
+<button class="text-gray-600 dark:text-gray-300 hover:text-white">
+<span class="material-symbols-outlined text-[26px]">bookmark</span>
+</button>
+</div>
+<div class="flex flex-col gap-1.5">
+<div class="text-sm font-bold text-gray-900 dark:text-gray-100">1.2k likes</div>
+<div class="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
+<span class="font-bold mr-1 text-gray-900 dark:text-white">VFun Official</span>
+                        Get ready to groove! 🕺💃 The Weekend Dance Off starts tomorrow at 10 AM. Don't forget to register and bring your energy!
+                        <div class="mt-1 flex flex-wrap gap-x-2 text-blue-500 dark:text-blue-400 font-medium">
+<a href="#">#VFun</a> <a href="#">#DanceCommunity</a> <a href="#">#WeekendVibes</a>
+</div>
+</div>
+<button class="text-xs text-gray-500 font-medium text-left mt-1">View all 156 comments</button>
+</div>
+</div>
+</article>
+<article class="bg-white dark:bg-surface-dark border-y border-gray-100 dark:border-white/5 sm:rounded-2xl sm:mx-4 sm:border sm:shadow-sm overflow-hidden">
+<div class="flex items-center justify-between p-4">
+<div class="flex items-center gap-3">
+<img alt="Avatar of ZenMaster" class="size-10 rounded-full object-cover border border-gray-100 dark:border-white/10" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA7MohRC2yISFPT3TOH8296X-xo8p66rmgqv4yOcPhLjWhvPkdUvozDTht-7Q_nx1gPeY19T0LYNLRc00vQWYF1mtBAbTGlOXvSicQ05mzi_vKdyHEpsUDAZ0pz1dPlwo9PSU0_KRhA8PQDcPjIS_khy8zLZBgMBPbJjTRGTJDhTTSV-pUUVSOj12iKg40qMm_5fVIKzhCKEYKhXyLSK1ezAXns2ve9g260hsf4hNMAmPN4mrjPCXztR9mDuhmjy7tTVJXmwGOkr3gu"/>
+<div>
+<h3 class="font-bold text-sm text-gray-900 dark:text-gray-100">ZenMaster</h3>
+<p class="text-xs text-gray-500">8 hours ago • Morning Routine</p>
+</div>
+</div>
+<button class="text-gray-400 hover:text-white"><span class="material-symbols-outlined">more_horiz</span></button>
+</div>
+<div class="w-full bg-gradient-to-br from-accent-purple/20 to-surface-highlight p-8 flex flex-col items-center justify-center text-center min-h-[300px]">
+<span class="material-symbols-outlined text-accent-purple text-6xl mb-4 opacity-80">self_improvement</span>
+<h2 class="text-2xl font-bold text-white mb-2 italic">"Breath is the bridge which connects life to consciousness."</h2>
+<p class="text-accent-purple font-medium mt-2">- Thich Nhat Hanh</p>
+</div>
+<div class="p-4">
+<div class="flex items-center justify-between mb-3">
+<div class="flex items-center gap-5">
+<button class="group flex items-center gap-1 text-gray-600 dark:text-gray-300 hover:text-red-500 transition-colors">
+<span class="material-symbols-outlined text-[26px]">favorite</span>
+</button>
+<button class="flex items-center gap-1 text-gray-600 dark:text-gray-300 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[26px]">chat_bubble</span>
+</button>
+<button class="flex items-center gap-1 text-gray-600 dark:text-gray-300 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[26px]">send</span>
+</button>
+</div>
+<button class="text-gray-600 dark:text-gray-300 hover:text-white">
+<span class="material-symbols-outlined text-[26px]">bookmark</span>
+</button>
+</div>
+<div class="flex flex-col gap-1.5">
+<div class="text-sm font-bold text-gray-900 dark:text-gray-100">324 likes</div>
+<div class="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
+<span class="font-bold mr-1 text-gray-900 dark:text-white">ZenMaster</span>
+                        Starting the day with 20 minutes of mindfulness. It changes everything. 🧘‍♂️✨
+                        <div class="mt-1 flex flex-wrap gap-x-2 text-blue-500 dark:text-blue-400 font-medium">
+<a href="#">#VLife</a> <a href="#">#Mindfulness</a> <a href="#">#Meditation</a>
+</div>
+</div>
+<button class="text-xs text-gray-500 font-medium text-left mt-1">View all 18 comments</button>
+</div>
+</div>
+</article>
+</section>
+</div>
+<button class="fixed bottom-24 right-5 z-40 size-14 rounded-full bg-primary text-black shadow-lg shadow-primary/30 flex items-center justify-center hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-3xl">edit</span>
+</button>
+<nav class="fixed bottom-0 w-full bg-background-light dark:bg-background-dark border-t border-gray-200 dark:border-white/5 pb-5 pt-3 px-6 z-50 backdrop-blur-lg bg-opacity-90 dark:bg-opacity-95">
+<ul class="flex justify-between items-center max-w-md mx-auto">
+<li>
+<a class="flex flex-col items-center gap-1 text-gray-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px] font-medium">Home</span>
+</a>
+</li>
+<li>
+<a class="flex flex-col items-center gap-1 text-gray-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">emoji_events</span>
+<span class="text-[10px] font-medium">Challenges</span>
+</a>
+</li>
+<li>
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined filled">dynamic_feed</span>
+<span class="text-[10px] font-bold">Community</span>
+</a>
+</li>
+<li>
+<a class="flex flex-col items-center gap-1 text-gray-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px] font-medium">Profile</span>
+</a>
+</li>
+</ul>
+</nav>
+</body></html>

@@ -1,17 +1,50 @@
-import * as functions from "firebase-functions";
+import { logger } from "firebase-functions";
+import { onSchedule, ScheduledEvent } from "firebase-functions/v2/scheduler";
+import { onDocumentUpdated } from "firebase-functions/v2/firestore";
 import * as admin from "firebase-admin";
 import { subHours, addDays, startOfDay, endOfDay } from "date-fns";
 import { sendPushToUser } from "../notifications";
 
 const db = admin.firestore();
+const region = process.env.FIREBASE_REGION || "europe-west1";
+
+interface BookingData {
+  userId: string;
+  serviceName: string;
+  venueName: string;
+  scheduledAt: admin.firestore.Timestamp;
+  reminder24hSent?: boolean;
+  reminder2hSent?: boolean;
+  pointsEarned: number;
+  status: string;
+  [key: string]: unknown;
+}
+
+interface UserChallengeData {
+  challengeId: string;
+  currentProgress: number;
+  [key: string]: unknown;
+}
+
+interface ChallengeData {
+  id: string;
+  title: string;
+  challengeType: string;
+  targetValue: number;
+  pointsReward: number;
+  [key: string]: unknown;
+}
 
 /**
  * Send booking reminders (runs every hour)
  */
-export const sendBookingReminders = functions.pubsub
-  .schedule("0 * * * *")
-  .timeZone("Europe/Rome")
-  .onRun(async () => {
+export const sendBookingReminders = onSchedule(
+  {
+    region,
+    schedule: "0 * * * *",
+    timeZone: "Europe/Rome",
+  },
+  async (_event: ScheduledEvent) => {
     const now = new Date();
     const reminderWindow = {
       start: admin.firestore.Timestamp.fromDate(addDays(now, 0)),
@@ -27,7 +60,7 @@ export const sendBookingReminders = functions.pubsub
       .get();
 
     for (const doc of upcomingBookings.docs) {
-      const booking = doc.data();
+      const booking = doc.data() as BookingData;
       const scheduledAt = booking.scheduledAt.toDate();
       const hoursUntil = (scheduledAt.getTime() - now.getTime()) / (1000 * 60 * 60);
 
@@ -54,16 +87,20 @@ export const sendBookingReminders = functions.pubsub
       }
     }
 
-    functions.logger.info(`Processed ${upcomingBookings.size} bookings for reminders`);
-  });
+    logger.info(`Processed ${upcomingBookings.size} bookings for reminders`);
+  }
+);
 
 /**
  * Mark no-shows and complete past bookings (runs every 30 min)
  */
-export const processCompletedBookings = functions.pubsub
-  .schedule("*/30 * * * *")
-  .timeZone("Europe/Rome")
-  .onRun(async () => {
+export const processCompletedBookings = onSchedule(
+  {
+    region,
+    schedule: "*/30 * * * *",
+    timeZone: "Europe/Rome",
+  },
+  async (_event: ScheduledEvent) => {
     const now = new Date();
     const cutoffTime = admin.firestore.Timestamp.fromDate(subHours(now, 2));
 
@@ -77,7 +114,7 @@ export const processCompletedBookings = functions.pubsub
     const batch = db.batch();
 
     for (const doc of pastBookings.docs) {
-      const booking = doc.data();
+      const booking = doc.data() as BookingData;
 
       // Mark as completed (in a real app, this might need staff confirmation)
       batch.update(doc.ref, {
@@ -97,16 +134,20 @@ export const processCompletedBookings = functions.pubsub
     }
 
     await batch.commit();
-    functions.logger.info(`Completed ${pastBookings.size} bookings`);
-  });
+    logger.info(`Completed ${pastBookings.size} bookings`);
+  }
+);
 
 /**
  * Expire VIP subscriptions (runs daily at midnight)
  */
-export const expireVipSubscriptions = functions.pubsub
-  .schedule("0 0 * * *")
-  .timeZone("Europe/Rome")
-  .onRun(async () => {
+export const expireVipSubscriptions = onSchedule(
+  {
+    region,
+    schedule: "0 0 * * *",
+    timeZone: "Europe/Rome",
+  },
+  async (_event: ScheduledEvent) => {
     const now = admin.firestore.Timestamp.now();
 
     const expiredVips = await db
@@ -138,16 +179,20 @@ export const expireVipSubscriptions = functions.pubsub
     }
 
     await batch.commit();
-    functions.logger.info(`Expired ${expiredVips.size} VIP subscriptions`);
-  });
+    logger.info(`Expired ${expiredVips.size} VIP subscriptions`);
+  }
+);
 
 /**
  * Expire promotion codes (runs daily)
  */
-export const expirePromotions = functions.pubsub
-  .schedule("0 1 * * *")
-  .timeZone("Europe/Rome")
-  .onRun(async () => {
+export const expirePromotions = onSchedule(
+  {
+    region,
+    schedule: "0 1 * * *",
+    timeZone: "Europe/Rome",
+  },
+  async (_event: ScheduledEvent) => {
     const now = admin.firestore.Timestamp.now();
 
     const expiredPromos = await db
@@ -163,16 +208,20 @@ export const expirePromotions = functions.pubsub
     }
 
     await batch.commit();
-    functions.logger.info(`Expired ${expiredPromos.size} promotions`);
-  });
+    logger.info(`Expired ${expiredPromos.size} promotions`);
+  }
+);
 
 /**
  * Daily stats aggregation (runs at 2 AM)
  */
-export const aggregateDailyStats = functions.pubsub
-  .schedule("0 2 * * *")
-  .timeZone("Europe/Rome")
-  .onRun(async () => {
+export const aggregateDailyStats = onSchedule(
+  {
+    region,
+    schedule: "0 2 * * *",
+    timeZone: "Europe/Rome",
+  },
+  async (_event: ScheduledEvent) => {
     const yesterday = startOfDay(addDays(new Date(), -1));
     const yesterdayEnd = endOfDay(yesterday);
 
@@ -218,16 +267,20 @@ export const aggregateDailyStats = functions.pubsub
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    functions.logger.info(`Daily stats aggregated for ${dateStr}`);
-  });
+    logger.info(`Daily stats aggregated for ${dateStr}`);
+  }
+);
 
 /**
  * Clean up old notifications (runs weekly)
  */
-export const cleanupOldNotifications = functions.pubsub
-  .schedule("0 3 * * 0")
-  .timeZone("Europe/Rome")
-  .onRun(async () => {
+export const cleanupOldNotifications = onSchedule(
+  {
+    region,
+    schedule: "0 3 * * 0",
+    timeZone: "Europe/Rome",
+  },
+  async (_event: ScheduledEvent) => {
     const thirtyDaysAgo = admin.firestore.Timestamp.fromDate(addDays(new Date(), -30));
 
     // Get all users
@@ -253,17 +306,29 @@ export const cleanupOldNotifications = functions.pubsub
       }
     }
 
-    functions.logger.info(`Cleaned up ${totalDeleted} old notifications`);
-  });
+    logger.info(`Cleaned up ${totalDeleted} old notifications`);
+  }
+);
 
 /**
  * Update challenge progress (triggered by booking completion)
  */
-export const updateChallengeProgress = functions.firestore
-  .document("bookings/{bookingId}")
-  .onUpdate(async (change) => {
-    const before = change.before.data();
-    const after = change.after.data();
+export const updateChallengeProgress = onDocumentUpdated(
+  {
+    region,
+    document: "bookings/{bookingId}",
+  },
+  async (event) => {
+    if (!event.data) {
+      return;
+    }
+
+    const before = event.data.before.data() as BookingData | undefined;
+    const after = event.data.after.data() as BookingData | undefined;
+
+    if (!before || !after) {
+      return;
+    }
 
     // Only process when booking becomes completed
     if (before.status !== "completed" && after.status === "completed") {
@@ -278,14 +343,14 @@ export const updateChallengeProgress = functions.firestore
         .get();
 
       for (const ucDoc of userChallenges.docs) {
-        const userChallenge = ucDoc.data();
+        const userChallenge = ucDoc.data() as UserChallengeData;
 
         // Get challenge details
         const challengeDoc = await db
           .collection("challenges")
           .doc(userChallenge.challengeId)
           .get();
-        const challenge = challengeDoc.data();
+        const challenge = challengeDoc.data() as ChallengeData;
 
         if (!challenge) continue;
 
@@ -343,4 +408,5 @@ export const updateChallengeProgress = functions.firestore
         }
       }
     }
-  });
+  }
+);

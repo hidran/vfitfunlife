@@ -11,6 +11,7 @@ import {
   getUserData,
   isProfileComplete,
   initRecaptcha,
+  handleAuthRedirect,
 } from '@/lib/firebase/auth';
 import { RecaptchaVerifier } from 'firebase/auth';
 
@@ -28,7 +29,7 @@ interface AuthState {
   phoneNumber: string | null;
 
   // Actions
-  initAuth: () => void;
+  initAuth: () => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   loginWithApple: () => Promise<void>;
   initPhoneAuth: (buttonId: string) => void;
@@ -53,7 +54,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   phoneNumber: null,
 
   // Initialize auth listener
-  initAuth: () => {
+  initAuth: async () => {
+    // Handle redirect result (for Google/Apple sign-in on web)
+    try {
+      const redirectUser = await handleAuthRedirect();
+      if (redirectUser) {
+        set({ firebaseUser: redirectUser, isLoading: true });
+        await get().loadUserData(redirectUser.uid);
+      }
+    } catch (error) {
+      console.error("Error handling auth redirect:", error);
+    }
+
     const unsubscribe = onAuthChange(async (firebaseUser) => {
       set({ firebaseUser, isLoading: true });
 
@@ -110,6 +122,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const firebaseUser = await signInWithGoogle();
 
+      // If null, redirect flow is being used - page will reload
+      if (!firebaseUser) {
+        return;
+      }
+
       // Check if profile is complete
       const profileComplete = await isProfileComplete(firebaseUser.uid);
 
@@ -133,6 +150,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const firebaseUser = await signInWithApple();
+
+      // If null, redirect flow is being used - page will reload
+      if (!firebaseUser) {
+        return;
+      }
 
       // Check if profile is complete
       const profileComplete = await isProfileComplete(firebaseUser.uid);

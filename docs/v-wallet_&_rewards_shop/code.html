@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>V-Wallet &amp; Rewards</title>
+<link href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#7311d4",
+                        "background-light": "#f7f6f8",
+                        "background-dark": "#191022",
+                        "surface-dark": "#241a30",
+                        "surface-light": "#ffffff",
+                    },
+                    fontFamily: {
+                        "display": ["Spline Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar hiding for clean UI */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .glass-panel {
+            background: rgba(36, 26, 48, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(115, 17, 212, 0.1);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display bg-background-light dark:bg-background-dark text-slate-900 dark:text-white overflow-x-hidden selection:bg-primary selection:text-white">
+<div class="relative min-h-screen w-full flex flex-col max-w-md mx-auto shadow-2xl pb-24">
+<!-- Top App Bar -->
+<div class="flex items-center p-4 pt-6 justify-between sticky top-0 z-20 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md">
+<div class="flex items-center gap-3">
+<div class="flex items-center justify-center size-10 rounded-full bg-primary/10 dark:bg-surface-dark text-primary">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+</div>
+<h2 class="text-xl font-bold leading-tight tracking-tight">V-Wallet</h2>
+</div>
+<button class="relative p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 size-2 bg-red-500 rounded-full border-2 border-background-light dark:border-background-dark"></span>
+</button>
+</div>
+<!-- Balance Hero Section -->
+<div class="flex flex-col items-center justify-center pt-6 pb-8 px-4 relative overflow-hidden">
+<!-- decorative glow behind text -->
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-primary/20 blur-[80px] rounded-full pointer-events-none"></div>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium uppercase tracking-wider mb-2">Total Balance</p>
+<h1 class="text-5xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-amber-300 via-purple-300 to-primary drop-shadow-sm mb-1">
+                12,450
+            </h1>
+<div class="flex items-center gap-2 bg-surface-dark/50 dark:bg-white/5 px-3 py-1 rounded-full border border-white/10 mt-2">
+<span class="material-symbols-outlined text-green-400 text-[18px]">trending_up</span>
+<p class="text-sm font-medium">≈ $124.50 USD</p>
+</div>
+</div>
+<!-- Actions Bar -->
+<div class="px-4 mb-8">
+<div class="grid grid-cols-3 gap-3">
+<button class="flex flex-col items-center gap-2 group">
+<div class="size-14 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20 group-active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-white text-[28px]">add_circle</span>
+</div>
+<span class="text-xs font-semibold text-slate-600 dark:text-slate-300">Top Up</span>
+</button>
+<button class="flex flex-col items-center gap-2 group">
+<div class="size-14 rounded-2xl bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 flex items-center justify-center group-active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-primary text-[28px]">qr_code_scanner</span>
+</div>
+<span class="text-xs font-semibold text-slate-600 dark:text-slate-300">Scan</span>
+</button>
+<button class="flex flex-col items-center gap-2 group">
+<div class="size-14 rounded-2xl bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 flex items-center justify-center group-active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-primary text-[28px]">card_giftcard</span>
+</div>
+<span class="text-xs font-semibold text-slate-600 dark:text-slate-300">Send</span>
+</button>
+</div>
+</div>
+<!-- Recent Activity Section -->
+<div class="flex flex-col px-4 mb-8">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-lg font-bold tracking-tight">Recent Activity</h3>
+<a class="text-xs font-medium text-primary hover:text-primary/80" href="#">See All</a>
+</div>
+<div class="flex flex-col gap-3">
+<!-- Transaction Item 1 -->
+<div class="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-surface-dark border border-slate-100 dark:border-white/5 shadow-sm">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-full bg-green-500/10 flex items-center justify-center text-green-500">
+<span class="material-symbols-outlined text-[20px]">directions_run</span>
+</div>
+<div class="flex flex-col">
+<span class="text-sm font-semibold">5k Morning Run</span>
+<span class="text-xs text-slate-500 dark:text-slate-400">Today, 8:30 AM</span>
+</div>
+</div>
+<span class="font-bold text-green-500 text-sm">+500 VP</span>
+</div>
+<!-- Transaction Item 2 -->
+<div class="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-surface-dark border border-slate-100 dark:border-white/5 shadow-sm">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500">
+<span class="material-symbols-outlined text-[20px]">calendar_month</span>
+</div>
+<div class="flex flex-col">
+<span class="text-sm font-semibold">Daily Streak Bonus</span>
+<span class="text-xs text-slate-500 dark:text-slate-400">Today, 7:00 AM</span>
+</div>
+</div>
+<span class="font-bold text-green-500 text-sm">+50 VP</span>
+</div>
+<!-- Transaction Item 3 -->
+<div class="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-surface-dark border border-slate-100 dark:border-white/5 shadow-sm">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-500">
+<span class="material-symbols-outlined text-[20px]">shopping_bag</span>
+</div>
+<div class="flex flex-col">
+<span class="text-sm font-semibold">Protein Shake Redeem</span>
+<span class="text-xs text-slate-500 dark:text-slate-400">Yesterday</span>
+</div>
+</div>
+<span class="font-bold text-slate-900 dark:text-white text-sm">-1,200 VP</span>
+</div>
+</div>
+</div>
+<!-- Rewards Shop Carousel -->
+<div class="flex flex-col mb-6">
+<div class="flex items-center justify-between px-4 mb-4">
+<div class="flex items-center gap-2">
+<h3 class="text-lg font-bold tracking-tight">Rewards Shop</h3>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-400 text-black">HOT</span>
+</div>
+<div class="flex gap-2">
+<button class="size-8 rounded-full bg-surface-light dark:bg-surface-dark flex items-center justify-center border border-slate-200 dark:border-slate-700">
+<span class="material-symbols-outlined text-[16px]">chevron_left</span>
+</button>
+<button class="size-8 rounded-full bg-surface-light dark:bg-surface-dark flex items-center justify-center border border-slate-200 dark:border-slate-700">
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</button>
+</div>
+</div>
+<!-- Carousel -->
+<div class="flex overflow-x-auto gap-4 px-4 pb-6 hide-scrollbar snap-x snap-mandatory">
+<!-- Card 1 -->
+<div class="min-w-[260px] snap-center rounded-2xl overflow-hidden relative group bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-white/5 shadow-lg">
+<div class="h-32 w-full bg-slate-800 relative">
+<img alt="Modern gym interior with weights and equipment" class="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-500" data-alt="Modern gym interior with weights and equipment" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDum8DzlZVuGiA1vUaXQwUtkskuGBQtXjo-azU-Oq6egGw_r6TG94AHGg_euyyY1o5wN5LUzSZtw8IqDmucKjU4xP2ckBV0GIeomp6Kq3b4uyk0o7_SqQckmk11cDurMOaB40aobUhK8PcUz4ukiwoyHcLKQEspN54pqHYLfpG5Nj4dCm49JQTkSTPelslDbYTRsm4Upup3q0jKcrlTppyy08v88QvFJmLKx1D9svE_Fbc5qO8mzRghM7neSjK3YSSEt0C3su8qEKzf"/>
+<div class="absolute top-2 left-2 bg-black/60 backdrop-blur-sm px-2 py-1 rounded text-xs font-bold text-white flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px] text-amber-400">star</span> Partner
+                        </div>
+</div>
+<div class="p-4">
+<div class="flex justify-between items-start mb-2">
+<div>
+<h4 class="font-bold text-base leading-tight">20% Off Membership</h4>
+<p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Valid at Gold's Gym &amp; Partners</p>
+</div>
+</div>
+<div class="flex items-center justify-between mt-4">
+<span class="text-primary font-bold text-lg">5,000 VP</span>
+<button class="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors shadow-lg shadow-primary/25">
+                                Redeem
+                            </button>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="min-w-[260px] snap-center rounded-2xl overflow-hidden relative group bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-white/5 shadow-lg">
+<div class="h-32 w-full bg-slate-800 relative">
+<img alt="Person wearing a VR headset in purple light" class="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-500" data-alt="Person wearing a VR headset in purple light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBbKKZYMCueEps8w9Ksg7Vmpha4Bo_Eh-mEzR-ywGmKqPMXmIMgiBznVfj5NYRPsDPf-QsrtYeO4OGBvzlliwBwSqnQWmNGm-0rszV20zIL77E2YDbgi8KGvtiK3hcg1DfwNz8vBP0QR8LPA-blttvT18upPAwJoE1bQvDt964gsYHWcLaCAWtSFzQ5zHyBNc8U8b1PfSt18vNZVAvP3wjle03vzQsv-LSccUgPk6Q3nEJWg6ObAWUgLD6FON8PCaCx4JOi3rI3MEj3"/>
+<div class="absolute top-2 left-2 bg-primary/80 backdrop-blur-sm px-2 py-1 rounded text-xs font-bold text-white">
+                            Exclusive
+                        </div>
+</div>
+<div class="p-4">
+<div class="flex justify-between items-start mb-2">
+<div>
+<h4 class="font-bold text-base leading-tight">Free VR Session</h4>
+<p class="text-xs text-slate-500 dark:text-slate-400 mt-1">30 mins at VFun Hubs</p>
+</div>
+</div>
+<div class="flex items-center justify-between mt-4">
+<span class="text-primary font-bold text-lg">8,000 VP</span>
+<button class="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors shadow-lg shadow-primary/25">
+                                Redeem
+                            </button>
+</div>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="min-w-[260px] snap-center rounded-2xl overflow-hidden relative group bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-white/5 shadow-lg">
+<div class="h-32 w-full bg-slate-800 relative">
+<img alt="Healthy wellness kit with bottle and towel" class="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-500" data-alt="Healthy wellness kit with bottle and towel" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAooStZ3UWl6eyA72utXF95-w6j1S6CzEQGdr_ZuOBB5M5Q3X2rxPfJQ45ozBdivTl5xHKZ88ioIIy7nKRGFNmAFikfbTFVndMshhjbvd6EFOd-ZXyYr-X63bP18ZcYa3vPC_yY_V6bEDy6n4biWoi0Gvxi63MnPIX6YIMe_iP8BcYIJtTu2AAkOTGZHzt_mxAtdKOoDXcSOxdfH7PpOQx2M5LoToR0Bwkprb9kf_aTzs8HCKbuoVmsCYy10apQs_cGBUWbO8PLs4tk"/>
+</div>
+<div class="p-4">
+<div class="flex justify-between items-start mb-2">
+<div>
+<h4 class="font-bold text-base leading-tight">VLife Wellness Kit</h4>
+<p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Includes towel &amp; bottle</p>
+</div>
+</div>
+<div class="flex items-center justify-between mt-4">
+<span class="text-primary font-bold text-lg">10,000 VP</span>
+<button class="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors shadow-lg shadow-primary/25">
+                                Redeem
+                            </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Navigation -->
+<div class="fixed bottom-0 left-0 right-0 max-w-md mx-auto z-50 px-6 pb-6 pt-2">
+<div class="glass-panel rounded-2xl h-16 flex items-center justify-around shadow-2xl">
+<button class="flex flex-col items-center gap-1 text-slate-500 dark:text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">fitness_center</span>
+<span class="text-[10px] font-medium">VFit</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-primary relative">
+<div class="absolute -top-10 bg-primary rounded-full p-3 shadow-lg shadow-primary/40 border-4 border-background-light dark:border-background-dark">
+<span class="material-symbols-outlined text-white">account_balance_wallet</span>
+</div>
+<span class="text-[10px] font-bold mt-6">Wallet</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-500 dark:text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px] font-medium">Profile</span>
+</button>
+</div>
+</div>
+</div>
+</body></html>

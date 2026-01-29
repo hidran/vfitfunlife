@@ -35,7 +35,9 @@ function initializeFirebase() {
   auth = getAuth(app);
   db = getFirestore(app);
   storage = getStorage(app);
-  functions = getFunctions(app, "europe-west1");
+  
+  const region = process.env.NEXT_PUBLIC_FIREBASE_REGION || "europe-west1";
+  functions = getFunctions(app, region);
 
   // Connect to emulators in development
   if (process.env.NODE_ENV === "development" && process.env.NEXT_PUBLIC_USE_EMULATORS === "true") {
