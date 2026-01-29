@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { cn } from '@/lib/utils';
+import { SectionSwitcher } from '@/components/ui/section-switcher';
 
 const vfitQuickActions = [
   { label: 'Palestre', icon: Dumbbell, href: '/fit/gyms' },
@@ -24,6 +25,7 @@ const vfitQuickActions = [
   { label: 'A Domicilio', icon: HomeIcon },
   { label: 'Virtual', icon: Tv },
 ];
+
 
 const vfitGyms = [
   {
@@ -428,15 +430,29 @@ function VFitHome() {
 export default function HomePage() {
   const { section } = useSection();
 
-  if (section === 'fit') {
-    return <VFitHome />;
-  }
-
-  const content = sectionContent[section];
-  const Icon = content.icon;
-
   return (
-    <div className="container-mobile py-6">
+    <>
+      <header className="sticky top-0 z-40 bg-background-dark/80 backdrop-blur-md">
+        <div className="container-mobile flex items-center justify-between py-4">
+          <h1 className="text-2xl font-bold text-white">V</h1>
+          <SectionSwitcher />
+          <Avatar name="User" size="sm" />
+        </div>
+      </header>
+      <main>
+        {section === 'fit' && <VFitHome />}
+        {section === 'fun' && <VFunHome />}
+        {section === 'life' && <VLifeHome />}
+      </main>
+    </>
+  );
+}
+
+function VFunHome() {
+  const content = sectionContent['fun'];
+  const Icon = content.icon;
+  return (
+        <div className="container-mobile py-6">
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <div className="w-12 h-12 rounded-xl bg-section-gradient flex items-center justify-center">
@@ -512,5 +528,89 @@ export default function HomePage() {
         </div>
       </div>
     </div>
-  );
+  )
 }
+
+function VLifeHome() {
+    const content = sectionContent['life'];
+    const Icon = content.icon;
+  return (
+        <div className="container-mobile py-6">
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-12 h-12 rounded-xl bg-section-gradient flex items-center justify-center">
+            <Icon size={24} className="text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-display font-bold gradient-text">
+              {content.title}
+            </h1>
+            <p className="text-text-secondary text-sm">{content.subtitle}</p>
+          </div>
+        </div>
+        <p className="text-text-tertiary mt-4 leading-relaxed">
+          {content.description}
+        </p>
+      </div>
+
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold text-text-inverse mb-4">
+          What you can do
+        </h2>
+        <div className="space-y-3">
+          {content.features.map((feature, index) => (
+            <div
+              key={feature}
+              className="flex items-center gap-3 p-4 rounded-xl bg-white/5 border border-white/10"
+            >
+              <div className="w-8 h-8 rounded-full bg-section-primary/20 flex items-center justify-center flex-shrink-0">
+                <span className="text-section-primary text-sm font-bold">
+                  {index + 1}
+                </span>
+              </div>
+              <span className="text-text-inverse">{feature}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold text-text-inverse mb-4">
+          Featured
+        </h2>
+        <div className="grid grid-cols-2 gap-4">
+          {[1, 2, 3, 4].map((item) => (
+            <div
+              key={item}
+              className="aspect-square rounded-2xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 flex items-center justify-center"
+            >
+              <div className="text-center">
+                <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-section-primary/20 animate-pulse" />
+                <div className="h-3 w-16 mx-auto rounded bg-white/10 animate-pulse" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold text-text-inverse mb-4">
+          Quick Actions
+        </h2>
+        <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2 -mx-4 px-4">
+          {['Book a Class', 'Find Nearby', 'View Schedule', 'My Progress'].map(
+            (action) => (
+              <button
+                key={action}
+                className="flex-shrink-0 px-5 py-3 rounded-full bg-section-primary/20 border border-section-primary/30 text-section-primary font-medium text-sm whitespace-nowrap transition-all duration-200 hover:bg-section-primary/30 active:scale-95 touch-target"
+              >
+                {action}
+              </button>
+            )
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
