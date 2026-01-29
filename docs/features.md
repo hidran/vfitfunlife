@@ -40,19 +40,19 @@ Splash → Onboarding (first launch) → Auth → Main App
 
 ## 3. Authentication
 ### 3.1 Login Screen
-- [ ] Phone number input with country code picker (default +39 Italy)
-- [ ] "Send OTP" button
-- [ ] Divider "oppure"
+- [x] Phone number input with country code picker (default +39 Italy)
+- [x] "Send OTP" button
+- [x] Divider "oppure"
 - [x] Social login buttons: Google, Apple (iOS only), Facebook
 - [ ] "Non hai un account? Registrati" link
-- [ ] Terms & Privacy links at bottom
+- [x] Terms & Privacy links at bottom
 
 ### 3.2 OTP Verification
-- [ ] 6-digit code input with auto-focus advance
+- [x] 6-digit code input with auto-focus advance
 - [ ] Countdown timer (60s) for resend
 - [ ] "Resend Code" button (disabled during countdown)
-- [ ] Auto-submit on complete
-- [ ] Error handling with shake animation
+- [x] Auto-submit on complete
+- [x] Error handling with shake animation
 
 ### 3.3 Registration (if new user)
 - [ ] Full name input
