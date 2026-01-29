@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Booking Details &amp; QR Code</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;family=Noto+Sans:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec5b",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102216",
+                        "surface-dark": "#1c2e22",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"],
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "1.5rem",
+                        "xl": "2rem",
+                        "2xl": "2.5rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for webkit to keep it clean */
+        ::-webkit-scrollbar {
+            width: 0px;
+            background: transparent;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display antialiased overflow-x-hidden">
+<div class="relative flex min-h-screen w-full flex-col max-w-md mx-auto bg-background-light dark:bg-background-dark shadow-2xl overflow-hidden">
+<!-- Top App Bar -->
+<div class="absolute top-0 left-0 w-full z-20 p-4 pt-6 flex items-center justify-between bg-gradient-to-b from-black/60 to-transparent">
+<button class="flex items-center justify-center size-10 rounded-full bg-black/20 backdrop-blur-md text-white hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h2 class="text-white text-lg font-bold tracking-tight opacity-0">Booking Details</h2> <!-- Hidden title for layout balance, shown on scroll in real app -->
+<button class="flex items-center justify-center size-10 rounded-full bg-black/20 backdrop-blur-md text-white hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined">more_horiz</span>
+</button>
+</div>
+<!-- Hero Section -->
+<div class="relative w-full h-[320px] shrink-0">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="Modern gym interior with neon lights and fitness equipment" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCgBsbFd6JK1uI0SS-OC-CJvFvEvZcbSyHEfRUFXWJYUZAQMkTxsBoJTFA9oh8g7YBrLLqceGKY-chAXzwhtrn-rderPP7wTE2tZohMy9PilHmMJ-yefCVdvZgXQk9CKPyF6GxNfo4sI-056Ea0WtayJRWfp_3zvss20Of6ijQAybkH0ZzLurLO670nvSgtW4f4jdI8p5VJniQ3fo8uHpQVC2NzKactRogGVpbApXzEB-7cwSYxhFSjVaMrYF9F8-U1enG8aesX3kmo');">
+</div>
+<!-- Gradient Overlay -->
+<div class="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/60 to-transparent"></div>
+<div class="absolute bottom-0 left-0 w-full p-6 pb-12 flex flex-col items-start gap-2">
+<div class="flex items-center gap-2 mb-1">
+<span class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/20 backdrop-blur-md border border-primary/30 text-primary text-xs font-bold uppercase tracking-wider">
+<span class="material-symbols-outlined text-[16px]">check_circle</span>
+                        Confirmed
+                    </span>
+<span class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-white text-xs font-bold uppercase tracking-wider">
+                        VFit Gym
+                    </span>
+</div>
+<h1 class="text-white text-4xl font-bold leading-tight tracking-tight">Morning HIIT Blast</h1>
+<p class="text-white/70 text-base font-medium">with Coach Sarah</p>
+</div>
+</div>
+<!-- Check-in Card (Floating) -->
+<div class="relative z-10 px-4 -mt-8 mb-6">
+<div class="flex flex-col items-center justify-center rounded-2xl bg-surface-dark border border-white/5 p-6 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+<div class="relative p-3 bg-white rounded-xl mb-4">
+<!-- Placeholder QR Code -->
+<img alt="QR code for gym check-in" class="size-40 object-contain mix-blend-multiply opacity-90" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAYiRku-hVlRuoKK0ldq7H0-QrjEHPOjadyTuSCPAAqXNt5pw9IxUSwiRFrGtAR-YDJ3jisXhI0tsgVoFntIhopiQq73kH1FNujz9PCAidvrEFGGCrQvUb0MeWzxLE4UWtJUTw-ifT872kNK8a4yPgf6aUYseG3s7NtrypmzuGv1LAVKZLMIyADJpjH9FjN4Jh4v6gYN0lxo5nEGzbXE1nUPbBl5aGk8oY4srTrol6utfFxqdnjHxXkB_CQZPDixbif0JhtCNg5JvAx"/>
+<!-- Corner accents for visual flair -->
+<div class="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-primary rounded-tl-lg -mt-1 -ml-1"></div>
+<div class="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-primary rounded-tr-lg -mt-1 -mr-1"></div>
+<div class="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-primary rounded-bl-lg -mb-1 -ml-1"></div>
+<div class="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-primary rounded-br-lg -mb-1 -mr-1"></div>
+</div>
+<h3 class="text-white text-xl font-bold tracking-tight">Scan to Check In</h3>
+<p class="text-primary/80 text-sm mt-1 font-medium">Show this code at the reception desk</p>
+</div>
+</div>
+<!-- Info Stack -->
+<div class="flex flex-col px-4 gap-4 mb-24">
+<!-- Date & Time -->
+<div class="flex items-start gap-4 p-4 rounded-xl bg-surface-dark/50 border border-white/5">
+<div class="flex items-center justify-center size-12 rounded-full bg-surface-dark border border-white/10 shrink-0 text-primary">
+<span class="material-symbols-outlined">calendar_month</span>
+</div>
+<div class="flex flex-col">
+<span class="text-white/50 text-xs font-bold uppercase tracking-wider mb-0.5">Date &amp; Time</span>
+<p class="text-white text-lg font-bold">Monday, Nov 12</p>
+<p class="text-white/80 text-base">07:00 AM - 08:00 AM</p>
+</div>
+</div>
+<!-- Location -->
+<div class="flex items-start gap-4 p-4 rounded-xl bg-surface-dark/50 border border-white/5">
+<div class="flex items-center justify-center size-12 rounded-full bg-surface-dark border border-white/10 shrink-0 text-primary">
+<span class="material-symbols-outlined">location_on</span>
+</div>
+<div class="flex flex-col flex-1">
+<span class="text-white/50 text-xs font-bold uppercase tracking-wider mb-0.5">Location</span>
+<p class="text-white text-lg font-bold">VFit Downtown</p>
+<p class="text-white/80 text-base mb-2">123 Fitness Blvd, Wellness City</p>
+<button class="flex items-center gap-2 text-primary hover:text-white transition-colors text-sm font-bold group w-fit">
+<span class="border-b border-primary/30 group-hover:border-primary pb-0.5">Get Directions</span>
+<span class="material-symbols-outlined text-[18px] transition-transform group-hover:translate-x-1">arrow_forward</span>
+</button>
+</div>
+<!-- Mini Map Thumbnail -->
+<div class="w-16 h-16 rounded-lg bg-cover bg-center shrink-0 opacity-80 border border-white/10" data-alt="Small map showing location pin" data-location="Wellness City" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDYhwoiM4QdvP_4xymsz9Via7ufu111eqI4n9FzJWUXbNolx9Oqkvcn9VF3M-bgHUrlh236PquI-bZfz0oKYy_FtCdvEzRUc8dCClVaDF8M-5xNLS0wp_6C0ZX6HEo8wVgFDT-6P0_ZNwEtvOrk4YI_4qXbELndhQu5XWzl4RYYgVMo1OJ1D5tghIo1GoxcIU13SfDYSAwnQY1adEzakznFj30q2bD3cViYVBVMnjnrxvt0eY1oay20Go2QZ_CqugEMAHzKDRzAGaE-'); filter: grayscale(100%) invert(1);">
+</div>
+</div>
+<!-- Instructor -->
+<div class="flex items-center gap-4 p-4 rounded-xl bg-surface-dark/50 border border-white/5">
+<div class="size-12 rounded-full bg-cover bg-center border border-white/10 shrink-0" data-alt="Portrait of fitness instructor Sarah" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuC0h0PmU9Iktx2Iq2fy5Rb7fbnJAHPGNp1op1aDCilG-7adX_br5WcWGJX2jKKZU3yVSRXdF2hgO2-ywm1PQSuNkqxaxyyLs1_CIrLZ6rwGVioZe2lczkozMI6vpGOfeMMEIG70oVpuyZKsk-Mf7SpDpJZeVP1yWiSGIrlXVzpDuJ-rtK5czzas3VmobFSEVKH3qmbI5elerJ6pF8fQHnTBFyI7kO5XA0f0tALyzfXjw33e44Bd4vE7d5yCgkWTX2WrfVn7w53PwlK8');">
+</div>
+<div class="flex flex-col">
+<span class="text-white/50 text-xs font-bold uppercase tracking-wider mb-0.5">Instructor</span>
+<p class="text-white text-lg font-bold">Coach Sarah</p>
+</div>
+<button class="ml-auto flex items-center justify-center size-10 rounded-full bg-white/5 text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+<span class="material-symbols-outlined">chat_bubble</span>
+</button>
+</div>
+</div>
+<!-- Sticky Action Bar -->
+<div class="fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto p-4 bg-background-dark/90 backdrop-blur-xl border-t border-white/5 z-30">
+<div class="grid grid-cols-2 gap-3">
+<button class="w-full py-3.5 rounded-full border border-white/20 text-white font-bold text-sm hover:bg-white/5 transition-colors">
+                    Reschedule
+                </button>
+<button class="w-full py-3.5 rounded-full bg-white/5 text-red-400 font-bold text-sm hover:bg-red-500/10 hover:text-red-300 transition-colors">
+                    Cancel Booking
+                </button>
+</div>
+</div>
+</div>
+</body></html>

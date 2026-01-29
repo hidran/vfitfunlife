@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>V App - Your Inspirational Journey</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec5b",
+                        "background-dark": "#08120b",
+                        "surface-glass": "rgba(255, 255, 255, 0.08)",
+                        "input-glass": "rgba(0, 0, 0, 0.3)",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        @layer utilities {
+            .backdrop-blur-xl {
+                backdrop-filter: blur(24px);
+            }
+            .text-shadow-lg {
+                text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            }
+        }
+        body {
+            min-height: 100dvh;
+            background-color: #08120b;
+        }
+        .bg-journey-layer {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAOtgccnE5tVlrmLS0RVaGrDunCrn4ByahWXPZckJEIKbbSxsyy58mLdYBPSkJoojGmXnsJjRfOk9IfTpsthisS86xZn_baCjD0Uj1PPycxAcZEg4MvrKzQ9MQfgnMrPhJzbWU4ZSo7tQZL-gzWdl93oM5Yt5Har6wbQsKeqsExsMjIYlHT6UHrXhEYDN9xjXgYYKIP52gVv1jUF1MxvVPe2MRoJ4k2Sj6tdFfHaYJ3dPd3YYWp9WJJZ4pbcKN6-wxrMzhl2WCl-4OQ");
+            background-size: cover;
+            background-position: center;
+            filter: brightness(0.6) contrast(1.1);
+        }
+        .bg-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            background: linear-gradient(to bottom, rgba(8, 18, 11, 0.4) 0%, rgba(8, 18, 11, 0.8) 50%, rgba(8, 18, 11, 1) 100%);
+        }
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.5) !important;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display text-white antialiased selection:bg-primary selection:text-background-dark">
+<div class="bg-journey-layer"></div>
+<div class="bg-overlay"></div>
+<div class="relative flex min-h-screen w-full flex-col overflow-x-hidden">
+<div class="flex items-center p-4 justify-between z-20">
+<button class="flex size-12 shrink-0 items-center justify-center rounded-full bg-white/10 backdrop-blur-md border border-white/10 hover:bg-white/20 transition-all text-white">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<div class="px-4 py-1.5 rounded-full bg-white/5 backdrop-blur-md border border-white/10 text-xs font-medium text-slate-300">
+                Phase 01
+            </div>
+</div>
+<div class="flex flex-col items-center justify-center pt-6 pb-4 px-6">
+<div class="w-24 h-24 rounded-full border-[1.5px] border-primary/40 flex items-center justify-center bg-black/40 backdrop-blur-md shadow-[0_0_30px_rgba(19,236,91,0.3)] mb-8">
+<span class="text-primary text-6xl font-bold italic tracking-tighter">V</span>
+</div>
+<h1 class="text-4xl font-bold leading-tight mb-3 tracking-tight text-center text-shadow-lg">Begin Your Story</h1>
+<p class="text-slate-300 text-center max-w-[280px] text-base font-light leading-relaxed">
+                A journey curated for your <span class="text-primary font-medium">Fit</span>, your <span class="text-primary font-medium">Fun</span>, and your <span class="text-primary font-medium">Life</span>.
+            </p>
+</div>
+<div class="flex flex-col gap-4 px-6 py-8 w-full max-w-md mx-auto">
+<div class="flex flex-col gap-3">
+<div class="relative group">
+<div class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">
+<span class="material-symbols-outlined text-xl">person</span>
+</div>
+<input class="w-full bg-input-glass backdrop-blur-xl border border-white/10 rounded-2xl py-4 pl-14 pr-4 text-white placeholder:text-slate-500 focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-all h-16" placeholder="Your Name" type="text"/>
+</div>
+<div class="relative group">
+<div class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">
+<span class="material-symbols-outlined text-xl">alternate_email</span>
+</div>
+<input class="w-full bg-input-glass backdrop-blur-xl border border-white/10 rounded-2xl py-4 pl-14 pr-4 text-white placeholder:text-slate-500 focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-all h-16" placeholder="Email Address" type="email"/>
+</div>
+<div class="relative group">
+<div class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">
+<span class="material-symbols-outlined text-xl">lock</span>
+</div>
+<input class="w-full bg-input-glass backdrop-blur-xl border border-white/10 rounded-2xl py-4 pl-14 pr-14 text-white placeholder:text-slate-500 focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-all h-16" placeholder="Create Password" type="password"/>
+<button class="absolute right-5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors">
+<span class="material-symbols-outlined">visibility</span>
+</button>
+</div>
+</div>
+<div class="mt-4">
+<label class="block text-xs font-semibold uppercase tracking-widest text-slate-400 mb-4 px-1">Choose your primary path</label>
+<div class="grid grid-cols-3 gap-3">
+<button class="relative flex flex-col items-center justify-center aspect-square rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md text-slate-400 hover:text-primary hover:border-primary/30 transition-all group overflow-hidden">
+<span class="material-symbols-outlined mb-2 text-2xl group-hover:scale-110 transition-transform">fitness_center</span>
+<span class="text-[10px] font-bold tracking-widest uppercase">VFit</span>
+</button>
+<button class="relative flex flex-col items-center justify-center aspect-square rounded-2xl bg-primary text-background-dark shadow-[0_10px_20px_rgba(19,236,91,0.2)] transition-all">
+<span class="material-symbols-outlined mb-2 text-2xl">celebration</span>
+<span class="text-[10px] font-bold tracking-widest uppercase">VFun</span>
+<div class="absolute top-2 right-2 size-1.5 bg-background-dark rounded-full"></div>
+</button>
+<button class="relative flex flex-col items-center justify-center aspect-square rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md text-slate-400 hover:text-primary hover:border-primary/30 transition-all group">
+<span class="material-symbols-outlined mb-2 text-2xl group-hover:scale-110 transition-transform">spa</span>
+<span class="text-[10px] font-bold tracking-widest uppercase">VLife</span>
+</button>
+</div>
+</div>
+<div class="mt-6 flex flex-col gap-6">
+<button class="w-full bg-primary hover:bg-[#16ff65] text-background-dark font-bold text-lg h-16 rounded-2xl shadow-[0_8px_30px_rgba(19,236,91,0.3)] transition-all transform active:scale-[0.98] flex items-center justify-center gap-3">
+                    Start My Journey
+                    <span class="material-symbols-outlined font-bold">east</span>
+</button>
+<div class="flex items-center gap-4">
+<div class="h-[1px] flex-1 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+<span class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Fast Connect</span>
+<div class="h-[1px] flex-1 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<button class="flex items-center justify-center gap-3 h-14 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl hover:bg-white/10 transition-all text-white font-medium text-sm">
+<img alt="Google" class="size-5 opacity-80" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDyFnDVDfPxvJRdA5T7yXeYHYsC1IybF7mTFWpyR0Ox8V-qMH5_zvcFvAL2uOYRbND0Er3lvgMH4CVWDsYxE3BtCKq6a-f2ucgwA66zHMQiT3EREcr16vZX3ZuXT3Rq3a0xD5TTm8Ejy0QO_CqVJVResCXv00wsVx3MckyKTMGRnRGqEm8NYI9mxy7pCQS72To0ItEJE7g9kc_2L742FQSUiGTIVApUHbhb_DTNg18caBgP2g9Y-91VVJslPqrEWMNGiifORWqwUz3S"/>
+                        Google
+                    </button>
+<button class="flex items-center justify-center gap-3 h-14 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl hover:bg-white/10 transition-all text-white font-medium text-sm">
+<span class="material-symbols-outlined text-xl opacity-80">brand_awareness</span>
+                        Apple
+                    </button>
+</div>
+</div>
+<div class="mt-8 text-center">
+<p class="text-slate-400 text-sm font-light">
+                    Returning to your journey? 
+                    <a class="text-primary font-semibold ml-1 hover:underline underline-offset-4" href="#">Sign In</a>
+</p>
+</div>
+</div>
+<div class="h-12 w-full"></div>
+</div>
+
+</body></html>

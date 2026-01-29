@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>VFun Entertainment</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#8B5CF6", // Vibrant purple from screenshots
+              secondary: "#EC4899", // Pink accent
+              tertiary: "#F97316", // Orange accent
+              "background-light": "#F3F4F6",
+              "background-dark": "#111827",
+              "card-light": "#FFFFFF",
+              "card-dark": "#1F2937",
+              "text-light": "#1F2937",
+              "text-dark": "#F9FAFB",
+            },
+            fontFamily: {
+              display: ["Poppins", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "12px",
+            },
+          },
+        },
+      };
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-text-light dark:text-text-dark antialiased pb-20 transition-colors duration-200">
+<header class="fixed top-0 w-full z-50 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 px-4 py-3 flex items-center justify-between">
+<div class="flex items-center space-x-3">
+<button class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors">
+<span class="material-icons text-text-light dark:text-text-dark">menu</span>
+</button>
+<button class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors">
+<span class="material-icons text-text-light dark:text-text-dark">home</span>
+</button>
+</div>
+<div class="absolute left-1/2 transform -translate-x-1/2">
+<h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-secondary to-tertiary uppercase tracking-wider">VFun</h1>
+</div>
+<div class="flex items-center space-x-3">
+<button class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors relative">
+<span class="material-icons text-text-light dark:text-text-dark">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
+</button>
+<div class="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-secondary p-0.5">
+<img alt="Profile" class="w-full h-full rounded-full object-cover border-2 border-white dark:border-gray-900" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBGNsVfkjKhATEaG6NetFYuhSmYj0T9s9AaQ_WX6aakLmaQ2T3mM2x_j1tajCOcjMleLF-4o02P2QtO5f_hPwF0QgMs_Ks9fKlkemXgb5L1-zvPtwf0i1dqTw-AogiX3Xa1O1CGwZqSLyUtcM78BuqZiHpHHJsSKCjgf7v-VyWW3ZbZBGieOWAPqa0gsxanPOpWIuOpUXULHGfMg9q0tc9att8Mdm_BnZ5aGfYb8Uwa6lZqYlF9vZY9AZTu35XqKNq1iZ55f2a2Ij8F"/>
+</div>
+</div>
+</header>
+<main class="pt-20 px-4 space-y-6">
+<section class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-900 to-purple-900 shadow-xl">
+<div class="absolute top-0 right-0 w-64 h-64 bg-secondary/20 rounded-full blur-3xl -mr-16 -mt-16"></div>
+<div class="absolute bottom-0 left-0 w-64 h-64 bg-tertiary/20 rounded-full blur-3xl -ml-16 -mb-16"></div>
+<div class="relative z-10 p-6 flex flex-col items-center text-center space-y-4">
+<div class="w-16 h-16 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center mb-2 ring-4 ring-white/5">
+<span class="material-icons text-3xl text-white">theater_comedy</span>
+</div>
+<h2 class="text-3xl font-bold text-white tracking-tight">Events &amp; <br/><span class="text-transparent bg-clip-text bg-gradient-to-r from-secondary to-tertiary">Animation</span></h2>
+<p class="text-gray-300 text-sm max-w-xs">Join our immersive community events, workshops, and next-level interactive experiences.</p>
+<div class="flex gap-3 pt-2 w-full justify-center">
+<button class="flex-1 bg-white/10 hover:bg-white/20 text-white py-3 px-4 rounded-xl border border-white/10 backdrop-blur-sm transition-all flex flex-col items-center gap-1">
+<span class="material-icons text-secondary">celebration</span>
+<span class="text-xs font-semibold">Party</span>
+</button>
+<button class="flex-1 bg-white/10 hover:bg-white/20 text-white py-3 px-4 rounded-xl border border-white/10 backdrop-blur-sm transition-all flex flex-col items-center gap-1">
+<span class="material-icons text-tertiary">view_in_ar</span>
+<span class="text-xs font-semibold">VR Exp</span>
+</button>
+</div>
+</div>
+</section>
+<div class="flex overflow-x-auto pb-2 gap-3 no-scrollbar">
+<button class="flex-shrink-0 px-5 py-2 rounded-full bg-primary text-white font-medium shadow-lg shadow-primary/30">
+                Calendar
+            </button>
+<button class="flex-shrink-0 px-5 py-2 rounded-full bg-white dark:bg-card-dark text-gray-500 dark:text-gray-400 font-medium border border-gray-200 dark:border-gray-700 whitespace-nowrap">
+                Party
+            </button>
+<button class="flex-shrink-0 px-5 py-2 rounded-full bg-white dark:bg-card-dark text-gray-500 dark:text-gray-400 font-medium border border-gray-200 dark:border-gray-700 whitespace-nowrap">
+                Events
+            </button>
+<button class="flex-shrink-0 px-5 py-2 rounded-full bg-white dark:bg-card-dark text-gray-500 dark:text-gray-400 font-medium border border-gray-200 dark:border-gray-700 whitespace-nowrap">
+                TV
+            </button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="md:col-span-2 bg-card-light dark:bg-card-dark rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800">
+<div class="flex justify-between items-center mb-4">
+<h3 class="text-lg font-bold text-gray-800 dark:text-white">Schedule</h3>
+<button class="text-primary text-sm font-medium">View All</button>
+</div>
+<div class="space-y-4">
+<div class="flex items-start gap-4 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer group">
+<div class="flex flex-col items-center bg-white dark:bg-gray-700 rounded-lg p-2 min-w-[60px] shadow-sm">
+<span class="text-xs font-bold text-gray-400 uppercase">Oct</span>
+<span class="text-xl font-bold text-primary">24</span>
+</div>
+<div class="flex-1">
+<h4 class="font-semibold text-gray-900 dark:text-white group-hover:text-primary transition-colors">VR Fitness Marathon</h4>
+<p class="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
+<span class="material-icons text-[14px]">schedule</span> 10:00 AM - 12:00 PM
+                            </p>
+</div>
+<span class="material-icons text-gray-300 group-hover:text-primary">chevron_right</span>
+</div>
+<div class="flex items-start gap-4 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer group">
+<div class="flex flex-col items-center bg-white dark:bg-gray-700 rounded-lg p-2 min-w-[60px] shadow-sm">
+<span class="text-xs font-bold text-gray-400 uppercase">Oct</span>
+<span class="text-xl font-bold text-secondary">26</span>
+</div>
+<div class="flex-1">
+<h4 class="font-semibold text-gray-900 dark:text-white group-hover:text-secondary transition-colors">Neon Night Yoga</h4>
+<p class="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
+<span class="material-icons text-[14px]">schedule</span> 08:00 PM - 09:30 PM
+                            </p>
+</div>
+<span class="material-icons text-gray-300 group-hover:text-secondary">chevron_right</span>
+</div>
+<div class="flex items-start gap-4 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer group">
+<div class="flex flex-col items-center bg-white dark:bg-gray-700 rounded-lg p-2 min-w-[60px] shadow-sm">
+<span class="text-xs font-bold text-gray-400 uppercase">Oct</span>
+<span class="text-xl font-bold text-tertiary">31</span>
+</div>
+<div class="flex-1">
+<h4 class="font-semibold text-gray-900 dark:text-white group-hover:text-tertiary transition-colors">Halloween Dance Off</h4>
+<p class="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
+<span class="material-icons text-[14px]">schedule</span> 09:00 PM - Late
+                            </p>
+</div>
+<span class="material-icons text-gray-300 group-hover:text-tertiary">chevron_right</span>
+</div>
+</div>
+</div>
+<div class="bg-card-light dark:bg-card-dark rounded-2xl p-0 overflow-hidden shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col">
+<div class="p-4 flex items-center justify-between border-b border-gray-100 dark:border-gray-800">
+<div class="flex items-center gap-2">
+<span class="relative flex h-3 w-3">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+</span>
+<h3 class="font-bold text-gray-800 dark:text-white">Live Now</h3>
+</div>
+<span class="text-xs font-bold text-purple-600 bg-purple-100 dark:bg-purple-900/30 dark:text-purple-300 px-2 py-1 rounded">TWITCH</span>
+</div>
+<div class="relative group aspect-video md:aspect-auto md:h-full">
+<img alt="Live Stream Thumbnail" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDY-M86H1RmrGc_H0SbcYmmLKkEJK5jfhvDx-2am8gEkBXPu0pENHACsLksOowHgqSx1eirgJLhT0i39T2HFp7JyCwJIMFE5x8BbyMVIM4YXYaa3ve8hrwGc5FC_3WHAdXmdtau9gm-3tQjMSABZGEAoiCd4_pbzT2kE1NH4O74NGG9NfKgy_9vRozNOvUvTmZOHf5s-Oi0SZ7ffcoPrO2Z4o9usYrIvMZqY2UhGwLL1UtEN5tGLi1ThLbdZmJNkNYsTkfQAPHHnw8Y"/>
+<div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="bg-primary hover:bg-purple-600 text-white rounded-full p-4 transform hover:scale-110 transition-all shadow-lg">
+<span class="material-icons text-3xl">play_arrow</span>
+</button>
+</div>
+<div class="absolute bottom-3 left-3 bg-black/60 backdrop-blur-sm px-2 py-1 rounded text-white text-xs font-medium">
+<span class="text-red-400 mr-1">●</span> 1.2k Viewers
+                    </div>
+</div>
+<div class="p-4">
+<h4 class="font-semibold text-gray-900 dark:text-white truncate">Morning Cardio Blast with Sarah</h4>
+<p class="text-sm text-gray-500 dark:text-gray-400 mt-1">VFit Official Channel</p>
+</div>
+</div>
+</div>
+<section>
+<div class="flex justify-between items-center mb-4 mt-2">
+<h3 class="text-lg font-bold text-gray-800 dark:text-white">Staff &amp; Animation Crew</h3>
+</div>
+<div class="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
+<div class="flex-shrink-0 w-24 flex flex-col items-center gap-2">
+<div class="w-20 h-20 rounded-full p-0.5 bg-gradient-to-br from-secondary to-tertiary">
+<img alt="Staff" class="w-full h-full rounded-full object-cover border-2 border-white dark:border-gray-900" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA_ATqCsW-LjAY5jNi4hZtJQPj8cXEFectPmMIF9TblSI8rDuA9BPk9Ggn-2sQeNVkqB1aPSa-4f4qxC-DPAC6w5QVnhYaEiFeBqbwKQpUwW-UlIfTGwONJGS7B2olkOh6xo9Rg0HszXxav3YpNLIsJfi7fTd_N_4AE2FO72hoZqlyJg4dsKcTQMkJ8V4Zx5necE6WLSe4ciBoJw4AsgisuK2J6oYnymXaZUg9R-RDmmI5Lr_h49gR6ZHZvP1GTEnar1p_RZoaEQiGC"/>
+</div>
+<span class="text-xs font-medium text-center text-gray-700 dark:text-gray-300">Elena<br/><span class="text-[10px] text-gray-400">Events Lead</span></span>
+</div>
+<div class="flex-shrink-0 w-24 flex flex-col items-center gap-2">
+<div class="w-20 h-20 rounded-full p-0.5 bg-gray-200 dark:bg-gray-700">
+<img alt="Staff" class="w-full h-full rounded-full object-cover border-2 border-white dark:border-gray-900" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCj5caJ5wlq75lG9hz2tGLs6WwJY6bu8SwO8T18YcnSGORFmJIBN2pFxvSo2bW6Ta6KYTTaClo-bfC2ytWT_VzR2t6OcfL_1fvQjfmaHN4D3gK3Ng1i6sU9X72hC8gToyU4_umeI5huCCSwDM6uYCaCeLrrE_cz6FOd-ON-crMdyR5Lzv2TXThTCeMVqlsBZzckSW4exkwowtumMtxpnHS4VmocG6rKDgtRyl3EEllq9QJv3siqqTVIixQLDpQkt6BwBS_H7lTjAZfl"/>
+</div>
+<span class="text-xs font-medium text-center text-gray-700 dark:text-gray-300">Marco<br/><span class="text-[10px] text-gray-400">DJ</span></span>
+</div>
+<div class="flex-shrink-0 w-24 flex flex-col items-center gap-2">
+<div class="w-20 h-20 rounded-full p-0.5 bg-gray-200 dark:bg-gray-700">
+<img alt="Staff" class="w-full h-full rounded-full object-cover border-2 border-white dark:border-gray-900" src="https://lh3.googleusercontent.com/aida-public/AB6AXuALGehadzyWyjLdufLgPTlYM7QST1kuD9uGJRbIYVjUCses8cajslvxC9uK4lOvSg3vRNs84PvcrnIufp-VCxEcJ_zUAKTaMsphYJXJZOHrSxeOtq3afYssuHAzqndFg519rwnFkzZlUiyUT3zTUR7VFYD_DlEpxIgBFJRN0PCFiZ-NPGj6ij4hFp53Sa_7sZbJTFB7Wxy156TimIrM1vXckgI377Zr8yOkg9QnUqRbvO5yAbIsk4RwXwkMg7A_4gZCWG7LUiO0NAdc"/>
+</div>
+<span class="text-xs font-medium text-center text-gray-700 dark:text-gray-300">Sofia<br/><span class="text-[10px] text-gray-400">Organizer</span></span>
+</div>
+<div class="flex-shrink-0 w-24 flex flex-col items-center gap-2">
+<div class="w-20 h-20 rounded-full p-0.5 bg-gray-200 dark:bg-gray-700">
+<img alt="Staff" class="w-full h-full rounded-full object-cover border-2 border-white dark:border-gray-900" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAAApH8tpCLU_JEIvv27ygtSSnBIPZxqyfH6LxgETJRVPuCdIslVH6XHLHVh89mP-jptXeJeip19CEUx0E6AaNUvwZsAdvaDi8HEfOEkyqsp3PV9o_urHu8BzFtv_nSMaq8YAoXCdDWYXXgXrePESCTL_kyXoLpgpobRqBJyj22jUTqGNtnImx2jJ05bvgHJxxbMPXMnemXFdAN1-feZa1B5WVSteHTnlIGJYIoK5VzC0CAcFOokD2WAsxb56A7EmvwUWZ9FUoYbUOy"/>
+</div>
+<span class="text-xs font-medium text-center text-gray-700 dark:text-gray-300">Alex<br/><span class="text-[10px] text-gray-400">VR Tech</span></span>
+</div>
+</div>
+</section>
+<button class="w-full bg-gradient-to-r from-primary to-secondary text-white font-semibold py-4 rounded-xl shadow-lg shadow-primary/30 flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+<span class="material-icons">manage_search</span>
+            Explore Full Catalog
+        </button>
+</main>
+<nav class="fixed bottom-0 w-full bg-white dark:bg-card-dark border-t border-gray-200 dark:border-gray-800 pb-safe pt-2 z-40">
+<div class="flex justify-around items-center px-2 pb-2">
+<a class="flex flex-col items-center p-2 text-gray-400 hover:text-primary transition-colors" href="#">
+<span class="material-icons">fitness_center</span>
+<span class="text-[10px] font-medium mt-1">VFit</span>
+</a>
+<a class="flex flex-col items-center p-2 text-primary dark:text-white transition-colors relative" href="#">
+<div class="absolute -top-10 bg-gradient-to-r from-secondary to-tertiary p-3 rounded-full shadow-lg shadow-orange-500/30 border-4 border-white dark:border-card-dark">
+<span class="material-icons text-white">theater_comedy</span>
+</div>
+<span class="text-[10px] font-bold mt-7 bg-clip-text text-transparent bg-gradient-to-r from-secondary to-tertiary">VFun</span>
+</a>
+<a class="flex flex-col items-center p-2 text-gray-400 hover:text-primary transition-colors" href="#">
+<span class="material-icons">spa</span>
+<span class="text-[10px] font-medium mt-1">VLife</span>
+</a>
+</div>
+</nav>
+<style>
+        .pb-safe {
+            padding-bottom: env(safe-area-inset-bottom, 20px);
+        }.no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }.no-scrollbar {
+            -ms-overflow-style: none;scrollbar-width: none;}
+    </style>
+
+</body></html>

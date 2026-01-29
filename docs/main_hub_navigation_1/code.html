@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Vfitfunlife - Hub</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography,container-queries"></script>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#a855f7",
+                        "background-light": "#f8fafc",
+                        "background-dark": "#0f172a",
+                        "fit-green": "#10b981",
+                        "fun-orange": "#f97316",
+                        "life-purple": "#8b5cf6",
+                    },
+                    fontFamily: {
+                        sans: ["Inter", "sans-serif"],
+                    },
+                },
+            },
+        };
+    </script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style type="text/tailwindcss">
+        @layer base {
+            body {
+                @apply bg-background-light text-slate-900 font-sans;
+                -webkit-tap-highlight-color: transparent;
+            }
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .active-nav .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="min-h-screen flex flex-col overflow-hidden">
+<header class="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-slate-100 px-5 pt-10 pb-4">
+<div class="max-w-md mx-auto flex justify-between items-center">
+<div class="flex items-center gap-3">
+<button class="p-1 rounded-full hover:bg-slate-100 transition-colors">
+<span class="material-symbols-outlined text-2xl text-slate-700">menu</span>
+</button>
+<div class="flex items-baseline">
+<span class="font-extrabold text-xl tracking-tighter text-slate-900">V</span>
+<span class="font-medium text-sm text-slate-500 ml-0.5">fitfunlife</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden xs:flex gap-3">
+<span class="material-symbols-outlined text-[22px] text-slate-400">account_balance_wallet</span>
+<span class="material-symbols-outlined text-[22px] text-slate-400">emoji_events</span>
+</div>
+<button class="bg-slate-900 text-white px-5 py-2 rounded-full text-xs font-bold tracking-wide shadow-sm hover:bg-slate-800 transition-all active:scale-95">
+                    LOGIN
+                </button>
+</div>
+</div>
+</header>
+<main class="flex-1 mt-24 mb-20 overflow-y-auto px-5">
+<div class="max-w-md mx-auto py-4 space-y-4">
+<div class="relative h-[24vh] min-h-[160px] rounded-3xl overflow-hidden shadow-sm border border-slate-100 group">
+<div class="absolute inset-0 bg-gradient-to-r from-fit-green/90 to-emerald-600/90 z-10"></div>
+<img alt="Fitness" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDPMHDde0mfvWaEOW45i3zfmIEUY0p88kP-Mqt8oVAdWMDokAcnx2dMItOHHWZR_06o4AhhqHXDB0tjnnEiKaKqgHPVNs_mqR5X9lh5gbRAofLt2jQoE5MgMdo5ZaoH6avfx-sht4IFpxQAOLmAPb8D6FmIEfM8hW6FSuTZH4xoX95T4AnLrkeTtExbSUBSplfYszKi4KGmH2tD0e3Erjorm0aQZTYp4Tqn-hNOXwOYvNrwi9HjjlCemdp6f0RQFDVOppzzAqZ2mUOj"/>
+<div class="relative z-20 h-full p-6 flex items-center justify-between">
+<div>
+<h2 class="text-4xl font-black text-white tracking-tight mb-1">FIT</h2>
+<p class="text-white/80 text-xs font-medium uppercase tracking-widest">Training &amp; Gym</p>
+</div>
+<div class="text-right">
+<ul class="text-[11px] leading-relaxed font-semibold text-white/90 space-y-0.5">
+<li>Palestre</li>
+<li>Domicilio</li>
+<li>Outdoor</li>
+<li>Virtual</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="relative h-[24vh] min-h-[160px] rounded-3xl overflow-hidden shadow-sm border border-slate-100 group">
+<div class="absolute inset-0 bg-gradient-to-r from-fun-orange/90 to-pink-600/90 z-10"></div>
+<img alt="Fun" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBi0cTp5oSuphFwfUEMXhI6QAv1fiA2vOVLHoPo0Aceh-56CffL2KueNnaaHuAP545ofsEwxg1L70Qkw5HRQXAE0GWWNcNsEmKp3bsEBpawik9syN2yvKRusABAy2HTW7H6SjO16TRZUzhBGKlHay8k67D-PvHjLuIrlurFwTq7NGrLrMdTExbdvaaaY-Eo10nS3RRZmfkMpLbLWBGx4hLp3RszjSfM8ZzSTjTttJQ-vov8SKZ4JBDAhUFr7FpEaYIW1aMHFtn3gS3d"/>
+<div class="relative z-20 h-full p-6 flex flex-row-reverse items-center justify-between">
+<div class="text-right">
+<h2 class="text-4xl font-black text-white tracking-tight mb-1">FUN</h2>
+<p class="text-white/80 text-xs font-medium uppercase tracking-widest">Events &amp; Social</p>
+</div>
+<div>
+<ul class="text-[11px] leading-relaxed font-semibold text-white/90 space-y-0.5">
+<li>Animation</li>
+<li>Party</li>
+<li>Events</li>
+<li>Intratt.</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="relative h-[24vh] min-h-[160px] rounded-3xl overflow-hidden shadow-sm border border-slate-100 group">
+<div class="absolute inset-0 bg-gradient-to-r from-life-purple/90 to-indigo-700/90 z-10"></div>
+<img alt="Life" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCDNr9Gyf-mKK52AKstf3kJgJmsmAfzKkWkqcHbiAKyS87PBGl-1aSjKkmNSKlayHzsbXvscKRt_sIYomjo8AplyyxiPBYqZ27RQ-ySPNRxPDEUNbYYscKcb5gxc8UIWx77m41rPqfDhGE_GuYjxwwyozv4oFGTy-ZmaYnV20lWbNR2L6MP1ujuktPi3Q6rzlIhxq_w0Hbq6XutHu_e0w6UHqOsC060tmL13ztmv0kgOuylFrIc63RTespcmSXxgoZMEfu2hQOUZyiS"/>
+<div class="relative z-20 h-full p-6 flex items-center justify-between">
+<div>
+<h2 class="text-4xl font-black text-white tracking-tight mb-1">LIFE</h2>
+<p class="text-white/80 text-xs font-medium uppercase tracking-widest">Wellness &amp; Care</p>
+</div>
+<div class="text-right">
+<ul class="text-[11px] leading-relaxed font-semibold text-white/90 space-y-0.5">
+<li>Wellness</li>
+<li>Estetista</li>
+<li>Parrucch.</li>
+<li>Camera Iperb.</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</main>
+<nav class="fixed bottom-0 w-full bg-white/90 backdrop-blur-xl border-t border-slate-100 pb-8 pt-3 px-6 z-50">
+<div class="max-w-md mx-auto flex justify-between items-center">
+<a class="flex flex-col items-center gap-1 text-slate-900 active-nav group" href="#">
+<span class="material-symbols-outlined text-[26px]">home</span>
+<span class="text-[10px] font-bold tracking-tight">Home</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition-colors" href="#">
+<span class="material-symbols-outlined text-[26px]">search</span>
+<span class="text-[10px] font-medium tracking-tight">Explore</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition-colors" href="#">
+<span class="material-symbols-outlined text-[26px]">qr_code_scanner</span>
+<span class="text-[10px] font-medium tracking-tight">Scan</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition-colors" href="#">
+<span class="material-symbols-outlined text-[26px]">chat_bubble</span>
+<span class="text-[10px] font-medium tracking-tight">Social</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition-colors" href="#">
+<span class="material-symbols-outlined text-[26px]">person</span>
+<span class="text-[10px] font-medium tracking-tight">Profile</span>
+</a>
+</div>
+</nav>
+
+</body></html>

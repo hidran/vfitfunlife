@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>VFit Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#8B5CF6", // Purple from the reference image button
+                        "primary-dark": "#7C3AED",
+                        "secondary": "#10B981", // Teal gradient hint
+                        "background-light": "#F3F4F6", // Light gray
+                        "background-dark": "#0F172A", // Dark blue/slate from reference
+                        "surface-light": "#FFFFFF",
+                        "surface-dark": "#1E293B",
+                        "text-light": "#1F2937",
+                        "text-dark": "#E2E8F0",
+                        "muted-light": "#6B7280",
+                        "muted-dark": "#94A3B8",
+                    },
+                    fontFamily: {
+                        display: ["Inter", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "12px",
+                        'xl': "16px",
+                        '2xl': "24px",
+                    },
+                },
+            },
+        };
+    </script>
+<style>.hide-scroll::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scroll {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-text-light dark:text-text-dark antialiased transition-colors duration-200">
+<div class="max-w-md mx-auto min-h-screen flex flex-col relative overflow-hidden bg-background-light dark:bg-background-dark shadow-2xl">
+<header class="sticky top-0 z-50 bg-surface-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 px-4 py-3 flex justify-between items-center">
+<button class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+<span class="material-icons-outlined text-2xl">menu</span>
+</button>
+<div class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-500">
+                VFit
+            </div>
+<div class="flex items-center space-x-2">
+<button class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors relative">
+<span class="material-icons-outlined text-2xl">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-surface-light dark:border-background-dark"></span>
+</button>
+<button class="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-blue-400 p-[2px]">
+<div class="w-full h-full rounded-full bg-surface-light dark:bg-gray-800 flex items-center justify-center overflow-hidden">
+<img alt="Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBGpH3yasf7N7MBr8nm2FC_kiUTNlTAlVm-A8_NQgsnfsd1g7MZRQIzNACAwIUGzci98hA5rfsbwm9yR1OQiIazOUro8lz9WEE-TUIi5265rC3r_qv3NCMtFC7Eah5byx2ptTuVaO8F-BEoVysenWdbX11YH-6KPxTHg6EcoTJF_nlZclxsB8kHlIRrynrPx_h0oKwnHLHgiK5ex2s1dBuCg8wSjPX8ZjShBO2xHTRbfcGLkxcOeHn5EaFUSUwFQqBBhxUopuy3H-Ir"/>
+</div>
+</button>
+</div>
+</header>
+<main class="flex-1 overflow-y-auto pb-24 px-4 pt-4 space-y-6">
+<section>
+<div class="flex justify-between items-center mb-3">
+<h2 class="text-lg font-bold flex items-center gap-2">
+<span class="material-icons-outlined text-primary">fitness_center</span>
+                        Gyms &amp; Locations
+                    </h2>
+<a class="text-sm text-primary font-medium hover:underline" href="#">See all</a>
+</div>
+<div class="flex overflow-x-auto gap-4 pb-4 hide-scroll -mx-4 px-4 snap-x">
+<div class="snap-center shrink-0 w-64 bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden group">
+<div class="h-32 bg-gray-200 relative">
+<img alt="Gym Interior" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuApboGmjxZUHKI5nJyfaBJXNd1R-jIIenBgMeYAQkOZIRz8gwU5tnLUEivSyMkqNU4PrPTULGwYFq9JkjJXpfrbr-e2_iZ6BGmBU-v9IJPQf1z7x28sIOwT5UUsWOGLxEoCRJr9L5Q5W1RZvfedZFJPBhuDX_gQSmoXi9TSrGZub1M5cnlBwZLyfW3tf1v4OR4oDjQjKe5RAz7RCExsCj-p3J65zxi1UgO-CQ6ZhxUBzUKEt7K_GqHq2u7Jwe6PDB8XDakjjb82T9dm"/>
+<div class="absolute top-2 right-2 bg-white/90 dark:bg-black/70 backdrop-blur-sm px-2 py-1 rounded-lg flex items-center gap-1 text-xs font-bold text-yellow-500">
+<span class="material-icons-outlined text-[14px]">star</span> 4.8
+                             </div>
+</div>
+<div class="p-3">
+<h3 class="font-semibold text-base mb-1">Carosello Fitness</h3>
+<p class="text-xs text-muted-light dark:text-muted-dark flex items-center gap-1">
+<span class="material-icons-outlined text-[14px]">location_on</span> Milan, IT
+                            </p>
+</div>
+</div>
+<div class="snap-center shrink-0 w-64 bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden group">
+<div class="h-32 bg-gray-200 relative">
+<img alt="Gym Equipment" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB_NCUpGtBvcMsF7Ij25WGw0h4UqH1kK7ockpUm_2LOUxksp6-7T91jU0EI7J-YRu1VvHoDvznbdP3UJNUJhwvnQnIOLwZb9_iYDvtAn0N_ILOToMjHgbgG0d9QLDxT3FsKGri_bO_YgcVHkOiurA8t-J1cT94bqifxi24rM_8F-5ZsgeKrQ4UA5yUrVc9qQiaSaD05mHBUW0DzVYlIvA0fUakkGSwPvDzLxzBeT2dnFqpKIuXmGozSCt47CV-tsOoCkBiw72elvl1k"/>
+<div class="absolute top-2 right-2 bg-white/90 dark:bg-black/70 backdrop-blur-sm px-2 py-1 rounded-lg flex items-center gap-1 text-xs font-bold text-yellow-500">
+<span class="material-icons-outlined text-[14px]">star</span> 4.9
+                             </div>
+</div>
+<div class="p-3">
+<h3 class="font-semibold text-base mb-1">Urban Core Gym</h3>
+<p class="text-xs text-muted-light dark:text-muted-dark flex items-center gap-1">
+<span class="material-icons-outlined text-[14px]">location_on</span> Rome, IT
+                            </p>
+</div>
+</div>
+</div>
+</section>
+<section class="grid grid-cols-1 gap-4">
+<div class="bg-surface-light dark:bg-surface-dark rounded-xl p-4 border border-gray-100 dark:border-gray-700 shadow-sm">
+<h3 class="font-bold mb-3 flex items-center gap-2">
+<span class="material-icons-outlined text-green-500">category</span>
+                        Active Classes
+                    </h3>
+<div class="flex flex-wrap gap-2">
+<span class="px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full text-xs font-medium">Kangoo Jumps</span>
+<span class="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs font-medium">Trampoline</span>
+<span class="px-3 py-1 bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 rounded-full text-xs font-medium">Pilates</span>
+<span class="px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full text-xs font-medium">Cardio</span>
+<span class="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full text-xs font-medium">+3 more</span>
+</div>
+</div>
+<div class="relative w-full h-48 rounded-xl overflow-hidden shadow-sm border border-gray-200 dark:border-gray-700 group cursor-pointer">
+<img alt="Map View" class="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCjLWnmrf4YTPuOumjaPky09OdWDgTErSTcrHChVEw7MaYLjrvcVcx2Scehox40OeIkBpOg2m0-UAzhwK-cbmQ_cI1y6ddy8WDH9N0sn_4V1C7uzUtAmLQ4nOzV1Jeiz8VwYAbQwITtoC4Yr1CWTbtlUB8F_XG4H7WHhxw6XhGLLolvQqE83YCks9UeaLmI6RhjOH71x15Wj578cFFtLQz7us8eHdfZqOP5WKJlcNiko6ZAsU2Yb32xipCOdTH9QVitQFcSF2fmH9iU"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-4">
+<div class="flex justify-between items-end">
+<div>
+<h3 class="text-white font-bold text-lg">We are here too!</h3>
+<p class="text-gray-200 text-xs">Explore nearby affiliated locations</p>
+</div>
+<div class="bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded shadow-lg flex items-center gap-1">
+<span class="material-icons-outlined text-[14px]">verified</span>
+                                Top Quality Crew
+                            </div>
+</div>
+</div>
+<div class="absolute top-3 right-3 bg-surface-light dark:bg-surface-dark p-2 rounded-full shadow-lg">
+<span class="material-icons-outlined text-primary">near_me</span>
+</div>
+</div>
+</section>
+<section>
+<div class="bg-gradient-to-br from-indigo-900 to-purple-900 rounded-2xl p-5 text-white shadow-lg relative overflow-hidden">
+<div class="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+<div class="absolute bottom-0 left-0 -ml-8 -mb-8 w-24 h-24 bg-primary/30 rounded-full blur-xl"></div>
+<div class="relative z-10 mb-4">
+<h2 class="text-xl font-bold mb-1">Find your Online Coach</h2>
+<p class="text-indigo-200 text-sm">Personalized training sessions wherever you are.</p>
+</div>
+<div class="space-y-3 relative z-10">
+<div class="bg-white/10 backdrop-blur-md rounded-xl p-3 flex items-center gap-3 border border-white/10 hover:bg-white/20 transition-colors cursor-pointer">
+<img alt="Instructor" class="w-12 h-12 rounded-full object-cover border-2 border-primary" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBH6ksislkRZph4sa-_5-lA2Hu0A0ia2Et-HjN0wtZO0ag0WKHdxGX3q0HPAaGXGxhW3aZlXe2fRkI4E_SddjwMbnzp-n9m1nHAgyLRuIp1BqBsdGjjvq5Vnca4OR6jZNZd6CiXUB-iTEQk9B5wP3HS1VVQ-A1dwtjtHpi9tYObyOvjVTUE_CtJW7TG1aYhmSTO-j3TmyDELR8Zb4UBoD-5P2E9qGA_JCDMzRbUT5iYWd2pgrE3TP6Gfih5Iax8iIvyalchxxv_L1Ry"/>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h4 class="font-semibold text-sm">Marco Rossi</h4>
+<div class="flex text-yellow-400 text-xs">
+<span class="material-icons-outlined text-[12px]">star</span>
+<span class="material-icons-outlined text-[12px]">star</span>
+<span class="material-icons-outlined text-[12px]">star</span>
+<span class="material-icons-outlined text-[12px]">star</span>
+<span class="material-icons-outlined text-[12px]">star</span>
+</div>
+</div>
+<p class="text-xs text-gray-300 mt-0.5">Specialist in HIIT &amp; Cardio</p>
+</div>
+<button class="bg-primary hover:bg-primary-dark text-white text-xs font-bold py-1.5 px-3 rounded-lg transition-colors">
+                                Book
+                            </button>
+</div>
+<div class="bg-white/10 backdrop-blur-md rounded-xl p-3 flex items-center gap-3 border border-white/10 hover:bg-white/20 transition-colors cursor-pointer">
+<img alt="Instructor" class="w-12 h-12 rounded-full object-cover border-2 border-primary" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA_okcGanMGG4HpWOnZQRfB_f4t2IkVsY5A4YvDMKJTPn34K3Ax8NBu9tLTp5pa7SYF96jP-xyAJb0693_eerHTYyxB3TKsjRMzswPF0_G14xSI4pXxlaw5IdRsuisrE_-gtkOcZxkMaPVJv4hpSX9knq6GVw1HaWcnL5HlxKc-wTliGykF0L6HkMHX3M_6tf_JxuwtBYMrS5ybQosvob3RHkzOO-fKyTRoAvY3eNxcPp-Te2kOYOtUeH6ogUwEq1g74RQP4imE2g0k"/>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h4 class="font-semibold text-sm">Elena Bianchi</h4>
+<div class="flex text-yellow-400 text-xs">
+<span class="material-icons-outlined text-[12px]">star</span>
+<span class="material-icons-outlined text-[12px]">star</span>
+<span class="material-icons-outlined text-[12px]">star</span>
+<span class="material-icons-outlined text-[12px]">star</span>
+<span class="material-icons-outlined text-[12px] opacity-50">star</span>
+</div>
+</div>
+<p class="text-xs text-gray-300 mt-0.5">Yoga &amp; Mindfulness Expert</p>
+</div>
+<button class="bg-primary hover:bg-primary-dark text-white text-xs font-bold py-1.5 px-3 rounded-lg transition-colors">
+                                Book
+                            </button>
+</div>
+</div>
+<div class="mt-4 text-center">
+<button class="text-xs font-semibold text-white/80 hover:text-white flex items-center justify-center gap-1 mx-auto">
+                            View all instructors
+                            <span class="material-icons-outlined text-[14px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</section>
+<section class="pb-6">
+<div class="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl p-4 text-white flex justify-between items-center shadow-md">
+<div>
+<h3 class="font-bold text-lg">Outdoor Events</h3>
+<p class="text-xs opacity-90">Join our next virtual e-game!</p>
+</div>
+<span class="material-icons-outlined text-4xl opacity-50">sports_esports</span>
+</div>
+</section>
+</main>
+<nav class="absolute bottom-0 w-full bg-surface-light dark:bg-background-dark border-t border-gray-200 dark:border-gray-800 pb-safe pt-2">
+<div class="flex justify-around items-center px-2 pb-2">
+<a class="flex flex-col items-center p-2 text-primary" href="#">
+<span class="material-icons-outlined">fitness_center</span>
+<span class="text-[10px] font-medium mt-1">VFit</span>
+</a>
+<a class="flex flex-col items-center p-2 text-muted-light dark:text-muted-dark hover:text-primary dark:hover:text-primary transition-colors" href="#">
+<span class="material-icons-outlined">celebration</span>
+<span class="text-[10px] font-medium mt-1">VFun</span>
+</a>
+<div class="relative -top-5">
+<button class="w-14 h-14 bg-primary text-white rounded-full shadow-lg shadow-primary/40 flex items-center justify-center transform hover:scale-105 transition-transform border-4 border-surface-light dark:border-background-dark">
+<span class="material-icons-outlined text-2xl">add</span>
+</button>
+</div>
+<a class="flex flex-col items-center p-2 text-muted-light dark:text-muted-dark hover:text-primary dark:hover:text-primary transition-colors" href="#">
+<span class="material-icons-outlined">spa</span>
+<span class="text-[10px] font-medium mt-1">VLife</span>
+</a>
+<a class="flex flex-col items-center p-2 text-muted-light dark:text-muted-dark hover:text-primary dark:hover:text-primary transition-colors" href="#">
+<span class="material-icons-outlined">person</span>
+<span class="text-[10px] font-medium mt-1">Profile</span>
+</a>
+</div>
+</nav>
+<div class="h-6 w-full bg-surface-light dark:bg-background-dark"></div>
+</div>
+<script>
+        // Simple dark mode toggle for demonstration purposes (optional, usually handled by system pref)
+        // Check local storage or system preference
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark')
+        } else {
+            document.documentElement.classList.remove('dark')
+        }
+    </script>
+
+</body></html>

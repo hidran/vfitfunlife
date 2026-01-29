@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>VLife - Home Services</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#8B5CF6", // Purple accent from screenshots
+              "primary-dark": "#7C3AED",
+              "background-light": "#F3F4F6",
+              "background-dark": "#0F172A", // Dark blue/slate from screenshots
+              "surface-light": "#FFFFFF",
+              "surface-dark": "#1E293B",
+              "text-light": "#1F2937",
+              "text-dark": "#F8FAFC",
+            },
+            fontFamily: {
+              display: ["Inter", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "12px",
+              "xl": "20px",
+            },
+          },
+        },
+      };
+    </script>
+<style>.no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }.map-pattern {
+            background-color: #e5e5f7;
+            opacity: 0.8;
+            background-image:  repeating-radial-gradient( circle at 0 0, transparent 0, #e5e5f7 10px ), repeating-linear-gradient( #f0f0f555, #f0f0f5 );
+        }
+        .dark .map-pattern {
+            background-color: #1e293b;
+            background-image: radial-gradient(#334155 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-text-light dark:text-text-dark antialiased transition-colors duration-200">
+<div class="max-w-md mx-auto min-h-screen flex flex-col relative overflow-hidden bg-background-light dark:bg-background-dark shadow-2xl">
+<div class="h-12 w-full flex items-center justify-between px-6 pt-2 z-20">
+<span class="text-xs font-semibold">9:41</span>
+<div class="flex items-center space-x-1">
+<span class="material-icons text-sm">signal_cellular_alt</span>
+<span class="material-icons text-sm">wifi</span>
+<span class="material-icons text-sm">battery_full</span>
+</div>
+</div>
+<header class="px-5 py-4 flex items-center justify-between z-20 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md sticky top-0">
+<div class="flex items-center space-x-4">
+<button class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-surface-dark transition">
+<span class="material-icons">menu</span>
+</button>
+<button class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-surface-dark transition">
+<span class="material-icons">home</span>
+</button>
+</div>
+<div class="text-2xl font-bold tracking-tight text-primary">VLife</div>
+<div class="flex items-center space-x-2">
+<button class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-surface-dark transition" onclick="document.documentElement.classList.toggle('dark')">
+<span class="material-icons dark:hidden">dark_mode</span>
+<span class="material-icons hidden dark:block">light_mode</span>
+</button>
+<button class="relative">
+<img alt="Profile" class="w-9 h-9 rounded-full border-2 border-surface-light dark:border-surface-dark" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAhFOW5cHluB4YqxWXIMA3YfjdWS1efFNpNxunbiGxbQhmBYnKZxYxBNkbFtOIn9MVPDB8p7hkYX0ctx1TdMAG1p1ynNb62W1WueVDM9R0z4A_q09ODoHGOmcFrZAWbrwx83fh6EpkcMFJ-92BhvUmP2_rUB0Q3oAksVgU5BEV3EEV99DRYAE3-NCbJ-CEfL3DRnBIwvQ9Viw9jPVnLKA1bxgxwzO4ML1JqYZ8g_o-lNaLLPTkqeuzAxwUrkIwqfWg4flK8VD8QHtz2"/>
+<span class="absolute top-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-background-dark rounded-full"></span>
+</button>
+</div>
+</header>
+<main class="flex-1 overflow-y-auto pb-24 no-scrollbar">
+<div class="px-6 mb-4">
+<div class="flex items-center space-x-2 text-gray-500 dark:text-gray-400 text-sm mb-1">
+<span>VLife</span>
+<span class="material-icons text-xs">chevron_right</span>
+<span>Wellness</span>
+</div>
+<h1 class="text-2xl font-bold">Services at Home</h1>
+<p class="text-sm text-gray-500 dark:text-gray-400">Find professionals near you</p>
+</div>
+<div class="relative w-full h-64 bg-gray-200 dark:bg-gray-800 mb-6 overflow-hidden">
+<div class="absolute inset-0 map-pattern"></div>
+<div class="absolute top-4 left-4 right-4 flex space-x-2">
+<div class="flex-1 bg-white dark:bg-surface-dark rounded-full shadow-lg flex items-center px-4 py-2 border border-gray-100 dark:border-gray-700">
+<span class="material-icons text-gray-400 mr-2">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm w-full p-0 text-gray-700 dark:text-gray-200 placeholder-gray-400" placeholder="Search area..." type="text"/>
+</div>
+<button class="bg-white dark:bg-surface-dark p-2 rounded-full shadow-lg text-primary border border-gray-100 dark:border-gray-700">
+<span class="material-icons">my_location</span>
+</button>
+</div>
+<div class="absolute top-1/3 left-1/4 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer group">
+<div class="bg-white dark:bg-surface-dark px-2 py-1 rounded shadow text-xs font-semibold mb-1 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 text-gray-800 dark:text-white">
+                        Osteopath - 0.5km
+                    </div>
+<span class="material-icons text-primary text-4xl drop-shadow-md">location_on</span>
+<div class="w-3 h-1 bg-black/20 rounded-full blur-[2px]"></div>
+</div>
+<div class="absolute bottom-1/3 right-1/4 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer group">
+<div class="bg-white dark:bg-surface-dark px-2 py-1 rounded shadow text-xs font-semibold mb-1 opacity-100 transition-opacity whitespace-nowrap z-10 text-gray-800 dark:text-white">
+                        Massage - 1.2km
+                    </div>
+<span class="material-icons text-pink-500 text-4xl drop-shadow-md">location_on</span>
+<div class="w-3 h-1 bg-black/20 rounded-full blur-[2px]"></div>
+</div>
+<div class="absolute bottom-4 left-0 right-0 flex justify-center">
+<button class="bg-primary hover:bg-primary-dark text-white px-5 py-2 rounded-full shadow-lg text-sm font-medium flex items-center transition transform active:scale-95">
+<span class="material-icons text-sm mr-2">map</span> Open Full Map
+                    </button>
+</div>
+</div>
+<div class="px-6 mb-6">
+<div class="flex justify-between items-center mb-3">
+<h2 class="text-lg font-bold">Categories</h2>
+<a class="text-primary text-sm font-medium" href="#">See all</a>
+</div>
+<div class="flex space-x-4 overflow-x-auto no-scrollbar pb-2">
+<div class="flex flex-col items-center space-y-2 min-w-[72px]">
+<div class="w-16 h-16 rounded-2xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-primary border border-purple-200 dark:border-purple-800/50 shadow-sm">
+<span class="material-symbols-outlined text-2xl">spa</span>
+</div>
+<span class="text-xs font-medium text-center">Wellness</span>
+</div>
+<div class="flex flex-col items-center space-y-2 min-w-[72px]">
+<div class="w-16 h-16 rounded-2xl bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center text-pink-500 border border-pink-200 dark:border-pink-800/50 shadow-sm">
+<span class="material-symbols-outlined text-2xl">content_cut</span>
+</div>
+<span class="text-xs font-medium text-center">Beauty</span>
+</div>
+<div class="flex flex-col items-center space-y-2 min-w-[72px]">
+<div class="w-16 h-16 rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-500 border border-blue-200 dark:border-blue-800/50 shadow-sm">
+<span class="material-symbols-outlined text-2xl">medical_services</span>
+</div>
+<span class="text-xs font-medium text-center">Physio</span>
+</div>
+<div class="flex flex-col items-center space-y-2 min-w-[72px]">
+<div class="w-16 h-16 rounded-2xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-500 border border-orange-200 dark:border-orange-800/50 shadow-sm">
+<span class="material-symbols-outlined text-2xl">psychology</span>
+</div>
+<span class="text-xs font-medium text-center">Coaching</span>
+</div>
+</div>
+</div>
+<div class="px-6 mb-8">
+<h2 class="text-lg font-bold mb-3">Top Rated Near You</h2>
+<div class="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
+<div class="flex items-start space-x-4">
+<div class="relative">
+<img alt="Professional Portrait" class="w-16 h-16 rounded-xl object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBp7risPAmrrzIGK_y6rVGhNiNkcW-0oeuiLs9k0anaAWaNXtjFg1-JFxir8QmrtnssgfZoHcHZg6KUIb3Zc7Ll8TsfsnD64kI0feKcCo_zIIRhAd8kf7SMazEVybXf-PWcS9G7SVMjZqTOduWQbAmDFlBdIEspggQvTcdvJpFAVhG6-zw6xmT93g1mX9gZNq0jqvKFWtQik0L9gtfcNd76ZdI0kccJ3agOpIeloRDRPS3Tc_j7LAW3R4kFZUE_widBxNMJMtRejiRa"/>
+<div class="absolute -bottom-2 -right-2 bg-yellow-400 text-black text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center border border-white dark:border-surface-dark">
+<span class="material-icons text-[10px] mr-0.5">star</span> 4.9
+                            </div>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-bold text-base">Dr. Sarah Miller</h3>
+<p class="text-xs text-primary font-medium mb-1">Osteopath &amp; Physio</p>
+</div>
+<button class="text-gray-400 hover:text-red-500 transition">
+<span class="material-icons text-xl">favorite_border</span>
+</button>
+</div>
+<div class="mt-2 space-y-1">
+<div class="flex items-center text-[10px] text-gray-500 dark:text-gray-400">
+<span class="w-12">Quality</span>
+<div class="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full mx-2 overflow-hidden">
+<div class="h-full bg-green-500 w-[95%]"></div>
+</div>
+<span>5.0</span>
+</div>
+<div class="flex items-center text-[10px] text-gray-500 dark:text-gray-400">
+<span class="w-12">Punctual</span>
+<div class="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full mx-2 overflow-hidden">
+<div class="h-full bg-blue-500 w-[85%]"></div>
+</div>
+<span>4.8</span>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex justify-between items-center">
+<div class="text-xs font-medium text-gray-500 dark:text-gray-400">
+<span class="material-icons text-sm align-middle mr-1">schedule</span> Next slot: Today, 14:00
+                        </div>
+<button class="bg-primary text-white text-sm font-semibold px-4 py-2 rounded-lg shadow hover:bg-primary-dark transition">
+                            Book Now
+                        </button>
+</div>
+</div>
+</div>
+<div class="px-6 mb-8">
+<div class="relative bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl p-5 text-white overflow-hidden shadow-lg">
+<div class="absolute -top-10 -right-10 w-32 h-32 bg-white opacity-10 rounded-full blur-xl"></div>
+<div class="absolute bottom-0 left-10 w-24 h-24 bg-pink-500 opacity-20 rounded-full blur-xl"></div>
+<div class="relative z-10 flex justify-between items-center">
+<div>
+<div class="inline-block bg-white/20 backdrop-blur-sm px-2 py-0.5 rounded text-[10px] font-bold tracking-wider mb-2 uppercase">VIP Offer</div>
+<h3 class="text-xl font-bold mb-1">Get 20% Off</h3>
+<p class="text-sm text-purple-100 mb-3">On your first home massage.</p>
+<button class="bg-white text-purple-700 text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm">
+                                Claim Code
+                            </button>
+</div>
+<div class="transform rotate-12 bg-white p-1 shadow-xl rounded-lg">
+<span class="material-icons text-4xl text-yellow-500">local_activity</span>
+</div>
+</div>
+</div>
+</div>
+<div class="px-6 pb-6">
+<div class="bg-surface-light dark:bg-surface-dark border border-gray-200 dark:border-gray-700 rounded-xl p-4 flex flex-col items-center text-center shadow-sm">
+<div class="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center text-green-600 dark:text-green-400 mb-2">
+<span class="material-icons">chat</span>
+</div>
+<h3 class="font-bold text-sm mb-1">Need a custom quote?</h3>
+<p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Contact us for specialized home equipment or group sessions.</p>
+<button class="w-full py-2.5 border-2 border-primary text-primary dark:text-primary rounded-lg text-sm font-bold hover:bg-primary hover:text-white transition-colors">
+                        Request Quote
+                    </button>
+</div>
+</div>
+</main>
+<nav class="absolute bottom-0 w-full bg-surface-light dark:bg-surface-dark border-t border-gray-200 dark:border-gray-800 pb-safe pt-2 z-30 shadow-[0_-5px_15px_rgba(0,0,0,0.05)]">
+<div class="flex justify-around items-end h-16 pb-4 px-2">
+<a class="flex flex-col items-center space-y-1 group" href="#">
+<span class="material-icons text-gray-400 group-hover:text-primary transition">fitness_center</span>
+<span class="text-[10px] font-medium text-gray-400 group-hover:text-primary transition">VFit</span>
+</a>
+<a class="flex flex-col items-center space-y-1 group" href="#">
+<span class="material-icons text-gray-400 group-hover:text-primary transition">celebration</span>
+<span class="text-[10px] font-medium text-gray-400 group-hover:text-primary transition">VFun</span>
+</a>
+<div class="relative -top-6">
+<div class="absolute inset-0 bg-primary/20 blur-xl rounded-full"></div>
+<a class="relative flex items-center justify-center w-14 h-14 bg-primary rounded-full shadow-lg shadow-primary/40 transform transition hover:scale-105 active:scale-95" href="#">
+<span class="material-symbols-outlined text-white text-3xl">spa</span>
+</a>
+</div>
+<a class="flex flex-col items-center space-y-1 group" href="#">
+<span class="material-icons text-gray-400 group-hover:text-primary transition">event</span>
+<span class="text-[10px] font-medium text-gray-400 group-hover:text-primary transition">Bookings</span>
+</a>
+<a class="flex flex-col items-center space-y-1 group" href="#">
+<span class="material-icons text-gray-400 group-hover:text-primary transition">person</span>
+<span class="text-[10px] font-medium text-gray-400 group-hover:text-primary transition">Profile</span>
+</a>
+</div>
+<div class="absolute bottom-1 left-1/2 transform -translate-x-1/2 text-[10px] font-bold text-primary">VLife</div>
+</nav>
+</div>
+
+</body></html>

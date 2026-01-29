@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Side Menu Drawer</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#8B5CF6", // Violet/Purple from the provided screenshots
+              "background-light": "#F3F4F6",
+              "background-dark": "#0F172A", // Dark slate/navy blue from screenshots
+              "surface-dark": "#1E293B",
+              "accent-teal": "#2DD4BF", // For gradients/accents seen in 'Events & Animation' text
+              "accent-blue": "#3B82F6",
+            },
+            fontFamily: {
+              display: ["Inter", "sans-serif"],
+              body: ["Inter", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "0.75rem",
+            },
+          },
+        },
+      };
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }.glass-dark {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glass-light {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-right: 1px solid rgba(0, 0, 0, 0.05);
+        }.toggle-checkbox:checked {
+            right: 0;
+            border-color: #8B5CF6;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #8B5CF6;
+        }::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4B5563;
+            border-radius: 2px;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark min-h-screen text-slate-800 dark:text-slate-100 overflow-hidden relative">
+<div class="fixed top-[-10%] right-[-10%] w-64 h-64 bg-primary/20 rounded-full blur-3xl pointer-events-none z-0"></div>
+<div class="fixed bottom-[-10%] left-[-10%] w-80 h-80 bg-accent-teal/10 rounded-full blur-3xl pointer-events-none z-0"></div>
+<div class="absolute inset-0 z-0 flex flex-col p-6 transition-all duration-300 filter blur-[2px] opacity-50 dark:opacity-30">
+<div class="flex justify-between items-center mb-8">
+<span class="material-icons text-3xl">menu</span>
+<div class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent-blue">Vfitfunlife</div>
+<div class="w-8 h-8 rounded-full bg-slate-300 dark:bg-slate-700"></div>
+</div>
+<div class="space-y-4">
+<div class="h-40 bg-white dark:bg-surface-dark rounded-2xl shadow-sm w-full animate-pulse"></div>
+<div class="grid grid-cols-2 gap-4">
+<div class="h-32 bg-white dark:bg-surface-dark rounded-2xl shadow-sm animate-pulse"></div>
+<div class="h-32 bg-white dark:bg-surface-dark rounded-2xl shadow-sm animate-pulse"></div>
+</div>
+<div class="h-64 bg-white dark:bg-surface-dark rounded-2xl shadow-sm w-full animate-pulse"></div>
+</div>
+</div>
+<div class="fixed inset-y-0 left-0 w-[85%] max-w-sm z-50 glass-light dark:glass-dark transform transition-transform duration-300 ease-out shadow-2xl flex flex-col h-full">
+<div class="pt-12 pb-6 px-6 border-b border-gray-200 dark:border-gray-700/50">
+<div class="flex items-center gap-4 mb-6">
+<div class="relative">
+<img alt="User Profile" class="w-14 h-14 rounded-full ring-2 ring-primary ring-offset-2 ring-offset-background-light dark:ring-offset-background-dark object-cover shadow-lg" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBvAESpus6sj-ttwtPcturkoJl9o4jXjX-Fi0ANnTAlS1TK1EwZ2ZU6JtfQMrCa9T5knN3k4WYgv98vvRt-PEIiC5nkRIQ2hCByFsb9LMbxGEv68sZIwZuT5jqHcQs5RdHOw6FuepLdRZE5xJsR8xoW7ynDhpFGT2j0zB4MB0PTEwpG3IEtzt6VN_k2eIBKrl6kt23QwdCo4kgRmsOLiJloqrAaNfWtyjQ-sBQSucokduZG0s0rqQKDmU0KuuaZ9QH6ixTDG2eft4Sj"/>
+<div class="absolute bottom-0 right-0 w-4 h-4 bg-green-500 border-2 border-white dark:border-background-dark rounded-full"></div>
+</div>
+<div>
+<h2 class="text-lg font-bold text-gray-900 dark:text-white leading-tight">Mario Rossi</h2>
+<p class="text-xs text-gray-500 dark:text-gray-400">mario.rossi@email.com</p>
+</div>
+</div>
+<div class="flex items-center justify-between bg-gray-100 dark:bg-slate-800/80 p-1.5 rounded-xl">
+<button class="flex-1 py-2 text-sm font-medium rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+                    Prof
+                </button>
+<button class="flex-1 py-2 text-sm font-semibold rounded-lg bg-white dark:bg-primary shadow-sm text-primary dark:text-white ring-1 ring-black/5 dark:ring-white/10">
+                    Privato
+                </button>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto py-6 px-4 space-y-1">
+<nav class="space-y-1 mb-8">
+<a class="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl transition-all group" href="#">
+<span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">account_balance_wallet</span>
+<span class="font-medium">Saldo (Balance)</span>
+<span class="ml-auto text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-full">€ 24.50</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl transition-all group" href="#">
+<span class="material-symbols-outlined text-yellow-500 group-hover:scale-110 transition-transform">stars</span>
+<span class="font-medium">Punti (Points)</span>
+<span class="ml-auto text-xs text-gray-400">1,250 pt</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl transition-all group" href="#">
+<span class="material-symbols-outlined text-rose-500 group-hover:scale-110 transition-transform">local_offer</span>
+<span class="font-medium">Promo</span>
+<span class="ml-auto w-2 h-2 rounded-full bg-rose-500"></span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl transition-all group" href="#">
+<span class="material-symbols-outlined text-accent-teal group-hover:scale-110 transition-transform">emoji_events</span>
+<span class="font-medium">Sfide (Challenges)</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl transition-all group" href="#">
+<span class="material-symbols-outlined text-blue-500 group-hover:scale-110 transition-transform">groups</span>
+<span class="font-medium">Social</span>
+</a>
+</nav>
+<div class="border-t border-gray-200 dark:border-gray-700/50 mx-4 mb-6"></div>
+<div class="px-2 space-y-4">
+<p class="px-2 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Categories</p>
+<div class="bg-gray-50 dark:bg-slate-800/50 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700">
+<div class="bg-gradient-to-r from-primary/10 to-transparent p-4 flex items-center gap-3 border-b border-gray-100 dark:border-gray-700/50">
+<span class="material-symbols-outlined text-primary">fitness_center</span>
+<h3 class="font-bold text-gray-900 dark:text-white">V-FIT</h3>
+</div>
+<div class="p-3 grid grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-300">
+<div class="flex items-center gap-2 p-2 hover:bg-white dark:hover:bg-slate-700 rounded-lg cursor-pointer transition-colors">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span> Palestre
+                        </div>
+<div class="flex items-center gap-2 p-2 hover:bg-white dark:hover:bg-slate-700 rounded-lg cursor-pointer transition-colors">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span> Domicilio
+                        </div>
+<div class="flex items-center gap-2 p-2 hover:bg-white dark:hover:bg-slate-700 rounded-lg cursor-pointer transition-colors">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span> Outdoor
+                        </div>
+<div class="flex items-center gap-2 p-2 hover:bg-white dark:hover:bg-slate-700 rounded-lg cursor-pointer transition-colors">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span> Virtual
+                        </div>
+</div>
+</div>
+<div class="bg-gray-50 dark:bg-slate-800/50 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700">
+<div class="bg-gradient-to-r from-accent-teal/10 to-transparent p-4 flex items-center gap-3 border-b border-gray-100 dark:border-gray-700/50">
+<span class="material-symbols-outlined text-accent-teal">celebration</span>
+<h3 class="font-bold text-gray-900 dark:text-white">V-FUN</h3>
+</div>
+<div class="p-3 grid grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-300">
+<div class="flex items-center gap-2 p-2 hover:bg-white dark:hover:bg-slate-700 rounded-lg cursor-pointer transition-colors">
+<span class="w-1.5 h-1.5 rounded-full bg-accent-teal"></span> Animazione
+                        </div>
+<div class="flex items-center gap-2 p-2 hover:bg-white dark:hover:bg-slate-700 rounded-lg cursor-pointer transition-colors">
+<span class="w-1.5 h-1.5 rounded-full bg-accent-teal"></span> Party
+                        </div>
+<div class="flex items-center gap-2 p-2 hover:bg-white dark:hover:bg-slate-700 rounded-lg cursor-pointer transition-colors">
+<span class="w-1.5 h-1.5 rounded-full bg-accent-teal"></span> Eventi
+                        </div>
+<div class="flex items-center gap-2 p-2 hover:bg-white dark:hover:bg-slate-700 rounded-lg cursor-pointer transition-colors">
+<span class="w-1.5 h-1.5 rounded-full bg-accent-teal"></span> Intratten.
+                        </div>
+</div>
+</div>
+<div class="bg-gray-50 dark:bg-slate-800/50 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700">
+<div class="bg-gradient-to-r from-accent-blue/10 to-transparent p-4 flex items-center gap-3 border-b border-gray-100 dark:border-gray-700/50">
+<span class="material-symbols-outlined text-accent-blue">spa</span>
+<h3 class="font-bold text-gray-900 dark:text-white">V-LIFE</h3>
+</div>
+<div class="p-3 grid grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-300">
+<div class="flex items-center gap-2 p-2 hover:bg-white dark:hover:bg-slate-700 rounded-lg cursor-pointer transition-colors">
+<span class="w-1.5 h-1.5 rounded-full bg-accent-blue"></span> Wellness
+                        </div>
+<div class="flex items-center gap-2 p-2 hover:bg-white dark:hover:bg-slate-700 rounded-lg cursor-pointer transition-colors">
+<span class="w-1.5 h-1.5 rounded-full bg-accent-blue"></span> Estetista
+                        </div>
+<div class="flex items-center gap-2 p-2 hover:bg-white dark:hover:bg-slate-700 rounded-lg cursor-pointer transition-colors">
+<span class="w-1.5 h-1.5 rounded-full bg-accent-blue"></span> Parrucch.
+                        </div>
+<div class="flex items-center gap-2 p-2 hover:bg-white dark:hover:bg-slate-700 rounded-lg cursor-pointer transition-colors">
+<span class="w-1.5 h-1.5 rounded-full bg-accent-blue"></span> Riabilit.
+                        </div>
+</div>
+</div>
+</div>
+<div class="mt-8 mb-4">
+<a class="flex items-center gap-3 px-4 py-3 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">info</span>
+<span class="font-medium">Chi Siamo (About Us)</span>
+</a>
+</div>
+</div>
+<div class="p-6 border-t border-gray-200 dark:border-gray-700/50 bg-gray-50/50 dark:bg-slate-900/50 backdrop-blur-sm">
+<button class="w-full flex items-center justify-center gap-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 py-3 rounded-xl font-medium transition-colors">
+<span class="material-icons text-sm">logout</span>
+                Logout
+            </button>
+<div class="flex justify-center mt-4 space-x-4 opacity-50">
+<i class="text-gray-500 dark:text-gray-400 hover:text-primary transition-colors cursor-pointer material-icons" style="font-size: 1.2rem;">facebook</i>
+<i class="text-gray-500 dark:text-gray-400 hover:text-primary transition-colors cursor-pointer material-icons" style="font-size: 1.2rem;">photo_camera</i> 
+<i class="text-gray-500 dark:text-gray-400 hover:text-primary transition-colors cursor-pointer material-icons" style="font-size: 1.2rem;">smart_display</i> 
+</div>
+</div>
+</div>
+<div class="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-40"></div>
+
+</body></html>

@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>VLife Wellness - Vfitfunlife</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=Playfair+Display:ital,wght@0,600;1,600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#8b5cf6", // Purple accent from screenshot
+                        "primary-dark": "#7c3aed",
+                        "background-light": "#f8fafc",
+                        "background-dark": "#0f172a",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1e293b",
+                        "text-light": "#1e293b",
+                        "text-dark": "#f8fafc",
+                        "secondary-text-light": "#64748b",
+                        "secondary-text-dark": "#94a3b8",
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Playfair Display', 'serif'],
+                    },
+                    borderRadius: {
+                        DEFAULT: "1rem",
+                    },
+                    boxShadow: {
+                        'glow': '0 0 20px -5px rgba(139, 92, 246, 0.5)',
+                    }
+                },
+            },
+        };
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark font-sans transition-colors duration-200 min-h-screen flex justify-center selection:bg-primary selection:text-white">
+<div class="w-full max-w-md bg-background-light dark:bg-background-dark flex flex-col min-h-screen relative shadow-2xl overflow-hidden">
+<header class="sticky top-0 z-50 bg-surface-light/80 dark:bg-surface-dark/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 px-4 py-3 flex justify-between items-center">
+<button class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+<span class="material-icons-round text-2xl">menu</span>
+</button>
+<h1 class="text-2xl font-display font-semibold text-primary italic">VLife</h1>
+<div class="flex items-center gap-2">
+<button class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+<span class="material-icons-round text-2xl">account_circle</span>
+</button>
+</div>
+</header>
+<main class="flex-1 overflow-y-auto px-4 pb-24 pt-4 space-y-6">
+<section class="grid grid-cols-2 gap-3">
+<div class="col-span-2 bg-surface-light dark:bg-surface-dark p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+<div class="flex justify-between items-start mb-2">
+<h2 class="text-lg font-semibold tracking-tight">Wellness</h2>
+<span class="material-icons-round text-primary bg-primary/10 p-1.5 rounded-lg text-sm">spa</span>
+</div>
+<ul class="text-sm text-secondary-text-light dark:text-secondary-text-dark space-y-1.5">
+<li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary"></span>Osteopata</li>
+<li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary"></span>Fisioterapia</li>
+<li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary"></span>Massaggio Sportivo</li>
+<li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary"></span>Mental Coach</li>
+</ul>
+</div>
+<button class="bg-surface-light dark:bg-surface-dark p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center gap-2 text-center hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
+<div class="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform">
+<span class="material-icons-round">location_on</span>
+</div>
+<span class="font-medium text-sm">Sedi</span>
+</button>
+<button class="bg-surface-light dark:bg-surface-dark p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center gap-2 text-center hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
+<div class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
+<span class="material-icons-round">home_work</span>
+</div>
+<span class="font-medium text-sm">A Domicilio</span>
+</button>
+</section>
+<div class="relative w-full h-32 rounded-2xl overflow-hidden shadow-md group cursor-pointer">
+<img alt="Professional massage therapy" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC3mvmPsZHa8ZZyh3FBWz9FHPseoY2qHWFKp-LxCOrZ4PzFKSjIGsDO0O1dYaZa9JYNsrgpwkGvK2FI59F13yP3Jnvs5Q_7BQD-N8fppBd_IVIVejGWysn91dDL_oVifWMyqxCXr3iDtHkoC_QE2Fj8iM0WOBBXjtnymJdKq2LTpiy5ffp7do0_iaHpC3g-nN0FOS8g-dDl9FNSP4RdCYod1dkSEJjFNHjm2igyl9yLg_b2WRrNj6E9ECSkbtI8uvP6_iCAURvxf_at"/>
+<div class="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent flex flex-col justify-center px-5">
+<span class="text-xs font-bold text-primary uppercase tracking-wider mb-1">New Service</span>
+<h3 class="text-white font-display text-xl">Figura di Massaggio</h3>
+<p class="text-gray-200 text-xs mt-1">Book your session today</p>
+</div>
+</div>
+<section class="relative py-4">
+<div class="relative flex items-center justify-center mb-6">
+<div class="absolute inset-0 flex items-center">
+<div class="w-full border-t border-gray-200 dark:border-gray-700"></div>
+</div>
+<h2 class="relative bg-background-light dark:bg-background-dark px-4 text-2xl font-display italic text-primary">Estetica</h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-1 shadow-lg border-2 border-primary/20 relative overflow-hidden">
+<div class="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-primary rounded-tl-lg m-2"></div>
+<div class="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-primary rounded-tr-lg m-2"></div>
+<div class="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-primary rounded-bl-lg m-2"></div>
+<div class="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-primary rounded-br-lg m-2"></div>
+<div class="p-5 text-center space-y-4">
+<h3 class="font-bold text-lg uppercase tracking-wide border-b pb-2 border-gray-100 dark:border-gray-700 inline-block px-4">Menu Servizi</h3>
+<ul class="space-y-3 text-sm font-medium">
+<li class="flex justify-between items-center group cursor-pointer">
+<span class="group-hover:text-primary transition-colors">Estetista</span>
+<span class="material-icons-round text-xs text-gray-400">chevron_right</span>
+</li>
+<li class="flex justify-between items-center group cursor-pointer">
+<span class="group-hover:text-primary transition-colors">Parrucchiere Donna</span>
+<span class="material-icons-round text-xs text-gray-400">chevron_right</span>
+</li>
+<li class="flex justify-between items-center group cursor-pointer">
+<span class="group-hover:text-primary transition-colors">Promozioni Prodotti</span>
+<span class="material-icons-round text-xs text-gray-400">chevron_right</span>
+</li>
+<li class="flex justify-between items-center group cursor-pointer">
+<span class="group-hover:text-primary transition-colors">Unghie</span>
+<span class="material-icons-round text-xs text-gray-400">chevron_right</span>
+</li>
+<li class="flex justify-between items-center group cursor-pointer">
+<span class="group-hover:text-primary transition-colors">Parrucchiere Uomo</span>
+<span class="material-icons-round text-xs text-gray-400">chevron_right</span>
+</li>
+</ul>
+</div>
+</div>
+<div class="space-y-4">
+<div class="bg-surface-light dark:bg-surface-dark p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+<h4 class="text-sm font-semibold mb-3 flex items-center gap-2">
+<span class="material-icons-round text-yellow-400 text-sm">star</span>
+                                Recensioni recenti
+                            </h4>
+<div class="space-y-3">
+<div class="bg-gray-50 dark:bg-gray-800/50 p-2.5 rounded-xl">
+<div class="flex items-center gap-1 text-yellow-400 mb-1">
+<span class="material-icons-round text-[10px]">star</span>
+<span class="material-icons-round text-[10px]">star</span>
+<span class="material-icons-round text-[10px]">star</span>
+<span class="material-icons-round text-[10px]">star</span>
+<span class="material-icons-round text-[10px]">star</span>
+</div>
+<p class="text-xs text-secondary-text-light dark:text-secondary-text-dark italic">"Servizio impeccabile e professionale!"</p>
+</div>
+<div class="bg-gray-50 dark:bg-gray-800/50 p-2.5 rounded-xl">
+<div class="flex items-center gap-1 text-yellow-400 mb-1">
+<span class="material-icons-round text-[10px]">star</span>
+<span class="material-icons-round text-[10px]">star</span>
+<span class="material-icons-round text-[10px]">star</span>
+<span class="material-icons-round text-[10px]">star</span>
+<span class="material-icons-round text-[10px] text-gray-300">star</span>
+</div>
+<p class="text-xs text-secondary-text-light dark:text-secondary-text-dark italic">"Unghie perfette, tornerò sicuramente."</p>
+</div>
+</div>
+</div>
+<div class="flex gap-3 h-24">
+<div class="flex-1 relative bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl p-3 flex flex-col items-center justify-center text-white shadow-lg transform rotate-1 hover:rotate-0 transition-transform cursor-pointer">
+<div class="absolute -top-2 -right-2 bg-white text-orange-600 rounded-full p-1 shadow-sm">
+<span class="material-icons-round text-sm">local_offer</span>
+</div>
+<span class="font-bold text-lg leading-none">VIP</span>
+<span class="text-[10px] font-medium uppercase mt-1">Sconto Esclusivo</span>
+</div>
+<div class="flex-[2] rounded-2xl overflow-hidden relative shadow-sm">
+<img alt="Nail art example" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDys1dPaZnC5tA2i7rN2_t_oo8-q6L2aiNRhdxS1yUwdHcyAjCTvPG2eneY7shi3SoIKsUK8gW_6RhxzMBaLgvE3Qcpgc2tqwfpg3AeG83obuPT3HkYEabGz-72cU7GIux2fX3AcBWJTkqfXo-n2svzzrItszXjSeFgcQiFn54GdY--z73ZMy0Gs1rK2beooFuf__MlSKg_cqfXM_82ex3JNEDcc6HN4rjkdaL_i8Y4yOVj_JJ2v2OaFjtFecBhP7wLJt5qbdNNwu28"/>
+<div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
+<p class="text-white text-[10px] font-medium">Nail Art Gallery</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<button class="w-full bg-primary hover:bg-primary-dark text-white font-semibold py-4 px-6 rounded-2xl shadow-glow transform transition-all active:scale-95 flex items-center justify-center gap-2 group mb-6">
+<span>Contatta Ora per un Preventivo</span>
+<span class="material-icons-round group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</button>
+<section class="grid grid-cols-2 gap-4 pb-4">
+<div class="bg-surface-light dark:bg-surface-dark p-3 rounded-2xl border border-gray-100 dark:border-gray-700 flex flex-col items-center text-center gap-2">
+<img alt="Rehab zone" class="w-full h-24 object-cover rounded-xl mb-1" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBe9etkMDRrRCxep2GGOnFXdm4kqvnmetY_1ZTt5X7wR05BwTlPyO4_AGdZz4D4UPOl5Z5rqQrPtYv93UGxdITBw2wFO6YMwM1trsr2pnYRB8mxnQLM4byquPisp5EH-RBJqMhfllyig60XICXCbS-sHh5Lke1mnuBluuNTrGI7Q0EJlMK84E8-yaA7sxNwmeuMvSPkvvcOEuBK5LHw936fttw9P6rFnzR_Za4T8mQjMxnPC5n3_s4ehWmt6eK_LAj2J1eg3ARk5-h4"/>
+<span class="text-xs font-semibold">Foto Riabilitazione</span>
+</div>
+<div class="bg-surface-light dark:bg-surface-dark p-3 rounded-2xl border border-gray-100 dark:border-gray-700 flex flex-col items-center text-center gap-2">
+<img alt="Room view" class="w-full h-24 object-cover rounded-xl mb-1" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCOqqJUN7t30UbPTfM4t6iWYk41zoVTB_lG_2axtsk0CaZsNNcF13628IXTJmhDwcgrPfuwCoylq7M3M2UzhN89z8ptr6g6l0fcWuWa4kLV7nrptzgQLedRIyxJNC23qLnzO40ANnf67RSBiv7HqSq33BE3R3f-CfC2FJLeGDJLVIWL2DCR033BtQf8sIMeQytQQMl5vDDhcx6JyfEB5ZVnZpgnv-hXTxlJkMqkBzYMsHi2x88oKJGehNytW05tfc6nWN62AVuRgYkY"/>
+<span class="text-xs font-semibold">Foto Camera Iperbarica</span>
+</div>
+</section>
+</main>
+<nav class="absolute bottom-0 left-0 right-0 bg-surface-light/95 dark:bg-surface-dark/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 pb-5 pt-3 px-6 z-50">
+<ul class="flex justify-between items-center">
+<li>
+<a class="flex flex-col items-center gap-1 text-secondary-text-light dark:text-secondary-text-dark hover:text-primary transition-colors" href="#">
+<span class="material-icons-round text-2xl">fitness_center</span>
+<span class="text-[10px] font-medium">VFit</span>
+</a>
+</li>
+<li>
+<a class="flex flex-col items-center gap-1 text-secondary-text-light dark:text-secondary-text-dark hover:text-primary transition-colors" href="#">
+<span class="material-icons-round text-2xl">celebration</span>
+<span class="text-[10px] font-medium">VFun</span>
+</a>
+</li>
+<li class="relative">
+<div class="absolute -top-10 left-1/2 -translate-x-1/2 w-14 h-14 bg-primary rounded-full shadow-lg shadow-primary/40 flex items-center justify-center border-4 border-background-light dark:border-background-dark">
+<span class="material-icons-round text-white text-2xl">spa</span>
+</div>
+<a class="flex flex-col items-center gap-1 text-primary pt-6" href="#">
+<span class="text-[10px] font-bold">VLife</span>
+</a>
+</li>
+<li>
+<a class="flex flex-col items-center gap-1 text-secondary-text-light dark:text-secondary-text-dark hover:text-primary transition-colors" href="#">
+<span class="material-icons-round text-2xl">event</span>
+<span class="text-[10px] font-medium">Eventi</span>
+</a>
+</li>
+<li>
+<a class="flex flex-col items-center gap-1 text-secondary-text-light dark:text-secondary-text-dark hover:text-primary transition-colors" href="#">
+<span class="material-icons-round text-2xl">settings</span>
+<span class="text-[10px] font-medium">Profilo</span>
+</a>
+</li>
+</ul>
+</nav>
+</div>
+<button class="fixed bottom-4 right-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 p-3 rounded-full shadow-lg z-[100] hover:scale-110 transition-transform" onclick="document.documentElement.classList.toggle('dark')">
+<span class="material-icons-round dark:hidden">dark_mode</span>
+<span class="material-icons-round hidden dark:block">light_mode</span>
+</button>
+
+</body></html>

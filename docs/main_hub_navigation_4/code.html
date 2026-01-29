@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Vfitfunlife - Personalized Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#a855f7",
+                        "background-light": "#f8fafc",
+                        "background-dark": "#0f172a",
+                        "fit-green": "#10b981",
+                        "fun-orange": "#f97316",
+                        "life-purple": "#8b5cf6",
+                    },
+                    fontFamily: {
+                        display: ["Inter", "sans-serif"],
+                        body: ["Inter", "sans-serif"],
+                    },
+                },
+            },
+        };
+    </script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style type="text/tailwindcss">
+        @layer base {
+            body {
+                font-family: 'Inter', sans-serif;
+                -webkit-tap-highlight-color: transparent;
+            }
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .custom-blur {
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-100 flex flex-col h-screen overflow-hidden selection:bg-primary selection:text-white">
+<header class="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-slate-900/80 custom-blur border-b border-slate-200 dark:border-slate-800 px-5 pt-10 pb-4">
+<div class="flex justify-between items-center">
+<div class="flex items-center space-x-3">
+<button class="p-2 -ml-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-2xl">menu</span>
+</button>
+<div class="font-black text-xl tracking-tighter flex items-center">
+<span class="bg-clip-text text-transparent bg-gradient-to-r from-fit-green via-fun-orange to-life-purple">V</span>
+<span class="text-slate-900 dark:text-white font-bold ml-0.5">fitfunlife</span>
+</div>
+</div>
+<div class="flex items-center space-x-1">
+<button class="p-2 text-slate-500 dark:text-slate-400">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="h-8 w-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center overflow-hidden border-2 border-primary/20">
+<span class="material-symbols-outlined text-xl text-slate-500">person</span>
+</div>
+</div>
+</div>
+</header>
+<main class="flex-1 overflow-y-auto pt-28 pb-32 px-5 space-y-6">
+<section class="mb-2">
+<p class="text-sm font-medium text-slate-500 dark:text-slate-400">Good morning, Marco</p>
+<h1 class="text-2xl font-bold text-slate-900 dark:text-white">Your Smart Hub</h1>
+</section>
+<div class="relative group cursor-pointer overflow-hidden rounded-3xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm transition-all active:scale-[0.98]">
+<div class="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-50"></div>
+<img alt="Fitness" class="absolute right-0 top-0 h-full w-1/2 object-cover opacity-20 dark:opacity-40 grayscale" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDPMHDde0mfvWaEOW45i3zfmIEUY0p88kP-Mqt8oVAdWMDokAcnx2dMItOHHWZR_06o4AhhqHXDB0tjnnEiKaKqgHPVNs_mqR5X9lh5gbRAofLt2jQoE5MgMdo5ZaoH6avfx-sht4IFpxQAOLmAPb8D6FmIEfM8hW6FSuTZH4xoX95T4AnLrkeTtExbSUBSplfYszKi4KGmH2tD0e3Erjorm0aQZTYp4Tqn-hNOXwOYvNrwi9HjjlCemdp6f0RQFDVOppzzAqZ2mUOj"/>
+<div class="relative p-6 flex flex-col h-full">
+<div class="flex justify-between items-start mb-6">
+<div>
+<span class="inline-block px-3 py-1 rounded-full bg-fit-green/10 text-fit-green text-[10px] font-bold uppercase tracking-widest mb-1">Training</span>
+<h2 class="text-3xl font-black italic tracking-tighter text-slate-900 dark:text-white">FIT</h2>
+</div>
+<div class="bg-fit-green text-white p-2 rounded-xl shadow-lg shadow-fit-green/20">
+<span class="material-symbols-outlined">fitness_center</span>
+</div>
+</div>
+<div class="mt-auto space-y-3">
+<div class="bg-white/60 dark:bg-slate-900/40 custom-blur p-3 rounded-2xl border border-white/40 dark:border-slate-700/50">
+<p class="text-[10px] font-bold text-fit-green uppercase tracking-wide">Next Workout</p>
+<p class="text-sm font-semibold text-slate-800 dark:text-slate-200">HIIT Session • 4:30 PM</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">VFit Downtown Club</p>
+</div>
+<div class="flex items-center text-xs font-semibold text-slate-400 dark:text-slate-500 px-1">
+<span>Palestre</span>
+<span class="mx-2 opacity-30">•</span>
+<span>Outdoor</span>
+<span class="mx-2 opacity-30">•</span>
+<span>Virtual</span>
+<span class="material-symbols-outlined text-sm ml-auto">chevron_right</span>
+</div>
+</div>
+</div>
+</div>
+<div class="relative group cursor-pointer overflow-hidden rounded-3xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm transition-all active:scale-[0.98]">
+<div class="absolute inset-0 bg-gradient-to-br from-orange-500/10 to-transparent opacity-50"></div>
+<img alt="Fun" class="absolute right-0 top-0 h-full w-1/2 object-cover opacity-20 dark:opacity-40 grayscale" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBi0cTp5oSuphFwfUEMXhI6QAv1fiA2vOVLHoPo0Aceh-56CffL2KueNnaaHuAP545ofsEwxg1L70Qkw5HRQXAE0GWWNcNsEmKp3bsEBpawik9syN2yvKRusABAy2HTW7H6SjO16TRZUzhBGKlHay8k67D-PvHjLuIrlurFwTq7NGrLrMdTExbdvaaaY-Eo10nS3RRZmfkMpLbLWBGx4hLp3RszjSfM8ZzSTjTttJQ-vov8SKZ4JBDAhUFr7FpEaYIW1aMHFtn3gS3d"/>
+<div class="relative p-6 flex flex-col h-full">
+<div class="flex justify-between items-start mb-6">
+<div>
+<span class="inline-block px-3 py-1 rounded-full bg-fun-orange/10 text-fun-orange text-[10px] font-bold uppercase tracking-widest mb-1">Entertainment</span>
+<h2 class="text-3xl font-black italic tracking-tighter text-slate-900 dark:text-white">FUN</h2>
+</div>
+<div class="bg-fun-orange text-white p-2 rounded-xl shadow-lg shadow-fun-orange/20">
+<span class="material-symbols-outlined">celebration</span>
+</div>
+</div>
+<div class="mt-auto space-y-3">
+<div class="bg-white/60 dark:bg-slate-900/40 custom-blur p-3 rounded-2xl border border-white/40 dark:border-slate-700/50">
+<p class="text-[10px] font-bold text-fun-orange uppercase tracking-wide">Upcoming Event</p>
+<p class="text-sm font-semibold text-slate-800 dark:text-slate-200">Summer Pool Party</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">Friday, July 12 • 9 spots left</p>
+</div>
+<div class="flex items-center text-xs font-semibold text-slate-400 dark:text-slate-500 px-1">
+<span>Parties</span>
+<span class="mx-2 opacity-30">•</span>
+<span>Animation</span>
+<span class="mx-2 opacity-30">•</span>
+<span>Events</span>
+<span class="material-symbols-outlined text-sm ml-auto">chevron_right</span>
+</div>
+</div>
+</div>
+</div>
+<div class="relative group cursor-pointer overflow-hidden rounded-3xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm transition-all active:scale-[0.98]">
+<div class="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent opacity-50"></div>
+<img alt="Lifestyle" class="absolute right-0 top-0 h-full w-1/2 object-cover opacity-20 dark:opacity-40 grayscale" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCDNr9Gyf-mKK52AKstf3kJgJmsmAfzKkWkqcHbiAKyS87PBGl-1aSjKkmNSKlayHzsbXvscKRt_sIYomjo8AplyyxiPBYqZ27RQ-ySPNRxPDEUNbYYscKcb5gxc8UIWx77m41rPqfDhGE_GuYjxwwyozv4oFGTy-ZmaYnV20lWbNR2L6MP1ujuktPi3Q6rzlIhxq_w0Hbq6XutHu_e0w6UHqOsC060tmL13ztmv0kgOuylFrIc63RTespcmSXxgoZMEfu2hQOUZyiS"/>
+<div class="relative p-6 flex flex-col h-full">
+<div class="flex justify-between items-start mb-6">
+<div>
+<span class="inline-block px-3 py-1 rounded-full bg-life-purple/10 text-life-purple text-[10px] font-bold uppercase tracking-widest mb-1">Wellness</span>
+<h2 class="text-3xl font-black italic tracking-tighter text-slate-900 dark:text-white">LIFE</h2>
+</div>
+<div class="bg-life-purple text-white p-2 rounded-xl shadow-lg shadow-life-purple/20">
+<span class="material-symbols-outlined">spa</span>
+</div>
+</div>
+<div class="mt-auto space-y-3">
+<div class="bg-white/60 dark:bg-slate-900/40 custom-blur p-3 rounded-2xl border border-white/40 dark:border-slate-700/50">
+<p class="text-[10px] font-bold text-life-purple uppercase tracking-wide">Wellness Tip</p>
+<p class="text-sm font-semibold text-slate-800 dark:text-slate-200">"Prioritize 10min meditation"</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">Boost focus and recovery</p>
+</div>
+<div class="flex items-center text-xs font-semibold text-slate-400 dark:text-slate-500 px-1">
+<span>Wellness</span>
+<span class="mx-2 opacity-30">•</span>
+<span>Hair</span>
+<span class="mx-2 opacity-30">•</span>
+<span>Recovery</span>
+<span class="material-symbols-outlined text-sm ml-auto">chevron_right</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<nav class="fixed bottom-0 left-0 right-0 z-50 bg-white/90 dark:bg-slate-900/90 custom-blur border-t border-slate-200 dark:border-slate-800 pb-8 pt-2 px-8">
+<ul class="flex justify-between items-center max-w-md mx-auto relative">
+<li>
+<a class="flex flex-col items-center text-primary" href="#">
+<span class="material-symbols-outlined text-[28px]">dashboard</span>
+<span class="text-[10px] font-bold mt-1">Hub</span>
+</a>
+</li>
+<li>
+<a class="flex flex-col items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" href="#">
+<span class="material-symbols-outlined text-[26px]">explore</span>
+<span class="text-[10px] font-medium mt-1">Explore</span>
+</a>
+</li>
+<li class="-mt-12">
+<button class="bg-slate-900 dark:bg-white text-white dark:text-slate-900 w-16 h-16 rounded-3xl shadow-2xl shadow-slate-400 dark:shadow-black/50 flex items-center justify-center transform active:scale-90 transition-transform border-4 border-white dark:border-slate-900">
+<span class="material-symbols-outlined text-3xl font-bold">qr_code_scanner</span>
+</button>
+</li>
+<li>
+<a class="flex flex-col items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" href="#">
+<span class="material-symbols-outlined text-[26px]">forum</span>
+<span class="text-[10px] font-medium mt-1">Social</span>
+</a>
+</li>
+<li>
+<a class="flex flex-col items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" href="#">
+<span class="material-symbols-outlined text-[26px]">account_balance_wallet</span>
+<span class="text-[10px] font-medium mt-1">Wallet</span>
+</a>
+</li>
+</ul>
+</nav>
+<div class="fixed top-1/4 -right-20 w-64 h-64 bg-primary/5 rounded-full blur-[100px] pointer-events-none"></div>
+<div class="fixed bottom-1/4 -left-20 w-64 h-64 bg-fit-green/5 rounded-full blur-[100px] pointer-events-none"></div>
+
+</body></html>

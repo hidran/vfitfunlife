@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Professional Profile &amp; Booking</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#8B5CF6", // Violet from the screenshots (buttons/gradients)
+                        "background-light": "#F3F4F6", // Light gray
+                        "background-dark": "#0B0E14", // Very dark navy/black from screenshot
+                        "surface-dark": "#151B26", // Slightly lighter for cards in dark mode
+                        "surface-light": "#FFFFFF", // White for cards in light mode
+                    },
+                    fontFamily: {
+                        display: ["Inter", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "12px",
+                    },
+                },
+            },
+        };
+    </script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass-panel {
+            background: rgba(21, 27, 38, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .light .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        .gradient-text {
+            background: linear-gradient(to right, #60A5FA, #A78BFA);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-gray-800 dark:text-gray-200 transition-colors duration-200">
+<div class="max-w-md mx-auto min-h-screen relative flex flex-col pb-24">
+<header class="flex justify-between items-center p-4 sticky top-0 z-20 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md">
+<button class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors">
+<span class="material-symbols-outlined text-gray-800 dark:text-white">arrow_back</span>
+</button>
+<div class="text-xl font-bold tracking-tight">
+<span class="text-primary">V</span><span class="font-normal text-gray-600 dark:text-gray-400">Life</span>
+</div>
+<button class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors">
+<span class="material-symbols-outlined text-gray-800 dark:text-white">favorite</span>
+</button>
+</header>
+<main class="flex-1 px-4 pt-2 space-y-6">
+<div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col items-center relative overflow-hidden">
+<div class="absolute top-0 left-0 w-full h-24 bg-gradient-to-r from-primary/10 to-blue-500/10 z-0"></div>
+<div class="relative z-10 -mt-2">
+<div class="w-28 h-28 rounded-full p-1 bg-gradient-to-tr from-blue-400 to-primary">
+<img alt="Professional Portrait" class="w-full h-full object-cover rounded-full border-4 border-surface-light dark:border-surface-dark" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCiwRHa14S7ovQWno8bkhjgYRP08edSXcmd6Vhm0oWpLrLNb1hwrBCcUNt9Yu2tdqGEDp-w5BBeKCTN0y4B2CvR5cwIW9rWPAceWG5t4PF8gxPDjxP2D1pt-cqtm5mI4V512tHH2szJVM_0MTpCtmeDE-U_j2J2rW9Rog51xBWCEzM9a0dA4L6-4FzpG76tziYp5iHbACUIaWUiydBOYNZBrDcenxVahlOI8dyb0FUCp5EEZBPDds58W8C5Y_-h1Lru69FdTZBF3L7I"/>
+</div>
+<div class="absolute bottom-0 right-1 bg-green-500 w-4 h-4 rounded-full border-2 border-surface-light dark:border-surface-dark"></div>
+</div>
+<div class="text-center mt-3 z-10">
+<h1 class="text-2xl font-bold text-gray-900 dark:text-white">Dr. Sarah Vanni</h1>
+<p class="text-primary font-medium">Osteopath &amp; Wellness Coach</p>
+<div class="flex items-center justify-center mt-2 space-x-1 text-yellow-400 text-sm">
+<span class="material-symbols-outlined filled text-[18px]">star</span>
+<span class="material-symbols-outlined filled text-[18px]">star</span>
+<span class="material-symbols-outlined filled text-[18px]">star</span>
+<span class="material-symbols-outlined filled text-[18px]">star</span>
+<span class="material-symbols-outlined filled text-[18px]">star_half</span>
+<span class="text-gray-500 dark:text-gray-400 ml-1">(124 Reviews)</span>
+</div>
+</div>
+<div class="flex justify-center w-full mt-5 gap-3 z-10">
+<div class="flex flex-col items-center p-2 min-w-[70px]">
+<span class="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 p-2 rounded-full mb-1">
+<span class="material-symbols-outlined text-[20px]">location_on</span>
+</span>
+<span class="text-xs text-gray-500 dark:text-gray-400">Milano</span>
+</div>
+<div class="flex flex-col items-center p-2 min-w-[70px]">
+<span class="bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 p-2 rounded-full mb-1">
+<span class="material-symbols-outlined text-[20px]">translate</span>
+</span>
+<span class="text-xs text-gray-500 dark:text-gray-400">EN/IT</span>
+</div>
+<div class="flex flex-col items-center p-2 min-w-[70px]">
+<span class="bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 p-2 rounded-full mb-1">
+<span class="material-symbols-outlined text-[20px]">verified</span>
+</span>
+<span class="text-xs text-gray-500 dark:text-gray-400">Verified</span>
+</div>
+</div>
+</div>
+<div class="flex space-x-4 border-b border-gray-200 dark:border-gray-700">
+<button class="pb-2 border-b-2 border-primary text-primary font-semibold text-sm flex-1">Profile</button>
+<button class="pb-2 border-b-2 border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 font-medium text-sm flex-1 transition-colors">Services</button>
+<button class="pb-2 border-b-2 border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 font-medium text-sm flex-1 transition-colors">Gallery</button>
+</div>
+<section class="space-y-3">
+<h3 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">info</span>
+                    About
+                </h3>
+<p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                    Specialized in postural rehabilitation and sports massage. I help clients achieve better mobility and reduce chronic pain through personalized treatment plans.
+                </p>
+</section>
+<section class="space-y-3">
+<h3 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">assignment</span>
+                    Technical Profile
+                </h3>
+<div class="bg-surface-light dark:bg-surface-dark rounded-xl border border-gray-100 dark:border-gray-800 p-4 grid grid-cols-2 gap-4">
+<div class="space-y-1">
+<p class="text-xs text-gray-500 uppercase tracking-wider">Experience</p>
+<p class="font-medium text-gray-800 dark:text-gray-200">8+ Years</p>
+</div>
+<div class="space-y-1">
+<p class="text-xs text-gray-500 uppercase tracking-wider">Certifications</p>
+<p class="font-medium text-gray-800 dark:text-gray-200">Physio L2, OST</p>
+</div>
+<div class="space-y-1">
+<p class="text-xs text-gray-500 uppercase tracking-wider">Specialty</p>
+<p class="font-medium text-gray-800 dark:text-gray-200">Back Pain</p>
+</div>
+<div class="space-y-1">
+<p class="text-xs text-gray-500 uppercase tracking-wider">Availability</p>
+<p class="font-medium text-green-500">Mon - Sat</p>
+</div>
+</div>
+</section>
+<section class="space-y-3 pb-4">
+<div class="flex justify-between items-end">
+<h3 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">reviews</span>
+                        Recent Reviews
+                    </h3>
+<a class="text-xs text-primary hover:underline" href="#">View all</a>
+</div>
+<div class="flex gap-4 overflow-x-auto pb-2 snap-x">
+<div class="min-w-[260px] bg-surface-light dark:bg-surface-dark p-4 rounded-xl border border-gray-100 dark:border-gray-800 snap-center">
+<div class="flex items-center gap-2 mb-2">
+<img alt="User" class="w-8 h-8 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCkhfPlZsRtZ5EbugNBrdEZTNyBhlEcxzZDg0Vc2PZcDvUpId9AMY7Lxts-RMbn8xWCRp5fytbfYOV0iJYESaJxgeztLTF6zMsyCBa9roFs3rZlXstsK_JJHn9aWHQfLmTjZ9WU_tB-PI0Rdoth3HF_R3Z67DK_ZBSlvXSzi5la9_3TuCz74Y0oLyvnKm4HWUSVhk2vi74Nk97bWqOk4pmy8sCS5kKLf-QQhVfWuI1_Bji9uAHKPQD2hY-hCCVNUJQjmx9tmOP_qVRd"/>
+<div>
+<p class="text-sm font-medium text-gray-800 dark:text-white">Marco R.</p>
+<div class="flex text-yellow-400 text-[10px]">
+<span class="material-symbols-outlined filled text-[12px]">star</span>
+<span class="material-symbols-outlined filled text-[12px]">star</span>
+<span class="material-symbols-outlined filled text-[12px]">star</span>
+<span class="material-symbols-outlined filled text-[12px]">star</span>
+<span class="material-symbols-outlined filled text-[12px]">star</span>
+</div>
+</div>
+</div>
+<p class="text-xs text-gray-600 dark:text-gray-400 italic">"Incredible session. My back pain is gone after just two visits."</p>
+</div>
+<div class="min-w-[260px] bg-surface-light dark:bg-surface-dark p-4 rounded-xl border border-gray-100 dark:border-gray-800 snap-center">
+<div class="flex items-center gap-2 mb-2">
+<img alt="User" class="w-8 h-8 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCgIdPPOto2X1T_ONr2irED4dbuevIxIvXG38alXwZw_56g_xkcKhB1xYJmgCH5zYBXS3MBvedqcDedF-0pGuv0DUBTnVHAwkT87V7YW7wd6AwXphU-hFJ8afoMbVwA9dw2-JKMwFM8lXUOelZ3CS85uW095lGRfEuxwkaKLx1zcZdOVzf9YMuE2HghVKeRaqf9M6gmjliu6EPmoXhfQEfAtJ3mITMmulfmejJZaH8Dh6yRqdfbETyAiVvAKs5_0BZr_QZYRjUC0ACT"/>
+<div>
+<p class="text-sm font-medium text-gray-800 dark:text-white">Giulia B.</p>
+<div class="flex text-yellow-400 text-[10px]">
+<span class="material-symbols-outlined filled text-[12px]">star</span>
+<span class="material-symbols-outlined filled text-[12px]">star</span>
+<span class="material-symbols-outlined filled text-[12px]">star</span>
+<span class="material-symbols-outlined filled text-[12px]">star</span>
+<span class="material-symbols-outlined filled text-[12px]">star</span>
+</div>
+</div>
+</div>
+<p class="text-xs text-gray-600 dark:text-gray-400 italic">"Professional and punctual. The virtual consultation was very helpful."</p>
+</div>
+</div>
+</section>
+</main>
+<div class="fixed bottom-0 left-0 right-0 p-4 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800 z-50">
+<div class="max-w-md mx-auto flex items-center gap-4">
+<div class="flex flex-col">
+<span class="text-xs text-gray-500 dark:text-gray-400">Starting from</span>
+<div class="flex items-baseline gap-1">
+<span class="text-xl font-bold text-gray-900 dark:text-white">€45</span>
+<span class="text-xs text-gray-500">/session</span>
+</div>
+</div>
+<button class="flex-1 bg-primary hover:bg-violet-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-violet-500/30 transition-all active:scale-95 flex items-center justify-center gap-2">
+<span>BOOK NOW</span>
+<span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+
+</body></html>

@@ -1,0 +1,183 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in ['admin', 'superadmin'];
+    }
+
+    function isVenueStaff(venueId) {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/venueStaff/$(request.auth.uid)).data.venueId == venueId;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+
+      // User subcollections
+      match /addresses/{addressId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /notifications/{notificationId} {
+        allow read: if isOwner(userId);
+        allow update: if isOwner(userId); // Mark as read
+        allow create, delete: if false; // Only Cloud Functions can create/delete
+      }
+
+      match /pointsTransactions/{transactionId} {
+        allow read: if isOwner(userId);
+        allow write: if false; // Only Cloud Functions
+      }
+
+      match /userChallenges/{challengeId} {
+        allow read: if isOwner(userId);
+        allow write: if false; // Only Cloud Functions
+      }
+    }
+
+    // Venues collection (public read)
+    match /venues/{venueId} {
+      allow read: if true;
+      allow write: if isAdmin() || isVenueStaff(venueId);
+
+      match /services/{serviceId} {
+        allow read: if true;
+        allow write: if isAdmin() || isVenueStaff(venueId);
+      }
+
+      match /reviews/{reviewId} {
+        allow read: if true;
+        allow create: if isAuthenticated() &&
+          request.resource.data.userId == request.auth.uid;
+        allow update, delete: if isAuthenticated() &&
+          resource.data.userId == request.auth.uid;
+      }
+    }
+
+    // Instructors collection (public read)
+    match /instructors/{instructorId} {
+      allow read: if true;
+      allow write: if isAdmin() ||
+        (isAuthenticated() && resource.data.userId == request.auth.uid);
+
+      match /reviews/{reviewId} {
+        allow read: if true;
+        allow create: if isAuthenticated() &&
+          request.resource.data.userId == request.auth.uid;
+        allow update, delete: if isAuthenticated() &&
+          resource.data.userId == request.auth.uid;
+      }
+
+      match /availability/{dateId} {
+        allow read: if true;
+        allow write: if isAdmin() ||
+          (isAuthenticated() && get(/databases/$(database)/documents/instructors/$(instructorId)).data.userId == request.auth.uid);
+      }
+    }
+
+    // Fitness Classes (public read)
+    match /fitnessClasses/{classId} {
+      allow read: if true;
+      allow write: if isAdmin() || isVenueStaff(resource.data.venueId);
+
+      match /schedules/{scheduleId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+    }
+
+    // Bookings (user can read/create their own)
+    match /bookings/{bookingId} {
+      allow read: if isAuthenticated() &&
+        (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() &&
+        (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // Class Bookings
+    match /classBookings/{bookingId} {
+      allow read: if isAuthenticated() &&
+        (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() &&
+        (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // Events (public read)
+    match /events/{eventId} {
+      allow read: if true;
+      allow write: if isAdmin();
+
+      match /registrations/{registrationId} {
+        allow read: if isAuthenticated() &&
+          (resource.data.userId == request.auth.uid || isAdmin());
+        allow create: if isAuthenticated() &&
+          request.resource.data.userId == request.auth.uid;
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    // Service Categories (public read)
+    match /serviceCategories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // VIP Plans (public read)
+    match /vipPlans/{planId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Challenges (public read)
+    match /challenges/{challengeId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Promotions (public read active ones)
+    match /promotions/{promotionId} {
+      allow read: if resource.data.isActive == true || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Streaming Schedule (public read)
+    match /streamingSchedule/{scheduleId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Admin users (admin only)
+    match /admins/{adminId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Venue Staff (admin only)
+    match /venueStaff/{staffId} {
+      allow read: if isAuthenticated() &&
+        (request.auth.uid == staffId || isAdmin());
+      allow write: if isAdmin();
+    }
+  }
+}

@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>My Bookings List</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Config -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec5b",
+                        "secondary-orange": "#f97316",
+                        "secondary-purple": "#a855f7",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102216",
+                        "surface-dark": "#1a2e22",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "1rem", "lg": "1.5rem", "xl": "2rem", "2xl": "2.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar hiding */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .glass-nav {
+            background: rgba(16, 34, 22, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display antialiased selection:bg-primary selection:text-background-dark">
+<div class="relative min-h-screen w-full flex flex-col overflow-hidden pb-24">
+<!-- Ambient Background Gradients for Glassmorphism Context -->
+<div class="fixed top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
+<div class="absolute top-[-10%] right-[-20%] w-[500px] h-[500px] bg-primary/10 rounded-full blur-[100px]"></div>
+<div class="absolute bottom-[20%] left-[-20%] w-[400px] h-[400px] bg-secondary-purple/10 rounded-full blur-[100px]"></div>
+</div>
+<!-- Top App Bar -->
+<div class="sticky top-0 z-30 flex items-center p-4 pb-2 justify-between bg-background-dark/80 backdrop-blur-md">
+<h2 class="text-white text-2xl font-bold leading-tight tracking-[-0.015em] flex-1">My Bookings</h2>
+<div class="flex items-center justify-end gap-3">
+<button class="flex items-center justify-center rounded-full h-10 w-10 bg-white/5 hover:bg-white/10 transition-colors text-white relative">
+<span class="material-symbols-outlined text-[24px]">notifications</span>
+<span class="absolute top-2 right-2.5 w-2 h-2 bg-primary rounded-full border border-background-dark"></span>
+</button>
+<div class="h-10 w-10 rounded-full bg-cover bg-center border-2 border-primary/20" data-alt="User profile picture showing a smiling woman" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAZbrrn3pdCBS5H_FprRee518eLdbKW227acVxGUAlRgSIlMmxkXYB9KUlk93lTKcvpSje2MM0rfcFMyAnzXV9j7L928k87mRBcoFySVj-sdnkTwuGrg1sloAjSYuWg2Iuy9r5Y8hBZcyPiGFyyLZh1UGAJZAKxgXqs-rKHEUgPmMEk1yzSNM2poYK6ary5AWfdxJk8UIF7gqfTj6c_03DZ8Xnd4M3Quk4qZi773AxMDXXUTa2QxTD33eiegwOstoXA9F_aoq3IwApK');"></div>
+</div>
+</div>
+<!-- Segmented Control Tabs -->
+<div class="px-4 py-4 z-10">
+<div class="flex h-12 w-full items-center justify-center rounded-full bg-surface-dark p-1 relative">
+<!-- Upcoming Tab (Active) -->
+<label class="flex cursor-pointer h-full flex-1 items-center justify-center rounded-full relative z-10 transition-all">
+<input checked="" class="peer sr-only" name="booking-tabs" type="radio"/>
+<div class="absolute inset-0 bg-primary rounded-full opacity-0 peer-checked:opacity-100 transition-opacity shadow-lg shadow-primary/20"></div>
+<span class="relative text-white/60 peer-checked:text-background-dark font-bold text-sm transition-colors z-20">Upcoming</span>
+</label>
+<!-- History Tab -->
+<label class="flex cursor-pointer h-full flex-1 items-center justify-center rounded-full relative z-10 transition-all">
+<input class="peer sr-only" name="booking-tabs" type="radio"/>
+<div class="absolute inset-0 bg-primary rounded-full opacity-0 peer-checked:opacity-100 transition-opacity shadow-lg shadow-primary/20"></div>
+<span class="relative text-white/60 peer-checked:text-background-dark font-bold text-sm transition-colors z-20">History</span>
+</label>
+</div>
+</div>
+<!-- Bookings List -->
+<div class="flex flex-col gap-5 px-4 z-10">
+<!-- VFit Card (Green Theme) -->
+<div class="group relative overflow-hidden rounded-2xl glass-panel hover:bg-white/5 transition-all duration-300">
+<!-- Category Accent Line -->
+<div class="absolute left-0 top-0 bottom-0 w-1.5 bg-primary"></div>
+<div class="flex p-4 gap-4">
+<!-- Text Content -->
+<div class="flex flex-1 flex-col justify-between">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-primary text-[18px]">fitness_center</span>
+<p class="text-primary text-xs font-bold uppercase tracking-wider">VFit</p>
+</div>
+<h3 class="text-white text-lg font-bold leading-tight mb-2">Crossfit Masterclass</h3>
+<div class="flex flex-col gap-1.5">
+<div class="flex items-center gap-2 text-white/70">
+<span class="material-symbols-outlined text-[16px]">calendar_today</span>
+<p class="text-xs font-medium">Tomorrow, 10:00 AM</p>
+</div>
+<div class="flex items-center gap-2 text-white/70">
+<span class="material-symbols-outlined text-[16px]">location_on</span>
+<p class="text-xs font-medium">Gym A, Main Block</p>
+</div>
+</div>
+</div>
+<div class="mt-4">
+<button class="flex items-center justify-center rounded-full h-9 px-5 bg-primary hover:bg-primary/90 text-background-dark text-sm font-bold w-fit transition-colors">
+                                View Ticket
+                            </button>
+</div>
+</div>
+<!-- Image -->
+<div class="w-28 h-32 rounded-xl bg-cover bg-center shrink-0 self-center shadow-lg" data-alt="Muscular person lifting heavy weights in a gym setting" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuB3oMLF3jdCq95dR_RUTTZvV246HqAKqV8Knu2dWE1Q3XcJM10B6fojfIx_f729VqEC_hKU2kNAA4jiV4xLayp95QqdoUXYy94xCj2QMd-J_gDW7nqTGJ0h_-2CeFeLqgbEHsjB7X1_6pEiCJ6Vd3_CwvuR0kfx4kZn_7nD62qnr_YX1ShUN1hRJyfSOKJPy_JIWLj_E1dTWOGNsVwDfPZWcQ9mVE9T832Dq70CZUyG_j3jun0hNgWtb1cisr7kFm5zvDDLSJENXtpz');"></div>
+</div>
+</div>
+<!-- VFun Card (Orange Theme) -->
+<div class="group relative overflow-hidden rounded-2xl glass-panel hover:bg-white/5 transition-all duration-300">
+<!-- Category Accent Line -->
+<div class="absolute left-0 top-0 bottom-0 w-1.5 bg-secondary-orange"></div>
+<div class="flex p-4 gap-4">
+<!-- Text Content -->
+<div class="flex flex-1 flex-col justify-between">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-secondary-orange text-[18px]">celebration</span>
+<p class="text-secondary-orange text-xs font-bold uppercase tracking-wider">VFun</p>
+</div>
+<h3 class="text-white text-lg font-bold leading-tight mb-2">VR Zombie Run Party</h3>
+<div class="flex flex-col gap-1.5">
+<div class="flex items-center gap-2 text-white/70">
+<span class="material-symbols-outlined text-[16px]">calendar_today</span>
+<p class="text-xs font-medium">Sat, Nov 12, 8:00 PM</p>
+</div>
+<div class="flex items-center gap-2 text-white/70">
+<span class="material-symbols-outlined text-[16px]">location_on</span>
+<p class="text-xs font-medium">VR Zone, Level 2</p>
+</div>
+</div>
+</div>
+<div class="mt-4">
+<button class="flex items-center justify-center rounded-full h-9 px-5 bg-secondary-orange hover:bg-secondary-orange/90 text-white text-sm font-bold w-fit transition-colors shadow-[0_0_15px_rgba(249,115,22,0.3)]">
+                                View Ticket
+                            </button>
+</div>
+</div>
+<!-- Image -->
+<div class="w-28 h-32 rounded-xl bg-cover bg-center shrink-0 self-center shadow-lg" data-alt="Person wearing a VR headset in a colorful room" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuD5Ls0MeogxJz0hZkdEz_v_X0JncdtgB6L3DoYH8Dc95Fj37D3vH5iPAmsMwU6xMygZF99lN3IrmicebkCAZbtjP_udABtCiR7FTc9JzxFdlnfV5Syl8LKyIHRPAWL6jeqPOlO1lgZ5LdUtdIbb5Cr1e8cyc-bbq1xtzgaUO8mwpip7cnTTdbUxfxtCdWMYJAJybqyLc-EJsXVgeHlEGHDvKh1rEejYjM0SFjDLJQ55etl_wQe6t0BP_0x1DCqbdNJfOLMzLwAmR-XM');"></div>
+</div>
+</div>
+<!-- VLife Card (Purple Theme) -->
+<div class="group relative overflow-hidden rounded-2xl glass-panel hover:bg-white/5 transition-all duration-300">
+<!-- Category Accent Line -->
+<div class="absolute left-0 top-0 bottom-0 w-1.5 bg-secondary-purple"></div>
+<div class="flex p-4 gap-4">
+<!-- Text Content -->
+<div class="flex flex-1 flex-col justify-between">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-secondary-purple text-[18px]">spa</span>
+<p class="text-secondary-purple text-xs font-bold uppercase tracking-wider">VLife</p>
+</div>
+<h3 class="text-white text-lg font-bold leading-tight mb-2">Deep Tissue Massage</h3>
+<div class="flex flex-col gap-1.5">
+<div class="flex items-center gap-2 text-white/70">
+<span class="material-symbols-outlined text-[16px]">calendar_today</span>
+<p class="text-xs font-medium">Sun, Nov 13, 2:00 PM</p>
+</div>
+<div class="flex items-center gap-2 text-white/70">
+<span class="material-symbols-outlined text-[16px]">location_on</span>
+<p class="text-xs font-medium">Spa Room 3</p>
+</div>
+</div>
+</div>
+<div class="mt-4">
+<button class="flex items-center justify-center rounded-full h-9 px-5 border border-secondary-purple text-secondary-purple hover:bg-secondary-purple hover:text-white text-sm font-bold w-fit transition-all duration-300">
+                                Manage
+                            </button>
+</div>
+</div>
+<!-- Image -->
+<div class="w-28 h-32 rounded-xl bg-cover bg-center shrink-0 self-center shadow-lg" data-alt="Relaxing spa setting with stones and flowers" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuC3ll8GBW62udxfC-ZrT36_bJ9kF0swqK_702VjuQqMQWG48-CCMC_G1JMXF0mdXsI-2ni4R8ms6x1-VrQRyYMR1o2jwpkZ3IcPtQfhWt_egXwxN3S_5HOSmCCIZ1af7rnNNqvfZ8_vgvTVqZHUcqh40nqrzvPJeHyX7r2ufEDzf0SZw0w5bktLgKlFxf-QzOyx2280Lg3NSI-bWisxuLN4CkYx0QxhxYEKOj8TqHOCZko-0c-WWhbwxLBw_qP13Tp05m3xWECFFoon');"></div>
+</div>
+</div>
+<!-- VFit Card (Another one) -->
+<div class="group relative overflow-hidden rounded-2xl glass-panel hover:bg-white/5 transition-all duration-300">
+<!-- Category Accent Line -->
+<div class="absolute left-0 top-0 bottom-0 w-1.5 bg-primary"></div>
+<div class="flex p-4 gap-4">
+<!-- Text Content -->
+<div class="flex flex-1 flex-col justify-between">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-primary text-[18px]">fitness_center</span>
+<p class="text-primary text-xs font-bold uppercase tracking-wider">VFit</p>
+</div>
+<h3 class="text-white text-lg font-bold leading-tight mb-2">Morning Yoga Flow</h3>
+<div class="flex flex-col gap-1.5">
+<div class="flex items-center gap-2 text-white/70">
+<span class="material-symbols-outlined text-[16px]">calendar_today</span>
+<p class="text-xs font-medium">Mon, Nov 14, 7:00 AM</p>
+</div>
+<div class="flex items-center gap-2 text-white/70">
+<span class="material-symbols-outlined text-[16px]">location_on</span>
+<p class="text-xs font-medium">Studio B, East Wing</p>
+</div>
+</div>
+</div>
+<div class="mt-4">
+<button class="flex items-center justify-center rounded-full h-9 px-5 bg-primary hover:bg-primary/90 text-background-dark text-sm font-bold w-fit transition-colors">
+                                View Ticket
+                            </button>
+</div>
+</div>
+<!-- Image -->
+<div class="w-28 h-32 rounded-xl bg-cover bg-center shrink-0 self-center shadow-lg" data-alt="Person performing yoga pose in a bright studio" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDjpGywKxSbs0LA2vlWroNGnOs6F30L-r4VpSID2XNGIpYN6EYNjANhiUt6gTS582r1nQT65_FrmMkgDUUKz-zBc4ERQu0GnOsCE1ecRYFn__5D-t8yI0eclvZLiinaZsdlFTCAZcj0Zf6Jf17aWRz-60tUzOkdDhCDYgmyOApB0eh5SAD_1O4VkWn_M-r5CdklSOi8Bj_fO5biWN4nGBr4a68oU2-X55qxzCqp-Pb5fwAaRhZVmoQkaikDHf-uXz4JZ2eH7THFN0V7');"></div>
+</div>
+</div>
+<div class="h-4"></div>
+</div>
+</div>
+<!-- Bottom Navigation -->
+<div class="fixed bottom-0 left-0 right-0 glass-nav z-50 px-6 pb-6 pt-3">
+<div class="flex items-center justify-between">
+<button class="flex flex-col items-center gap-1 text-white/50 hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[26px]">home</span>
+<span class="text-[10px] font-medium">Home</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-white/50 hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[26px]">search</span>
+<span class="text-[10px] font-medium">Explore</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-primary relative">
+<span class="material-symbols-outlined text-[26px] fill">confirmation_number</span>
+<span class="text-[10px] font-medium">Bookings</span>
+<span class="absolute -top-1 -right-0.5 w-2 h-2 bg-primary rounded-full"></span>
+</button>
+<button class="flex flex-col items-center gap-1 text-white/50 hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[26px]">person</span>
+<span class="text-[10px] font-medium">Profile</span>
+</button>
+</div>
+</div>
+</body></html>
