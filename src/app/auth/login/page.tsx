@@ -256,6 +256,15 @@ export default function LoginPage() {
                   Continua con Apple
                 </Button>
               </div>
+
+              <div className="mt-8 text-center">
+                <p className="text-text-secondary text-sm">
+                  Non hai un account?{' '}
+                  <a href="/auth/register" className="font-semibold text-primary hover:underline">
+                    Registrati
+                  </a>
+                </p>
+              </div>
             </>
           )}
         </div>
