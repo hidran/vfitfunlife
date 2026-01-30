@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { cn } from '@/lib/utils';
+import { usePullToRefresh } from 'use-pull-to-refresh';
 import { SectionSwitcher } from '@/components/ui/section-switcher';
 
 const vfitQuickActions = [
@@ -429,6 +430,9 @@ function VFitHome() {
 
 export default function HomePage() {
   const { section } = useSection();
+  const { isRefreshing, pullPosition } = usePullToRefresh({
+    onRefresh: () => new Promise(resolve => setTimeout(resolve, 2000)),
+  });
 
   return (
     <>
@@ -439,7 +443,30 @@ export default function HomePage() {
           <Avatar name="User" size="sm" />
         </div>
       </header>
-      <main>
+      <main
+        style={{
+          transform: `translateY(${isRefreshing ? 60 : pullPosition}px)`,
+          transition: 'transform 0.3s',
+        }}
+      >
+        <div
+          style={{
+            position: 'fixed',
+            top: '-60px',
+            left: 0,
+            right: 0,
+            height: '60px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {isRefreshing ? (
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+          ) : (
+            <div style={{ transform: `rotate(${pullPosition}deg)` }}>⬇️</div>
+          )}
+        </div>
         {section === 'fit' && <VFitHome />}
         {section === 'fun' && <VFunHome />}
         {section === 'life' && <VLifeHome />}
