@@ -1,7 +1,18 @@
 'use client';
 
-import { useAuthContext } from '@/contexts/AuthContext';
+import { useAuthStore } from '@/stores/authStore';
 
+/**
+ * @deprecated Use useAuthStore directly instead.
+ * This hook exists for backward compatibility.
+ */
 export function useAuth() {
-  return useAuthContext();
+  const { firebaseUser, user, isLoading, isInitialized } = useAuthStore();
+
+  return {
+    user: firebaseUser,
+    firestoreUser: user,
+    loading: !isInitialized || isLoading,
+    isInitialized,
+  };
 }

@@ -3,26 +3,28 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { SplashScreen } from '@/components/screens/SplashScreen';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuthStore } from '@/stores/authStore';
 
 export default function HomePage() {
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { firebaseUser, user, isInitialized } = useAuthStore();
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
-    if (!loading && !showSplash) {
-      const hasOnboarded = localStorage.getItem('hasOnboarded');
+    if (!isInitialized || showSplash) return;
 
-      if (!hasOnboarded) {
-        router.push('/onboarding');
-      } else if (!user) {
-        router.push('/auth/login');
-      } else {
-        router.push('/home');
-      }
+    const hasOnboarded = localStorage.getItem('hasOnboarded');
+
+    if (!hasOnboarded) {
+      router.push('/onboarding');
+    } else if (!firebaseUser) {
+      router.push('/auth/login');
+    } else if (!user) {
+      router.push('/auth/register');
+    } else {
+      router.push('/home');
     }
-  }, [user, loading, showSplash, router]);
+  }, [firebaseUser, user, isInitialized, showSplash, router]);
 
   const handleSplashComplete = () => {
     setShowSplash(false);

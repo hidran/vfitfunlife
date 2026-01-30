@@ -1,31 +1,29 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { onAuthStateChanged, type User } from 'firebase/auth';
-import { auth } from '@/lib/firebase/config';
+import { createContext, useContext, useEffect, type ReactNode } from 'react';
+import { useAuthStore } from '@/stores/authStore';
 
 interface AuthContextValue {
-  user: User | null;
-  loading: boolean;
+  isInitialized: boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+/**
+ * AuthProvider initializes the auth listener on mount.
+ * All auth state is managed by useAuthStore.
+ */
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const isInitialized = useAuthStore((state) => state.isInitialized);
+  const initialize = useAuthStore((state) => state.initialize);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
+    const unsubscribe = initialize();
+    return unsubscribe;
+  }, [initialize]);
 
   return (
-    <AuthContext.Provider value={{ user, loading }}>
+    <AuthContext.Provider value={{ isInitialized }}>
       {children}
     </AuthContext.Provider>
   );

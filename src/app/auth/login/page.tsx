@@ -9,8 +9,7 @@ import { CountryCodePicker } from '@/components/ui/country-code-picker';
 import { OtpInput } from '@/components/ui/otp-input';
 import { Divider } from '@/components/ui/divider';
 import { Spinner } from '@/components/ui/Spinner';
-import Image from 'next/image';
-import { Apple, Mail } from 'lucide-react';
+import { Apple } from 'lucide-react';
 import { FcGoogle } from 'react-icons/fc';
 
 export default function LoginPage() {
@@ -19,6 +18,7 @@ export default function LoginPage() {
     firebaseUser,
     user,
     isLoading,
+    isInitialized,
     error,
     isOtpSent,
     phoneNumber: storedPhoneNumber,
@@ -34,23 +34,28 @@ export default function LoginPage() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [countdown, setCountdown] = useState(0);
+  const [recaptchaInitialized, setRecaptchaInitialized] = useState(false);
 
-  // Initialize reCAPTCHA on mount
+  // Initialize reCAPTCHA on mount (only once)
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && !recaptchaInitialized && isInitialized) {
       initPhoneAuth('recaptcha-container');
+      setRecaptchaInitialized(true);
     }
-  }, [initPhoneAuth]);
+  }, [initPhoneAuth, recaptchaInitialized, isInitialized]);
 
-  // Redirect if already logged in
+  // Redirect based on auth state
   useEffect(() => {
+    if (!isInitialized) return;
+
     if (user) {
-      router.push('/home');
+      // Fully authenticated with complete profile
+      router.replace('/home');
     } else if (firebaseUser && !user) {
-      // User is authenticated but profile is not complete
-      router.push('/auth/register');
+      // Authenticated but profile incomplete
+      router.replace('/auth/register');
     }
-  }, [user, firebaseUser, router]);
+  }, [user, firebaseUser, isInitialized, router]);
 
   // Countdown timer for OTP resend
   useEffect(() => {
@@ -110,7 +115,17 @@ export default function LoginPage() {
     await loginWithApple();
   };
 
-  if (isLoading) {
+  // Show loading while initializing or during auth operations
+  if (!isInitialized || (isLoading && !isOtpSent)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background-dark via-background-dark to-primary-dark/20">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  // Don't show login form if user is authenticated (will redirect)
+  if (user || (firebaseUser && !user)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background-dark via-background-dark to-primary-dark/20">
         <Spinner size="lg" />

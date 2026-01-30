@@ -1,13 +1,13 @@
 import { create } from 'zustand';
-import { User as FirebaseUser } from 'firebase/auth';
+import { User as FirebaseUser, onAuthStateChanged } from 'firebase/auth';
 import { User } from '@/types/firebase';
+import { auth } from '@/lib/firebase/config';
 import {
   signInWithGoogle,
   signInWithApple,
   sendOtp,
   verifyOtp,
   signOut as firebaseSignOut,
-  onAuthChange,
   getUserData,
   isProfileComplete,
   initRecaptcha,
@@ -29,7 +29,7 @@ interface AuthState {
   phoneNumber: string | null;
 
   // Actions
-  initAuth: () => Promise<void>;
+  initialize: () => () => void;
   loginWithGoogle: () => Promise<void>;
   loginWithApple: () => Promise<void>;
   initPhoneAuth: (buttonId: string) => void;
@@ -38,65 +38,90 @@ interface AuthState {
   logout: () => Promise<void>;
   clearError: () => void;
   setUser: (user: User | null) => void;
-  loadUserData: (uid: string) => Promise<void>;
+  loadUserData: (uid: string) => Promise<User | null>;
   refreshUserProfile: () => Promise<void>;
 }
+
+// Track if we've already handled the redirect in this session
+let redirectHandled = false;
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   // Initial state
   firebaseUser: null,
   user: null,
-  isLoading: false,
+  isLoading: true, // Start loading until initialized
   isInitialized: false,
   error: null,
   recaptchaVerifier: null,
   isOtpSent: false,
   phoneNumber: null,
 
-  // Initialize auth listener
-  initAuth: async () => {
-    // Handle redirect result (for Google/Apple sign-in on web)
-    try {
-      const redirectUser = await handleAuthRedirect();
-      if (redirectUser) {
-        set({ firebaseUser: redirectUser, isLoading: true });
-        await get().loadUserData(redirectUser.uid);
+  // Initialize auth - call this once on app mount
+  initialize: () => {
+    // Handle redirect result first (for Google/Apple sign-in on web)
+    const handleRedirect = async () => {
+      if (redirectHandled) return;
+      redirectHandled = true;
+
+      try {
+        const redirectUser = await handleAuthRedirect();
+        if (redirectUser) {
+          set({ firebaseUser: redirectUser, isLoading: true });
+          await get().loadUserData(redirectUser.uid);
+        }
+      } catch (error) {
+        console.error("Error handling auth redirect:", error);
+        set({ error: "Failed to complete sign-in", isLoading: false, isInitialized: true });
       }
-    } catch (error) {
-      console.error("Error handling auth redirect:", error);
-    }
+    };
 
-    const unsubscribe = onAuthChange(async (firebaseUser) => {
-      set({ firebaseUser, isLoading: true });
+    handleRedirect();
 
+    // Subscribe to auth state changes
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // Load user data from Firestore
+        set({ firebaseUser, isLoading: true });
         await get().loadUserData(firebaseUser.uid);
       } else {
-        set({ user: null, isLoading: false, isInitialized: true });
-      }
-    });
-
-    // Store cleanup function
-    if (typeof window !== 'undefined') {
-      window.addEventListener('beforeunload', unsubscribe);
-    }
-  },
-
-  // Load user data from Firestore
-  loadUserData: async (uid: string) => {
-    try {
-      const userData = await getUserData(uid);
-
-      if (userData) {
         set({
-          user: { ...userData, id: uid, uid } as User,
+          firebaseUser: null,
+          user: null,
           isLoading: false,
           isInitialized: true,
         });
+      }
+    });
+
+    return unsubscribe;
+  },
+
+  // Load user data from Firestore with retry for new users
+  loadUserData: async (uid: string) => {
+    try {
+      let userData = await getUserData(uid);
+
+      // For new users, the Cloud Function might not have created the document yet
+      // Retry a few times with delay
+      if (!userData) {
+        for (let i = 0; i < 3; i++) {
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+          userData = await getUserData(uid);
+          if (userData) break;
+        }
+      }
+
+      if (userData) {
+        const user = { ...userData, id: uid, uid } as User;
+        set({
+          user,
+          isLoading: false,
+          isInitialized: true,
+        });
+        return user;
       } else {
-        // User document doesn't exist, need to complete registration
+        // User document doesn't exist - need to complete registration
         set({ user: null, isLoading: false, isInitialized: true });
+        return null;
       }
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -105,6 +130,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isLoading: false,
         isInitialized: true
       });
+      return null;
     }
   },
 
@@ -124,17 +150,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // If null, redirect flow is being used - page will reload
       if (!firebaseUser) {
+        // Keep loading state - redirect will handle the rest
         return;
       }
+
+      // For popup flow (native), handle immediately
+      set({ firebaseUser, isLoading: true });
 
       // Check if profile is complete
       const profileComplete = await isProfileComplete(firebaseUser.uid);
 
-      if (!profileComplete) {
-        // Redirect to complete registration will be handled by the component
-        set({ isLoading: false });
-      } else {
+      if (profileComplete) {
         await get().loadUserData(firebaseUser.uid);
+      } else {
+        // Profile incomplete - redirect to registration will be handled by component
+        set({ isLoading: false, isInitialized: true });
       }
     } catch (error: any) {
       console.error('Google sign in error:', error);
@@ -153,17 +183,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // If null, redirect flow is being used - page will reload
       if (!firebaseUser) {
+        // Keep loading state - redirect will handle the rest
         return;
       }
+
+      // For popup flow (native), handle immediately
+      set({ firebaseUser, isLoading: true });
 
       // Check if profile is complete
       const profileComplete = await isProfileComplete(firebaseUser.uid);
 
-      if (!profileComplete) {
-        // Redirect to complete registration will be handled by the component
-        set({ isLoading: false });
-      } else {
+      if (profileComplete) {
         await get().loadUserData(firebaseUser.uid);
+      } else {
+        // Profile incomplete - redirect to registration will be handled by component
+        set({ isLoading: false, isInitialized: true });
       }
     } catch (error: any) {
       console.error('Apple sign in error:', error);
@@ -217,16 +251,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     try {
       const firebaseUser = await verifyOtp(code);
+      set({ firebaseUser, isLoading: true, isOtpSent: false, phoneNumber: null });
 
       // Check if profile is complete
       const profileComplete = await isProfileComplete(firebaseUser.uid);
 
-      if (!profileComplete) {
-        // Redirect to complete registration will be handled by the component
-        set({ isLoading: false, isOtpSent: false, phoneNumber: null });
-      } else {
+      if (profileComplete) {
         await get().loadUserData(firebaseUser.uid);
-        set({ isOtpSent: false, phoneNumber: null });
+      } else {
+        // Profile incomplete - redirect to registration will be handled by component
+        set({ isLoading: false, isInitialized: true });
       }
     } catch (error: any) {
       console.error('Verify OTP error:', error);

@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import {
   User,
   MapPin,
@@ -13,7 +14,7 @@ import {
   Gift,
   Crown
 } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
 
 const menuItems = [
@@ -42,7 +43,19 @@ const menuItems = [
 ];
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const router = useRouter();
+  const { user, firebaseUser, logout, isLoading } = useAuthStore();
+
+  const handleLogout = async () => {
+    await logout();
+    router.push('/auth/login');
+  };
+
+  // Get user display info
+  const displayName = user?.fullName || firebaseUser?.displayName || 'Utente';
+  const contactInfo = user?.phone || user?.email || firebaseUser?.phoneNumber || firebaseUser?.email || '';
+  const pointsBalance = user?.pointsBalance || 0;
+  const isVip = user?.isVip || false;
 
   return (
     <div className="min-h-screen bg-background-dark pb-20">
@@ -50,17 +63,28 @@ export default function ProfilePage() {
       <div className="p-4 pt-6">
         <div className="flex items-center gap-4 mb-6">
           <div className="w-20 h-20 rounded-full bg-gradient-to-br from-vfit-primary via-vfun-primary to-vlife-primary p-0.5">
-            <div className="w-full h-full rounded-full bg-background-dark flex items-center justify-center">
-              <User className="w-8 h-8 text-text-tertiary" />
+            <div className="w-full h-full rounded-full bg-background-dark flex items-center justify-center overflow-hidden">
+              {user?.avatarUrl ? (
+                <img src={user.avatarUrl} alt={displayName} className="w-full h-full object-cover" />
+              ) : (
+                <User className="w-8 h-8 text-text-tertiary" />
+              )}
             </div>
           </div>
 
           <div className="flex-1">
-            <h1 className="text-xl font-display font-bold text-text-inverse">
-              {user?.displayName || 'Utente'}
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-display font-bold text-text-inverse">
+                {displayName}
+              </h1>
+              {isVip && (
+                <span className="px-2 py-0.5 bg-vip-gold/20 text-vip-gold text-xs font-medium rounded-full">
+                  VIP
+                </span>
+              )}
+            </div>
             <p className="text-sm text-text-secondary">
-              {user?.phoneNumber || user?.email || 'Completa il profilo'}
+              {contactInfo || 'Completa il profilo'}
             </p>
           </div>
         </div>
@@ -72,7 +96,7 @@ export default function ProfilePage() {
             <p className="text-xs text-text-tertiary">Prenotazioni</p>
           </div>
           <div className="bg-background-secondary/10 rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-vip-gold">0</p>
+            <p className="text-2xl font-bold text-vip-gold">{pointsBalance}</p>
             <p className="text-xs text-text-tertiary">Punti</p>
           </div>
           <div className="bg-background-secondary/10 rounded-xl p-3 text-center">
@@ -87,8 +111,12 @@ export default function ProfilePage() {
             <Crown className="w-6 h-6 text-vip-gold" />
           </div>
           <div className="flex-1 text-left">
-            <h3 className="font-semibold text-vip-gold">Diventa VIP</h3>
-            <p className="text-sm text-text-secondary">Sconti esclusivi e vantaggi</p>
+            <h3 className="font-semibold text-vip-gold">
+              {isVip ? 'Sei VIP!' : 'Diventa VIP'}
+            </h3>
+            <p className="text-sm text-text-secondary">
+              {isVip ? 'Goditi i vantaggi esclusivi' : 'Sconti esclusivi e vantaggi'}
+            </p>
           </div>
           <ChevronRight className="w-5 h-5 text-vip-gold" />
         </button>
@@ -132,9 +160,13 @@ export default function ProfilePage() {
         ))}
 
         {/* Logout */}
-        <button className="w-full flex items-center gap-4 p-4 text-left text-error hover:bg-error/10 rounded-xl transition-colors">
+        <button
+          onClick={handleLogout}
+          disabled={isLoading}
+          className="w-full flex items-center gap-4 p-4 text-left text-error hover:bg-error/10 rounded-xl transition-colors disabled:opacity-50"
+        >
           <LogOut className="w-5 h-5" />
-          <span>Esci</span>
+          <span>{isLoading ? 'Uscita...' : 'Esci'}</span>
         </button>
       </div>
 
