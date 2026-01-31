@@ -1,9 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
-import { List, Map, MapPin, Search, SlidersHorizontal, Star } from 'lucide-react';
+import { useMemo, useState, useCallback } from 'react';
+import { List, Map as MapIcon, MapPin, Search, SlidersHorizontal, Star, Navigation } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { GoogleMap } from '@/components/map/GoogleMap';
+import { useRouter } from 'next/navigation';
 
 const gyms = [
   {
@@ -16,6 +18,8 @@ const gyms = [
     amenities: ['Sauna', 'Pool'],
     priceLevel: 2,
     partner: true,
+    lat: 45.4642,
+    lng: 9.1900,
   },
   {
     id: 'urban-core',
@@ -27,6 +31,8 @@ const gyms = [
     amenities: ['CrossFit', 'Boxing'],
     priceLevel: 3,
     partner: false,
+    lat: 45.4789,
+    lng: 9.1965,
   },
   {
     id: 'village-fit',
@@ -38,6 +44,8 @@ const gyms = [
     amenities: ['Yoga', 'Spa'],
     priceLevel: 1,
     partner: true,
+    lat: 45.4523,
+    lng: 9.1756,
   },
   {
     id: 'pulse-studio',
@@ -49,6 +57,34 @@ const gyms = [
     amenities: ['Pilates', 'HIIT'],
     priceLevel: 2,
     partner: false,
+    lat: 45.4834,
+    lng: 9.1856,
+  },
+  {
+    id: 'elite-fitness',
+    name: 'Elite Fitness Center',
+    city: 'Brera',
+    rating: 4.9,
+    reviews: 215,
+    distanceKm: 1.8,
+    amenities: ['Pool', 'Tennis', 'Spa'],
+    priceLevel: 3,
+    partner: true,
+    lat: 45.4701,
+    lng: 9.1854,
+  },
+  {
+    id: 'power-gym',
+    name: 'Power Gym Milano',
+    city: 'Porta Romana',
+    rating: 4.5,
+    reviews: 89,
+    distanceKm: 4.2,
+    amenities: ['Weights', 'Cardio'],
+    priceLevel: 1,
+    partner: false,
+    lat: 45.4456,
+    lng: 9.2056,
   },
 ];
 
@@ -65,15 +101,37 @@ const sortLabels: Record<SortOption, string> = {
 const sortOptions: SortOption[] = ['nearest', 'top', 'price'];
 
 export default function GymsPage() {
+  const router = useRouter();
   const [view, setView] = useState<'list' | 'map'>('list');
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<SortOption>('nearest');
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | undefined>();
 
   const handleSort = () => {
     const currentIndex = sortOptions.indexOf(sort);
     const nextSort = sortOptions[(currentIndex + 1) % sortOptions.length];
     setSort(nextSort);
   };
+
+  const handleGetLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.error('Geolocation error:', error);
+        }
+      );
+    }
+  };
+
+  const handleGymSelect = useCallback((gymId: string) => {
+    router.push(`/venue/${gymId}`);
+  }, [router]);
 
   const filteredGyms = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -135,7 +193,7 @@ export default function GymsPage() {
               <button
                 key={filter}
                 type="button"
-                className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-text-tertiary"
+                className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-text-tertiary hover:bg-white/10 transition-colors"
               >
                 <SlidersHorizontal className="h-3.5 w-3.5" />
                 {filter}
@@ -168,18 +226,29 @@ export default function GymsPage() {
                     : 'text-text-tertiary'
                 )}
               >
-                <Map className="h-4 w-4" />
+                <MapIcon className="h-4 w-4" />
                 Mappa
               </button>
             </div>
 
-            <button
-              type="button"
-              onClick={handleSort}
-              className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-text-tertiary"
-            >
-              {sortLabels[sort]}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleGetLocation}
+                className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-text-tertiary hover:bg-white/10 transition-colors"
+                title="Usa la mia posizione"
+              >
+                <Navigation className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Posizione</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleSort}
+                className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-text-tertiary hover:bg-white/10 transition-colors"
+              >
+                {sortLabels[sort]}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -189,7 +258,7 @@ export default function GymsPage() {
               <Link
                 key={gym.id}
                 href={`/venue/${gym.id}`}
-                className="block overflow-hidden rounded-2xl border border-white/10 bg-white/5"
+                className="block overflow-hidden rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors"
               >
                 <div className="relative h-32 bg-gradient-to-br from-vfit-secondary/40 via-vfit-primary/25 to-transparent">
                   <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.2),_transparent_65%)]" />
@@ -234,43 +303,34 @@ export default function GymsPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5">
-              <div className="relative h-60 bg-[radial-gradient(circle_at_top,_rgba(0,201,255,0.12),_transparent_60%)]">
-                <div className="absolute inset-0 bg-[linear-gradient(135deg,_rgba(0,102,255,0.15),_rgba(123,97,255,0.1))]" />
-                {filteredGyms.slice(0, 3).map((gym, index) => (
-                  <div
-                    key={gym.id}
-                    className={cn(
-                      'absolute flex flex-col items-center gap-1',
-                      index === 0 && 'left-1/4 top-12',
-                      index === 1 && 'right-1/4 top-20',
-                      index === 2 && 'left-1/2 bottom-12'
-                    )}
-                  >
-                    <div className="rounded-full bg-background-dark/80 px-2 py-1 text-[10px] text-text-inverse">
-                      {gym.name}
-                    </div>
-                    <MapPin className="h-6 w-6 text-section-primary" />
-                  </div>
-                ))}
-                <div className="absolute right-4 bottom-4 rounded-full bg-section-primary/20 px-3 py-1 text-xs font-semibold text-section-primary">
-                  {filteredGyms.length} sedi
-                </div>
-              </div>
-            </div>
+            <GoogleMap
+              gyms={filteredGyms}
+              userLocation={userLocation}
+              onGymSelect={handleGymSelect}
+              className="h-[60vh] min-h-[500px]"
+            />
 
+            {/* Gym list below map */}
             <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-text-inverse">
+                Palestre vicine ({filteredGyms.length})
+              </h3>
               {filteredGyms.map((gym) => (
                 <Link
                   key={gym.id}
                   href={`/venue/${gym.id}`}
-                  className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3"
+                  className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 hover:bg-white/10 transition-colors"
                 >
-                  <div>
-                    <p className="text-sm font-semibold text-text-inverse">
-                      {gym.name}
-                    </p>
-                    <p className="text-xs text-text-tertiary">{gym.city}</p>
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-section-primary/20 flex items-center justify-center">
+                      <MapPin className="h-5 w-5 text-section-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-text-inverse">
+                        {gym.name}
+                      </p>
+                      <p className="text-xs text-text-tertiary">{gym.city}</p>
+                    </div>
                   </div>
                   <div className="text-right text-xs text-text-tertiary">
                     <div className="flex items-center justify-end gap-1 text-text-inverse">
