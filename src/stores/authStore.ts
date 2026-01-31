@@ -246,30 +246,39 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   // Google Sign In
   loginWithGoogle: async () => {
+    console.log('[AuthStore] loginWithGoogle starting');
     set({ isLoading: true, error: null });
     try {
+      console.log('[AuthStore] Calling signInWithGoogle...');
       const firebaseUser = await signInWithGoogle();
+      console.log('[AuthStore] signInWithGoogle returned:', firebaseUser ? 'user' : 'null');
 
       // If null, redirect flow is being used - page will reload
       if (!firebaseUser) {
+        console.log('[AuthStore] No firebaseUser, returning (redirect flow)');
         // Keep loading state - redirect will handle the rest
         return;
       }
 
       // For popup flow (native), handle immediately
+      console.log('[AuthStore] Setting firebaseUser, uid:', firebaseUser.uid);
       set({ firebaseUser, isLoading: true });
 
       // Check if profile is complete
+      console.log('[AuthStore] Checking profile complete...');
       const profileComplete = await isProfileComplete(firebaseUser.uid);
+      console.log('[AuthStore] Profile complete:', profileComplete);
 
       if (profileComplete) {
+        console.log('[AuthStore] Profile complete, loading user data...');
         await get().loadUserData(firebaseUser.uid);
       } else {
         // Profile incomplete - redirect to registration will be handled by component
+        console.log('[AuthStore] Profile incomplete, setting state');
         set({ isLoading: false, isInitialized: true });
       }
     } catch (error: any) {
-      console.error('Google sign in error:', error);
+      console.error('[AuthStore] Google sign in error:', error);
       set({
         error: error.message || 'Failed to sign in with Google',
         isLoading: false
