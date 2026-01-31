@@ -44,7 +44,7 @@ Splash → Onboarding (first launch) → Auth → Main App
 - [x] "Send OTP" button
 - [x] Divider "oppure"
 - [x] Social login buttons: Google, Apple (iOS only), Facebook
-- [ ] "Non hai un account? Registrati" link
+- [x] "Non hai un account? Registrati" link
 - [x] Terms & Privacy links at bottom
 
 ### 3.2 OTP Verification
@@ -78,23 +78,23 @@ Bottom tabs with section-aware theming:
 ```
 
 ### 4.1 Home Tab
-- [ ] Dynamic header with section switcher (FIT | FUN | LIFE)
+- [x] Dynamic header with section switcher (FIT | FUN | LIFE)
 - [x] Section colors change entire screen theme
-- [ ] Pull-to-refresh
-- [ ] Content changes based on active section
+- [x] Pull-to-refresh
+- [x] Content changes based on active section
 
 #### Home - VFit Content
-- [ ] VIP upgrade banner (if not VIP) or active discount badge
-- [ ] Quick actions: "Palestre", "Corsi", "A Domicilio", "Virtual"
-- [ ] "Palestre Vicine" horizontal carousel
+- [x] VIP upgrade banner (if not VIP) or active discount badge
+- [x] Quick actions: "Palestre", "Corsi", "A Domicilio", "Virtual"
+- [x] "Palestre Vicine" horizontal carousel
   - Venue cards with image, name, rating, distance
   - "Vedi tutte" link
-- [ ] "Corsi Oggi" section
+- [x] "Corsi Oggi" section
   - Class cards with time, name, instructor, spots
-- [ ] "Istruttori Top" carousel
+- [x] "Istruttori Top" carousel
   - Instructor cards with photo, name, specialty, rating
-- [ ] "Le Tue Sfide" active challenges preview
-- [ ] Map preview with venue markers
+- [x] "Le Tue Sfide" active challenges preview
+- [x] Map preview with venue markers
 
 #### Home - VFun Content
 - [ ] Featured event hero banner (full width, auto-scroll)
@@ -107,15 +107,15 @@ Bottom tabs with section-aware theming:
 - [ ] "Lavora Con Noi" CTA card
 
 #### Home - VLife Content
-- [ ] VIP banner with wellness discount
-- [ ] Quick actions grid:
+- [x] VIP banner with wellness discount
+- [x] Quick actions grid:
   - Wellness: Osteopatia, Fisioterapia, Mental Coach, Psicologo
   - Estetica: Estetista, Parrucchiere, Unghie, Massaggi
-- [ ] "Servizi a Domicilio" highlight section
-- [ ] "Centri Vicini" venue carousel
-- [ ] "Recensioni" testimonials carousel
-- [ ] "Camera Iperbarica" feature card
-- [ ] "Contatta per Preventivo" floating CTA
+- [x] "Servizi a Domicilio" highlight section
+- [x] "Centri Vicini" venue carousel
+- [x] "Recensioni" testimonials carousel
+- [x] "Camera Iperbarica" feature card
+- [x] "Contatta per Preventivo" floating CTA
 
 ---
 
@@ -130,12 +130,12 @@ Bottom tabs with section-aware theming:
 - [ ] Search bar
 
 ### 5.2 Gym Detail (`/venue/[id]`)
-- [ ] Hero image carousel with dots
-- [ ] Venue name, rating, review count
-- [ ] "Partner" badge if applicable
-- [ ] Address with "Directions" button (opens native maps)
-- [ ] Opening hours (expandable, current status indicator)
-- [ ] Amenities grid with icons
-- [ ] Description (expandable)
-- [ ] "Servizi" tab - list of services with prices
-- [ ] "Corsi" tab
+- [x] Hero image carousel with dots
+- [x] Venue name, rating, review count
+- [x] "Partner" badge if applicable
+- [x] Address with "Directions" button (opens native maps)
+- [x] Opening hours (expandable, current status indicator)
+- [x] Amenities grid with icons
+- [x] Description (expandable)
+- [x] "Servizi" tab - list of services with prices
+- [x] "Corsi" tab
