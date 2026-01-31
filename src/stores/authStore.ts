@@ -72,6 +72,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   // Initialize auth - call this once on app mount
   initialize: () => {
+    console.log('[Auth] Initializing auth store...');
     // Cancellation flag to prevent state updates after unmount
     let isCancelled = false;
     // Track if redirect was processed to prevent duplicate handling
@@ -80,19 +81,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // Handle redirect result first (for Google/Apple sign-in on web)
     const handleRedirect = async () => {
       const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
+      console.log('[Auth] Checking redirect... URL:', currentUrl);
       
       // Skip if already processed this URL (HMR protection)
       if (lastProcessedUrl === currentUrl) {
+        console.log('[Auth] URL already processed, skipping');
         return;
       }
       
-      if (redirectHandled || isCancelled || redirectProcessing) return;
+      if (redirectHandled || isCancelled || redirectProcessing) {
+        console.log('[Auth] Redirect already handled or processing, skipping');
+        return;
+      }
       
       // Only check redirect result if we're on an auth page
       const isAuthPage = typeof window !== 'undefined' && 
         (window.location.pathname.startsWith('/auth/') || window.location.pathname === '/');
       
       if (!isAuthPage) {
+        console.log('[Auth] Not on auth page, skipping redirect check');
         redirectHandled = true;
         return;
       }
@@ -101,17 +108,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       lastProcessedUrl = currentUrl;
 
       try {
+        console.log('[Auth] Calling handleAuthRedirect...');
         const redirectUser = await handleAuthRedirect();
+        console.log('[Auth] Redirect result:', redirectUser ? 'User found' : 'No user');
         if (isCancelled) return;
         
         if (redirectUser) {
           // Redirect auth successful - set user and let onAuthStateChanged confirm
+          console.log('[Auth] Setting firebaseUser from redirect, uid:', redirectUser.uid);
           set({ firebaseUser: redirectUser, isLoading: true });
           // Note: onAuthStateChanged will also fire, but loadUserData has UID check
         }
       } catch (error: any) {
         if (isCancelled) return;
-        console.error("Error handling auth redirect:", error);
+        console.error("[Auth] Error handling auth redirect:", error);
         if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
           set({ error: error.message || "Failed to complete sign-in", isLoading: false, isInitialized: true });
         }
@@ -123,23 +133,28 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     // Subscribe to auth state changes
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      console.log('[Auth] onAuthStateChanged fired, user:', firebaseUser ? firebaseUser.uid : 'null');
       if (isCancelled) return;
       
       // If we're processing a redirect, wait for it unless this is a null (logout)
       if (redirectProcessing && firebaseUser) {
-        // Redirect processing will handle this
+        console.log('[Auth] Redirect processing, skipping auth state change');
         return;
       }
       
       if (firebaseUser) {
         // Avoid duplicate load if redirect already handled this user
         const currentState = get();
+        console.log('[Auth] Current state - firebaseUser:', currentState.firebaseUser?.uid, 'user:', currentState.user?.uid);
         if (currentState.firebaseUser?.uid === firebaseUser.uid && currentState.user) {
+          console.log('[Auth] User already loaded, skipping');
           return;
         }
+        console.log('[Auth] Setting firebaseUser and loading data...');
         set({ firebaseUser, isLoading: true });
         await get().loadUserData(firebaseUser.uid);
       } else {
+        console.log('[Auth] No user, setting null state');
         set({
           firebaseUser: null,
           user: null,
@@ -161,17 +176,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   // Load user data from Firestore with retry for new users
   loadUserData: async (uid: string) => {
+    console.log('[Auth] Loading user data for uid:', uid);
     try {
       let userData = await getUserData(uid);
+      console.log('[Auth] User data from Firestore:', userData ? 'found' : 'not found');
 
       // If no user data, try to initialize profile (for existing Auth users without Firestore docs)
       if (!userData) {
         try {
           console.log('[Auth] No user document found, initializing profile...');
           const initResult = await initializeUserProfile();
+          console.log('[Auth] Profile init result:', initResult);
           if (initResult.success) {
             // Retry loading user data
             userData = await getUserData(uid);
+            console.log('[Auth] User data after init:', userData ? 'found' : 'not found');
           }
         } catch (initError) {
           console.error('[Auth] Failed to initialize profile:', initError);
@@ -180,6 +199,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // For new users, retry a few times with delay
       if (!userData) {
+        console.log('[Auth] Retrying user data load...');
         for (let i = 0; i < MAX_RETRIES; i++) {
           await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
           userData = await getUserData(uid);
@@ -189,13 +209,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // Verify the Firebase user hasn't changed (prevent race condition)
       const currentFirebaseUser = get().firebaseUser;
+      console.log('[Auth] Current firebase user:', currentFirebaseUser?.uid, 'requested uid:', uid);
       if (!userData || currentFirebaseUser?.uid !== uid) {
         // User document doesn't exist or auth state changed - need to complete registration
+        console.log('[Auth] User data not found or auth changed, setting null user');
         set({ user: null, isLoading: false, isInitialized: true });
         return null;
       }
 
       const user = { ...userData, id: uid, uid } as User;
+      console.log('[Auth] User data loaded successfully');
       set({
         user,
         isLoading: false,
@@ -203,7 +226,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
       return user;
     } catch (error) {
-      console.error('Error loading user data:', error);
+      console.error('[Auth] Error loading user data:', error);
       set({
         error: 'Failed to load user data',
         isLoading: false,

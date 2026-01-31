@@ -253,9 +253,16 @@ export async function completeRegistration(
  * Called when a new user signs up or when an auth user doesn't have a Firestore document
  */
 export async function initializeUserProfile(): Promise<{ success: boolean; isNewUser: boolean }> {
-  const initProfile = httpsCallable(functions, 'initializeUserProfile');
-  const result = await initProfile();
-  return result.data as { success: boolean; isNewUser: boolean };
+  console.log('[Auth] Calling initializeUserProfile Cloud Function...');
+  try {
+    const initProfile = httpsCallable(functions, 'initializeUserProfile');
+    const result = await initProfile();
+    console.log('[Auth] initializeUserProfile result:', result.data);
+    return result.data as { success: boolean; isNewUser: boolean };
+  } catch (error) {
+    console.error('[Auth] initializeUserProfile failed:', error);
+    throw error;
+  }
 }
 
 /**
