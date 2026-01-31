@@ -45,6 +45,9 @@ interface AuthState {
 // Track if we've already handled the redirect in this session
 let redirectHandled = false;
 
+// Track the last processed URL to handle HMR and redirects
+let lastProcessedUrl: string | null = null;
+
 // Constants for retry logic
 const RETRY_DELAY_MS = 1000;
 const MAX_RETRIES = 3;
@@ -69,6 +72,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     // Handle redirect result first (for Google/Apple sign-in on web)
     const handleRedirect = async () => {
+      const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
+      
+      // Skip if already processed this URL (HMR protection)
+      if (lastProcessedUrl === currentUrl) {
+        return;
+      }
+      
       if (redirectHandled || isCancelled || redirectProcessing) return;
       
       // Only check redirect result if we're on an auth page
@@ -81,6 +91,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       redirectProcessing = true;
+      lastProcessedUrl = currentUrl;
 
       try {
         const redirectUser = await handleAuthRedirect();
