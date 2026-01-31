@@ -64,33 +64,61 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   initialize: () => {
     // Cancellation flag to prevent state updates after unmount
     let isCancelled = false;
+    // Track if redirect was processed to prevent duplicate handling
+    let redirectProcessing = false;
 
     // Handle redirect result first (for Google/Apple sign-in on web)
     const handleRedirect = async () => {
-      if (redirectHandled || isCancelled) return;
-      redirectHandled = true;
+      if (redirectHandled || isCancelled || redirectProcessing) return;
+      
+      // Only check redirect result if we're on an auth page
+      const isAuthPage = typeof window !== 'undefined' && 
+        (window.location.pathname.startsWith('/auth/') || window.location.pathname === '/');
+      
+      if (!isAuthPage) {
+        redirectHandled = true;
+        return;
+      }
+
+      redirectProcessing = true;
 
       try {
         const redirectUser = await handleAuthRedirect();
         if (isCancelled) return;
+        
         if (redirectUser) {
+          // Redirect auth successful - set user and let onAuthStateChanged confirm
           set({ firebaseUser: redirectUser, isLoading: true });
-          await get().loadUserData(redirectUser.uid);
+          // Note: onAuthStateChanged will also fire, but loadUserData has UID check
         }
-      } catch (error) {
+      } catch (error: any) {
         if (isCancelled) return;
         console.error("Error handling auth redirect:", error);
-        set({ error: "Failed to complete sign-in", isLoading: false, isInitialized: true });
+        if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
+          set({ error: error.message || "Failed to complete sign-in", isLoading: false, isInitialized: true });
+        }
+      } finally {
+        redirectHandled = true;
+        redirectProcessing = false;
       }
     };
-
-    handleRedirect();
 
     // Subscribe to auth state changes
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (isCancelled) return;
       
+      // If we're processing a redirect, wait for it unless this is a null (logout)
+      if (redirectProcessing && firebaseUser) {
+        // Redirect processing will handle this
+        return;
+      }
+      
       if (firebaseUser) {
+        // Avoid duplicate load if redirect already handled this user
+        const currentState = get();
+        if (currentState.firebaseUser?.uid === firebaseUser.uid && currentState.user) {
+          return;
+        }
         set({ firebaseUser, isLoading: true });
         await get().loadUserData(firebaseUser.uid);
       } else {
@@ -102,6 +130,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         });
       }
     });
+
+    // Start redirect handling (don't await, let it run in parallel with auth listener)
+    handleRedirect();
 
     // Return cleanup function
     return () => {
