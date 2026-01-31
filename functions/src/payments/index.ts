@@ -27,7 +27,11 @@ interface WalletFundsData {
 /**
  * Create a Stripe customer for a user
  */
-export const createStripeCustomer = functions.region(region).https.onCall(async (data: any, context) => {
+export const createStripeCustomer = functions.region(region).https.onCall(async (
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _data: unknown,
+  context
+) => {
   const userId = requireAuth(context);
   const userDoc = await db.collection("users").doc(userId).get();
   requireDoc(userDoc, "User not found");
@@ -107,7 +111,10 @@ export const createPaymentIntent = functions.region(region).https.onCall(async (
 /**
  * Create a VIP subscription
  */
-export const createVipSubscription = functions.region(region).https.onCall(async (data: VipSubscriptionData, context) => {
+export const createVipSubscription = functions.region(region).https.onCall(async (
+  data: VipSubscriptionData,
+  context
+) => {
   const userId = requireAuth(context);
   const { planId } = data;
 

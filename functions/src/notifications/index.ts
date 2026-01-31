@@ -207,7 +207,10 @@ export const registerFcmToken = functions.region(region).https.onCall(async (dat
 /**
  * Mark notification as read
  */
-export const markNotificationRead = functions.region(region).https.onCall(async (data: NotificationActionData, context) => {
+export const markNotificationRead = functions.region(region).https.onCall(async (
+  data: NotificationActionData,
+  context
+) => {
   const userId = requireAuth(context);
   const { notificationId } = data;
 
@@ -224,7 +227,11 @@ export const markNotificationRead = functions.region(region).https.onCall(async 
 /**
  * Mark all notifications as read
  */
-export const markAllNotificationsRead = functions.region(region).https.onCall(async (data: any, context) => {
+export const markAllNotificationsRead = functions.region(region).https.onCall(async (
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _data: unknown,
+  context
+) => {
   const userId = requireAuth(context);
 
   const unreadNotifs = await db
