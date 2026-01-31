@@ -12,6 +12,9 @@ import {
   isProfileComplete,
   initRecaptcha,
   handleAuthRedirect,
+  registerWithEmail,
+  signInWithEmail,
+  resetPassword,
 } from '@/lib/firebase/auth';
 import { RecaptchaVerifier } from 'firebase/auth';
 
@@ -32,6 +35,9 @@ interface AuthState {
   initialize: () => () => void;
   loginWithGoogle: () => Promise<void>;
   loginWithApple: () => Promise<void>;
+  loginWithEmail: (email: string, password: string) => Promise<void>;
+  registerWithEmail: (email: string, password: string, fullName: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   initPhoneAuth: (buttonId: string) => void;
   sendPhoneOtp: (phoneNumber: string) => Promise<boolean>;
   verifyPhoneOtp: (code: string) => Promise<void>;
@@ -351,6 +357,130 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   // Clear error
   clearError: () => set({ error: null }),
+
+  // Email/Password Login
+  loginWithEmail: async (email: string, password: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const firebaseUser = await signInWithEmail(email, password);
+      set({ firebaseUser, isLoading: true });
+
+      // Check if profile is complete
+      const profileComplete = await isProfileComplete(firebaseUser.uid);
+
+      if (profileComplete) {
+        await get().loadUserData(firebaseUser.uid);
+      } else {
+        // Profile incomplete - redirect to registration will be handled by component
+        set({ isLoading: false, isInitialized: true });
+      }
+    } catch (error: any) {
+      console.error('Email sign in error:', error);
+      let errorMessage = 'Failed to sign in';
+      
+      // Map Firebase error codes to user-friendly messages
+      switch (error.code) {
+        case 'auth/user-not-found':
+          errorMessage = 'No account found with this email';
+          break;
+        case 'auth/wrong-password':
+          errorMessage = 'Incorrect password';
+          break;
+        case 'auth/invalid-email':
+          errorMessage = 'Invalid email address';
+          break;
+        case 'auth/user-disabled':
+          errorMessage = 'This account has been disabled';
+          break;
+        case 'auth/too-many-requests':
+          errorMessage = 'Too many failed attempts. Please try again later';
+          break;
+        default:
+          errorMessage = error.message || 'Failed to sign in';
+      }
+      
+      set({
+        error: errorMessage,
+        isLoading: false
+      });
+    }
+  },
+
+  // Email/Password Registration
+  registerWithEmail: async (email: string, password: string, fullName: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const firebaseUser = await registerWithEmail(email, password);
+      
+      // Create user profile in Firestore
+      const { completeRegistration } = await import('@/lib/firebase/auth');
+      await completeRegistration(firebaseUser.uid, {
+        fullName,
+        email,
+        preferredSection: 'fit',
+      });
+
+      set({ 
+        firebaseUser, 
+        isLoading: false, 
+        isInitialized: true 
+      });
+    } catch (error: any) {
+      console.error('Email registration error:', error);
+      let errorMessage = 'Failed to create account';
+      
+      // Map Firebase error codes to user-friendly messages
+      switch (error.code) {
+        case 'auth/email-already-in-use':
+          errorMessage = 'An account with this email already exists';
+          break;
+        case 'auth/invalid-email':
+          errorMessage = 'Invalid email address';
+          break;
+        case 'auth/weak-password':
+          errorMessage = 'Password is too weak. Use at least 6 characters';
+          break;
+        case 'auth/operation-not-allowed':
+          errorMessage = 'Email/password sign-up is not enabled';
+          break;
+        default:
+          errorMessage = error.message || 'Failed to create account';
+      }
+      
+      set({
+        error: errorMessage,
+        isLoading: false
+      });
+    }
+  },
+
+  // Password Reset
+  resetPassword: async (email: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      await resetPassword(email);
+      set({ isLoading: false });
+    } catch (error: any) {
+      console.error('Password reset error:', error);
+      let errorMessage = 'Failed to send reset email';
+      
+      switch (error.code) {
+        case 'auth/user-not-found':
+          errorMessage = 'No account found with this email';
+          break;
+        case 'auth/invalid-email':
+          errorMessage = 'Invalid email address';
+          break;
+        default:
+          errorMessage = error.message || 'Failed to send reset email';
+      }
+      
+      set({
+        error: errorMessage,
+        isLoading: false
+      });
+    }
+  },
 
   // Set user manually (for registration flow)
   setUser: (user: User | null) => set({ user }),

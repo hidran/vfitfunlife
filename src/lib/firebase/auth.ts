@@ -12,6 +12,13 @@ import {
   User,
   RecaptchaVerifier,
   ConfirmationResult,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+  sendEmailVerification,
+  updatePassword,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
 } from "firebase/auth";
 import { Capacitor } from "@capacitor/core";
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
@@ -234,4 +241,75 @@ export async function getUserData(userId: string) {
     }
     throw error;
   }
+}
+
+/**
+ * Register with email and password
+ */
+export async function registerWithEmail(
+  email: string,
+  password: string
+): Promise<User> {
+  const result = await createUserWithEmailAndPassword(auth, email, password);
+  return result.user;
+}
+
+/**
+ * Sign in with email and password
+ */
+export async function signInWithEmail(
+  email: string,
+  password: string
+): Promise<User> {
+  const result = await signInWithEmailAndPassword(auth, email, password);
+  return result.user;
+}
+
+/**
+ * Send password reset email
+ */
+export async function resetPassword(email: string): Promise<void> {
+  await sendPasswordResetEmail(auth, email);
+}
+
+/**
+ * Send email verification
+ */
+export async function verifyEmail(user: User): Promise<void> {
+  await sendEmailVerification(user);
+}
+
+/**
+ * Check if email is verified
+ */
+export function isEmailVerified(user: User): boolean {
+  return user.emailVerified;
+}
+
+/**
+ * Update user password (requires reauthentication)
+ */
+export async function changePassword(
+  user: User,
+  currentPassword: string,
+  newPassword: string
+): Promise<void> {
+  // Reauthenticate user first
+  const credential = EmailAuthProvider.credential(
+    user.email!,
+    currentPassword
+  );
+  await reauthenticateWithCredential(user, credential);
+  
+  // Update password
+  await updatePassword(user, newPassword);
+}
+
+/**
+ * Check if user signed in with email/password
+ */
+export function isEmailProvider(user: User): boolean {
+  return user.providerData.some(
+    (provider) => provider.providerId === 'password'
+  );
 }
