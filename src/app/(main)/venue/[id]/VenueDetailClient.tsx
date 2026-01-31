@@ -191,9 +191,9 @@ export default function VenueDetailClient({ id }: { id: string }) {
 
           {activeTab === 'services' ? (
             <div className="mt-4 space-y-3">
-              {venue.services.map((service) => (
+              {venue.services.map((service, index) => (
                 <div
-                  key={service.name}
+                  key={`service-${service.name}-${index}`}
                   className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3"
                 >
                   <span className="text-sm font-semibold text-text-inverse">
@@ -207,9 +207,9 @@ export default function VenueDetailClient({ id }: { id: string }) {
             </div>
           ) : (
             <div className="mt-4 space-y-3">
-              {venue.courses.map((course) => (
+              {venue.courses.map((course, index) => (
                 <div
-                  key={course.name}
+                  key={`course-${course.name}-${index}`}
                   className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3"
                 >
                   <div className="flex items-center gap-3">
