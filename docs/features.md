@@ -97,14 +97,14 @@ Bottom tabs with section-aware theming:
 - [x] Map preview with venue markers
 
 #### Home - VFun Content
-- [ ] Featured event hero banner (full width, auto-scroll)
-- [ ] Quick actions: "Eventi", "VR", "Party", "TV"
-- [ ] "Prossimi Eventi" list
-  - Event cards with image, date, title, price
-- [ ] "VR Experiences" carousel
-- [ ] "Live Now" streaming indicator (if active)
-- [ ] "Palinsesto" TV schedule preview
-- [ ] "Lavora Con Noi" CTA card
+- [x] Featured event hero banner (full width, auto-scroll dots)
+- [x] Quick actions: "Eventi", "VR", "Party", "TV"
+- [x] "Prossimi Eventi" list
+  - Event cards with date, title, price, tags (Hot/VIP/Nuovo)
+- [x] "VR Experiences" carousel with ratings and levels
+- [x] "Live Now" streaming indicator with pulsing animation
+- [x] "Palinsesto" TV schedule preview with channel badges
+- [x] "Party Mode" CTA card (private events)
 
 #### Home - VLife Content
 - [x] VIP banner with wellness discount
@@ -122,12 +122,12 @@ Bottom tabs with section-aware theming:
 ## 5. VFit Screens
 
 ### 5.1 Gyms List (`/fit/gyms`)
-- [ ] Toggle: List view / Map view
-- [ ] Filter bar: Distance, Rating, Amenities, Price range
-- [ ] Sort: Nearest, Top rated, Price low-high
-- [ ] Gym cards in list
-- [ ] Map with clustered markers
-- [ ] Search bar
+- [x] Toggle: List view / Map view
+- [x] Filter bar UI: Distance, Rating, Amenities, Price range
+- [x] Sort: Nearest, Top rated, Price low-high
+- [x] Gym cards in list
+- [ ] Map with real Mapbox GL and clustered markers (currently mock)
+- [x] Search bar
 
 ### 5.2 Gym Detail (`/venue/[id]`)
 - [x] Hero image carousel with dots
