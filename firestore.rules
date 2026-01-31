@@ -3,52 +3,164 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+
+    /**
+     * Check if the user is authenticated
+     */
     function isAuthenticated() {
       return request.auth != null;
     }
 
+    /**
+     * Check if the current user is the owner of the document
+     */
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    function isAdmin() {
-      return isAuthenticated() &&
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in ['admin', 'superadmin'];
+    /**
+     * Get the role of the authenticated user
+     */
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
 
+    /**
+     * Get the full user data of the authenticated user
+     */
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    /**
+     * Check if the authenticated user is a superadmin
+     */
+    function isSuperAdmin() {
+      return isAuthenticated() && getUserRole() == 'superadmin';
+    }
+
+    /**
+     * Check if the authenticated user is an admin (superadmin or admin)
+     */
+    function isAdmin() {
+      return isAuthenticated() && getUserRole() in ['superadmin', 'admin'];
+    }
+
+    /**
+     * Check if the authenticated user is a provider
+     */
+    function isProvider() {
+      return isAuthenticated() && getUserRole() == 'provider';
+    }
+
+    /**
+     * Check if the authenticated user is a customer
+     */
+    function isCustomer() {
+      return isAuthenticated() && getUserRole() == 'customer';
+    }
+
+    /**
+     * Check if the user has a specific permission
+     */
+    function hasPermission(permission) {
+      return isAuthenticated() && permission in getUserData().permissions;
+    }
+
+    /**
+     * Check if user is staff (admin or superadmin)
+     */
+    function isStaff() {
+      return isAdmin();
+    }
+
+    /**
+     * Check if user is venue staff
+     */
     function isVenueStaff(venueId) {
       return isAuthenticated() &&
         exists(/databases/$(database)/documents/venueStaff/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/venueStaff/$(request.auth.uid)).data.venueId == venueId;
     }
 
-    // Users collection
+    /**
+     * Check if provider is the assigned instructor for a booking
+     */
+    function isAssignedProvider(bookingId) {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/bookings/$(bookingId)) &&
+        get(/databases/$(database)/documents/bookings/$(bookingId)).data.instructorId == request.auth.uid;
+    }
+
+    /**
+     * Validate user creation data
+     */
+    function isValidUserCreate() {
+      return request.resource.data.keys().hasOnly([
+        'uid', 'email', 'phone', 'fullName', 'avatarUrl', 'dateOfBirth',
+        'role', 'userType', 'permissions', 'providerProfile',
+        'isActive', 'isVip', 'isVerified',
+        'vipExpiresAt', 'vipPlanId', 'stripeCustomerId', 'stripeSubscriptionId',
+        'pointsBalance', 'walletBalance',
+        'preferredLanguage', 'preferredSection', 'notificationsEnabled',
+        'fcmTokens', 'referralCode', 'referredBy', 'referralCount',
+        'createdAt', 'updatedAt', 'lastLoginAt', 'createdBy'
+      ]);
+    }
+
+    /**
+     * Validate user update data (customers and providers)
+     */
+    function isValidUserUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'fullName', 'email', 'phone', 'dateOfBirth', 'preferredLanguage',
+        'preferredSection', 'avatarUrl', 'notificationsEnabled', 'fcmTokens',
+        'updatedAt', 'providerProfile'
+      ]);
+    }
+
+    /**
+     * Validate role update (admin only fields)
+     */
+    function isValidRoleUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'permissions', 'userType']);
+    }
+
+    // ============================================
+    // USERS COLLECTION
+    // ============================================
+
     match /users/{userId} {
-      allow read: if isOwner(userId) || isAdmin();
-      
-      // Allow create only with valid initial fields
-      allow create: if isOwner(userId) && 
-        request.resource.data.keys().hasOnly([
-          'fullName', 'email', 'phone', 'dateOfBirth', 'preferredSection',
-          'preferredLanguage', 'avatarUrl', 'createdAt', 'updatedAt',
-          'referralCode', 'referredBy'
-        ]) &&
-        request.resource.data.fullName is string &&
-        request.resource.data.fullName.size() > 0 &&
-        request.resource.data.fullName.size() <= 100;
-      
-      // Allow update only with valid fields
-      allow update: if isOwner(userId) && 
-        request.resource.data.keys().hasOnly([
-          'fullName', 'email', 'phone', 'dateOfBirth', 'preferredSection',
-          'preferredLanguage', 'avatarUrl', 'updatedAt', 'notificationsEnabled',
-          'fcmTokens'
-        ]) &&
-        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdAt']));
-      
-      allow delete: if isAdmin();
+      // Read rules
+      allow read: if isOwner(userId) || 
+                    isAdmin() || 
+                    (isProvider() && resource.data.role == 'provider' && resource.data.userType != null);
+
+      // Create rules - superadmin can create any user, new users can create their own profile
+      allow create: if isSuperAdmin() || 
+                       (isOwner(userId) && 
+                        request.resource.data.role in ['customer', 'provider'] &&
+                        isValidUserCreate());
+
+      // Update rules
+      allow update: if (
+        // Users can update their own basic profile
+        (isOwner(userId) && isValidUserUpdate() && !isValidRoleUpdate())
+      ) || (
+        // Superadmin can update anything
+        isSuperAdmin()
+      ) || (
+        // Admin can update non-superadmin users and cannot change roles
+        isAdmin() && 
+        resource.data.role != 'superadmin' &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'permissions'])
+      );
+
+      // Delete rules - superadmin only
+      allow delete: if isSuperAdmin();
 
       // User subcollections
       match /addresses/{addressId} {
@@ -70,11 +182,62 @@ service cloud.firestore {
         allow read: if isOwner(userId);
         allow write: if false; // Only Cloud Functions
       }
+
+      match /availability/{dateId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow write: if isOwner(userId) || isAdmin();
+      }
     }
 
-    // Venues collection (public read)
+    // ============================================
+    // PROVIDER APPLICATIONS
+    // ============================================
+
+    match /providerApplications/{applicationId} {
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // ============================================
+    // ROLE CHANGE LOGS (Admin only)
+    // ============================================
+
+    match /roleChangeLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false; // Only Cloud Functions
+    }
+
+    // ============================================
+    // VERIFICATION LOGS (Admin only)
+    // ============================================
+
+    match /verificationLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false; // Only Cloud Functions
+    }
+
+    // ============================================
+    // USER STATUS LOGS (Admin only)
+    // ============================================
+
+    match /userStatusLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false; // Only Cloud Functions
+    }
+
+    // ============================================
+    // VENUES COLLECTION
+    // ============================================
+
     match /venues/{venueId} {
+      // Public read
       allow read: if true;
+
+      // Write: Admin or venue staff
       allow write: if isAdmin() || isVenueStaff(venueId);
 
       match /services/{serviceId} {
@@ -89,13 +252,26 @@ service cloud.firestore {
         allow update, delete: if isAuthenticated() &&
           resource.data.userId == request.auth.uid;
       }
+
+      match /staff/{staffId} {
+        allow read: if isAdmin() || isVenueStaff(venueId);
+        allow write: if isAdmin() || isVenueStaff(venueId);
+      }
     }
 
-    // Instructors collection (public read)
+    // ============================================
+    // INSTRUCTORS/PROVIDERS COLLECTION
+    // ============================================
+
     match /instructors/{instructorId} {
-      allow read: if true;
+      // Public read for verified instructors
+      allow read: if resource.data.providerProfile.isVerified == true ||
+                    isAdmin() ||
+                    request.auth.uid == resource.data.uid;
+
+      // Write: Admin or the instructor themselves
       allow write: if isAdmin() ||
-        (isAuthenticated() && resource.data.userId == request.auth.uid);
+        (isAuthenticated() && resource.data.uid == request.auth.uid);
 
       match /reviews/{reviewId} {
         allow read: if true;
@@ -108,33 +284,64 @@ service cloud.firestore {
       match /availability/{dateId} {
         allow read: if true;
         allow write: if isAdmin() ||
-          (isAuthenticated() && get(/databases/$(database)/documents/instructors/$(instructorId)).data.userId == request.auth.uid);
+          (isAuthenticated() && get(/databases/$(database)/documents/instructors/$(instructorId)).data.uid == request.auth.uid);
       }
     }
 
-    // Fitness Classes (public read)
-    match /fitnessClasses/{classId} {
-      allow read: if true;
-      allow write: if isAdmin() || isVenueStaff(resource.data.venueId);
+    // ============================================
+    // BOOKINGS COLLECTION
+    // ============================================
 
-      match /schedules/{scheduleId} {
-        allow read: if true;
-        allow write: if isAdmin();
-      }
-    }
-
-    // Bookings (user can read/create their own)
     match /bookings/{bookingId} {
-      allow read: if isAuthenticated() &&
-        (resource.data.userId == request.auth.uid || isAdmin());
+      // Read: Owner, assigned provider, or admin
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.instructorId == request.auth.uid ||
+        isAdmin()
+      );
+
+      // Create: Customers can create their own bookings
       allow create: if isAuthenticated() &&
-        request.resource.data.userId == request.auth.uid;
-      allow update: if isAuthenticated() &&
-        (resource.data.userId == request.auth.uid || isAdmin());
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.keys().hasOnly([
+          'userId', 'venueId', 'serviceId', 'instructorId',
+          'userName', 'userPhone', 'userEmail', 'venueName', 'venueAddress',
+          'serviceName', 'instructorName', 'bookingType', 'serviceAddress',
+          'scheduledAt', 'scheduledEndAt', 'durationMinutes', 'status',
+          'originalPrice', 'discountAmount', 'homeServiceFee', 'finalPrice',
+          'depositAmount', 'pointsUsed', 'pointsValue', 'pointsEarned',
+          'promotionId', 'promotionCode', 'depositPaid', 'paymentStatus',
+          'paymentMethod', 'stripePaymentIntentId', 'userNotes', 'internalNotes',
+          'cancelledAt', 'cancelledBy', 'cancellationReason', 'refundAmount',
+          'hasReviewed', 'reviewId', 'createdAt', 'updatedAt', 'confirmedAt', 'completedAt'
+        ]);
+
+      // Update: Owner (limited fields), assigned provider (status), or admin
+      allow update: if isAuthenticated() && (
+        // Admin can update all bookings
+        isAdmin()
+      ) || (
+        // Customer can update their own booking (limited fields - mainly for cancellation)
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'userNotes', 'cancelledAt', 'cancelledBy', 'cancellationReason', 'updatedAt'
+        ])
+      ) || (
+        // Assigned provider can update status
+        resource.data.instructorId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'updatedAt', 'internalNotes'
+        ])
+      );
+
+      // Delete: Admin only
       allow delete: if isAdmin();
     }
 
-    // Class Bookings
+    // ============================================
+    // CLASS BOOKINGS
+    // ============================================
+
     match /classBookings/{bookingId} {
       allow read: if isAuthenticated() &&
         (resource.data.userId == request.auth.uid || isAdmin());
@@ -145,7 +352,24 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Events (public read)
+    // ============================================
+    // FITNESS CLASSES
+    // ============================================
+
+    match /fitnessClasses/{classId} {
+      allow read: if true;
+      allow write: if isAdmin() || isVenueStaff(resource.data.venueId);
+
+      match /schedules/{scheduleId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+    }
+
+    // ============================================
+    // EVENTS
+    // ============================================
+
     match /events/{eventId} {
       allow read: if true;
       allow write: if isAdmin();
@@ -159,45 +383,162 @@ service cloud.firestore {
       }
     }
 
-    // Service Categories (public read)
+    // ============================================
+    // SERVICE CATEGORIES
+    // ============================================
+
     match /serviceCategories/{categoryId} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // VIP Plans (public read)
+    // ============================================
+    // VIP PLANS
+    // ============================================
+
     match /vipPlans/{planId} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // Challenges (public read)
+    // ============================================
+    // CHALLENGES
+    // ============================================
+
     match /challenges/{challengeId} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // Promotions (public read active ones)
+    // ============================================
+    // PROMOTIONS
+    // ============================================
+
     match /promotions/{promotionId} {
       allow read: if resource.data.isActive == true || isAdmin();
       allow write: if isAdmin();
     }
 
-    // Streaming Schedule (public read)
+    // ============================================
+    // STREAMING SCHEDULE
+    // ============================================
+
     match /streamingSchedule/{scheduleId} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // Admin users (admin only)
+    // ============================================
+    // CONFIGURATION (Admin only)
+    // ============================================
+
+    match /config/{configId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // ============================================
+    // SYSTEM SETTINGS (Superadmin only)
+    // ============================================
+
+    match /systemSettings/{settingId} {
+      allow read: if isSuperAdmin();
+      allow write: if isSuperAdmin();
+    }
+
+    // ============================================
+    // ADMIN COLLECTION (Deprecated - using users with role)
+    // ============================================
+
     match /admins/{adminId} {
       allow read, write: if isAdmin();
     }
 
-    // Venue Staff (admin only)
+    // ============================================
+    // VENUE STAFF
+    // ============================================
+
     match /venueStaff/{staffId} {
       allow read: if isAuthenticated() &&
         (request.auth.uid == staffId || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // ============================================
+    // PAYMENTS
+    // ============================================
+
+    match /payments/{paymentId} {
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if false; // Only Cloud Functions
+      allow update: if isAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // ============================================
+    // STRIPE CUSTOMERS
+    // ============================================
+
+    match /stripeCustomers/{customerId} {
+      allow read: if isAuthenticated() && 
+        (resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if false; // Only Cloud Functions
+    }
+
+    // ============================================
+    // NOTIFICATIONS (Global)
+    // ============================================
+
+    match /notifications/{notificationId} {
+      allow read: if isAdmin();
+      allow write: if false; // Only Cloud Functions
+    }
+
+    // ============================================
+    // ANALYTICS (Admin only)
+    // ============================================
+
+    match /analytics/{docId} {
+      allow read: if isAdmin();
+      allow write: if false; // Only Cloud Functions
+    }
+
+    // ============================================
+    // AUDIT LOGS (Admin only)
+    // ============================================
+
+    match /auditLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false; // Only Cloud Functions
+    }
+
+    // ============================================
+    // DELETED USERS (Superadmin only)
+    // ============================================
+
+    match /deletedUsers/{userId} {
+      allow read: if isSuperAdmin();
+      allow write: if isSuperAdmin();
+    }
+
+    // ============================================
+    // USER TYPES (Public read, admin write)
+    // ============================================
+
+    match /userTypes/{userTypeId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ============================================
+    // SERVICE TYPES (Public read, admin write)
+    // ============================================
+
+    match /serviceTypes/{serviceTypeId} {
+      allow read: if true;
       allow write: if isAdmin();
     }
   }

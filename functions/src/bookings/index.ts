@@ -2,6 +2,7 @@ import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https
 import * as admin from "firebase-admin";
 import { addMinutes } from "date-fns";
 import { UserData, VenueData, ServiceData, InstructorData, PromotionData } from "../types";
+import { getUserRoleInfo, requirePermission, checkIsAdmin } from "../utils/roles";
 
 const db = admin.firestore();
 const region = process.env.FIREBASE_REGION || "europe-west1";
@@ -25,6 +26,23 @@ interface CancelBookingData {
 
 interface ConfirmBookingData {
   bookingId: string;
+}
+
+interface GetBookingData {
+  bookingId: string;
+}
+
+interface ListBookingsData {
+  status?: string;
+  limit?: number;
+  offset?: number;
+  asProvider?: boolean;
+}
+
+interface UpdateBookingStatusData {
+  bookingId: string;
+  status: string;
+  notes?: string;
 }
 
 interface BookingResources {
@@ -174,6 +192,7 @@ async function calculateBookingFinancials(
 
 /**
  * Create a new booking
+ * Customers can create bookings for themselves
  */
 export const createBooking = onCall<BookingData>(
   { region },
@@ -183,6 +202,13 @@ export const createBooking = onCall<BookingData>(
     }
 
     const userId = request.auth.uid;
+    const callerInfo = await getUserRoleInfo(userId);
+
+    // Check if user has booking creation permission
+    if (!callerInfo || !callerInfo.permissions.includes("bookings:write")) {
+      throw new HttpsError("permission-denied", "Cannot create bookings");
+    }
+
     const {
       venueId,
       serviceId,
@@ -319,7 +345,116 @@ export const createBooking = onCall<BookingData>(
 );
 
 /**
+ * Get a single booking
+ * Users can read their own bookings
+ * Providers can read bookings assigned to them
+ * Admins can read any booking
+ */
+export const getBooking = onCall<GetBookingData>(
+  { region },
+  async (request: CallableRequest<GetBookingData>) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Must be authenticated");
+    }
+
+    const callerId = request.auth.uid;
+    const { bookingId } = request.data;
+
+    const bookingDoc = await db.collection("bookings").doc(bookingId).get();
+
+    if (!bookingDoc.exists) {
+      throw new HttpsError("not-found", "Booking not found");
+    }
+
+    const booking = bookingDoc.data()!;
+
+    // Check permissions
+    const isOwner = booking.userId === callerId;
+    const isAssignedProvider = booking.instructorId === callerId;
+    const isAdmin = await checkIsAdmin(callerId);
+
+    if (!isOwner && !isAssignedProvider && !isAdmin) {
+      throw new HttpsError("permission-denied", "Cannot access this booking");
+    }
+
+    return {
+      bookingId: bookingDoc.id,
+      ...booking,
+    };
+  }
+);
+
+/**
+ * List bookings
+ * Users see their own bookings
+ * Providers see bookings assigned to them
+ * Admins see all bookings
+ */
+export const listBookings = onCall<ListBookingsData>(
+  { region },
+  async (request: CallableRequest<ListBookingsData>) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Must be authenticated");
+    }
+
+    const callerId = request.auth.uid;
+    const { status, limit = 20, offset = 0, asProvider } = request.data || {};
+    const callerInfo = await getUserRoleInfo(callerId);
+
+    if (!callerInfo) {
+      throw new HttpsError("not-found", "User not found");
+    }
+
+    let query: admin.firestore.Query = db.collection("bookings");
+
+    // Filter by caller's role
+    if (callerInfo.role === "customer") {
+      // Customers only see their own bookings
+      query = query.where("userId", "==", callerId);
+    } else if (callerInfo.role === "provider") {
+      // Providers can view bookings assigned to them
+      if (asProvider) {
+        query = query.where("instructorId", "==", callerId);
+      } else {
+        // Or their own bookings as a customer
+        query = query.where("userId", "==", callerId);
+      }
+    }
+    // Admins/superadmins see all bookings (no filter)
+
+    // Apply status filter if provided
+    if (status) {
+      query = query.where("status", "==", status);
+    }
+
+    // Order by created date
+    query = query.orderBy("createdAt", "desc");
+
+    // Apply pagination
+    const snapshot = await query.limit(limit).offset(offset).get();
+
+    const bookings = snapshot.docs.map((doc) => ({
+      bookingId: doc.id,
+      ...doc.data(),
+    }));
+
+    return {
+      bookings,
+      pagination: {
+        limit,
+        offset,
+        count: bookings.length,
+        hasMore: bookings.length === limit,
+      },
+    };
+  }
+);
+
+/**
  * Cancel a booking
+ * Users can cancel their own bookings
+ * Providers can cancel bookings assigned to them
+ * Admins can cancel any booking
  */
 export const cancelBooking = onCall<CancelBookingData>(
   { region },
@@ -328,7 +463,7 @@ export const cancelBooking = onCall<CancelBookingData>(
       throw new HttpsError("unauthenticated", "Must be authenticated");
     }
 
-    const userId = request.auth.uid;
+    const callerId = request.auth.uid;
     const { bookingId, reason } = request.data;
 
     const bookingRef = db.collection("bookings").doc(bookingId);
@@ -340,8 +475,13 @@ export const cancelBooking = onCall<CancelBookingData>(
 
     const booking = bookingDoc.data()!;
 
-    if (booking.userId !== userId) {
-      throw new HttpsError("permission-denied", "Not authorized to cancel this booking");
+    // Check permissions
+    const isOwner = booking.userId === callerId;
+    const isAssignedProvider = booking.instructorId === callerId;
+    const isAdminUser = await checkIsAdmin(callerId);
+
+    if (!isOwner && !isAssignedProvider && !isAdminUser) {
+      throw new HttpsError("permission-denied", "Cannot cancel this booking");
     }
 
     if (["completed", "cancelled"].includes(booking.status)) {
@@ -360,12 +500,20 @@ export const cancelBooking = onCall<CancelBookingData>(
       refundAmount = booking.finalPrice * 0.5; // 50% refund
     }
 
+    // Determine who cancelled
+    let cancelledBy = "user";
+    if (isAssignedProvider) {
+      cancelledBy = "provider";
+    } else if (isAdminUser) {
+      cancelledBy = "admin";
+    }
+
     const batch = db.batch();
 
     batch.update(bookingRef, {
       status: "cancelled",
       cancelledAt: admin.firestore.FieldValue.serverTimestamp(),
-      cancelledBy: "user",
+      cancelledBy,
       cancellationReason: reason || null,
       refundAmount,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -373,7 +521,7 @@ export const cancelBooking = onCall<CancelBookingData>(
 
     // Refund points if used
     if (booking.pointsUsed > 0) {
-      const userRef = db.collection("users").doc(userId);
+      const userRef = db.collection("users").doc(booking.userId);
       batch.update(userRef, {
         pointsBalance: admin.firestore.FieldValue.increment(booking.pointsUsed),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -382,7 +530,7 @@ export const cancelBooking = onCall<CancelBookingData>(
       const userDoc = await userRef.get();
       const userData = userDoc.data();
 
-      const pointsTransactionRef = db.collection("users").doc(userId).collection("pointsTransactions").doc();
+      const pointsTransactionRef = db.collection("users").doc(booking.userId).collection("pointsTransactions").doc();
       batch.set(pointsTransactionRef, {
         points: booking.pointsUsed,
         type: "refund",
@@ -410,7 +558,15 @@ export const confirmBooking = onCall<ConfirmBookingData>(
       throw new HttpsError("unauthenticated", "Must be authenticated");
     }
 
+    const callerId = request.auth.uid;
     const { bookingId } = request.data;
+
+    // Check admin permission
+    try {
+      await requirePermission(callerId, "bookings:confirm");
+    } catch (error) {
+      throw new HttpsError("permission-denied", "Admin access required to confirm bookings");
+    }
 
     const bookingRef = db.collection("bookings").doc(bookingId);
     const bookingDoc = await bookingRef.get();
@@ -428,6 +584,7 @@ export const confirmBooking = onCall<ConfirmBookingData>(
     await bookingRef.update({
       status: "confirmed",
       confirmedAt: admin.firestore.FieldValue.serverTimestamp(),
+      confirmedBy: callerId,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
@@ -443,5 +600,84 @@ export const confirmBooking = onCall<ConfirmBookingData>(
     });
 
     return { success: true };
+  }
+);
+
+/**
+ * Update booking status
+ * Admin/staff only
+ */
+export const updateBookingStatus = onCall<UpdateBookingStatusData>(
+  { region },
+  async (request: CallableRequest<UpdateBookingStatusData>) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Must be authenticated");
+    }
+
+    const callerId = request.auth.uid;
+    const { bookingId, status, notes } = request.data;
+
+    // Check admin permission
+    const callerInfo = await getUserRoleInfo(callerId);
+    if (!callerInfo || (callerInfo.role !== "admin" && callerInfo.role !== "superadmin")) {
+      throw new HttpsError("permission-denied", "Admin access required");
+    }
+
+    const bookingRef = db.collection("bookings").doc(bookingId);
+    const bookingDoc = await bookingRef.get();
+
+    if (!bookingDoc.exists) {
+      throw new HttpsError("not-found", "Booking not found");
+    }
+
+    const validStatuses = ["pending", "confirmed", "in_progress", "completed", "cancelled", "no_show"];
+    if (!validStatuses.includes(status)) {
+      throw new HttpsError("invalid-argument", `Invalid status. Valid statuses: ${validStatuses.join(", ")}`);
+    }
+
+    const updateData: Record<string, unknown> = {
+      status,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      statusUpdatedBy: callerId,
+      statusUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    if (notes) {
+      updateData.internalNotes = notes;
+    }
+
+    // Add timestamp for specific statuses
+    if (status === "confirmed") {
+      updateData.confirmedAt = admin.firestore.FieldValue.serverTimestamp();
+      updateData.confirmedBy = callerId;
+    } else if (status === "completed") {
+      updateData.completedAt = admin.firestore.FieldValue.serverTimestamp();
+      updateData.completedBy = callerId;
+    }
+
+    await bookingRef.update(updateData);
+
+    // Send notification to user for status changes
+    const booking = bookingDoc.data()!;
+    const statusMessages: Record<string, string> = {
+      confirmed: "La tua prenotazione è stata confermata",
+      in_progress: "La tua prenotazione è in corso",
+      completed: "La tua prenotazione è stata completata",
+      cancelled: "La tua prenotazione è stata cancellata",
+    };
+
+    if (statusMessages[status]) {
+      await db.collection("users").doc(booking.userId).collection("notifications").add({
+        title: "Aggiornamento prenotazione",
+        body: statusMessages[status],
+        type: `booking_${status}`,
+        data: { bookingId },
+        imageUrl: null,
+        isRead: false,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+
+    return { success: true, bookingId, status };
   }
 );

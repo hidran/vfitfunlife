@@ -14,7 +14,8 @@
     "test:e2e:ui": "playwright test --ui",
     "deploy:functions": "firebase deploy --only functions",
     "deploy:rules": "firebase deploy --only firestore:rules",
-    "deploy:hosting": "firebase deploy --only hosting"
+    "deploy:hosting": "firebase deploy --only hosting",
+    "seed:users": "npx ts-node --transpile-only scripts/seed-users.ts"
   },
   "dependencies": {
     "@capacitor/app": "^8.0.0",

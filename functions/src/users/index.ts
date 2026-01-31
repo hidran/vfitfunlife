@@ -1,8 +1,15 @@
 import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
+import { getUserRoleInfo } from "../utils/roles";
 
 const db = admin.firestore();
 const region = process.env.FIREBASE_REGION || "europe-west1";
+
+// Re-export all role management functions
+export * from "./roles";
+
+// Export user type functions
+export * from "./userTypes";
 
 interface UserUpdateData {
   fullName?: string;
@@ -56,6 +63,8 @@ interface BookingData {
 
 /**
  * Update user profile
+ * Users can only update their own profile
+ * Providers have additional fields they can update
  */
 export const updateProfile = onCall<UserUpdateData>(
   { region },
@@ -66,13 +75,27 @@ export const updateProfile = onCall<UserUpdateData>(
 
     const userId = request.auth.uid;
     const data = request.data;
-    const allowedFields = [
+
+    // Get user role info to determine allowed fields
+    const roleInfo = await getUserRoleInfo(userId);
+
+    // Base allowed fields for all users
+    const baseAllowedFields = [
       "fullName",
       "dateOfBirth",
       "preferredLanguage",
       "preferredSection",
       "notificationsEnabled",
+      "avatarUrl",
     ];
+
+    // Additional fields providers can update (in their main profile, not providerProfile)
+    const providerAllowedFields = [
+      ...baseAllowedFields,
+      "phone", // Providers can update their contact phone
+    ];
+
+    const allowedFields = roleInfo?.role === "provider" ? providerAllowedFields : baseAllowedFields;
 
     const updates: Record<string, unknown> = {};
 
@@ -96,6 +119,9 @@ export const updateProfile = onCall<UserUpdateData>(
 
 /**
  * Get user stats
+ * Users can view their own stats
+ * Providers can view their own provider stats
+ * Admins can view any user's stats
  */
 export const getUserStats = onCall(
   { region },
@@ -104,12 +130,23 @@ export const getUserStats = onCall(
       throw new HttpsError("unauthenticated", "Must be authenticated");
     }
 
-    const userId = request.auth.uid;
+    const callerId = request.auth.uid;
+    const targetUserId = (request.data as { userId?: string }).userId || callerId;
+
+    // Check permissions
+    const callerInfo = await getUserRoleInfo(callerId);
+
+    // Users can only view their own stats unless they're admin
+    if (targetUserId !== callerId) {
+      if (!callerInfo || (callerInfo.role !== "admin" && callerInfo.role !== "superadmin")) {
+        throw new HttpsError("permission-denied", "Can only view your own stats");
+      }
+    }
 
     // Get completed bookings count
     const completedBookings = await db
       .collection("bookings")
-      .where("userId", "==", userId)
+      .where("userId", "==", targetUserId)
       .where("status", "==", "completed")
       .count()
       .get();
@@ -117,7 +154,7 @@ export const getUserStats = onCall(
     // Get total points earned
     const pointsEarned = await db
       .collection("users")
-      .doc(userId)
+      .doc(targetUserId)
       .collection("pointsTransactions")
       .where("type", "==", "earned")
       .get();
@@ -129,30 +166,68 @@ export const getUserStats = onCall(
       .collection("venues")
       .doc()
       .collection("reviews")
-      .where("userId", "==", userId)
+      .where("userId", "==", targetUserId)
       .count()
       .get();
 
     // Get active challenges
     const activeChallenges = await db
       .collection("users")
-      .doc(userId)
+      .doc(targetUserId)
       .collection("userChallenges")
       .where("status", "==", "in_progress")
       .count()
       .get();
 
     // Get referrals count
-    const userDoc = await db.collection("users").doc(userId).get();
+    const userDoc = await db.collection("users").doc(targetUserId).get();
     const userData = userDoc.data();
 
-    return {
+    const stats: Record<string, unknown> = {
       completedBookings: completedBookings.data().count,
       totalPointsEarned,
       reviewsWritten: reviewsWritten.data().count,
       activeChallenges: activeChallenges.data().count,
       referralCount: userData?.referralCount || 0,
     };
+
+    // Add provider-specific stats if the target user is a provider
+    if (userData?.role === "provider") {
+      // Get bookings as provider (using instructorId)
+      const providerBookings = await db
+        .collection("bookings")
+        .where("instructorId", "==", targetUserId)
+        .count()
+        .get();
+
+      const completedProviderBookings = await db
+        .collection("bookings")
+        .where("instructorId", "==", targetUserId)
+        .where("status", "==", "completed")
+        .count()
+        .get();
+
+      const totalEarnings = await db
+        .collection("bookings")
+        .where("instructorId", "==", targetUserId)
+        .where("status", "==", "completed")
+        .get();
+
+      const earnings = totalEarnings.docs.reduce((sum, doc) => {
+        const booking = doc.data();
+        return sum + (booking.providerEarnings || 0);
+      }, 0);
+
+      stats.providerStats = {
+        totalBookings: providerBookings.data().count,
+        completedBookings: completedProviderBookings.data().count,
+        totalEarnings: earnings,
+        rating: userData.providerProfile?.rating || 0,
+        reviewCount: userData.providerProfile?.reviewCount || 0,
+      };
+    }
+
+    return stats;
   }
 );
 
@@ -244,6 +319,7 @@ export const deleteAddress = onCall<DeleteAddressData>(
 
 /**
  * Get leaderboard
+ * Public endpoint - anyone can view
  */
 export const getLeaderboard = onCall<LeaderboardData>(
   { region },

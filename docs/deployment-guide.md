@@ -246,6 +246,366 @@ firebase deploy
 
 ---
 
+## Deploying Cloud Functions
+
+### Function Deployment Strategies
+
+```bash
+# Deploy all functions at once
+firebase deploy --only functions
+
+# Deploy specific function by name
+firebase deploy --only functions:initializeUserProfile
+firebase deploy --only functions:createBooking
+firebase deploy --only functions:processScheduledTasks
+
+# Deploy functions in a specific region
+firebase deploy --only functions --region europe-west1
+
+# Deploy with timeout/memory configuration
+# (configured in firebase.json or function code)
+```
+
+### Setting Function Configuration
+
+```bash
+# Set environment variables
+firebase functions:config:set stripe.secret_key="sk_live_xxx"
+firebase functions:config:set stripe.webhook_secret="whsec_xxx"
+firebase functions:config:set sendgrid.api_key="SG.xxx"
+firebase functions:config:set app.url="https://app.vfitfunlife.com"
+
+# Set different values per environment
+firebase functions:config:set stripe.secret_key="sk_test_xxx" --project vfit-dev
+firebase functions:config:set stripe.secret_key="sk_live_xxx" --project vfit-prod
+```
+
+### Function Secrets (Recommended)
+
+```bash
+# Store secrets securely (recommended over config for sensitive data)
+firebase functions:secrets:set STRIPE_SECRET_KEY
+firebase functions:secrets:set STRIPE_WEBHOOK_SECRET
+firebase functions:secrets:set SENDGRID_API_KEY
+
+# Access in function code
+const { defineSecret } = require('firebase-functions/params');
+const stripeKey = defineSecret('STRIPE_SECRET_KEY');
+```
+
+### Testing Functions Locally
+
+```bash
+# Start function emulators
+firebase emulators:start --only functions
+
+# Start with specific functions
+firebase emulators:start --only functions:createBooking,functions:cancelBooking
+
+# Run local shell for interactive testing
+firebase functions:shell
+
+# Test function in shell
+initializeUserProfile()
+createBooking({ venueId: 'test', serviceId: 'test', scheduledAt: '2024-02-01T10:00:00Z' })
+```
+
+---
+
+## Updating Firestore Rules
+
+### Deploy Rules
+
+```bash
+# Deploy firestore rules only
+firebase deploy --only firestore:rules
+
+# Deploy to specific project
+firebase deploy --only firestore:rules --project vfit-prod
+```
+
+### Firestore Rules Development Workflow
+
+```bash
+# 1. Edit firestore.rules file
+
+# 2. Test rules locally with emulator
+firebase emulators:start --only firestore
+
+# 3. Run rules unit tests
+npm run test:rules
+
+# 4. Deploy when verified
+firebase deploy --only firestore:rules
+```
+
+### Testing Rules
+
+```javascript
+// test/rules.spec.js
+const { initializeTestEnvironment } = require('@firebase/rules-unit-testing');
+
+describe('Firestore security rules', () => {
+  it('should allow users to read their own profile', async () => {
+    // Test implementation
+  });
+  
+  it('should prevent users from reading other profiles', async () => {
+    // Test implementation
+  });
+});
+```
+
+---
+
+## Seeding Data
+
+### User Types (Provider Categories)
+
+```bash
+# Run seeding script for user types
+node scripts/seed-user-types.js
+
+# Or via Cloud Function
+curl -X POST https://europe-west1-vfit-prod.cloudfunctions.net/seedUserTypes \
+  -H "Authorization: Bearer $(gcloud auth print-identity-token)"
+```
+
+### Sample Seeding Script
+
+```typescript
+// scripts/seed-user-types.ts
+import { db } from '../src/lib/firebase/config';
+import { collection, doc, setDoc } from 'firebase/firestore';
+
+const userTypes = [
+  {
+    id: 'personal_trainer',
+    name: 'Personal Trainer',
+    category: 'fitness',
+    slug: 'personal-trainer',
+    description: 'Certified fitness professionals for personalized training',
+    icon: '💪',
+    requirements: ['Certificazione CONI', 'Primo Soccorso'],
+    isActive: true,
+    displayOrder: 1,
+  },
+  {
+    id: 'yoga_instructor',
+    name: 'Yoga Instructor',
+    category: 'fitness',
+    slug: 'yoga-instructor',
+    description: 'Yoga teachers for all levels',
+    icon: '🧘',
+    requirements: ['Certificazione Yoga Alliance'],
+    isActive: true,
+    displayOrder: 2,
+  },
+  {
+    id: 'nutritionist',
+    name: 'Nutrizionista',
+    category: 'wellness',
+    slug: 'nutritionist',
+    description: 'Nutritional counseling and meal planning',
+    icon: '🥗',
+    requirements: ['Laurea in Scienze della Nutrizione'],
+    isActive: true,
+    displayOrder: 3,
+  },
+  // ... more types
+];
+
+async function seedUserTypes() {
+  for (const type of userTypes) {
+    const { id, ...data } = type;
+    await setDoc(doc(db, 'userTypes', id), {
+      ...data,
+      createdAt: new Date(),
+    });
+    console.log(`Created user type: ${type.name}`);
+  }
+}
+
+seedUserTypes().catch(console.error);
+```
+
+### Sample Users
+
+```bash
+# Seed sample users for testing
+node scripts/seed-sample-users.js --env=dev --count=10
+
+# Create specific test accounts
+node scripts/seed-sample-users.js --role=provider --verified=true
+```
+
+### Sample Data Script
+
+```typescript
+// scripts/seed-sample-data.ts
+import { db } from '../src/lib/firebase/config';
+import { auth } from '../src/lib/firebase/config';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc, collection, addDoc } from 'firebase/firestore';
+
+async function createSampleUsers() {
+  // Create test customer
+  const customerAuth = await createUserWithEmailAndPassword(
+    auth, 
+    'customer@test.com', 
+    'password123'
+  );
+  
+  await setDoc(doc(db, 'users', customerAuth.user.uid), {
+    uid: customerAuth.user.uid,
+    email: 'customer@test.com',
+    fullName: 'Test Customer',
+    role: 'customer',
+    isVip: false,
+    pointsBalance: 100,
+    createdAt: new Date(),
+  });
+
+  // Create test provider
+  const providerAuth = await createUserWithEmailAndPassword(
+    auth,
+    'provider@test.com',
+    'password123'
+  );
+  
+  await setDoc(doc(db, 'users', providerAuth.user.uid), {
+    uid: providerAuth.user.uid,
+    email: 'provider@test.com',
+    fullName: 'Test Provider',
+    role: 'provider',
+    userType: 'personal_trainer',
+    isVerified: true,
+    createdAt: new Date(),
+  });
+  
+  // Create provider profile
+  await setDoc(doc(db, 'providers', providerAuth.user.uid), {
+    userId: providerAuth.user.uid,
+    fullName: 'Test Provider',
+    bio: 'Professional personal trainer with 5+ years experience',
+    userType: 'personal_trainer',
+    specialties: ['strength', 'weight_loss'],
+    experienceYears: 5,
+    ratingAvg: 4.8,
+    reviewCount: 12,
+    isVerified: true,
+    isActive: true,
+    createdAt: new Date(),
+  });
+  
+  console.log('Sample users created!');
+}
+```
+
+---
+
+## Configuring OAuth Domains
+
+### Google OAuth Setup
+
+1. **Google Cloud Console**:
+   - Navigate to [Google Cloud Console](https://console.cloud.google.com/)
+   - Select your Firebase project
+   - Go to "APIs & Services" > "Credentials"
+
+2. **Configure OAuth Consent Screen**:
+   ```
+   App name: VFit
+   User support email: support@vfitfunlife.com
+   Authorized domains:
+     - vfitfunlife.com
+     - vfit-dev.firebaseapp.com (dev)
+     - vfit-prod.firebaseapp.com (prod)
+   ```
+
+3. **Add Authorized Redirect URIs**:
+   ```
+   # Development
+   https://vfit-dev.firebaseapp.com/__/auth/handler
+   http://localhost:3000
+   
+   # Production
+   https://vfit-prod.firebaseapp.com/__/auth/handler
+   https://app.vfitfunlife.com
+   ```
+
+4. **Configure in Firebase Console**:
+   ```bash
+   # Go to: Firebase Console > Authentication > Sign-in method > Google
+   # Enable Google sign-in
+   # Configure support email
+   ```
+
+### Apple OAuth Setup
+
+1. **Apple Developer Portal**:
+   - Navigate to [Apple Developer](https://developer.apple.com/)
+   - Certificates, Identifiers & Profiles
+
+2. **Create Service ID**:
+   ```
+   Identifier: com.vfit.app
+   Enable "Sign in with Apple"
+   ```
+
+3. **Configure Domains**:
+   ```
+   Primary App ID: com.vfit.app
+   Website URLs:
+     - https://app.vfitfunlife.com
+     - https://vfit-prod.firebaseapp.com
+   ```
+
+4. **Configure in Firebase**:
+   ```bash
+   # Go to: Firebase Console > Authentication > Sign-in method > Apple
+   # Enable Apple sign-in
+   # Upload private key downloaded from Apple
+   ```
+
+### Phone Auth (OTP) Setup
+
+1. **Enable in Firebase Console**:
+   ```
+   Firebase Console > Authentication > Sign-in method > Phone
+   Enable Phone authentication
+   ```
+
+2. **Add SHA-1 Certificate (Android)**:
+   ```bash
+   # Get SHA-1 from keystore
+   keytool -list -v -keystore android.keystore -alias vfit
+   
+   # Add to Firebase Console
+   # Project Settings > Your apps > Android > SHA certificate fingerprints
+   ```
+
+3. **Configure reCAPTCHA**:
+   ```bash
+   # Add to Firebase Console
+   # Authentication > Settings > reCAPTCHA Enterprise
+   # Or use invisible reCAPTCHA for web
+   ```
+
+### Custom Domain for Auth
+
+```bash
+# Add custom domain for auth flows in Firebase Console
+# Authentication > Settings > Authorized domains
+
+# Add:
+- app.vfitfunlife.com
+- staging.vfitfunlife.com
+- localhost (for development)
+```
+
+---
+
 ## Mobile App Build (iOS)
 
 ### Prerequisites
@@ -649,4 +1009,24 @@ cd ios/App
 pod install
 cd ../..
 npx cap sync ios
+```
+
+**Functions deployment fails**
+```bash
+# Check for syntax errors
+npm run lint
+
+# Verify all dependencies installed
+cd functions && npm install
+
+# Check function logs
+firebase functions:log --only <functionName>
+```
+
+**Firestore rules deployment fails**
+```bash
+# Validate rules syntax
+firebase deploy --only firestore:rules --dry-run
+
+# Check for circular references or syntax errors in firestore.rules
 ```

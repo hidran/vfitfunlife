@@ -150,3 +150,84 @@ Bottom tabs with section-aware theming:
 - [x] Description (expandable)
 - [x] "Servizi" tab - list of services with prices
 - [x] "Corsi" tab
+
+---
+
+## User Roles & Permissions
+
+### Role Hierarchy
+- **Superadmin**: Full system access, can manage users, roles, and configurations
+- **Admin**: Can manage platform settings, services, venues, user types
+- **Provider**: Service providers (trainers, coaches, therapists)
+  - Can manage own profile, services, availability
+  - Can view and manage own bookings
+  - Can view customer profiles for their bookings
+- **Customer**: Regular users who book services
+  - Can manage own profile
+  - Can book services
+  - Can view own booking history
+
+### Permission Matrix
+| Action | Superadmin | Admin | Provider | Customer |
+|--------|-----------|-------|----------|----------|
+| Manage Users | ✅ | ❌ | ❌ | ❌ |
+| Manage Roles | ✅ | ❌ | ❌ | ❌ |
+| Configure Platform | ✅ | ✅ | ❌ | ❌ |
+| Create Services | ✅ | ✅ | Own only | ❌ |
+| Manage Bookings | ✅ | ✅ | Own only | Own only |
+| View Provider Profiles | ✅ | ✅ | ✅ | ✅ |
+
+---
+
+## User Types (Provider Categories)
+
+### Fitness
+- Personal Trainer
+- Yoga Instructor
+- Pilates Instructor
+- CrossFit Coach
+
+### Wellness
+- Nutritionist
+- Dietitian
+- Massage Therapist
+- Physical Therapist
+
+### Beauty
+- Hairstylist
+- Makeup Artist
+- Esthetician
+
+### Mental Health
+- Psychologist
+- Life Coach
+- Career Coach
+
+### Education
+- Pronunciation Coach
+- Language Tutor
+
+### Provider Onboarding
+1. User registers with provider role
+2. Admin verifies certifications
+3. Provider completes profile
+4. Provider sets up services and availability
+5. Profile goes live
+
+---
+
+## Provider Profiles
+
+### Profile Components
+- **Basic Info**: Name, photo, bio, contact
+- **Professional**: Specialties, certifications, experience
+- **Services**: Offered services with pricing
+- **Availability**: Working hours, booking slots
+- **Portfolio**: Work samples, before/after
+- **Reviews**: Customer ratings and feedback
+
+### Verification Process
+- Document upload for certifications
+- Background check (for certain categories)
+- Manual admin approval
+- Verified badge on profile

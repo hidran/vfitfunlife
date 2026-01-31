@@ -3,6 +3,109 @@ import { Timestamp, GeoPoint } from "firebase/firestore";
 // Section type
 export type Section = "fit" | "fun" | "life";
 
+// User role type
+export type UserRole = "superadmin" | "admin" | "provider" | "customer";
+
+// Certification type
+export interface Certification {
+  id: string;
+  name: string;
+  issuingOrganization: string;
+  issueDate: Timestamp;
+  expiryDate: Timestamp | null;
+  documentUrl: string | null;
+  isVerified: boolean;
+}
+
+// Education type
+export interface Education {
+  id: string;
+  institution: string;
+  degree: string;
+  fieldOfStudy: string;
+  startDate: Timestamp;
+  endDate: Timestamp | null;
+  isOngoing: boolean;
+}
+
+// Social links type
+export interface SocialLinks {
+  instagram?: string;
+  linkedin?: string;
+  website?: string;
+  facebook?: string;
+  twitter?: string;
+}
+
+// Notification settings type
+export interface NotificationSettings {
+  email: boolean;
+  push: boolean;
+  sms: boolean;
+  marketing: boolean;
+  bookingReminders: boolean;
+  promotions: boolean;
+  newMessages: boolean;
+}
+
+// Privacy settings type
+export interface PrivacySettings {
+  profileVisible: boolean;
+  bookingsVisible: boolean;
+  showEmail: boolean;
+  showPhone: boolean;
+}
+
+// Provider profile type
+export interface ProviderProfile {
+  professionalBio: string;
+  specialties: string[];
+  certifications: Certification[];
+  yearsOfExperience: number;
+  languages: string[];
+  education: Education[];
+  licenseNumber: string | null;
+  cancellationPolicy: string | null;
+  isVerified: boolean;
+  isActive: boolean;
+  rating: number;
+  reviewCount: number;
+  portfolioImages: string[];
+  servicePricing: ServicePricing[];
+  availabilitySchedule: AvailabilitySchedule | null;
+}
+
+// Service pricing type
+export interface ServicePricing {
+  id: string;
+  serviceName: string;
+  description: string;
+  price: number;
+  durationMinutes: number;
+  isActive: boolean;
+}
+
+// Availability schedule type
+export interface AvailabilitySchedule {
+  monday: DaySchedule;
+  tuesday: DaySchedule;
+  wednesday: DaySchedule;
+  thursday: DaySchedule;
+  friday: DaySchedule;
+  saturday: DaySchedule;
+  sunday: DaySchedule;
+}
+
+export interface DaySchedule {
+  isAvailable: boolean;
+  slots: TimeSlot[];
+}
+
+export interface TimeSlot {
+  start: string;
+  end: string;
+}
+
 // User types
 export interface User {
   id: string;
@@ -12,6 +115,9 @@ export interface User {
   fullName: string;
   avatarUrl: string | null;
   dateOfBirth: Timestamp | null;
+  
+  // Role
+  role: UserRole;
 
   // VIP Status
   isVip: boolean;
@@ -36,6 +142,21 @@ export interface User {
   referralCode: string;
   referredBy: string | null;
   referralCount: number;
+  
+  // Profile
+  bio: string | null;
+  phoneVerified: boolean;
+  emailVerified: boolean;
+  
+  // Social links
+  socialLinks: SocialLinks | null;
+  
+  // Provider profile (only for providers)
+  providerProfile: ProviderProfile | null;
+  
+  // Settings
+  notificationSettings: NotificationSettings;
+  privacySettings: PrivacySettings;
 
   // Timestamps
   createdAt: Timestamp;

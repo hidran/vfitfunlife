@@ -21,9 +21,10 @@ import {
   reauthenticateWithCredential,
 } from "firebase/auth";
 import { Capacitor } from "@capacitor/core";
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, arrayUnion, arrayRemove } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { auth, db, functions } from "./config";
+import { ProviderProfile, Certification, Education, SocialLinks, NotificationSettings, PrivacySettings } from "@/types/firebase";
 
 // Store confirmation result for OTP verification
 let confirmationResult: ConfirmationResult | null = null;
@@ -377,4 +378,304 @@ export function isEmailProvider(user: User): boolean {
   return user.providerData.some(
     (provider) => provider.providerId === 'password'
   );
+}
+
+/**
+ * Update user profile data
+ */
+export async function updateUserProfile(
+  userId: string,
+  data: {
+    fullName?: string;
+    bio?: string | null;
+    phone?: string | null;
+    dateOfBirth?: Date;
+    preferredSection?: "fit" | "fun" | "life";
+    avatarUrl?: string;
+  }
+): Promise<void> {
+  const userRef = doc(db, "users", userId);
+  
+  const updateData: Record<string, any> = {
+    ...data,
+    updatedAt: serverTimestamp(),
+  };
+  
+  // Convert dateOfBirth to Timestamp if provided
+  if (data.dateOfBirth) {
+    updateData.dateOfBirth = data.dateOfBirth;
+  }
+  
+  // Remove undefined values
+  Object.keys(updateData).forEach((key) => {
+    if (updateData[key] === undefined) {
+      delete updateData[key];
+    }
+  });
+  
+  await updateDoc(userRef, updateData);
+}
+
+/**
+ * Update social links
+ */
+export async function updateSocialLinks(
+  userId: string,
+  socialLinks: SocialLinks
+): Promise<void> {
+  const userRef = doc(db, "users", userId);
+  await updateDoc(userRef, {
+    socialLinks,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * Update notification settings
+ */
+export async function updateNotificationSettings(
+  userId: string,
+  settings: NotificationSettings
+): Promise<void> {
+  const userRef = doc(db, "users", userId);
+  await updateDoc(userRef, {
+    notificationSettings: settings,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * Update privacy settings
+ */
+export async function updatePrivacySettings(
+  userId: string,
+  settings: PrivacySettings
+): Promise<void> {
+  const userRef = doc(db, "users", userId);
+  await updateDoc(userRef, {
+    privacySettings: settings,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * Verify phone number with OTP
+ */
+export async function verifyPhoneNumber(
+  userId: string,
+  verified: boolean = true
+): Promise<void> {
+  const userRef = doc(db, "users", userId);
+  await updateDoc(userRef, {
+    phoneVerified: verified,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+// Provider Profile Functions
+
+/**
+ * Update provider profile
+ */
+export async function updateProviderProfile(
+  userId: string,
+  data: Partial<ProviderProfile>
+): Promise<void> {
+  const userRef = doc(db, "users", userId);
+  
+  const userDoc = await getDoc(userRef);
+  if (!userDoc.exists()) {
+    throw new Error("User not found");
+  }
+  
+  const userData = userDoc.data();
+  const currentProviderProfile = userData.providerProfile || {};
+  
+  await updateDoc(userRef, {
+    providerProfile: {
+      ...currentProviderProfile,
+      ...data,
+    },
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * Get provider profile
+ */
+export async function getProviderProfile(
+  providerId: string
+): Promise<ProviderProfile | null> {
+  try {
+    const userDoc = await getDoc(doc(db, "users", providerId));
+    
+    if (!userDoc.exists()) {
+      return null;
+    }
+    
+    const data = userDoc.data();
+    
+    // Check if user is a provider
+    if (data.role !== "provider" && data.role !== "admin" && data.role !== "superadmin") {
+      return null;
+    }
+    
+    return data.providerProfile || null;
+  } catch (error) {
+    console.error("Error fetching provider profile:", error);
+    throw error;
+  }
+}
+
+/**
+ * Add certification to provider profile
+ */
+export async function addCertification(
+  userId: string,
+  certification: Omit<Certification, "id">
+): Promise<string> {
+  const userRef = doc(db, "users", userId);
+  
+  const certificationWithId = {
+    ...certification,
+    id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+  };
+  
+  await updateDoc(userRef, {
+    "providerProfile.certifications": arrayUnion(certificationWithId),
+    updatedAt: serverTimestamp(),
+  });
+  
+  return certificationWithId.id;
+}
+
+/**
+ * Remove certification from provider profile
+ */
+export async function removeCertification(
+  userId: string,
+  certification: Certification
+): Promise<void> {
+  const userRef = doc(db, "users", userId);
+  
+  await updateDoc(userRef, {
+    "providerProfile.certifications": arrayRemove(certification),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * Add education to provider profile
+ */
+export async function addEducation(
+  userId: string,
+  education: Omit<Education, "id">
+): Promise<string> {
+  const userRef = doc(db, "users", userId);
+  
+  const educationWithId = {
+    ...education,
+    id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+  };
+  
+  await updateDoc(userRef, {
+    "providerProfile.education": arrayUnion(educationWithId),
+    updatedAt: serverTimestamp(),
+  });
+  
+  return educationWithId.id;
+}
+
+/**
+ * Remove education from provider profile
+ */
+export async function removeEducation(
+  userId: string,
+  education: Education
+): Promise<void> {
+  const userRef = doc(db, "users", userId);
+  
+  await updateDoc(userRef, {
+    "providerProfile.education": arrayRemove(education),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * Update provider specialties
+ */
+export async function updateProviderSpecialties(
+  userId: string,
+  specialties: string[]
+): Promise<void> {
+  const userRef = doc(db, "users", userId);
+  
+  await updateDoc(userRef, {
+    "providerProfile.specialties": specialties,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * Update provider languages
+ */
+export async function updateProviderLanguages(
+  userId: string,
+  languages: string[]
+): Promise<void> {
+  const userRef = doc(db, "users", userId);
+  
+  await updateDoc(userRef, {
+    "providerProfile.languages": languages,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * Add portfolio image to provider profile
+ */
+export async function addPortfolioImage(
+  userId: string,
+  imageUrl: string
+): Promise<void> {
+  const userRef = doc(db, "users", userId);
+  
+  await updateDoc(userRef, {
+    "providerProfile.portfolioImages": arrayUnion(imageUrl),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * Remove portfolio image from provider profile
+ */
+export async function removePortfolioImage(
+  userId: string,
+  imageUrl: string
+): Promise<void> {
+  const userRef = doc(db, "users", userId);
+  
+  await updateDoc(userRef, {
+    "providerProfile.portfolioImages": arrayRemove(imageUrl),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * Check if user is a provider
+ */
+export async function isProvider(userId: string): Promise<boolean> {
+  try {
+    const userDoc = await getDoc(doc(db, "users", userId));
+    
+    if (!userDoc.exists()) {
+      return false;
+    }
+    
+    const data = userDoc.data();
+    return data.role === "provider" || data.role === "admin" || data.role === "superadmin";
+  } catch (error) {
+    console.error("Error checking provider status:", error);
+    return false;
+  }
 }

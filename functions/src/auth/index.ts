@@ -45,6 +45,21 @@ export const initializeUserProfile = onCall(
       avatarUrl: photoURL || null,
       dateOfBirth: null,
 
+      // Role and permissions
+      role: "customer",
+      permissions: [
+        "bookings:read",
+        "bookings:write",
+        "bookings:cancel",
+        "services:read",
+        "venues:read",
+        "promotions:read",
+      ],
+
+      // Status flags
+      isActive: true,
+      isVerified: false,
+
       // VIP Status
       isVip: false,
       vipExpiresAt: null,
