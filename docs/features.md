@@ -40,10 +40,13 @@ Splash → Onboarding (first launch) → Auth → Main App
 
 ## 3. Authentication
 ### 3.1 Login Screen
+- [x] Login method selection (Phone / Email / Social)
 - [x] Phone number input with country code picker (default +39 Italy)
 - [x] "Send OTP" button
+- [x] Email/Password login form
+- [x] "Password dimenticata?" link
 - [x] Divider "oppure"
-- [x] Social login buttons: Google, Apple (iOS only), Facebook
+- [x] Social login buttons: Google, Apple (iOS only)
 - [x] "Non hai un account? Registrati" link
 - [x] Terms & Privacy links at bottom
 
@@ -54,16 +57,24 @@ Splash → Onboarding (first launch) → Auth → Main App
 - [x] Auto-submit on complete
 - [x] Error handling with shake animation
 
-### 3.3 Registration (if new user)
+### 3.3 Registration
+- [x] Registration method selection (Email / Social / Phone)
+- [x] Email/Password registration form
 - [x] Full name input
-- [x] Email input (optional)
+- [x] Email input
+- [x] Password input (min 6 characters)
 - [x] Date of birth picker
 - [x] Avatar upload (camera/gallery)
 - [x] Section preference (FIT/FUN/LIFE priority)
 - [x] Terms & Privacy checkbox (required)
-- [x] "Completa Registrazione" CTA
+- [x] "Completa Registrazione" / "Crea Account" CTA
 
-### 3.4 Permissions (after registration)
+### 3.4 Password Reset
+- [x] Email input for reset link
+- [x] Success confirmation screen
+- [x] Resend option
+
+### 3.5 Permissions (after registration)
 - [x] Location permission request with explanation
 - [x] Push notification permission request
 - [x] Skip option for each
