@@ -27,8 +27,27 @@ service cloud.firestore {
     // Users collection
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId) || isAdmin();
+      
+      // Allow create only with valid initial fields
+      allow create: if isOwner(userId) && 
+        request.resource.data.keys().hasOnly([
+          'fullName', 'email', 'phone', 'dateOfBirth', 'preferredSection',
+          'preferredLanguage', 'avatarUrl', 'createdAt', 'updatedAt',
+          'referralCode', 'referredBy'
+        ]) &&
+        request.resource.data.fullName is string &&
+        request.resource.data.fullName.size() > 0 &&
+        request.resource.data.fullName.size() <= 100;
+      
+      // Allow update only with valid fields
+      allow update: if isOwner(userId) && 
+        request.resource.data.keys().hasOnly([
+          'fullName', 'email', 'phone', 'dateOfBirth', 'preferredSection',
+          'preferredLanguage', 'avatarUrl', 'updatedAt', 'notificationsEnabled',
+          'fcmTokens'
+        ]) &&
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdAt']));
+      
       allow delete: if isAdmin();
 
       // User subcollections
