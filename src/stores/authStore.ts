@@ -45,6 +45,10 @@ interface AuthState {
 // Track if we've already handled the redirect in this session
 let redirectHandled = false;
 
+// Constants for retry logic
+const RETRY_DELAY_MS = 1000;
+const MAX_RETRIES = 3;
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   // Initial state
   firebaseUser: null,
@@ -58,18 +62,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   // Initialize auth - call this once on app mount
   initialize: () => {
+    // Cancellation flag to prevent state updates after unmount
+    let isCancelled = false;
+
     // Handle redirect result first (for Google/Apple sign-in on web)
     const handleRedirect = async () => {
-      if (redirectHandled) return;
+      if (redirectHandled || isCancelled) return;
       redirectHandled = true;
 
       try {
         const redirectUser = await handleAuthRedirect();
+        if (isCancelled) return;
         if (redirectUser) {
           set({ firebaseUser: redirectUser, isLoading: true });
           await get().loadUserData(redirectUser.uid);
         }
       } catch (error) {
+        if (isCancelled) return;
         console.error("Error handling auth redirect:", error);
         set({ error: "Failed to complete sign-in", isLoading: false, isInitialized: true });
       }
@@ -79,6 +88,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     // Subscribe to auth state changes
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (isCancelled) return;
+      
       if (firebaseUser) {
         set({ firebaseUser, isLoading: true });
         await get().loadUserData(firebaseUser.uid);
@@ -92,7 +103,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
     });
 
-    return unsubscribe;
+    // Return cleanup function
+    return () => {
+      isCancelled = true;
+      unsubscribe();
+    };
   },
 
   // Load user data from Firestore with retry for new users
@@ -103,26 +118,28 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // For new users, the Cloud Function might not have created the document yet
       // Retry a few times with delay
       if (!userData) {
-        for (let i = 0; i < 3; i++) {
-          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+        for (let i = 0; i < MAX_RETRIES; i++) {
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
           userData = await getUserData(uid);
           if (userData) break;
         }
       }
 
-      if (userData) {
-        const user = { ...userData, id: uid, uid } as User;
-        set({
-          user,
-          isLoading: false,
-          isInitialized: true,
-        });
-        return user;
-      } else {
-        // User document doesn't exist - need to complete registration
+      // Verify the Firebase user hasn't changed (prevent race condition)
+      const currentFirebaseUser = get().firebaseUser;
+      if (!userData || currentFirebaseUser?.uid !== uid) {
+        // User document doesn't exist or auth state changed - need to complete registration
         set({ user: null, isLoading: false, isInitialized: true });
         return null;
       }
+
+      const user = { ...userData, id: uid, uid } as User;
+      set({
+        user,
+        isLoading: false,
+        isInitialized: true,
+      });
+      return user;
     } catch (error) {
       console.error('Error loading user data:', error);
       set({
