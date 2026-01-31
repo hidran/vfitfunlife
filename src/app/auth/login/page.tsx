@@ -72,14 +72,19 @@ export default function LoginPage() {
 
   // Redirect based on auth state
   useEffect(() => {
+    console.log('[Login] Redirect check - isInitialized:', isInitialized, 'firebaseUser:', firebaseUser?.uid, 'user:', user?.uid);
     if (!isInitialized) return;
 
     if (user) {
       // Fully authenticated with complete profile
+      console.log('[Login] User authenticated, redirecting to /home');
       router.replace('/home');
     } else if (firebaseUser && !user) {
       // Authenticated but profile incomplete
+      console.log('[Login] Profile incomplete, redirecting to /auth/register');
       router.replace('/auth/register');
+    } else {
+      console.log('[Login] No user, staying on login page');
     }
   }, [user, firebaseUser, isInitialized, router]);
 
