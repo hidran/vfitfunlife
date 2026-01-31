@@ -449,11 +449,11 @@ export const verifyProvider = onCall<VerifyProviderData>(
     // Update verification status
     await db.collection("users").doc(providerId).update({
       "providerProfile.isVerified": verified,
-      isVerified: verified,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      verificationNotes: notes || null,
-      verifiedBy: callerId,
-      verifiedAt: admin.firestore.FieldValue.serverTimestamp(),
+      "isVerified": verified,
+      "updatedAt": admin.firestore.FieldValue.serverTimestamp(),
+      "verificationNotes": notes || null,
+      "verifiedBy": callerId,
+      "verifiedAt": admin.firestore.FieldValue.serverTimestamp(),
     });
 
     // Log verification action

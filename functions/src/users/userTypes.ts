@@ -65,9 +65,9 @@ export const seedUserTypes = onCall<SeedUserTypesData>(
         const now = admin.firestore.FieldValue.serverTimestamp();
         const data = {
           ...userType,
-          createdAt: existingDoc.exists
-            ? existingDoc.data()?.createdAt || now
-            : now,
+          createdAt: existingDoc.exists ?
+            existingDoc.data()?.createdAt || now :
+            now,
           updatedAt: now,
         };
 
@@ -84,7 +84,8 @@ export const seedUserTypes = onCall<SeedUserTypesData>(
 
       return {
         success: true,
-        message: `User types seeded: ${results.created} created, ${results.updated} updated, ${results.skipped} skipped`,
+        message: `User types seeded: ${results.created} created, ` +
+          `${results.updated} updated, ${results.skipped} skipped`,
         results,
       };
     } catch (error) {

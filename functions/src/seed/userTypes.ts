@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 import * as admin from "firebase-admin";
 
 /**
