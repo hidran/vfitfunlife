@@ -81,7 +81,12 @@ export default function OnboardingPage() {
   const isLast = activeIndex === lastIndex;
 
   const handleComplete = () => {
-    localStorage.setItem('hasOnboarded', 'true');
+    try {
+      localStorage.setItem('hasOnboarded', 'true');
+    } catch (e) {
+      // Silently fail if localStorage is unavailable
+      console.warn('Failed to save onboarding status');
+    }
     router.push('/auth/login');
   };
 
@@ -116,7 +121,7 @@ export default function OnboardingPage() {
           style={{ transform: `translateX(${translateX})` }}
         >
           {slides.map((slide, index) => (
-            <div key={slide.title} className="min-w-full">
+            <div key={`slide-${index}`} className="min-w-full">
               <OnboardingSlide
                 {...slide}
                 isActive={index === activeIndex}
