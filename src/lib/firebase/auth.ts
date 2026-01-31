@@ -87,19 +87,23 @@ export async function verifyOtp(code: string): Promise<User> {
  * Uses redirect flow on web (avoids COOP issues) and popup on native
  */
 export async function signInWithGoogle(): Promise<User | null> {
+  console.log('[Auth] signInWithGoogle called');
   const provider = new GoogleAuthProvider();
   provider.addScope("email");
   provider.addScope("profile");
 
   // On native platforms, use popup (works better with Capacitor)
   if (Capacitor.isNativePlatform()) {
+    console.log('[Auth] Native platform, using popup');
     const result = await signInWithPopup(auth, provider);
     await updateUserLastLogin(result.user.uid);
     return result.user;
   }
 
   // On web, use redirect to avoid COOP issues
+  console.log('[Auth] Web platform, using redirect');
   await signInWithRedirect(auth, provider);
+  console.log('[Auth] Redirect initiated, page will reload');
   return null; // Redirect will reload the page
 }
 
@@ -108,15 +112,20 @@ export async function signInWithGoogle(): Promise<User | null> {
  * Call this on app initialization
  */
 export async function handleAuthRedirect(): Promise<User | null> {
+  console.log('[Auth] handleAuthRedirect called');
   try {
+    console.log('[Auth] Calling getRedirectResult...');
     const result = await getRedirectResult(auth);
+    console.log('[Auth] getRedirectResult result:', result ? 'has result' : 'null');
     if (result?.user) {
+      console.log('[Auth] Redirect user found, uid:', result.user.uid);
       await updateUserLastLogin(result.user.uid);
       return result.user;
     }
+    console.log('[Auth] No redirect user found');
     return null;
   } catch (error) {
-    console.error("Error handling auth redirect:", error);
+    console.error("[Auth] Error handling auth redirect:", error);
     throw error;
   }
 }

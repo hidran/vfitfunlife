@@ -132,8 +132,14 @@ export default function LoginPage() {
   };
 
   const handleGoogleLogin = async () => {
+    console.log('[Login] Google login clicked');
     clearError();
-    await loginWithGoogle();
+    try {
+      await loginWithGoogle();
+      console.log('[Login] Google login completed');
+    } catch (error) {
+      console.error('[Login] Google login error:', error);
+    }
   };
 
   const handleAppleLogin = async () => {
