@@ -84,7 +84,7 @@ export async function verifyOtp(code: string): Promise<User> {
 
 /**
  * Sign in with Google
- * Uses redirect flow on web (avoids COOP issues) and popup on native
+ * Uses popup on all platforms (redirect has issues with web.app domain)
  */
 export async function signInWithGoogle(): Promise<User | null> {
   console.log('[Auth] signInWithGoogle called');
@@ -92,19 +92,25 @@ export async function signInWithGoogle(): Promise<User | null> {
   provider.addScope("email");
   provider.addScope("profile");
 
-  // On native platforms, use popup (works better with Capacitor)
-  if (Capacitor.isNativePlatform()) {
-    console.log('[Auth] Native platform, using popup');
+  // Use popup for all platforms (redirect has domain issues)
+  console.log('[Auth] Using popup flow');
+  console.log('[Auth] Current auth domain:', auth.app.options.authDomain);
+  try {
     const result = await signInWithPopup(auth, provider);
+    console.log('[Auth] Popup success, uid:', result.user.uid);
     await updateUserLastLogin(result.user.uid);
     return result.user;
+  } catch (error: any) {
+    console.error('[Auth] signInWithPopup failed:', error);
+    console.error('[Auth] Error code:', error.code);
+    // If popup blocked, fall back to redirect
+    if (error.code === 'auth/popup-blocked') {
+      console.log('[Auth] Popup blocked, falling back to redirect');
+      await signInWithRedirect(auth, provider);
+      return null;
+    }
+    throw error;
   }
-
-  // On web, use redirect to avoid COOP issues
-  console.log('[Auth] Web platform, using redirect');
-  await signInWithRedirect(auth, provider);
-  console.log('[Auth] Redirect initiated, page will reload');
-  return null; // Redirect will reload the page
 }
 
 /**
@@ -124,31 +130,42 @@ export async function handleAuthRedirect(): Promise<User | null> {
     }
     console.log('[Auth] No redirect user found');
     return null;
-  } catch (error) {
+  } catch (error: any) {
     console.error("[Auth] Error handling auth redirect:", error);
+    console.error("[Auth] Error code:", error.code);
+    console.error("[Auth] Error message:", error.message);
     throw error;
   }
 }
 
 /**
  * Sign in with Apple
- * Uses redirect flow on web (avoids COOP issues) and popup on native
+ * Uses popup on all platforms (redirect has issues with web.app domain)
  */
 export async function signInWithApple(): Promise<User | null> {
+  console.log('[Auth] signInWithApple called');
   const provider = new OAuthProvider("apple.com");
   provider.addScope("email");
   provider.addScope("name");
 
-  // On native platforms, use popup (works better with Capacitor)
-  if (Capacitor.isNativePlatform()) {
+  // Use popup for all platforms
+  console.log('[Auth] Using popup flow for Apple');
+  try {
     const result = await signInWithPopup(auth, provider);
+    console.log('[Auth] Apple popup success, uid:', result.user.uid);
     await updateUserLastLogin(result.user.uid);
     return result.user;
+  } catch (error: any) {
+    console.error('[Auth] signInWithPopup (Apple) failed:', error);
+    console.error('[Auth] Error code:', error.code);
+    // If popup blocked, fall back to redirect
+    if (error.code === 'auth/popup-blocked') {
+      console.log('[Auth] Popup blocked, falling back to redirect');
+      await signInWithRedirect(auth, provider);
+      return null;
+    }
+    throw error;
   }
-
-  // On web, use redirect to avoid COOP issues
-  await signInWithRedirect(auth, provider);
-  return null; // Redirect will reload the page
 }
 
 /**
