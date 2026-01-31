@@ -679,3 +679,32 @@ export async function isProvider(userId: string): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Update user avatar URL
+ */
+export async function updateUserAvatar(userId: string, avatarUrl: string): Promise<void> {
+  const userRef = doc(db, "users", userId);
+  await updateDoc(userRef, {
+    avatarUrl,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * Request phone verification (sends OTP)
+ * This is handled separately through the phone auth flow
+ */
+export async function requestPhoneVerification(phoneNumber: string): Promise<void> {
+  // This function is a placeholder - actual implementation uses Firebase Phone Auth
+  // See initRecaptcha and sendOtp functions for the actual implementation
+  console.log('Phone verification requested for:', phoneNumber);
+}
+
+/**
+ * Verify phone code (placeholder - actual implementation in verifyOtp)
+ */
+export async function verifyPhoneCode(code: string): Promise<void> {
+  // This function is a placeholder - actual implementation uses verifyOtp
+  console.log('Phone code verification:', code);
+}

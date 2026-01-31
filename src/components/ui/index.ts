@@ -45,3 +45,7 @@ export type { SpinnerProps } from './Spinner';
 // IconButton component
 export { IconButton } from './IconButton';
 export type { IconButtonProps } from './IconButton';
+
+// Modal component
+export { Modal } from './Modal';
+export type { ModalProps } from './Modal';

@@ -1030,3 +1030,583 @@ firebase deploy --only firestore:rules --dry-run
 
 # Check for circular references or syntax errors in firestore.rules
 ```
+
+
+---
+
+## Admin Features Deployment
+
+### Deploying Admin Backoffice
+
+The admin backoffice is part of the main Next.js application, accessible at `/admin/*` routes. It requires specific setup for proper functioning.
+
+#### Pre-deployment Checks
+
+1. **Verify Admin Routes Exist**
+   ```bash
+   ls -la src/app/admin/
+   ```
+   Should contain:
+   - `page.tsx` - Dashboard
+   - `users/page.tsx` - User management
+   - `providers/page.tsx` - Provider management
+   - `bookings/page.tsx` - Booking management
+   - `finance/page.tsx` - Financial reports
+
+2. **Verify Admin Cloud Functions**
+   ```bash
+   ls -la functions/src/admin/
+   ```
+   Should contain:
+   - `getDashboardStats.ts`
+   - `getUsers.ts`
+   - `verifyProvider.ts`
+   - `processRefund.ts`
+
+3. **Deploy Admin Functions**
+   ```bash
+   firebase deploy --only functions:getDashboardStats
+   firebase deploy --only functions:getUsers
+   firebase deploy --only functions:verifyProvider
+   firebase deploy --only functions:processRefund
+   firebase deploy --only functions:updateUserRole
+   firebase deploy --only functions:suspendUser
+   firebase deploy --only functions:getAllBookings
+   firebase deploy --only functions:updatePlatformSettings
+   ```
+
+#### Build and Deploy
+
+```bash
+# Build with production settings
+npm run build
+
+# Deploy to Firebase Hosting
+firebase deploy --only hosting
+```
+
+---
+
+## Setting Up Admin Accounts
+
+### Creating the First Superadmin
+
+The first superadmin account must be created manually or via a secure script.
+
+#### Method 1: Using CLI Script (Recommended)
+
+```bash
+# Run the admin creation script
+node scripts/create-admin.js \
+  --email=superadmin@yourcompany.com \
+  --password=SecurePassword123! \
+  --name="Super Admin" \
+  --role=superadmin \
+  --project=production
+```
+
+Script content (`scripts/create-admin.js`):
+```javascript
+const { initializeApp } = require('firebase-admin/app');
+const { getAuth } = require('firebase-admin/auth');
+const { getFirestore } = require('firebase-admin/firestore');
+
+const args = require('minimist')(process.argv.slice(2));
+
+const projectId = args.project || 'vfit-prod';
+
+initializeApp({
+  projectId: projectId,
+});
+
+const auth = getAuth();
+const db = getFirestore();
+
+async function createAdmin() {
+  const { email, password, name, role } = args;
+  
+  if (!email || !password || !role) {
+    console.error('Usage: node create-admin.js --email=... --password=... --role=superadmin|admin');
+    process.exit(1);
+  }
+  
+  try {
+    // Create user in Firebase Auth
+    const userRecord = await auth.createUser({
+      email,
+      password,
+      displayName: name || email,
+    });
+    
+    // Set custom claims for role
+    await auth.setCustomUserClaims(userRecord.uid, { role });
+    
+    // Create user document in Firestore
+    await db.collection('users').doc(userRecord.uid).set({
+      uid: userRecord.uid,
+      email,
+      fullName: name || email,
+      role: role,
+      isVerified: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    
+    console.log(`✅ ${role} account created successfully:`);
+    console.log(`   UID: ${userRecord.uid}`);
+    console.log(`   Email: ${email}`);
+  } catch (error) {
+    console.error('❌ Error creating admin:', error.message);
+    process.exit(1);
+  }
+}
+
+createAdmin();
+```
+
+#### Method 2: Manual Creation
+
+1. **Register User via App**
+   - Go to the registration page
+   - Create account with admin email
+
+2. **Set Admin Role via Firebase Console**
+   - Go to Firebase Console > Authentication
+   - Find the user
+   - Copy the UID
+
+3. **Set Custom Claims**
+   ```bash
+   # Using Firebase Admin SDK locally
+   node -e "
+   const admin = require('firebase-admin');
+   admin.initializeApp({
+     credential: admin.credential.cert(require('./serviceAccountKey.json'))
+   });
+   admin.auth().setCustomUserClaims('USER_UID_HERE', { role: 'superadmin' });
+   "
+   ```
+
+4. **Update Firestore Document**
+   ```javascript
+   // In Firestore console or via script
+   db.collection('users').doc('USER_UID').update({
+     role: 'superadmin',
+     updatedAt: new Date()
+   });
+   ```
+
+### Creating Additional Admins
+
+Once a superadmin exists, additional admins can be created through the admin dashboard:
+
+1. **Via Admin Dashboard**
+   - Login as superadmin
+   - Go to Admin > User Management
+   - Click "Add Admin"
+   - Enter email and details
+   - Select role (admin or superadmin)
+   - Send invitation email
+
+2. **Via CLI (for bulk creation)**
+   ```bash
+   node scripts/bulk-create-admins.js --file=admins.csv
+   ```
+
+### Admin Account Security
+
+1. **Enable 2FA**
+   - Require all admins to enable two-factor authentication
+   - Go to Firebase Console > Authentication > Settings
+   - Enable "Require 2FA for admin accounts"
+
+2. **Password Policy**
+   - Minimum 12 characters
+   - Require uppercase, lowercase, number, symbol
+   - Password expiration (90 days)
+
+3. **Access Logging**
+   - All admin actions are logged to `/logs` collection
+   - Review logs regularly
+   - Set up alerts for suspicious activity
+
+---
+
+## Configuring Provider Verification Workflow
+
+### Verification Settings
+
+Configure the provider verification workflow in platform settings:
+
+```typescript
+// Firestore document: settings/platform
+{
+  verification: {
+    enabled: true,
+    autoApprove: false,  // Set true to skip manual review
+    requiredDocuments: [
+      'certification',
+      'identity',
+      'insurance'  // Optional
+    ],
+    reviewTimeHours: 48,  // SLA for review
+    reminderFrequency: 'daily',  // Notify admins of pending
+  }
+}
+```
+
+### Admin Notification Setup
+
+Configure notifications for verification requests:
+
+```bash
+# Set up email notifications
+firebase functions:config:set \
+  admin.verification_email="verifications@yourcompany.com" \
+  admin.notification_slack_webhook="https://hooks.slack.com/..." \
+  --project production
+```
+
+### Verification Queue Management
+
+1. **Access Queue**
+   - Admin Dashboard > Provider Verification
+   - Shows pending, approved, rejected tabs
+
+2. **Review Process**
+   - Click on provider to view details
+   - Review uploaded documents
+   - Check certification validity
+   - Verify photo quality
+   - Make decision:
+     - Approve: Adds verified badge
+     - Reject: Requires reason
+     - Request Info: Sends back to provider
+
+3. **Bulk Actions**
+   - Select multiple providers
+   - Bulk approve/reject
+   - Export queue report
+
+### Automation Rules
+
+Set up automatic verification for trusted providers:
+
+```javascript
+// functions/src/admin/autoVerify.js
+exports.autoVerifyProvider = functions.firestore
+  .document('providers/{providerId}')
+  .onCreate(async (snap, context) => {
+    const provider = snap.data();
+    
+    // Auto-approve if meets criteria
+    if (provider.certifications.length >= 3 && 
+        provider.bio.length > 200 &&
+        provider.avatarUrl) {
+      await snap.ref.update({
+        verificationStatus: 'approved',
+        verifiedAt: admin.firestore.FieldValue.serverTimestamp(),
+        autoVerified: true
+      });
+    }
+  });
+```
+
+---
+
+## Managing User Types (Provider Categories)
+
+### Initial Setup
+
+Seed the database with default provider categories:
+
+```bash
+# Run the seeding script
+node scripts/seed-user-types.js --env=production
+```
+
+Or manually via Firebase Console:
+
+1. Go to Firestore Database
+2. Create `userTypes` collection
+3. Add documents:
+
+```javascript
+// Example: Personal Trainer
+{
+  id: 'personal_trainer',
+  name: 'Personal Trainer',
+  category: 'fitness',
+  slug: 'personal-trainer',
+  description: 'Certified fitness professionals for personalized training',
+  icon: '💪',
+  requirements: [
+    'Certificazione CONI',
+    'Primo Soccorso BLSD'
+  ],
+  defaultServices: [
+    {
+      name: 'Sessione di Personal Training',
+      durationMinutes: 60,
+      basePrice: 50
+    },
+    {
+      name: 'Consultazione Fitness',
+      durationMinutes: 30,
+      basePrice: 25
+    }
+  ],
+  isActive: true,
+  displayOrder: 1,
+  createdAt: Timestamp
+}
+```
+
+### Adding New Categories
+
+**Via Admin Dashboard:**
+1. Login as admin
+2. Go to Content > User Types
+3. Click "Add Category"
+4. Fill in:
+   - Name (display name)
+   - Category (fitness/wellness/beauty/etc.)
+   - Description
+   - Icon (emoji or URL)
+   - Requirements (list)
+   - Default services
+5. Save
+
+**Via API:**
+```typescript
+const createUserType = httpsCallable(functions, 'admin/createUserType');
+await createUserType({
+  name: 'Nutritionist',
+  category: 'wellness',
+  slug: 'nutritionist',
+  description: 'Professional nutrition counseling',
+  icon: '🥗',
+  requirements: ['Laurea in Scienze della Nutrizione'],
+  defaultServices: [
+    { name: 'Consultazione Nutrizionale', durationMinutes: 60, basePrice: 60 }
+  ]
+});
+```
+
+### Managing Categories
+
+**Enable/Disable:**
+- Toggle `isActive` field
+- Disabled categories don't appear in search filters
+- Existing providers keep their category
+
+**Reorder:**
+- Update `displayOrder` field
+- Lower numbers appear first
+
+**Update Requirements:**
+- Edit `requirements` array
+- Doesn't affect existing providers
+- Only new applications affected
+
+### Category Analytics
+
+View category performance:
+```
+Admin Dashboard > Content > User Types > Analytics
+
+Metrics:
+- Total providers per category
+- Average rating per category
+- Booking volume
+- Revenue generated
+- Growth trends
+```
+
+---
+
+## Admin Dashboard Configuration
+
+### Dashboard Widgets
+
+Configure which widgets appear on the admin dashboard:
+
+```typescript
+// Firestore: settings/admin/dashboard
+{
+  widgets: {
+    statsOverview: { enabled: true, position: 1 },
+    bookingChart: { enabled: true, position: 2 },
+    revenueChart: { enabled: true, position: 3 },
+    recentActivity: { enabled: true, position: 4 },
+    pendingVerifications: { enabled: true, position: 5 },
+    topProviders: { enabled: true, position: 6 },
+  }
+}
+```
+
+### Report Scheduling
+
+Set up automated reports:
+
+```bash
+# Deploy scheduled report function
+firebase deploy --only functions:sendWeeklyReports
+```
+
+Configure recipients:
+```typescript
+// Firestore: settings/admin/reports
+{
+  weeklyReport: {
+    enabled: true,
+    schedule: '0 9 * * 1',  // Mondays at 9 AM
+    recipients: ['admin@company.com', 'manager@company.com'],
+    metrics: ['bookings', 'revenue', 'users', 'providers']
+  },
+  monthlyReport: {
+    enabled: true,
+    schedule: '0 9 1 * *',  // 1st of month at 9 AM
+    recipients: ['admin@company.com'],
+    metrics: ['all']
+  }
+}
+```
+
+### Access Control
+
+Configure which admin roles can access what:
+
+```typescript
+// Firestore: settings/admin/access
+{
+  permissions: {
+    admin: {
+      canViewDashboard: true,
+      canManageUsers: true,
+      canVerifyProviders: true,
+      canManageBookings: true,
+      canViewFinance: true,
+      canProcessRefunds: true,
+      canManageContent: true,
+      canViewSystemLogs: false,
+      canManageAdmins: false,
+      canChangeSettings: false,
+    },
+    superadmin: {
+      // All permissions true
+    }
+  }
+}
+```
+
+---
+
+## Testing Admin Features
+
+### Pre-deployment Testing
+
+```bash
+# Run admin-specific tests
+npm run test:admin
+
+# Test admin API endpoints
+npm run test:admin-api
+
+# E2E tests for admin flows
+npm run test:e2e:admin
+```
+
+### Post-deployment Verification
+
+**Dashboard Access:**
+- [ ] Superadmin can access /admin
+- [ ] Admin can access /admin
+- [ ] Customer cannot access /admin (redirected)
+- [ ] Provider cannot access /admin (redirected)
+
+**User Management:**
+- [ ] View all users
+- [ ] Search and filter users
+- [ ] Edit user profile
+- [ ] Change user role
+- [ ] Suspend/activate user
+
+**Provider Verification:**
+- [ ] View verification queue
+- [ ] Review provider documents
+- [ ] Approve provider
+- [ ] Reject provider with reason
+- [ ] Notification sent to provider
+
+**Booking Management:**
+- [ ] View all bookings
+- [ ] Filter by status, date, user
+- [ ] Cancel booking
+- [ ] Process refund
+- [ ] Export booking data
+
+**Content Management:**
+- [ ] Create user type
+- [ ] Edit user type
+- [ ] Disable/enable category
+- [ ] Manage venues
+- [ ] Update platform settings
+
+**Finance:**
+- [ ] View transaction history
+- [ ] Process provider payouts
+- [ ] Generate commission reports
+- [ ] View revenue analytics
+
+---
+
+## Troubleshooting Admin Features
+
+### Admin Can't Access Dashboard
+
+**Check custom claims:**
+```bash
+# Get user by email
+firebase auth:get-user-by-email admin@example.com
+
+# Verify claims are set correctly
+```
+
+**Check Firestore role:**
+```javascript
+// In Firestore console
+db.collection('users').doc('ADMIN_UID').get()
+// Should have role: 'admin' or 'superadmin'
+```
+
+### Verification Notifications Not Sending
+
+**Check Functions logs:**
+```bash
+firebase functions:log --only notifyNewVerification
+```
+
+**Verify SendGrid configuration:**
+```bash
+firebase functions:config:get
+# Should contain sendgrid.api_key
+```
+
+### Dashboard Stats Not Loading
+
+**Check function deployment:**
+```bash
+firebase functions:log --only getDashboardStats
+```
+
+**Verify Firestore indexes:**
+```bash
+firebase deploy --only firestore:indexes
+```
+
+**Check data exists:**
+- Bookings collection not empty
+- Users collection not empty
+- Proper date format in documents
+

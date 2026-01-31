@@ -1,163 +1,215 @@
 'use client';
 
-import { useState } from 'react';
-import { Calendar, Clock, MapPin, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  Calendar,
+  RefreshCw,
+  Plus,
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { useBookingStore } from '@/stores/bookingStore';
+import { useAuthStore } from '@/stores/authStore';
+import { Spinner } from '@/components/ui/Spinner';
+import { Button } from '@/components/ui/button';
+import { BookingCard } from '@/components/booking';
+import type { Booking } from '@/types/booking';
 
-type BookingTab = 'upcoming' | 'past';
-
-interface MockBooking {
-  id: string;
-  serviceName: string;
-  venueName: string;
-  date: string;
-  time: string;
-  status: 'confirmed' | 'pending' | 'completed' | 'cancelled';
-  image: string;
-}
-
-const mockBookings: MockBooking[] = [
-  {
-    id: '1',
-    serviceName: 'Personal Training',
-    venueName: 'V Fitness Milano Centro',
-    date: '2026-02-01',
-    time: '10:00',
-    status: 'confirmed',
-    image: '/images/placeholder.jpg',
-  },
-  {
-    id: '2',
-    serviceName: 'Massaggio Rilassante',
-    venueName: 'V Wellness Spa',
-    date: '2026-02-03',
-    time: '15:30',
-    status: 'pending',
-    image: '/images/placeholder.jpg',
-  },
-];
-
-const pastBookings: MockBooking[] = [
-  {
-    id: '3',
-    serviceName: 'Yoga Class',
-    venueName: 'V Fitness Milano Centro',
-    date: '2026-01-25',
-    time: '09:00',
-    status: 'completed',
-    image: '/images/placeholder.jpg',
-  },
-];
+type BookingTab = 'upcoming' | 'past' | 'cancelled';
 
 export default function BookingsPage() {
+  const router = useRouter();
+  const { user } = useAuthStore();
+  const {
+    userBookings,
+    isLoadingBookings,
+    fetchUserBookings,
+    cancelBooking,
+    rescheduleBooking,
+  } = useBookingStore();
+
   const [activeTab, setActiveTab] = useState<BookingTab>('upcoming');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const bookings = activeTab === 'upcoming' ? mockBookings : pastBookings;
+  // Load bookings on mount
+  useEffect(() => {
+    if (user) {
+      loadBookings();
+    }
+  }, [user, activeTab]);
 
-  const getStatusBadge = (status: MockBooking['status']) => {
-    const styles = {
-      confirmed: 'bg-success/20 text-success',
-      pending: 'bg-warning/20 text-warning',
-      completed: 'bg-info/20 text-info',
-      cancelled: 'bg-error/20 text-error',
-    };
-    const labels = {
-      confirmed: 'Confermato',
-      pending: 'In attesa',
-      completed: 'Completato',
-      cancelled: 'Annullato',
-    };
-    return (
-      <span className={cn('px-2 py-1 rounded-full text-xs font-medium', styles[status])}>
-        {labels[status]}
-      </span>
-    );
+  const loadBookings = useCallback(async () => {
+    if (!user) return;
+    
+    const status = activeTab === 'upcoming' 
+      ? 'confirmed' 
+      : activeTab === 'past' 
+        ? 'completed' 
+        : 'cancelled';
+    
+    await fetchUserBookings(user.uid, { status });
+  }, [user, activeTab, fetchUserBookings]);
+
+  // Pull to refresh handler
+  const handlePullToRefresh = async () => {
+    setIsRefreshing(true);
+    await loadBookings();
+    setIsRefreshing(false);
+  };
+
+  // Filter bookings by tab
+  const filteredBookings = userBookings.filter((booking) => {
+    switch (activeTab) {
+      case 'upcoming':
+        return ['confirmed', 'pending', 'in_progress'].includes(booking.status);
+      case 'past':
+        return booking.status === 'completed';
+      case 'cancelled':
+        return booking.status === 'cancelled';
+      default:
+        return true;
+    }
+  });
+
+  // Sort by date
+  const sortedBookings = [...filteredBookings].sort((a, b) => {
+    return b.scheduledAt.toDate().getTime() - a.scheduledAt.toDate().getTime();
+  });
+
+  const handleCancel = async (id: string) => {
+    if (!confirm('Sei sicuro di voler annullare questa prenotazione?')) return;
+    
+    try {
+      await cancelBooking(id, 'Annullato dall\'utente');
+    } catch (error) {
+      alert('Errore durante l\'annullamento');
+    }
+  };
+
+  const handleReschedule = (id: string) => {
+    router.push(`/bookings/${id}/reschedule`);
+  };
+
+  const handleReview = (id: string) => {
+    router.push(`/bookings/${id}/review`);
   };
 
   return (
-    <div className="min-h-screen bg-background-dark pb-20">
+    <div className="min-h-screen bg-background-dark">
+      {/* Pull to refresh indicator */}
+      <AnimatePresence>
+        {isRefreshing && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-0 left-0 right-0 z-50 flex justify-center pt-4"
+          >
+            <div className="bg-[#2A2D3A] rounded-full px-4 py-2 flex items-center gap-2 shadow-lg">
+              <Spinner size="sm" />
+              <span className="text-sm text-white">Aggiornamento...</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <div className="p-4">
-        <h1 className="text-2xl font-display font-bold text-text-inverse">Le mie prenotazioni</h1>
-      </div>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-2xl font-display font-bold text-text-inverse">
+            Le mie prenotazioni
+          </h1>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={loadBookings}
+              disabled={isLoadingBookings}
+              className="p-2 rounded-full hover:bg-white/10 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={cn(
+                'w-5 h-5 text-text-secondary',
+                isLoadingBookings && 'animate-spin'
+              )} />
+            </button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => router.push('/booking')}
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              Nuova
+            </Button>
+          </div>
+        </div>
 
-      {/* Tabs */}
-      <div className="px-4 mb-4">
-        <div className="flex bg-background-secondary/10 rounded-xl p-1">
-          <button
-            onClick={() => setActiveTab('upcoming')}
-            className={cn(
-              'flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors',
-              activeTab === 'upcoming'
-                ? 'bg-[var(--section-primary)] text-white'
-                : 'text-text-secondary'
-            )}
-          >
-            In arrivo
-          </button>
-          <button
-            onClick={() => setActiveTab('past')}
-            className={cn(
-              'flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors',
-              activeTab === 'past'
-                ? 'bg-[var(--section-primary)] text-white'
-                : 'text-text-secondary'
-            )}
-          >
-            Passate
-          </button>
+        {/* Tabs */}
+        <div className="flex bg-[#2A2D3A]/50 rounded-xl p-1">
+          {[
+            { id: 'upcoming', label: 'In arrivo' },
+            { id: 'past', label: 'Passate' },
+            { id: 'cancelled', label: 'Annullate' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as BookingTab)}
+              className={cn(
+                'flex-1 py-2.5 px-3 rounded-lg text-sm font-medium transition-all',
+                activeTab === tab.id
+                  ? 'bg-[var(--section-primary)] text-white shadow-lg'
+                  : 'text-text-secondary hover:text-white'
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Bookings List */}
-      <div className="px-4 space-y-3">
-        {bookings.length === 0 ? (
+      {/* Content */}
+      <div className="px-4 pb-24">
+        {isLoadingBookings && !isRefreshing ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <Spinner size="lg" />
+            <p className="text-text-secondary mt-4">Caricamento prenotazioni...</p>
+          </div>
+        ) : sortedBookings.length === 0 ? (
           <div className="text-center py-12">
-            <Calendar className="w-12 h-12 text-text-tertiary mx-auto mb-4" />
-            <p className="text-text-secondary">
-              {activeTab === 'upcoming'
-                ? 'Nessuna prenotazione in arrivo'
-                : 'Nessuna prenotazione passata'}
+            <Calendar className="w-16 h-16 text-text-tertiary mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-white mb-2">
+              {activeTab === 'upcoming' && 'Nessuna prenotazione in arrivo'}
+              {activeTab === 'past' && 'Nessuna prenotazione passata'}
+              {activeTab === 'cancelled' && 'Nessuna prenotazione annullata'}
+            </h3>
+            <p className="text-text-secondary mb-6">
+              {activeTab === 'upcoming' && 'Prenota il tuo primo servizio con i nostri professionisti'}
+              {activeTab === 'past' && 'Le tue prenotazioni completate appariranno qui'}
+              {activeTab === 'cancelled' && 'Le prenotazioni annullate appariranno qui'}
             </p>
+            {activeTab === 'upcoming' && (
+              <Button onClick={() => router.push('/booking')}>
+                Cerca servizi
+              </Button>
+            )}
           </div>
         ) : (
-          bookings.map((booking) => (
-            <button
-              key={booking.id}
-              className="w-full bg-background-secondary/5 rounded-xl p-4 flex gap-4 items-center text-left hover:bg-background-secondary/10 transition-colors"
-            >
-              <div className="w-16 h-16 rounded-lg bg-background-secondary/20 flex-shrink-0" />
-
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-1">
-                  <h3 className="font-medium text-text-inverse truncate">
-                    {booking.serviceName}
-                  </h3>
-                  {getStatusBadge(booking.status)}
-                </div>
-
-                <p className="text-sm text-text-secondary truncate mb-2">
-                  {booking.venueName}
-                </p>
-
-                <div className="flex items-center gap-4 text-xs text-text-tertiary">
-                  <span className="flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    {new Date(booking.date).toLocaleDateString('it-IT', {
-                      day: 'numeric',
-                      month: 'short',
-                    })}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    {booking.time}
-                  </span>
-                </div>
-              </div>
-
-              <ChevronRight className="w-5 h-5 text-text-tertiary flex-shrink-0" />
-            </button>
-          ))
+          <div className="space-y-3">
+            {sortedBookings.map((booking, index) => (
+              <motion.div
+                key={booking.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+              >
+                <BookingCard
+                  booking={booking}
+                  compact={activeTab === 'upcoming'}
+                  onCancel={handleCancel}
+                  onReschedule={handleReschedule}
+                  onReview={handleReview}
+                />
+              </motion.div>
+            ))}
+          </div>
         )}
       </div>
     </div>

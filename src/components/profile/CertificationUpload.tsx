@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, ChangeEvent } from 'react';
-import { Upload, X, FileText, Check, Trash2, Award } from 'lucide-react';
+import { Upload, X, FileText, Check, Trash2, Award, Eye, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +28,8 @@ export function CertificationUpload({
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewType, setPreviewType] = useState<'pdf' | 'image' | null>(null);
   const [newCert, setNewCert] = useState({
     name: '',
     issuingOrganization: '',
@@ -44,23 +46,36 @@ export function CertificationUpload({
     // Validate file type
     const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
     if (!allowedTypes.includes(file.type)) {
-      setError('Please select a PDF or image file');
+      setError('Seleziona un file PDF o immagine');
       return;
     }
 
     // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
-      setError('File size must be less than 10MB');
+      setError('La dimensione del file deve essere inferiore a 10MB');
       return;
     }
 
     setSelectedFile(file);
     setError(null);
+
+    // Create preview for images
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPreviewUrl(e.target?.result as string);
+        setPreviewType('image');
+      };
+      reader.readAsDataURL(file);
+    } else if (file.type === 'application/pdf') {
+      setPreviewUrl(URL.createObjectURL(file));
+      setPreviewType('pdf');
+    }
   };
 
   const handleAdd = async () => {
     if (!newCert.name.trim() || !newCert.issuingOrganization.trim()) {
-      setError('Name and issuing organization are required');
+      setError('Nome e organizzazione sono obbligatori');
       return;
     }
 
@@ -96,13 +111,15 @@ export function CertificationUpload({
         expiryDate: '',
       });
       setSelectedFile(null);
+      setPreviewUrl(null);
+      setPreviewType(null);
       setIsAdding(false);
 
       // Notify parent
       onUpdate?.(certifications);
     } catch (err) {
       console.error('Error adding certification:', err);
-      setError('Failed to add certification');
+      setError('Errore durante il salvataggio. Riprova.');
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
@@ -110,7 +127,7 @@ export function CertificationUpload({
   };
 
   const handleDelete = async (cert: Certification) => {
-    if (!confirm('Are you sure you want to remove this certification?')) return;
+    if (!confirm('Sei sicuro di voler rimuovere questa certificazione?')) return;
 
     try {
       // Delete document from storage if exists
@@ -125,12 +142,12 @@ export function CertificationUpload({
       onUpdate?.(certifications.filter((c) => c.id !== cert.id));
     } catch (err) {
       console.error('Error removing certification:', err);
-      setError('Failed to remove certification');
+      setError('Errore durante la rimozione. Riprova.');
     }
   };
 
   const formatDate = (timestamp: Timestamp | null): string => {
-    if (!timestamp) return 'No expiry';
+    if (!timestamp) return 'Nessuna scadenza';
     const date = timestamp.toDate();
     return date.toLocaleDateString('it-IT', { year: 'numeric', month: 'short' });
   };
@@ -140,13 +157,27 @@ export function CertificationUpload({
     return timestamp.toDate() < new Date();
   };
 
+  const isPdf = (url?: string | null): boolean => {
+    if (!url) return false;
+    return url.toLowerCase().endsWith('.pdf');
+  };
+
+  const clearFileSelection = () => {
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    setPreviewType(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <div className={cn('space-y-4', className)}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Award className="text-section-primary" size={20} />
           <h3 className="text-sm font-medium text-text-tertiary">
-            Certifications ({certifications.length})
+            Certificazioni ({certifications.length})
           </h3>
         </div>
         {!isAdding && (
@@ -155,7 +186,7 @@ export function CertificationUpload({
             size="sm"
             onClick={() => setIsAdding(true)}
           >
-            Add
+            Aggiungi
           </Button>
         )}
       </div>
@@ -183,9 +214,9 @@ export function CertificationUpload({
                 <p className="text-xs text-text-tertiary truncate">
                   {cert.issuingOrganization}
                 </p>
-                <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
                   <span className="text-xs text-text-tertiary">
-                    Issued: {formatDate(cert.issueDate)}
+                    Rilasciata: {formatDate(cert.issueDate)}
                   </span>
                   {cert.expiryDate && (
                     <span
@@ -194,25 +225,38 @@ export function CertificationUpload({
                         isExpired(cert.expiryDate) ? 'text-error' : 'text-text-tertiary'
                       )}
                     >
-                      Expires: {formatDate(cert.expiryDate)}
-                      {isExpired(cert.expiryDate) && ' (Expired)'}
+                      Scade: {formatDate(cert.expiryDate)}
+                      {isExpired(cert.expiryDate) && ' (Scaduta)'}
                     </span>
                   )}
                   {cert.isVerified && (
                     <span className="inline-flex items-center gap-1 text-xs text-success-DEFAULT">
                       <Check size={10} />
-                      Verified
+                      Verificata
                     </span>
                   )}
                 </div>
               </div>
 
-              <button
-                onClick={() => handleDelete(cert)}
-                className="p-2 rounded-lg text-error/70 hover:text-error hover:bg-error/10 transition-colors"
-              >
-                <Trash2 size={16} />
-              </button>
+              <div className="flex items-center gap-1">
+                {cert.documentUrl && (
+                  <a
+                    href={cert.documentUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 rounded-lg text-text-tertiary hover:text-section-primary hover:bg-section-primary/10 transition-colors"
+                    title={isPdf(cert.documentUrl) ? 'Visualizza PDF' : 'Visualizza immagine'}
+                  >
+                    <Eye size={16} />
+                  </a>
+                )}
+                <button
+                  onClick={() => handleDelete(cert)}
+                  className="p-2 rounded-lg text-error/70 hover:text-error hover:bg-error/10 transition-colors"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -222,12 +266,12 @@ export function CertificationUpload({
       {isAdding && (
         <div className="p-4 rounded-xl bg-background-secondary/5 border border-white/10 space-y-4">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-medium text-text-inverse">Add Certification</h4>
+            <h4 className="text-sm font-medium text-text-inverse">Aggiungi Certificazione</h4>
             <button
               onClick={() => {
                 setIsAdding(false);
                 setError(null);
-                setSelectedFile(null);
+                clearFileSelection();
               }}
               className="p-1 rounded-lg text-text-tertiary hover:text-text-inverse hover:bg-white/10"
             >
@@ -237,28 +281,28 @@ export function CertificationUpload({
 
           <div className="space-y-3">
             <Input
-              label="Certification Name"
-              placeholder="e.g., Personal Trainer Certification"
+              label="Nome Certificazione *"
+              placeholder="es. Certificazione Personal Trainer"
               value={newCert.name}
               onChange={(e) => setNewCert({ ...newCert, name: e.target.value })}
             />
 
             <Input
-              label="Issuing Organization"
-              placeholder="e.g., ACE Fitness"
+              label="Organizzazione *"
+              placeholder="es. ACE Fitness"
               value={newCert.issuingOrganization}
               onChange={(e) => setNewCert({ ...newCert, issuingOrganization: e.target.value })}
             />
 
             <div className="grid grid-cols-2 gap-3">
               <Input
-                label="Issue Date"
+                label="Data di Rilascio"
                 type="date"
                 value={newCert.issueDate}
                 onChange={(e) => setNewCert({ ...newCert, issueDate: e.target.value })}
               />
               <Input
-                label="Expiry Date (optional)"
+                label="Data di Scadenza (opzionale)"
                 type="date"
                 value={newCert.expiryDate}
                 onChange={(e) => setNewCert({ ...newCert, expiryDate: e.target.value })}
@@ -268,7 +312,7 @@ export function CertificationUpload({
             {/* File Upload */}
             <div>
               <label className="block text-sm font-medium text-text-tertiary mb-2">
-                Certificate Document (optional)
+                Documento Certificato (opzionale)
               </label>
               <input
                 ref={fileInputRef}
@@ -277,43 +321,70 @@ export function CertificationUpload({
                 onChange={handleFileSelect}
                 className="hidden"
               />
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className={cn(
-                  'w-full flex items-center gap-3 p-3 rounded-xl border border-dashed transition-colors',
-                  selectedFile
-                    ? 'border-section-primary bg-section-gradient/5'
-                    : 'border-white/20 hover:border-white/40'
-                )}
-              >
-                {selectedFile ? (
-                  <>
-                    <FileText className="text-section-primary" size={20} />
-                    <div className="flex-1 text-left">
-                      <p className="text-sm text-text-inverse truncate">{selectedFile.name}</p>
+              
+              {/* Preview */}
+              {previewUrl && previewType === 'image' && (
+                <div className="relative mb-3 rounded-xl overflow-hidden bg-background-secondary/10">
+                  <img
+                    src={previewUrl}
+                    alt="Preview"
+                    className="w-full h-40 object-contain"
+                  />
+                  <button
+                    onClick={clearFileSelection}
+                    className="absolute top-2 right-2 p-1.5 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              )}
+
+              {previewUrl && previewType === 'pdf' && (
+                <div className="relative mb-3 p-4 rounded-xl bg-background-secondary/10 border border-white/10">
+                  <div className="flex items-center gap-3">
+                    <FileText className="text-section-primary" size={32} />
+                    <div className="flex-1">
+                      <p className="text-sm text-text-inverse font-medium">
+                        {selectedFile?.name}
+                      </p>
                       <p className="text-xs text-text-tertiary">
-                        {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                        PDF Documento
                       </p>
                     </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedFile(null);
-                      }}
-                      className="p-1 rounded text-text-tertiary hover:text-error"
+                    <a
+                      href={previewUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 rounded-lg text-text-tertiary hover:text-section-primary hover:bg-section-primary/10 transition-colors"
                     >
-                      <X size={16} />
+                      <Eye size={18} />
+                    </a>
+                    <button
+                      onClick={clearFileSelection}
+                      className="p-2 rounded-lg text-text-tertiary hover:text-error hover:bg-error/10 transition-colors"
+                    >
+                      <X size={18} />
                     </button>
-                  </>
-                ) : (
-                  <>
-                    <Upload className="text-text-tertiary" size={20} />
-                    <span className="text-sm text-text-secondary">
-                      Click to upload PDF or image
-                    </span>
-                  </>
-                )}
-              </button>
+                  </div>
+                </div>
+              )}
+
+              {!previewUrl && (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className={cn(
+                    'w-full flex items-center gap-3 p-3 rounded-xl border border-dashed transition-colors',
+                    selectedFile
+                      ? 'border-section-primary bg-section-gradient/5'
+                      : 'border-white/20 hover:border-white/40'
+                  )}
+                >
+                  <Upload className="text-text-tertiary" size={20} />
+                  <span className="text-sm text-text-secondary">
+                    Clicca per caricare PDF o immagine
+                  </span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -329,10 +400,11 @@ export function CertificationUpload({
               onClick={() => {
                 setIsAdding(false);
                 setError(null);
+                clearFileSelection();
               }}
               disabled={isUploading}
             >
-              Cancel
+              Annulla
             </Button>
             <Button
               variant="primary"
@@ -342,9 +414,19 @@ export function CertificationUpload({
               disabled={isUploading || !newCert.name.trim() || !newCert.issuingOrganization.trim()}
               isLoading={isUploading}
             >
-              Add Certification
+              <Check size={16} className="mr-1" />
+              Aggiungi
             </Button>
           </div>
+        </div>
+      )}
+
+      {certifications.length === 0 && !isAdding && (
+        <div className="text-center py-6 bg-background-secondary/5 rounded-xl">
+          <p className="text-text-tertiary text-sm">Nessuna certificazione aggiunta</p>
+          <p className="text-text-tertiary/70 text-xs mt-1">
+            Clicca "Aggiungi" per inserire le tue certificazioni
+          </p>
         </div>
       )}
     </div>

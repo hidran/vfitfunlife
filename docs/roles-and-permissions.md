@@ -1,5 +1,21 @@
 # Roles & Permissions Guide
 
+## Table of Contents
+- [Overview](#overview)
+- [Superadmin](#superadmin)
+- [Admin](#admin)
+- [Provider](#provider)
+- [Customer](#customer)
+- [Permission Matrix](#permission-matrix)
+- [User Profile Permissions](#user-profile-permissions)
+- [Booking Permissions](#booking-permissions)
+- [Admin Permissions](#admin-permissions)
+- [Firestore Security Rules](#firestore-security-rules)
+- [Best Practices](#best-practices)
+- [FAQ](#faq)
+
+---
+
 ## Overview
 
 VFit uses a role-based access control (RBAC) system with four main roles. Each role has specific permissions that determine what actions users can perform and what data they can access.
@@ -41,14 +57,19 @@ The highest level of access in the system. Superadmins have unrestricted access 
 | | Delete users | Permanently remove accounts |
 | | Manage roles | Assign/change user roles |
 | | View all profiles | Access complete user data |
+| | Suspend/activate | Enable or disable accounts |
 | **Platform** | Configure settings | System-wide configurations |
 | | Manage billing | View and manage all transactions |
 | | View analytics | Access all platform metrics |
 | | Manage admins | Create/remove admin accounts |
+| | View system logs | Access audit logs and system events |
 | **Content** | Manage all services | CRUD operations on all services |
 | | Manage venues | Full venue management |
 | | Manage user types | Create/edit provider categories |
 | | Moderate reviews | Remove inappropriate content |
+| **Bookings** | View all bookings | Access any booking record |
+| | Modify bookings | Cancel, reschedule any booking |
+| | Process refunds | Issue full or partial refunds |
 
 ### Data Access
 
@@ -59,6 +80,8 @@ The highest level of access in the system. Superadmins have unrestricted access 
 - All bookings and transactions
 - System configuration
 - Analytics and reports
+- Audit logs
+- System settings
 ```
 
 ### Access Areas
@@ -68,6 +91,7 @@ The highest level of access in the system. Superadmins have unrestricted access 
 - System Configuration
 - Billing & Analytics
 - Content Moderation
+- System Logs
 
 ---
 
@@ -83,6 +107,7 @@ Platform administrators responsible for day-to-day management. They have broad a
 | **Users** | View users | Browse and search user list |
 | | Edit users | Modify customer/provider profiles |
 | | Verify providers | Approve/reject provider applications |
+| | Suspend users | Temporarily disable accounts |
 | **Platform** | Manage services | Create/edit service categories |
 | | Manage venues | Add/edit venue information |
 | | Manage user types | Create/edit provider types |
@@ -90,14 +115,19 @@ Platform administrators responsible for day-to-day management. They have broad a
 | | View reports | Access platform analytics |
 | **Content** | Moderate reviews | Flag/remove reviews |
 | | Manage promotions | Create/edit promotional codes |
+| **Bookings** | View all bookings | Access booking details |
+| | Cancel bookings | Cancel with refund processing |
+| | Process refunds | Issue refunds (limited amounts) |
 
 ### Limitations
 
 ❌ **Cannot:**
 - Create or modify superadmin accounts
-- Access system-level configuration
-- Delete user accounts (only soft-disable)
+- Access system-level configuration (e.g., commission rates)
+- Delete user accounts (only soft-disable/suspend)
 - View payment credentials (only transactions)
+- Manage role hierarchy
+- Access raw system logs
 
 ### Data Access
 
@@ -132,10 +162,12 @@ Service providers who offer fitness, wellness, beauty, or educational services. 
 | | Manage services | Add/edit offered services |
 | | Set availability | Configure working hours |
 | | Upload portfolio | Add work samples |
+| | Upload certifications | Add professional credentials |
 | **Bookings** | View own bookings | See all bookings with them |
 | | Confirm bookings | Accept pending bookings |
 | | Cancel bookings | Cancel with reason |
 | | Reschedule | Move bookings to new slots |
+| | Complete bookings | Mark as finished |
 | **Customers** | View customer info | Name, contact for their bookings |
 | | Contact customers | Message via platform |
 | | View history | Past bookings with customer |
@@ -152,6 +184,7 @@ interface ProviderAccess {
   ownAvailability: 'read' | 'write';
   ownBookings: 'read' | 'write';
   ownEarnings: 'read';
+  ownPortfolio: 'read' | 'write';
   
   // Customer data - Limited Read
   customerBasicInfo: 'read';  // Name, phone for bookings only
@@ -203,6 +236,7 @@ End users who book services. Customers have access to their own data and can dis
 | **Profile** | Edit own profile | Update personal information |
 | | Manage addresses | Add/edit service locations |
 | | Upload avatar | Profile photo |
+| | Update preferences | Notifications, privacy |
 | **Bookings** | Create bookings | Book services |
 | | View own bookings | Booking history and details |
 | | Cancel own bookings | Cancel with refund rules |
@@ -256,6 +290,7 @@ interface CustomerAccess {
 | Edit any user | ✅ | ✅* | ❌ | ❌ |
 | Delete users | ✅ | ❌ | ❌ | ❌ |
 | Manage roles | ✅ | ❌ | ❌ | ❌ |
+| Suspend users | ✅ | ✅ | ❌ | ❌ |
 | **Provider Management** |
 | Verify providers | ✅ | ✅ | ❌ | ❌ |
 | Edit any provider | ✅ | ✅ | ❌ | ❌ |
@@ -270,16 +305,157 @@ interface CustomerAccess {
 | View own bookings | ✅ | ✅ | ✅ | ✅ |
 | Create bookings | ✅ | ✅ | ✅ | ✅ |
 | Cancel any booking | ✅ | ✅ | ❌ | ❌ |
-| Cancel own booking | ✅ | ✅ | ✅ | ✅ |
+| Cancel own booking | ✅ | ✅ | ✅*** | ✅*** |
+| Reschedule bookings | ✅ | ✅ | Own only | Own only |
 | **Content** |
 | Moderate reviews | ✅ | ✅ | ❌ | ❌ |
 | Write reviews | ✅ | ✅ | ❌ | ✅ |
 | **Platform** |
 | System settings | ✅ | ❌ | ❌ | ❌ |
 | View analytics | ✅ | ✅ | Own only | Own only |
+| Process refunds | ✅ | Limited | ❌ | ❌ |
 
 \* Cannot modify roles or delete accounts
 \*\* Public profile information only
+\*\*\* Subject to cancellation policy
+
+---
+
+## User Profile Permissions
+
+### Permission Matrix
+
+| Action | Customer | Provider | Admin | Superadmin |
+|--------|----------|----------|-------|------------|
+| **Own Profile** |
+| View own profile | ✅ | ✅ | ✅ | ✅ |
+| Edit own profile | ✅ | ✅ | ✅ | ✅ |
+| Change avatar | ✅ | ✅ | ✅ | ✅ |
+| Update preferences | ✅ | ✅ | ✅ | ✅ |
+| **Other Profiles** |
+| View public profiles | ✅ | ✅ | ✅ | ✅ |
+| View full profile details | ❌ | ❌ | ✅ | ✅ |
+| Edit other profiles | ❌ | ❌ | Limited | ✅ |
+| Delete other profiles | ❌ | ❌ | ❌ | ✅ |
+| **Provider-Specific** |
+| Upload certifications | ❌ | Own only | ❌ | ❌ |
+| View own certifications | ❌ | Own only | ✅ | ✅ |
+| Verify certifications | ❌ | ❌ | ✅ | ✅ |
+| Manage availability | ❌ | Own only | ❌ | ❌ |
+| **Privacy Controls** |
+| Set profile visibility | ✅ | ✅ | ✅ | ✅ |
+| Control contact info visibility | ✅ | ✅ | ✅ | ✅ |
+
+### Permission Descriptions
+
+- **Customer**: Can view public profiles only. Cannot see private information like contact details unless booking is confirmed.
+- **Provider**: Same as customer for other profiles. Full control over own provider profile including certifications and availability.
+- **Admin**: Can view all profile details for support purposes. Can edit basic information but not sensitive data like passwords.
+- **Superadmin**: Full access to all profiles. Can edit, suspend, or delete any account.
+
+---
+
+## Booking Permissions
+
+### Permission Matrix
+
+| Action | Customer | Provider | Admin | Superadmin |
+|--------|----------|----------|-------|------------|
+| **Create & View** |
+| Create booking | ✅ | ❌ | ✅ | ✅ |
+| View own bookings | ✅ | Own only | All | All |
+| View booking details | Own only | Own bookings | All | All |
+| Search all bookings | ❌ | ❌ | ✅ | ✅ |
+| **Modify Bookings** |
+| Cancel booking | Own only | Own bookings | All | All |
+| Reschedule booking | Own only | Own bookings | All | All |
+| Modify any booking | ❌ | ❌ | ✅ | ✅ |
+| **Booking Actions** |
+| Confirm booking | ❌ | Own bookings | ✅ | ✅ |
+| Reject booking | ❌ | Own bookings | ✅ | ✅ |
+| Mark complete | ❌ | Own bookings | ✅ | ✅ |
+| Mark no-show | ❌ | Own bookings | ✅ | ✅ |
+| **Financial** |
+| Process payment | Own only | ❌ | ✅ | ✅ |
+| Process refund | ❌ | ❌ | ✅ | ✅ |
+| View payment details | Own only | Own earnings | All | All |
+
+### Cancellation Permissions by Status
+
+| Booking Status | Customer Cancel | Provider Cancel | Admin Cancel |
+|----------------|-----------------|-----------------|--------------|
+| Pending | ✅ | ✅ | ✅ |
+| Confirmed | ✅* | ✅* | ✅ |
+| In Progress | ❌ | ❌ | ✅ |
+| Completed | ❌ | ❌ | ❌ |
+| Cancelled | ❌ | ❌ | ❌ |
+
+\* Subject to cancellation policy time limits
+
+### Refund Permissions
+
+| Refund Type | Customer Request | Provider Issue | Admin Issue | Superadmin Issue |
+|-------------|------------------|----------------|-------------|------------------|
+| Full refund | ❌ | ❌ | ✅ | ✅ |
+| Partial refund | ❌ | ❌ | ✅ | ✅ |
+| Policy-based | Automatic | ❌ | ✅ | ✅ |
+| Goodwill | ❌ | ❌ | ✅ | ✅ |
+
+---
+
+## Admin Permissions
+
+### Permission Matrix
+
+| Action | Admin | Superadmin |
+|--------|-------|------------|
+| **Dashboard Access** |
+| View dashboard | ✅ | ✅ |
+| View all statistics | Limited | ✅ |
+| View system health | ❌ | ✅ |
+| **User Management** |
+| View all users | ✅ | ✅ |
+| Edit user profiles | ✅ | ✅ |
+| Change user roles | Limited | ✅ |
+| Create admin accounts | ❌ | ✅ |
+| Delete user accounts | ❌ | ✅ |
+| Manage permissions | ❌ | ✅ |
+| **Provider Management** |
+| View provider queue | ✅ | ✅ |
+| Verify providers | ✅ | ✅ |
+| Edit provider profiles | ✅ | ✅ |
+| Suspend providers | ✅ | ✅ |
+| **Booking Management** |
+| View all bookings | ✅ | ✅ |
+| Cancel any booking | ✅ | ✅ |
+| Modify bookings | ✅ | ✅ |
+| Process refunds | ✅ (Limited amount) | ✅ (Unlimited) |
+| Override policies | ❌ | ✅ |
+| **Content Management** |
+| Manage user types | ✅ | ✅ |
+| Manage venues | ✅ | ✅ |
+| Moderate reviews | ✅ | ✅ |
+| Manage promotions | ✅ | ✅ |
+| **Finance** |
+| View transactions | ✅ | ✅ |
+| Process payouts | Limited | ✅ |
+| View commission reports | ✅ | ✅ |
+| Change commission rates | ❌ | ✅ |
+| **System** |
+| View system logs | ❌ | ✅ |
+| Manage settings | Limited | ✅ |
+| Deploy updates | ❌ | ✅ |
+| Database access | ❌ | ✅ |
+
+### Admin Limitations
+
+Admins **CANNOT**:
+- Create or modify other admin/superadmin accounts
+- Access system logs and audit trails
+- Change platform commission rates or core business rules
+- Access raw payment credentials or sensitive financial data
+- Delete user accounts (only suspend)
+- Modify role hierarchy or permission definitions
 
 ---
 
@@ -300,6 +476,10 @@ function isAdmin() {
 function isProvider() {
   return hasRole('provider');
 }
+
+function isOwner(userId) {
+  return request.auth != null && request.auth.uid == userId;
+}
 ```
 
 ### Collection Access Rules
@@ -307,9 +487,9 @@ function isProvider() {
 ```javascript
 // Users - Restricted
 match /users/{userId} {
-  allow read: if request.auth.uid == userId || isAdmin();
-  allow create: if request.auth.uid == userId;
-  allow update: if request.auth.uid == userId || isAdmin();
+  allow read: if isOwner(userId) || isAdmin();
+  allow create: if isOwner(userId);
+  allow update: if isOwner(userId) || isAdmin();
   allow delete: if hasRole('superadmin');
 }
 
@@ -320,6 +500,12 @@ match /providers/{providerId} {
     (isProvider() && request.auth.uid == resource.data.userId);
   allow update: if isAdmin() || 
     (isProvider() && request.auth.uid == resource.data.userId);
+}
+
+// Provider Certifications
+match /providers/{providerId}/certifications/{certId} {
+  allow read: if isProvider() && isOwner(providerId) || isAdmin();
+  allow write: if isProvider() && isOwner(providerId);
 }
 
 // User Types - Admin managed
@@ -340,6 +526,28 @@ match /bookings/{bookingId} {
     resource.data.customerId == request.auth.uid ||
     resource.data.providerId == request.auth.uid;
 }
+
+// Payments - Restricted
+match /payments/{paymentId} {
+  allow read: if request.auth != null && (
+    resource.data.customerId == request.auth.uid ||
+    resource.data.providerId == request.auth.uid ||
+    isAdmin()
+  );
+  allow write: if isAdmin();
+}
+
+// Admin Logs - Superadmin only
+match /logs/{logId} {
+  allow read: if hasRole('superadmin');
+  allow write: if isAdmin();
+}
+
+// System Settings - Admin only
+match /settings/{settingId} {
+  allow read: if isAdmin();
+  allow write: if hasRole('superadmin');
+}
 ```
 
 ---
@@ -352,6 +560,9 @@ match /bookings/{bookingId} {
 2. **Use Cloud Functions for sensitive operations**: Role changes, payments
 3. **Log admin actions**: Audit trail for compliance
 4. **Principle of least privilege**: Grant minimum required access
+5. **Validate inputs**: Sanitize all user inputs
+6. **Check permissions at every layer**: Client, Firestore rules, and Cloud Functions
+7. **Use transaction for multi-step operations**: Ensure data consistency
 
 ### For Admins
 
@@ -359,6 +570,9 @@ match /bookings/{bookingId} {
 2. **Regular access reviews**: Audit user roles periodically
 3. **Document role changes**: Keep record of why roles were changed
 4. **Use separate accounts**: Don't use admin accounts for daily use
+5. **Report suspicious activity**: Escalate security concerns
+6. **Follow refund policies**: Don't override without good reason
+7. **Keep audit records**: Document important decisions
 
 ---
 
@@ -375,3 +589,15 @@ A: No, providers can only see bookings they are involved with.
 
 **Q: What's the difference between admin and superadmin?**
 A: Superadmins can manage admins and system settings. Admins manage day-to-day operations.
+
+**Q: Can a suspended user reactivate their account?**
+A: Only admins or superadmins can reactivate suspended accounts. Contact support for assistance.
+
+**Q: Who can see my private information?**
+A: Only you, platform admins (for support), and providers you book with (limited info) can see your data.
+
+**Q: Can I change my role from provider to customer?**
+A: Yes, but you'll lose provider features and any active bookings must be completed or cancelled first.
+
+**Q: How long are admin actions logged?**
+A: Admin actions are logged indefinitely for compliance and security purposes.

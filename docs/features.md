@@ -1,5 +1,21 @@
 # Feature Requirements
 
+## Table of Contents
+- [Screen Flow](#screen-flow)
+- [Splash Screen](#1-splash-screen)
+- [Onboarding](#2-onboarding-first-launch-only)
+- [Authentication](#3-authentication)
+- [Main Tab Navigation](#4-main-tab-navigation)
+- [VFit Screens](#5-vfit-screens)
+- [User Profile](#user-profile)
+- [Booking System](#booking-system)
+- [Admin Backoffice](#admin-backoffice)
+- [User Roles & Permissions](#user-roles--permissions)
+- [User Types (Provider Categories)](#user-types-provider-categories)
+- [Provider Profiles](#provider-profiles)
+
+---
+
 ## Screen Flow
 
 ```
@@ -150,6 +166,350 @@ Bottom tabs with section-aware theming:
 - [x] Description (expandable)
 - [x] "Servizi" tab - list of services with prices
 - [x] "Corsi" tab
+
+---
+
+## User Profile
+
+### Profile Management
+
+#### Personal Information
+- **Name and Bio**: Full name display with editable biography
+- **Profile Photo**: Avatar upload with crop and resize functionality
+- **Contact Details**: 
+  - Email address with verification status
+  - Phone number with SMS verification
+  - Preferred contact method settings
+- **Social Media Links**: Connect Instagram, Facebook, LinkedIn profiles
+- **Date of Birth**: Age verification for certain services
+
+#### Notification Preferences
+- Push notifications toggle
+- Email notifications settings
+- SMS notifications for bookings
+- Marketing communications preferences
+- Notification quiet hours
+
+#### Privacy Settings
+- Profile visibility (public/private)
+- Show/hide contact information
+- Booking history visibility
+- Review visibility settings
+- Data download request
+- Account deletion option
+
+### Provider Profiles
+
+Provider profiles extend the base user profile with professional features:
+
+#### Professional Information
+- **Professional Bio**: Extended description of expertise and approach
+- **Specialties**: Tags for areas of expertise (e.g., "Weight Loss", "Strength Training")
+- **Services Offered**: List of available services with descriptions
+- **Certifications**: 
+  - Document upload with verification status
+  - Certificate name, issuing organization, date
+  - Verification badge when approved by admin
+- **Education History**: Degrees, institutions, graduation dates
+- **Experience**: Years of professional experience
+- **Languages Spoken**: Multi-language support for international users
+
+#### Portfolio & Gallery
+- Before/after photo gallery
+- Work samples and demonstrations
+- Video introductions
+- Client testimonials showcase
+
+#### Availability & Scheduling
+- Weekly schedule configuration (Mon-Sun)
+- Time slot management
+- Buffer time between appointments
+- Exception dates (holidays, time off)
+- Advance booking window settings
+- Same-day booking availability
+
+#### Service Pricing
+- Service-specific pricing
+- Duration options
+- Package deals and discounts
+- Home service surcharges
+- Deposit requirements
+
+#### Client Reviews
+- Star rating display
+- Written review showcase
+- Response to reviews
+- Average rating calculation
+- Review count statistics
+
+#### Verification Badge
+- Displayed on profile when verified
+- Verification requirements checklist
+- Re-verification for expired certifications
+
+---
+
+## Booking System
+
+### For Customers
+
+#### Search and Discovery
+- **Provider Search**: Keyword search across provider profiles
+- **Advanced Filters**:
+  - Category (Fitness, Wellness, Beauty, etc.)
+  - Price range
+  - Availability (today, this week, flexible)
+  - Location/distance
+  - Rating and review count
+  - Home service availability
+  - Language spoken
+- **Sort Options**: Recommended, nearest, highest rated, most reviewed, price
+
+#### Provider Profiles
+- View full provider profile
+- See services and pricing
+- Check availability calendar
+- Read reviews and ratings
+- View portfolio/gallery
+- Contact provider (pre-booking)
+
+#### Booking Flow
+1. Select service from provider's offerings
+2. Choose booking type (in-venue, home service, virtual)
+3. Select date and time from available slots
+4. Add service address (for home services)
+5. Add special requests or notes
+6. Review booking summary
+7. Apply promo code (optional)
+8. Select payment method
+9. Pay deposit or full amount
+10. Receive instant confirmation
+
+#### Booking Management
+- **My Bookings Dashboard**:
+  - Upcoming bookings with countdown
+  - Past booking history
+  - Cancelled bookings
+  - Filter by status and date range
+- **Reschedule**: Change date/time if provider availability permits
+- **Cancel Booking**: With cancellation policy applied
+- **Rebook**: Quick rebooking with previous providers
+
+#### Payment Integration
+- Multiple payment methods (credit card, wallet, points)
+- Secure Stripe integration
+- Deposit or full payment options
+- Points redemption at checkout
+- Promo code application
+- Automatic invoicing
+
+#### Calendar Sync
+- Add bookings to device calendar
+- Sync with Google Calendar
+- Sync with Apple Calendar
+- Export booking schedule
+
+### For Providers
+
+#### Provider Dashboard
+- **Stats Overview**:
+  - Total bookings (today, week, month)
+  - Total earnings
+  - Rating summary
+  - New client count
+- **Quick Actions**: Confirm pending bookings, add availability
+
+#### Availability Management
+- **Weekly Schedule**: Set standard working hours per day
+- **Exception Dates**: Block off holidays or personal time
+- **Bulk Availability**: Set recurring patterns
+- **Quick Toggle**: Mark as unavailable for today
+- **Calendar View**: Visual availability management
+
+#### Booking Management
+- **Incoming Bookings**:
+  - New booking notifications
+  - Pending confirmation queue
+  - Auto-accept options
+- **Booking Calendar**:
+  - Day/week/month views
+  - Color-coded by status
+  - Click to view details
+- **Actions**:
+  - Confirm/reject bookings
+  - Mark as completed
+  - Add internal notes
+  - Contact customer
+
+#### Client Management
+- **Client Directory**: List of all past and current clients
+- **Client Profiles**: View booking history per client
+- **Notes**: Add private notes about clients
+- **Messaging**: In-app communication
+
+#### Earnings & Payouts
+- **Earnings Dashboard**:
+  - Total earnings breakdown
+  - Pending payouts
+  - Commission details
+  - Payout history
+- **Withdrawal Requests**: 
+  - Request payouts to bank account
+  - Minimum payout thresholds
+  - Payout schedule settings
+
+#### Performance Analytics
+- **Booking Analytics**:
+  - Booking trends over time
+  - Peak hours/days
+  - Cancellation rates
+- **Revenue Analytics**:
+  - Revenue by service type
+  - Month-over-month growth
+  - Average booking value
+- **Client Analytics**:
+  - New vs returning clients
+  - Client retention rate
+  - Referral tracking
+
+---
+
+## Admin Backoffice
+
+### Dashboard
+
+#### Platform Overview
+- **Key Metrics**:
+  - Total registered users
+  - Active providers
+  - Total bookings (today, week, month)
+  - Total revenue
+  - Pending verifications
+- **Real-time Activity**: Live feed of platform activity
+- **Quick Actions**: 
+  - Verify pending providers
+  - Process refunds
+  - Respond to support tickets
+
+#### Charts and Analytics
+- **User Growth**: Registration trends over time
+- **Booking Volume**: Daily/weekly/monthly booking charts
+- **Revenue Charts**: Platform earnings visualization
+- **Provider Performance**: Top performing providers
+- **Geographic Distribution**: User and provider locations
+
+### User Management
+
+#### User Directory
+- **List View**: All users with search and filters
+- **User Details**: Complete profile information
+- **Actions**:
+  - View user profile
+  - Edit user information
+  - Change user role
+  - Suspend/activate account
+  - Reset password
+  - Delete account (GDPR compliance)
+
+#### Role Management
+- Assign roles (customer, provider, admin)
+- Bulk role changes
+- Role change audit log
+
+### Provider Management
+
+#### Verification Queue
+- **Pending Verifications**: List of providers awaiting approval
+- **Document Review**:
+  - View uploaded certifications
+  - Check document validity
+  - Request additional documents
+- **Approval Actions**:
+  - Approve with verification badge
+  - Reject with reason
+  - Request more information
+
+#### Provider Directory
+- **All Providers**: Searchable, filterable list
+- **Provider Status**: Active, pending, suspended, rejected
+- **Performance View**: Bookings, ratings, earnings per provider
+- **Actions**:
+  - Edit provider profile
+  - Suspend/activate provider
+  - Remove verification badge
+
+### Booking Management
+
+#### Booking Overview
+- **All Bookings**: Complete list with advanced filters
+- **Booking Details**: Full booking information
+- **Status Management**:
+  - Cancel bookings
+  - Process refunds
+  - Reschedule bookings
+  - Add admin notes
+
+#### Export and Reporting
+- Export booking data (CSV, Excel)
+- Filter by date range, status, provider
+- Generate reports
+
+### Content Management
+
+#### User Types (Provider Categories)
+- **Create/Edit Categories**:
+  - Category name and slug
+  - Description and icon
+  - Requirements list
+  - Default services
+- **Ordering**: Drag-drop to reorder categories
+- **Enable/Disable**: Toggle category availability
+
+#### Venues Management
+- **Add/Edit Venues**:
+  - Basic information (name, address, contact)
+  - Location and geocoding
+  - Amenities and features
+  - Operating hours
+  - Photos and media
+- **Partner Status**: Mark as partner venue
+- **Featured Venues**: Promote on homepage
+
+#### Platform Settings
+- **General Settings**:
+  - Platform name and branding
+  - Default language and currency
+  - Contact information
+- **Booking Settings**:
+  - Cancellation policies
+  - Deposit requirements
+  - Booking lead time
+- **Payment Settings**:
+  - Commission rates
+  - Payout schedules
+  - Tax configuration
+
+### Finance
+
+#### Transaction History
+- **All Transactions**: Complete payment records
+- **Filters**: By date, user, status, type
+- **Details**: Payment intent, amount, fees
+
+#### Provider Payouts
+- **Payout Queue**: Pending provider withdrawals
+- **Process Payouts**: Approve and process payments
+- **Payout History**: All processed payouts
+
+#### Commission Reports
+- **Revenue Breakdown**: Platform commission earnings
+- **Provider Earnings**: Total provider payouts
+- **Tax Reports**: VAT/sales tax calculations
+
+#### Refund Processing
+- **Refund Requests**: List of refund requests
+- **Process Refunds**: Full or partial refunds
+- **Refund Policy**: Configure automatic refund rules
 
 ---
 

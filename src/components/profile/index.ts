@@ -4,3 +4,8 @@ export { NotificationSettings } from './NotificationSettings';
 export { CertificationUpload } from './CertificationUpload';
 export { ServicePricingCard } from './ServicePricingCard';
 export { AvailabilityCalendar } from './AvailabilityCalendar';
+export { EducationHistory } from './EducationHistory';
+export { PortfolioGallery } from './PortfolioGallery';
+export { SpecialtiesSelector } from './SpecialtiesSelector';
+export { LanguagesSelector } from './LanguagesSelector';
+export { CancellationPolicyEditor } from './CancellationPolicyEditor';

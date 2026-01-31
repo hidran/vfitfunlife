@@ -1,5 +1,23 @@
 # API Reference
 
+## Table of Contents
+- [Authentication](#authentication)
+- [Cloud Functions](#cloud-functions)
+- [Auth Functions](#auth-functions)
+- [User Functions](#user-functions)
+- [Profile APIs](#profile-apis)
+- [Provider Functions](#provider-functions)
+- [Booking Functions](#booking-functions)
+- [Customer Booking APIs](#customer-booking-apis)
+- [Provider Booking APIs](#provider-booking-apis)
+- [Payment Functions](#payment-functions)
+- [Admin Functions](#admin-functions)
+- [Admin APIs](#admin-apis)
+- [Error Handling](#error-handling)
+- [Webhooks](#webhooks)
+
+---
+
 ## Authentication
 
 ### Client-side Authentication
@@ -174,6 +192,231 @@ POST /setUserRole
 
 ---
 
+## Profile APIs
+
+### Update Personal Information
+
+```typescript
+POST /updateProfile
+
+// Request
+{
+  fullName?: string;
+  bio?: string;
+  dateOfBirth?: string;           // ISO date format
+  phone?: string;
+  email?: string;
+  preferredLanguage?: 'it' | 'en';
+}
+
+// Response
+{
+  success: boolean;
+  updatedAt: string;
+  user: User;
+}
+```
+
+### Update Avatar
+
+```typescript
+POST /updateAvatar
+
+// Request - FormData
+{
+  file: File;                     // Image file (JPG, PNG, max 5MB)
+}
+
+// Response
+{
+  success: boolean;
+  avatarUrl: string;              // New avatar URL
+}
+
+// Error Codes
+// - invalid-argument: Invalid file type or size
+// - resource-exhausted: Storage quota exceeded
+```
+
+### Update Social Links
+
+```typescript
+POST /updateSocialLinks
+
+// Request
+{
+  instagram?: string;
+  facebook?: string;
+  linkedin?: string;
+  website?: string;
+  twitter?: string;
+  youtube?: string;
+}
+
+// Response
+{
+  success: boolean;
+  socialLinks: SocialLinks;
+}
+```
+
+### Update Notification Settings
+
+```typescript
+POST /updateNotificationSettings
+
+// Request
+{
+  email?: boolean;                // Email notifications
+  push?: boolean;                 // Push notifications
+  sms?: boolean;                  // SMS notifications
+  marketing?: boolean;            // Marketing emails
+  bookingReminders?: boolean;     // Booking reminder notifications
+  promotionalOffers?: boolean;    // Promotional offers
+  quietHoursStart?: string;       // "22:00"
+  quietHoursEnd?: string;         // "08:00"
+}
+
+// Response
+{
+  success: boolean;
+  settings: NotificationSettings;
+}
+```
+
+### Update Privacy Settings
+
+```typescript
+POST /updatePrivacySettings
+
+// Request
+{
+  profileVisible?: boolean;       // Show profile to public
+  showContactInfo?: boolean;      // Show email/phone
+  showBookingHistory?: boolean;   // Show booking history to providers
+  allowSearchIndexing?: boolean;  // Allow search engines
+}
+
+// Response
+{
+  success: boolean;
+  settings: PrivacySettings;
+}
+```
+
+### Add Certification (Provider Only)
+
+```typescript
+POST /addCertification
+
+// Request
+{
+  name: string;                   // Certification name
+  issuingOrganization: string;    // Issuing organization
+  issueDate: string;              // ISO date
+  expiryDate?: string;            // ISO date (optional)
+  documentFile?: File;            // PDF or image of certificate
+}
+
+// Response
+{
+  success: boolean;
+  certification: {
+    id: string;
+    name: string;
+    issuingOrganization: string;
+    issueDate: string;
+    expiryDate?: string;
+    documentUrl?: string;
+    verified: boolean;
+    createdAt: string;
+  };
+}
+
+// Error Codes
+// - permission-denied: User is not a provider
+```
+
+### Remove Certification
+
+```typescript
+POST /removeCertification
+
+// Request
+{
+  certificationId: string;
+}
+
+// Response
+{
+  success: boolean;
+}
+```
+
+### Add Education Entry (Provider Only)
+
+```typescript
+POST /addEducation
+
+// Request
+{
+  degree: string;                 // Degree/Certificate name
+  institution: string;            // School/University name
+  fieldOfStudy?: string;          // Field of study
+  startYear: number;
+  endYear?: number;               // Omit if ongoing
+  isCurrent?: boolean;
+}
+
+// Response
+{
+  success: boolean;
+  education: {
+    id: string;
+    degree: string;
+    institution: string;
+    fieldOfStudy?: string;
+    startYear: number;
+    endYear?: number;
+    createdAt: string;
+  };
+}
+```
+
+### Update Availability (Provider Only)
+
+```typescript
+POST /updateAvailability
+
+// Request
+{
+  schedule: {
+    day: number;                  // 0-6 (Sunday-Saturday)
+    start: string;                // "09:00"
+    end: string;                  // "18:00"
+    isAvailable: boolean;
+    slots?: {                     // Specific time slots
+      start: string;              // "09:00"
+      end: string;                // "10:00"
+      isBooked: boolean;
+    }[];
+  }[];
+  exceptions?: {                  // Date exceptions
+    date: string;                 // "2024-02-15"
+    isAvailable: boolean;
+    reason?: string;
+  }[];
+}
+
+// Response
+{
+  success: boolean;
+  updatedDays: number;
+}
+```
+
+---
+
 ## Provider Functions
 
 ### Create Provider Profile
@@ -258,7 +501,8 @@ POST /getProviderProfile
     category: string;
   };
   specialties: string[];
-  certifications: string[];
+  certifications: Certification[];
+  education: Education[];
   experienceYears: number;
   languages: string[];
   ratingAvg: number;
@@ -294,7 +538,9 @@ POST /listProviders
   };
   homeServiceOnly?: boolean;    // Filter for home service providers
   availableNow?: boolean;       // Filter by current availability
-  sortBy?: 'rating' | 'distance' | 'bookings' | 'newest';
+  minRating?: number;           // Minimum rating (1-5)
+  maxPrice?: number;            // Maximum price
+  sortBy?: 'rating' | 'distance' | 'bookings' | 'newest' | 'price_low' | 'price_high';
   limit?: number;               // Default: 20, Max: 100
   cursor?: string;              // For pagination
 }
@@ -312,6 +558,7 @@ POST /listProviders
     startingPrice: number;
     homeServiceAvailable: boolean;
     distanceKm?: number;
+    isVerified: boolean;
   }[];
   nextCursor?: string;
   totalCount: number;
@@ -331,6 +578,9 @@ POST /updateProviderService
   price: number;
   durationMinutes: number;
   isActive: boolean;
+  maxBookingsPerDay?: number;
+  requiresDeposit?: boolean;
+  depositAmount?: number;
 }
 
 // Response
@@ -460,6 +710,47 @@ POST /confirmBooking
 // Note: Provider only - confirms a pending booking request
 ```
 
+### Complete Booking
+
+```typescript
+POST /completeBooking
+
+// Request
+{
+  bookingId: string;
+  notes?: string;
+}
+
+// Response
+{
+  success: boolean;
+  completedAt: string;
+  earnings: number;             // Provider earnings
+}
+
+// Note: Provider only - marks booking as completed
+```
+
+### Reschedule Booking
+
+```typescript
+POST /rescheduleBooking
+
+// Request
+{
+  bookingId: string;
+  newScheduledAt: string;       // New date/time
+  reason?: string;
+}
+
+// Response
+{
+  success: boolean;
+  booking: Booking;
+  priceDifference: number;      // Additional charge or refund
+}
+```
+
 ### Get Booking Details
 
 ```typescript
@@ -515,6 +806,8 @@ POST /getBookingDetails
   qrCode?: string;              // For check-in
   canCancel: boolean;
   cancellationDeadline?: string;
+  customerNotes?: string;
+  providerNotes?: string;
 }
 ```
 
@@ -525,7 +818,7 @@ POST /listUserBookings
 
 // Request
 {
-  status?: ('pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled')[];
+  status?: ('pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show')[];
   fromDate?: string;
   toDate?: string;
   limit?: number;
@@ -543,8 +836,326 @@ POST /listUserBookings
     status: string;
     finalPrice: number;
     canCancel: boolean;
+    avatarUrl?: string;
   }[];
   nextCursor?: string;
+  totalCount: number;
+}
+```
+
+---
+
+## Customer Booking APIs
+
+### Search Providers
+
+```typescript
+POST /searchProviders
+
+// Request
+{
+  query?: string;               // Search query
+  category?: string;            // Filter by category
+  location?: {
+    latitude: number;
+    longitude: number;
+    radiusKm: number;           // Search radius
+  };
+  date?: string;                // Check availability for specific date
+  minRating?: number;
+  maxPrice?: number;
+  homeServiceOnly?: boolean;
+  availableNow?: boolean;
+  sortBy?: 'relevance' | 'rating' | 'distance' | 'price' | 'bookings';
+  limit?: number;
+  offset?: number;
+}
+
+// Response
+{
+  providers: {
+    id: string;
+    fullName: string;
+    avatarUrl?: string;
+    shortBio: string;
+    userType: {
+      id: string;
+      name: string;
+    };
+    ratingAvg: number;
+    reviewCount: number;
+    startingPrice: number;
+    distanceKm?: number;
+    isVerified: boolean;
+    isAvailable: boolean;       // For requested date
+  }[];
+  totalCount: number;
+  hasMore: boolean;
+}
+```
+
+### Get Provider Availability
+
+```typescript
+POST /getProviderAvailability
+
+// Request
+{
+  providerId: string;
+  date: string;                 // "2024-02-15"
+  serviceId?: string;           // Check availability for specific service
+}
+
+// Response
+{
+  date: string;
+  isAvailable: boolean;
+  slots: {
+    start: string;              // "09:00"
+    end: string;                // "10:00"
+    isAvailable: boolean;
+    serviceId?: string;
+  }[];
+  workingHours: {
+    start: string;
+    end: string;
+  };
+}
+```
+
+### Create Booking
+
+```typescript
+POST /createBooking
+
+// Request
+{
+  providerId?: string;
+  venueId?: string;
+  serviceId: string;
+  scheduledAt: string;
+  bookingType: 'in_venue' | 'home_service' | 'virtual' | 'outdoor';
+  serviceAddress?: Address;
+  promotionCode?: string;
+  usePoints?: boolean;
+  customerNotes?: string;
+}
+
+// Response
+{
+  bookingId: string;
+  status: 'pending' | 'confirmed';
+  finalPrice: number;
+  depositAmount: number;
+  paymentUrl?: string;          // If payment required
+  expiresAt: string;            // Booking hold expiration
+}
+```
+
+### Get User Bookings
+
+```typescript
+POST /getUserBookings
+
+// Request
+{
+  status?: BookingStatus[];
+  fromDate?: string;
+  toDate?: string;
+  limit?: number;
+  cursor?: string;
+}
+
+// Response
+{
+  bookings: BookingSummary[];
+  nextCursor?: string;
+  totalCount: number;
+}
+```
+
+### Cancel Booking
+
+```typescript
+POST /cancelBooking
+
+// Request
+{
+  bookingId: string;
+  reason: string;
+  requestRefund?: boolean;
+}
+
+// Response
+{
+  success: boolean;
+  refundAmount: number;
+  refundPolicy: 'full' | 'partial' | 'none';
+  refundDays: number;           // Days until refund processed
+}
+```
+
+### Reschedule Booking
+
+```typescript
+POST /rescheduleBooking
+
+// Request
+{
+  bookingId: string;
+  newDate: string;              // New scheduled date/time
+  reason?: string;
+}
+
+// Response
+{
+  success: boolean;
+  booking: Booking;
+  priceAdjustment: number;      // Positive = charge more, negative = refund
+}
+```
+
+---
+
+## Provider Booking APIs
+
+### Get Provider Bookings
+
+```typescript
+POST /getProviderBookings
+
+// Request
+{
+  filters?: {
+    status?: BookingStatus[];
+    fromDate?: string;
+    toDate?: string;
+    customerId?: string;
+  };
+  limit?: number;
+  cursor?: string;
+}
+
+// Response
+{
+  bookings: {
+    id: string;
+    customerName: string;
+    customerPhone: string;
+    customerAvatar?: string;
+    serviceName: string;
+    scheduledAt: string;
+    durationMinutes: number;
+    status: BookingStatus;
+    finalPrice: number;
+    isNewCustomer: boolean;
+    customerNotes?: string;
+  }[];
+  nextCursor?: string;
+  totalCount: number;
+  summary: {
+    pending: number;
+    confirmed: number;
+    completed: number;
+    totalRevenue: number;
+  };
+}
+```
+
+### Confirm Booking
+
+```typescript
+POST /confirmBooking
+
+// Request
+{
+  bookingId: string;
+  notes?: string;
+}
+
+// Response
+{
+  success: boolean;
+  confirmedAt: string;
+  customerNotificationSent: boolean;
+}
+```
+
+### Complete Booking
+
+```typescript
+POST /completeBooking
+
+// Request
+{
+  bookingId: string;
+  notes?: string;
+  addToPortfolio?: boolean;     // Add photos to portfolio
+}
+
+// Response
+{
+  success: boolean;
+  completedAt: string;
+  earnings: number;
+  platformFee: number;
+  netEarnings: number;
+}
+```
+
+### Get Provider Schedule
+
+```typescript
+POST /getProviderSchedule
+
+// Request
+{
+  startDate: string;            // Start of date range
+  endDate: string;              // End of date range
+}
+
+// Response
+{
+  schedule: {
+    date: string;
+    bookings: {
+      id: string;
+      customerName: string;
+      serviceName: string;
+      startTime: string;
+      endTime: string;
+      status: BookingStatus;
+    }[];
+    availableSlots: {
+      start: string;
+      end: string;
+    }[];
+    isFullyBooked: boolean;
+  }[];
+}
+```
+
+### Reject Booking
+
+```typescript
+POST /rejectBooking
+
+// Request
+{
+  bookingId: string;
+  reason: string;
+  suggestAlternative?: {
+    date: string;
+    time: string;
+  };
+}
+
+// Response
+{
+  success: boolean;
+  rejectedAt: string;
+  refundIssued: boolean;
+  customerNotificationSent: boolean;
 }
 ```
 
@@ -666,6 +1277,7 @@ POST /admin/verifyProvider
   providerId: string;
   status: 'approved' | 'rejected';
   notes?: string;
+  verifiedCertifications?: string[];  // IDs of verified certs
 }
 
 // Response
@@ -675,6 +1287,341 @@ POST /admin/verifyProvider
 }
 
 // Requires: admin or superadmin role
+```
+
+---
+
+## Admin APIs
+
+### Get Dashboard Stats
+
+```typescript
+POST /admin/getDashboardStats
+
+// Request (no body required)
+{}
+
+// Response
+{
+  overview: {
+    totalUsers: number;
+    activeUsers: number;          // Active in last 30 days
+    totalProviders: number;
+    verifiedProviders: number;
+    pendingVerifications: number;
+  };
+  bookings: {
+    today: number;
+    thisWeek: number;
+    thisMonth: number;
+    total: number;
+    completionRate: number;
+    cancellationRate: number;
+  };
+  revenue: {
+    today: number;
+    thisWeek: number;
+    thisMonth: number;
+    total: number;
+    platformCommission: number;
+  };
+  charts: {
+    userGrowth: { date: string; count: number }[];
+    bookingTrends: { date: string; count: number }[];
+    revenueTrends: { date: string; amount: number }[];
+  };
+  recentActivity: {
+    id: string;
+    type: 'booking' | 'registration' | 'verification' | 'review';
+    description: string;
+    timestamp: string;
+    userId?: string;
+    userName?: string;
+  }[];
+}
+
+// Requires: admin or superadmin role
+```
+
+### Get Users
+
+```typescript
+POST /admin/getUsers
+
+// Request
+{
+  filters?: {
+    role?: ('customer' | 'provider' | 'admin' | 'superadmin')[];
+    status?: ('active' | 'suspended' | 'pending')[];
+    search?: string;              // Search by name/email
+    verified?: boolean;
+    dateFrom?: string;
+    dateTo?: string;
+  };
+  sort?: {
+    field: 'createdAt' | 'lastLogin' | 'name' | 'bookings';
+    direction: 'asc' | 'desc';
+  };
+  pagination?: {
+    limit: number;
+    cursor?: string;
+  };
+}
+
+// Response
+{
+  users: {
+    id: string;
+    fullName: string;
+    email: string;
+    phone?: string;
+    role: string;
+    status: string;
+    isVerified: boolean;
+    createdAt: string;
+    lastLoginAt?: string;
+    bookingCount: number;
+    avatarUrl?: string;
+  }[];
+  nextCursor?: string;
+  totalCount: number;
+}
+
+// Requires: admin or superadmin role
+```
+
+### Update User Role
+
+```typescript
+POST /admin/updateUserRole
+
+// Request
+{
+  userId: string;
+  role: 'customer' | 'provider' | 'admin' | 'superadmin';
+  reason?: string;
+}
+
+// Response
+{
+  success: boolean;
+  previousRole: string;
+  newRole: string;
+  updatedAt: string;
+}
+
+// Requires: superadmin role (for admin/superadmin assignments)
+// Requires: admin role (for customer/provider changes)
+```
+
+### Suspend User
+
+```typescript
+POST /admin/suspendUser
+
+// Request
+{
+  userId: string;
+  reason: string;
+  duration?: 'temporary' | 'permanent';
+  restoreDate?: string;         // If temporary
+  notifyUser?: boolean;
+}
+
+// Response
+{
+  success: boolean;
+  suspendedAt: string;
+  status: 'suspended';
+}
+
+// Requires: admin or superadmin role
+```
+
+### Verify Provider
+
+```typescript
+POST /admin/verifyProvider
+
+// Request
+{
+  providerId: string;
+  status: 'approved' | 'rejected' | 'pending';
+  notes?: string;
+  verifiedDocuments?: string[];
+  rejectionReason?: string;
+}
+
+// Response
+{
+  success: boolean;
+  status: string;
+  verifiedAt?: string;
+  verifiedBy?: string;
+}
+
+// Requires: admin or superadmin role
+```
+
+### Get Bookings
+
+```typescript
+POST /admin/getBookings
+
+// Request
+{
+  filters?: {
+    status?: BookingStatus[];
+    fromDate?: string;
+    toDate?: string;
+    customerId?: string;
+    providerId?: string;
+    venueId?: string;
+    minAmount?: number;
+    maxAmount?: number;
+  };
+  sort?: {
+    field: 'scheduledAt' | 'createdAt' | 'amount' | 'status';
+    direction: 'asc' | 'desc';
+  };
+  pagination?: {
+    limit: number;
+    cursor?: string;
+  };
+}
+
+// Response
+{
+  bookings: {
+    id: string;
+    customerName: string;
+    customerId: string;
+    providerName?: string;
+    providerId?: string;
+    venueName?: string;
+    serviceName: string;
+    scheduledAt: string;
+    status: BookingStatus;
+    finalPrice: number;
+    paymentStatus: string;
+    createdAt: string;
+  }[];
+  nextCursor?: string;
+  totalCount: number;
+  summary: {
+    totalRevenue: number;
+    totalBookings: number;
+    byStatus: Record<BookingStatus, number>;
+  };
+}
+
+// Requires: admin or superadmin role
+```
+
+### Process Refund
+
+```typescript
+POST /admin/processRefund
+
+// Request
+{
+  bookingId: string;
+  amount: number;               // Partial or full amount
+  reason: string;
+  notifyCustomer?: boolean;
+  notifyProvider?: boolean;
+}
+
+// Response
+{
+  success: boolean;
+  refundId: string;
+  amount: number;
+  status: 'pending' | 'completed' | 'failed';
+  estimatedArrival?: string;
+}
+
+// Requires: admin or superadmin role
+```
+
+### Update Platform Settings
+
+```typescript
+POST /admin/updatePlatformSettings
+
+// Request
+{
+  settings: {
+    platformName?: string;
+    supportEmail?: string;
+    supportPhone?: string;
+    commissionRate?: number;      // Platform commission percentage
+    depositPercentage?: number;   // Required deposit percentage
+    cancellationPolicy?: {
+      fullRefundHours: number;    // Hours before booking for full refund
+      partialRefundHours: number;
+      partialRefundPercentage: number;
+    };
+    bookingSettings?: {
+      minAdvanceBooking: number;  // Minutes
+      maxAdvanceBooking: number;  // Days
+      defaultBufferMinutes: number;
+    };
+    featureFlags?: {
+      enableHomeService: boolean;
+      enableVirtual: boolean;
+      enableSubscriptions: boolean;
+    };
+  };
+}
+
+// Response
+{
+  success: boolean;
+  updatedAt: string;
+  settings: PlatformSettings;
+}
+
+// Requires: superadmin role
+```
+
+### Get System Logs
+
+```typescript
+POST /admin/getSystemLogs
+
+// Request
+{
+  filters?: {
+    action?: string[];
+    userId?: string;
+    fromDate?: string;
+    toDate?: string;
+    severity?: ('info' | 'warning' | 'error')[];
+  };
+  pagination?: {
+    limit: number;
+    cursor?: string;
+  };
+}
+
+// Response
+{
+  logs: {
+    id: string;
+    action: string;
+    userId?: string;
+    userName?: string;
+    details: Record<string, any>;
+    severity: 'info' | 'warning' | 'error';
+    ipAddress?: string;
+    timestamp: string;
+  }[];
+  nextCursor?: string;
+  totalCount: number;
+}
+
+// Requires: superadmin role
 ```
 
 ---
@@ -719,6 +1666,7 @@ interface HttpsError {
 | `failed-precondition` | Invalid state (e.g., slot taken) | Retry or select alternative |
 | `invalid-argument` | Missing/invalid parameters | Fix form validation |
 | `resource-exhausted` | Rate limit or quota exceeded | Wait and retry |
+| `out-of-range` | Pagination cursor invalid | Reset to first page |
 
 ---
 
@@ -734,6 +1682,7 @@ Events handled:
 - `customer.subscription.created` - Activate VIP status
 - `customer.subscription.deleted` - Deactivate VIP status
 - `invoice.payment_succeeded` - Renew VIP subscription
+- `charge.refunded` - Process refund completion
 
 ```typescript
 // Webhook payload structure
@@ -748,3 +1697,45 @@ Events handled:
 ```
 
 **Security:** Stripe signature verified using webhook secret.
+
+### Internal Webhooks
+
+#### Booking Status Changed
+
+```typescript
+POST /webhooks/bookingStatusChanged
+
+// Payload
+{
+  bookingId: string;
+  previousStatus: BookingStatus;
+  newStatus: BookingStatus;
+  changedBy: 'customer' | 'provider' | 'system' | 'admin';
+  timestamp: string;
+}
+```
+
+Triggers:
+- Push notifications
+- Email notifications
+- SMS notifications (if enabled)
+- Calendar updates
+
+#### Provider Verified
+
+```typescript
+POST /webhooks/providerVerified
+
+// Payload
+{
+  providerId: string;
+  status: 'approved' | 'rejected';
+  verifiedBy: string;
+  timestamp: string;
+}
+```
+
+Triggers:
+- Provider notification
+- Profile update
+- Search index update
