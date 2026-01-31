@@ -1,6 +1,6 @@
-import * as functions from "firebase-functions/v1";
+import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https";
+import { onDocumentUpdated } from "firebase-functions/v2/firestore";
 import * as admin from "firebase-admin";
-import { requireAuth } from "../utils/validation";
 
 const db = admin.firestore();
 const messaging = admin.messaging();
@@ -32,6 +32,14 @@ interface RegisterTokenData {
 
 interface NotificationActionData {
   notificationId: string;
+}
+
+interface BookingData {
+  userId: string;
+  serviceName: string;
+  pointsEarned: number;
+  cancelledBy?: string;
+  status: string;
 }
 
 /**
@@ -112,7 +120,7 @@ export async function sendPushToUser(
       }
     }
   } catch (error) {
-    functions.logger.error("Error sending push notification:", error);
+    console.error("Error sending push notification:", error);
   }
 }
 
@@ -133,133 +141,158 @@ export async function sendPushToUsers(
 /**
  * Send notification to all VIP users
  */
-export const sendVipNotification = functions.region(region).https.onCall(async (data: VipNotificationData) => {
-  // Admin check would go here
-  const { title, body, imageUrl } = data;
+export const sendVipNotification = onCall<VipNotificationData>(
+  { region },
+  async (request: CallableRequest<VipNotificationData>) => {
+    // Admin check would go here
+    const { title, body, imageUrl } = request.data;
 
-  const vipUsers = await db
-    .collection("users")
-    .where("isVip", "==", true)
-    .where("notificationsEnabled", "==", true)
-    .get();
+    const vipUsers = await db
+      .collection("users")
+      .where("isVip", "==", true)
+      .where("notificationsEnabled", "==", true)
+      .get();
 
-  const userIds = vipUsers.docs.map((doc) => doc.id);
+    const userIds = vipUsers.docs.map((doc) => doc.id);
 
-  await sendPushToUsers(userIds, { title, body, imageUrl });
+    await sendPushToUsers(userIds, { title, body, imageUrl });
 
-  // Store in-app notifications
-  const batch = db.batch();
-  for (const userId of userIds) {
-    const notifRef = db.collection("users").doc(userId).collection("notifications").doc();
-    batch.set(notifRef, {
-      title,
-      body,
-      type: "vip",
-      data: {},
-      imageUrl: imageUrl || null,
-      isRead: false,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    // Store in-app notifications
+    const batch = db.batch();
+    for (const userId of userIds) {
+      const notifRef = db.collection("users").doc(userId).collection("notifications").doc();
+      batch.set(notifRef, {
+        title,
+        body,
+        type: "vip",
+        data: {},
+        imageUrl: imageUrl || null,
+        isRead: false,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+    await batch.commit();
+
+    return { sentTo: userIds.length };
   }
-  await batch.commit();
-
-  return { sentTo: userIds.length };
-});
+);
 
 /**
  * Register FCM token for a user
  */
-export const registerFcmToken = functions.region(region).https.onCall(async (data: RegisterTokenData, context) => {
-  const userId = requireAuth(context);
-  const { token, platform } = data;
+export const registerFcmToken = onCall<RegisterTokenData>(
+  { region },
+  async (request: CallableRequest<RegisterTokenData>) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Must be authenticated");
+    }
 
-  if (!token || !platform) {
-    throw new functions.https.HttpsError("invalid-argument", "Token and platform required");
+    const userId = request.auth.uid;
+    const { token, platform } = request.data;
+
+    if (!token || !platform) {
+      throw new HttpsError("invalid-argument", "Token and platform required");
+    }
+
+    const userRef = db.collection("users").doc(userId);
+    const userDoc = await userRef.get();
+    const userData = userDoc.data();
+
+    const fcmTokens = userData?.fcmTokens || [];
+
+    // Remove existing token for this platform/device
+    const filteredTokens = fcmTokens.filter((t: FcmToken) => t.token !== token);
+
+    // Add new token
+    filteredTokens.push({
+      token,
+      platform,
+      updatedAt: admin.firestore.Timestamp.now(),
+    });
+
+    // Keep only last 5 tokens
+    const limitedTokens = filteredTokens.slice(-5);
+
+    await userRef.update({
+      fcmTokens: limitedTokens,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    return { success: true };
   }
-
-  const userRef = db.collection("users").doc(userId);
-  const userDoc = await userRef.get();
-  const userData = userDoc.data();
-
-  const fcmTokens = userData?.fcmTokens || [];
-
-  // Remove existing token for this platform/device
-  const filteredTokens = fcmTokens.filter((t: FcmToken) => t.token !== token);
-
-  // Add new token
-  filteredTokens.push({
-    token,
-    platform,
-    updatedAt: admin.firestore.Timestamp.now(),
-  });
-
-  // Keep only last 5 tokens
-  const limitedTokens = filteredTokens.slice(-5);
-
-  await userRef.update({
-    fcmTokens: limitedTokens,
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-  });
-
-  return { success: true };
-});
+);
 
 /**
  * Mark notification as read
  */
-export const markNotificationRead = functions.region(region).https.onCall(async (
-  data: NotificationActionData,
-  context
-) => {
-  const userId = requireAuth(context);
-  const { notificationId } = data;
+export const markNotificationRead = onCall<NotificationActionData>(
+  { region },
+  async (request: CallableRequest<NotificationActionData>) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Must be authenticated");
+    }
 
-  await db
-    .collection("users")
-    .doc(userId)
-    .collection("notifications")
-    .doc(notificationId)
-    .update({ isRead: true });
+    const userId = request.auth.uid;
+    const { notificationId } = request.data;
 
-  return { success: true };
-});
+    await db
+      .collection("users")
+      .doc(userId)
+      .collection("notifications")
+      .doc(notificationId)
+      .update({ isRead: true });
+
+    return { success: true };
+  }
+);
 
 /**
  * Mark all notifications as read
  */
-export const markAllNotificationsRead = functions.region(region).https.onCall(async (
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _data: unknown,
-  context
-) => {
-  const userId = requireAuth(context);
+export const markAllNotificationsRead = onCall(
+  { region },
+  async (request: CallableRequest) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Must be authenticated");
+    }
 
-  const unreadNotifs = await db
-    .collection("users")
-    .doc(userId)
-    .collection("notifications")
-    .where("isRead", "==", false)
-    .get();
+    const userId = request.auth.uid;
 
-  const batch = db.batch();
-  unreadNotifs.docs.forEach((doc) => {
-    batch.update(doc.ref, { isRead: true });
-  });
+    const unreadNotifs = await db
+      .collection("users")
+      .doc(userId)
+      .collection("notifications")
+      .where("isRead", "==", false)
+      .get();
 
-  await batch.commit();
+    const batch = db.batch();
+    unreadNotifs.docs.forEach((doc) => {
+      batch.update(doc.ref, { isRead: true });
+    });
 
-  return { markedCount: unreadNotifs.size };
-});
+    await batch.commit();
+
+    return { markedCount: unreadNotifs.size };
+  }
+);
 
 /**
  * Trigger notification when booking status changes
  */
-export const onBookingStatusChange = functions.region(region).firestore
-  .document("bookings/{bookingId}")
-  .onUpdate(async (change, context) => {
-    const before = change.before.data();
-    const after = change.after.data();
-    const bookingId = context.params.bookingId;
+export const onBookingStatusChange = onDocumentUpdated(
+  { region, document: "bookings/{bookingId}" },
+  async (event) => {
+    if (!event.data) {
+      return;
+    }
+
+    const before = event.data.before.data() as BookingData | undefined;
+    const after = event.data.after.data() as BookingData | undefined;
+    const bookingId = event.params.bookingId;
+
+    if (!before || !after) {
+      return;
+    }
 
     if (before.status === after.status) {
       return;
@@ -308,4 +341,5 @@ export const onBookingStatusChange = functions.region(region).firestore
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
     }
-  });
+  }
+);

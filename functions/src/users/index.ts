@@ -248,6 +248,7 @@ export const deleteAddress = onCall<DeleteAddressData>(
 export const getLeaderboard = onCall<LeaderboardData>(
   { region },
   async (request: CallableRequest<LeaderboardData>) => {
+    // Allow unauthenticated access to leaderboard
     const { type = "points", limit = 10 } = request.data;
 
     let query;

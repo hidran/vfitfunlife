@@ -2,7 +2,16 @@
   "permissions": {
     "allow": [
       "Bash(npm run build:*)",
-      "Bash(npm run lint:*)"
+      "Bash(npm run lint:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nRefactor auth: consolidate dual state management\n\n- Remove dual state management anti-pattern \\(AuthContext + AuthStore\\)\n- AuthContext now only initializes auth listener, all state in AuthStore\n- Add retry logic for new user document creation \\(Cloud Function timing\\)\n- Fix redirect after Google/Apple OAuth sign-in on web\n- Update login page to properly wait for isInitialized\n- Update main layout and root page to use useAuthStore\n- Update useAuth hook for backward compatibility\n- Profile page now displays real user data and implements logout\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nFix Firebase Functions v7 compatibility\n\n- Update imports to use firebase-functions/v1 compatibility layer\n- Add requireAuth helper function to validation.ts\n- Fix requireDoc to use v1 HttpsError\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(ls:*)",
+      "Bash(wc:*)"
     ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true
   }
 }

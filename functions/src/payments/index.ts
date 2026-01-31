@@ -1,7 +1,6 @@
-import * as functions from "firebase-functions/v1";
+import { onCall, onRequest, HttpsError, CallableRequest } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import Stripe from "stripe";
-import { requireAuth, requireDoc } from "../utils/validation";
 
 const db = admin.firestore();
 const region = process.env.FIREBASE_REGION || "europe-west1";
@@ -27,205 +26,238 @@ interface WalletFundsData {
 /**
  * Create a Stripe customer for a user
  */
-export const createStripeCustomer = functions.region(region).https.onCall(async (
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _data: unknown,
-  context
-) => {
-  const userId = requireAuth(context);
-  const userDoc = await db.collection("users").doc(userId).get();
-  requireDoc(userDoc, "User not found");
-  const userData = userDoc.data()!;
+export const createStripeCustomer = onCall(
+  { region },
+  async (request: CallableRequest) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Must be authenticated");
+    }
 
-  if (userData.stripeCustomerId) {
-    return { customerId: userData.stripeCustomerId };
-  }
+    const userId = request.auth.uid;
+    const userDoc = await db.collection("users").doc(userId).get();
 
-  const customer = await stripe.customers.create({
-    email: userData.email || undefined,
-    phone: userData.phone || undefined,
-    name: userData.fullName,
-    metadata: {
-      firebaseUserId: userId,
-    },
-  });
+    if (!userDoc.exists) {
+      throw new HttpsError("not-found", "User not found");
+    }
 
-  await db.collection("users").doc(userId).update({
-    stripeCustomerId: customer.id,
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-  });
+    const userData = userDoc.data()!;
 
-  return { customerId: customer.id };
-});
+    if (userData.stripeCustomerId) {
+      return { customerId: userData.stripeCustomerId };
+    }
 
-/**
- * Create a payment intent for a booking
- */
-export const createPaymentIntent = functions.region(region).https.onCall(async (data: PaymentIntentData, context) => {
-  const userId = requireAuth(context);
-  const { bookingId, isDeposit } = data;
-
-  const bookingDoc = await db.collection("bookings").doc(bookingId).get();
-  requireDoc(bookingDoc, "Booking not found");
-  const booking = bookingDoc.data()!;
-
-  if (booking.userId !== userId) {
-    throw new functions.https.HttpsError("permission-denied", "Not authorized");
-  }
-
-  const userDoc = await db.collection("users").doc(userId).get();
-  const userData = userDoc.data();
-
-  if (!userData?.stripeCustomerId) {
-    throw new functions.https.HttpsError("failed-precondition", "No Stripe customer found");
-  }
-
-  const amount = isDeposit ? booking.depositAmount : booking.finalPrice;
-  const amountInCents = Math.round(amount * 100);
-
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount: amountInCents,
-    currency: "eur",
-    customer: userData.stripeCustomerId,
-    metadata: {
-      bookingId,
-      userId,
-      isDeposit: isDeposit ? "true" : "false",
-    },
-    automatic_payment_methods: {
-      enabled: true,
-    },
-  });
-
-  await db.collection("bookings").doc(bookingId).update({
-    stripePaymentIntentId: paymentIntent.id,
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-  });
-
-  return {
-    clientSecret: paymentIntent.client_secret,
-    paymentIntentId: paymentIntent.id,
-  };
-});
-
-/**
- * Create a VIP subscription
- */
-export const createVipSubscription = functions.region(region).https.onCall(async (
-  data: VipSubscriptionData,
-  context
-) => {
-  const userId = requireAuth(context);
-  const { planId } = data;
-
-  const userDoc = await db.collection("users").doc(userId).get();
-  requireDoc(userDoc, "User not found");
-  const userData = userDoc.data()!;
-
-  if (userData.isVip && userData.stripeSubscriptionId) {
-    throw new functions.https.HttpsError("already-exists", "User already has an active VIP subscription");
-  }
-
-  const planDoc = await db.collection("vipPlans").doc(planId).get();
-  requireDoc(planDoc, "VIP plan not found");
-  const plan = planDoc.data()!;
-
-  if (!plan.isActive) {
-    throw new functions.https.HttpsError("not-found", "VIP plan not found");
-  }
-
-  let customerId = userData.stripeCustomerId;
-  if (!customerId) {
     const customer = await stripe.customers.create({
       email: userData.email || undefined,
       phone: userData.phone || undefined,
       name: userData.fullName,
-      metadata: { firebaseUserId: userId },
+      metadata: {
+        firebaseUserId: userId,
+      },
     });
-    customerId = customer.id;
 
     await db.collection("users").doc(userId).update({
-      stripeCustomerId: customerId,
+      stripeCustomerId: customer.id,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
+
+    return { customerId: customer.id };
   }
+);
 
-  const subscription = await stripe.subscriptions.create({
-    customer: customerId,
-    items: [{ price: plan.stripePriceId }],
-    payment_behavior: "default_incomplete",
-    payment_settings: { save_default_payment_method: "on_subscription" },
-    expand: ["latest_invoice.payment_intent"],
-    metadata: {
-      firebaseUserId: userId,
-      planId,
-    },
-  });
+/**
+ * Create a payment intent for a booking
+ */
+export const createPaymentIntent = onCall<PaymentIntentData>(
+  { region },
+  async (request: CallableRequest<PaymentIntentData>) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Must be authenticated");
+    }
 
-  const invoice = subscription.latest_invoice as Stripe.Invoice;
-  const paymentIntent = invoice.payment_intent as Stripe.PaymentIntent;
+    const userId = request.auth.uid;
+    const { bookingId, isDeposit } = request.data;
 
-  return {
-    subscriptionId: subscription.id,
-    clientSecret: paymentIntent.client_secret,
-  };
-});
+    const bookingDoc = await db.collection("bookings").doc(bookingId).get();
+
+    if (!bookingDoc.exists) {
+      throw new HttpsError("not-found", "Booking not found");
+    }
+
+    const booking = bookingDoc.data()!;
+
+    if (booking.userId !== userId) {
+      throw new HttpsError("permission-denied", "Not authorized");
+    }
+
+    const userDoc = await db.collection("users").doc(userId).get();
+    const userData = userDoc.data();
+
+    if (!userData?.stripeCustomerId) {
+      throw new HttpsError("failed-precondition", "No Stripe customer found");
+    }
+
+    const amount = isDeposit ? booking.depositAmount : booking.finalPrice;
+    const amountInCents = Math.round(amount * 100);
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amountInCents,
+      currency: "eur",
+      customer: userData.stripeCustomerId,
+      metadata: {
+        bookingId,
+        userId,
+        isDeposit: isDeposit ? "true" : "false",
+      },
+      automatic_payment_methods: {
+        enabled: true,
+      },
+    });
+
+    await db.collection("bookings").doc(bookingId).update({
+      stripePaymentIntentId: paymentIntent.id,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    return {
+      clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id,
+    };
+  }
+);
+
+/**
+ * Create a VIP subscription
+ */
+export const createVipSubscription = onCall<VipSubscriptionData>(
+  { region },
+  async (request: CallableRequest<VipSubscriptionData>) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Must be authenticated");
+    }
+
+    const userId = request.auth.uid;
+    const { planId } = request.data;
+
+    const userDoc = await db.collection("users").doc(userId).get();
+
+    if (!userDoc.exists) {
+      throw new HttpsError("not-found", "User not found");
+    }
+
+    const userData = userDoc.data()!;
+
+    if (userData.isVip && userData.stripeSubscriptionId) {
+      throw new HttpsError("already-exists", "User already has an active VIP subscription");
+    }
+
+    const planDoc = await db.collection("vipPlans").doc(planId).get();
+
+    if (!planDoc.exists) {
+      throw new HttpsError("not-found", "VIP plan not found");
+    }
+
+    const plan = planDoc.data()!;
+
+    if (!plan.isActive) {
+      throw new HttpsError("not-found", "VIP plan not found");
+    }
+
+    let customerId = userData.stripeCustomerId;
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: userData.email || undefined,
+        phone: userData.phone || undefined,
+        name: userData.fullName,
+        metadata: { firebaseUserId: userId },
+      });
+      customerId = customer.id;
+
+      await db.collection("users").doc(userId).update({
+        stripeCustomerId: customerId,
+      });
+    }
+
+    const subscription = await stripe.subscriptions.create({
+      customer: customerId,
+      items: [{ price: plan.stripePriceId }],
+      payment_behavior: "default_incomplete",
+      payment_settings: { save_default_payment_method: "on_subscription" },
+      expand: ["latest_invoice.payment_intent"],
+      metadata: {
+        firebaseUserId: userId,
+        planId,
+      },
+    });
+
+    const invoice = subscription.latest_invoice as Stripe.Invoice;
+    const paymentIntent = invoice.payment_intent as Stripe.PaymentIntent;
+
+    return {
+      subscriptionId: subscription.id,
+      clientSecret: paymentIntent.client_secret,
+    };
+  }
+);
 
 /**
  * Stripe webhook handler
  */
-export const stripeWebhook = functions.region(region).https.onRequest(async (req, res) => {
-  const sig = req.headers["stripe-signature"] as string;
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+export const stripeWebhook = onRequest(
+  { region },
+  async (req, res) => {
+    const sig = req.headers["stripe-signature"] as string;
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-  if (!webhookSecret) {
-    functions.logger.error("Stripe webhook secret not configured");
-    res.status(500).send("Webhook secret not configured");
-    return;
-  }
-
-  let event: Stripe.Event;
-
-  try {
-    event = stripe.webhooks.constructEvent(req.rawBody, sig, webhookSecret);
-  } catch (err) {
-    functions.logger.error("Webhook signature verification failed:", err);
-    res.status(400).send(`Webhook Error: ${err}`);
-    return;
-  }
-
-  try {
-    switch (event.type) {
-    case "payment_intent.succeeded":
-      await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent);
-      break;
-
-    case "payment_intent.payment_failed":
-      await handlePaymentIntentFailed(event.data.object as Stripe.PaymentIntent);
-      break;
-
-    case "customer.subscription.created":
-    case "customer.subscription.updated":
-      await handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
-      break;
-
-    case "customer.subscription.deleted":
-      await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
-      break;
-
-    case "invoice.payment_succeeded":
-      await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice);
-      break;
-
-    default:
-      functions.logger.info(`Unhandled event type: ${event.type}`);
+    if (!webhookSecret) {
+      console.error("Stripe webhook secret not configured");
+      res.status(500).send("Webhook secret not configured");
+      return;
     }
 
-    res.json({ received: true });
-  } catch (error) {
-    functions.logger.error("Error processing webhook:", error);
-    res.status(500).send("Webhook processing error");
+    let event: Stripe.Event;
+
+    try {
+      event = stripe.webhooks.constructEvent(req.rawBody, sig, webhookSecret);
+    } catch (err) {
+      console.error("Webhook signature verification failed:", err);
+      res.status(400).send(`Webhook Error: ${err}`);
+      return;
+    }
+
+    try {
+      switch (event.type) {
+      case "payment_intent.succeeded":
+        await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent);
+        break;
+
+      case "payment_intent.payment_failed":
+        await handlePaymentIntentFailed(event.data.object as Stripe.PaymentIntent);
+        break;
+
+      case "customer.subscription.created":
+      case "customer.subscription.updated":
+        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
+        break;
+
+      case "customer.subscription.deleted":
+        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
+        break;
+
+      case "invoice.payment_succeeded":
+        await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice);
+        break;
+
+      default:
+        console.info(`Unhandled event type: ${event.type}`);
+      }
+
+      res.json({ received: true });
+    } catch (error) {
+      console.error("Error processing webhook:", error);
+      res.status(500).send("Webhook processing error");
+    }
   }
-});
+);
 
 async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent) {
   const { bookingId, userId, isDeposit } = paymentIntent.metadata;
@@ -356,36 +388,43 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
 /**
  * Add funds to user wallet
  */
-export const addWalletFunds = functions.region(region).https.onCall(async (data: WalletFundsData, context) => {
-  const userId = requireAuth(context);
-  const { amount } = data;
+export const addWalletFunds = onCall<WalletFundsData>(
+  { region },
+  async (request: CallableRequest<WalletFundsData>) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Must be authenticated");
+    }
 
-  if (amount < 10 || amount > 500) {
-    throw new functions.https.HttpsError("invalid-argument", "Amount must be between €10 and €500");
+    const userId = request.auth.uid;
+    const { amount } = request.data;
+
+    if (amount < 10 || amount > 500) {
+      throw new HttpsError("invalid-argument", "Amount must be between €10 and €500");
+    }
+
+    const userDoc = await db.collection("users").doc(userId).get();
+    const userData = userDoc.data();
+
+    if (!userData?.stripeCustomerId) {
+      throw new HttpsError("failed-precondition", "No Stripe customer found");
+    }
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(amount * 100),
+      currency: "eur",
+      customer: userData.stripeCustomerId,
+      metadata: {
+        userId,
+        type: "wallet_topup",
+        amount: amount.toString(),
+      },
+      automatic_payment_methods: {
+        enabled: true,
+      },
+    });
+
+    return {
+      clientSecret: paymentIntent.client_secret,
+    };
   }
-
-  const userDoc = await db.collection("users").doc(userId).get();
-  const userData = userDoc.data();
-
-  if (!userData?.stripeCustomerId) {
-    throw new functions.https.HttpsError("failed-precondition", "No Stripe customer found");
-  }
-
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount: Math.round(amount * 100),
-    currency: "eur",
-    customer: userData.stripeCustomerId,
-    metadata: {
-      userId,
-      type: "wallet_topup",
-      amount: amount.toString(),
-    },
-    automatic_payment_methods: {
-      enabled: true,
-    },
-  });
-
-  return {
-    clientSecret: paymentIntent.client_secret,
-  };
-});
+);

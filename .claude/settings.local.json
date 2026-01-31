@@ -1,7 +1,11 @@
 {
   "permissions": {
+
     "allow": [
-      "mcp__jetbrains__list_directory_tree"
+      "mcp__jetbrains__list_direc,tory_tree",
+      "mcp__jetbrains__write_file",
+      "mcp__jetbrains__create_file",
+      "mcp__jetbrains__read_file"
     ]
   }
 }

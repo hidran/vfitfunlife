@@ -22,7 +22,8 @@ import {
 } from "firebase/auth";
 import { Capacitor } from "@capacitor/core";
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
-import { auth, db } from "./config";
+import { httpsCallable } from "firebase/functions";
+import { auth, db, functions } from "./config";
 
 // Store confirmation result for OTP verification
 let confirmationResult: ConfirmationResult | null = null;
@@ -164,12 +165,26 @@ export function onAuthChange(callback: (user: User | null) => void): () => void 
 
 /**
  * Check if user profile is complete
+ * Also tries to initialize profile if document doesn't exist
  */
 export async function isProfileComplete(userId: string): Promise<boolean> {
   try {
     const userDoc = await getDoc(doc(db, "users", userId));
 
     if (!userDoc.exists()) {
+      // Try to initialize profile for existing Auth users
+      try {
+        console.log('[Auth] Profile not found, attempting to initialize...');
+        await initializeUserProfile();
+        // Re-check after initialization
+        const newDoc = await getDoc(doc(db, "users", userId));
+        if (newDoc.exists()) {
+          const data = newDoc.data();
+          return Boolean(data.fullName && data.fullName.trim().length > 0);
+        }
+      } catch (initError) {
+        console.error('[Auth] Failed to auto-initialize profile:', initError);
+      }
       return false;
     }
 
@@ -231,6 +246,16 @@ export async function completeRegistration(
     updatedAt: serverTimestamp(),
     createdAt: serverTimestamp(), // Add createdAt for new users
   }, { merge: true });
+}
+
+/**
+ * Initialize user profile via Cloud Function
+ * Called when a new user signs up or when an auth user doesn't have a Firestore document
+ */
+export async function initializeUserProfile(): Promise<{ success: boolean; isNewUser: boolean }> {
+  const initProfile = httpsCallable(functions, 'initializeUserProfile');
+  const result = await initProfile();
+  return result.data as { success: boolean; isNewUser: boolean };
 }
 
 /**

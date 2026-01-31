@@ -1,7 +1,6 @@
-import * as functions from "firebase-functions/v1";
+import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import { addMinutes } from "date-fns";
-import { requireAuth, requireDoc } from "../utils/validation";
 import { UserData, VenueData, ServiceData, InstructorData, PromotionData } from "../types";
 
 const db = admin.firestore();
@@ -64,9 +63,9 @@ async function fetchBookingResources(
     servicePromise,
   ]);
 
-  requireDoc(userDoc, "User not found");
-  requireDoc(venueDoc, "Venue not found");
-  requireDoc(serviceDoc, "Service not found");
+  if (!userDoc.exists) throw new HttpsError("not-found", "User not found");
+  if (!venueDoc.exists) throw new HttpsError("not-found", "Venue not found");
+  if (!serviceDoc.exists) throw new HttpsError("not-found", "Service not found");
 
   let instructorDoc = null;
   if (instructorId) {
@@ -176,247 +175,273 @@ async function calculateBookingFinancials(
 /**
  * Create a new booking
  */
-export const createBooking = functions.region(region).https.onCall(async (data: BookingData, context) => {
-  const userId = requireAuth(context);
-  const {
-    venueId,
-    serviceId,
-    instructorId,
-    scheduledAt,
-    bookingType,
-    serviceAddress,
-    promotionCode,
-    usePoints,
-    userNotes,
-  } = data;
-
-  // 1. Fetch Resources
-  const { userData, venue, service, instructor } = await fetchBookingResources(
-    userId,
-    venueId,
-    serviceId,
-    instructorId
-  );
-
-  // 2. Calculate Financials
-  const financials = await calculateBookingFinancials(
-    service,
-    userData,
-    bookingType,
-    promotionCode,
-    usePoints
-  );
-
-  // 3. Prepare Booking Data
-  const scheduledDate = new Date(scheduledAt);
-  const scheduledEndDate = addMinutes(scheduledDate, service.durationMinutes);
-
-  const bookingRef = db.collection("bookings").doc();
-  const bookingData = {
-    userId,
-    venueId,
-    serviceId,
-    instructorId: instructorId || null,
-
-    // Denormalized data
-    userName: userData.fullName,
-    userPhone: userData.phone,
-    userEmail: userData.email,
-    venueName: venue.name,
-    venueAddress: venue.address,
-    serviceName: service.name,
-    instructorName: instructor?.fullName || null,
-
-    // Booking details
-    bookingType,
-    serviceAddress: bookingType === "home_service" ? serviceAddress : null,
-
-    // Schedule
-    scheduledAt: admin.firestore.Timestamp.fromDate(scheduledDate),
-    scheduledEndAt: admin.firestore.Timestamp.fromDate(scheduledEndDate),
-    durationMinutes: service.durationMinutes,
-
-    // Status
-    status: "pending",
-
-    // Financials
-    ...financials,
-    promotionCode: promotionCode || null,
-    depositPaid: false,
-
-    // Payment
-    paymentStatus: "pending",
-    paymentMethod: null,
-    stripePaymentIntentId: null,
-
-    // Notes
-    userNotes: userNotes || null,
-    internalNotes: null,
-
-    // Cancellation
-    cancelledAt: null,
-    cancelledBy: null,
-    cancellationReason: null,
-    refundAmount: null,
-
-    // Review
-    hasReviewed: false,
-    reviewId: null,
-
-    // Timestamps
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    confirmedAt: null,
-    completedAt: null,
-  };
-
-  // 4. Execute Transaction (Create Booking + Update Points + Update Promo)
-  await db.runTransaction(async (transaction) => {
-    transaction.set(bookingRef, bookingData);
-
-    // Deduct points if used
-    if (financials.pointsUsed > 0) {
-      const userRef = db.collection("users").doc(userId);
-      transaction.update(userRef, {
-        pointsBalance: admin.firestore.FieldValue.increment(-financials.pointsUsed),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-
-      const pointsRef = db.collection("users").doc(userId).collection("pointsTransactions").doc();
-      transaction.set(pointsRef, {
-        points: -financials.pointsUsed,
-        type: "spent",
-        source: "booking",
-        sourceId: bookingRef.id,
-        description: `Punti utilizzati per ${service.name}`,
-        balanceAfter: userData.pointsBalance - financials.pointsUsed,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
+export const createBooking = onCall<BookingData>(
+  { region },
+  async (request: CallableRequest<BookingData>) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Must be authenticated");
     }
 
-    // Increment promo usage
-    if (financials.promotionId) {
-      const promoRef = db.collection("promotions").doc(financials.promotionId);
-      transaction.update(promoRef, {
-        currentUses: admin.firestore.FieldValue.increment(1),
-      });
-    }
-  });
+    const userId = request.auth.uid;
+    const {
+      venueId,
+      serviceId,
+      instructorId,
+      scheduledAt,
+      bookingType,
+      serviceAddress,
+      promotionCode,
+      usePoints,
+      userNotes,
+    } = request.data;
 
-  return {
-    bookingId: bookingRef.id,
-    finalPrice: financials.finalPrice,
-    depositAmount: financials.depositAmount,
-    pointsUsed: financials.pointsUsed,
-    pointsEarned: financials.pointsEarned,
-  };
-});
+    // 1. Fetch Resources
+    const { userData, venue, service, instructor } = await fetchBookingResources(
+      userId,
+      venueId,
+      serviceId,
+      instructorId
+    );
+
+    // 2. Calculate Financials
+    const financials = await calculateBookingFinancials(
+      service,
+      userData,
+      bookingType,
+      promotionCode,
+      usePoints
+    );
+
+    // 3. Prepare Booking Data
+    const scheduledDate = new Date(scheduledAt);
+    const scheduledEndDate = addMinutes(scheduledDate, service.durationMinutes);
+
+    const bookingRef = db.collection("bookings").doc();
+    const bookingData = {
+      userId,
+      venueId,
+      serviceId,
+      instructorId: instructorId || null,
+
+      // Denormalized data
+      userName: userData.fullName,
+      userPhone: userData.phone,
+      userEmail: userData.email,
+      venueName: venue.name,
+      venueAddress: venue.address,
+      serviceName: service.name,
+      instructorName: instructor?.fullName || null,
+
+      // Booking details
+      bookingType,
+      serviceAddress: bookingType === "home_service" ? serviceAddress : null,
+
+      // Schedule
+      scheduledAt: admin.firestore.Timestamp.fromDate(scheduledDate),
+      scheduledEndAt: admin.firestore.Timestamp.fromDate(scheduledEndDate),
+      durationMinutes: service.durationMinutes,
+
+      // Status
+      status: "pending",
+
+      // Financials
+      ...financials,
+      promotionCode: promotionCode || null,
+      depositPaid: false,
+
+      // Payment
+      paymentStatus: "pending",
+      paymentMethod: null,
+      stripePaymentIntentId: null,
+
+      // Notes
+      userNotes: userNotes || null,
+      internalNotes: null,
+
+      // Cancellation
+      cancelledAt: null,
+      cancelledBy: null,
+      cancellationReason: null,
+      refundAmount: null,
+
+      // Review
+      hasReviewed: false,
+      reviewId: null,
+
+      // Timestamps
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      confirmedAt: null,
+      completedAt: null,
+    };
+
+    // 4. Execute Transaction (Create Booking + Update Points + Update Promo)
+    await db.runTransaction(async (transaction) => {
+      transaction.set(bookingRef, bookingData);
+
+      // Deduct points if used
+      if (financials.pointsUsed > 0) {
+        const userRef = db.collection("users").doc(userId);
+        transaction.update(userRef, {
+          pointsBalance: admin.firestore.FieldValue.increment(-financials.pointsUsed),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        const pointsRef = db.collection("users").doc(userId).collection("pointsTransactions").doc();
+        transaction.set(pointsRef, {
+          points: -financials.pointsUsed,
+          type: "spent",
+          source: "booking",
+          sourceId: bookingRef.id,
+          description: `Punti utilizzati per ${service.name}`,
+          balanceAfter: userData.pointsBalance - financials.pointsUsed,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+
+      // Increment promo usage
+      if (financials.promotionId) {
+        const promoRef = db.collection("promotions").doc(financials.promotionId);
+        transaction.update(promoRef, {
+          currentUses: admin.firestore.FieldValue.increment(1),
+        });
+      }
+    });
+
+    return {
+      bookingId: bookingRef.id,
+      finalPrice: financials.finalPrice,
+      depositAmount: financials.depositAmount,
+      pointsUsed: financials.pointsUsed,
+      pointsEarned: financials.pointsEarned,
+    };
+  }
+);
 
 /**
  * Cancel a booking
  */
-export const cancelBooking = functions.region(region).https.onCall(async (data: CancelBookingData, context) => {
-  const userId = requireAuth(context);
-  const { bookingId, reason } = data;
+export const cancelBooking = onCall<CancelBookingData>(
+  { region },
+  async (request: CallableRequest<CancelBookingData>) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Must be authenticated");
+    }
 
-  const bookingRef = db.collection("bookings").doc(bookingId);
-  const bookingDoc = await bookingRef.get();
+    const userId = request.auth.uid;
+    const { bookingId, reason } = request.data;
 
-  requireDoc(bookingDoc, "Booking not found");
-  const booking = bookingDoc.data()!;
+    const bookingRef = db.collection("bookings").doc(bookingId);
+    const bookingDoc = await bookingRef.get();
 
-  if (booking.userId !== userId) {
-    throw new functions.https.HttpsError("permission-denied", "Not authorized to cancel this booking");
-  }
+    if (!bookingDoc.exists) {
+      throw new HttpsError("not-found", "Booking not found");
+    }
 
-  if (["completed", "cancelled"].includes(booking.status)) {
-    throw new functions.https.HttpsError("failed-precondition", "Booking cannot be cancelled");
-  }
+    const booking = bookingDoc.data()!;
 
-  // Calculate refund based on cancellation policy
-  const scheduledAt = booking.scheduledAt.toDate();
-  const now = new Date();
-  const hoursUntilBooking = (scheduledAt.getTime() - now.getTime()) / (1000 * 60 * 60);
+    if (booking.userId !== userId) {
+      throw new HttpsError("permission-denied", "Not authorized to cancel this booking");
+    }
 
-  let refundAmount = 0;
-  if (hoursUntilBooking >= 24) {
-    refundAmount = booking.finalPrice; // Full refund
-  } else if (hoursUntilBooking >= 12) {
-    refundAmount = booking.finalPrice * 0.5; // 50% refund
-  }
+    if (["completed", "cancelled"].includes(booking.status)) {
+      throw new HttpsError("failed-precondition", "Booking cannot be cancelled");
+    }
 
-  const batch = db.batch();
+    // Calculate refund based on cancellation policy
+    const scheduledAt = booking.scheduledAt.toDate();
+    const now = new Date();
+    const hoursUntilBooking = (scheduledAt.getTime() - now.getTime()) / (1000 * 60 * 60);
 
-  batch.update(bookingRef, {
-    status: "cancelled",
-    cancelledAt: admin.firestore.FieldValue.serverTimestamp(),
-    cancelledBy: "user",
-    cancellationReason: reason || null,
-    refundAmount,
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-  });
+    let refundAmount = 0;
+    if (hoursUntilBooking >= 24) {
+      refundAmount = booking.finalPrice; // Full refund
+    } else if (hoursUntilBooking >= 12) {
+      refundAmount = booking.finalPrice * 0.5; // 50% refund
+    }
 
-  // Refund points if used
-  if (booking.pointsUsed > 0) {
-    const userRef = db.collection("users").doc(userId);
-    batch.update(userRef, {
-      pointsBalance: admin.firestore.FieldValue.increment(booking.pointsUsed),
+    const batch = db.batch();
+
+    batch.update(bookingRef, {
+      status: "cancelled",
+      cancelledAt: admin.firestore.FieldValue.serverTimestamp(),
+      cancelledBy: "user",
+      cancellationReason: reason || null,
+      refundAmount,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    const userDoc = await userRef.get();
-    const userData = userDoc.data();
+    // Refund points if used
+    if (booking.pointsUsed > 0) {
+      const userRef = db.collection("users").doc(userId);
+      batch.update(userRef, {
+        pointsBalance: admin.firestore.FieldValue.increment(booking.pointsUsed),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
 
-    const pointsTransactionRef = db.collection("users").doc(userId).collection("pointsTransactions").doc();
-    batch.set(pointsTransactionRef, {
-      points: booking.pointsUsed,
-      type: "refund",
-      source: "booking",
-      sourceId: bookingId,
-      description: "Rimborso punti - prenotazione cancellata",
-      balanceAfter: (userData?.pointsBalance || 0) + booking.pointsUsed,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+      const userDoc = await userRef.get();
+      const userData = userDoc.data();
+
+      const pointsTransactionRef = db.collection("users").doc(userId).collection("pointsTransactions").doc();
+      batch.set(pointsTransactionRef, {
+        points: booking.pointsUsed,
+        type: "refund",
+        source: "booking",
+        sourceId: bookingId,
+        description: "Rimborso punti - prenotazione cancellata",
+        balanceAfter: (userData?.pointsBalance || 0) + booking.pointsUsed,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+
+    await batch.commit();
+
+    return { success: true, refundAmount };
   }
-
-  await batch.commit();
-
-  return { success: true, refundAmount };
-});
+);
 
 /**
  * Confirm a booking (admin/staff only or after payment)
  */
-export const confirmBooking = functions.region(region).https.onCall(async (data: ConfirmBookingData, context) => {
-  requireAuth(context);
-  const { bookingId } = data;
+export const confirmBooking = onCall<ConfirmBookingData>(
+  { region },
+  async (request: CallableRequest<ConfirmBookingData>) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Must be authenticated");
+    }
 
-  const bookingRef = db.collection("bookings").doc(bookingId);
-  const bookingDoc = await bookingRef.get();
+    const { bookingId } = request.data;
 
-  requireDoc(bookingDoc, "Booking not found");
-  const booking = bookingDoc.data()!;
+    const bookingRef = db.collection("bookings").doc(bookingId);
+    const bookingDoc = await bookingRef.get();
 
-  if (booking.status !== "pending") {
-    throw new functions.https.HttpsError("failed-precondition", "Booking is not pending");
+    if (!bookingDoc.exists) {
+      throw new HttpsError("not-found", "Booking not found");
+    }
+
+    const booking = bookingDoc.data()!;
+
+    if (booking.status !== "pending") {
+      throw new HttpsError("failed-precondition", "Booking is not pending");
+    }
+
+    await bookingRef.update({
+      status: "confirmed",
+      confirmedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // Send notification to user
+    await db.collection("users").doc(booking.userId).collection("notifications").add({
+      title: "Prenotazione confermata",
+      body: `La tua prenotazione per ${booking.serviceName} è stata confermata`,
+      type: "booking_confirmed",
+      data: { bookingId },
+      imageUrl: null,
+      isRead: false,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    return { success: true };
   }
-
-  await bookingRef.update({
-    status: "confirmed",
-    confirmedAt: admin.firestore.FieldValue.serverTimestamp(),
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-  });
-
-  // Send notification to user
-  await db.collection("users").doc(booking.userId).collection("notifications").add({
-    title: "Prenotazione confermata",
-    body: `La tua prenotazione per ${booking.serviceName} è stata confermata`,
-    type: "booking_confirmed",
-    data: { bookingId },
-    imageUrl: null,
-    isRead: false,
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-  });
-
-  return { success: true };
-});
+);

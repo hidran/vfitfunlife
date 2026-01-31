@@ -15,6 +15,7 @@ import {
   registerWithEmail,
   signInWithEmail,
   resetPassword,
+  initializeUserProfile,
 } from '@/lib/firebase/auth';
 import { RecaptchaVerifier } from 'firebase/auth';
 
@@ -163,8 +164,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       let userData = await getUserData(uid);
 
-      // For new users, the Cloud Function might not have created the document yet
-      // Retry a few times with delay
+      // If no user data, try to initialize profile (for existing Auth users without Firestore docs)
+      if (!userData) {
+        try {
+          console.log('[Auth] No user document found, initializing profile...');
+          const initResult = await initializeUserProfile();
+          if (initResult.success) {
+            // Retry loading user data
+            userData = await getUserData(uid);
+          }
+        } catch (initError) {
+          console.error('[Auth] Failed to initialize profile:', initError);
+        }
+      }
+
+      // For new users, retry a few times with delay
       if (!userData) {
         for (let i = 0; i < MAX_RETRIES; i++) {
           await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
