@@ -1,4 +1,4 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env node
 /**
  * Firestore Seed Script for User Types
  * 
@@ -6,7 +6,7 @@
  * with the predefined user type data.
  * 
  * Usage:
- *   npx ts-node scripts/seed-user-types.ts
+ *   node scripts/seed-user-types.mjs
  * 
  * Environment variables:
  *   - GOOGLE_APPLICATION_CREDENTIALS: Path to service account JSON file
@@ -14,19 +14,20 @@
  *   - FORCE_UPDATE: Set to 'true' to update existing documents (default: false)
  */
 
-import * as admin from "firebase-admin";
+import { initializeApp, cert, getApps } from 'firebase-admin/app';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
 // Initialize Firebase Admin
 const projectId = process.env.FIREBASE_PROJECT_ID || "vfit-funlife";
 const forceUpdate = process.env.FORCE_UPDATE === "true";
 
-if (!admin.apps.length) {
-  admin.initializeApp({
+if (getApps().length === 0) {
+  initializeApp({
     projectId: projectId,
   });
 }
 
-const db = admin.firestore();
+const db = getFirestore();
 
 /**
  * User type seed data
@@ -443,14 +444,14 @@ const userTypesSeedData = [
 /**
  * Main seed function
  */
-async function seedUserTypes(): Promise<void> {
+async function seedUserTypes() {
   console.log("\n🌱 Starting User Types seed...\n");
 
   const results = {
     created: 0,
     updated: 0,
     skipped: 0,
-    errors: [] as string[],
+    errors: [],
   };
 
   for (const userType of userTypesSeedData) {
@@ -460,8 +461,8 @@ async function seedUserTypes(): Promise<void> {
 
       const data = {
         ...userType,
-        createdAt: existingDoc.exists ? existingDoc.data()?.createdAt : admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: existingDoc.exists ? existingDoc.data()?.createdAt : FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
       };
 
       if (existingDoc.exists) {
