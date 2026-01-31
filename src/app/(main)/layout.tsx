@@ -51,9 +51,12 @@ export default function MainAppLayout({ children }: MainAppLayoutProps) {
     );
   }
 
+  // TODO: Replace with actual notification count from notifications API
+  const notificationCount = 0;
+
   return (
     <MainLayout
-      notificationCount={3} // TODO: Get from notifications context/query
+      notificationCount={notificationCount}
       userAvatarUrl={user.avatarUrl || firebaseUser.photoURL}
     >
       {children}
