@@ -264,8 +264,43 @@ export default function RegisterPage() {
           <form onSubmit={handleEmailSubmit} className="space-y-6 max-w-md mx-auto">
             {/* Error Message */}
             {(error || storeError) && (
-              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
-                <p className="text-red-400 text-sm text-center">{error || storeError}</p>
+              <div className={cn(
+                "p-4 border rounded-lg",
+                (error || storeError)?.includes('not enabled')
+                  ? "bg-yellow-500/10 border-yellow-500/20"
+                  : "bg-red-500/10 border-red-500/20"
+              )}>
+                <p className={cn(
+                  "text-sm text-center",
+                  (error || storeError)?.includes('not enabled')
+                    ? "text-yellow-400"
+                    : "text-red-400"
+                )}>
+                  {error || storeError}
+                </p>
+                {(error || storeError)?.includes('not enabled') && (
+                  <div className="mt-3 text-center">
+                    <p className="text-xs text-text-tertiary mb-2">
+                      Puoi comunque registrarti con:
+                    </p>
+                    <div className="flex gap-2 justify-center">
+                      <button
+                        type="button"
+                        onClick={() => router.push('/auth/login')}
+                        className="text-xs bg-white/10 hover:bg-white/15 px-3 py-1.5 rounded-full text-text-inverse transition-colors"
+                      >
+                        Google
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => router.push('/auth/login')}
+                        className="text-xs bg-white/10 hover:bg-white/15 px-3 py-1.5 rounded-full text-text-inverse transition-colors"
+                      >
+                        Telefono
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
