@@ -1,6 +1,11 @@
 // Mock data for VFit (Fitness) section
+// Note: For production, use types from '@/types/firebase'
 
-export interface Venue {
+/**
+ * Simplified Venue interface for mock data only.
+ * @deprecated Use Venue from '@/types/firebase' for production code
+ */
+export interface MockVenue {
   id: string;
   name: string;
   image: string;
@@ -16,7 +21,11 @@ export interface Venue {
   };
 }
 
-export interface FitnessClass {
+/**
+ * Simplified FitnessClass interface for mock data only.
+ * @deprecated Use FitnessClass from '@/types/firebase' for production code
+ */
+export interface MockFitnessClass {
   id: string;
   name: string;
   instructor: string;
@@ -30,7 +39,11 @@ export interface FitnessClass {
   category: 'yoga' | 'pilates' | 'hiit' | 'spinning' | 'crossfit' | 'functional' | 'dance';
 }
 
-export interface Instructor {
+/**
+ * Simplified Instructor interface for mock data only.
+ * @deprecated Use Instructor from '@/types/firebase' for production code
+ */
+export interface MockInstructor {
   id: string;
   name: string;
   image: string;
@@ -41,7 +54,11 @@ export interface Instructor {
   isAvailable: boolean;
 }
 
-export interface Challenge {
+/**
+ * Simplified Challenge interface for mock data only.
+ * @deprecated Use Challenge from '@/types/firebase' for production code
+ */
+export interface MockChallenge {
   id: string;
   title: string;
   description: string;
@@ -54,7 +71,7 @@ export interface Challenge {
 }
 
 // Mock Venues (Palestre)
-export const mockVenues: Venue[] = [
+export const mockVenues: MockVenue[] = [
   {
     id: '1',
     name: 'FitLife Centro',
@@ -118,7 +135,7 @@ export const mockVenues: Venue[] = [
 ];
 
 // Mock Classes (Corsi)
-export const mockClasses: FitnessClass[] = [
+export const mockClasses: MockFitnessClass[] = [
   {
     id: '1',
     name: 'Power Yoga',
@@ -200,7 +217,7 @@ export const mockClasses: FitnessClass[] = [
 ];
 
 // Mock Instructors
-export const mockInstructors: Instructor[] = [
+export const mockInstructors: MockInstructor[] = [
   {
     id: '1',
     name: 'Maria Rossi',
@@ -254,7 +271,7 @@ export const mockInstructors: Instructor[] = [
 ];
 
 // Mock Challenges
-export const mockChallenges: Challenge[] = [
+export const mockChallenges: MockChallenge[] = [
   {
     id: '1',
     title: '10K Steps Challenge',
