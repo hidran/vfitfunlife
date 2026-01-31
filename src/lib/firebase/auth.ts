@@ -30,14 +30,21 @@ let confirmationResult: ConfirmationResult | null = null;
 /**
  * Initialize reCAPTCHA verifier for phone auth
  */
-export function initRecaptcha(buttonId: string): RecaptchaVerifier {
-  return new RecaptchaVerifier(auth, buttonId, {
+export function initRecaptcha(containerId: string): RecaptchaVerifier {
+  const container = document.getElementById(containerId);
+  if (!container) {
+    throw new Error(`reCAPTCHA container with id '${containerId}' not found`);
+  }
+
+  return new RecaptchaVerifier(auth, containerId, {
     size: "invisible",
     callback: () => {
       // reCAPTCHA solved
+      console.log('[reCAPTCHA] Solved');
     },
     "expired-callback": () => {
       // Reset reCAPTCHA
+      console.log('[reCAPTCHA] Expired, resetting...');
     },
   });
 }

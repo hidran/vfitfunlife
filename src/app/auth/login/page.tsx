@@ -44,13 +44,31 @@ export default function LoginPage() {
   const [recaptchaInitialized, setRecaptchaInitialized] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Initialize reCAPTCHA on mount (only once)
+  // Initialize reCAPTCHA only when phone method is selected
   useEffect(() => {
-    if (typeof window !== 'undefined' && !recaptchaInitialized && isInitialized) {
-      initPhoneAuth('recaptcha-container');
-      setRecaptchaInitialized(true);
+    if (
+      typeof window !== 'undefined' && 
+      loginMethod === 'phone' && 
+      !isOtpSent &&
+      !recaptchaInitialized && 
+      isInitialized
+    ) {
+      // Small delay to ensure DOM element exists
+      const timer = setTimeout(() => {
+        const container = document.getElementById('recaptcha-container');
+        if (container) {
+          try {
+            initPhoneAuth('recaptcha-container');
+            setRecaptchaInitialized(true);
+          } catch (error) {
+            console.error('Failed to initialize reCAPTCHA:', error);
+          }
+        }
+      }, 100);
+      
+      return () => clearTimeout(timer);
     }
-  }, [initPhoneAuth, recaptchaInitialized, isInitialized]);
+  }, [loginMethod, isOtpSent, initPhoneAuth, recaptchaInitialized, isInitialized]);
 
   // Redirect based on auth state
   useEffect(() => {
