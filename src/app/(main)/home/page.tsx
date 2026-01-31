@@ -688,86 +688,356 @@ export default function HomePage() {
 }
 
 function VFunHome() {
-  const content = sectionContent['fun'];
-  const Icon = content.icon;
   return (
-        <div className="container-mobile py-6">
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-12 h-12 rounded-xl bg-section-gradient flex items-center justify-center">
-            <Icon size={24} className="text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-display font-bold gradient-text">
-              {content.title}
-            </h1>
-            <p className="text-text-secondary text-sm">{content.subtitle}</p>
-          </div>
-        </div>
-        <p className="text-text-tertiary mt-4 leading-relaxed">
-          {content.description}
-        </p>
-      </div>
-
-      <div className="mb-8">
-        <h2 className="text-lg font-semibold text-text-inverse mb-4">
-          What you can do
-        </h2>
-        <div className="space-y-3">
-          {content.features.map((feature, index) => (
-            <div
-              key={feature}
-              className="flex items-center gap-3 p-4 rounded-xl bg-white/5 border border-white/10"
-            >
-              <div className="w-8 h-8 rounded-full bg-section-primary/20 flex items-center justify-center flex-shrink-0">
-                <span className="text-section-primary text-sm font-bold">
-                  {index + 1}
+    <div className="container-mobile py-6 space-y-8 pb-24">
+      {/* Featured Event Hero Banner */}
+      <section className="relative overflow-hidden rounded-3xl">
+        <div className="relative h-64 bg-gradient-to-br from-purple-600/40 via-pink-500/30 to-orange-400/20">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(236,72,153,0.3),_transparent_50%)]" />
+          <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-pink-500/30 blur-3xl" />
+          <div className="absolute -bottom-10 left-0 h-32 w-32 rounded-full bg-purple-500/30 blur-2xl" />
+          
+          {/* Content */}
+          <div className="absolute inset-0 p-6 flex flex-col justify-between">
+            <div className="flex items-start justify-between">
+              <span className="rounded-full bg-red-500/90 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-white shadow-lg">
+                {vfunFeaturedEvent.tag}
+              </span>
+              <div className="flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur-sm px-3 py-1.5">
+                <Users className="h-3.5 w-3.5 text-white/80" />
+                <span className="text-[11px] font-medium text-white">
+                  {vfunFeaturedEvent.attendees.toLocaleString()}
                 </span>
               </div>
-              <span className="text-text-inverse">{feature}</span>
             </div>
-          ))}
+            
+            <div>
+              <p className="text-sm font-medium text-pink-300">
+                {vfunFeaturedEvent.date} · {vfunFeaturedEvent.location}
+              </p>
+              <h2 className="mt-1 text-2xl font-bold text-white leading-tight">
+                {vfunFeaturedEvent.title}
+              </h2>
+              <p className="mt-1 text-sm text-white/70">
+                {vfunFeaturedEvent.subtitle}
+              </p>
+              <div className="mt-4 flex items-center gap-3">
+                <span className="text-lg font-bold text-white">
+                  {vfunFeaturedEvent.price}
+                </span>
+                <button className="flex-1 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-purple-900 shadow-lg shadow-white/20 transition-all hover:scale-[1.02] active:scale-95">
+                  Prenota ora
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+        
+        {/* Dots Indicator */}
+        <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">
+          <div className="h-1.5 w-6 rounded-full bg-white" />
+          <div className="h-1.5 w-1.5 rounded-full bg-white/40" />
+          <div className="h-1.5 w-1.5 rounded-full bg-white/40" />
+        </div>
+      </section>
 
-      <div className="mb-8">
-        <h2 className="text-lg font-semibold text-text-inverse mb-4">
-          Featured
-        </h2>
-        <div className="grid grid-cols-2 gap-4">
-          {[1, 2, 3, 4].map((item) => (
+      {/* Live Now Indicator */}
+      {vfunIsStreamingLive && (
+        <section className="relative overflow-hidden rounded-2xl border border-red-500/30 bg-gradient-to-r from-red-500/20 via-red-500/10 to-transparent p-4">
+          <div className="flex items-center gap-4">
+            <div className="relative h-14 w-14 rounded-xl bg-red-500/30 flex items-center justify-center">
+              <Radio className="h-7 w-7 text-red-400" />
+              <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500" />
+              </span>
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold uppercase tracking-wide text-red-400">
+                  Live Now
+                </span>
+                <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-[10px] font-semibold text-red-300">
+                  V Fun
+                </span>
+              </div>
+              <h3 className="text-base font-bold text-text-inverse">
+                DJ Set Live - Saturday Vibes
+              </h3>
+              <p className="text-xs text-text-tertiary">
+                Con Marco Carola · 2.4k spettatori
+              </p>
+            </div>
+            <button className="rounded-full bg-red-500/20 p-2.5 text-red-400 transition-all hover:bg-red-500/30">
+              <Play className="h-5 w-5 fill-current" />
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* Quick Actions Grid */}
+      <section>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-text-inverse">Esplora</h3>
+          <span className="text-xs text-text-tertiary">VFun</span>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-4">
+          {vfunQuickActions.map((action) => {
+            const Icon = action.icon;
+            const content = (
+              <>
+                <div className="flex items-center justify-between">
+                  <div className="h-10 w-10 rounded-xl bg-section-primary/20 text-section-primary flex items-center justify-center">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-text-tertiary opacity-0 transition-opacity group-hover:opacity-100" />
+                </div>
+                <p className="mt-4 text-sm font-semibold text-text-inverse">
+                  {action.label}
+                </p>
+                <p className="mt-1 text-xs text-text-tertiary">Scopri ora</p>
+              </>
+            );
+
+            if (action.href) {
+              return (
+                <Link
+                  key={action.label}
+                  href={action.href}
+                  className={cn(
+                    'group rounded-2xl border border-white/10 bg-white/5 p-4 transition-all',
+                    'hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/10'
+                  )}
+                >
+                  {content}
+                </Link>
+              );
+            }
+
+            return (
+              <button
+                key={action.label}
+                type="button"
+                className={cn(
+                  'group rounded-2xl border border-white/10 bg-white/5 p-4 transition-all',
+                  'hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/10'
+                )}
+              >
+                {content}
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Prossimi Eventi - Upcoming Events Carousel */}
+      <section>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-text-inverse">Prossimi Eventi</h3>
+          <Link
+            href="/fun/events"
+            className="text-sm font-medium text-section-primary"
+          >
+            Vedi tutti
+          </Link>
+        </div>
+        <div className="mt-4 flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+          {vfunUpcomingEvents.map((event) => (
             <div
-              key={item}
-              className="aspect-square rounded-2xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 flex items-center justify-center"
+              key={event.id}
+              className="min-w-[240px] rounded-2xl border border-white/10 bg-white/5 overflow-hidden"
             >
-              <div className="text-center">
-                <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-section-primary/20 animate-pulse" />
-                <div className="h-3 w-16 mx-auto rounded bg-white/10 animate-pulse" />
+              <div className="relative h-28 bg-gradient-to-br from-purple-500/30 via-pink-500/20 to-orange-400/10">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.15),_transparent_60%)]" />
+                {event.tag && (
+                  <span className={cn(
+                    "absolute left-3 top-3 rounded-full px-2 py-1 text-[10px] font-semibold uppercase",
+                    event.tag === 'Hot' && "bg-orange-500/90 text-white",
+                    event.tag === 'VIP' && "bg-vip-gold/90 text-background-dark",
+                    event.tag === 'Nuovo' && "bg-section-primary/90 text-white",
+                  )}>
+                    {event.tag}
+                  </span>
+                )}
+                <div className="absolute right-3 top-3 rounded-full bg-background-dark/80 px-2 py-1 text-[11px] font-semibold text-white">
+                  {event.date}
+                </div>
+              </div>
+              <div className="p-3">
+                <h4 className="text-sm font-semibold text-text-inverse">
+                  {event.title}
+                </h4>
+                <div className="mt-2 flex items-center gap-2 text-xs text-text-tertiary">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>{event.time}</span>
+                </div>
+                <div className="mt-1 flex items-center gap-2 text-xs text-text-tertiary">
+                  <MapPin className="h-3.5 w-3.5" />
+                  <span>{event.location}</span>
+                </div>
+                <div className="mt-3 flex items-center justify-between">
+                  <span className="text-sm font-bold text-section-primary">
+                    {event.price}
+                  </span>
+                  <button className="rounded-full bg-section-primary/20 px-3 py-1 text-xs font-semibold text-section-primary">
+                    Prenota
+                  </button>
+                </div>
               </div>
             </div>
           ))}
         </div>
-      </div>
+      </section>
 
-      <div>
-        <h2 className="text-lg font-semibold text-text-inverse mb-4">
-          Quick Actions
-        </h2>
-        <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2 -mx-4 px-4">
-          {['Book a Class', 'Find Nearby', 'View Schedule', 'My Progress'].map(
-            (action) => (
-              <button
-                key={action}
-                className="flex-shrink-0 px-5 py-3 rounded-full bg-section-primary/20 border border-section-primary/30 text-section-primary font-medium text-sm whitespace-nowrap transition-all duration-200 hover:bg-section-primary/30 active:scale-95 touch-target"
-              >
-                {action}
-              </button>
-            )
-          )}
+      {/* VR Experiences Carousel */}
+      <section>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-text-inverse">VR Experiences</h3>
+          <Link
+            href="/fun/vr"
+            className="text-sm font-medium text-section-primary"
+          >
+            Esplora
+          </Link>
         </div>
-      </div>
+        <div className="mt-4 flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+          {vfunVRExperiences.map((vr) => (
+            <div
+              key={vr.id}
+              className="min-w-[200px] rounded-2xl border border-white/10 bg-white/5 p-4"
+            >
+              <div className="flex items-start justify-between">
+                <div className="h-10 w-10 rounded-xl bg-indigo-500/20 flex items-center justify-center">
+                  <Glasses className="h-5 w-5 text-indigo-400" />
+                </div>
+                <div className="flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5">
+                  <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
+                  <span className="text-[11px] font-semibold text-text-inverse">
+                    {vr.rating}
+                  </span>
+                </div>
+              </div>
+              <h4 className="mt-3 text-sm font-semibold text-text-inverse">
+                {vr.title}
+              </h4>
+              <div className="mt-2 flex items-center gap-3 text-xs text-text-tertiary">
+                <span className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {vr.duration}
+                </span>
+                <span className="rounded-full bg-indigo-500/20 px-2 py-0.5 text-indigo-300">
+                  {vr.level}
+                </span>
+              </div>
+              <div className="mt-3 flex items-center justify-between">
+                <span className="text-sm font-bold text-text-inverse">
+                  {vr.price}
+                </span>
+                <button className="rounded-full bg-indigo-500/20 px-3 py-1.5 text-xs font-semibold text-indigo-400">
+                  Prenota
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Palinsesto TV Schedule */}
+      <section>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-text-inverse">Palinsesto TV</h3>
+          <Link
+            href="/fun/tv"
+            className="text-sm font-medium text-section-primary"
+          >
+            Guida TV
+          </Link>
+        </div>
+        <div className="mt-4 space-y-3">
+          {vfunTVSchedule.map((show, index) => (
+            <div
+              key={`${show.title}-${index}`}
+              className={cn(
+                "flex items-center gap-4 rounded-2xl border p-3 transition-all",
+                show.isLive
+                  ? "border-red-500/30 bg-red-500/10"
+                  : "border-white/10 bg-white/5"
+              )}
+            >
+              <div className={cn(
+                "flex h-12 w-12 flex-col items-center justify-center rounded-xl",
+                show.isLive ? "bg-red-500/20 text-red-400" : "bg-white/10 text-text-tertiary"
+              )}>
+                <span className="text-xs font-bold">{show.time}</span>
+                {show.isLive && (
+                  <span className="mt-0.5 flex h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className={cn(
+                  "text-sm font-semibold truncate",
+                  show.isLive ? "text-text-inverse" : "text-text-inverse"
+                )}>
+                  {show.title}
+                </p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className={cn(
+                    "text-[11px] font-medium",
+                    show.channel === 'V Fit' && "text-emerald-400",
+                    show.channel === 'V Life' && "text-pink-400",
+                    show.channel === 'V Fun' && "text-purple-400",
+                    show.channel === 'V Wellness' && "text-cyan-400",
+                  )}>
+                    {show.channel}
+                  </span>
+                  {show.isLive && (
+                    <span className="text-[10px] font-bold uppercase text-red-400">
+                      In onda
+                    </span>
+                  )}
+                </div>
+              </div>
+              <button className={cn(
+                "rounded-full p-2 transition-all",
+                show.isLive
+                  ? "bg-red-500/20 text-red-400 hover:bg-red-500/30"
+                  : "bg-white/10 text-text-tertiary hover:bg-white/20"
+              )}>
+                <Play className="h-4 w-4 fill-current" />
+              </button>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Party Mode CTA */}
+      <section className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-pink-500/25 via-purple-500/20 to-indigo-500/15 p-5">
+        <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-pink-500/30 blur-2xl" />
+        <div className="absolute -left-4 -bottom-4 h-20 w-20 rounded-full bg-purple-500/30 blur-2xl" />
+        <div className="relative">
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-xl bg-pink-500/30 flex items-center justify-center">
+              <PartyPopper className="h-6 w-6 text-pink-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-text-inverse">Party Mode</h3>
+              <p className="text-sm text-text-tertiary">Organizza il tuo evento</p>
+            </div>
+          </div>
+          <p className="mt-3 text-sm text-text-secondary leading-relaxed">
+            Vuoi organizzare una festa privata o un evento aziendale? Scegli location esclusive, catering e intrattenimento su misura.
+          </p>
+          <Link
+            href="/fun/party-mode"
+            className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-pink-400"
+          >
+            Richiedi preventivo
+            <ArrowUpRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </section>
     </div>
-  )
+  );
 }
 
 function VLifeHome() {
