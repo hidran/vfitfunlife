@@ -264,15 +264,50 @@ export async function completeRegistration(
   }
 ): Promise<void> {
   const userRef = doc(db, "users", userId);
+  const userDoc = await getDoc(userRef);
 
-  await setDoc(userRef, {
-    fullName: data.fullName,
-    email: data.email || null,
-    dateOfBirth: data.dateOfBirth || null,
-    preferredSection: data.preferredSection || "fit",
-    updatedAt: serverTimestamp(),
-    createdAt: serverTimestamp(), // Add createdAt for new users
-  }, { merge: true });
+  if (!userDoc.exists()) {
+    // New user, create document with all required fields to satisfy isValidUserCreate
+    await setDoc(userRef, {
+      uid: userId,
+      fullName: data.fullName,
+      email: data.email || null,
+      dateOfBirth: data.dateOfBirth || null,
+      preferredSection: data.preferredSection || "fit",
+      role: "customer",
+      permissions: [
+        "bookings:read",
+        "bookings:write",
+        "bookings:cancel",
+        "services:read",
+        "venues:read",
+        "promotions:read",
+      ],
+      isActive: true,
+      isVerified: false,
+      isVip: false,
+      pointsBalance: 100, // Welcome points
+      walletBalance: 0,
+      preferredLanguage: "it",
+      notificationsEnabled: true,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      lastLoginAt: serverTimestamp(),
+    });
+  } else {
+    // Existing user, update only allowed fields (isValidUserUpdate)
+    // Avoid sending 'createdAt' as it's not allowed in updates
+    const updateData: Record<string, any> = {
+      fullName: data.fullName,
+      updatedAt: serverTimestamp(),
+    };
+
+    if (data.email) updateData.email = data.email;
+    if (data.dateOfBirth) updateData.dateOfBirth = data.dateOfBirth;
+    if (data.preferredSection) updateData.preferredSection = data.preferredSection;
+
+    await updateDoc(userRef, updateData);
+  }
 }
 
 /**
@@ -366,7 +401,7 @@ export async function changePassword(
     currentPassword
   );
   await reauthenticateWithCredential(user, credential);
-  
+
   // Update password
   await updatePassword(user, newPassword);
 }
@@ -395,24 +430,24 @@ export async function updateUserProfile(
   }
 ): Promise<void> {
   const userRef = doc(db, "users", userId);
-  
+
   const updateData: Record<string, any> = {
     ...data,
     updatedAt: serverTimestamp(),
   };
-  
+
   // Convert dateOfBirth to Timestamp if provided
   if (data.dateOfBirth) {
     updateData.dateOfBirth = data.dateOfBirth;
   }
-  
+
   // Remove undefined values
   Object.keys(updateData).forEach((key) => {
     if (updateData[key] === undefined) {
       delete updateData[key];
     }
   });
-  
+
   await updateDoc(userRef, updateData);
 }
 
@@ -482,15 +517,15 @@ export async function updateProviderProfile(
   data: Partial<ProviderProfile>
 ): Promise<void> {
   const userRef = doc(db, "users", userId);
-  
+
   const userDoc = await getDoc(userRef);
   if (!userDoc.exists()) {
     throw new Error("User not found");
   }
-  
+
   const userData = userDoc.data();
   const currentProviderProfile = userData.providerProfile || {};
-  
+
   await updateDoc(userRef, {
     providerProfile: {
       ...currentProviderProfile,
@@ -508,18 +543,18 @@ export async function getProviderProfile(
 ): Promise<ProviderProfile | null> {
   try {
     const userDoc = await getDoc(doc(db, "users", providerId));
-    
+
     if (!userDoc.exists()) {
       return null;
     }
-    
+
     const data = userDoc.data();
-    
+
     // Check if user is a provider
     if (data.role !== "provider" && data.role !== "admin" && data.role !== "superadmin") {
       return null;
     }
-    
+
     return data.providerProfile || null;
   } catch (error) {
     console.error("Error fetching provider profile:", error);
@@ -535,17 +570,17 @@ export async function addCertification(
   certification: Omit<Certification, "id">
 ): Promise<string> {
   const userRef = doc(db, "users", userId);
-  
+
   const certificationWithId = {
     ...certification,
     id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
   };
-  
+
   await updateDoc(userRef, {
     "providerProfile.certifications": arrayUnion(certificationWithId),
     updatedAt: serverTimestamp(),
   });
-  
+
   return certificationWithId.id;
 }
 
@@ -557,7 +592,7 @@ export async function removeCertification(
   certification: Certification
 ): Promise<void> {
   const userRef = doc(db, "users", userId);
-  
+
   await updateDoc(userRef, {
     "providerProfile.certifications": arrayRemove(certification),
     updatedAt: serverTimestamp(),
@@ -572,17 +607,17 @@ export async function addEducation(
   education: Omit<Education, "id">
 ): Promise<string> {
   const userRef = doc(db, "users", userId);
-  
+
   const educationWithId = {
     ...education,
     id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
   };
-  
+
   await updateDoc(userRef, {
     "providerProfile.education": arrayUnion(educationWithId),
     updatedAt: serverTimestamp(),
   });
-  
+
   return educationWithId.id;
 }
 
@@ -594,7 +629,7 @@ export async function removeEducation(
   education: Education
 ): Promise<void> {
   const userRef = doc(db, "users", userId);
-  
+
   await updateDoc(userRef, {
     "providerProfile.education": arrayRemove(education),
     updatedAt: serverTimestamp(),
@@ -609,7 +644,7 @@ export async function updateProviderSpecialties(
   specialties: string[]
 ): Promise<void> {
   const userRef = doc(db, "users", userId);
-  
+
   await updateDoc(userRef, {
     "providerProfile.specialties": specialties,
     updatedAt: serverTimestamp(),
@@ -624,7 +659,7 @@ export async function updateProviderLanguages(
   languages: string[]
 ): Promise<void> {
   const userRef = doc(db, "users", userId);
-  
+
   await updateDoc(userRef, {
     "providerProfile.languages": languages,
     updatedAt: serverTimestamp(),
@@ -639,7 +674,7 @@ export async function addPortfolioImage(
   imageUrl: string
 ): Promise<void> {
   const userRef = doc(db, "users", userId);
-  
+
   await updateDoc(userRef, {
     "providerProfile.portfolioImages": arrayUnion(imageUrl),
     updatedAt: serverTimestamp(),
@@ -654,7 +689,7 @@ export async function removePortfolioImage(
   imageUrl: string
 ): Promise<void> {
   const userRef = doc(db, "users", userId);
-  
+
   await updateDoc(userRef, {
     "providerProfile.portfolioImages": arrayRemove(imageUrl),
     updatedAt: serverTimestamp(),
@@ -667,11 +702,11 @@ export async function removePortfolioImage(
 export async function isProvider(userId: string): Promise<boolean> {
   try {
     const userDoc = await getDoc(doc(db, "users", userId));
-    
+
     if (!userDoc.exists()) {
       return false;
     }
-    
+
     const data = userDoc.data();
     return data.role === "provider" || data.role === "admin" || data.role === "superadmin";
   } catch (error) {

@@ -116,9 +116,10 @@ service cloud.firestore {
      */
     function isValidUserUpdate() {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-        'fullName', 'email', 'phone', 'dateOfBirth', 'preferredLanguage',
+        'fullName', 'email', 'phone', 'bio', 'dateOfBirth', 'preferredLanguage',
         'preferredSection', 'avatarUrl', 'notificationsEnabled', 'fcmTokens',
-        'updatedAt', 'providerProfile'
+        'updatedAt', 'lastLoginAt', 'phoneVerified', 'emailVerified',
+        'socialLinks', 'notificationSettings', 'privacySettings', 'providerProfile'
       ]);
     }
 
