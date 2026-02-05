@@ -22,6 +22,7 @@ import {
   X,
   LogOut,
   Bell,
+  Database,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -92,6 +93,12 @@ export function Sidebar({
       label: "Payments",
       href: "/admin/payments",
       icon: <CreditCard className="w-5 h-5" />,
+      allowedRoles: ["superadmin", "admin"],
+    },
+    {
+      label: "Data Management",
+      href: "/admin/data",
+      icon: <Database className="w-5 h-5" />,
       allowedRoles: ["superadmin", "admin"],
     },
     {

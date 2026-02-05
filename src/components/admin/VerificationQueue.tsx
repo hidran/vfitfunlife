@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { cn } from "@/lib/utils";
+import { cn, formatDate, toDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { AdminProvider } from "@/types/admin";
 import { VerificationBadge } from "./UserRoleBadge";
@@ -123,7 +123,7 @@ export function VerificationQueue({
                         <Calendar className="w-4 h-4 text-white/40" />
                         <span className="text-white/50">Joined:</span>
                         <span className="text-white">
-                          {provider.createdAt?.toDate().toLocaleDateString()}
+                          {formatDate(toDate(provider.createdAt) || new Date())}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 text-sm">

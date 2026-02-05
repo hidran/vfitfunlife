@@ -7,7 +7,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { DataTable, FilterBar } from "@/components/admin";
 import { Column } from "@/components/admin/DataTable";
 import { LogFilters, SystemLog } from "@/types/admin";
-import { formatDate } from "@/lib/utils";
+import { formatDate, toDate } from "@/lib/utils";
 import {
   FileText,
   AlertCircle,
@@ -80,17 +80,20 @@ export default function SystemLogsPage() {
     {
       key: "timestamp",
       header: "Timestamp",
-      cell: (log) => (
-        <span className="text-sm text-white/50 whitespace-nowrap">
-          {formatDate(log.timestamp?.toDate() || new Date(), {
-            month: "short",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-          })}
-        </span>
-      ),
+      cell: (log) => {
+        const date = toDate(log.timestamp);
+        return (
+          <span className="text-sm text-white/50 whitespace-nowrap">
+            {formatDate(date || new Date(), {
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            })}
+          </span>
+        );
+      },
       sortable: true,
       width: "w-40",
     },

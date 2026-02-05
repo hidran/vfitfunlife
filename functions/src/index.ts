@@ -10,3 +10,4 @@ export * from "./payments";
 export * from "./notifications";
 export * from "./users";
 export * from "./scheduled";
+export * from "./seed/seedData";

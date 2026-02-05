@@ -34,12 +34,16 @@ export default function AdminDashboardPage() {
     fetchDashboardStats,
     pendingVerifications,
     fetchPendingVerifications,
+    providers,
+    fetchProviders,
+    isLoadingProviders,
   } = useAdminStore();
 
   useEffect(() => {
     fetchDashboardStats();
     fetchPendingVerifications();
-  }, [fetchDashboardStats, fetchPendingVerifications]);
+    fetchProviders({ limit: 5, sortBy: 'bookings' });
+  }, [fetchDashboardStats, fetchPendingVerifications, fetchProviders]);
 
   const isSuperadmin = user?.role === "superadmin";
 
@@ -241,25 +245,47 @@ export default function AdminDashboardPage() {
         <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
           <h3 className="text-lg font-semibold text-white mb-6">Bookings by Status</h3>
           <div className="space-y-4">
-            {[
-              { label: "Completed", value: 65, color: "bg-[#10B981]" },
-              { label: "Confirmed", value: 20, color: "bg-[#00C9FF]" },
-              { label: "Pending", value: 10, color: "bg-[#F59E0B]" },
-              { label: "Cancelled", value: 5, color: "bg-[#EF4444]" },
-            ].map((item) => (
-              <div key={item.label}>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-white/70">{item.label}</span>
-                  <span className="text-sm text-white">{item.value}%</span>
-                </div>
-                <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                  <div
-                    className={cn("h-full rounded-full transition-all", item.color)}
-                    style={{ width: `${item.value}%` }}
-                  />
-                </div>
+            {isLoadingStats ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#00C9FF]" />
               </div>
-            ))}
+            ) : (
+              [
+                { 
+                  label: "Completed", 
+                  value: dashboardStats?.bookingsByStatus?.completed || 0, 
+                  color: "bg-[#10B981]" 
+                },
+                { 
+                  label: "Confirmed", 
+                  value: dashboardStats?.bookingsByStatus?.confirmed || 0, 
+                  color: "bg-[#00C9FF]" 
+                },
+                { 
+                  label: "Pending", 
+                  value: dashboardStats?.bookingsByStatus?.pending || 0, 
+                  color: "bg-[#F59E0B]" 
+                },
+                { 
+                  label: "Cancelled", 
+                  value: dashboardStats?.bookingsByStatus?.cancelled || 0, 
+                  color: "bg-[#EF4444]" 
+                },
+              ].map((item) => (
+                <div key={item.label}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-white/70">{item.label}</span>
+                    <span className="text-sm text-white">{item.value}%</span>
+                  </div>
+                  <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div
+                      className={cn("h-full rounded-full transition-all", item.color)}
+                      style={{ width: `${item.value}%` }}
+                    />
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -278,29 +304,35 @@ export default function AdminDashboardPage() {
             </Button>
           </div>
           <div className="space-y-4">
-            {[
-              { name: "John Smith", bookings: 45, revenue: 3200 },
-              { name: "Sarah Johnson", bookings: 38, revenue: 2800 },
-              { name: "Mike Davis", bookings: 32, revenue: 2400 },
-              { name: "Emily Brown", bookings: 28, revenue: 2100 },
-              { name: "Chris Wilson", bookings: 25, revenue: 1800 },
-            ].map((provider, index) => (
-              <div
-                key={provider.name}
-                className="flex items-center gap-4 p-3 bg-black/20 rounded-xl"
-              >
-                <span className="w-6 h-6 flex items-center justify-center text-sm font-semibold text-white/50">
-                  {index + 1}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-white truncate">{provider.name}</p>
-                  <p className="text-sm text-white/50">{provider.bookings} bookings</p>
-                </div>
-                <span className="font-semibold text-white">
-                  {formatPrice(provider.revenue)}
-                </span>
+            {isLoadingProviders ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#00C9FF]" />
               </div>
-            ))}
+            ) : providers.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-white/50">No providers yet</p>
+              </div>
+            ) : (
+              providers.slice(0, 5).map((provider, index) => (
+                <div
+                  key={provider.id}
+                  className="flex items-center gap-4 p-3 bg-black/20 rounded-xl"
+                >
+                  <span className="w-6 h-6 flex items-center justify-center text-sm font-semibold text-white/50">
+                    {index + 1}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-white truncate">{provider.fullName}</p>
+                    <p className="text-sm text-white/50">
+                      {(provider as any).performanceMetrics?.totalBookings || 0} bookings
+                    </p>
+                  </div>
+                  <span className="font-semibold text-white">
+                    {formatPrice((provider as any).performanceMetrics?.totalRevenue || 0)}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

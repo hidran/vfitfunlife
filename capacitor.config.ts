@@ -4,9 +4,27 @@ const config: CapacitorConfig = {
   appId: 'com.vfit.app',
   appName: 'V Fitness & Wellness',
   webDir: 'out',
+  
+  // Server configuration
   server: {
     androidScheme: 'https',
+    // Enable for live reload during development:
+    // url: 'http://YOUR_IP:3000',
+    // cleartext: true,
   },
+  
+  // iOS configuration
+  ios: {
+    contentInset: 'always',
+    scheme: 'VFit',
+  },
+  
+  // Android configuration
+  android: {
+    backgroundColor: '#1A1D29',
+  },
+  
+  // Plugin configurations
   plugins: {
     SplashScreen: {
       launchShowDuration: 2000,
@@ -21,10 +39,6 @@ const config: CapacitorConfig = {
     StatusBar: {
       style: 'DARK',
       backgroundColor: '#1A1D29',
-    },
-    Keyboard: {
-      resize: 'body',
-      resizeOnFullScreen: true,
     },
     PushNotifications: {
       presentationOptions: ['badge', 'sound', 'alert'],

@@ -34,14 +34,14 @@ export default function ProviderDashboardPage() {
     fetchActivities(5);
   }, [fetchDashboardStats, fetchBookings, fetchActivities]);
 
-  // Mock data for demo
+  // Use real data from Firestore
   const stats = dashboardStats || {
-    todayAppointments: 3,
-    weekBookings: 12,
-    monthEarnings: 2450,
-    newClients: 5,
-    completionRate: 94,
-    averageRating: 4.8,
+    todayAppointments: 0,
+    weekBookings: 0,
+    monthEarnings: 0,
+    newClients: 0,
+    completionRate: 0,
+    averageRating: 0,
     chartData: [],
   };
 
@@ -213,59 +213,13 @@ export default function ProviderDashboardPage() {
 
             <div className="p-4 space-y-4">
               {activities.length === 0 ? (
-                <>
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
-                      <Calendar className="w-4 h-4 text-green-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-white">New booking received</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        John Smith booked Personal Training
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">2 hours ago</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-                      <CheckCircle className="w-4 h-4 text-blue-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-white">Booking completed</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        Session with Sarah Johnson
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">5 hours ago</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
-                      <Star className="w-4 h-4 text-yellow-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-white">New review received</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        5-star rating from Michael Brown
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">Yesterday</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-                      <Wallet className="w-4 h-4 text-purple-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-white">Payment received</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        €120 for Yoga Class Package
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">Yesterday</p>
-                    </div>
-                  </div>
-                </>
+                <div className="text-center py-8">
+                  <Bell className="w-10 h-10 text-gray-600 mx-auto mb-3" />
+                  <p className="text-sm text-gray-400">No recent activity</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Activities will appear here when you get bookings
+                  </p>
+                </div>
               ) : (
                 activities.map((activity) => (
                   <div key={activity.id} className="flex items-start gap-3">

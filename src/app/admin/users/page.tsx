@@ -7,7 +7,7 @@ import { DataTable, FilterBar, UserRoleBadge, StatusBadge } from "@/components/a
 import { Button } from "@/components/ui/button";
 import { AdminUser, UserFilters } from "@/types/admin";
 import { Column } from "@/components/admin/DataTable";
-import { formatDate } from "@/lib/utils";
+import { formatDate, toDate } from "@/lib/utils";
 import {
   User,
   Mail,
@@ -18,6 +18,8 @@ import {
   Trash2,
   Ban,
   CheckCircle,
+  AlertCircle,
+  X,
 } from "lucide-react";
 
 export default function UsersPage() {
@@ -26,11 +28,13 @@ export default function UsersPage() {
     users,
     usersTotal,
     isLoadingUsers,
+    error,
     fetchUsers,
     bulkUpdateUsersAction,
     exportDataAction,
     suspendUserAction,
     activateUserAction,
+    clearError,
   } = useAdminStore();
 
   const [filters, setFilters] = useState<UserFilters>({
@@ -45,6 +49,11 @@ export default function UsersPage() {
   useEffect(() => {
     fetchUsers(filters);
   }, [filters, fetchUsers]);
+
+  // Clear error when unmounting
+  useEffect(() => {
+    return () => clearError();
+  }, [clearError]);
 
   const handleSearchChange = (search: string) => {
     setFilters((prev) => ({ ...prev, search, page: 1 }));
@@ -145,29 +154,35 @@ export default function UsersPage() {
     {
       key: "joined",
       header: "Joined",
-      cell: (user) => (
-        <span className="text-sm text-white/50">
-          {user.createdAt ? formatDate(user.createdAt.toDate()) : "N/A"}
-        </span>
-      ),
+      cell: (user) => {
+        const date = toDate(user.createdAt);
+        return (
+          <span className="text-sm text-white/50">
+            {date ? formatDate(date) : "N/A"}
+          </span>
+        );
+      },
       sortable: true,
       width: "w-32",
     },
     {
       key: "lastLogin",
       header: "Last Login",
-      cell: (user) => (
-        <span className="text-sm text-white/50">
-          {user.lastLoginAt
-            ? formatDate(user.lastLoginAt.toDate(), { 
-                month: "short", 
-                day: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })
-            : "Never"}
-        </span>
-      ),
+      cell: (user) => {
+        const date = toDate(user.lastLoginAt);
+        return (
+          <span className="text-sm text-white/50">
+            {date
+              ? formatDate(date, { 
+                  month: "short", 
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : "Never"}
+          </span>
+        );
+      },
       sortable: true,
       width: "w-32",
     },
@@ -194,6 +209,25 @@ export default function UsersPage() {
           Add User
         </Button>
       </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+            <div>
+              <p className="text-red-200 font-medium">Error loading users</p>
+              <p className="text-red-300/70 text-sm">{error}</p>
+            </div>
+          </div>
+          <button
+            onClick={clearError}
+            className="text-red-300/70 hover:text-red-200 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      )}
 
       {/* Filters */}
       <FilterBar

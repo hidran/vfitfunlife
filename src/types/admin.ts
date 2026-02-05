@@ -14,6 +14,12 @@ export interface AdminDashboardStats {
   pendingVerifications: number;
   openTickets: number;
   recentActivity: ActivityItem[];
+  bookingsByStatus?: {
+    completed: number;
+    confirmed: number;
+    pending: number;
+    cancelled: number;
+  };
 }
 
 // Activity Item
@@ -47,6 +53,7 @@ export interface ProviderFilters {
   search?: string;
   page?: number;
   limit?: number;
+  sortBy?: "bookings" | "revenue" | "rating" | "createdAt";
 }
 
 // Booking Filters

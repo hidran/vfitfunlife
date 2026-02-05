@@ -1,82 +1,121 @@
-# VFit Scripts
+# VFit Demo Data Seeding
 
-This folder contains utility scripts for the VFit Firebase project.
+This folder contains scripts to populate Firestore with demo data for testing and development.
 
-## Setup
+## Prerequisites
 
-### 1. Get Firebase Service Account Key
-
-1. Go to [Firebase Console](https://console.firebase.google.com/)
-2. Select your project
-3. Go to Project Settings > Service Accounts
-4. Click "Generate new private key"
-5. Save the JSON file as `serviceAccountKey.json` in this folder
-
-### 2. Configure Environment
+Set up your Firebase environment variables (same as the main app):
 
 ```bash
-cp .env.local.example .env.local
+export NEXT_PUBLIC_FIREBASE_API_KEY="your-api-key"
+export NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="your-project.firebaseapp.com"
+export NEXT_PUBLIC_FIREBASE_PROJECT_ID="your-project-id"
+export NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="your-project.appspot.com"
+export NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="your-sender-id"
+export NEXT_PUBLIC_FIREBASE_APP_ID="your-app-id"
 ```
 
-Edit `.env.local` to point to your service account key:
-```
-GOOGLE_APPLICATION_CREDENTIALS=./serviceAccountKey.json
-```
+Or create a `.env` file in the project root.
 
-## Scripts
+## Usage
 
-### Seed Users
-
-Creates 10 sample users in Firebase Auth + Firestore:
+### Option 1: Using Node.js Script (Recommended)
 
 ```bash
-# Using npm script (recommended)
-npm run seed:users
+# Install dependencies (if not already installed)
+npm install firebase
 
-# Or directly with ts-node
-npx ts-node --transpile-only scripts/seed-users.ts
+# Run the seeding script
+node scripts/seed-demo-data.js
+
+# To clear all collections first
+node scripts/seed-demo-data.js --clear
 ```
 
-**Users created:**
+### Option 2: Using Firebase CLI
 
-| Email | Role | Name |
-|-------|------|------|
-| admin@vfit.com | superadmin | System Administrator |
-| manager@vfit.com | admin | Platform Manager |
-| marco.rossi@vfit.com | provider (personal_trainer) | Marco Rossi |
-| elena.bianchi@vfit.com | provider (yoga_teacher) | Elena Bianchi |
-| giulia.neri@vfit.com | provider (hairstylist) | Giulia Neri |
-| dr.alessandro.verdi@vfit.com | provider (psychologist) | Dr. Alessandro Verdi |
-| sarah.johnson@vfit.com | provider (pronunciation_coach) | Sarah Johnson |
-| dr.laura.martini@vfit.com | provider (nutritionist) | Dr. Laura Martini |
-| user1@test.com | customer | Luca Ferrari |
-| user2@test.com | customer | Maria Colombo |
-
-**Default password for all users:** `Test123456!`
-
-The script is idempotent - it will skip users that already exist.
-
-## Troubleshooting
-
-### "Error: Cannot find module 'firebase-admin'"
-
-Make sure you're running from the project root:
-```bash
-cd /path/to/vfit
-npx ts-node scripts/seed-users.ts
-```
-
-### "Could not load the default credentials"
-
-Make sure you've set up the `GOOGLE_APPLICATION_CREDENTIALS` environment variable
-pointing to a valid service account key file.
-
-### Using with Firebase Emulator
-
-If you want to seed the local emulator instead of production:
+If you have Firebase Admin SDK set up with `GOOGLE_APPLICATION_CREDENTIALS`:
 
 ```bash
-export FIRESTORE_EMULATOR_HOST=localhost:8080
-export FIREBASE_AUTH_EMULATOR_HOST=localhost:9099
-npx ts-node scripts/seed-users.ts
+# Set the path to your service account key
+export GOOGLE_APPLICATION_CREDENTIALS="/path/to/serviceAccountKey.json"
+
+# Run the script
+node scripts/seed-demo-data.js
 ```
+
+## What Gets Seeded
+
+### Providers (15)
+- Fitness trainers (Personal Training, Yoga, Pilates, HIIT, CrossFit, etc.)
+- Wellness professionals (Massage, Physiotherapy, Osteopathy, Psychology, Nutrition)
+- Each with realistic profiles, certifications, services, and pricing
+
+### Customers (20)
+- Regular users with profiles, addresses, and preferences
+- Mix of VIP and regular members
+
+### Venues (10)
+- 6 Fitness gyms/centers
+- 4 Wellness/beauty centers
+- Each with addresses, amenities, opening hours
+
+### Classes (30)
+- Group fitness classes scheduled over next 7 days
+- Linked to venues and instructors
+- Various levels (Beginner, Intermediate, Advanced)
+
+### Bookings (50)
+- Mix of past and future bookings
+- Various statuses (completed, confirmed, pending, cancelled)
+- Realistic pricing with platform fees
+
+### Reviews (30)
+- 4-5 star ratings with comments
+- Linked to completed bookings
+
+## Demo Data Highlights
+
+### Sample Providers
+- **Marco Rossi** - Personal Trainer (verified, 5+ years experience)
+- **Elena Bianchi** - Yoga Instructor (verified, 10 years experience)
+- **Luca Ferrari** - HIIT Specialist (verified, 3 years experience)
+- **Giulia Romano** - Nutritionist (verified, 7 years experience)
+
+### Sample Venues
+- **Carosello Fitness** - Premium gym in Milano Centro
+- **Wellness Spa Milano** - Full-service wellness center
+- **Urban Core Gym** - Modern fitness facility
+
+### Sample Classes
+- HIIT Power (Mon-Fri mornings)
+- Pilates Flow (daily)
+- Yoga Morning (weekends)
+- Functional 360 (evenings)
+
+## Customizing Data
+
+Edit the constants at the top of `seed-demo-data.js`:
+
+```javascript
+const FITNESS_SPECIALTIES = ['Personal Training', 'Yoga', ...];
+const GYM_NAMES = ['Carosello Fitness', 'Urban Core Gym', ...];
+const CLASS_NAMES = ['HIIT Power', 'Pilates Flow', ...];
+```
+
+## Resetting Data
+
+To completely reset and start fresh:
+
+```bash
+node scripts/seed-demo-data.js --clear
+node scripts/seed-demo-data.js
+```
+
+## Notes
+
+- The script uses Firestore's `writeBatch` for efficient bulk writes
+- Timestamps are generated relative to current date
+- Data is randomized but realistic (Italian names, Milano locations, etc.)
+- Provider ratings and review counts are auto-generated
+- Service pricing ranges from €30 to €120 per session

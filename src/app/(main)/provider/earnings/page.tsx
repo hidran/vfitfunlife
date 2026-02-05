@@ -7,6 +7,56 @@ import { Button } from '@/components/ui/button';
 import { useProviderStore } from '@/stores/providerStore';
 import { EarningsFilters } from '@/types/provider';
 import { cn } from '@/lib/utils';
+import { Transaction } from '@/types/provider';
+
+// Helper function to generate chart data from actual transactions
+function generateChartDataFromTransactions(transactions: Transaction[]) {
+  const data: Record<string, { earnings: number; bookings: number }> = {};
+  
+  // Initialize last 30 days with zeros
+  const today = new Date();
+  for (let i = 29; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    const dateStr = date.toISOString().split('T')[0];
+    data[dateStr] = { earnings: 0, bookings: 0 };
+  }
+  
+  // Fill in actual transaction data
+  transactions.forEach(t => {
+    // Handle both Firestore Timestamp and Date
+    const createdAt = t.createdAt && typeof t.createdAt === 'object' && 'toDate' in t.createdAt 
+      ? t.createdAt.toDate() 
+      : new Date(t.createdAt);
+    const date = createdAt.toISOString().split('T')[0];
+    if (data[date] && t.type === 'booking_payment' && t.status === 'completed') {
+      data[date].earnings += t.amount;
+      data[date].bookings += 1;
+    }
+  });
+  
+  return Object.entries(data).map(([date, values]) => ({
+    date,
+    earnings: values.earnings,
+    bookings: values.bookings,
+  }));
+}
+
+// Helper function to generate empty chart data
+function generateEmptyChartData() {
+  const data = [];
+  const today = new Date();
+  for (let i = 29; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    data.push({
+      date: date.toISOString().split('T')[0],
+      earnings: 0,
+      bookings: 0,
+    });
+  }
+  return data;
+}
 
 export default function ProviderEarningsPage() {
   const { earnings, isLoadingEarnings, fetchEarnings, requestWithdrawal } = useProviderStore();
@@ -17,26 +67,20 @@ export default function ProviderEarningsPage() {
     fetchEarnings();
   }, [fetchEarnings]);
 
-  // Mock data for demo
+  // Use real data from Firestore
   const earningsData = earnings || {
-    availableBalance: 1245.50,
-    pendingAmount: 450.00,
-    monthTotal: 2450.00,
-    yearTotal: 18500.00,
-    lifetimeTotal: 45200.00,
+    availableBalance: 0,
+    pendingAmount: 0,
+    monthTotal: 0,
+    yearTotal: 0,
+    lifetimeTotal: 0,
     transactions: [],
   };
 
-  // Mock chart data
-  const chartData = Array.from({ length: 30 }, (_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() - (29 - i));
-    return {
-      date: date.toISOString().split('T')[0],
-      earnings: Math.floor(Math.random() * 200) + 50,
-      bookings: Math.floor(Math.random() * 5) + 1,
-    };
-  });
+  // Generate chart data from actual transactions or show empty state
+  const chartData = earnings?.transactions?.length 
+    ? generateChartDataFromTransactions(earnings.transactions)
+    : generateEmptyChartData();
 
   const handleWithdraw = async () => {
     const amount = parseFloat(withdrawAmount);

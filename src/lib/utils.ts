@@ -27,6 +27,23 @@ export function formatDate(date: Date | string, options?: Intl.DateTimeFormatOpt
 }
 
 /**
+ * Safely convert Firestore Timestamp or various date formats to JavaScript Date
+ * Handles: Firestore Timestamp, Date, ISO string, milliseconds, or null/undefined
+ */
+export function toDate(
+  value: Date | { toDate: () => Date } | string | number | null | undefined
+): Date | null {
+  if (!value) return null;
+  if (value instanceof Date) return value;
+  if (typeof value === 'string') return new Date(value);
+  if (typeof value === 'number') return new Date(value);
+  if (typeof value === 'object' && 'toDate' in value && typeof value.toDate === 'function') {
+    return value.toDate();
+  }
+  return null;
+}
+
+/**
  * Calculate distance between two coordinates using Haversine formula
  */
 export function calculateDistance(

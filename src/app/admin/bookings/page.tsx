@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { BookingFilters } from "@/types/admin";
 import { Booking as BookingType } from "@/types/firebase";
 import { Column } from "@/components/admin/DataTable";
-import { formatPrice, formatDate } from "@/lib/utils";
+import { formatPrice, formatDate, toDate } from "@/lib/utils";
 import {
   Calendar,
   User,
@@ -94,7 +94,7 @@ export default function BookingsPage() {
         <div>
           <p className="font-medium text-white">#{booking.id.slice(-6).toUpperCase()}</p>
           <p className="text-xs text-white/40">
-            {formatDate(booking.createdAt?.toDate() || new Date(), {
+            {formatDate(toDate(booking.createdAt) || new Date(), {
               month: "short",
               day: "numeric",
               hour: "2-digit",
@@ -144,7 +144,7 @@ export default function BookingsPage() {
         <div>
           <p className="text-sm text-white">{booking.serviceName}</p>
           <p className="text-xs text-white/50">
-            {formatDate(booking.scheduledAt?.toDate() || new Date(), {
+            {formatDate(toDate(booking.scheduledAt) || new Date(), {
               month: "short",
               day: "numeric",
               hour: "2-digit",

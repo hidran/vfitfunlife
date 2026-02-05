@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAdminStore } from "@/stores/adminStore";
 import { Button } from "@/components/ui/button";
 import { UserRoleBadge, StatusBadge } from "@/components/admin";
-import { formatDate, formatPrice } from "@/lib/utils";
+import { formatDate, formatPrice, toDate } from "@/lib/utils";
 import { User, UserRole } from "@/types/firebase";
 import {
   ArrowLeft,
@@ -226,7 +226,7 @@ export default function UserDetailClient({ userId }: UserDetailClientProps) {
                 <div>
                   <p className="text-xs text-white/40">Joined</p>
                   <p className="text-sm text-white">
-                    {user.createdAt ? formatDate(user.createdAt.toDate()) : "N/A"}
+                    {formatDate(toDate(user.createdAt) || new Date())}
                   </p>
                 </div>
               </div>
@@ -238,7 +238,7 @@ export default function UserDetailClient({ userId }: UserDetailClientProps) {
                   <p className="text-xs text-white/40">Last Login</p>
                   <p className="text-sm text-white">
                     {user.lastLoginAt
-                      ? formatDate(user.lastLoginAt.toDate(), {
+                      ? formatDate(toDate(user.lastLoginAt) || new Date(), {
                           month: "short",
                           day: "numeric",
                           hour: "2-digit",
@@ -307,7 +307,7 @@ export default function UserDetailClient({ userId }: UserDetailClientProps) {
                   <span className="text-white/50">Date of Birth</span>
                   <span className="text-white">
                     {user.dateOfBirth
-                      ? formatDate(user.dateOfBirth.toDate())
+                      ? formatDate(toDate(user.dateOfBirth) || new Date())
                       : "Not set"}
                   </span>
                 </div>

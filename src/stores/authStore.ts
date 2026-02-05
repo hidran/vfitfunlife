@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { User as FirebaseUser, onAuthStateChanged } from 'firebase/auth';
+import { User as FirebaseUser, onAuthStateChanged, setPersistence, indexedDBLocalPersistence } from 'firebase/auth';
 import { User } from '@/types/firebase';
 import { auth } from '@/lib/firebase/config';
 import {
@@ -18,6 +18,7 @@ import {
   initializeUserProfile,
 } from '@/lib/firebase/auth';
 import { RecaptchaVerifier } from 'firebase/auth';
+import { isNativePlatform } from '@/lib/capacitor';
 
 interface AuthState {
   // Auth state
@@ -77,6 +78,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     let isCancelled = false;
     // Track if redirect was processed to prevent duplicate handling
     let redirectProcessing = false;
+    // Track if auth state has been received
+    let authStateReceived = false;
+
+    // Set auth persistence (especially important for native apps)
+    const setupPersistence = async () => {
+      try {
+        // For native apps, ensure we use the correct persistence
+        if (isNativePlatform()) {
+          console.log('[Auth] Setting up native auth persistence...');
+          await setPersistence(auth, indexedDBLocalPersistence);
+          console.log('[Auth] Auth persistence set to indexedDB');
+        }
+      } catch (error) {
+        console.warn('[Auth] Failed to set persistence:', error);
+      }
+    };
 
     // Handle redirect result first (for Google/Apple sign-in on web)
     const handleRedirect = async () => {
@@ -104,6 +121,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return;
       }
 
+      // Only set redirectProcessing if we're actually going to check for a redirect
+      // This prevents blocking onAuthStateChanged when there's no redirect to process
       redirectProcessing = true;
       lastProcessedUrl = currentUrl;
 
@@ -119,6 +138,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           set({ firebaseUser: redirectUser, isLoading: true });
           // Note: onAuthStateChanged will also fire, but loadUserData has UID check
         }
+        // If no redirect user, onAuthStateChanged will handle the already-logged-in user
       } catch (error: any) {
         if (isCancelled) return;
         console.error("[Auth] Error handling auth redirect:", error);
@@ -128,19 +148,36 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       } finally {
         redirectHandled = true;
         redirectProcessing = false;
+        console.log('[Auth] Redirect handling complete, redirectProcessing = false');
       }
     };
 
+    // Setup persistence first
+    setupPersistence();
+
+    // For native apps, check currentUser immediately as onAuthStateChanged can be delayed
+    if (isNativePlatform() && auth.currentUser) {
+      console.log('[Auth] Native app: currentUser found immediately:', auth.currentUser.uid);
+      authStateReceived = true;
+      set({ firebaseUser: auth.currentUser, isLoading: true });
+      // Use setTimeout to not block the initialization
+      setTimeout(() => {
+        if (!isCancelled) {
+          get().loadUserData(auth.currentUser!.uid);
+        }
+      }, 0);
+    }
+
     // Subscribe to auth state changes
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      authStateReceived = true;
       console.log('[Auth] onAuthStateChanged fired, user:', firebaseUser ? firebaseUser.uid : 'null');
       if (isCancelled) return;
       
-      // If we're processing a redirect, wait for it unless this is a null (logout)
-      if (redirectProcessing && firebaseUser) {
-        console.log('[Auth] Redirect processing, skipping auth state change');
-        return;
-      }
+      // Note: We don't skip when redirectProcessing is true because:
+      // 1. The redirect check might complete before onAuthStateChanged fires
+      // 2. If no redirect user is found, onAuthStateChanged needs to handle the persistent auth user
+      // 3. loadUserData has duplicate loading checks to prevent issues
       
       if (firebaseUser) {
         // Avoid duplicate load if redirect already handled this user
@@ -167,9 +204,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // Start redirect handling (don't await, let it run in parallel with auth listener)
     handleRedirect();
 
+    // Set a timeout to ensure auth eventually completes (especially for native apps)
+    // Sometimes onAuthStateChanged can take a while or not fire properly
+    const timeoutId = setTimeout(() => {
+      if (!isCancelled && !authStateReceived) {
+        console.warn('[Auth] Auth state timeout - no response from onAuthStateChanged');
+        const currentState = get();
+        if (currentState.isLoading && !currentState.isInitialized) {
+          set({
+            isLoading: false,
+            isInitialized: true,
+            error: null,
+          });
+        }
+      }
+    }, 5000);
+
     // Return cleanup function
     return () => {
       isCancelled = true;
+      clearTimeout(timeoutId);
       unsubscribe();
     };
   },

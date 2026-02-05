@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAdminStore } from "@/stores/adminStore";
 import { Button } from "@/components/ui/button";
 import { VerificationBadge, StatusBadge } from "@/components/admin";
-import { formatDate, formatPrice } from "@/lib/utils";
+import { formatDate, formatPrice, toDate } from "@/lib/utils";
 import { AdminProvider } from "@/types/admin";
 import { Timestamp } from "firebase/firestore";
 import {
@@ -350,8 +350,8 @@ export default function ProviderDetailClient({ providerId }: ProviderDetailClien
                         <p className="font-medium text-white">{cert.name}</p>
                         <p className="text-sm text-white/50">{cert.issuingOrganization}</p>
                         <p className="text-xs text-white/40 mt-1">
-                          Issued: {formatDate(cert.issueDate.toDate())}
-                          {cert.expiryDate && ` · Expires: ${formatDate(cert.expiryDate.toDate())}`}
+                          Issued: {formatDate(toDate(cert.issueDate) || new Date())}
+                          {cert.expiryDate && ` · Expires: ${formatDate(toDate(cert.expiryDate) || new Date())}`}
                         </p>
                       </div>
                     </div>

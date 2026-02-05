@@ -185,12 +185,12 @@ export async function getUsers(
       );
     }
 
-    // Date filtering
+    // Date filtering (createdAt is already converted to Date by convertTimestamps)
     if (filters.dateFrom) {
-      users = users.filter((u) => u.createdAt?.toDate() >= filters.dateFrom!);
+      users = users.filter((u) => (u.createdAt as unknown as Date) >= filters.dateFrom!);
     }
     if (filters.dateTo) {
-      users = users.filter((u) => u.createdAt?.toDate() <= filters.dateTo!);
+      users = users.filter((u) => (u.createdAt as unknown as Date) <= filters.dateTo!);
     }
 
     const total = users.length;
@@ -402,12 +402,12 @@ export async function getBookings(
       ...convertTimestamps(doc.data()),
     })) as Booking[];
 
-    // Date filtering
+    // Date filtering (scheduledAt is already converted to Date by convertTimestamps)
     if (filters.dateFrom) {
-      bookings = bookings.filter((b) => b.scheduledAt?.toDate() >= filters.dateFrom!);
+      bookings = bookings.filter((b) => (b.scheduledAt as unknown as Date) >= filters.dateFrom!);
     }
     if (filters.dateTo) {
-      bookings = bookings.filter((b) => b.scheduledAt?.toDate() <= filters.dateTo!);
+      bookings = bookings.filter((b) => (b.scheduledAt as unknown as Date) <= filters.dateTo!);
     }
 
     // Search
@@ -535,12 +535,12 @@ export async function getSystemLogs(
       ...convertTimestamps(doc.data()),
     })) as SystemLog[];
 
-    // Date filtering
+    // Date filtering (timestamp is already converted to Date by convertTimestamps)
     if (filters.dateFrom) {
-      logs = logs.filter((l) => l.timestamp?.toDate() >= filters.dateFrom!);
+      logs = logs.filter((l) => (l.timestamp as unknown as Date) >= filters.dateFrom!);
     }
     if (filters.dateTo) {
-      logs = logs.filter((l) => l.timestamp?.toDate() <= filters.dateTo!);
+      logs = logs.filter((l) => (l.timestamp as unknown as Date) <= filters.dateTo!);
     }
 
     const total = logs.length;
@@ -724,12 +724,12 @@ export async function getAdminTransactions(filters?: {
       ...convertTimestamps(doc.data()),
     })) as AdminTransaction[];
 
-    // Date filtering
+    // Date filtering (createdAt is already converted to Date by convertTimestamps)
     if (filters?.dateFrom) {
-      transactions = transactions.filter((t) => t.createdAt?.toDate() >= filters.dateFrom!);
+      transactions = transactions.filter((t) => (t.createdAt as unknown as Date) >= filters.dateFrom!);
     }
     if (filters?.dateTo) {
-      transactions = transactions.filter((t) => t.createdAt?.toDate() <= filters.dateTo!);
+      transactions = transactions.filter((t) => (t.createdAt as unknown as Date) <= filters.dateTo!);
     }
 
     return transactions;

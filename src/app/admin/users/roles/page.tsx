@@ -5,7 +5,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { DataTable, UserRoleBadge } from "@/components/admin";
 import { Button } from "@/components/ui/button";
 import { Column } from "@/components/admin/DataTable";
-import { formatDate } from "@/lib/utils";
+import { formatDate, toDate } from "@/lib/utils";
 import { User, UserRole } from "@/types/firebase";
 import {
   Shield,
@@ -127,18 +127,21 @@ export default function UserRolesPage() {
     {
       key: "lastLogin",
       header: "Last Login",
-      cell: (user) => (
-        <span className="text-sm text-white/50">
-          {user.lastLoginAt
-            ? formatDate(user.lastLoginAt.toDate(), {
-                month: "short",
-                day: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })
-            : "Never"}
-        </span>
-      ),
+      cell: (user) => {
+        const date = toDate(user.lastLoginAt);
+        return (
+          <span className="text-sm text-white/50">
+            {date
+              ? formatDate(date, {
+                  month: "short",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : "Never"}
+          </span>
+        );
+      },
       width: "w-32",
     },
   ];

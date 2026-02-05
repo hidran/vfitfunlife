@@ -7,65 +7,7 @@ import { useProviderStore } from '@/stores/providerStore';
 import { ProviderClient } from '@/types/provider';
 import Link from 'next/link';
 
-// Mock data for demo
-const MOCK_CLIENTS: ProviderClient[] = [
-  {
-    id: '1',
-    userId: 'user1',
-    name: 'John Smith',
-    email: 'john.smith@example.com',
-    phone: '+39 123 456 7890',
-    totalBookings: 12,
-    totalSpent: 850,
-    lastVisit: new Date('2024-01-20'),
-    firstVisit: new Date('2023-06-15'),
-    notes: 'Prefers morning sessions',
-  },
-  {
-    id: '2',
-    userId: 'user2',
-    name: 'Sarah Johnson',
-    email: 'sarah.j@example.com',
-    phone: '+39 234 567 8901',
-    totalBookings: 8,
-    totalSpent: 640,
-    lastVisit: new Date('2024-01-18'),
-    firstVisit: new Date('2023-08-22'),
-    notes: 'Has knee issues - avoid high impact',
-  },
-  {
-    id: '3',
-    userId: 'user3',
-    name: 'Michael Brown',
-    email: 'mbrown@example.com',
-    phone: '+39 345 678 9012',
-    totalBookings: 5,
-    totalSpent: 400,
-    lastVisit: new Date('2024-01-15'),
-    firstVisit: new Date('2023-11-10'),
-  },
-  {
-    id: '4',
-    userId: 'user4',
-    name: 'Emma Davis',
-    email: 'emma.davis@example.com',
-    phone: '+39 456 789 0123',
-    totalBookings: 20,
-    totalSpent: 1800,
-    lastVisit: new Date('2024-01-22'),
-    firstVisit: new Date('2023-03-05'),
-    notes: 'VIP client - priority scheduling',
-  },
-  {
-    id: '5',
-    userId: 'user5',
-    name: 'James Wilson',
-    email: 'j.wilson@example.com',
-    totalBookings: 3,
-    totalSpent: 240,
-    firstVisit: new Date('2024-01-10'),
-  },
-];
+// Real data is fetched from Firestore via providerStore
 
 export default function ProviderClientsPage() {
   const { clients, isLoadingClients, fetchClients } = useProviderStore();
@@ -75,8 +17,8 @@ export default function ProviderClientsPage() {
     fetchClients();
   }, [fetchClients]);
 
-  // Use mock data for now
-  const displayClients = clients.length > 0 ? clients : MOCK_CLIENTS;
+  // Use real data from Firestore
+  const displayClients = clients;
 
   const filteredClients = displayClients.filter(client =>
     client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

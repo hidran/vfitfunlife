@@ -20,7 +20,7 @@ import {
   Globe,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
-import { cn } from '@/lib/utils';
+import { cn, toDate } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/Spinner';
@@ -151,7 +151,7 @@ export default function EditProfilePage() {
         phone: user.phone || '',
         bio: user.bio || '',
         dateOfBirth: user.dateOfBirth
-          ? new Date(user.dateOfBirth.toDate()).toISOString().split('T')[0]
+          ? new Date(toDate(user.dateOfBirth) || Date.now()).toISOString().split('T')[0]
           : '',
         preferredSection: user.preferredSection || 'fit',
       });
@@ -286,9 +286,18 @@ export default function EditProfilePage() {
       await refreshUserProfile();
       setSaveStatus('saved');
       setHasUnsavedChanges(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving profile:', error);
-      setSaveStatus('error');
+      // Check if it's a network/offline error
+      if (error.code === 'unavailable' || error.code === 'network-request-failed' || error.message?.includes('offline')) {
+        alert('Sei offline. Le modifiche verranno sincronizzate quando tornerai online.');
+        // Still mark as saved since Firestore will queue the write
+        setSaveStatus('saved');
+        setHasUnsavedChanges(false);
+      } else {
+        alert('Errore durante il salvataggio. Riprova più tardi.');
+        setSaveStatus('error');
+      }
     } finally {
       setIsSaving(false);
     }

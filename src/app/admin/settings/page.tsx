@@ -6,6 +6,7 @@ import { useAdminStore } from "@/stores/adminStore";
 import { useAuthStore } from "@/stores/authStore";
 import { Button } from "@/components/ui/button";
 import { PlatformSettings } from "@/types/admin";
+import { SeedDataPanel } from "@/components/admin";
 import {
   Save,
   Shield,
@@ -14,6 +15,7 @@ import {
   Bell,
   ToggleLeft,
   AlertTriangle,
+  Database,
 } from "lucide-react";
 
 export default function SettingsPage() {
@@ -315,6 +317,21 @@ export default function SettingsPage() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Demo Data Management */}
+        <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6 lg:col-span-2">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+              <Database className="w-5 h-5 text-purple-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-white">Demo Data Management</h3>
+              <p className="text-sm text-white/50">Seed or clear demo data for testing</p>
+            </div>
+          </div>
+          
+          <SeedDataPanel />
         </div>
       </div>
     </div>

@@ -38,7 +38,44 @@ import { Avatar } from '@/components/ui/Avatar';
 import { cn } from '@/lib/utils';
 import { usePullToRefresh } from 'use-pull-to-refresh';
 import { SectionSwitcher } from '@/components/ui/section-switcher';
+import { useEffect, useState } from 'react';
+import { collection, query, where, limit, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase/config';
+import { Spinner } from '@/components/ui/Spinner';
 
+// Types
+interface Provider {
+  id: string;
+  fullName: string;
+  avatarUrl: string | null;
+  specialties: string[];
+  rating: number;
+  reviewCount: number;
+  yearsOfExperience: number;
+  isVerified: boolean;
+}
+
+interface Venue {
+  id: string;
+  name: string;
+  city: string;
+  rating: number;
+  reviews: number;
+  distance: string;
+  partner: boolean;
+  specialties?: string[];
+}
+
+interface ClassSession {
+  id: string;
+  time: string;
+  name: string;
+  instructor: string;
+  spots: number;
+  tag: string;
+}
+
+// Static quick actions
 const vfitQuickActions = [
   { label: 'Palestre', icon: Dumbbell, href: '/fit/gyms' },
   { label: 'Corsi', icon: Calendar },
@@ -46,82 +83,28 @@ const vfitQuickActions = [
   { label: 'Virtual', icon: Tv },
 ];
 
-
-const vfitGyms = [
-  {
-    id: 'carosello',
-    name: 'Carosello Fitness',
-    city: 'Milano Centro',
-    rating: 4.8,
-    reviews: 124,
-    distance: '1.2 km',
-    partner: true,
-  },
-  {
-    id: 'urban-core',
-    name: 'Urban Core Gym',
-    city: 'Porta Nuova',
-    rating: 4.9,
-    reviews: 98,
-    distance: '2.4 km',
-    partner: false,
-  },
-  {
-    id: 'village-fit',
-    name: 'Village Fit Club',
-    city: 'Navigli',
-    rating: 4.7,
-    reviews: 142,
-    distance: '3.1 km',
-    partner: true,
-  },
+const vfunQuickActions = [
+  { label: 'Eventi', icon: Ticket, href: '/fun/events' },
+  { label: 'VR', icon: Glasses, href: '/fun/vr' },
+  { label: 'Party', icon: PartyPopper, href: '/fun/parties' },
+  { label: 'TV', icon: Tv, href: '/fun/tv' },
 ];
 
-const vfitClasses = [
-  {
-    time: '07:30',
-    name: 'HIIT Power',
-    instructor: 'Marco R.',
-    spots: 3,
-    tag: 'Intenso',
-  },
-  {
-    time: '12:15',
-    name: 'Pilates Flow',
-    instructor: 'Elena B.',
-    spots: 6,
-    tag: 'Balance',
-  },
-  {
-    time: '18:45',
-    name: 'Functional 360',
-    instructor: 'Luca S.',
-    spots: 2,
-    tag: 'Strength',
-  },
+const vlifeWellnessActions = [
+  { label: 'Osteopatia', icon: Bone, href: '/life/osteopatia' },
+  { label: 'Fisioterapia', icon: Activity, href: '/life/fisioterapia' },
+  { label: 'Mental Coach', icon: Brain, href: '/life/mental-coach' },
+  { label: 'Psicologo', icon: HeartHandshake, href: '/life/psicologo' },
 ];
 
-const vfitTrainers = [
-  {
-    name: 'Elena Bianchi',
-    specialty: 'Yoga & Mobility',
-    rating: 4.9,
-    reviews: 98,
-  },
-  {
-    name: 'Marco Rossi',
-    specialty: 'HIIT & Cardio',
-    rating: 4.8,
-    reviews: 132,
-  },
-  {
-    name: 'Giulia Conti',
-    specialty: 'Strength Coach',
-    rating: 4.7,
-    reviews: 76,
-  },
+const vlifeEsteticaActions = [
+  { label: 'Estetista', icon: Sparkles, href: '/life/estetista' },
+  { label: 'Parrucchiere', icon: Scissors, href: '/life/parrucchiere' },
+  { label: 'Unghie', icon: Hand, href: '/life/unghie' },
+  { label: 'Massaggi', icon: Flower2, href: '/life/massaggi' },
 ];
 
+// Static challenges
 const vfitChallenges = [
   {
     title: '30-Day Core',
@@ -137,18 +120,11 @@ const vfitChallenges = [
   },
 ];
 
-// VFun mock data
-const vfunQuickActions = [
-  { label: 'Eventi', icon: Ticket, href: '/fun/events' },
-  { label: 'VR', icon: Glasses, href: '/fun/vr' },
-  { label: 'Party', icon: PartyPopper, href: '/fun/parties' },
-  { label: 'TV', icon: Tv, href: '/fun/tv' },
-];
-
+// Static VFun content
 const vfunFeaturedEvent = {
   id: 'summer-festival-2026',
   title: 'Summer Festival 2026',
-  subtitle: 'La notte più attesa dell\'anno',
+  subtitle: 'La notte piu attesa dell\'anno',
   date: '15 Feb 2026',
   location: 'V Arena Milano',
   price: 'Da €45',
@@ -245,91 +221,6 @@ const vfunTVSchedule = [
 
 const vfunIsStreamingLive = true;
 
-// VLife Mock Data
-const vlifeWellnessActions = [
-  { label: 'Osteopatia', icon: Bone, href: '/life/osteopatia' },
-  { label: 'Fisioterapia', icon: Activity, href: '/life/fisioterapia' },
-  { label: 'Mental Coach', icon: Brain, href: '/life/mental-coach' },
-  { label: 'Psicologo', icon: HeartHandshake, href: '/life/psicologo' },
-];
-
-const vlifeEsteticaActions = [
-  { label: 'Estetista', icon: Sparkles, href: '/life/estetista' },
-  { label: 'Parrucchiere', icon: Scissors, href: '/life/parrucchiere' },
-  { label: 'Unghie', icon: Hand, href: '/life/unghie' },
-  { label: 'Massaggi', icon: Flower2, href: '/life/massaggi' },
-];
-
-const vlifeWellnessCenters = [
-  {
-    id: 'wellness-spa-milano',
-    name: 'Wellness Spa Milano',
-    city: 'Centro Storico',
-    rating: 4.9,
-    reviews: 256,
-    distance: '0.8 km',
-    specialties: ['Spa', 'Massaggi', 'Estetica'],
-    partner: true,
-  },
-  {
-    id: 'centro-benessere-navigli',
-    name: 'Centro Benessere Navigli',
-    city: 'Navigli',
-    rating: 4.7,
-    reviews: 189,
-    distance: '1.5 km',
-    specialties: ['Fisioterapia', 'Osteopatia'],
-    partner: false,
-  },
-  {
-    id: 'beauty-wellness-hub',
-    name: 'Beauty & Wellness Hub',
-    city: 'Porta Venezia',
-    rating: 4.8,
-    reviews: 312,
-    distance: '2.1 km',
-    specialties: ['Parrucchiere', 'Estetista', 'Unghie'],
-    partner: true,
-  },
-  {
-    id: 'oasi-del-relax',
-    name: 'Oasi del Relax',
-    city: 'Brera',
-    rating: 4.6,
-    reviews: 145,
-    distance: '2.8 km',
-    specialties: ['Massaggi', 'Mental Coach'],
-    partner: false,
-  },
-];
-
-const vlifeTestimonials = [
-  {
-    id: 1,
-    name: 'Francesca M.',
-    service: 'Massaggio Decontratturante',
-    rating: 5,
-    text: 'Esperienza fantastica! Il massaggio ha risolto il mio mal di schiena cronico. Staff professionale e ambiente rilassante.',
-    date: '2 giorni fa',
-  },
-  {
-    id: 2,
-    name: 'Giovanni P.',
-    service: 'Seduta di Osteopatia',
-    rating: 5,
-    text: 'Dopo anni di dolori cervicali, finalmente ho trovato sollievo. Il dottore e molto competente e attento.',
-    date: '1 settimana fa',
-  },
-  {
-    id: 3,
-    name: 'Laura B.',
-    service: 'Trattamento Viso',
-    rating: 4,
-    text: 'Pelle luminosa e idratata dopo il trattamento. Consigliatissimo per chi vuole prendersi cura di se.',
-    date: '3 giorni fa',
-  },
-];
-
 const sectionContent: Record<
   Section,
   {
@@ -384,7 +275,181 @@ const sectionContent: Record<
   },
 };
 
+// Firestore data fetching hooks
+function useTopProviders(limitCount: number = 6) {
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProviders = async () => {
+      try {
+        // Simpler query without composite index requirement
+        const q = query(
+          collection(db, 'users'),
+          where('role', '==', 'provider'),
+          limit(limitCount * 2) // Fetch more to filter locally
+        );
+        
+        const snapshot = await getDocs(q);
+        let providersData = snapshot.docs
+          .map(doc => {
+            const data = doc.data();
+            const profile = data.providerProfile || {};
+            return {
+              id: doc.id,
+              fullName: data.fullName || 'Unknown',
+              avatarUrl: data.avatarUrl || null,
+              specialties: profile.specialties || [],
+              rating: profile.rating || 0,
+              reviewCount: profile.reviewCount || 0,
+              yearsOfExperience: profile.yearsOfExperience || 0,
+              isVerified: profile.isVerified || false,
+              isActive: profile.isActive || false,
+            };
+          })
+          .filter(p => p.isActive)
+          .sort((a, b) => b.rating - a.rating)
+          .slice(0, limitCount);
+        
+        setProviders(providersData);
+      } catch (error) {
+        console.error('Error fetching providers:', error);
+        setProviders([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    // Add timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      setIsLoading(false);
+    }, 5000);
+
+    fetchProviders();
+    return () => clearTimeout(timeoutId);
+  }, [limitCount]);
+
+  return { providers, isLoading };
+}
+
+function useVenuesByType(type: 'fitness' | 'wellness', limitCount: number = 4) {
+  const [venues, setVenues] = useState<Venue[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchVenues = async () => {
+      try {
+        // Simpler query without composite index requirement
+        const q = query(
+          collection(db, 'venues'),
+          where('type', '==', type),
+          limit(limitCount * 2)
+        );
+        
+        const snapshot = await getDocs(q);
+        const venuesData = snapshot.docs
+          .map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              name: data.name || 'Unknown Venue',
+              city: data.city || data.address?.city || 'Unknown',
+              rating: data.rating || 0,
+              reviews: data.reviewCount || 0,
+              distance: `${(Math.random() * 3 + 0.5).toFixed(1)} km`,
+              partner: data.isPartner || false,
+              specialties: data.specialties || [],
+              isActive: data.isActive !== false,
+            };
+          })
+          .filter(v => v.isActive)
+          .sort((a, b) => b.rating - a.rating)
+          .slice(0, limitCount);
+        
+        setVenues(venuesData);
+      } catch (error) {
+        console.error('Error fetching venues:', error);
+        setVenues([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const timeoutId = setTimeout(() => {
+      setIsLoading(false);
+    }, 5000);
+
+    fetchVenues();
+    return () => clearTimeout(timeoutId);
+  }, [type, limitCount]);
+
+  return { venues, isLoading };
+}
+
+function useTodayClasses(limitCount: number = 3) {
+  const [classes, setClasses] = useState<ClassSession[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchClasses = async () => {
+      try {
+        // Simpler query - fetch upcoming classes without complex range queries
+        const q = query(
+          collection(db, 'classes'),
+          limit(limitCount * 3)
+        );
+        
+        const snapshot = await getDocs(q);
+        const now = new Date();
+        const classesData = snapshot.docs
+          .map(doc => {
+            const data = doc.data();
+            const startTime = data.startTime?.toDate?.() || new Date();
+            return {
+              id: doc.id,
+              time: startTime.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
+              name: data.name || 'Unnamed Class',
+              instructor: data.instructorName || 'Unknown',
+              spots: data.maxCapacity - (data.bookedCount || 0),
+              tag: data.level || 'All Levels',
+              startTime,
+              isActive: data.isActive !== false,
+            };
+          })
+          .filter(c => c.isActive && c.startTime >= now)
+          .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
+          .slice(0, limitCount);
+        
+        setClasses(classesData);
+      } catch (error) {
+        console.error('Error fetching classes:', error);
+        setClasses([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const timeoutId = setTimeout(() => {
+      setIsLoading(false);
+    }, 5000);
+
+    fetchClasses();
+    return () => clearTimeout(timeoutId);
+  }, [limitCount]);
+
+  return { classes, isLoading };
+}
+
 function VFitHome() {
+  const { providers: trainers, isLoading: loadingTrainers } = useTopProviders(6);
+  const { venues: gyms, isLoading: loadingGyms } = useVenuesByType('fitness', 4);
+  const { classes: classSessions, isLoading: loadingClasses } = useTodayClasses(3);
+
+  // Fallback data while loading
+  const displayTrainers = trainers.length > 0 ? trainers.slice(0, 3) : [];
+  const displayGyms = gyms.length > 0 ? gyms : [];
+  const displayClasses = classSessions.length > 0 ? classSessions : [];
+
   return (
     <div className="container-mobile py-6 space-y-8">
       <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-r from-vfit-secondary/25 via-vfit-primary/20 to-vfit-accent/20 p-5">
@@ -468,7 +533,9 @@ function VFitHome() {
 
       <section>
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-text-inverse">Palestre vicine</h3>
+          <h3 className="text-lg font-semibold text-text-inverse">
+            {loadingGyms ? 'Caricamento...' : displayGyms.length > 0 ? 'Palestre vicine' : 'Palestre Partner'}
+          </h3>
           <Link
             href="/fit/gyms"
             className="text-sm font-medium text-section-primary"
@@ -477,104 +544,153 @@ function VFitHome() {
           </Link>
         </div>
         <div className="mt-4 flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-          {vfitGyms.map((gym) => (
-            <Link
-              key={gym.id}
-              href={`/venue/${gym.id}`}
-              className="min-w-[220px] rounded-2xl border border-white/10 bg-white/5 overflow-hidden"
-            >
-              <div className="relative h-28 bg-gradient-to-br from-vfit-secondary/40 via-vfit-primary/20 to-transparent">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.18),_transparent_60%)]" />
-                {gym.partner && (
-                  <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold uppercase text-background-dark">
-                    Partner
-                  </span>
-                )}
-                <div className="absolute right-3 top-3 rounded-full bg-background-dark/80 px-2 py-1 text-[11px] font-semibold text-white">
-                  {gym.rating.toFixed(1)}
+          {loadingGyms ? (
+            <div className="min-w-[220px] h-40 flex items-center justify-center">
+              <Spinner size="md" />
+            </div>
+          ) : displayGyms.length > 0 ? (
+            displayGyms.map((gym) => (
+              <Link
+                key={gym.id}
+                href={`/venue/${gym.id}`}
+                className="min-w-[220px] rounded-2xl border border-white/10 bg-white/5 overflow-hidden"
+              >
+                <div className="relative h-28 bg-gradient-to-br from-vfit-secondary/40 via-vfit-primary/20 to-transparent">
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.18),_transparent_60%)]" />
+                  {gym.partner && (
+                    <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold uppercase text-background-dark">
+                      Partner
+                    </span>
+                  )}
+                  <div className="absolute right-3 top-3 rounded-full bg-background-dark/80 px-2 py-1 text-[11px] font-semibold text-white">
+                    {gym.rating.toFixed(1)}
+                  </div>
                 </div>
-              </div>
-              <div className="p-3">
-                <h4 className="text-sm font-semibold text-text-inverse">
-                  {gym.name}
-                </h4>
-                <p className="text-xs text-text-tertiary">{gym.city}</p>
-                <div className="mt-2 flex items-center justify-between text-xs text-text-tertiary">
-                  <span>{gym.distance}</span>
-                  <span>{gym.reviews} recensioni</span>
+                <div className="p-3">
+                  <h4 className="text-sm font-semibold text-text-inverse">
+                    {gym.name}
+                  </h4>
+                  <p className="text-xs text-text-tertiary">{gym.city}</p>
+                  <div className="mt-2 flex items-center justify-between text-xs text-text-tertiary">
+                    <span>{gym.distance}</span>
+                    <span>{gym.reviews} recensioni</span>
+                  </div>
                 </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            ))
+          ) : (
+            <div className="min-w-[220px] rounded-2xl border border-white/10 bg-white/5 p-4 text-center">
+              <p className="text-sm text-text-tertiary">Nessuna palestra disponibile</p>
+              <Link href="/booking" className="text-sm text-section-primary mt-2 inline-block">
+                Trova un trainer
+              </Link>
+            </div>
+          )}
         </div>
       </section>
 
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-text-inverse">Corsi oggi</h3>
+          <h3 className="text-lg font-semibold text-text-inverse">
+            {loadingClasses ? 'Caricamento...' : displayClasses.length > 0 ? 'Corsi oggi' : 'Corsi disponibili'}
+          </h3>
           <button className="text-sm font-medium text-section-primary">Calendario</button>
         </div>
         <div className="space-y-3">
-          {vfitClasses.map((session, index) => (
-            <div
-              key={`class-${session.name}-${index}`}
-              className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3"
-            >
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 flex-col items-center justify-center rounded-xl bg-section-primary/15 text-section-primary">
-                  <span className="text-xs font-semibold">{session.time}</span>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-text-inverse">
-                    {session.name}
-                  </p>
-                  <p className="text-xs text-text-tertiary">
-                    {session.instructor} · {session.tag}
-                  </p>
-                </div>
-              </div>
-              <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-text-inverse">
-                {session.spots} posti
-              </span>
+          {loadingClasses ? (
+            <div className="flex items-center justify-center py-8">
+              <Spinner size="md" />
             </div>
-          ))}
+          ) : displayClasses.length > 0 ? (
+            displayClasses.map((session) => (
+              <div
+                key={session.id}
+                className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="flex h-12 w-12 flex-col items-center justify-center rounded-xl bg-section-primary/15 text-section-primary">
+                    <span className="text-xs font-semibold">{session.time}</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-text-inverse">
+                      {session.name}
+                    </p>
+                    <p className="text-xs text-text-tertiary">
+                      {session.instructor} · {session.tag}
+                    </p>
+                  </div>
+                </div>
+                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-text-inverse">
+                  {session.spots} posti
+                </span>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-6 border border-white/10 rounded-2xl">
+              <p className="text-sm text-text-tertiary">Nessun corso oggi</p>
+              <Link href="/booking" className="text-sm text-section-primary mt-2 inline-block">
+                Prenota un trainer personale
+              </Link>
+            </div>
+          )}
         </div>
       </section>
 
       <section>
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-text-inverse">Istruttori top</h3>
-          <button className="text-sm font-medium text-section-primary">Scopri</button>
+          <h3 className="text-lg font-semibold text-text-inverse">
+            {loadingTrainers ? 'Caricamento...' : 'Istruttori top'}
+          </h3>
+          <Link href="/booking" className="text-sm font-medium text-section-primary">
+            Scopri
+          </Link>
         </div>
         <div className="mt-4 flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-          {vfitTrainers.map((trainer, index) => (
-            <div
-              key={`trainer-${trainer.name}-${index}`}
-              className="min-w-[200px] rounded-2xl border border-white/10 bg-white/5 p-4"
-            >
-              <div className="flex items-center gap-3">
-                <Avatar name={trainer.name} size="md" />
-                <div>
-                  <p className="text-sm font-semibold text-text-inverse">
-                    {trainer.name}
-                  </p>
-                  <p className="text-xs text-text-tertiary">
-                    {trainer.specialty}
-                  </p>
-                </div>
-              </div>
-              <div className="mt-4 flex items-center gap-2 text-xs text-text-tertiary">
-                <Star className="h-4 w-4 text-yellow-400" />
-                <span className="text-text-inverse font-semibold">
-                  {trainer.rating.toFixed(1)}
-                </span>
-                <span>({trainer.reviews})</span>
-              </div>
-              <button className="mt-4 w-full rounded-full bg-section-primary/20 py-2 text-xs font-semibold text-section-primary">
-                Prenota
-              </button>
+          {loadingTrainers ? (
+            <div className="min-w-[200px] h-32 flex items-center justify-center">
+              <Spinner size="md" />
             </div>
-          ))}
+          ) : displayTrainers.length > 0 ? (
+            displayTrainers.map((trainer) => (
+              <Link
+                key={trainer.id}
+                href={`/provider/${trainer.id}`}
+                className="min-w-[200px] rounded-2xl border border-white/10 bg-white/5 p-4"
+              >
+                <div className="flex items-center gap-3">
+                  <Avatar name={trainer.fullName} size="md" src={trainer.avatarUrl} />
+                  <div>
+                    <p className="text-sm font-semibold text-text-inverse">
+                      {trainer.fullName}
+                    </p>
+                    <p className="text-xs text-text-tertiary">
+                      {trainer.specialties[0] || 'Trainer'}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center gap-2 text-xs text-text-tertiary">
+                  <Star className="h-4 w-4 text-yellow-400" />
+                  <span className="text-text-inverse font-semibold">
+                    {trainer.rating.toFixed(1)}
+                  </span>
+                  <span>({trainer.reviewCount})</span>
+                  {trainer.isVerified && (
+                    <span className="ml-auto text-success-DEFAULT">Verificato</span>
+                  )}
+                </div>
+                <button className="mt-4 w-full rounded-full bg-section-primary/20 py-2 text-xs font-semibold text-section-primary">
+                  Prenota
+                </button>
+              </Link>
+            ))
+          ) : (
+            <div className="min-w-[200px] rounded-2xl border border-white/10 bg-white/5 p-4 text-center">
+              <p className="text-sm text-text-tertiary">Nessun trainer disponibile</p>
+              <Link href="/booking" className="text-sm text-section-primary mt-2 inline-block">
+                Cerca trainer
+              </Link>
+            </div>
+          )}
         </div>
       </section>
 
@@ -637,53 +753,6 @@ function VFitHome() {
         </div>
       </section>
     </div>
-  );
-}
-
-export default function HomePage() {
-  const { section } = useSection();
-  const { isRefreshing, pullPosition } = usePullToRefresh({
-    onRefresh: () => new Promise(resolve => setTimeout(resolve, 2000)),
-  });
-
-  return (
-    <>
-      <header className="sticky top-0 z-40 bg-background-dark/80 backdrop-blur-md">
-        <div className="container-mobile flex items-center justify-between py-4">
-          <h1 className="text-2xl font-bold text-white">V</h1>
-          <SectionSwitcher />
-          <Avatar name="User" size="sm" />
-        </div>
-      </header>
-      <main
-        style={{
-          transform: `translateY(${isRefreshing ? 60 : pullPosition}px)`,
-          transition: 'transform 0.3s',
-        }}
-      >
-        <div
-          style={{
-            position: 'fixed',
-            top: '-60px',
-            left: 0,
-            right: 0,
-            height: '60px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          {isRefreshing ? (
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
-          ) : (
-            <div style={{ transform: `rotate(${pullPosition}deg)` }}>⬇️</div>
-          )}
-        </div>
-        {section === 'fit' && <VFitHome />}
-        {section === 'fun' && <VFunHome />}
-        {section === 'life' && <VLifeHome />}
-      </main>
-    </>
   );
 }
 
@@ -1040,7 +1109,102 @@ function VFunHome() {
   );
 }
 
+// Testimonials from Firestore
+function useTestimonials(limitCount: number = 3) {
+  const [testimonials, setTestimonials] = useState<Array<{
+    id: string;
+    name: string;
+    service: string;
+    rating: number;
+    text: string;
+    date: string;
+  }>>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTestimonials = async () => {
+      try {
+        // Simpler query without composite index
+        const q = query(
+          collection(db, 'reviews'),
+          limit(limitCount * 3)
+        );
+        
+        const snapshot = await getDocs(q);
+        const reviewsData = snapshot.docs
+          .map(doc => {
+            const data = doc.data();
+            const createdAt = data.createdAt?.toDate?.() || new Date();
+            const daysAgo = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+            return {
+              id: doc.id,
+              name: data.userName?.split(' ')[0] + ' ' + 
+                (data.userName?.split(' ')[1]?.charAt(0) || '') + '.' || 'Anonymous',
+              service: data.serviceName || 'Service',
+              rating: data.rating || 5,
+              text: data.comment || data.text || '',
+              date: daysAgo === 0 ? 'Oggi' : daysAgo === 1 ? 'Ieri' : `${daysAgo} giorni fa`,
+            };
+          })
+          .filter(r => r.rating >= 4)
+          .sort((a, b) => b.rating - a.rating)
+          .slice(0, limitCount);
+        
+        setTestimonials(reviewsData);
+      } catch (error) {
+        console.error('Error fetching testimonials:', error);
+        setTestimonials([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const timeoutId = setTimeout(() => {
+      setIsLoading(false);
+    }, 5000);
+
+    fetchTestimonials();
+    return () => clearTimeout(timeoutId);
+  }, [limitCount]);
+
+  return { testimonials, isLoading };
+}
+
 function VLifeHome() {
+  const { venues: centers, isLoading: loadingCenters } = useVenuesByType('wellness', 4);
+  const { testimonials, isLoading: loadingTestimonials } = useTestimonials(3);
+
+  // Fallback testimonials
+  const fallbackTestimonials = [
+    {
+      id: '1',
+      name: 'Francesca M.',
+      service: 'Massaggio Decontratturante',
+      rating: 5,
+      text: 'Esperienza fantastica! Il massaggio ha risolto il mio mal di schiena cronico. Staff professionale e ambiente rilassante.',
+      date: '2 giorni fa',
+    },
+    {
+      id: '2',
+      name: 'Giovanni P.',
+      service: 'Seduta di Osteopatia',
+      rating: 5,
+      text: 'Dopo anni di dolori cervicali, finalmente ho trovato sollievo. Il dottore e molto competente e attento.',
+      date: '1 settimana fa',
+    },
+    {
+      id: '3',
+      name: 'Laura B.',
+      service: 'Trattamento Viso',
+      rating: 4,
+      text: 'Pelle luminosa e idratata dopo il trattamento. Consigliatissimo per chi vuole prendersi cura di se.',
+      date: '3 giorni fa',
+    },
+  ];
+
+  const displayTestimonials = testimonials.length > 0 ? testimonials : fallbackTestimonials;
+  const displayCenters = centers.length > 0 ? centers : [];
+
   return (
     <div className="container-mobile py-6 space-y-8 pb-24">
       {/* VIP Banner - Wellness Discount */}
@@ -1172,7 +1336,9 @@ function VLifeHome() {
       {/* Centri Vicini - Horizontal Carousel */}
       <section>
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-text-inverse">Centri Vicini</h3>
+          <h3 className="text-lg font-semibold text-text-inverse">
+            {loadingCenters ? 'Caricamento...' : displayCenters.length > 0 ? 'Centri Vicini' : 'Centri Partner'}
+          </h3>
           <Link
             href="/life/centers"
             className="text-sm font-medium text-section-primary"
@@ -1181,48 +1347,61 @@ function VLifeHome() {
           </Link>
         </div>
         <div className="mt-4 flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-          {vlifeWellnessCenters.map((center) => (
-            <Link
-              key={center.id}
-              href={`/venue/${center.id}`}
-              className="min-w-[240px] rounded-2xl border border-white/10 bg-white/5 overflow-hidden"
-            >
-              <div className="relative h-28 bg-gradient-to-br from-pink-500/30 via-purple-500/20 to-indigo-500/10">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.15),_transparent_60%)]" />
-                {center.partner && (
-                  <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold uppercase text-background-dark">
-                    Partner
-                  </span>
-                )}
-                <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-background-dark/80 px-2 py-1">
-                  <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
-                  <span className="text-[11px] font-semibold text-white">
-                    {center.rating.toFixed(1)}
-                  </span>
-                </div>
-              </div>
-              <div className="p-3">
-                <h4 className="text-sm font-semibold text-text-inverse">
-                  {center.name}
-                </h4>
-                <p className="text-xs text-text-tertiary">{center.city}</p>
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {center.specialties.slice(0, 2).map((spec) => (
-                    <span key={spec} className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-text-tertiary">
-                      {spec}
+          {loadingCenters ? (
+            <div className="min-w-[240px] h-40 flex items-center justify-center">
+              <Spinner size="md" />
+            </div>
+          ) : displayCenters.length > 0 ? (
+            displayCenters.map((center) => (
+              <Link
+                key={center.id}
+                href={`/venue/${center.id}`}
+                className="min-w-[240px] rounded-2xl border border-white/10 bg-white/5 overflow-hidden"
+              >
+                <div className="relative h-28 bg-gradient-to-br from-pink-500/30 via-purple-500/20 to-indigo-500/10">
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.15),_transparent_60%)]" />
+                  {center.partner && (
+                    <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold uppercase text-background-dark">
+                      Partner
                     </span>
-                  ))}
+                  )}
+                  <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-background-dark/80 px-2 py-1">
+                    <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
+                    <span className="text-[11px] font-semibold text-white">
+                      {center.rating.toFixed(1)}
+                    </span>
+                  </div>
                 </div>
-                <div className="mt-2 flex items-center justify-between text-xs text-text-tertiary">
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-3 w-3" />
-                    {center.distance}
-                  </span>
-                  <span>{center.reviews} recensioni</span>
+                <div className="p-3">
+                  <h4 className="text-sm font-semibold text-text-inverse">
+                    {center.name}
+                  </h4>
+                  <p className="text-xs text-text-tertiary">{center.city}</p>
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {(center.specialties || []).slice(0, 2).map((spec) => (
+                      <span key={spec} className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-text-tertiary">
+                        {spec}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="mt-2 flex items-center justify-between text-xs text-text-tertiary">
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-3 w-3" />
+                      {center.distance}
+                    </span>
+                    <span>{center.reviews} recensioni</span>
+                  </div>
                 </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            ))
+          ) : (
+            <div className="min-w-[240px] rounded-2xl border border-white/10 bg-white/5 p-4 text-center">
+              <p className="text-sm text-text-tertiary">Nessun centro disponibile</p>
+              <Link href="/booking" className="text-sm text-section-primary mt-2 inline-block">
+                Trova un professionista
+              </Link>
+            </div>
+          )}
         </div>
       </section>
 
@@ -1233,7 +1412,11 @@ function VLifeHome() {
           <Quote className="h-5 w-5 text-section-primary" />
         </div>
         <div className="mt-4 flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-          {vlifeTestimonials.map((testimonial) => (
+          {loadingTestimonials ? (
+            <div className="min-w-[280px] h-40 flex items-center justify-center">
+              <Spinner size="md" />
+            </div>
+          ) : displayTestimonials.map((testimonial) => (
             <div
               key={testimonial.id}
               className="min-w-[280px] rounded-2xl border border-white/10 bg-white/5 p-4"
@@ -1338,3 +1521,49 @@ function VLifeHome() {
   );
 }
 
+export default function HomePage() {
+  const { section } = useSection();
+  const { isRefreshing, pullPosition } = usePullToRefresh({
+    onRefresh: () => new Promise(resolve => setTimeout(resolve, 2000)),
+  });
+
+  return (
+    <>
+      <header className="sticky top-0 z-40 bg-background-dark/80 backdrop-blur-md">
+        <div className="container-mobile flex items-center justify-between py-4">
+          <h1 className="text-2xl font-bold text-white">V</h1>
+          <SectionSwitcher />
+          <Avatar name="User" size="sm" />
+        </div>
+      </header>
+      <main
+        style={{
+          transform: `translateY(${isRefreshing ? 60 : pullPosition}px)`,
+          transition: 'transform 0.3s',
+        }}
+      >
+        <div
+          style={{
+            position: 'fixed',
+            top: '-60px',
+            left: 0,
+            right: 0,
+            height: '60px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {isRefreshing ? (
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+          ) : (
+            <div style={{ transform: `rotate(${pullPosition}deg)` }}>⬇️</div>
+          )}
+        </div>
+        {section === 'fit' && <VFitHome />}
+        {section === 'fun' && <VFunHome />}
+        {section === 'life' && <VLifeHome />}
+      </main>
+    </>
+  );
+}
