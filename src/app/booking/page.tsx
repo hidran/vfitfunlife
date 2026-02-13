@@ -56,14 +56,18 @@ export default function BookingPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState(searchFilters.query || '');
 
+  const runSearch = useCallback(() => {
+    return searchProviders({ ...searchFilters, query: searchQuery });
+  }, [searchProviders, searchFilters, searchQuery]);
+
   // Debounced search
   useEffect(() => {
     const timer = setTimeout(() => {
-      searchProviders({ ...searchFilters, query: searchQuery });
+      void runSearch();
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, searchFilters.category, searchFilters.sortBy]);
+  }, [runSearch]);
 
   const handleProviderSelect = useCallback((provider: ProviderSearchResult) => {
     selectProvider(provider);

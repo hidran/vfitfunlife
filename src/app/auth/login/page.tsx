@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -265,9 +266,9 @@ export default function LoginPage() {
             <div className="mt-8 text-center">
               <p className="text-text-secondary text-sm">
                 Non hai un account?{' '}
-                <a href="/auth/register" className="font-semibold text-primary hover:underline">
+                <Link href="/auth/register" className="font-semibold text-primary hover:underline">
                   Registrati
-                </a>
+                </Link>
               </p>
             </div>
           </div>
@@ -277,13 +278,13 @@ export default function LoginPage() {
         <div className="px-6 py-8 text-center">
           <p className="text-text-secondary text-xs mb-2">
             Continuando, accetti i nostri{' '}
-            <a href="/terms" className="text-primary hover:underline">
+            <Link href="/terms" className="text-primary hover:underline">
               Termini di Servizio
-            </a>{' '}
+            </Link>{' '}
             e la{' '}
-            <a href="/privacy" className="text-primary hover:underline">
+            <Link href="/privacy" className="text-primary hover:underline">
               Privacy Policy
-            </a>
+            </Link>
           </p>
         </div>
       </div>
@@ -497,9 +498,9 @@ export default function LoginPage() {
                   <input type="checkbox" className="rounded border-white/20 bg-white/5" />
                   <span>Ricordami</span>
                 </label>
-                <a href="/auth/forgot-password" className="text-primary hover:underline">
+                <Link href="/auth/forgot-password" className="text-primary hover:underline">
                   Password dimenticata?
-                </a>
+                </Link>
               </div>
 
               <Button
@@ -514,9 +515,9 @@ export default function LoginPage() {
             <div className="mt-8 text-center space-y-4">
               <p className="text-text-secondary text-sm">
                 Non hai un account?{' '}
-                <a href="/auth/register" className="font-semibold text-primary hover:underline">
+                <Link href="/auth/register" className="font-semibold text-primary hover:underline">
                   Registrati
-                </a>
+                </Link>
               </p>
             </div>
           </div>
@@ -526,13 +527,13 @@ export default function LoginPage() {
         <div className="px-6 py-8 text-center">
           <p className="text-text-secondary text-xs mb-2">
             Continuando, accetti i nostri{' '}
-            <a href="/terms" className="text-primary hover:underline">
+            <Link href="/terms" className="text-primary hover:underline">
               Termini di Servizio
-            </a>{' '}
+            </Link>{' '}
             e la{' '}
-            <a href="/privacy" className="text-primary hover:underline">
+            <Link href="/privacy" className="text-primary hover:underline">
               Privacy Policy
-            </a>
+            </Link>
           </p>
         </div>
       </div>

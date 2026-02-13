@@ -34,15 +34,12 @@ interface DeviceInfo {
  * All functions gracefully degrade when running in web browser
  */
 export function useCapacitor() {
-  const [isNative, setIsNative] = useState(false);
-  const [platform, setPlatform] = useState<'ios' | 'android' | 'web'>('web');
+  const [isNative] = useState<boolean>(() => isNativePlatform());
+  const [platform] = useState<'ios' | 'android' | 'web'>(() => getPlatform());
   const [networkStatus, setNetworkStatus] = useState<NetworkStatus>({ connected: true });
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null);
 
   useEffect(() => {
-    setIsNative(isNativePlatform());
-    setPlatform(getPlatform());
-
     // Get device info
     getDeviceInfo().then((info) => {
       setDeviceInfo(info as DeviceInfo);

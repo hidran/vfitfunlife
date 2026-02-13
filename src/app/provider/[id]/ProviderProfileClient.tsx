@@ -108,7 +108,7 @@ export default function ProviderProfileClient() {
   }, [providerId]);
 
   const handleBookNow = () => {
-    router.push(`/book/provider/${providerId}`);
+    router.push(`/booking/${providerId}`);
   };
 
   const handleContact = () => {

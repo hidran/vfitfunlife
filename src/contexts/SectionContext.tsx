@@ -14,32 +14,37 @@ const SectionContext = createContext<SectionContextValue | undefined>(undefined)
 const STORAGE_KEY = 'preferredSection';
 const VALID_SECTIONS: Section[] = ['fit', 'fun', 'life'];
 
+const getInitialSection = (): Section => {
+  if (typeof window === 'undefined') {
+    return 'fit';
+  }
+
+  try {
+    const saved = window.localStorage.getItem(STORAGE_KEY) as Section | null;
+    if (saved && VALID_SECTIONS.includes(saved)) {
+      return saved;
+    }
+  } catch {
+    // Silently fail if localStorage is unavailable (private mode, disabled, etc.)
+    console.warn('Failed to read section preference from localStorage');
+  }
+
+  return 'fit';
+};
+
 export function SectionProvider({ children }: { children: ReactNode }) {
-  const [section, setSection] = useState<Section>('fit');
+  const [section, setSection] = useState<Section>(getInitialSection);
 
   // Apply section to document for CSS theming
   useEffect(() => {
     document.documentElement.setAttribute('data-section', section);
   }, [section]);
 
-  // Load saved section preference
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY) as Section | null;
-      if (saved && VALID_SECTIONS.includes(saved)) {
-        setSection(saved);
-      }
-    } catch (e) {
-      // Silently fail if localStorage is unavailable (private mode, disabled, etc.)
-      console.warn('Failed to read section preference from localStorage');
-    }
-  }, []);
-
   const handleSetSection = useCallback((newSection: Section) => {
     setSection(newSection);
     try {
       localStorage.setItem(STORAGE_KEY, newSection);
-    } catch (e) {
+    } catch {
       // Silently fail if localStorage is unavailable
       console.warn('Failed to save section preference to localStorage');
     }

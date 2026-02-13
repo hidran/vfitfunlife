@@ -110,7 +110,7 @@ export default function SearchPage() {
         {query && (
           <section>
             <p className="text-text-secondary text-center py-12">
-              Ricerca "{query}" in corso...
+              Ricerca &quot;{query}&quot; in corso...
             </p>
           </section>
         )}

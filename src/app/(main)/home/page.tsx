@@ -86,7 +86,7 @@ const vfitQuickActions = [
 const vfunQuickActions = [
   { label: 'Eventi', icon: Ticket, href: '/fun/events' },
   { label: 'VR', icon: Glasses, href: '/fun/vr' },
-  { label: 'Party', icon: PartyPopper, href: '/fun/parties' },
+  { label: 'Party', icon: PartyPopper, href: '/fun/party-mode' },
   { label: 'TV', icon: Tv, href: '/fun/tv' },
 ];
 

@@ -267,7 +267,7 @@ export function EducationHistory({
         <div className="text-center py-6 bg-background-secondary/5 rounded-xl">
           <p className="text-text-tertiary text-sm">Nessun titolo di studio aggiunto</p>
           <p className="text-text-tertiary/70 text-xs mt-1">
-            Clicca "Aggiungi" per inserire la tua formazione
+            Clicca &quot;Aggiungi&quot; per inserire la tua formazione
           </p>
         </div>
       )}

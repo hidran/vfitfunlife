@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -147,9 +148,9 @@ export default function ForgotPasswordPage() {
           <div className="mt-8 text-center">
             <p className="text-text-secondary text-sm">
               Ricordi la password?{' '}
-              <a href="/auth/login" className="font-semibold text-primary hover:underline">
+              <Link href="/auth/login" className="font-semibold text-primary hover:underline">
                 Accedi
-              </a>
+              </Link>
             </p>
           </div>
         </div>

@@ -42,7 +42,6 @@ export function OtpInput({
     const nextEmptyIndex = value.length < length ? value.length : length - 1;
     if (inputRefs.current[nextEmptyIndex]) {
       inputRefs.current[nextEmptyIndex]?.focus();
-      setActiveIndex(nextEmptyIndex);
     }
   }, [value, length]);
 

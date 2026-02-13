@@ -281,7 +281,7 @@ export function ServicePricingCard({
           <p className="text-text-tertiary text-sm">No services added yet</p>
           {isEditable && (
             <p className="text-text-tertiary/70 text-xs mt-1">
-              Click "Add" to create your first service
+              Click &quot;Add&quot; to create your first service
             </p>
           )}
         </div>

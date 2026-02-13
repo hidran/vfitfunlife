@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -227,9 +228,9 @@ export default function RegisterPage() {
           <div className="mt-8 text-center">
             <p className="text-text-secondary text-sm">
               Hai già un account?{' '}
-              <a href="/auth/login" className="font-semibold text-primary hover:underline">
+              <Link href="/auth/login" className="font-semibold text-primary hover:underline">
                 Accedi
-              </a>
+              </Link>
             </p>
           </div>
         </div>
@@ -444,13 +445,13 @@ export default function RegisterPage() {
               />
               <label htmlFor="terms" className="text-sm text-text-secondary leading-relaxed">
                 Accetto i{' '}
-                <a href="/terms" className="text-primary hover:underline">
+                <Link href="/terms" className="text-primary hover:underline">
                   Termini di Servizio
-                </a>{' '}
+                </Link>{' '}
                 e la{' '}
-                <a href="/privacy" className="text-primary hover:underline">
+                <Link href="/privacy" className="text-primary hover:underline">
                   Privacy Policy
-                </a>
+                </Link>
               </label>
             </div>
 
@@ -466,9 +467,9 @@ export default function RegisterPage() {
             <div className="text-center">
               <p className="text-text-secondary text-sm">
                 Hai già un account?{' '}
-                <a href="/auth/login" className="font-semibold text-primary hover:underline">
+                <Link href="/auth/login" className="font-semibold text-primary hover:underline">
                   Accedi
-                </a>
+                </Link>
               </p>
             </div>
           </form>
@@ -595,13 +596,13 @@ export default function RegisterPage() {
             />
             <label htmlFor="terms" className="text-sm text-text-secondary leading-relaxed">
               Accetto i{' '}
-              <a href="/terms" className="text-primary hover:underline">
+              <Link href="/terms" className="text-primary hover:underline">
                 Termini di Servizio
-              </a>{' '}
+              </Link>{' '}
               e la{' '}
-              <a href="/privacy" className="text-primary hover:underline">
+              <Link href="/privacy" className="text-primary hover:underline">
                 Privacy Policy
-              </a>
+              </Link>
             </label>
           </div>
 

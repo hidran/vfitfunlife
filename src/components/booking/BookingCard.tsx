@@ -12,6 +12,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
+import { getBookingSectionMeta } from '@/lib/bookingUtils';
 import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
 // IconButton component is used below
@@ -45,6 +46,7 @@ export function BookingCard({
 }: BookingCardProps) {
   const router = useRouter();
   const status = statusConfig[booking.status];
+  const sectionMeta = getBookingSectionMeta(booking.serviceName);
   
   const scheduledAt = booking.scheduledAt.toDate();
   const isPast = scheduledAt < new Date();
@@ -57,50 +59,71 @@ export function BookingCard({
       <button
         onClick={() => router.push(`/bookings/${booking.id}`)}
         className={cn(
-          'w-full bg-[#2A2D3A]/50 rounded-xl p-4 flex items-center gap-4',
-          'hover:bg-[#2A2D3A] transition-colors text-left',
+          'group relative w-full overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-4 text-left',
+          'hover:bg-white/10 transition-colors',
           className
         )}
       >
-        <Avatar
-          src={booking.providerAvatar}
-          alt={booking.providerName}
-          size="md"
+        <div
+          className="absolute left-0 top-0 h-full w-1.5"
+          style={{ backgroundColor: sectionMeta.color }}
         />
+
+        <div className="flex flex-1 items-start gap-3 pl-2">
+          <Avatar
+            src={booking.providerAvatar}
+            alt={booking.providerName}
+            size="md"
+            className="shrink-0"
+          />
         
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-medium text-white truncate">
+          <div className="min-w-0 flex-1">
+            <div className="mb-1 flex items-center gap-2">
+              <span
+                className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                style={{
+                  color: sectionMeta.color,
+                  backgroundColor: sectionMeta.softColor,
+                }}
+              >
+                {sectionMeta.label}
+              </span>
+              <Badge variant={status.variant} size="sm">
+                {status.label}
+              </Badge>
+            </div>
+          
+            <h3 className="truncate font-semibold text-white">
               {booking.serviceName}
             </h3>
-            <Badge variant={status.variant} size="sm">
-              {status.label}
-            </Badge>
-          </div>
+            <p className="truncate text-sm text-text-secondary">{booking.providerName}</p>
           
-          <p className="text-sm text-text-secondary truncate">
-            {booking.providerName}
-          </p>
-          
-          <div className="flex items-center gap-3 mt-1.5 text-xs text-text-tertiary">
-            <span className="flex items-center gap-1">
-              <Calendar className="w-3 h-3" />
-              {scheduledAt.toLocaleDateString('it-IT', {
-                day: 'numeric',
-                month: 'short',
-              })}
-            </span>
-            <span className="flex items-center gap-1">
-              <Clock className="w-3 h-3" />
-              {scheduledAt.toLocaleTimeString('it-IT', {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </span>
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-text-tertiary">
+              <span className="flex items-center gap-1">
+                <Calendar className="h-3 w-3" />
+                {scheduledAt.toLocaleDateString('it-IT', {
+                  day: 'numeric',
+                  month: 'short',
+                })}
+              </span>
+              <span className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                {scheduledAt.toLocaleTimeString('it-IT', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </span>
+              {booking.location?.address && (
+                <span className="flex items-center gap-1 truncate">
+                  <MapPin className="h-3 w-3" />
+                  <span className="truncate">{booking.location.address}</span>
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
-        <ChevronRight className="w-5 h-5 text-text-tertiary flex-shrink-0" />
+        <ChevronRight className="h-5 w-5 shrink-0 text-text-tertiary group-hover:text-white" />
       </button>
     );
   }

@@ -1,6 +1,6 @@
 'use client';
 
-import { forwardRef, type InputHTMLAttributes } from 'react';
+import { forwardRef, useId, type InputHTMLAttributes } from 'react';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -11,7 +11,8 @@ export interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement
 
 const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
   ({ className, label, error, id, ...props }, ref) => {
-    const checkboxId = id || `checkbox-${Math.random().toString(36).substr(2, 9)}`;
+    const generatedId = useId();
+    const checkboxId = id || generatedId;
 
     return (
       <div className="w-full">

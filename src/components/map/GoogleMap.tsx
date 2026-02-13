@@ -40,19 +40,18 @@ const getGymCoordinates = (gymId: string, index: number) => {
 };
 
 export function GoogleMap({ gyms, userLocation, onGymSelect, className }: GoogleMapProps) {
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const mapRef = useRef<HTMLDivElement>(null);
   const googleMapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(Boolean(apiKey));
+  const [error, setError] = useState<string | null>(
+    apiKey ? null : 'Google Maps API key not configured'
+  );
 
   // Initialize map
   useEffect(() => {
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-    
     if (!apiKey) {
-      setError('Google Maps API key not configured');
-      setIsLoading(false);
       return;
     }
 
@@ -123,7 +122,7 @@ export function GoogleMap({ gyms, userLocation, onGymSelect, className }: Google
       markersRef.current.forEach(marker => marker.setMap(null));
       markersRef.current = [];
     };
-  }, [userLocation]);
+  }, [apiKey, userLocation]);
 
   // Add/update markers when gyms change
   useEffect(() => {

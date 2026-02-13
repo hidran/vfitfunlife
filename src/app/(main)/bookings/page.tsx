@@ -32,13 +32,6 @@ export default function BookingsPage() {
   const [activeTab, setActiveTab] = useState<BookingTab>('upcoming');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Load bookings on mount
-  useEffect(() => {
-    if (user) {
-      loadBookings();
-    }
-  }, [user, activeTab]);
-
   const loadBookings = useCallback(async () => {
     if (!user) return;
     
@@ -50,6 +43,13 @@ export default function BookingsPage() {
     
     await fetchUserBookings(user.uid, { status });
   }, [user, activeTab, fetchUserBookings]);
+
+  // Load bookings on mount and when filters change
+  useEffect(() => {
+    if (user) {
+      void loadBookings();
+    }
+  }, [user, loadBookings]);
 
   // Pull to refresh handler
   const handlePullToRefresh = async () => {

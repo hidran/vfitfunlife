@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -36,16 +36,12 @@ const STATUS_BADGES = {
 };
 
 export default function BookingDetailClient() {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const { bookings, confirmBooking, completeBooking, cancelBooking } = useProviderStore();
-  const [booking, setBooking] = useState(bookings.find(b => b.id === id));
+  const booking = bookings.find((entry) => entry.id === id);
   const [showNotes, setShowNotes] = useState(false);
   const [privateNotes, setPrivateNotes] = useState('');
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
-
-  useEffect(() => {
-    setBooking(bookings.find(b => b.id === id));
-  }, [bookings, id]);
 
   if (!booking) {
     return (

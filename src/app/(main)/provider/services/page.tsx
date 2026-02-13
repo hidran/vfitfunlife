@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Plus, Edit, Copy, Trash2, MoreVertical, Check, X, Clock, DollarSign, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useProviderStore } from '@/stores/providerStore';
@@ -71,6 +71,7 @@ const MOCK_SERVICES: ProviderService[] = [
 export default function ProviderServicesPage() {
   const { services, isLoadingServices, fetchServices, updateService, deleteService } = useProviderStore();
   const [displayServices, setDisplayServices] = useState<ProviderService[]>(MOCK_SERVICES);
+  const nextServiceIdRef = useRef(MOCK_SERVICES.length + 1);
   const [editingService, setEditingService] = useState<ProviderService | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newService, setNewService] = useState<Partial<ProviderService>>({
@@ -85,6 +86,12 @@ export default function ProviderServicesPage() {
     fetchServices();
   }, [fetchServices]);
 
+  const createServiceId = () => {
+    const id = `new-${nextServiceIdRef.current}`;
+    nextServiceIdRef.current += 1;
+    return id;
+  };
+
   const handleToggleActive = (service: ProviderService) => {
     const updated = displayServices.map(s =>
       s.id === service.id ? { ...s, isActive: !s.isActive } : s
@@ -95,7 +102,7 @@ export default function ProviderServicesPage() {
   const handleDuplicate = (service: ProviderService) => {
     const duplicate: ProviderService = {
       ...service,
-      id: `new-${Date.now()}`,
+      id: createServiceId(),
       serviceName: `${service.serviceName} (Copy)`,
       bookingCount: 0,
       revenue: 0,
@@ -123,7 +130,7 @@ export default function ProviderServicesPage() {
 
   const handleAddService = () => {
     const service: ProviderService = {
-      id: `new-${Date.now()}`,
+      id: createServiceId(),
       serviceName: newService.serviceName || 'New Service',
       description: newService.description || '',
       price: newService.price || 0,

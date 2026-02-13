@@ -127,7 +127,7 @@ export default function PermissionsPage() {
         </div>
         <h1 className="text-3xl font-bold text-white mb-2">Permessi</h1>
         <p className="text-text-secondary">
-          Consenti l'accesso per un'esperienza completa
+          Consenti l&apos;accesso per un&apos;esperienza completa
         </p>
       </div>
 

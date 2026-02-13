@@ -15,6 +15,7 @@ export default function HomePage() {
   
   const [showSplash, setShowSplash] = useState(true);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [redirectFailed, setRedirectFailed] = useState(false);
   const redirectAttempted = useRef(false);
 
   // Debug logging
@@ -41,6 +42,7 @@ export default function HomePage() {
     const handleRedirect = async () => {
       redirectAttempted.current = true;
       setIsRedirecting(true);
+      setRedirectFailed(false);
       
       const hasOnboarded = localStorage.getItem('hasOnboarded');
       console.log('[HomePage] Redirecting:', {
@@ -65,6 +67,7 @@ export default function HomePage() {
         console.error('[HomePage] Redirect failed:', error);
         redirectAttempted.current = false;
         setIsRedirecting(false);
+        setRedirectFailed(true);
       }
     };
 
@@ -96,7 +99,7 @@ export default function HomePage() {
   }
 
   // Show error state if redirect failed
-  if (!isRedirecting && !redirectAttempted.current) {
+  if (redirectFailed) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4">
         <p className="text-lg text-text-inverse">Something went wrong</p>

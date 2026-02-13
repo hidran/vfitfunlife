@@ -425,7 +425,7 @@ export function CertificationUpload({
         <div className="text-center py-6 bg-background-secondary/5 rounded-xl">
           <p className="text-text-tertiary text-sm">Nessuna certificazione aggiunta</p>
           <p className="text-text-tertiary/70 text-xs mt-1">
-            Clicca "Aggiungi" per inserire le tue certificazioni
+            Clicca &quot;Aggiungi&quot; per inserire le tue certificazioni
           </p>
         </div>
       )}

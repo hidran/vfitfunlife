@@ -1,13 +1,12 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
   ChevronLeft,
   Calendar,
   Clock,
   MapPin,
-  Phone,
   MessageCircle,
   Star,
   X,
@@ -18,17 +17,21 @@ import {
   AlertCircle,
   Copy,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn, formatPrice } from '@/lib/utils';
+import { buildFallbackBooking } from '@/lib/bookingUtils';
 import { useBookingStore } from '@/stores/bookingStore';
 import { Button } from '@/components/ui/button';
-import { Spinner } from '@/components/ui/Spinner';
-import { Badge } from '@/components/ui/Badge';
+import { Badge, type BadgeProps } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
 import { GoogleMap } from '@/components/map/GoogleMap';
 import type { Booking, BookingStatus } from '@/types/booking';
 
-const statusConfig: Record<BookingStatus, { label: string; variant: any; icon: any }> = {
+const statusConfig: Record<
+  BookingStatus,
+  { label: string; variant: BadgeProps['variant']; icon: LucideIcon }
+> = {
   pending: { label: 'In attesa', variant: 'warning', icon: AlertCircle },
   confirmed: { label: 'Confermato', variant: 'success', icon: CheckCircle },
   in_progress: { label: 'In corso', variant: 'info', icon: Clock },
@@ -37,68 +40,67 @@ const statusConfig: Record<BookingStatus, { label: string; variant: any; icon: a
   no_show: { label: 'No show', variant: 'error', icon: AlertCircle },
 };
 
-// Mock booking data
-const MOCK_BOOKING: Booking = {
-  id: 'booking-1',
-  userId: 'user-1',
-  providerId: 'provider-1',
-  serviceId: 'svc-1',
-  serviceName: 'Personal Training 1-to-1',
-  providerName: 'Marco Rossi',
-  providerAvatar: '/images/placeholder.jpg',
-  scheduledAt: { toDate: () => new Date(Date.now() + 86400000 * 2) } as any,
-  scheduledEndAt: { toDate: () => new Date(Date.now() + 86400000 * 2 + 3600000) } as any,
-  duration: 60,
-  locationType: 'in_person',
-  location: {
-    address: 'Via Roma 123, Milano',
-    lat: 45.4642,
-    lng: 9.1900,
-  },
-  servicePrice: 60,
-  platformFee: 3,
-  discountAmount: 0,
-  pointsUsed: 0,
-  pointsValue: 0,
-  totalPrice: 63,
-  status: 'confirmed',
-  paymentStatus: 'paid',
-  hasReviewed: false,
-  createdAt: { toDate: () => new Date() } as any,
-  updatedAt: { toDate: () => new Date() } as any,
-};
-
 export default function BookingDetailPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
   const bookingId = params.id as string;
   const justConfirmed = searchParams.get('confirmed') === 'true';
+  const justRescheduled = searchParams.get('rescheduled') === 'true';
+  const justReviewed = searchParams.get('reviewed') === 'true';
 
-  const { getBooking, cancelBooking } = useBookingStore();
-  const [booking, setBooking] = useState<Booking | null>(null);
-  const [loading, setLoading] = useState(true);
+  const {
+    cancelBooking,
+    userBookings,
+    currentBooking,
+    updateBookingInList,
+    updateCurrentBooking,
+  } = useBookingStore();
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [localBookingOverride, setLocalBookingOverride] = useState<Booking | null>(null);
 
-  useEffect(() => {
-    loadBooking();
-  }, [bookingId]);
+  const storeBooking = useMemo(() => {
+    return (
+      userBookings.find((entry) => entry.id === bookingId) ||
+      (currentBooking?.id === bookingId ? currentBooking : null)
+    );
+  }, [bookingId, currentBooking, userBookings]);
 
-  const loadBooking = async () => {
-    setLoading(true);
-    // In real app, fetch from API
-    // const booking = await getBooking(bookingId);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    setBooking(MOCK_BOOKING);
-    setLoading(false);
-  };
+  const booking = localBookingOverride ?? storeBooking ?? buildFallbackBooking(bookingId);
+  const isFallbackBooking = !localBookingOverride && !storeBooking;
+
+  const qrCells = useMemo(() => {
+    const source = `${booking.id}-${booking.providerId ?? ''}-${booking.scheduledAt.toDate().toISOString()}`;
+    const values = source.split('').map((char) => char.charCodeAt(0));
+
+    return Array.from({ length: 21 * 21 }, (_, index) => {
+      const seed = values[index % values.length] ?? 0;
+      return ((seed + index * 13) % 4) <= 1;
+    });
+  }, [booking.id, booking.providerId, booking.scheduledAt]);
 
   const handleCancel = async () => {
     try {
+      if (isFallbackBooking) {
+        setLocalBookingOverride({
+          ...booking,
+          status: 'cancelled',
+          cancellationReason: 'Annullato dall\'utente',
+        });
+        setShowCancelModal(false);
+        return;
+      }
+
       await cancelBooking(bookingId, 'Annullato dall\'utente');
+      const cancelledBooking = {
+        ...booking,
+        status: 'cancelled' as const,
+        cancellationReason: 'Annullato dall\'utente',
+      };
+      updateBookingInList(cancelledBooking);
+      updateCurrentBooking(cancelledBooking);
       setShowCancelModal(false);
-      loadBooking();
-    } catch (error) {
+    } catch {
       alert('Errore durante l\'annullamento');
     }
   };
@@ -131,8 +133,6 @@ export default function BookingDetailPage() {
   };
 
   const handleShare = async () => {
-    if (!booking) return;
-
     const shareData = {
       title: 'La mia prenotazione VFit',
       text: `Ho prenotato ${booking.serviceName} con ${booking.providerName}`,
@@ -153,20 +153,12 @@ export default function BookingDetailPage() {
   };
 
   const handleChat = () => {
-    router.push(`/chat/${booking?.providerId}`);
+    router.push(`/chat/${booking.providerId}`);
   };
 
   const handleReview = () => {
     router.push(`/bookings/${bookingId}/review`);
   };
-
-  if (loading || !booking) {
-    return (
-      <div className="min-h-screen bg-background-dark flex items-center justify-center">
-        <Spinner size="xl" />
-      </div>
-    );
-  }
 
   const status = statusConfig[booking.status];
   const scheduledAt = booking.scheduledAt.toDate();
@@ -177,22 +169,53 @@ export default function BookingDetailPage() {
 
   return (
     <div className="min-h-screen bg-background-dark">
-      {/* Success Banner */}
-      {justConfirmed && (
+      {(justConfirmed || justRescheduled || justReviewed || isFallbackBooking) && (
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-success/20 border-b border-success/30 p-4"
+          className={cn(
+            'border-b p-4',
+            isFallbackBooking ? 'border-warning/30 bg-warning/15' : 'border-success/30 bg-success/20'
+          )}
         >
-          <div className="flex items-center gap-3">
-            <CheckCircle className="w-6 h-6 text-success" />
-            <div>
-              <p className="font-semibold text-success">Prenotazione confermata!</p>
-              <p className="text-sm text-success/80">
-                Riceverai una conferma via email
-              </p>
+          {justConfirmed && (
+            <div className="mb-2 flex items-center gap-3 last:mb-0">
+              <CheckCircle className="h-6 w-6 text-success" />
+              <div>
+                <p className="font-semibold text-success">Prenotazione confermata!</p>
+                <p className="text-sm text-success/80">Riceverai una conferma via email.</p>
+              </div>
             </div>
-          </div>
+          )}
+          {justRescheduled && (
+            <div className="mb-2 flex items-center gap-3 last:mb-0">
+              <RotateCcw className="h-6 w-6 text-success" />
+              <div>
+                <p className="font-semibold text-success">Prenotazione riprogrammata</p>
+                <p className="text-sm text-success/80">Il nuovo slot e stato salvato con successo.</p>
+              </div>
+            </div>
+          )}
+          {justReviewed && (
+            <div className="mb-2 flex items-center gap-3 last:mb-0">
+              <Star className="h-6 w-6 text-success" />
+              <div>
+                <p className="font-semibold text-success">Recensione inviata</p>
+                <p className="text-sm text-success/80">Grazie, il tuo feedback e stato registrato.</p>
+              </div>
+            </div>
+          )}
+          {isFallbackBooking && (
+            <div className="flex items-center gap-3">
+              <AlertCircle className="h-6 w-6 text-warning" />
+              <div>
+                <p className="font-semibold text-warning">Anteprima dati</p>
+                <p className="text-sm text-warning/90">
+                  Questa prenotazione usa dati demo finche non viene caricata dal backend.
+                </p>
+              </div>
+            </div>
+          )}
         </motion.div>
       )}
 
@@ -270,6 +293,37 @@ export default function BookingDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* Check-in ticket */}
+        {booking.status !== 'cancelled' && (
+          <div className="bg-[#2A2D3A]/60 rounded-2xl border border-white/10 p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-text-tertiary">Check-in</p>
+                <p className="font-semibold text-white">Mostra questo codice in reception</p>
+              </div>
+              <Badge variant="partner" size="sm">QR Ticket</Badge>
+            </div>
+
+            <div className="mx-auto w-fit rounded-xl bg-white p-3 shadow-lg">
+              <div
+                className="grid h-40 w-40 gap-0.5 bg-white"
+                style={{ gridTemplateColumns: 'repeat(21, minmax(0, 1fr))' }}
+              >
+                {qrCells.map((filled, index) => (
+                  <span
+                    key={index}
+                    className={cn('h-1.5 w-1.5 rounded-[1px]', filled ? 'bg-black' : 'bg-white')}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <p className="mt-3 text-center text-xs font-mono tracking-wide text-text-secondary">
+              {booking.id.toUpperCase()}
+            </p>
+          </div>
+        )}
 
         {/* Date & Time */}
         <div className="bg-[#2A2D3A]/50 rounded-2xl p-4 space-y-3">

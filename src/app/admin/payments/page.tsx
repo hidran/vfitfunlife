@@ -27,55 +27,56 @@ interface Transaction {
   createdAt: Date;
 }
 
+const MOCK_TRANSACTIONS: Transaction[] = [
+  {
+    id: "tx_1",
+    type: "booking_payment",
+    amount: 150.0,
+    status: "completed",
+    description: "Personal Training Session",
+    customerName: "Marco Rossi",
+    providerName: "John Smith",
+    createdAt: new Date("2026-02-12T10:00:00.000Z"),
+  },
+  {
+    id: "tx_2",
+    type: "commission",
+    amount: 22.5,
+    status: "completed",
+    description: "Platform commission (15%)",
+    customerName: "-",
+    providerName: "John Smith",
+    createdAt: new Date("2026-02-11T10:00:00.000Z"),
+  },
+  {
+    id: "tx_3",
+    type: "payout",
+    amount: 127.5,
+    status: "pending",
+    description: "Provider payout",
+    customerName: "-",
+    providerName: "John Smith",
+    createdAt: new Date("2026-02-10T10:00:00.000Z"),
+  },
+  {
+    id: "tx_4",
+    type: "refund",
+    amount: 150.0,
+    status: "completed",
+    description: "Refund for cancelled booking",
+    customerName: "Anna Bianchi",
+    providerName: "Sarah Johnson",
+    createdAt: new Date("2026-02-09T10:00:00.000Z"),
+  },
+];
+
 export default function PaymentsPage() {
   const router = useRouter();
   const [searchValue, setSearchValue] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
 
-  // Mock data
-  const transactions: Transaction[] = [
-    {
-      id: "tx_1",
-      type: "booking_payment",
-      amount: 150.0,
-      status: "completed",
-      description: "Personal Training Session",
-      customerName: "Marco Rossi",
-      providerName: "John Smith",
-      createdAt: new Date(),
-    },
-    {
-      id: "tx_2",
-      type: "commission",
-      amount: 22.5,
-      status: "completed",
-      description: "Platform commission (15%)",
-      customerName: "-",
-      providerName: "John Smith",
-      createdAt: new Date(Date.now() - 86400000),
-    },
-    {
-      id: "tx_3",
-      type: "payout",
-      amount: 127.5,
-      status: "pending",
-      description: "Provider payout",
-      customerName: "-",
-      providerName: "John Smith",
-      createdAt: new Date(Date.now() - 172800000),
-    },
-    {
-      id: "tx_4",
-      type: "refund",
-      amount: 150.0,
-      status: "completed",
-      description: "Refund for cancelled booking",
-      customerName: "Anna Bianchi",
-      providerName: "Sarah Johnson",
-      createdAt: new Date(Date.now() - 259200000),
-    },
-  ];
+  const transactions = MOCK_TRANSACTIONS;
 
   const columns: Column<Transaction>[] = [
     {
