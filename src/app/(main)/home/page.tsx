@@ -39,7 +39,7 @@ import { cn } from '@/lib/utils';
 import { usePullToRefresh } from 'use-pull-to-refresh';
 import { SectionSwitcher } from '@/components/ui/section-switcher';
 import { useEffect, useState } from 'react';
-import { collection, query, where, limit, getDocs } from 'firebase/firestore';
+import { collection, collectionGroup, query, where, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { Spinner } from '@/components/ui/Spinner';
 
@@ -283,10 +283,10 @@ function useTopProviders(limitCount: number = 6) {
   useEffect(() => {
     const fetchProviders = async () => {
       try {
-        // Simpler query without composite index requirement
+        // Query public instructor profiles to avoid restricted user documents
         const q = query(
-          collection(db, 'users'),
-          where('role', '==', 'provider'),
+          collection(db, 'instructors'),
+          where('providerProfile.isVerified', '==', true),
           limit(limitCount * 2) // Fetch more to filter locally
         );
         
@@ -297,14 +297,14 @@ function useTopProviders(limitCount: number = 6) {
             const profile = data.providerProfile || {};
             return {
               id: doc.id,
-              fullName: data.fullName || 'Unknown',
+              fullName: data.fullName || data.name || 'Unknown',
               avatarUrl: data.avatarUrl || null,
-              specialties: profile.specialties || [],
-              rating: profile.rating || 0,
-              reviewCount: profile.reviewCount || 0,
-              yearsOfExperience: profile.yearsOfExperience || 0,
-              isVerified: profile.isVerified || false,
-              isActive: profile.isActive || false,
+              specialties: data.specialties || profile.specialties || [],
+              rating: data.ratingAvg || profile.rating || 0,
+              reviewCount: data.reviewCount || profile.reviewCount || 0,
+              yearsOfExperience: data.experienceYears || profile.yearsOfExperience || 0,
+              isVerified: profile.isVerified ?? true,
+              isActive: data.isActive ?? profile.isActive ?? true,
             };
           })
           .filter(p => p.isActive)
@@ -393,9 +393,9 @@ function useTodayClasses(limitCount: number = 3) {
   useEffect(() => {
     const fetchClasses = async () => {
       try {
-        // Simpler query - fetch upcoming classes without complex range queries
+        // fitnessClasses is public-read in firestore.rules
         const q = query(
-          collection(db, 'classes'),
+          collection(db, 'fitnessClasses'),
           limit(limitCount * 3)
         );
         
@@ -409,8 +409,8 @@ function useTodayClasses(limitCount: number = 3) {
               id: doc.id,
               time: startTime.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
               name: data.name || 'Unnamed Class',
-              instructor: data.instructorName || 'Unknown',
-              spots: data.maxCapacity - (data.bookedCount || 0),
+              instructor: data.instructorName || data.instructor?.fullName || 'Unknown',
+              spots: (data.maxParticipants || data.maxCapacity || 20) - (data.bookedCount || 0),
               tag: data.level || 'All Levels',
               startTime,
               isActive: data.isActive !== false,
@@ -1124,9 +1124,9 @@ function useTestimonials(limitCount: number = 3) {
   useEffect(() => {
     const fetchTestimonials = async () => {
       try {
-        // Simpler query without composite index
+        // Pull reviews from venue/instructor review subcollections
         const q = query(
-          collection(db, 'reviews'),
+          collectionGroup(db, 'reviews'),
           limit(limitCount * 3)
         );
         
