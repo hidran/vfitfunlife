@@ -153,7 +153,7 @@ Bottom tabs with section-aware theming:
 - [x] Filter bar UI: Distance, Rating, Amenities, Price range
 - [x] Sort: Nearest, Top rated, Price low-high
 - [x] Gym cards in list
-- [ ] Map with real Mapbox GL and clustered markers (currently mock)
+- [x] Map with real Mapbox GL and clustered markers
 - [x] Search bar
 
 ### 5.2 Gym Detail (`/venue/[id]`)

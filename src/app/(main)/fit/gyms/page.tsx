@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useMemo, useState, useCallback } from 'react';
 import { List, Map as MapIcon, MapPin, Search, SlidersHorizontal, Star, Navigation } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { GoogleMap } from '@/components/map/GoogleMap';
+import { MapboxGymsMap } from '@/components/map/MapboxGymsMap';
 import { useRouter } from 'next/navigation';
 
 const gyms = [
@@ -303,7 +303,7 @@ export default function GymsPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            <GoogleMap
+            <MapboxGymsMap
               gyms={filteredGyms}
               userLocation={userLocation}
               onGymSelect={handleGymSelect}

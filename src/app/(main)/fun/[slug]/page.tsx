@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { FeaturePlaceholderPage } from '@/components/screens/FeaturePlaceholderPage';
+import { FunRouteScreen } from '@/components/screens/FunRouteScreen';
 import { FUN_ROUTE_CONTENT, type FunRouteSlug } from '@/lib/featureRouteContent';
 
 export function generateStaticParams() {
@@ -14,15 +14,5 @@ export default function FunFeaturePage({ params }: { params: { slug: string } })
     notFound();
   }
 
-  return (
-    <FeaturePlaceholderPage
-      title={content.title}
-      description={content.description}
-      icon={content.icon}
-      badge={content.badge ?? 'VFun in aggiornamento'}
-      notes={content.notes}
-      primaryAction={content.primaryAction}
-      secondaryAction={content.secondaryAction}
-    />
-  );
+  return <FunRouteScreen slug={slug} />;
 }

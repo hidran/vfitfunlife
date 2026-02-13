@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { FeaturePlaceholderPage } from '@/components/screens/FeaturePlaceholderPage';
+import { ProfileSectionScreen } from '@/components/screens/ProfileSectionScreen';
 import {
   PROFILE_ROUTE_CONTENT,
   type ProfileRouteSection,
@@ -17,15 +17,5 @@ export default function ProfileSectionPage({ params }: { params: { section: stri
     notFound();
   }
 
-  return (
-    <FeaturePlaceholderPage
-      title={content.title}
-      description={content.description}
-      icon={content.icon}
-      badge={content.badge ?? 'Profilo in aggiornamento'}
-      notes={content.notes}
-      primaryAction={content.primaryAction}
-      secondaryAction={content.secondaryAction}
-    />
-  );
+  return <ProfileSectionScreen section={section} />;
 }

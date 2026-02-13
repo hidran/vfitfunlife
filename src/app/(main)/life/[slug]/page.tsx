@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { FeaturePlaceholderPage } from '@/components/screens/FeaturePlaceholderPage';
+import { LifeRouteScreen } from '@/components/screens/LifeRouteScreen';
 import { LIFE_ROUTE_CONTENT, type LifeRouteSlug } from '@/lib/featureRouteContent';
 
 export function generateStaticParams() {
@@ -14,15 +14,5 @@ export default function LifeFeaturePage({ params }: { params: { slug: string } }
     notFound();
   }
 
-  return (
-    <FeaturePlaceholderPage
-      title={content.title}
-      description={content.description}
-      icon={content.icon}
-      badge={content.badge ?? 'VLife in aggiornamento'}
-      notes={content.notes}
-      primaryAction={content.primaryAction ?? { href: '/home', label: 'Torna alla Home' }}
-      secondaryAction={content.secondaryAction}
-    />
-  );
+  return <LifeRouteScreen slug={slug} />;
 }

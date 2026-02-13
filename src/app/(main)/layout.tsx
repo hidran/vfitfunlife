@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
+import { useNotificationStore } from '@/stores/notificationStore';
 import { MainLayout } from '@/components/layout/MainLayout';
 import type { ReactNode } from 'react';
 
@@ -12,6 +13,9 @@ interface MainAppLayoutProps {
 
 export default function MainAppLayout({ children }: MainAppLayoutProps) {
   const { firebaseUser, user, isLoading, isInitialized } = useAuthStore();
+  const notificationCount = useNotificationStore((state) =>
+    state.notifications.reduce((count, notification) => count + (notification.read ? 0 : 1), 0)
+  );
   const router = useRouter();
 
   useEffect(() => {
@@ -50,9 +54,6 @@ export default function MainAppLayout({ children }: MainAppLayoutProps) {
       </div>
     );
   }
-
-  // TODO: Replace with actual notification count from notifications API
-  const notificationCount = 0;
 
   return (
     <MainLayout

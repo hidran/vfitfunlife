@@ -426,6 +426,7 @@ export async function updateUserProfile(
     phone?: string | null;
     dateOfBirth?: Date;
     preferredSection?: "fit" | "fun" | "life";
+    preferredLanguage?: "it" | "en";
     avatarUrl?: string;
   }
 ): Promise<void> {
