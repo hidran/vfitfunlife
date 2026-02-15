@@ -40,18 +40,21 @@ const getGymCoordinates = (gymId: string, index: number) => {
 };
 
 export function GoogleMap({ gyms, userLocation, onGymSelect, className }: GoogleMapProps) {
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim();
+  const hasPlaceholderKey = !apiKey || /your_|example|xxx/i.test(apiKey);
   const mapRef = useRef<HTMLDivElement>(null);
   const googleMapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
-  const [isLoading, setIsLoading] = useState(Boolean(apiKey));
+  const [isLoading, setIsLoading] = useState(Boolean(apiKey) && !hasPlaceholderKey);
   const [error, setError] = useState<string | null>(
-    apiKey ? null : 'Google Maps API key not configured'
+    hasPlaceholderKey
+      ? 'Google Maps API key non valida o non configurata'
+      : null
   );
 
   // Initialize map
   useEffect(() => {
-    if (!apiKey) {
+    if (!apiKey || hasPlaceholderKey) {
       return;
     }
 
@@ -111,9 +114,23 @@ export function GoogleMap({ gyms, userLocation, onGymSelect, className }: Google
 
       googleMapRef.current = new google.maps.Map(mapRef.current, mapOptions);
       setIsLoading(false);
-    }).catch((err) => {
+    }).catch((err: unknown) => {
+      const message =
+        typeof err === 'object' && err !== null && 'message' in err
+          ? String((err as { message?: string }).message ?? '')
+          : '';
+      const lowerMessage = message.toLowerCase();
+      const isDomainOrBillingError =
+        /referer|origin|notallowedmaperror|billing|forbidden|api key|denied|unauthorized/i.test(
+          lowerMessage
+        );
+
       console.error('Google Maps loading error:', err);
-      setError('Failed to load Google Maps');
+      setError(
+        isDomainOrBillingError
+          ? 'Google Maps ha rifiutato la richiesta. Verifica API key, billing e domini consentiti.'
+          : 'Failed to load Google Maps'
+      );
       setIsLoading(false);
     });
 
@@ -122,7 +139,7 @@ export function GoogleMap({ gyms, userLocation, onGymSelect, className }: Google
       markersRef.current.forEach(marker => marker.setMap(null));
       markersRef.current = [];
     };
-  }, [apiKey, userLocation]);
+  }, [apiKey, hasPlaceholderKey, userLocation]);
 
   // Add/update markers when gyms change
   useEffect(() => {

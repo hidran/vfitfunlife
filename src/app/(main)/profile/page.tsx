@@ -66,7 +66,7 @@ const menuItems = [
     section: 'Supporto',
     items: [
       { icon: HelpCircle, label: 'Centro assistenza', href: '/help' },
-      { icon: Star, label: "Valuta l'app", href: '#' },
+      { icon: Star, label: "Valuta l'app", href: '/feedback' },
     ],
   },
 ];

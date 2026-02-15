@@ -78,9 +78,9 @@ interface ClassSession {
 // Static quick actions
 const vfitQuickActions = [
   { label: 'Palestre', icon: Dumbbell, href: '/fit/gyms' },
-  { label: 'Corsi', icon: Calendar },
-  { label: 'A Domicilio', icon: HomeIcon },
-  { label: 'Virtual', icon: Tv },
+  { label: 'Corsi', icon: Calendar, href: '/fit/classes' },
+  { label: 'A Domicilio', icon: HomeIcon, href: '/fit/home-training' },
+  { label: 'Virtual', icon: Tv, href: '/fit/virtual' },
 ];
 
 const vfunQuickActions = [
