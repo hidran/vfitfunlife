@@ -1,5 +1,6 @@
 import { httpsCallable } from "firebase/functions";
 import { functions } from "./config";
+import type { AppLocale } from "@/types/locale";
 
 // Type definitions for function responses
 interface BookingResult {
@@ -140,7 +141,7 @@ export async function applyReferralCode(data: {
 export async function updateProfile(data: {
   fullName?: string;
   dateOfBirth?: Date;
-  preferredLanguage?: "it" | "en";
+  preferredLanguage?: AppLocale;
   preferredSection?: "fit" | "fun" | "life";
   notificationsEnabled?: boolean;
 }): Promise<{ success: boolean }> {

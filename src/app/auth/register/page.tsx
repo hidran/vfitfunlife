@@ -11,6 +11,7 @@ import { Camera, Calendar, User, Mail, Lock, ChevronLeft } from 'lucide-react';
 import { completeRegistration } from '@/lib/firebase/auth';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/hooks/useI18n';
 
 const SECTIONS = [
   { id: 'fit' as const, label: 'VFit', color: 'from-vfit-primary to-vfit-secondary' },
@@ -22,6 +23,7 @@ type RegistrationMethod = 'social' | 'email' | null;
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const { firebaseUser, refreshUserProfile, registerWithEmail, clearError, error: storeError } = useAuthStore();
 
   const [registrationMethod, setRegistrationMethod] = useState<RegistrationMethod>(
@@ -45,17 +47,17 @@ export default function RegisterPage() {
     setError('');
 
     if (!fullName.trim()) {
-      setError('Il nome completo è obbligatorio');
+      setError(t('auth.register.error.fullNameRequired'));
       return;
     }
 
     if (!acceptTerms) {
-      setError('Devi accettare i Termini e Condizioni');
+      setError(t('auth.register.error.acceptTerms'));
       return;
     }
 
     if (!firebaseUser) {
-      setError('Utente non autenticato');
+      setError(t('auth.register.error.userNotAuthenticated'));
       return;
     }
 
@@ -76,7 +78,7 @@ export default function RegisterPage() {
       router.push('/home');
     } catch (err) {
       console.error('Registration error:', err);
-      setError('Errore durante la registrazione. Riprova.');
+      setError(t('auth.register.error.generic'));
     } finally {
       setIsLoading(false);
     }
@@ -89,27 +91,27 @@ export default function RegisterPage() {
 
     // Validation
     if (!fullName.trim()) {
-      setError('Il nome completo è obbligatorio');
+      setError(t('auth.register.error.fullNameRequired'));
       return;
     }
 
     if (!email.trim()) {
-      setError('L\'email è obbligatoria');
+      setError(t('auth.register.error.emailRequired'));
       return;
     }
 
     if (!password || password.length < 6) {
-      setError('La password deve essere di almeno 6 caratteri');
+      setError(t('auth.register.error.passwordMinLength'));
       return;
     }
 
     if (password !== confirmPassword) {
-      setError('Le password non coincidono');
+      setError(t('auth.register.error.passwordMismatch'));
       return;
     }
 
     if (!acceptTerms) {
-      setError('Devi accettare i Termini e Condizioni');
+      setError(t('auth.register.error.acceptTerms'));
       return;
     }
 
@@ -123,7 +125,7 @@ export default function RegisterPage() {
       router.push('/auth/permissions');
     } catch (err: any) {
       console.error('Registration error:', err);
-      setError(storeError || 'Errore durante la registrazione. Riprova.');
+      setError(storeError || t('auth.register.error.generic'));
     } finally {
       setIsLoading(false);
     }
@@ -140,11 +142,11 @@ export default function RegisterPage() {
             className="flex items-center gap-2 text-text-secondary hover:text-text-inverse transition-colors mb-6"
           >
             <ChevronLeft className="h-5 w-5" />
-            <span className="text-sm">Torna al login</span>
+            <span className="text-sm">{t('auth.common.backToLogin')}</span>
           </button>
-          <h1 className="text-3xl font-bold text-white mb-2">Crea un account</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">{t('auth.register.methodSelection.title')}</h1>
           <p className="text-text-secondary">
-            Scegli come vuoi registrarti
+            {t('auth.register.methodSelection.subtitle')}
           </p>
         </div>
 
@@ -162,8 +164,8 @@ export default function RegisterPage() {
                 <Mail className="h-7 w-7 text-section-primary" />
               </div>
               <div className="text-left">
-                <p className="font-semibold text-text-inverse text-lg">Email e Password</p>
-                <p className="text-sm text-text-tertiary">Registrati con la tua email</p>
+                <p className="font-semibold text-text-inverse text-lg">{t('auth.register.method.email.title')}</p>
+                <p className="text-sm text-text-tertiary">{t('auth.register.method.email.subtitle')}</p>
               </div>
             </button>
 
@@ -183,8 +185,8 @@ export default function RegisterPage() {
                 </svg>
               </div>
               <div className="text-left">
-                <p className="font-semibold text-text-inverse text-lg">Google</p>
-                <p className="text-sm text-text-tertiary">Registrati con Google</p>
+                <p className="font-semibold text-text-inverse text-lg">{t('auth.register.method.google.title')}</p>
+                <p className="text-sm text-text-tertiary">{t('auth.register.method.google.subtitle')}</p>
               </div>
             </button>
 
@@ -201,8 +203,8 @@ export default function RegisterPage() {
                 </svg>
               </div>
               <div className="text-left">
-                <p className="font-semibold text-text-inverse text-lg">Apple</p>
-                <p className="text-sm text-text-tertiary">Registrati con Apple</p>
+                <p className="font-semibold text-text-inverse text-lg">{t('auth.register.method.apple.title')}</p>
+                <p className="text-sm text-text-tertiary">{t('auth.register.method.apple.subtitle')}</p>
               </div>
             </button>
 
@@ -219,17 +221,17 @@ export default function RegisterPage() {
                 </svg>
               </div>
               <div className="text-left">
-                <p className="font-semibold text-text-inverse text-lg">Telefono</p>
-                <p className="text-sm text-text-tertiary">Registrati con SMS</p>
+                <p className="font-semibold text-text-inverse text-lg">{t('auth.register.method.phone.title')}</p>
+                <p className="text-sm text-text-tertiary">{t('auth.register.method.phone.subtitle')}</p>
               </div>
             </button>
           </div>
 
           <div className="mt-8 text-center">
             <p className="text-text-secondary text-sm">
-              Hai già un account?{' '}
+              {t('auth.register.alreadyHaveAccount')}{' '}
               <Link href="/auth/login" className="font-semibold text-primary hover:underline">
-                Accedi
+                {t('auth.common.login')}
               </Link>
             </p>
           </div>
@@ -252,11 +254,11 @@ export default function RegisterPage() {
             className="flex items-center gap-2 text-text-secondary hover:text-text-inverse transition-colors mb-6"
           >
             <ChevronLeft className="h-5 w-5" />
-            <span className="text-sm">Indietro</span>
+            <span className="text-sm">{t('auth.common.back')}</span>
           </button>
-          <h1 className="text-3xl font-bold text-white mb-2">Crea il tuo account</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">{t('auth.register.emailForm.title')}</h1>
           <p className="text-text-secondary">
-            Inserisci i tuoi dati per iniziare
+            {t('auth.register.emailForm.subtitle')}
           </p>
         </div>
 
@@ -282,7 +284,7 @@ export default function RegisterPage() {
                 {(error || storeError)?.includes('not enabled') && (
                   <div className="mt-3 text-center">
                     <p className="text-xs text-text-tertiary mb-2">
-                      Puoi comunque registrarti con:
+                      {t('auth.register.emailForm.altMethodsHint')}
                     </p>
                     <div className="flex gap-2 justify-center">
                       <button
@@ -290,14 +292,14 @@ export default function RegisterPage() {
                         onClick={() => router.push('/auth/login')}
                         className="text-xs bg-white/10 hover:bg-white/15 px-3 py-1.5 rounded-full text-text-inverse transition-colors"
                       >
-                        Google
+                        {t('auth.register.method.google.title')}
                       </button>
                       <button
                         type="button"
                         onClick={() => router.push('/auth/login')}
                         className="text-xs bg-white/10 hover:bg-white/15 px-3 py-1.5 rounded-full text-text-inverse transition-colors"
                       >
-                        Telefono
+                        {t('auth.register.method.phone.title')}
                       </button>
                     </div>
                   </div>
@@ -308,13 +310,13 @@ export default function RegisterPage() {
             {/* Full Name */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-text-secondary">
-                Nome completo *
+                {t('auth.register.field.fullName')}
               </label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-tertiary" />
                 <Input
                   type="text"
-                  placeholder="Mario Rossi"
+                  placeholder={t('auth.register.placeholder.fullName')}
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   className="pl-10"
@@ -327,13 +329,13 @@ export default function RegisterPage() {
             {/* Email */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-text-secondary">
-                Email *
+                {t('auth.register.field.emailRequired')}
               </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-tertiary" />
                 <Input
                   type="email"
-                  placeholder="mario@esempio.it"
+                  placeholder={t('auth.common.emailPlaceholder')}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-10"
@@ -346,7 +348,7 @@ export default function RegisterPage() {
             {/* Password */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-text-secondary">
-                Password *
+                {t('auth.register.field.password')}
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-tertiary" />
@@ -365,16 +367,16 @@ export default function RegisterPage() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-tertiary hover:text-text-inverse"
                 >
-                  {showPassword ? 'Nascondi' : 'Mostra'}
+                  {showPassword ? t('auth.common.hide') : t('auth.common.show')}
                 </button>
               </div>
-              <p className="text-xs text-text-tertiary">Minimo 6 caratteri</p>
+              <p className="text-xs text-text-tertiary">{t('auth.register.passwordMinHint')}</p>
             </div>
 
             {/* Confirm Password */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-text-secondary">
-                Conferma Password *
+                {t('auth.register.field.confirmPassword')}
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-tertiary" />
@@ -394,7 +396,7 @@ export default function RegisterPage() {
             {/* Date of Birth */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-text-secondary">
-                Data di nascita (opzionale)
+                {t('auth.register.field.dateOfBirthOptional')}
               </label>
               <div className="relative">
                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-tertiary" />
@@ -411,7 +413,7 @@ export default function RegisterPage() {
             {/* Section Preference */}
             <div className="space-y-3">
               <label className="text-sm font-medium text-text-secondary">
-                Cosa ti interessa di più?
+                {t('auth.register.field.preferredSection')}
               </label>
               <div className="grid grid-cols-3 gap-3">
                 {SECTIONS.map((section) => (
@@ -444,13 +446,13 @@ export default function RegisterPage() {
                 disabled={isLoading}
               />
               <label htmlFor="terms" className="text-sm text-text-secondary leading-relaxed">
-                Accetto i{' '}
+                {t('auth.register.acceptPrefix')}{' '}
                 <Link href="/terms" className="text-primary hover:underline">
-                  Termini di Servizio
+                  {t('auth.common.termsOfService')}
                 </Link>{' '}
-                e la{' '}
+                {t('auth.common.andThe')}{' '}
                 <Link href="/privacy" className="text-primary hover:underline">
-                  Privacy Policy
+                  {t('auth.common.privacyPolicy')}
                 </Link>
               </label>
             </div>
@@ -461,14 +463,14 @@ export default function RegisterPage() {
               className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity py-3"
               disabled={isLoading || !acceptTerms}
             >
-              {isLoading ? <Spinner size="sm" /> : 'Crea Account'}
+              {isLoading ? <Spinner size="sm" /> : t('auth.register.createAccount')}
             </Button>
 
             <div className="text-center">
               <p className="text-text-secondary text-sm">
-                Hai già un account?{' '}
+                {t('auth.register.alreadyHaveAccount')}{' '}
                 <Link href="/auth/login" className="font-semibold text-primary hover:underline">
-                  Accedi
+                  {t('auth.common.login')}
                 </Link>
               </p>
             </div>
@@ -483,9 +485,9 @@ export default function RegisterPage() {
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-background-dark via-background-dark to-primary-dark/20">
       {/* Header */}
       <div className="px-6 pt-12 pb-6">
-        <h1 className="text-3xl font-bold text-white mb-2">Completa il profilo</h1>
+        <h1 className="text-3xl font-bold text-white mb-2">{t('auth.register.socialForm.title')}</h1>
         <p className="text-text-secondary">
-          Aiutaci a personalizzare la tua esperienza
+          {t('auth.register.socialForm.subtitle')}
         </p>
       </div>
 
@@ -512,13 +514,13 @@ export default function RegisterPage() {
           {/* Full Name */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-text-secondary">
-              Nome completo *
+              {t('auth.register.field.fullName')}
             </label>
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-tertiary" />
               <Input
                 type="text"
-                placeholder="Mario Rossi"
+                placeholder={t('auth.register.placeholder.fullName')}
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 className="pl-10"
@@ -531,11 +533,11 @@ export default function RegisterPage() {
           {/* Email (optional) */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-text-secondary">
-              Email (opzionale)
+              {t('auth.register.field.emailOptional')}
             </label>
             <Input
               type="email"
-              placeholder="mario@esempio.it"
+              placeholder={t('auth.common.emailPlaceholder')}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={isLoading}
@@ -545,7 +547,7 @@ export default function RegisterPage() {
           {/* Date of Birth */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-text-secondary">
-              Data di nascita (opzionale)
+              {t('auth.register.field.dateOfBirthOptional')}
             </label>
             <div className="relative">
               <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-tertiary" />
@@ -562,7 +564,7 @@ export default function RegisterPage() {
           {/* Section Preference */}
           <div className="space-y-3">
             <label className="text-sm font-medium text-text-secondary">
-              Cosa ti interessa di più?
+              {t('auth.register.field.preferredSection')}
             </label>
             <div className="grid grid-cols-3 gap-3">
               {SECTIONS.map((section) => (
@@ -595,13 +597,13 @@ export default function RegisterPage() {
               disabled={isLoading}
             />
             <label htmlFor="terms" className="text-sm text-text-secondary leading-relaxed">
-              Accetto i{' '}
+              {t('auth.register.acceptPrefix')}{' '}
               <Link href="/terms" className="text-primary hover:underline">
-                Termini di Servizio
+                {t('auth.common.termsOfService')}
               </Link>{' '}
-              e la{' '}
+              {t('auth.common.andThe')}{' '}
               <Link href="/privacy" className="text-primary hover:underline">
-                Privacy Policy
+                {t('auth.common.privacyPolicy')}
               </Link>
             </label>
           </div>
@@ -612,7 +614,7 @@ export default function RegisterPage() {
             className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity py-3"
             disabled={isLoading || !acceptTerms}
           >
-            {isLoading ? <Spinner size="sm" /> : 'Completa Registrazione'}
+            {isLoading ? <Spinner size="sm" /> : t('auth.register.completeRegistration')}
           </Button>
         </form>
       </div>

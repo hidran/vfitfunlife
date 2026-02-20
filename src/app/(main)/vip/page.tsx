@@ -4,44 +4,47 @@ import { useState } from 'react';
 import { Check, Crown, Sparkles } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useI18n } from '@/hooks/useI18n';
+import type { MessageKey } from '@/i18n/messages';
 
 interface VipPlan {
   id: string;
-  name: string;
+  nameKey: MessageKey;
   monthlyPrice: number;
   yearlyPrice: number;
   highlight?: boolean;
-  benefits: string[];
+  benefitKeys: MessageKey[];
 }
 
 const VIP_PLANS: VipPlan[] = [
   {
     id: 'starter',
-    name: 'VIP Starter',
+    nameKey: 'vip.plan.starter.name',
     monthlyPrice: 9.9,
     yearlyPrice: 89,
-    benefits: [
-      'Sconto 5% su servizi selezionati',
-      'Notifiche prioritarie booking',
-      'Accesso promo mensili',
+    benefitKeys: [
+      'vip.plan.starter.benefit1',
+      'vip.plan.starter.benefit2',
+      'vip.plan.starter.benefit3',
     ],
   },
   {
     id: 'pro',
-    name: 'VIP Pro',
+    nameKey: 'vip.plan.pro.name',
     monthlyPrice: 19.9,
     yearlyPrice: 179,
     highlight: true,
-    benefits: [
-      'Sconto 12% su tutto il catalogo',
-      'Supporto prioritario',
-      'Accesso anticipato ad eventi VFun',
-      'Doppio accumulo punti reward',
+    benefitKeys: [
+      'vip.plan.pro.benefit1',
+      'vip.plan.pro.benefit2',
+      'vip.plan.pro.benefit3',
+      'vip.plan.pro.benefit4',
     ],
   },
 ];
 
 export default function VipPage() {
+  const { t } = useI18n();
   const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
   const [selectedPlan, setSelectedPlan] = useState<string>('pro');
 
@@ -50,17 +53,17 @@ export default function VipPage() {
       <header className="space-y-2">
         <div className="flex items-center gap-2">
           <Crown className="h-5 w-5 text-warning" />
-          <h1 className="text-2xl font-bold text-text-inverse">Programma VIP</h1>
+          <h1 className="text-2xl font-bold text-text-inverse">{t('vip.title')}</h1>
         </div>
         <p className="text-sm text-text-secondary">
-          Sblocca vantaggi esclusivi su booking, eventi e priorita assistenza.
+          {t('vip.subtitle')}
         </p>
       </header>
 
       <section className="rounded-2xl border border-warning/30 bg-warning/15 p-4">
         <p className="flex items-center gap-2 text-sm font-semibold text-warning">
           <Sparkles className="h-4 w-4" />
-          Promo attiva: 7 giorni prova VIP Pro
+          {t('vip.promoTrial')}
         </p>
       </section>
 
@@ -73,7 +76,7 @@ export default function VipPage() {
             billing === 'monthly' ? 'bg-section-primary text-background-dark' : 'text-text-secondary'
           )}
         >
-          Mensile
+          {t('vip.billing.monthly')}
         </button>
         <button
           type="button"
@@ -83,7 +86,7 @@ export default function VipPage() {
             billing === 'yearly' ? 'bg-section-primary text-background-dark' : 'text-text-secondary'
           )}
         >
-          Annuale
+          {t('vip.billing.yearly')}
         </button>
       </section>
 
@@ -103,23 +106,23 @@ export default function VipPage() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="font-semibold text-text-inverse">{plan.name}</p>
+                  <p className="font-semibold text-text-inverse">{t(plan.nameKey)}</p>
                   <p className="text-sm text-text-secondary">
-                    {formatPrice(price)}/mese
+                    {t('vip.pricePerMonth', { price: formatPrice(price) })}
                   </p>
                 </div>
                 {plan.highlight && (
                   <span className="rounded-full bg-warning/20 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-warning">
-                    Consigliato
+                    {t('vip.recommended')}
                   </span>
                 )}
               </div>
 
               <ul className="mt-3 space-y-2">
-                {plan.benefits.map((benefit) => (
-                  <li key={benefit} className="flex items-center gap-2 text-sm text-text-secondary">
+                {plan.benefitKeys.map((benefitKey) => (
+                  <li key={benefitKey} className="flex items-center gap-2 text-sm text-text-secondary">
                     <Check className="h-4 w-4 text-success" />
-                    {benefit}
+                    {t(benefitKey)}
                   </li>
                 ))}
               </ul>
@@ -129,7 +132,7 @@ export default function VipPage() {
                 variant={isSelected ? 'primary' : 'secondary'}
                 onClick={() => setSelectedPlan(plan.id)}
               >
-                {isSelected ? 'Selezionato' : 'Seleziona piano'}
+                {isSelected ? t('vip.selected') : t('vip.selectPlan')}
               </Button>
             </article>
           );
@@ -137,7 +140,9 @@ export default function VipPage() {
       </section>
 
       <Button className="w-full">
-        Attiva {VIP_PLANS.find((plan) => plan.id === selectedPlan)?.name}
+        {t('vip.activate', {
+          name: t(VIP_PLANS.find((plan) => plan.id === selectedPlan)?.nameKey ?? 'vip.plan.pro.name'),
+        })}
       </Button>
     </div>
   );

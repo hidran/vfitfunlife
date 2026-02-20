@@ -1,11 +1,16 @@
+'use client';
+
 import Link from 'next/link';
 import type { LucideIcon } from 'lucide-react';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/hooks/useI18n';
+import type { MessageKey } from '@/i18n/messages';
 
 export interface PlaceholderAction {
   href: string;
-  label: string;
+  label?: string;
+  labelKey?: MessageKey;
 }
 
 interface FeaturePlaceholderPageProps {
@@ -22,14 +27,16 @@ interface FeaturePlaceholderPageProps {
 export function FeaturePlaceholderPage({
   title,
   description,
-  badge = 'Nuova funzionalita in sviluppo',
+  badge,
   icon,
   notes,
   primaryAction,
   secondaryAction,
   className,
 }: FeaturePlaceholderPageProps) {
+  const { t } = useI18n();
   const Icon = icon ?? Sparkles;
+  const resolvedBadge = badge ?? t('placeholder.badgeInDevelopment');
 
   return (
     <div className={cn('container-mobile py-8', className)}>
@@ -39,7 +46,7 @@ export function FeaturePlaceholderPage({
 
         <div className="relative">
           <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-text-tertiary">
-            {badge}
+            {resolvedBadge}
           </span>
 
           <div className="mt-4 flex items-start gap-4">
@@ -75,7 +82,7 @@ export function FeaturePlaceholderPage({
                   href={primaryAction.href}
                   className="inline-flex items-center gap-2 rounded-full bg-section-primary px-4 py-2 text-sm font-semibold text-background-dark"
                 >
-                  {primaryAction.label}
+                  {primaryAction.label ?? (primaryAction.labelKey ? t(primaryAction.labelKey) : '')}
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               )}
@@ -85,7 +92,7 @@ export function FeaturePlaceholderPage({
                   href={secondaryAction.href}
                   className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-4 py-2 text-sm font-semibold text-text-inverse"
                 >
-                  {secondaryAction.label}
+                  {secondaryAction.label ?? (secondaryAction.labelKey ? t(secondaryAction.labelKey) : '')}
                 </Link>
               )}
             </div>

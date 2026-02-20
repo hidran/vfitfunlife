@@ -1,4 +1,5 @@
 import { Timestamp, GeoPoint } from "firebase/firestore";
+import type { AppLocale } from "@/types/locale";
 
 // Section type
 export type Section = "fit" | "fun" | "life";
@@ -131,7 +132,7 @@ export interface User {
   walletBalance: number;
 
   // Preferences
-  preferredLanguage: "it" | "en";
+  preferredLanguage: AppLocale;
   preferredSection: Section;
   notificationsEnabled: boolean;
 

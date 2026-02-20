@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import { useNotificationStore } from '@/stores/notificationStore';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { useI18n } from '@/hooks/useI18n';
 import type { ReactNode } from 'react';
 
 interface MainAppLayoutProps {
@@ -13,6 +14,7 @@ interface MainAppLayoutProps {
 
 export default function MainAppLayout({ children }: MainAppLayoutProps) {
   const { firebaseUser, user, isLoading, isInitialized } = useAuthStore();
+  const { t, setLocale } = useI18n();
   const notificationCount = useNotificationStore((state) =>
     state.notifications.reduce((count, notification) => count + (notification.read ? 0 : 1), 0)
   );
@@ -31,13 +33,19 @@ export default function MainAppLayout({ children }: MainAppLayoutProps) {
     }
   }, [firebaseUser, user, isInitialized, router]);
 
+  useEffect(() => {
+    if (user?.preferredLanguage) {
+      setLocale(user.preferredLanguage);
+    }
+  }, [setLocale, user?.preferredLanguage]);
+
   // Show loading state while checking authentication
   if (!isInitialized || isLoading) {
     return (
       <div className="min-h-screen bg-background-dark flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-3 border-white/20 border-t-section-primary rounded-full animate-spin" />
-          <p className="text-text-tertiary text-sm">Loading...</p>
+          <p className="text-text-tertiary text-sm">{t('common.loading')}</p>
         </div>
       </div>
     );
@@ -49,7 +57,7 @@ export default function MainAppLayout({ children }: MainAppLayoutProps) {
       <div className="min-h-screen bg-background-dark flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-3 border-white/20 border-t-section-primary rounded-full animate-spin" />
-          <p className="text-text-tertiary text-sm">Redirecting...</p>
+          <p className="text-text-tertiary text-sm">{t('common.redirecting')}</p>
         </div>
       </div>
     );

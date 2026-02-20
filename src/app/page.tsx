@@ -4,9 +4,11 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { SplashScreen } from '@/components/screens/SplashScreen';
 import { useAuthStore } from '@/stores/authStore';
+import { useI18n } from '@/hooks/useI18n';
 
 export default function HomePage() {
   const router = useRouter();
+  const { t } = useI18n();
   // Use individual selectors to ensure re-renders on state changes
   const firebaseUser = useAuthStore((state) => state.firebaseUser);
   const user = useAuthStore((state) => state.user);
@@ -90,10 +92,10 @@ export default function HomePage() {
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
         <div className="animate-pulse">
           <span className="text-2xl font-display font-bold bg-gradient-to-r from-vfit-primary via-vfun-primary to-vlife-primary bg-clip-text text-transparent">
-            Initializing...
+            {t('app.initializing')}
           </span>
         </div>
-        <p className="text-sm text-text-tertiary">Checking authentication...</p>
+        <p className="text-sm text-text-tertiary">{t('app.checkingAuth')}</p>
       </div>
     );
   }
@@ -102,19 +104,19 @@ export default function HomePage() {
   if (redirectFailed) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4">
-        <p className="text-lg text-text-inverse">Something went wrong</p>
+        <p className="text-lg text-text-inverse">{t('app.error.title')}</p>
         <p className="text-sm text-text-tertiary text-center">
           {!firebaseUser 
-            ? 'Not authenticated. Redirecting to login...'
+            ? t('app.error.notAuthenticated')
             : !user 
-              ? 'Profile incomplete. Redirecting to registration...'
-              : 'Ready to redirect...'}
+              ? t('app.error.profileIncomplete')
+              : t('app.error.readyToRedirect')}
         </p>
         <button 
           onClick={() => window.location.reload()}
           className="px-4 py-2 bg-section-primary text-white rounded-lg"
         >
-          Reload Page
+          {t('app.error.reload')}
         </button>
       </div>
     );
@@ -125,7 +127,7 @@ export default function HomePage() {
     <div className="flex items-center justify-center min-h-screen">
       <div className="animate-pulse">
         <span className="text-2xl font-display font-bold bg-gradient-to-r from-vfit-primary via-vfun-primary to-vlife-primary bg-clip-text text-transparent">
-          Loading...
+          {t('common.loading')}
         </span>
       </div>
     </div>

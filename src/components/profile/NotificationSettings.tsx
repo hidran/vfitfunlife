@@ -4,9 +4,10 @@ import { useState, useCallback } from 'react';
 import { Mail, Bell, MessageSquare, Tag, Calendar, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Spinner } from '@/components/ui/Spinner';
 import { updateNotificationSettings } from '@/lib/firebase/auth';
 import { NotificationSettings as NotificationSettingsType } from '@/types/firebase';
+import { useI18n } from '@/hooks/useI18n';
+import type { MessageKey } from '@/i18n/messages';
 
 interface NotificationSettingsProps {
   userId: string;
@@ -28,47 +29,52 @@ const defaultSettings: NotificationSettingsType = {
 const notificationOptions = [
   {
     key: 'email' as const,
-    label: 'Email Notifications',
-    description: 'Receive updates via email',
+    labelKey: 'profile.notifications.option.email.label',
+    descriptionKey: 'profile.notifications.option.email.description',
     icon: Mail,
   },
   {
     key: 'push' as const,
-    label: 'Push Notifications',
-    description: 'Receive push notifications on your device',
+    labelKey: 'profile.notifications.option.push.label',
+    descriptionKey: 'profile.notifications.option.push.description',
     icon: Bell,
   },
   {
     key: 'sms' as const,
-    label: 'SMS Notifications',
-    description: 'Receive text messages for important updates',
+    labelKey: 'profile.notifications.option.sms.label',
+    descriptionKey: 'profile.notifications.option.sms.description',
     icon: MessageSquare,
   },
   {
     key: 'bookingReminders' as const,
-    label: 'Booking Reminders',
-    description: 'Get reminded about upcoming bookings',
+    labelKey: 'profile.notifications.option.bookingReminders.label',
+    descriptionKey: 'profile.notifications.option.bookingReminders.description',
     icon: Calendar,
   },
   {
     key: 'promotions' as const,
-    label: 'Promotions & Offers',
-    description: 'Receive special offers and discounts',
+    labelKey: 'profile.notifications.option.promotions.label',
+    descriptionKey: 'profile.notifications.option.promotions.description',
     icon: Tag,
   },
   {
     key: 'newMessages' as const,
-    label: 'New Messages',
-    description: 'Get notified when you receive new messages',
+    labelKey: 'profile.notifications.option.newMessages.label',
+    descriptionKey: 'profile.notifications.option.newMessages.description',
     icon: MessageSquare,
   },
   {
     key: 'marketing' as const,
-    label: 'Marketing Communications',
-    description: 'Receive news, updates, and marketing emails',
+    labelKey: 'profile.notifications.option.marketing.label',
+    descriptionKey: 'profile.notifications.option.marketing.description',
     icon: Mail,
   },
-];
+] as const satisfies ReadonlyArray<{
+  key: keyof NotificationSettingsType;
+  labelKey: MessageKey;
+  descriptionKey: MessageKey;
+  icon: typeof Mail;
+}>;
 
 export function NotificationSettings({
   userId,
@@ -76,6 +82,7 @@ export function NotificationSettings({
   onUpdate,
   className,
 }: NotificationSettingsProps) {
+  const { t } = useI18n();
   const [settings, setSettings] = useState<NotificationSettingsType>({
     ...defaultSettings,
     ...initialSettings,
@@ -106,7 +113,7 @@ export function NotificationSettings({
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       console.error('Error saving notification settings:', err);
-      setError('Failed to save notification settings');
+      setError(t('profile.notifications.error.save'));
     } finally {
       setIsSaving(false);
     }
@@ -125,9 +132,9 @@ export function NotificationSettings({
       <div className={cn('space-y-3', className)}>
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-medium text-text-tertiary">Notifications</h3>
+            <h3 className="text-sm font-medium text-text-tertiary">{t('profile.notifications.title')}</h3>
             <p className="text-xs text-text-tertiary/70">
-              {enabledCount} of {notificationOptions.length} enabled
+              {t('profile.notifications.enabledCount', { enabled: enabledCount, total: notificationOptions.length })}
             </p>
           </div>
           <Button
@@ -135,7 +142,7 @@ export function NotificationSettings({
             size="sm"
             onClick={() => setIsEditing(true)}
           >
-            Manage
+            {t('profile.notifications.manage')}
           </Button>
         </div>
 
@@ -150,18 +157,18 @@ export function NotificationSettings({
                 className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-success-DEFAULT/10 text-success-DEFAULT text-xs"
               >
                 <option.icon size={12} />
-                <span>{option.label}</span>
+                <span>{t(option.labelKey)}</span>
               </div>
             );
           })}
           {enabledCount > 4 && (
             <span className="inline-flex items-center px-2 py-1 rounded-full bg-background-secondary/10 text-text-tertiary text-xs">
-              +{enabledCount - 4} more
+              {t('profile.notifications.more', { count: enabledCount - 4 })}
             </span>
           )}
           {enabledCount === 0 && (
             <p className="text-sm text-text-tertiary italic">
-              All notifications are disabled
+              {t('profile.notifications.allDisabled')}
             </p>
           )}
         </div>
@@ -172,7 +179,7 @@ export function NotificationSettings({
   return (
     <div className={cn('space-y-4', className)}>
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-text-tertiary">Notification Preferences</h3>
+        <h3 className="text-sm font-medium text-text-tertiary">{t('profile.notifications.preferencesTitle')}</h3>
         <div className="flex gap-2">
           <Button
             variant="ghost"
@@ -223,10 +230,10 @@ export function NotificationSettings({
                   'font-medium text-sm',
                   isEnabled ? 'text-text-inverse' : 'text-text-secondary'
                 )}>
-                  {option.label}
+                  {t(option.labelKey)}
                 </p>
                 <p className="text-xs text-text-tertiary truncate">
-                  {option.description}
+                  {t(option.descriptionKey)}
                 </p>
               </div>
 
@@ -253,7 +260,7 @@ export function NotificationSettings({
       )}
 
       {success && (
-        <p className="text-sm text-success-DEFAULT">Notification settings saved!</p>
+        <p className="text-sm text-success-DEFAULT">{t('profile.notifications.saved')}</p>
       )}
     </div>
   );

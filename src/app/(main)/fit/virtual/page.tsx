@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { MonitorPlay, Play, Signal, Star, Timer } from 'lucide-react';
+import { useI18n } from '@/hooks/useI18n';
 
 interface VirtualProgram {
   id: string;
@@ -40,25 +41,27 @@ const programs: VirtualProgram[] = [
 ];
 
 export default function FitVirtualPage() {
+  const { t } = useI18n();
+
   return (
     <div className="container-mobile py-6 pb-24 space-y-5">
       <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
-        <h1 className="text-2xl font-display font-bold text-text-inverse">Virtual Training</h1>
+        <h1 className="text-2xl font-display font-bold text-text-inverse">{t('fit.virtual.title')}</h1>
         <p className="mt-1 text-sm text-text-secondary">
-          Allenati ovunque con sessioni live e on-demand.
+          {t('fit.virtual.subtitle')}
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <Link
             href="/booking"
             className="rounded-full bg-section-primary px-4 py-2 text-xs font-semibold text-background-dark"
           >
-            Prenota sessione
+            {t('fit.virtual.bookSession')}
           </Link>
           <Link
             href="/bookings"
             className="rounded-full border border-white/20 bg-white/5 px-4 py-2 text-xs font-semibold text-text-inverse"
           >
-            Vedi calendario
+            {t('fit.virtual.viewCalendar')}
           </Link>
         </div>
       </section>
@@ -66,7 +69,7 @@ export default function FitVirtualPage() {
       <section className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4">
         <p className="inline-flex items-center gap-2 text-sm font-medium text-text-inverse">
           <Signal className="h-4 w-4 text-red-300" />
-          Canale live attivo: 2 classi in diretta ora.
+          {t('fit.virtual.liveChannelActive', { count: 2 })}
         </p>
       </section>
 
@@ -77,7 +80,7 @@ export default function FitVirtualPage() {
               <h2 className="text-sm font-semibold text-text-inverse">{program.title}</h2>
               {program.live && (
                 <span className="rounded-full bg-red-500/80 px-2 py-1 text-[10px] font-semibold uppercase text-white">
-                  Live
+                  {t('common.live')}
                 </span>
               )}
             </div>
@@ -100,7 +103,7 @@ export default function FitVirtualPage() {
               className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-section-primary/20 px-4 py-2 text-sm font-semibold text-section-primary"
             >
               <Play className="h-4 w-4" />
-              Avvia percorso
+              {t('fit.virtual.startProgram')}
             </Link>
           </article>
         ))}
@@ -108,4 +111,3 @@ export default function FitVirtualPage() {
     </div>
   );
 }
-

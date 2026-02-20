@@ -1,15 +1,15 @@
 'use client';
 
 import { useState, useRef, ChangeEvent } from 'react';
-import { Upload, X, FileText, Check, Trash2, Award, Eye, Download } from 'lucide-react';
+import { Upload, X, FileText, Check, Trash2, Award, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Spinner } from '@/components/ui/Spinner';
 import { uploadCertification, deleteCertification } from '@/lib/firebase/storage';
 import { addCertification, removeCertification } from '@/lib/firebase/auth';
 import { Certification } from '@/types/firebase';
 import { Timestamp } from 'firebase/firestore';
+import { useI18n } from '@/hooks/useI18n';
 
 interface CertificationUploadProps {
   userId: string;
@@ -24,6 +24,7 @@ export function CertificationUpload({
   onUpdate,
   className,
 }: CertificationUploadProps) {
+  const { locale, t } = useI18n();
   const [isAdding, setIsAdding] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -46,13 +47,13 @@ export function CertificationUpload({
     // Validate file type
     const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
     if (!allowedTypes.includes(file.type)) {
-      setError('Seleziona un file PDF o immagine');
+      setError(t('profile.certifications.error.fileType'));
       return;
     }
 
     // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
-      setError('La dimensione del file deve essere inferiore a 10MB');
+      setError(t('profile.certifications.error.fileSize'));
       return;
     }
 
@@ -75,7 +76,7 @@ export function CertificationUpload({
 
   const handleAdd = async () => {
     if (!newCert.name.trim() || !newCert.issuingOrganization.trim()) {
-      setError('Nome e organizzazione sono obbligatori');
+      setError(t('profile.certifications.error.requiredFields'));
       return;
     }
 
@@ -119,7 +120,7 @@ export function CertificationUpload({
       onUpdate?.(certifications);
     } catch (err) {
       console.error('Error adding certification:', err);
-      setError('Errore durante il salvataggio. Riprova.');
+      setError(t('profile.certifications.error.save'));
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
@@ -127,7 +128,7 @@ export function CertificationUpload({
   };
 
   const handleDelete = async (cert: Certification) => {
-    if (!confirm('Sei sicuro di voler rimuovere questa certificazione?')) return;
+    if (!confirm(t('profile.certifications.confirmDelete'))) return;
 
     try {
       // Delete document from storage if exists
@@ -142,14 +143,21 @@ export function CertificationUpload({
       onUpdate?.(certifications.filter((c) => c.id !== cert.id));
     } catch (err) {
       console.error('Error removing certification:', err);
-      setError('Errore durante la rimozione. Riprova.');
+      setError(t('profile.certifications.error.remove'));
     }
   };
 
   const formatDate = (timestamp: Timestamp | null): string => {
-    if (!timestamp) return 'Nessuna scadenza';
+    if (!timestamp) return t('profile.certifications.noExpiry');
     const date = timestamp.toDate();
-    return date.toLocaleDateString('it-IT', { year: 'numeric', month: 'short' });
+    const localeTag = {
+      it: 'it-IT',
+      en: 'en-US',
+      es: 'es-ES',
+      fr: 'fr-FR',
+      de: 'de-DE',
+    }[locale];
+    return date.toLocaleDateString(localeTag, { year: 'numeric', month: 'short' });
   };
 
   const isExpired = (timestamp: Timestamp | null): boolean => {
@@ -177,7 +185,7 @@ export function CertificationUpload({
         <div className="flex items-center gap-2">
           <Award className="text-section-primary" size={20} />
           <h3 className="text-sm font-medium text-text-tertiary">
-            Certificazioni ({certifications.length})
+            {t('profile.certifications.title', { count: certifications.length })}
           </h3>
         </div>
         {!isAdding && (
@@ -186,7 +194,7 @@ export function CertificationUpload({
             size="sm"
             onClick={() => setIsAdding(true)}
           >
-            Aggiungi
+            {t('profile.certifications.add')}
           </Button>
         )}
       </div>
@@ -216,7 +224,7 @@ export function CertificationUpload({
                 </p>
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                   <span className="text-xs text-text-tertiary">
-                    Rilasciata: {formatDate(cert.issueDate)}
+                    {t('profile.certifications.issued')}: {formatDate(cert.issueDate)}
                   </span>
                   {cert.expiryDate && (
                     <span
@@ -225,14 +233,14 @@ export function CertificationUpload({
                         isExpired(cert.expiryDate) ? 'text-error' : 'text-text-tertiary'
                       )}
                     >
-                      Scade: {formatDate(cert.expiryDate)}
-                      {isExpired(cert.expiryDate) && ' (Scaduta)'}
+                      {t('profile.certifications.expires')}: {formatDate(cert.expiryDate)}
+                      {isExpired(cert.expiryDate) && ` (${t('profile.certifications.expired')})`}
                     </span>
                   )}
                   {cert.isVerified && (
                     <span className="inline-flex items-center gap-1 text-xs text-success-DEFAULT">
                       <Check size={10} />
-                      Verificata
+                      {t('profile.certifications.verified')}
                     </span>
                   )}
                 </div>
@@ -245,7 +253,7 @@ export function CertificationUpload({
                     target="_blank"
                     rel="noopener noreferrer"
                     className="p-2 rounded-lg text-text-tertiary hover:text-section-primary hover:bg-section-primary/10 transition-colors"
-                    title={isPdf(cert.documentUrl) ? 'Visualizza PDF' : 'Visualizza immagine'}
+                    title={isPdf(cert.documentUrl) ? t('profile.certifications.viewPdf') : t('profile.certifications.viewImage')}
                   >
                     <Eye size={16} />
                   </a>
@@ -266,7 +274,7 @@ export function CertificationUpload({
       {isAdding && (
         <div className="p-4 rounded-xl bg-background-secondary/5 border border-white/10 space-y-4">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-medium text-text-inverse">Aggiungi Certificazione</h4>
+            <h4 className="text-sm font-medium text-text-inverse">{t('profile.certifications.addTitle')}</h4>
             <button
               onClick={() => {
                 setIsAdding(false);
@@ -281,28 +289,28 @@ export function CertificationUpload({
 
           <div className="space-y-3">
             <Input
-              label="Nome Certificazione *"
-              placeholder="es. Certificazione Personal Trainer"
+              label={t('profile.certifications.field.name')}
+              placeholder={t('profile.certifications.placeholder.name')}
               value={newCert.name}
               onChange={(e) => setNewCert({ ...newCert, name: e.target.value })}
             />
 
             <Input
-              label="Organizzazione *"
-              placeholder="es. ACE Fitness"
+              label={t('profile.certifications.field.organization')}
+              placeholder={t('profile.certifications.placeholder.organization')}
               value={newCert.issuingOrganization}
               onChange={(e) => setNewCert({ ...newCert, issuingOrganization: e.target.value })}
             />
 
             <div className="grid grid-cols-2 gap-3">
               <Input
-                label="Data di Rilascio"
+                label={t('profile.certifications.field.issueDate')}
                 type="date"
                 value={newCert.issueDate}
                 onChange={(e) => setNewCert({ ...newCert, issueDate: e.target.value })}
               />
               <Input
-                label="Data di Scadenza (opzionale)"
+                label={t('profile.certifications.field.expiryDate')}
                 type="date"
                 value={newCert.expiryDate}
                 onChange={(e) => setNewCert({ ...newCert, expiryDate: e.target.value })}
@@ -312,7 +320,7 @@ export function CertificationUpload({
             {/* File Upload */}
             <div>
               <label className="block text-sm font-medium text-text-tertiary mb-2">
-                Documento Certificato (opzionale)
+                {t('profile.certifications.field.document')}
               </label>
               <input
                 ref={fileInputRef}
@@ -327,7 +335,7 @@ export function CertificationUpload({
                 <div className="relative mb-3 rounded-xl overflow-hidden bg-background-secondary/10">
                   <img
                     src={previewUrl}
-                    alt="Preview"
+                    alt={t('profile.certifications.previewAlt')}
                     className="w-full h-40 object-contain"
                   />
                   <button
@@ -348,7 +356,7 @@ export function CertificationUpload({
                         {selectedFile?.name}
                       </p>
                       <p className="text-xs text-text-tertiary">
-                        PDF Documento
+                        {t('profile.certifications.pdfDocument')}
                       </p>
                     </div>
                     <a
@@ -381,7 +389,7 @@ export function CertificationUpload({
                 >
                   <Upload className="text-text-tertiary" size={20} />
                   <span className="text-sm text-text-secondary">
-                    Clicca per caricare PDF o immagine
+                    {t('profile.certifications.uploadPrompt')}
                   </span>
                 </button>
               )}
@@ -404,7 +412,7 @@ export function CertificationUpload({
               }}
               disabled={isUploading}
             >
-              Annulla
+              {t('profile.certifications.cancel')}
             </Button>
             <Button
               variant="primary"
@@ -415,7 +423,7 @@ export function CertificationUpload({
               isLoading={isUploading}
             >
               <Check size={16} className="mr-1" />
-              Aggiungi
+              {t('profile.certifications.add')}
             </Button>
           </div>
         </div>
@@ -423,9 +431,9 @@ export function CertificationUpload({
 
       {certifications.length === 0 && !isAdding && (
         <div className="text-center py-6 bg-background-secondary/5 rounded-xl">
-          <p className="text-text-tertiary text-sm">Nessuna certificazione aggiunta</p>
+          <p className="text-text-tertiary text-sm">{t('profile.certifications.empty')}</p>
           <p className="text-text-tertiary/70 text-xs mt-1">
-            Clicca &quot;Aggiungi&quot; per inserire le tue certificazioni
+            {t('profile.certifications.emptyHint')}
           </p>
         </div>
       )}

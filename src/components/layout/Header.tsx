@@ -4,6 +4,7 @@ import { useSection, type Section } from '@/contexts/SectionContext';
 import { Bell, User } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback } from 'react';
+import { useI18n } from '@/hooks/useI18n';
 
 interface SectionOption {
   value: Section;
@@ -23,6 +24,7 @@ interface HeaderProps {
 
 export function Header({ notificationCount = 0, userAvatarUrl }: HeaderProps) {
   const { section, setSection } = useSection();
+  const { t } = useI18n();
 
   const handleSectionChange = useCallback(
     (newSection: Section) => {
@@ -40,12 +42,12 @@ export function Header({ notificationCount = 0, userAvatarUrl }: HeaderProps) {
           <Link
             href="/profile"
             className="touch-target flex items-center justify-center rounded-full overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--section-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-background-dark"
-            aria-label="Go to profile"
+            aria-label={t('header.goToProfile')}
           >
             {userAvatarUrl ? (
               <img
                 src={userAvatarUrl}
-                alt="Profile"
+                alt={t('header.profileAvatarAlt')}
                 className="w-9 h-9 rounded-full object-cover"
               />
             ) : (
@@ -59,7 +61,7 @@ export function Header({ notificationCount = 0, userAvatarUrl }: HeaderProps) {
           <div
             className="flex items-center bg-white/10 rounded-full p-1"
             role="tablist"
-            aria-label="App sections"
+            aria-label={t('header.appSections')}
           >
             {sections.map((sectionOption) => {
               const isActive = section === sectionOption.value;
@@ -100,7 +102,11 @@ export function Header({ notificationCount = 0, userAvatarUrl }: HeaderProps) {
           <Link
             href="/notifications"
             className="touch-target flex items-center justify-center relative focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--section-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-background-dark rounded-full"
-            aria-label={`Notifications${notificationCount > 0 ? `, ${notificationCount} unread` : ''}`}
+            aria-label={
+              notificationCount > 0
+                ? t('header.notificationsUnread', { count: notificationCount })
+                : t('header.notifications')
+            }
           >
             <Bell size={24} className="text-text-inverse" />
 

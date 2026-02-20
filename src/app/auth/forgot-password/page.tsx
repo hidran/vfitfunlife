@@ -8,9 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/Spinner';
 import { Mail, ChevronLeft, CheckCircle } from 'lucide-react';
+import { useI18n } from '@/hooks/useI18n';
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const { resetPassword, isLoading, error, clearError } = useAuthStore();
   
   const [email, setEmail] = useState('');
@@ -23,7 +25,7 @@ export default function ForgotPasswordPage() {
     clearError();
 
     if (!email.trim()) {
-      setLocalError('Inserisci la tua email');
+      setLocalError(t('auth.forgot.error.emailRequired'));
       return;
     }
 
@@ -32,7 +34,7 @@ export default function ForgotPasswordPage() {
       setIsSubmitted(true);
     } catch (err) {
       console.error('Password reset error:', err);
-      setLocalError(error || 'Errore durante l\'invio dell\'email di reset');
+      setLocalError(error || t('auth.forgot.error.sendFailed'));
     }
   };
 
@@ -46,7 +48,7 @@ export default function ForgotPasswordPage() {
             className="flex items-center gap-2 text-text-secondary hover:text-text-inverse transition-colors"
           >
             <ChevronLeft className="h-5 w-5" />
-            <span className="text-sm">Torna al login</span>
+            <span className="text-sm">{t('auth.common.backToLogin')}</span>
           </button>
         </div>
 
@@ -57,13 +59,11 @@ export default function ForgotPasswordPage() {
               <CheckCircle className="w-10 h-10 text-green-400" />
             </div>
 
-            <h1 className="text-2xl font-bold text-white mb-4">
-              Email inviata!
-            </h1>
+            <h1 className="text-2xl font-bold text-white mb-4">{t('auth.forgot.success.title')}</h1>
             <p className="text-text-secondary mb-8">
-              Abbiamo inviato un link per reimpostare la password a{' '}
+              {t('auth.forgot.success.descriptionPrefix')}{' '}
               <span className="text-text-inverse font-medium">{email}</span>.{' '}
-              Controlla la tua casella di posta e segui le istruzioni.
+              {t('auth.forgot.success.descriptionSuffix')}
             </p>
 
             <div className="space-y-3">
@@ -71,14 +71,14 @@ export default function ForgotPasswordPage() {
                 onClick={() => router.push('/auth/login')}
                 className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
               >
-                Torna al login
+                {t('auth.common.backToLogin')}
               </Button>
 
               <button
                 onClick={() => setIsSubmitted(false)}
                 className="text-text-secondary text-sm hover:text-text-inverse"
               >
-                Non hai ricevuto l&apos;email? Reinvia
+                {t('auth.forgot.success.resendCta')}
               </button>
             </div>
           </div>
@@ -96,15 +96,15 @@ export default function ForgotPasswordPage() {
           className="flex items-center gap-2 text-text-secondary hover:text-text-inverse transition-colors"
         >
           <ChevronLeft className="h-5 w-5" />
-          <span className="text-sm">Torna al login</span>
+          <span className="text-sm">{t('auth.common.backToLogin')}</span>
         </button>
       </div>
 
       {/* Content */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 pt-8 pb-8">
-        <h1 className="text-2xl font-bold text-white mb-2">Password dimenticata?</h1>
+        <h1 className="text-2xl font-bold text-white mb-2">{t('auth.forgot.title')}</h1>
         <p className="text-text-secondary text-center mb-8 max-w-sm">
-          Inserisci la tua email e ti invieremo un link per reimpostare la password
+          {t('auth.forgot.subtitle')}
         </p>
 
         {/* Error Message */}
@@ -119,14 +119,14 @@ export default function ForgotPasswordPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-text-secondary mb-2">
-                Email
+                {t('auth.common.email')}
               </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-tertiary" />
                 <Input
                   id="email"
                   type="email"
-                  placeholder="nome@esempio.com"
+                  placeholder={t('auth.common.emailPlaceholder')}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-10"
@@ -141,15 +141,15 @@ export default function ForgotPasswordPage() {
               className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
               disabled={isLoading || !email}
             >
-              {isLoading ? <Spinner size="sm" /> : 'Invia link di reset'}
+              {isLoading ? <Spinner size="sm" /> : t('auth.forgot.sendResetLink')}
             </Button>
           </form>
 
           <div className="mt-8 text-center">
             <p className="text-text-secondary text-sm">
-              Ricordi la password?{' '}
+              {t('auth.forgot.rememberPassword')}{' '}
               <Link href="/auth/login" className="font-semibold text-primary hover:underline">
-                Accedi
+                {t('auth.common.login')}
               </Link>
             </p>
           </div>

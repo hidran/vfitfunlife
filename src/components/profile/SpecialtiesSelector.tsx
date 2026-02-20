@@ -5,11 +5,14 @@ import { Sparkles, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { updateProviderSpecialties } from '@/lib/firebase/auth';
+import { useI18n } from '@/hooks/useI18n';
+import type { MessageKey } from '@/i18n/messages';
 
 interface SpecialtiesSelectorProps {
   userId: string;
   specialties: string[];
   availableSpecialties: string[];
+  labelKeysByValue?: Partial<Record<string, MessageKey>>;
   onUpdate?: (specialties: string[]) => void;
   className?: string;
 }
@@ -18,26 +21,30 @@ export function SpecialtiesSelector({
   userId,
   specialties,
   availableSpecialties,
+  labelKeysByValue,
   onUpdate,
   className,
 }: SpecialtiesSelectorProps) {
+  const { t } = useI18n();
   const [selected, setSelected] = useState<string[]>(specialties);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+
+  const serializeSelection = (values: string[]) => [...values].sort().join('|');
 
   const toggleSpecialty = (specialty: string) => {
     const newSelected = selected.includes(specialty)
       ? selected.filter((s) => s !== specialty)
       : [...selected, specialty];
     setSelected(newSelected);
-    setHasChanges(JSON.stringify(newSelected.sort()) !== JSON.stringify(specialties.sort()));
+    setHasChanges(serializeSelection(newSelected) !== serializeSelection(specialties));
     setError(null);
   };
 
   const handleSave = async () => {
     if (selected.length === 0) {
-      setError('Seleziona almeno una specializzazione');
+      setError(t('profile.specialties.error.minOne'));
       return;
     }
 
@@ -50,10 +57,15 @@ export function SpecialtiesSelector({
       setHasChanges(false);
     } catch (err) {
       console.error('Error saving specialties:', err);
-      setError('Errore durante il salvataggio. Riprova.');
+      setError(t('profile.specialties.error.save'));
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const getSpecialtyLabel = (specialty: string) => {
+    const labelKey = labelKeysByValue?.[specialty];
+    return labelKey ? t(labelKey) : specialty;
   };
 
   return (
@@ -62,7 +74,7 @@ export function SpecialtiesSelector({
         <div className="flex items-center gap-2">
           <Sparkles className="text-section-primary" size={20} />
           <h3 className="text-sm font-medium text-text-tertiary">
-            Specializzazioni ({selected.length})
+            {t('profile.specialties.title', { count: selected.length })}
           </h3>
         </div>
         {hasChanges && (
@@ -74,7 +86,7 @@ export function SpecialtiesSelector({
             disabled={isLoading}
           >
             <Check size={16} className="mr-1" />
-            Salva
+            {t('profile.specialties.save')}
           </Button>
         )}
       </div>
@@ -101,7 +113,7 @@ export function SpecialtiesSelector({
             >
               <span className="flex items-center gap-1.5">
                 {isSelected && <Check size={12} />}
-                {specialty}
+                {getSpecialtyLabel(specialty)}
               </span>
             </button>
           );
@@ -110,7 +122,7 @@ export function SpecialtiesSelector({
 
       {selected.length === 0 && (
         <p className="text-sm text-text-tertiary italic">
-          Seleziona le tue specializzazioni
+          {t('profile.specialties.emptyHint')}
         </p>
       )}
     </div>

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/authStore";
 import { Sidebar } from "@/components/admin";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/hooks/useI18n";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -13,6 +14,7 @@ interface AdminLayoutProps {
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const { firebaseUser, user, isLoading, isInitialized, logout } = useAuthStore();
   const router = useRouter();
+  const { t } = useI18n();
 
   useEffect(() => {
     if (!isInitialized) return;
@@ -35,7 +37,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <div className="min-h-screen bg-background-dark flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-3 border-white/20 border-t-[#00C9FF] rounded-full animate-spin" />
-          <p className="text-text-tertiary text-sm">Loading...</p>
+          <p className="text-text-tertiary text-sm">{t('common.loading')}</p>
         </div>
       </div>
     );
@@ -47,7 +49,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <div className="min-h-screen bg-background-dark flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-3 border-white/20 border-t-[#00C9FF] rounded-full animate-spin" />
-          <p className="text-text-tertiary text-sm">Redirecting...</p>
+          <p className="text-text-tertiary text-sm">{t('common.redirecting')}</p>
         </div>
       </div>
     );

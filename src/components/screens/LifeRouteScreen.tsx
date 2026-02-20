@@ -15,6 +15,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { LIFE_ROUTE_CONTENT, type LifeRouteSlug } from '@/lib/featureRouteContent';
+import { useI18n } from '@/hooks/useI18n';
+import type { MessageKey } from '@/i18n/messages';
+import { toLocaleTag } from '@/types/locale';
 
 type SortBy = 'nearest' | 'rating' | 'price';
 type ProviderSlug = Exclude<LifeRouteSlug, 'home-services' | 'centers' | 'hyperbaric'>;
@@ -39,6 +42,21 @@ interface WellnessCenter {
   distanceKm: number;
   specialties: string[];
   isPartner: boolean;
+}
+
+interface HomeServiceCategory {
+  id: string;
+  nameKey: MessageKey;
+  etaKey: MessageKey;
+  fromPrice: number;
+}
+
+interface HyperbaricPlan {
+  id: string;
+  nameKey: MessageKey;
+  durationKey: MessageKey;
+  price: number;
+  notesKey: MessageKey;
 }
 
 const providerDirectory: Record<ProviderSlug, LifeProvider[]> = {
@@ -363,56 +381,82 @@ const wellnessCenters: WellnessCenter[] = [
   },
 ];
 
-const homeServiceSteps = [
-  'Seleziona il servizio e la fascia oraria',
-  'Conferma indirizzo e note per il professionista',
-  'Ricevi tracking e check-in in tempo reale',
+const homeServiceSteps: MessageKey[] = [
+  'lifeRoute.homeServices.step1',
+  'lifeRoute.homeServices.step2',
+  'lifeRoute.homeServices.step3',
 ];
 
-const homeServiceCategories = [
-  { name: 'Massaggi', eta: 'Entro 2h', from: 'EUR 55' },
-  { name: 'Beauty', eta: 'Entro 3h', from: 'EUR 39' },
-  { name: 'Hair Styling', eta: 'Entro 2h', from: 'EUR 29' },
-  { name: 'Fisioterapia', eta: 'Entro 4h', from: 'EUR 68' },
+const homeServiceCategories: HomeServiceCategory[] = [
+  {
+    id: 'massages',
+    nameKey: 'lifeRoute.homeServices.category.massages.name',
+    etaKey: 'lifeRoute.homeServices.category.massages.eta',
+    fromPrice: 55,
+  },
+  {
+    id: 'beauty',
+    nameKey: 'lifeRoute.homeServices.category.beauty.name',
+    etaKey: 'lifeRoute.homeServices.category.beauty.eta',
+    fromPrice: 39,
+  },
+  {
+    id: 'hair',
+    nameKey: 'lifeRoute.homeServices.category.hair.name',
+    etaKey: 'lifeRoute.homeServices.category.hair.eta',
+    fromPrice: 29,
+  },
+  {
+    id: 'physio',
+    nameKey: 'lifeRoute.homeServices.category.physio.name',
+    etaKey: 'lifeRoute.homeServices.category.physio.eta',
+    fromPrice: 68,
+  },
 ];
 
-const hyperbaricPlans = [
+const hyperbaricPlans: HyperbaricPlan[] = [
   {
     id: 'hb-single',
-    name: 'Sessione Singola',
-    duration: '90 minuti',
-    price: 'EUR 120',
-    notes: 'Perfetta per primo approccio o recupero spot.',
+    nameKey: 'lifeRoute.hyperbaric.plan.single.name',
+    durationKey: 'lifeRoute.hyperbaric.plan.single.duration',
+    price: 120,
+    notesKey: 'lifeRoute.hyperbaric.plan.single.notes',
   },
   {
     id: 'hb-5',
-    name: 'Pacchetto 5 Sessioni',
-    duration: '5 x 90 minuti',
-    price: 'EUR 540',
-    notes: 'Ideale per protocollo rigenerazione intensivo.',
+    nameKey: 'lifeRoute.hyperbaric.plan.five.name',
+    durationKey: 'lifeRoute.hyperbaric.plan.five.duration',
+    price: 540,
+    notesKey: 'lifeRoute.hyperbaric.plan.five.notes',
   },
   {
     id: 'hb-10',
-    name: 'Pacchetto 10 Sessioni',
-    duration: '10 x 90 minuti',
-    price: 'EUR 980',
-    notes: 'Programma completo con follow-up professionale.',
+    nameKey: 'lifeRoute.hyperbaric.plan.ten.name',
+    durationKey: 'lifeRoute.hyperbaric.plan.ten.duration',
+    price: 980,
+    notesKey: 'lifeRoute.hyperbaric.plan.ten.notes',
   },
 ];
 
-const providerSortLabels: Record<SortBy, string> = {
-  nearest: 'Piu vicino',
-  rating: 'Valutazione',
-  price: 'Prezzo',
+const providerSortLabels: Record<SortBy, MessageKey> = {
+  nearest: 'lifeRoute.sort.nearest',
+  rating: 'lifeRoute.sort.rating',
+  price: 'lifeRoute.sort.price',
 };
 
 const providerSortOptions: SortBy[] = ['nearest', 'rating', 'price'];
 
 export function LifeRouteScreen({ slug }: { slug: LifeRouteSlug }) {
+  const { t, locale } = useI18n();
   const content = LIFE_ROUTE_CONTENT[slug];
   const Icon = content?.icon ?? Sparkles;
   const [query, setQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortBy>('nearest');
+
+  const numberFormatter = useMemo(
+    () => new Intl.NumberFormat(toLocaleTag(locale)),
+    [locale]
+  );
 
   const providerSlug = useMemo(
     () => (slug in providerDirectory ? (slug as ProviderSlug) : null),
@@ -460,15 +504,17 @@ export function LifeRouteScreen({ slug }: { slug: LifeRouteSlug }) {
         <div className="absolute -bottom-12 left-0 h-32 w-32 rounded-full bg-section-secondary/20 blur-3xl" />
         <div className="relative">
           <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">
-            VLife
+            {t('lifeRoute.badge')}
           </span>
           <div className="mt-4 flex items-start gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-section-primary/20 text-section-primary">
               <Icon className="h-6 w-6" />
             </div>
             <div>
-              <h1 className="text-2xl font-display font-bold text-text-inverse">{content.title}</h1>
-              <p className="mt-1 text-sm text-text-secondary">{content.description}</p>
+              <h1 className="text-2xl font-display font-bold text-text-inverse">
+                {t(content.titleKey)}
+              </h1>
+              <p className="mt-1 text-sm text-text-secondary">{t(content.descriptionKey)}</p>
             </div>
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
@@ -476,13 +522,13 @@ export function LifeRouteScreen({ slug }: { slug: LifeRouteSlug }) {
               href="/home"
               className="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold text-text-inverse"
             >
-              Torna a Home
+              {t('common.backToHome')}
             </Link>
             <Link
               href="/booking"
               className="rounded-full bg-section-primary px-4 py-2 text-xs font-semibold text-background-dark"
             >
-              Prenota servizio
+              {t('lifeRoute.actions.bookService')}
             </Link>
           </div>
         </div>
@@ -495,8 +541,8 @@ export function LifeRouteScreen({ slug }: { slug: LifeRouteSlug }) {
             onChange={(event) => setQuery(event.target.value)}
             placeholder={
               slug === 'centers'
-                ? 'Cerca centri o specialita...'
-                : 'Cerca professionisti o trattamenti...'
+                ? t('lifeRoute.search.centersPlaceholder')
+                : t('lifeRoute.search.providersPlaceholder')
             }
           />
           {isProviderRoute && (
@@ -508,7 +554,7 @@ export function LifeRouteScreen({ slug }: { slug: LifeRouteSlug }) {
               }}
               className="rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold text-text-inverse"
             >
-              Ordina: {providerSortLabels[sortBy]}
+              {t('lifeRoute.sort.label')}: {t(providerSortLabels[sortBy])}
             </button>
           )}
         </div>
@@ -526,18 +572,18 @@ export function LifeRouteScreen({ slug }: { slug: LifeRouteSlug }) {
                 {provider.homeService && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2 py-1 text-[10px] font-semibold uppercase text-emerald-300">
                     <Home className="h-3 w-3" />
-                    Domicilio
+                    {t('lifeRoute.provider.homeService')}
                   </span>
                 )}
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-text-tertiary">
                 <span className="inline-flex items-center gap-1">
                   <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-                  {provider.rating.toFixed(1)} ({provider.reviews})
+                  {provider.rating.toFixed(1)} ({numberFormatter.format(provider.reviews)})
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <MapPin className="h-3.5 w-3.5" />
-                  {provider.distanceKm.toFixed(1)} km
+                  {t('lifeRoute.distanceKm', { value: provider.distanceKm.toFixed(1) })}
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <Clock className="h-3.5 w-3.5" />
@@ -545,19 +591,21 @@ export function LifeRouteScreen({ slug }: { slug: LifeRouteSlug }) {
                 </span>
               </div>
               <div className="mt-3 flex items-center justify-between">
-                <span className="text-sm font-bold text-section-primary">Da EUR {provider.priceFrom}</span>
+                <span className="text-sm font-bold text-section-primary">
+                  {t('lifeRoute.priceFromEur', { price: provider.priceFrom })}
+                </span>
                 <Link
                   href="/booking"
                   className="rounded-full bg-section-primary/20 px-3 py-1.5 text-xs font-semibold text-section-primary"
                 >
-                  Prenota
+                  {t('common.bookNow')}
                 </Link>
               </div>
             </article>
           ))}
           {filteredProviders.length === 0 && (
             <p className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-text-tertiary">
-              Nessun professionista trovato con i filtri selezionati.
+              {t('lifeRoute.provider.empty')}
             </p>
           )}
         </section>
@@ -575,7 +623,7 @@ export function LifeRouteScreen({ slug }: { slug: LifeRouteSlug }) {
                 {center.isPartner && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold uppercase text-background-dark">
                     <ShieldCheck className="h-3 w-3" />
-                    Partner
+                    {t('lifeRoute.partnerBadge')}
                   </span>
                 )}
               </div>
@@ -586,7 +634,7 @@ export function LifeRouteScreen({ slug }: { slug: LifeRouteSlug }) {
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <MapPin className="h-3.5 w-3.5" />
-                  {center.distanceKm.toFixed(1)} km
+                  {t('lifeRoute.distanceKm', { value: center.distanceKm.toFixed(1) })}
                 </span>
               </div>
               <div className="mt-3 flex flex-wrap gap-1.5">
@@ -600,14 +648,14 @@ export function LifeRouteScreen({ slug }: { slug: LifeRouteSlug }) {
                 href="/booking"
                 className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-section-primary"
               >
-                Vedi disponibilita
+                {t('lifeRoute.centers.viewAvailability')}
                 <ArrowUpRight className="h-4 w-4" />
               </Link>
             </article>
           ))}
           {filteredCenters.length === 0 && (
             <p className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-text-tertiary">
-              Nessun centro trovato con la ricerca corrente.
+              {t('lifeRoute.centers.empty')}
             </p>
           )}
         </section>
@@ -616,29 +664,29 @@ export function LifeRouteScreen({ slug }: { slug: LifeRouteSlug }) {
       {slug === 'home-services' && (
         <section className="space-y-4">
           <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
-            <h2 className="text-base font-semibold text-text-inverse">Servizi a domicilio verificati</h2>
-            <p className="mt-1 text-sm text-text-secondary">
-              Professionisti certificati con check-in in app e supporto dedicato.
-            </p>
+            <h2 className="text-base font-semibold text-text-inverse">{t('lifeRoute.homeServices.title')}</h2>
+            <p className="mt-1 text-sm text-text-secondary">{t('lifeRoute.homeServices.description')}</p>
             <div className="mt-3 space-y-1.5">
               {homeServiceSteps.map((step) => (
                 <p key={step} className="text-xs text-text-tertiary">
-                  • {step}
+                  • {t(step)}
                 </p>
               ))}
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             {homeServiceCategories.map((category) => (
-              <article key={category.name} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <h3 className="text-sm font-semibold text-text-inverse">{category.name}</h3>
-                <p className="mt-1 text-xs text-text-tertiary">{category.eta}</p>
-                <p className="mt-2 text-sm font-bold text-section-primary">Da {category.from}</p>
+              <article key={category.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <h3 className="text-sm font-semibold text-text-inverse">{t(category.nameKey)}</h3>
+                <p className="mt-1 text-xs text-text-tertiary">{t(category.etaKey)}</p>
+                <p className="mt-2 text-sm font-bold text-section-primary">
+                  {t('lifeRoute.priceFromEur', { price: category.fromPrice })}
+                </p>
                 <Link
                   href="/booking"
                   className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-section-primary"
                 >
-                  Prenota ora
+                  {t('common.bookNow')}
                   <ArrowUpRight className="h-3.5 w-3.5" />
                 </Link>
               </article>
@@ -652,51 +700,57 @@ export function LifeRouteScreen({ slug }: { slug: LifeRouteSlug }) {
           <div className="rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-4">
             <div className="flex items-center gap-2">
               <Wind className="h-5 w-5 text-cyan-300" />
-              <h2 className="text-base font-semibold text-text-inverse">Percorso Ossigeno Iperbarico</h2>
+              <h2 className="text-base font-semibold text-text-inverse">{t('lifeRoute.hyperbaric.title')}</h2>
             </div>
-            <p className="mt-2 text-sm text-text-secondary">
-              Trattamento in ambiente controllato con protocollo medico e monitoraggio costante.
-            </p>
+            <p className="mt-2 text-sm text-text-secondary">{t('lifeRoute.hyperbaric.description')}</p>
             <div className="mt-3 grid grid-cols-3 gap-2">
               <div className="rounded-xl bg-white/5 p-2 text-center">
                 <p className="text-lg font-bold text-cyan-300">90</p>
-                <p className="text-[10px] text-text-tertiary">Minuti</p>
+                <p className="text-[10px] text-text-tertiary">{t('lifeRoute.hyperbaric.metric.minutes')}</p>
               </div>
               <div className="rounded-xl bg-white/5 p-2 text-center">
                 <p className="text-lg font-bold text-cyan-300">2.0</p>
-                <p className="text-[10px] text-text-tertiary">ATA</p>
+                <p className="text-[10px] text-text-tertiary">{t('lifeRoute.hyperbaric.metric.ata')}</p>
               </div>
               <div className="rounded-xl bg-white/5 p-2 text-center">
                 <p className="text-lg font-bold text-cyan-300">100%</p>
-                <p className="text-[10px] text-text-tertiary">O2</p>
+                <p className="text-[10px] text-text-tertiary">{t('lifeRoute.hyperbaric.metric.o2')}</p>
               </div>
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             {hyperbaricPlans.map((plan) => (
               <article key={plan.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <h3 className="text-sm font-semibold text-text-inverse">{plan.name}</h3>
-                <p className="mt-1 text-xs text-text-tertiary">{plan.duration}</p>
-                <p className="mt-2 text-sm font-bold text-section-primary">{plan.price}</p>
-                <p className="mt-2 text-xs text-text-tertiary">{plan.notes}</p>
+                <h3 className="text-sm font-semibold text-text-inverse">{t(plan.nameKey)}</h3>
+                <p className="mt-1 text-xs text-text-tertiary">{t(plan.durationKey)}</p>
+                <p className="mt-2 text-sm font-bold text-section-primary">
+                  {t('lifeRoute.priceEur', { price: plan.price })}
+                </p>
+                <p className="mt-2 text-xs text-text-tertiary">{t(plan.notesKey)}</p>
               </article>
             ))}
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">Nota medica</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">
+              {t('lifeRoute.hyperbaric.medicalNote.title')}
+            </p>
             <p className="mt-1 text-sm text-text-secondary">
-              Prima della prenotazione e richiesto un breve questionario anamnestico.
+              {t('lifeRoute.hyperbaric.medicalNote.description')}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
-              {['Recupero sportivo', 'Rigenerazione cellulare', 'Focus mentale'].map((benefit) => (
+              {[
+                'lifeRoute.hyperbaric.benefit.1',
+                'lifeRoute.hyperbaric.benefit.2',
+                'lifeRoute.hyperbaric.benefit.3',
+              ].map((benefitKey) => (
                 <span
-                  key={benefit}
+                  key={benefitKey}
                   className={cn(
                     'inline-flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-xs text-text-tertiary'
                   )}
                 >
                   <Sparkles className="h-3 w-3 text-cyan-300" />
-                  {benefit}
+                  {t(benefitKey as MessageKey)}
                 </span>
               ))}
             </div>
@@ -705,7 +759,7 @@ export function LifeRouteScreen({ slug }: { slug: LifeRouteSlug }) {
             href="/booking"
             className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-section-primary/20 px-4 py-3 text-sm font-semibold text-section-primary"
           >
-            Prenota una valutazione
+            {t('lifeRoute.hyperbaric.bookAssessment')}
             <ArrowUpRight className="h-4 w-4" />
           </Link>
         </section>

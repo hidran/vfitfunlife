@@ -3,6 +3,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/hooks/useI18n';
 
 interface Gym {
   id: string;
@@ -40,17 +41,15 @@ const getGymCoordinates = (gymId: string, index: number) => {
 };
 
 export function GoogleMap({ gyms, userLocation, onGymSelect, className }: GoogleMapProps) {
+  const { t } = useI18n();
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim();
   const hasPlaceholderKey = !apiKey || /your_|example|xxx/i.test(apiKey);
   const mapRef = useRef<HTMLDivElement>(null);
   const googleMapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
   const [isLoading, setIsLoading] = useState(Boolean(apiKey) && !hasPlaceholderKey);
-  const [error, setError] = useState<string | null>(
-    hasPlaceholderKey
-      ? 'Google Maps API key non valida o non configurata'
-      : null
-  );
+  const [runtimeError, setRuntimeError] = useState<string | null>(null);
+  const error = runtimeError ?? (hasPlaceholderKey ? t('map.google.error.apiKeyInvalid') : null);
 
   // Initialize map
   useEffect(() => {
@@ -113,6 +112,7 @@ export function GoogleMap({ gyms, userLocation, onGymSelect, className }: Google
       };
 
       googleMapRef.current = new google.maps.Map(mapRef.current, mapOptions);
+      setRuntimeError(null);
       setIsLoading(false);
     }).catch((err: unknown) => {
       const message =
@@ -126,10 +126,10 @@ export function GoogleMap({ gyms, userLocation, onGymSelect, className }: Google
         );
 
       console.error('Google Maps loading error:', err);
-      setError(
+      setRuntimeError(
         isDomainOrBillingError
-          ? 'Google Maps ha rifiutato la richiesta. Verifica API key, billing e domini consentiti.'
-          : 'Failed to load Google Maps'
+          ? t('map.google.error.requestRejected')
+          : t('map.google.error.loadFailed')
       );
       setIsLoading(false);
     });
@@ -139,7 +139,7 @@ export function GoogleMap({ gyms, userLocation, onGymSelect, className }: Google
       markersRef.current.forEach(marker => marker.setMap(null));
       markersRef.current = [];
     };
-  }, [apiKey, hasPlaceholderKey, userLocation]);
+  }, [apiKey, hasPlaceholderKey, t, userLocation]);
 
   // Add/update markers when gyms change
   useEffect(() => {
@@ -219,9 +219,9 @@ export function GoogleMap({ gyms, userLocation, onGymSelect, className }: Google
             <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
               <span style="color: #fbbf24;">★</span>
               <span style="font-weight: 600;">${gym.rating}</span>
-              <span style="color: #8a8d99;">(${gym.reviews} recensioni)</span>
+              <span style="color: #8a8d99;">(${t('map.google.reviews', { count: gym.reviews })})</span>
             </div>
-            ${gym.partner ? '<span style="display: inline-block; margin-top: 8px; padding: 4px 8px; background: rgba(0, 201, 255, 0.2); color: #00C9FF; border-radius: 4px; font-size: 12px; font-weight: 500;">Partner</span>' : ''}
+            ${gym.partner ? `<span style="display: inline-block; margin-top: 8px; padding: 4px 8px; background: rgba(0, 201, 255, 0.2); color: #00C9FF; border-radius: 4px; font-size: 12px; font-weight: 500;">${t('map.google.partner')}</span>` : ''}
           </div>
         `,
       });
@@ -237,14 +237,14 @@ export function GoogleMap({ gyms, userLocation, onGymSelect, className }: Google
     if (gyms.length > 0) {
       googleMapRef.current.fitBounds(bounds, 50);
     }
-  }, [gyms, onGymSelect]);
+  }, [gyms, onGymSelect, t]);
 
   if (error) {
     return (
       <div className={cn("flex items-center justify-center bg-background-dark rounded-2xl border border-white/10", className)}>
         <div className="text-center p-6">
           <p className="text-red-400 text-sm mb-2">{error}</p>
-          <p className="text-text-tertiary text-xs">Please check your Google Maps API key configuration</p>
+          <p className="text-text-tertiary text-xs">{t('map.google.error.checkConfig')}</p>
         </div>
       </div>
     );
@@ -256,7 +256,7 @@ export function GoogleMap({ gyms, userLocation, onGymSelect, className }: Google
         <div className="absolute inset-0 flex items-center justify-center bg-background-dark z-10">
           <div className="flex flex-col items-center gap-3">
             <div className="w-8 h-8 border-2 border-white/20 border-t-section-primary rounded-full animate-spin" />
-            <p className="text-text-tertiary text-sm">Caricamento mappa...</p>
+            <p className="text-text-tertiary text-sm">{t('map.google.loading')}</p>
           </div>
         </div>
       )}

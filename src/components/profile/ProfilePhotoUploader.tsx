@@ -3,10 +3,10 @@
 import { useState, useRef, ChangeEvent } from 'react';
 import { Camera, Upload, X, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/Spinner';
 import { updateProfilePhoto } from '@/lib/firebase/storage';
 import { updateUserProfile } from '@/lib/firebase/auth';
+import { useI18n } from '@/hooks/useI18n';
 
 interface ProfilePhotoUploaderProps {
   userId: string;
@@ -39,6 +39,7 @@ export function ProfilePhotoUploader({
   size = 'lg',
   className,
 }: ProfilePhotoUploaderProps) {
+  const { t } = useI18n();
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -51,13 +52,13 @@ export function ProfilePhotoUploader({
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      setError('Please select an image file');
+      setError(t('profile.photo.error.imageOnly'));
       return;
     }
 
     // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
-      setError('File size must be less than 10MB');
+      setError(t('profile.photo.error.maxSize'));
       return;
     }
 
@@ -86,7 +87,7 @@ export function ProfilePhotoUploader({
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       console.error('Upload error:', err);
-      setError('Failed to upload photo. Please try again.');
+      setError(t('profile.photo.error.upload'));
       setPreviewUrl(null);
     } finally {
       setIsUploading(false);
@@ -111,7 +112,7 @@ export function ProfilePhotoUploader({
     .map((n) => n[0])
     .join('')
     .toUpperCase()
-    .slice(0, 2) || 'U';
+    .slice(0, 2) || t('profile.photo.initialsFallback');
 
   return (
     <div className={cn('flex flex-col items-center', className)}>
@@ -128,7 +129,7 @@ export function ProfilePhotoUploader({
             {displayUrl ? (
               <img
                 src={displayUrl}
-                alt={displayName || 'Profile'}
+                alt={displayName || t('profile.photo.alt')}
                 className="w-full h-full object-cover"
               />
             ) : (
@@ -194,7 +195,7 @@ export function ProfilePhotoUploader({
       {success && (
         <div className="mt-2 flex items-center gap-1 text-success-DEFAULT text-xs">
           <Check size={12} />
-          <span>Photo updated!</span>
+          <span>{t('profile.photo.success')}</span>
         </div>
       )}
     </div>

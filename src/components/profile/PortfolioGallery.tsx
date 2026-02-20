@@ -5,8 +5,9 @@ import { Image as ImageIcon, Plus, X, Trash2, ZoomIn, ChevronLeft, ChevronRight 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/Spinner';
-import { uploadPortfolioImage, deletePortfolioImage, getFilePathFromUrl } from '@/lib/firebase/storage';
+import { uploadPortfolioImage, deletePortfolioImage } from '@/lib/firebase/storage';
 import { addPortfolioImage, removePortfolioImage } from '@/lib/firebase/auth';
+import { useI18n } from '@/hooks/useI18n';
 
 interface PortfolioGalleryProps {
   userId: string;
@@ -21,6 +22,7 @@ export function PortfolioGallery({
   onUpdate,
   className,
 }: PortfolioGalleryProps) {
+  const { t } = useI18n();
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -44,13 +46,13 @@ export function PortfolioGallery({
         
         // Validate file type
         if (!file.type.startsWith('image/')) {
-          setError(`Il file ${file.name} non è un'immagine valida`);
+          setError(t('profile.portfolio.error.invalidImage', { name: file.name }));
           continue;
         }
 
         // Validate file size (max 5MB)
         if (file.size > 5 * 1024 * 1024) {
-          setError(`L'immagine ${file.name} supera i 5MB`);
+          setError(t('profile.portfolio.error.maxSize', { name: file.name }));
           continue;
         }
 
@@ -67,7 +69,7 @@ export function PortfolioGallery({
       onUpdate?.([...images, ...uploadedUrls]);
     } catch (err) {
       console.error('Error uploading images:', err);
-      setError('Errore durante il caricamento. Riprova.');
+      setError(t('profile.portfolio.error.upload'));
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
@@ -78,7 +80,7 @@ export function PortfolioGallery({
   };
 
   const handleDelete = async (imageUrl: string) => {
-    if (!confirm('Sei sicuro di voler rimuovere questa immagine?')) return;
+    if (!confirm(t('profile.portfolio.confirmDelete'))) return;
 
     try {
       // Delete from storage
@@ -90,7 +92,7 @@ export function PortfolioGallery({
       onUpdate?.(images.filter((url) => url !== imageUrl));
     } catch (err) {
       console.error('Error removing image:', err);
-      setError('Errore durante la rimozione. Riprova.');
+      setError(t('profile.portfolio.error.remove'));
     }
   };
 
@@ -119,7 +121,7 @@ export function PortfolioGallery({
         <div className="flex items-center gap-2">
           <ImageIcon className="text-section-primary" size={20} />
           <h3 className="text-sm font-medium text-text-tertiary">
-            Portfolio ({images.length})
+            {t('profile.portfolio.title', { count: images.length })}
           </h3>
         </div>
         <div className="flex items-center gap-2">
@@ -146,7 +148,7 @@ export function PortfolioGallery({
             ) : (
               <>
                 <Plus size={16} className="mr-1" />
-                Aggiungi
+                {t('profile.portfolio.add')}
               </>
             )}
           </Button>
@@ -171,7 +173,7 @@ export function PortfolioGallery({
             >
               <img
                 src={url}
-                alt={`Portfolio ${index + 1}`}
+                alt={t('profile.portfolio.imageAlt', { index: index + 1 })}
                 className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
               />
               
@@ -208,15 +210,15 @@ export function PortfolioGallery({
             className="aspect-square rounded-xl border-2 border-dashed border-white/20 hover:border-section-primary/50 flex flex-col items-center justify-center gap-2 transition-colors"
           >
             <Plus size={24} className="text-text-tertiary" />
-            <span className="text-xs text-text-tertiary">Aggiungi foto</span>
+            <span className="text-xs text-text-tertiary">{t('profile.portfolio.addPhoto')}</span>
           </button>
         </div>
       ) : (
         <div className="text-center py-8 bg-background-secondary/5 rounded-xl border-2 border-dashed border-white/10">
           <ImageIcon size={40} className="text-text-tertiary/50 mx-auto mb-3" />
-          <p className="text-text-tertiary text-sm">Nessuna immagine nel portfolio</p>
+          <p className="text-text-tertiary text-sm">{t('profile.portfolio.empty')}</p>
           <p className="text-text-tertiary/70 text-xs mt-1">
-            Aggiungi foto per mostrare il tuo lavoro
+            {t('profile.portfolio.emptyHint')}
           </p>
           <Button
             variant="outline"
@@ -228,12 +230,12 @@ export function PortfolioGallery({
             {isUploading ? (
               <>
                 <Spinner size="sm" className="mr-2" />
-                Caricamento...
+                {t('profile.portfolio.uploading')}
               </>
             ) : (
               <>
                 <Plus size={16} className="mr-2" />
-                Carica immagini
+                {t('profile.portfolio.uploadImages')}
               </>
             )}
           </Button>
@@ -286,7 +288,7 @@ export function PortfolioGallery({
           {/* Image */}
           <img
             src={images[currentImageIndex]}
-            alt={`Portfolio ${currentImageIndex + 1}`}
+            alt={t('profile.portfolio.imageAlt', { index: currentImageIndex + 1 })}
             className="max-w-full max-h-[90vh] object-contain"
             onClick={(e) => e.stopPropagation()}
           />

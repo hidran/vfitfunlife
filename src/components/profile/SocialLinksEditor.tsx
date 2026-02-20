@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { Instagram, Linkedin, Globe, Facebook, Twitter, Link as LinkIcon, Check, X, AlertCircle } from 'lucide-react';
+import { useState } from 'react';
+import { Instagram, Linkedin, Globe, Facebook, Twitter, Check, X, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Spinner } from '@/components/ui/Spinner';
 import { updateSocialLinks } from '@/lib/firebase/auth';
 import { SocialLinks } from '@/types/firebase';
+import { useI18n } from '@/hooks/useI18n';
+import type { MessageKey } from '@/i18n/messages';
 
 interface SocialLinksEditorProps {
   userId: string;
@@ -17,11 +18,46 @@ interface SocialLinksEditorProps {
 }
 
 const socialPlatforms = [
-  { key: 'instagram', label: 'Instagram', icon: Instagram, placeholder: '@username', color: '#E4405F' },
-  { key: 'linkedin', label: 'LinkedIn', icon: Linkedin, placeholder: 'linkedin.com/in/username', color: '#0A66C2' },
-  { key: 'website', label: 'Sito Web', icon: Globe, placeholder: 'tuosito.com', color: '#10B981' },
-  { key: 'facebook', label: 'Facebook', icon: Facebook, placeholder: 'facebook.com/username', color: '#1877F2' },
-  { key: 'twitter', label: 'Twitter/X', icon: Twitter, placeholder: '@username', color: '#1DA1F2' },
+  {
+    key: 'instagram',
+    labelKey: 'profile.social.platform.instagram',
+    icon: Instagram,
+    placeholderKey: 'profile.social.placeholder.instagram',
+    color: '#E4405F',
+    formatErrorKey: 'profile.social.validation.instagram',
+  },
+  {
+    key: 'linkedin',
+    labelKey: 'profile.social.platform.linkedin',
+    icon: Linkedin,
+    placeholderKey: 'profile.social.placeholder.linkedin',
+    color: '#0A66C2',
+    formatErrorKey: 'profile.social.validation.linkedin',
+  },
+  {
+    key: 'website',
+    labelKey: 'profile.social.platform.website',
+    icon: Globe,
+    placeholderKey: 'profile.social.placeholder.website',
+    color: '#10B981',
+    formatErrorKey: 'profile.social.validation.website',
+  },
+  {
+    key: 'facebook',
+    labelKey: 'profile.social.platform.facebook',
+    icon: Facebook,
+    placeholderKey: 'profile.social.placeholder.facebook',
+    color: '#1877F2',
+    formatErrorKey: 'profile.social.validation.facebook',
+  },
+  {
+    key: 'twitter',
+    labelKey: 'profile.social.platform.twitter',
+    icon: Twitter,
+    placeholderKey: 'profile.social.placeholder.twitter',
+    color: '#1DA1F2',
+    formatErrorKey: 'profile.social.validation.twitter',
+  },
 ] as const;
 
 // URL validation patterns
@@ -39,6 +75,7 @@ export function SocialLinksEditor({
   onUpdate,
   className,
 }: SocialLinksEditorProps) {
+  const { t } = useI18n();
   const [links, setLinks] = useState<SocialLinks>(socialLinks || {});
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -57,7 +94,8 @@ export function SocialLinksEditor({
     // Check URL pattern
     const pattern = URL_PATTERNS[key];
     if (pattern && !pattern.test(value)) {
-      return `Formato ${key} non valido`;
+      const platform = socialPlatforms.find((entry) => entry.key === key);
+      return t(platform?.formatErrorKey ?? 'profile.social.validation.generic');
     }
     
     return null;
@@ -88,7 +126,7 @@ export function SocialLinksEditor({
     
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
-      setError('Correggi gli errori prima di salvare');
+      setError(t('profile.social.error.fixBeforeSave'));
       return;
     }
 
@@ -104,7 +142,7 @@ export function SocialLinksEditor({
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       console.error('Error saving social links:', err);
-      setError('Errore durante il salvataggio. Riprova.');
+      setError(t('profile.social.error.save'));
     } finally {
       setIsSaving(false);
     }
@@ -141,13 +179,13 @@ export function SocialLinksEditor({
     return (
       <div className={cn('space-y-3', className)}>
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium text-text-tertiary">Link Social</h3>
+          <h3 className="text-sm font-medium text-text-tertiary">{t('profile.social.title')}</h3>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setIsEditing(true)}
           >
-            {hasLinks ? 'Modifica' : 'Aggiungi'}
+            {hasLinks ? t('profile.social.edit') : t('profile.social.add')}
           </Button>
         </div>
 
@@ -176,7 +214,7 @@ export function SocialLinksEditor({
           </div>
         ) : (
           <p className="text-sm text-text-tertiary italic">
-            Nessun link social aggiunto
+            {t('profile.social.empty')}
           </p>
         )}
       </div>
@@ -186,7 +224,7 @@ export function SocialLinksEditor({
   return (
     <div className={cn('space-y-4', className)}>
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-text-tertiary">Modifica Link Social</h3>
+        <h3 className="text-sm font-medium text-text-tertiary">{t('profile.social.editTitle')}</h3>
         <div className="flex gap-2">
           <Button
             variant="ghost"
@@ -226,8 +264,8 @@ export function SocialLinksEditor({
                 <platform.icon size={16} style={{ color: platform.color }} />
               </div>
               <Input
-                label={platform.label}
-                placeholder={platform.placeholder}
+                label={t(platform.labelKey)}
+                placeholder={t(platform.placeholderKey)}
                 value={links[platform.key as keyof SocialLinks] || ''}
                 onChange={(e) => handleChange(platform.key as keyof SocialLinks, e.target.value)}
                 error={validationErrors[platform.key]}
@@ -244,12 +282,12 @@ export function SocialLinksEditor({
       </div>
 
       <p className="text-xs text-text-tertiary">
-        Inserisci l&apos;URL completo o lo username (con @ per Instagram/Twitter)
+        {t('profile.social.hint')}
       </p>
 
       {success && (
         <p className="text-sm text-success-DEFAULT text-center">
-          Link social salvati con successo!
+          {t('profile.social.saved')}
         </p>
       )}
     </div>

@@ -5,10 +5,10 @@ import { GraduationCap, Plus, X, Trash2, Check, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Spinner } from '@/components/ui/Spinner';
 import { addEducation, removeEducation } from '@/lib/firebase/auth';
 import { Education } from '@/types/firebase';
 import { Timestamp } from 'firebase/firestore';
+import { useI18n } from '@/hooks/useI18n';
 
 interface EducationHistoryProps {
   userId: string;
@@ -23,6 +23,7 @@ export function EducationHistory({
   onUpdate,
   className,
 }: EducationHistoryProps) {
+  const { locale, t } = useI18n();
   const [isAdding, setIsAdding] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +38,7 @@ export function EducationHistory({
 
   const handleAdd = async () => {
     if (!newEducation.institution.trim() || !newEducation.degree.trim()) {
-      setError('Institution and degree are required');
+      setError(t('profile.education.error.requiredFields'));
       return;
     }
 
@@ -71,14 +72,14 @@ export function EducationHistory({
       onUpdate?.(education);
     } catch (err) {
       console.error('Error adding education:', err);
-      setError('Errore durante il salvataggio. Riprova.');
+      setError(t('profile.education.error.save'));
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleDelete = async (edu: Education) => {
-    if (!confirm('Sei sicuro di voler rimuovere questo titolo di studio?')) return;
+    if (!confirm(t('profile.education.confirmDelete'))) return;
 
     setIsLoading(true);
     try {
@@ -86,7 +87,7 @@ export function EducationHistory({
       onUpdate?.(education.filter((e) => e.id !== edu.id));
     } catch (err) {
       console.error('Error removing education:', err);
-      setError('Errore durante la rimozione. Riprova.');
+      setError(t('profile.education.error.remove'));
     } finally {
       setIsLoading(false);
     }
@@ -94,7 +95,14 @@ export function EducationHistory({
 
   const formatDate = (timestamp: Timestamp | null): string => {
     if (!timestamp) return '';
-    return timestamp.toDate().toLocaleDateString('it-IT', { year: 'numeric', month: 'short' });
+    const localeTag = {
+      it: 'it-IT',
+      en: 'en-US',
+      es: 'es-ES',
+      fr: 'fr-FR',
+      de: 'de-DE',
+    }[locale];
+    return timestamp.toDate().toLocaleDateString(localeTag, { year: 'numeric', month: 'short' });
   };
 
   return (
@@ -103,7 +111,7 @@ export function EducationHistory({
         <div className="flex items-center gap-2">
           <GraduationCap className="text-section-primary" size={20} />
           <h3 className="text-sm font-medium text-text-tertiary">
-            Education ({education.length})
+            {t('profile.education.title', { count: education.length })}
           </h3>
         </div>
         {!isAdding && (
@@ -114,7 +122,7 @@ export function EducationHistory({
             disabled={isLoading}
           >
             <Plus size={16} className="mr-1" />
-            Aggiungi
+            {t('profile.education.add')}
           </Button>
         )}
       </div>
@@ -146,7 +154,7 @@ export function EducationHistory({
                 <div className="flex items-center gap-2 mt-1 text-xs text-text-tertiary">
                   <Calendar size={12} />
                   <span>
-                    {formatDate(edu.startDate)} - {edu.isOngoing ? 'In corso' : formatDate(edu.endDate)}
+                    {formatDate(edu.startDate)} - {edu.isOngoing ? t('profile.education.ongoing') : formatDate(edu.endDate)}
                   </span>
                 </div>
               </div>
@@ -167,7 +175,7 @@ export function EducationHistory({
       {isAdding && (
         <div className="p-4 rounded-xl bg-background-secondary/5 border border-white/10 space-y-4">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-medium text-text-inverse">Aggiungi Titolo di Studio</h4>
+            <h4 className="text-sm font-medium text-text-inverse">{t('profile.education.addTitle')}</h4>
             <button
               onClick={() => {
                 setIsAdding(false);
@@ -181,35 +189,35 @@ export function EducationHistory({
 
           <div className="space-y-3">
             <Input
-              label="Istituzione *"
-              placeholder="es. Università di Milano"
+              label={t('profile.education.field.institution')}
+              placeholder={t('profile.education.placeholder.institution')}
               value={newEducation.institution}
               onChange={(e) => setNewEducation({ ...newEducation, institution: e.target.value })}
             />
 
             <Input
-              label="Titolo *"
-              placeholder="es. Laurea in Scienze Motorie"
+              label={t('profile.education.field.degree')}
+              placeholder={t('profile.education.placeholder.degree')}
               value={newEducation.degree}
               onChange={(e) => setNewEducation({ ...newEducation, degree: e.target.value })}
             />
 
             <Input
-              label="Campo di Studio"
-              placeholder="es. Scienze dello Sport"
+              label={t('profile.education.field.fieldOfStudy')}
+              placeholder={t('profile.education.placeholder.fieldOfStudy')}
               value={newEducation.fieldOfStudy}
               onChange={(e) => setNewEducation({ ...newEducation, fieldOfStudy: e.target.value })}
             />
 
             <div className="grid grid-cols-2 gap-3">
               <Input
-                label="Data Inizio"
+                label={t('profile.education.field.startDate')}
                 type="date"
                 value={newEducation.startDate}
                 onChange={(e) => setNewEducation({ ...newEducation, startDate: e.target.value })}
               />
               <Input
-                label="Data Fine"
+                label={t('profile.education.field.endDate')}
                 type="date"
                 value={newEducation.endDate}
                 onChange={(e) => setNewEducation({ ...newEducation, endDate: e.target.value })}
@@ -226,7 +234,7 @@ export function EducationHistory({
                 className="w-4 h-4 rounded border-white/20 bg-background-secondary/10 text-section-primary focus:ring-section-primary"
               />
               <label htmlFor="ongoing" className="text-sm text-text-secondary">
-                In corso
+                {t('profile.education.ongoing')}
               </label>
             </div>
           </div>
@@ -246,7 +254,7 @@ export function EducationHistory({
               }}
               disabled={isLoading}
             >
-              Annulla
+              {t('profile.education.cancel')}
             </Button>
             <Button
               variant="primary"
@@ -257,7 +265,7 @@ export function EducationHistory({
               isLoading={isLoading}
             >
               <Check size={16} className="mr-1" />
-              Salva
+              {t('profile.education.save')}
             </Button>
           </div>
         </div>
@@ -265,9 +273,9 @@ export function EducationHistory({
 
       {education.length === 0 && !isAdding && (
         <div className="text-center py-6 bg-background-secondary/5 rounded-xl">
-          <p className="text-text-tertiary text-sm">Nessun titolo di studio aggiunto</p>
+          <p className="text-text-tertiary text-sm">{t('profile.education.empty')}</p>
           <p className="text-text-tertiary/70 text-xs mt-1">
-            Clicca &quot;Aggiungi&quot; per inserire la tua formazione
+            {t('profile.education.emptyHint')}
           </p>
         </div>
       )}

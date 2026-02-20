@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Clock, Plus, Trash2, Check, X, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { AvailabilitySchedule, DaySchedule, TimeSlot } from '@/types/firebase';
+import { useI18n } from '@/hooks/useI18n';
+import type { MessageKey } from '@/i18n/messages';
 
 interface AvailabilityCalendarProps {
   schedule: AvailabilitySchedule | null;
@@ -13,15 +15,49 @@ interface AvailabilityCalendarProps {
   className?: string;
 }
 
-const daysOfWeek = [
-  { key: 'monday', label: 'Monday', short: 'Mon' },
-  { key: 'tuesday', label: 'Tuesday', short: 'Tue' },
-  { key: 'wednesday', label: 'Wednesday', short: 'Wed' },
-  { key: 'thursday', label: 'Thursday', short: 'Thu' },
-  { key: 'friday', label: 'Friday', short: 'Fri' },
-  { key: 'saturday', label: 'Saturday', short: 'Sat' },
-  { key: 'sunday', label: 'Sunday', short: 'Sun' },
-] as const;
+type AvailabilityDay = keyof AvailabilitySchedule;
+
+const daysOfWeek: Array<{
+  key: AvailabilityDay;
+  labelKey: MessageKey;
+  shortKey: MessageKey;
+}> = [
+  {
+    key: 'monday',
+    labelKey: 'profile.availability.day.monday.label',
+    shortKey: 'profile.availability.day.monday.short',
+  },
+  {
+    key: 'tuesday',
+    labelKey: 'profile.availability.day.tuesday.label',
+    shortKey: 'profile.availability.day.tuesday.short',
+  },
+  {
+    key: 'wednesday',
+    labelKey: 'profile.availability.day.wednesday.label',
+    shortKey: 'profile.availability.day.wednesday.short',
+  },
+  {
+    key: 'thursday',
+    labelKey: 'profile.availability.day.thursday.label',
+    shortKey: 'profile.availability.day.thursday.short',
+  },
+  {
+    key: 'friday',
+    labelKey: 'profile.availability.day.friday.label',
+    shortKey: 'profile.availability.day.friday.short',
+  },
+  {
+    key: 'saturday',
+    labelKey: 'profile.availability.day.saturday.label',
+    shortKey: 'profile.availability.day.saturday.short',
+  },
+  {
+    key: 'sunday',
+    labelKey: 'profile.availability.day.sunday.label',
+    shortKey: 'profile.availability.day.sunday.short',
+  },
+];
 
 const defaultDaySchedule: DaySchedule = {
   isAvailable: false,
@@ -44,15 +80,36 @@ export function AvailabilityCalendar({
   isEditable = true,
   className,
 }: AvailabilityCalendarProps) {
+  const { locale, t } = useI18n();
   const [schedule, setSchedule] = useState<AvailabilitySchedule>({
     ...defaultSchedule,
     ...initialSchedule,
   });
   const [isEditing, setIsEditing] = useState(false);
-  const [selectedDay, setSelectedDay] = useState<keyof AvailabilitySchedule | null>(null);
+  const [selectedDay, setSelectedDay] = useState<AvailabilityDay | null>(null);
   const [newSlot, setNewSlot] = useState<TimeSlot>({ start: '09:00', end: '17:00' });
 
-  const handleToggleDay = (day: keyof AvailabilitySchedule) => {
+  const localeTag = useMemo(() => {
+    const tags = {
+      it: 'it-IT',
+      en: 'en-US',
+      es: 'es-ES',
+      fr: 'fr-FR',
+      de: 'de-DE',
+    } as const;
+    return tags[locale] ?? tags.it;
+  }, [locale]);
+
+  const timeFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat(localeTag, {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+    [localeTag]
+  );
+
+  const handleToggleDay = (day: AvailabilityDay) => {
     setSchedule((prev) => ({
       ...prev,
       [day]: {
@@ -62,7 +119,7 @@ export function AvailabilityCalendar({
     }));
   };
 
-  const handleAddSlot = (day: keyof AvailabilitySchedule) => {
+  const handleAddSlot = (day: AvailabilityDay) => {
     if (!newSlot.start || !newSlot.end) return;
     if (newSlot.start >= newSlot.end) return;
 
@@ -78,7 +135,7 @@ export function AvailabilityCalendar({
     setNewSlot({ start: '09:00', end: '17:00' });
   };
 
-  const handleRemoveSlot = (day: keyof AvailabilitySchedule, index: number) => {
+  const handleRemoveSlot = (day: AvailabilityDay, index: number) => {
     setSchedule((prev) => ({
       ...prev,
       [day]: {
@@ -102,10 +159,9 @@ export function AvailabilityCalendar({
 
   const formatTime = (time: string): string => {
     const [hours, minutes] = time.split(':');
-    const hour = parseInt(hours);
-    const ampm = hour >= 12 ? 'PM' : 'AM';
-    const hour12 = hour % 12 || 12;
-    return `${hour12}:${minutes} ${ampm}`;
+    const hour = Number.parseInt(hours, 10);
+    const minute = Number.parseInt(minutes, 10);
+    return timeFormatter.format(new Date(2000, 0, 1, hour, minute));
   };
 
   const getAvailableDaysCount = () => {
@@ -118,16 +174,15 @@ export function AvailabilityCalendar({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Calendar className="text-section-primary" size={20} />
-            <h3 className="text-sm font-medium text-text-tertiary">Availability</h3>
+            <h3 className="text-sm font-medium text-text-tertiary">{t('profile.availability.title')}</h3>
           </div>
           {isEditable && (
             <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)}>
-              Edit
+              {t('profile.availability.editAction')}
             </Button>
           )}
         </div>
 
-        {/* Week View */}
         <div className="grid grid-cols-7 gap-1">
           {daysOfWeek.map((day) => {
             const daySchedule = schedule[day.key];
@@ -143,11 +198,13 @@ export function AvailabilityCalendar({
                     : 'bg-background-secondary/5 border border-white/5'
                 )}
               >
-                <p className={cn(
-                  'text-xs font-medium uppercase',
-                  isAvailable ? 'text-success-DEFAULT' : 'text-text-tertiary'
-                )}>
-                  {day.short}
+                <p
+                  className={cn(
+                    'text-xs font-medium uppercase',
+                    isAvailable ? 'text-success-DEFAULT' : 'text-text-tertiary'
+                  )}
+                >
+                  {t(day.shortKey)}
                 </p>
                 <div className="mt-1">
                   {isAvailable ? (
@@ -159,12 +216,12 @@ export function AvailabilityCalendar({
                       ))}
                       {daySchedule.slots.length > 2 && (
                         <p className="text-[10px] text-text-tertiary">
-                          +{daySchedule.slots.length - 2} more
+                          {t('profile.availability.moreSlots', { count: daySchedule.slots.length - 2 })}
                         </p>
                       )}
                     </div>
                   ) : (
-                    <p className="text-[10px] text-text-tertiary">Off</p>
+                    <p className="text-[10px] text-text-tertiary">{t('profile.availability.off')}</p>
                   )}
                 </div>
               </div>
@@ -172,25 +229,26 @@ export function AvailabilityCalendar({
           })}
         </div>
 
-        {/* Summary */}
         <div className="flex items-center gap-4 text-xs text-text-tertiary">
           <div className="flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full bg-success-DEFAULT" />
-            <span>{getAvailableDaysCount()} days available</span>
+            <span>{t('profile.availability.daysAvailable', { count: getAvailableDaysCount() })}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full bg-text-tertiary/30" />
-            <span>{7 - getAvailableDaysCount()} days off</span>
+            <span>{t('profile.availability.daysOff', { count: 7 - getAvailableDaysCount() })}</span>
           </div>
         </div>
       </div>
     );
   }
 
+  const selectedDayConfig = daysOfWeek.find((day) => day.key === selectedDay);
+
   return (
     <div className={cn('space-y-4', className)}>
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-text-tertiary">Edit Availability</h3>
+        <h3 className="text-sm font-medium text-text-tertiary">{t('profile.availability.editTitle')}</h3>
         <div className="flex gap-2">
           <Button variant="ghost" size="sm" onClick={handleCancel}>
             <X size={16} />
@@ -201,7 +259,6 @@ export function AvailabilityCalendar({
         </div>
       </div>
 
-      {/* Day Selector */}
       <div className="grid grid-cols-7 gap-1">
         {daysOfWeek.map((day) => {
           const daySchedule = schedule[day.key];
@@ -217,25 +274,24 @@ export function AvailabilityCalendar({
                 isSelected
                   ? 'bg-section-gradient text-white ring-2 ring-section-primary ring-offset-2 ring-offset-background-dark'
                   : isAvailable
-                  ? 'bg-success-DEFAULT/10 border border-success-DEFAULT/30 text-success-DEFAULT'
-                  : 'bg-background-secondary/5 border border-white/5 text-text-tertiary'
+                    ? 'bg-success-DEFAULT/10 border border-success-DEFAULT/30 text-success-DEFAULT'
+                    : 'bg-background-secondary/5 border border-white/5 text-text-tertiary'
               )}
             >
-              <p className="text-xs font-medium uppercase">{day.short}</p>
+              <p className="text-xs font-medium uppercase">{t(day.shortKey)}</p>
             </button>
           );
         })}
       </div>
 
-      {/* Day Editor */}
       {selectedDay && (
         <div className="p-4 rounded-xl bg-background-secondary/5 border border-white/10 space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="font-medium text-text-inverse">
-              {daysOfWeek.find((d) => d.key === selectedDay)?.label}
+              {t(selectedDayConfig?.labelKey ?? 'profile.availability.day.monday.label')}
             </h4>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-text-secondary">Available</span>
+              <span className="text-sm text-text-secondary">{t('profile.availability.availableToggle')}</span>
               <button
                 onClick={() => handleToggleDay(selectedDay)}
                 className={cn(
@@ -255,7 +311,6 @@ export function AvailabilityCalendar({
 
           {schedule[selectedDay].isAvailable && (
             <>
-              {/* Existing Slots */}
               <div className="space-y-2">
                 {schedule[selectedDay].slots.map((slot, index) => (
                   <div
@@ -276,26 +331,25 @@ export function AvailabilityCalendar({
                 ))}
                 {schedule[selectedDay].slots.length === 0 && (
                   <p className="text-sm text-text-tertiary text-center py-2">
-                    No time slots added
+                    {t('profile.availability.noSlots')}
                   </p>
                 )}
               </div>
 
-              {/* Add New Slot */}
               <div className="p-3 rounded-lg bg-background-secondary/10 border border-white/5">
-                <p className="text-xs text-text-tertiary mb-2">Add Time Slot</p>
+                <p className="text-xs text-text-tertiary mb-2">{t('profile.availability.addSlot')}</p>
                 <div className="flex items-center gap-2">
                   <input
                     type="time"
                     value={newSlot.start}
-                    onChange={(e) => setNewSlot({ ...newSlot, start: e.target.value })}
+                    onChange={(event) => setNewSlot({ ...newSlot, start: event.target.value })}
                     className="flex-1 bg-background-secondary/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-text-inverse focus:outline-none focus:border-section-primary"
                   />
-                  <span className="text-text-tertiary">to</span>
+                  <span className="text-text-tertiary">{t('profile.availability.to')}</span>
                   <input
                     type="time"
                     value={newSlot.end}
-                    onChange={(e) => setNewSlot({ ...newSlot, end: e.target.value })}
+                    onChange={(event) => setNewSlot({ ...newSlot, end: event.target.value })}
                     className="flex-1 bg-background-secondary/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-text-inverse focus:outline-none focus:border-section-primary"
                   />
                   <button
@@ -314,7 +368,7 @@ export function AvailabilityCalendar({
 
       {!selectedDay && (
         <p className="text-center text-sm text-text-tertiary py-4">
-          Select a day to edit availability
+          {t('profile.availability.selectDayHint')}
         </p>
       )}
     </div>

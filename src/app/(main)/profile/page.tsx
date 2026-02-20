@@ -45,28 +45,41 @@ import {
 import { isProvider, updateProviderProfile } from '@/lib/firebase/auth';
 import { ServicePricing, AvailabilitySchedule, ProviderProfile } from '@/types/firebase';
 import { formatPrice } from '@/lib/utils';
+import { useI18n } from '@/hooks/useI18n';
+import type { MessageKey } from '@/i18n/messages';
 
-const menuItems = [
+interface ProfileMenuItem {
+  icon: typeof User;
+  labelKey: MessageKey;
+  href: string;
+}
+
+interface ProfileMenuSection {
+  sectionKey: MessageKey;
+  items: ProfileMenuItem[];
+}
+
+const menuItems: ProfileMenuSection[] = [
   {
-    section: 'Account',
+    sectionKey: 'profile.menu.account',
     items: [
-      { icon: User, label: 'Dati personali', href: '/profile/edit' },
-      { icon: MapPin, label: 'I miei indirizzi', href: '/profile/addresses' },
-      { icon: CreditCard, label: 'Metodi di pagamento', href: '/profile/payment' },
+      { icon: User, labelKey: 'profile.menu.personalData', href: '/profile/edit' },
+      { icon: MapPin, labelKey: 'profile.menu.addresses', href: '/profile/addresses' },
+      { icon: CreditCard, labelKey: 'profile.menu.paymentMethods', href: '/profile/payment' },
     ],
   },
   {
-    section: 'Preferenze',
+    sectionKey: 'profile.menu.preferences',
     items: [
-      { icon: Bell, label: 'Notifiche', href: '/profile/notifications' },
-      { icon: Settings, label: 'Impostazioni', href: '/profile/settings' },
+      { icon: Bell, labelKey: 'profile.menu.notifications', href: '/profile/notifications' },
+      { icon: Settings, labelKey: 'profile.menu.settings', href: '/profile/settings' },
     ],
   },
   {
-    section: 'Supporto',
+    sectionKey: 'profile.menu.support',
     items: [
-      { icon: HelpCircle, label: 'Centro assistenza', href: '/help' },
-      { icon: Star, label: "Valuta l'app", href: '/feedback' },
+      { icon: HelpCircle, labelKey: 'profile.menu.helpCenter', href: '/help' },
+      { icon: Star, labelKey: 'profile.menu.rateApp', href: '/feedback' },
     ],
   },
 ];
@@ -93,8 +106,40 @@ const AVAILABLE_SPECIALTIES = [
   'Functional Training',
 ];
 
+const SPECIALTY_LABEL_KEYS: Partial<Record<string, MessageKey>> = {
+  'Personal Training': 'profile.specialty.personalTraining',
+  Yoga: 'profile.specialty.yoga',
+  Pilates: 'profile.specialty.pilates',
+  CrossFit: 'profile.specialty.crossfit',
+  Nutrizione: 'profile.specialty.nutrition',
+  Fisioterapia: 'profile.specialty.physiotherapy',
+  Massaggio: 'profile.specialty.massage',
+  'Mental Coaching': 'profile.specialty.mentalCoaching',
+  'Group Fitness': 'profile.specialty.groupFitness',
+  HIIT: 'profile.specialty.hiit',
+  'Strength Training': 'profile.specialty.strengthTraining',
+  Cardio: 'profile.specialty.cardio',
+  Danza: 'profile.specialty.dance',
+  'Arti Marziali': 'profile.specialty.martialArts',
+  Nuoto: 'profile.specialty.swimming',
+  Spinning: 'profile.specialty.spinning',
+  Boxe: 'profile.specialty.boxing',
+  'Functional Training': 'profile.specialty.functionalTraining',
+};
+
+const availabilityDayKeys: MessageKey[] = [
+  'profile.provider.day.sun',
+  'profile.provider.day.mon',
+  'profile.provider.day.tue',
+  'profile.provider.day.wed',
+  'profile.provider.day.thu',
+  'profile.provider.day.fri',
+  'profile.provider.day.sat',
+];
+
 export default function ProfilePage() {
   const router = useRouter();
+  const { t } = useI18n();
   const { user, firebaseUser, logout, isLoading, refreshUserProfile } = useAuthStore();
   const [isProviderUser, setIsProviderUser] = useState(false);
   const [isCheckingProvider, setIsCheckingProvider] = useState(true);
@@ -126,7 +171,7 @@ export default function ProfilePage() {
   }, [refreshUserProfile]);
 
   // Get user display info
-  const displayName = user?.fullName || firebaseUser?.displayName || 'Utente';
+  const displayName = user?.fullName || firebaseUser?.displayName || t('profile.defaultUser');
   const contactInfo = user?.phone || user?.email || firebaseUser?.phoneNumber || firebaseUser?.email || '';
   const pointsBalance = user?.pointsBalance || 0;
   const isVip = user?.isVip || false;
@@ -213,12 +258,12 @@ export default function ProfilePage() {
               </h1>
               {isVip && (
                 <span className="px-2 py-0.5 bg-vip-gold/20 text-vip-gold text-xs font-medium rounded-full">
-                  VIP
+                  {t('profile.badge.vip')}
                 </span>
               )}
               {isProviderUser && (
                 <span className="px-2 py-0.5 bg-section-gradient text-white text-xs font-medium rounded-full">
-                  Provider
+                  {t('profile.badge.provider')}
                 </span>
               )}
             </div>
@@ -236,12 +281,12 @@ export default function ProfilePage() {
                   <Mail size={12} />
                   <span>{user.email}</span>
                   {emailVerified ? (
-                    <span className="text-success-DEFAULT" title="Verificata">
+                    <span className="text-success-DEFAULT" title={t('profile.verification.emailVerifiedTitle')}>
                       <Shield size={10} />
                     </span>
                   ) : (
-                    <span className="text-warning-DEFAULT" title="Non verificata">
-                      (Non verif.)
+                    <span className="text-warning-DEFAULT" title={t('profile.verification.emailUnverifiedTitle')}>
+                      {t('profile.verification.unverifiedShort')}
                     </span>
                   )}
                 </div>
@@ -251,12 +296,12 @@ export default function ProfilePage() {
                   <Phone size={12} />
                   <span>{user.phone}</span>
                   {phoneVerified ? (
-                    <span className="text-success-DEFAULT" title="Verificato">
+                    <span className="text-success-DEFAULT" title={t('profile.verification.phoneVerifiedTitle')}>
                       <Shield size={10} />
                     </span>
                   ) : (
-                    <span className="text-warning-DEFAULT" title="Non verificato">
-                      (Non verif.)
+                    <span className="text-warning-DEFAULT" title={t('profile.verification.phoneUnverifiedTitle')}>
+                      {t('profile.verification.unverifiedShort')}
                     </span>
                   )}
                 </div>
@@ -271,7 +316,7 @@ export default function ProfilePage() {
                 onClick={() => router.push('/profile/edit')}
               >
                 <Edit3 size={14} className="mr-1" />
-                Modifica Profilo
+                {t('profile.action.editProfile')}
               </Button>
               {isProviderUser && (
                 <Button
@@ -280,7 +325,7 @@ export default function ProfilePage() {
                   onClick={() => router.push(`/provider/${user?.id}`)}
                 >
                   <ExternalLink size={14} className="mr-1" />
-                  Profilo Pubblico
+                  {t('profile.action.publicProfile')}
                 </Button>
               )}
             </div>
@@ -294,19 +339,19 @@ export default function ProfilePage() {
               {isProviderUser ? stats.totalBookings : 0}
             </p>
             <p className="text-xs text-text-tertiary">
-              {isProviderUser ? 'Prenotazioni' : 'Prenotazioni'}
+              {t('common.bookings')}
             </p>
           </div>
           <div className="bg-background-secondary/10 rounded-xl p-3 text-center">
             <p className="text-2xl font-bold text-vip-gold">{pointsBalance}</p>
-            <p className="text-xs text-text-tertiary">Punti</p>
+            <p className="text-xs text-text-tertiary">{t('profile.stats.points')}</p>
           </div>
           <div className="bg-background-secondary/10 rounded-xl p-3 text-center">
             <p className="text-2xl font-bold text-text-inverse">
               {isProviderUser ? formatPrice(stats.totalEarnings) : providerProfile?.reviewCount || 0}
             </p>
             <p className="text-xs text-text-tertiary">
-              {isProviderUser ? 'Guadagni' : 'Recensioni'}
+              {isProviderUser ? t('profile.stats.earnings') : t('profile.stats.reviews')}
             </p>
           </div>
         </div>
@@ -321,7 +366,7 @@ export default function ProfilePage() {
                   {providerProfile.rating?.toFixed(1) || '0.0'}
                 </span>
               </div>
-              <p className="text-xs text-text-tertiary mt-1">Valutazione media</p>
+              <p className="text-xs text-text-tertiary mt-1">{t('profile.provider.averageRating')}</p>
             </div>
             <div className="bg-section-gradient/10 border border-section-primary/20 rounded-xl p-3">
               <div className="flex items-center gap-2">
@@ -330,7 +375,7 @@ export default function ProfilePage() {
                   {providerProfile.yearsOfExperience || 0}
                 </span>
               </div>
-              <p className="text-xs text-text-tertiary mt-1">Anni di esperienza</p>
+              <p className="text-xs text-text-tertiary mt-1">{t('profile.provider.yearsExperience')}</p>
             </div>
           </div>
         )}
@@ -345,10 +390,10 @@ export default function ProfilePage() {
           </div>
           <div className="flex-1 text-left">
             <h3 className="font-semibold text-vip-gold">
-              {isVip ? 'Sei VIP!' : 'Diventa VIP'}
+              {isVip ? t('profile.vip.isVipTitle') : t('profile.vip.ctaTitle')}
             </h3>
             <p className="text-sm text-text-secondary">
-              {isVip ? 'Goditi i vantaggi esclusivi' : 'Sconti esclusivi e vantaggi'}
+              {isVip ? t('profile.vip.isVipSubtitle') : t('profile.vip.ctaSubtitle')}
             </p>
           </div>
           <ChevronRight className="w-5 h-5 text-vip-gold" />
@@ -363,8 +408,8 @@ export default function ProfilePage() {
             <Gift className="w-6 h-6 text-vfit-primary" />
           </div>
           <div className="flex-1 text-left">
-            <h3 className="font-semibold text-text-inverse">Invita un amico</h3>
-            <p className="text-sm text-text-secondary">Guadagna 50 punti per ogni invito</p>
+            <h3 className="font-semibold text-text-inverse">{t('profile.referral.title')}</h3>
+            <p className="text-sm text-text-secondary">{t('profile.referral.subtitle')}</p>
           </div>
           <ChevronRight className="w-5 h-5 text-text-tertiary" />
         </button>
@@ -399,13 +444,13 @@ export default function ProfilePage() {
           <div className="space-y-4">
             <div className="flex items-center gap-2 px-1">
               <Briefcase className="text-section-primary" size={20} />
-              <h2 className="text-lg font-semibold text-text-inverse">Profilo Professionale</h2>
+              <h2 className="text-lg font-semibold text-text-inverse">{t('profile.provider.sectionTitle')}</h2>
             </div>
 
             {/* Professional Bio */}
             {providerProfile?.professionalBio && (
               <div className="bg-background-secondary/5 rounded-xl p-4">
-                <h3 className="text-sm font-medium text-text-tertiary mb-2">Chi sono</h3>
+                <h3 className="text-sm font-medium text-text-tertiary mb-2">{t('profile.provider.about')}</h3>
                 <p className="text-sm text-text-secondary">{providerProfile.professionalBio}</p>
               </div>
             )}
@@ -416,6 +461,7 @@ export default function ProfilePage() {
                 userId={user.id}
                 specialties={providerProfile?.specialties || []}
                 availableSpecialties={AVAILABLE_SPECIALTIES}
+                labelKeysByValue={SPECIALTY_LABEL_KEYS}
                 onUpdate={refreshUserProfile}
               />
             </div>
@@ -432,11 +478,15 @@ export default function ProfilePage() {
             {/* Years of Experience */}
             {providerProfile?.yearsOfExperience !== undefined && providerProfile.yearsOfExperience > 0 && (
               <div className="bg-background-secondary/5 rounded-xl p-4">
-                <h3 className="text-sm font-medium text-text-tertiary mb-2">Esperienza</h3>
+                <h3 className="text-sm font-medium text-text-tertiary mb-2">{t('profile.provider.experience')}</h3>
                 <div className="flex items-center gap-2">
                   <Clock className="text-section-primary" size={18} />
                   <p className="text-sm text-text-inverse">
-                    {providerProfile.yearsOfExperience} {providerProfile.yearsOfExperience === 1 ? 'anno' : 'anni'} di esperienza professionale
+                    {providerProfile.yearsOfExperience}{' '}
+                    {providerProfile.yearsOfExperience === 1
+                      ? t('profile.provider.yearSingular')
+                      : t('profile.provider.yearPlural')}{' '}
+                    {t('profile.provider.experienceSuffix')}
                   </p>
                 </div>
               </div>
@@ -475,7 +525,7 @@ export default function ProfilePage() {
                 <div className="flex items-center gap-2">
                   <Calendar className="text-section-primary" size={20} />
                   <h3 className="text-sm font-medium text-text-tertiary">
-                    Disponibilità (Prossimi 7 giorni)
+                    {t('profile.provider.availabilityNext7Days')}
                   </h3>
                 </div>
               </div>
@@ -483,7 +533,6 @@ export default function ProfilePage() {
               {/* Next 7 Days Preview */}
               <div className="grid grid-cols-7 gap-1 mb-4">
                 {availabilityPreview.map((day, index) => {
-                  const dayNames = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
                   return (
                     <div
                       key={index}
@@ -498,14 +547,14 @@ export default function ProfilePage() {
                         'text-[10px] uppercase',
                         day.isAvailable ? 'text-success-DEFAULT' : 'text-text-tertiary'
                       )}>
-                        {dayNames[day.date.getDay()]}
+                        {t(availabilityDayKeys[day.date.getDay()])}
                       </p>
                       <p className="text-sm font-semibold text-text-inverse">
                         {day.date.getDate()}
                       </p>
                       {day.isAvailable && day.slots.length > 0 && (
                         <p className="text-[8px] text-text-tertiary mt-0.5">
-                          {day.slots.length} slot
+                          {t('profile.provider.slots', { count: day.slots.length })}
                         </p>
                       )}
                     </div>
@@ -524,7 +573,7 @@ export default function ProfilePage() {
             <div className="bg-background-secondary/5 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-4">
                 <DollarSign className="text-section-primary" size={20} />
-                <h3 className="text-sm font-medium text-text-tertiary">Servizi e Prezzi</h3>
+                <h3 className="text-sm font-medium text-text-tertiary">{t('profile.provider.servicesAndPricing')}</h3>
               </div>
               <ServicePricingCard
                 services={providerProfile?.servicePricing || []}
@@ -549,12 +598,12 @@ export default function ProfilePage() {
             {/* License Number */}
             {providerProfile?.licenseNumber && (
               <div className="bg-background-secondary/5 rounded-xl p-4">
-                <h3 className="text-sm font-medium text-text-tertiary mb-2">Licenza Professionale</h3>
+                <h3 className="text-sm font-medium text-text-tertiary mb-2">{t('profile.provider.license')}</h3>
                 <p className="text-sm text-text-inverse font-mono">{providerProfile.licenseNumber}</p>
                 {providerProfile.isVerified && (
                   <span className="inline-flex items-center gap-1 text-xs text-success-DEFAULT mt-1">
                     <Shield size={12} />
-                    Verificata
+                    {t('profile.provider.verified')}
                   </span>
                 )}
               </div>
@@ -574,7 +623,7 @@ export default function ProfilePage() {
               <div className="bg-background-secondary/5 rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Star className="text-section-primary" size={20} />
-                  <h3 className="text-sm font-medium text-text-tertiary">Recensioni</h3>
+                  <h3 className="text-sm font-medium text-text-tertiary">{t('profile.stats.reviews')}</h3>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -596,7 +645,7 @@ export default function ProfilePage() {
                     </div>
                   </div>
                   <span className="text-sm text-text-tertiary">
-                    {providerProfile.reviewCount || 0} recensioni
+                    {t('profile.reviews.count', { count: providerProfile.reviewCount || 0 })}
                   </span>
                 </div>
                 <Button
@@ -605,7 +654,7 @@ export default function ProfilePage() {
                   className="mt-3 w-full"
                   onClick={() => router.push(`/provider/${user.id}/reviews`)}
                 >
-                  Visualizza tutte le recensioni
+                  {t('profile.reviews.viewAll')}
                 </Button>
               </div>
             )}
@@ -614,14 +663,14 @@ export default function ProfilePage() {
 
         {/* Menu Sections */}
         {menuItems.map((section) => (
-          <div key={section.section}>
+          <div key={section.sectionKey}>
             <h3 className="text-sm font-medium text-text-tertiary mb-2 px-1">
-              {section.section}
+              {t(section.sectionKey)}
             </h3>
             <div className="bg-background-secondary/5 rounded-xl overflow-hidden">
               {section.items.map((item, index) => (
                 <button
-                  key={item.label}
+                  key={item.labelKey}
                   onClick={() => router.push(item.href)}
                   className={cn(
                     'w-full flex items-center gap-4 p-4 text-left hover:bg-background-secondary/10 transition-colors',
@@ -629,7 +678,7 @@ export default function ProfilePage() {
                   )}
                 >
                   <item.icon className="w-5 h-5 text-text-secondary" />
-                  <span className="flex-1 text-text-inverse">{item.label}</span>
+                  <span className="flex-1 text-text-inverse">{t(item.labelKey)}</span>
                   <ChevronRight className="w-5 h-5 text-text-tertiary" />
                 </button>
               ))}
@@ -644,13 +693,13 @@ export default function ProfilePage() {
           className="w-full flex items-center gap-4 p-4 text-left text-error hover:bg-error/10 rounded-xl transition-colors disabled:opacity-50"
         >
           <LogOut className="w-5 h-5" />
-          <span>{isLoading ? 'Uscita...' : 'Esci'}</span>
+          <span>{isLoading ? t('profile.logout.loading') : t('profile.logout.action')}</span>
         </button>
       </div>
 
       {/* App Version */}
       <p className="text-center text-xs text-text-tertiary mt-8 pb-4">
-        V Fitness v1.0.0
+        {t('profile.appVersion')}
       </p>
     </div>
   );

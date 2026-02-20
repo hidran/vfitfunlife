@@ -3,23 +3,25 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { Home, Search, Calendar, User } from 'lucide-react';
 import { useMemo } from 'react';
+import { useI18n } from '@/hooks/useI18n';
 
 interface TabItem {
-  name: string;
+  labelKey: 'tab.home' | 'tab.search' | 'tab.bookings' | 'tab.profile';
   href: string;
   icon: typeof Home;
 }
 
 const tabs: TabItem[] = [
-  { name: 'Home', href: '/home', icon: Home },
-  { name: 'Search', href: '/search', icon: Search },
-  { name: 'Bookings', href: '/bookings', icon: Calendar },
-  { name: 'Profile', href: '/profile', icon: User },
+  { labelKey: 'tab.home', href: '/home', icon: Home },
+  { labelKey: 'tab.search', href: '/search', icon: Search },
+  { labelKey: 'tab.bookings', href: '/bookings', icon: Calendar },
+  { labelKey: 'tab.profile', href: '/profile', icon: User },
 ];
 
 export function TabBar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { t } = useI18n();
 
   const activeTab = useMemo(() => {
     return tabs.find((tab) => pathname?.startsWith(tab.href))?.href || '/home';
@@ -33,7 +35,7 @@ export function TabBar() {
     <nav
       className="fixed bottom-0 left-0 right-0 z-50 glass border-t border-white/10"
       role="tablist"
-      aria-label="Main navigation"
+      aria-label={t('tab.mainNavigation')}
     >
       {/* Safe area padding at bottom */}
       <div className="pb-safe">
@@ -48,7 +50,7 @@ export function TabBar() {
                 onClick={() => handleTabPress(tab.href)}
                 role="tab"
                 aria-selected={isActive}
-                aria-label={tab.name}
+                aria-label={t(tab.labelKey)}
                 className={`
                   relative flex flex-col items-center justify-center
                   touch-target min-w-[64px] py-2 px-3
@@ -84,7 +86,7 @@ export function TabBar() {
                     ${isActive ? 'text-section-primary' : 'text-text-tertiary'}
                   `}
                 >
-                  {tab.name}
+                  {t(tab.labelKey)}
                 </span>
               </button>
             );

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useSection, type Section } from '@/contexts/SectionContext';
+import { useSection } from '@/contexts/SectionContext';
 import {
   ArrowUpRight,
   Briefcase,
@@ -42,6 +42,9 @@ import { useEffect, useState } from 'react';
 import { collection, collectionGroup, query, where, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { Spinner } from '@/components/ui/Spinner';
+import { useI18n } from '@/hooks/useI18n';
+import type { MessageKey } from '@/i18n/messages';
+import { toLocaleTag, type AppLocale } from '@/types/locale';
 
 // Types
 interface Provider {
@@ -75,208 +78,201 @@ interface ClassSession {
   tag: string;
 }
 
+interface QuickActionItem {
+  labelKey: MessageKey;
+  icon: typeof Dumbbell;
+  href: string;
+}
+
+interface VFitChallenge {
+  id: string;
+  titleKey: MessageKey;
+  progress: number;
+  currentValue: number;
+  targetValue: number;
+  streakDays: number;
+}
+
+interface VFunEvent {
+  id: string;
+  titleKey: MessageKey;
+  date: string;
+  time?: string;
+  locationKey: MessageKey;
+  price: string;
+  tagKey?: MessageKey;
+}
+
+interface VFunFeaturedEvent extends VFunEvent {
+  subtitleKey: MessageKey;
+  attendees: number;
+}
+
+interface VFunVRExperience {
+  id: string;
+  titleKey: MessageKey;
+  durationMinutes: number;
+  levelKey: MessageKey;
+  rating: number;
+  price: string;
+}
+
+interface VFunTVShow {
+  time: string;
+  titleKey: MessageKey;
+  channelKey: MessageKey;
+  isLive: boolean;
+}
+
 // Static quick actions
-const vfitQuickActions = [
-  { label: 'Palestre', icon: Dumbbell, href: '/fit/gyms' },
-  { label: 'Corsi', icon: Calendar, href: '/fit/classes' },
-  { label: 'A Domicilio', icon: HomeIcon, href: '/fit/home-training' },
-  { label: 'Virtual', icon: Tv, href: '/fit/virtual' },
+const vfitQuickActions: QuickActionItem[] = [
+  { labelKey: 'home.quickAction.gyms', icon: Dumbbell, href: '/fit/gyms' },
+  { labelKey: 'home.quickAction.classes', icon: Calendar, href: '/fit/classes' },
+  { labelKey: 'home.quickAction.homeTraining', icon: HomeIcon, href: '/fit/home-training' },
+  { labelKey: 'home.quickAction.virtual', icon: Tv, href: '/fit/virtual' },
 ];
 
-const vfunQuickActions = [
-  { label: 'Eventi', icon: Ticket, href: '/fun/events' },
-  { label: 'VR', icon: Glasses, href: '/fun/vr' },
-  { label: 'Party', icon: PartyPopper, href: '/fun/party-mode' },
-  { label: 'TV', icon: Tv, href: '/fun/tv' },
+const vfunQuickActions: QuickActionItem[] = [
+  { labelKey: 'home.quickAction.events', icon: Ticket, href: '/fun/events' },
+  { labelKey: 'home.quickAction.vr', icon: Glasses, href: '/fun/vr' },
+  { labelKey: 'home.quickAction.party', icon: PartyPopper, href: '/fun/party-mode' },
+  { labelKey: 'home.quickAction.tv', icon: Tv, href: '/fun/tv' },
 ];
 
-const vlifeWellnessActions = [
-  { label: 'Osteopatia', icon: Bone, href: '/life/osteopatia' },
-  { label: 'Fisioterapia', icon: Activity, href: '/life/fisioterapia' },
-  { label: 'Mental Coach', icon: Brain, href: '/life/mental-coach' },
-  { label: 'Psicologo', icon: HeartHandshake, href: '/life/psicologo' },
+const vlifeWellnessActions: QuickActionItem[] = [
+  { labelKey: 'route.life.osteopatia.title', icon: Bone, href: '/life/osteopatia' },
+  { labelKey: 'route.life.fisioterapia.title', icon: Activity, href: '/life/fisioterapia' },
+  { labelKey: 'route.life.mentalCoach.title', icon: Brain, href: '/life/mental-coach' },
+  { labelKey: 'route.life.psicologo.title', icon: HeartHandshake, href: '/life/psicologo' },
 ];
 
-const vlifeEsteticaActions = [
-  { label: 'Estetista', icon: Sparkles, href: '/life/estetista' },
-  { label: 'Parrucchiere', icon: Scissors, href: '/life/parrucchiere' },
-  { label: 'Unghie', icon: Hand, href: '/life/unghie' },
-  { label: 'Massaggi', icon: Flower2, href: '/life/massaggi' },
+const vlifeEsteticaActions: QuickActionItem[] = [
+  { labelKey: 'route.life.estetista.title', icon: Sparkles, href: '/life/estetista' },
+  { labelKey: 'route.life.parrucchiere.title', icon: Scissors, href: '/life/parrucchiere' },
+  { labelKey: 'route.life.unghie.title', icon: Hand, href: '/life/unghie' },
+  { labelKey: 'route.life.massaggi.title', icon: Flower2, href: '/life/massaggi' },
 ];
 
 // Static challenges
-const vfitChallenges = [
+const vfitChallenges: VFitChallenge[] = [
   {
-    title: '30-Day Core',
+    id: 'core',
+    titleKey: 'home.fit.challenge.core.title',
     progress: 0.7,
-    target: '14/20 sessioni',
-    streak: '7 giorni',
+    currentValue: 14,
+    targetValue: 20,
+    streakDays: 7,
   },
   {
-    title: 'Run 50 km',
+    id: 'run',
+    titleKey: 'home.fit.challenge.run.title',
     progress: 0.45,
-    target: '22/50 km',
-    streak: '4 giorni',
+    currentValue: 22,
+    targetValue: 50,
+    streakDays: 4,
   },
 ];
 
 // Static VFun content
-const vfunFeaturedEvent = {
+const vfunFeaturedEvent: VFunFeaturedEvent = {
   id: 'summer-festival-2026',
-  title: 'Summer Festival 2026',
-  subtitle: 'La notte piu attesa dell\'anno',
+  titleKey: 'home.fun.featured.title',
+  subtitleKey: 'home.fun.featured.subtitle',
   date: '15 Feb 2026',
-  location: 'V Arena Milano',
+  locationKey: 'home.fun.featured.location',
   price: 'Da €45',
-  tag: 'Sold Out 80%',
+  tagKey: 'home.fun.featured.tag',
   attendees: 2450,
 };
 
-const vfunUpcomingEvents = [
+const vfunUpcomingEvents: VFunEvent[] = [
   {
     id: 'pool-party',
-    title: 'Pool Party Deluxe',
+    titleKey: 'home.fun.event.poolParty.title',
     date: '8 Feb',
     time: '14:00',
-    location: 'V Club Rooftop',
+    locationKey: 'home.fun.event.poolParty.location',
     price: '€35',
-    image: null,
-    tag: 'Hot',
+    tagKey: 'home.fun.tag.hot',
   },
   {
     id: 'dj-night',
-    title: 'DJ Night w/ Marco Carola',
+    titleKey: 'home.fun.event.djNight.title',
     date: '10 Feb',
     time: '23:00',
-    location: 'V Arena',
+    locationKey: 'home.fun.event.djNight.location',
     price: '€50',
-    image: null,
-    tag: 'VIP',
+    tagKey: 'home.fun.tag.vip',
   },
   {
     id: 'fitness-rave',
-    title: 'Fitness Rave',
+    titleKey: 'home.fun.event.fitnessRave.title',
     date: '12 Feb',
     time: '20:00',
-    location: 'V Fit Central',
+    locationKey: 'home.fun.event.fitnessRave.location',
     price: '€25',
-    image: null,
-    tag: 'Nuovo',
+    tagKey: 'home.fun.tag.new',
   },
 ];
 
-const vfunVRExperiences = [
+const vfunVRExperiences: VFunVRExperience[] = [
   {
     id: 'beat-saber',
-    title: 'Beat Saber Challenge',
-    duration: '30 min',
-    level: 'Principiante',
+    titleKey: 'home.fun.vr.beatSaber.title',
+    durationMinutes: 30,
+    levelKey: 'home.fun.vr.level.beginner',
     rating: 4.9,
     price: '€15',
   },
   {
     id: 'boxing-vr',
-    title: 'VR Boxing Pro',
-    duration: '45 min',
-    level: 'Avanzato',
+    titleKey: 'home.fun.vr.boxing.title',
+    durationMinutes: 45,
+    levelKey: 'home.fun.vr.level.advanced',
     rating: 4.8,
     price: '€20',
   },
   {
     id: 'dance-vr',
-    title: 'Dance Revolution VR',
-    duration: '30 min',
-    level: 'Tutti',
+    titleKey: 'home.fun.vr.dance.title',
+    durationMinutes: 30,
+    levelKey: 'home.fun.vr.level.all',
     rating: 4.7,
     price: '€12',
   },
 ];
 
-const vfunTVSchedule = [
+const vfunTVSchedule: VFunTVShow[] = [
   {
     time: '10:00',
-    title: 'Morning Yoga Flow',
-    channel: 'V Wellness',
+    titleKey: 'home.fun.tv.morningYoga',
+    channelKey: 'home.fun.channel.wellness',
     isLive: false,
   },
   {
     time: '14:30',
-    title: 'HIIT Workout Live',
-    channel: 'V Fit',
+    titleKey: 'home.fun.tv.hiitLive',
+    channelKey: 'home.fun.channel.fit',
     isLive: true,
   },
   {
     time: '18:00',
-    title: 'Cooking Healthy',
-    channel: 'V Life',
+    titleKey: 'home.fun.tv.cookingHealthy',
+    channelKey: 'home.fun.channel.life',
     isLive: false,
   },
   {
     time: '21:00',
-    title: 'DJ Set Live',
-    channel: 'V Fun',
+    titleKey: 'home.fun.tv.djSetLive',
+    channelKey: 'home.fun.channel.fun',
     isLive: false,
   },
 ];
 
 const vfunIsStreamingLive = true;
 
-const sectionContent: Record<
-  Section,
-  {
-    title: string;
-    subtitle: string;
-    description: string;
-    icon: typeof Dumbbell;
-    features: string[];
-  }
-> = {
-  fit: {
-    title: 'VFit',
-    subtitle: 'Your Fitness Journey',
-    description:
-      'Access gyms, book classes, connect with personal trainers, and discover home workouts.',
-    icon: Dumbbell,
-    features: [
-      'Gym Access & Check-in',
-      'Group Fitness Classes',
-      'Personal Training',
-      'Home Workout Programs',
-      'Progress Tracking',
-    ],
-  },
-  fun: {
-    title: 'VFun',
-    subtitle: 'Entertainment & Events',
-    description:
-      'Discover events, parties, VR experiences, and exclusive streaming content.',
-    icon: PartyPopper,
-    features: [
-      'Live Events & Parties',
-      'VR Experiences',
-      'Exclusive Streaming',
-      'Social Meetups',
-      'Member-Only Access',
-    ],
-  },
-  life: {
-    title: 'VLife',
-    subtitle: 'Wellness & Beauty',
-    description:
-      'Book spa treatments, aesthetic services, massage therapy, and mental wellness sessions.',
-    icon: Sparkles,
-    features: [
-      'Spa & Relaxation',
-      'Aesthetic Treatments',
-      'Massage Therapy',
-      'Mental Wellness',
-      'Beauty Services',
-    ],
-  },
-};
-
 // Firestore data fetching hooks
-function useTopProviders(limitCount: number = 6) {
+function useTopProviders(limitCount: number = 6, unknownName: string) {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -297,7 +293,7 @@ function useTopProviders(limitCount: number = 6) {
             const profile = data.providerProfile || {};
             return {
               id: doc.id,
-              fullName: data.fullName || data.name || 'Unknown',
+              fullName: data.fullName || data.name || unknownName,
               avatarUrl: data.avatarUrl || null,
               specialties: data.specialties || profile.specialties || [],
               rating: data.ratingAvg || profile.rating || 0,
@@ -327,12 +323,17 @@ function useTopProviders(limitCount: number = 6) {
 
     fetchProviders();
     return () => clearTimeout(timeoutId);
-  }, [limitCount]);
+  }, [limitCount, unknownName]);
 
   return { providers, isLoading };
 }
 
-function useVenuesByType(type: 'fitness' | 'wellness', limitCount: number = 4) {
+function useVenuesByType(
+  type: 'fitness' | 'wellness',
+  limitCount: number = 4,
+  fallbackVenueName: string,
+  fallbackCityName: string
+) {
   const [venues, setVenues] = useState<Venue[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -352,8 +353,8 @@ function useVenuesByType(type: 'fitness' | 'wellness', limitCount: number = 4) {
             const data = doc.data();
             return {
               id: doc.id,
-              name: data.name || 'Unknown Venue',
-              city: data.city || data.address?.city || 'Unknown',
+              name: data.name || fallbackVenueName,
+              city: data.city || data.address?.city || fallbackCityName,
               rating: data.rating || 0,
               reviews: data.reviewCount || 0,
               distance: `${(Math.random() * 3 + 0.5).toFixed(1)} km`,
@@ -381,12 +382,20 @@ function useVenuesByType(type: 'fitness' | 'wellness', limitCount: number = 4) {
 
     fetchVenues();
     return () => clearTimeout(timeoutId);
-  }, [type, limitCount]);
+  }, [type, limitCount, fallbackVenueName, fallbackCityName]);
 
   return { venues, isLoading };
 }
 
-function useTodayClasses(limitCount: number = 3) {
+function useTodayClasses(
+  limitCount: number = 3,
+  locale: AppLocale,
+  labels: {
+    unnamedClass: string;
+    unknownInstructor: string;
+    allLevels: string;
+  }
+) {
   const [classes, setClasses] = useState<ClassSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -407,11 +416,14 @@ function useTodayClasses(limitCount: number = 3) {
             const startTime = data.startTime?.toDate?.() || new Date();
             return {
               id: doc.id,
-              time: startTime.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
-              name: data.name || 'Unnamed Class',
-              instructor: data.instructorName || data.instructor?.fullName || 'Unknown',
+              time: startTime.toLocaleTimeString(toLocaleTag(locale), {
+                hour: '2-digit',
+                minute: '2-digit',
+              }),
+              name: data.name || labels.unnamedClass,
+              instructor: data.instructorName || data.instructor?.fullName || labels.unknownInstructor,
               spots: (data.maxParticipants || data.maxCapacity || 20) - (data.bookedCount || 0),
-              tag: data.level || 'All Levels',
+              tag: data.level || labels.allLevels,
               startTime,
               isActive: data.isActive !== false,
             };
@@ -435,15 +447,28 @@ function useTodayClasses(limitCount: number = 3) {
 
     fetchClasses();
     return () => clearTimeout(timeoutId);
-  }, [limitCount]);
+  }, [limitCount, labels.allLevels, labels.unnamedClass, labels.unknownInstructor, locale]);
 
   return { classes, isLoading };
 }
 
 function VFitHome() {
-  const { providers: trainers, isLoading: loadingTrainers } = useTopProviders(6);
-  const { venues: gyms, isLoading: loadingGyms } = useVenuesByType('fitness', 4);
-  const { classes: classSessions, isLoading: loadingClasses } = useTodayClasses(3);
+  const { t, locale } = useI18n();
+  const { providers: trainers, isLoading: loadingTrainers } = useTopProviders(
+    6,
+    t('home.shared.unknownPerson')
+  );
+  const { venues: gyms, isLoading: loadingGyms } = useVenuesByType(
+    'fitness',
+    4,
+    t('home.shared.unknownVenue'),
+    t('home.shared.unknownCity')
+  );
+  const { classes: classSessions, isLoading: loadingClasses } = useTodayClasses(3, locale, {
+    unnamedClass: t('home.shared.unnamedClass'),
+    unknownInstructor: t('home.shared.unknownPerson'),
+    allLevels: t('home.fit.classLevel.all'),
+  });
 
   // Fallback data while loading
   const displayTrainers = trainers.length > 0 ? trainers.slice(0, 3) : [];
@@ -458,20 +483,20 @@ function VFitHome() {
         <div className="relative flex flex-wrap items-center justify-between gap-4">
           <div>
             <span className="inline-flex items-center gap-2 rounded-full bg-vip-gold/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-vip-gold">
-              VIP Upgrade
+              {t('home.fit.vip.badge')}
             </span>
             <h2 className="mt-3 text-xl font-bold text-text-inverse">
-              Sblocca sconti esclusivi
+              {t('home.fit.vip.title')}
             </h2>
             <p className="mt-1 text-sm text-text-tertiary">
-              Passa a VIP per classi illimitate e offerte premium.
+              {t('home.fit.vip.subtitle')}
             </p>
           </div>
           <Link
             href="/profile"
             className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-background-dark shadow-lg shadow-white/10"
           >
-            Attiva
+            {t('home.fit.vip.activate')}
             <ArrowUpRight className="h-4 w-4" />
           </Link>
         </div>
@@ -479,8 +504,8 @@ function VFitHome() {
 
       <section>
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-text-inverse">Azioni rapide</h3>
-          <span className="text-xs text-text-tertiary">VFit</span>
+          <h3 className="text-lg font-semibold text-text-inverse">{t('home.fit.quickActions.title')}</h3>
+          <span className="text-xs text-text-tertiary">{t('home.fit.quickActions.badge')}</span>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-4">
           {vfitQuickActions.map((action) => {
@@ -494,16 +519,16 @@ function VFitHome() {
                   <ChevronRight className="h-4 w-4 text-text-tertiary opacity-0 transition-opacity group-hover:opacity-100" />
                 </div>
                 <p className="mt-4 text-sm font-semibold text-text-inverse">
-                  {action.label}
+                  {t(action.labelKey)}
                 </p>
-                <p className="mt-1 text-xs text-text-tertiary">Scopri ora</p>
+                <p className="mt-1 text-xs text-text-tertiary">{t('common.discoverNow')}</p>
               </>
             );
 
             if (action.href) {
               return (
                 <Link
-                  key={action.label}
+                  key={`${action.labelKey}-${action.href}`}
                   href={action.href}
                   className={cn(
                     'group rounded-2xl border border-white/10 bg-white/5 p-4 transition-all',
@@ -517,7 +542,7 @@ function VFitHome() {
 
             return (
               <button
-                key={action.label}
+                key={`${action.labelKey}-${action.href}`}
                 type="button"
                 className={cn(
                   'group rounded-2xl border border-white/10 bg-white/5 p-4 transition-all',
@@ -534,13 +559,17 @@ function VFitHome() {
       <section>
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-text-inverse">
-            {loadingGyms ? 'Caricamento...' : displayGyms.length > 0 ? 'Palestre vicine' : 'Palestre Partner'}
+            {loadingGyms
+              ? t('common.loading')
+              : displayGyms.length > 0
+                ? t('home.fit.gyms.nearby')
+                : t('home.fit.gyms.partner')}
           </h3>
           <Link
             href="/fit/gyms"
             className="text-sm font-medium text-section-primary"
           >
-            Vedi tutte
+            {t('home.fit.gyms.viewAll')}
           </Link>
         </div>
         <div className="mt-4 flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
@@ -559,7 +588,7 @@ function VFitHome() {
                   <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.18),_transparent_60%)]" />
                   {gym.partner && (
                     <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold uppercase text-background-dark">
-                      Partner
+                      {t('home.fit.partnerBadge')}
                     </span>
                   )}
                   <div className="absolute right-3 top-3 rounded-full bg-background-dark/80 px-2 py-1 text-[11px] font-semibold text-white">
@@ -573,16 +602,16 @@ function VFitHome() {
                   <p className="text-xs text-text-tertiary">{gym.city}</p>
                   <div className="mt-2 flex items-center justify-between text-xs text-text-tertiary">
                     <span>{gym.distance}</span>
-                    <span>{gym.reviews} recensioni</span>
+                    <span>{t('home.fit.reviews', { count: gym.reviews })}</span>
                   </div>
                 </div>
               </Link>
             ))
           ) : (
             <div className="min-w-[220px] rounded-2xl border border-white/10 bg-white/5 p-4 text-center">
-              <p className="text-sm text-text-tertiary">Nessuna palestra disponibile</p>
+              <p className="text-sm text-text-tertiary">{t('home.fit.gyms.empty')}</p>
               <Link href="/booking" className="text-sm text-section-primary mt-2 inline-block">
-                Trova un trainer
+                {t('home.fit.gyms.findTrainer')}
               </Link>
             </div>
           )}
@@ -592,9 +621,15 @@ function VFitHome() {
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-text-inverse">
-            {loadingClasses ? 'Caricamento...' : displayClasses.length > 0 ? 'Corsi oggi' : 'Corsi disponibili'}
+            {loadingClasses
+              ? t('common.loading')
+              : displayClasses.length > 0
+                ? t('home.fit.classes.today')
+                : t('home.fit.classes.available')}
           </h3>
-          <button className="text-sm font-medium text-section-primary">Calendario</button>
+          <button className="text-sm font-medium text-section-primary">
+            {t('home.fit.classes.calendar')}
+          </button>
         </div>
         <div className="space-y-3">
           {loadingClasses ? (
@@ -621,15 +656,15 @@ function VFitHome() {
                   </div>
                 </div>
                 <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-text-inverse">
-                  {session.spots} posti
+                  {t('home.fit.classSpots', { count: session.spots })}
                 </span>
               </div>
             ))
           ) : (
             <div className="text-center py-6 border border-white/10 rounded-2xl">
-              <p className="text-sm text-text-tertiary">Nessun corso oggi</p>
+              <p className="text-sm text-text-tertiary">{t('home.fit.classes.emptyToday')}</p>
               <Link href="/booking" className="text-sm text-section-primary mt-2 inline-block">
-                Prenota un trainer personale
+                {t('home.fit.classes.bookPersonalTrainer')}
               </Link>
             </div>
           )}
@@ -639,10 +674,10 @@ function VFitHome() {
       <section>
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-text-inverse">
-            {loadingTrainers ? 'Caricamento...' : 'Istruttori top'}
+            {loadingTrainers ? t('common.loading') : t('home.fit.trainers.top')}
           </h3>
           <Link href="/booking" className="text-sm font-medium text-section-primary">
-            Scopri
+            {t('home.fit.trainers.discover')}
           </Link>
         </div>
         <div className="mt-4 flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
@@ -664,7 +699,7 @@ function VFitHome() {
                       {trainer.fullName}
                     </p>
                     <p className="text-xs text-text-tertiary">
-                      {trainer.specialties[0] || 'Trainer'}
+                      {trainer.specialties[0] || t('home.fit.trainers.defaultSpecialty')}
                     </p>
                   </div>
                 </div>
@@ -675,19 +710,19 @@ function VFitHome() {
                   </span>
                   <span>({trainer.reviewCount})</span>
                   {trainer.isVerified && (
-                    <span className="ml-auto text-success-DEFAULT">Verificato</span>
+                    <span className="ml-auto text-success-DEFAULT">{t('home.fit.trainers.verified')}</span>
                   )}
                 </div>
                 <button className="mt-4 w-full rounded-full bg-section-primary/20 py-2 text-xs font-semibold text-section-primary">
-                  Prenota
+                  {t('common.bookNow')}
                 </button>
               </Link>
             ))
           ) : (
             <div className="min-w-[200px] rounded-2xl border border-white/10 bg-white/5 p-4 text-center">
-              <p className="text-sm text-text-tertiary">Nessun trainer disponibile</p>
+              <p className="text-sm text-text-tertiary">{t('home.fit.trainers.empty')}</p>
               <Link href="/booking" className="text-sm text-section-primary mt-2 inline-block">
-                Cerca trainer
+                {t('home.fit.trainers.search')}
               </Link>
             </div>
           )}
@@ -696,23 +731,28 @@ function VFitHome() {
 
       <section className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-text-inverse">Le tue sfide</h3>
+          <h3 className="text-lg font-semibold text-text-inverse">{t('home.fit.challenges.title')}</h3>
           <Trophy className="h-5 w-5 text-section-primary" />
         </div>
-        {vfitChallenges.map((challenge, index) => (
+        {vfitChallenges.map((challenge) => (
           <div
-            key={`challenge-${challenge.title}-${index}`}
+            key={`challenge-${challenge.id}`}
             className="rounded-2xl border border-white/10 bg-white/5 p-4"
           >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-semibold text-text-inverse">
-                  {challenge.title}
+                  {t(challenge.titleKey)}
                 </p>
-                <p className="text-xs text-text-tertiary">{challenge.target}</p>
+                <p className="text-xs text-text-tertiary">
+                  {t('home.fit.challenge.progress', {
+                    current: challenge.currentValue,
+                    total: challenge.targetValue,
+                  })}
+                </p>
               </div>
               <span className="rounded-full bg-section-primary/15 px-3 py-1 text-xs font-semibold text-section-primary">
-                {challenge.streak}
+                {t('home.fit.challenge.streakDays', { count: challenge.streakDays })}
               </span>
             </div>
             <div className="mt-3 h-2 rounded-full bg-white/10">
@@ -732,23 +772,23 @@ function VFitHome() {
           <div className="absolute left-1/2 top-16 h-4 w-4 rounded-full bg-vfit-accent shadow-[0_0_12px_rgba(123,97,255,0.8)]" />
           <div className="absolute right-12 bottom-12 h-5 w-5 rounded-full bg-section-secondary shadow-[0_0_12px_rgba(0,102,255,0.8)]" />
           <div className="absolute right-6 top-6 rounded-full bg-background-dark/80 px-3 py-1 text-xs text-text-inverse">
-            +12 location
+            {t('home.fit.map.locations', { count: 12 })}
           </div>
           <div className="absolute left-5 bottom-5 flex items-center gap-2 text-xs text-text-inverse">
             <MapPin className="h-4 w-4 text-section-primary" />
-            Milano
+            {t('home.fit.map.city')}
           </div>
         </div>
         <div className="flex items-center justify-between px-4 py-3">
           <div>
-            <p className="text-sm font-semibold text-text-inverse">Mappa VFit</p>
-            <p className="text-xs text-text-tertiary">Scopri le sedi vicine</p>
+            <p className="text-sm font-semibold text-text-inverse">{t('home.fit.map.title')}</p>
+            <p className="text-xs text-text-tertiary">{t('home.fit.map.subtitle')}</p>
           </div>
           <Link
             href="/fit/gyms"
             className="text-sm font-semibold text-section-primary"
           >
-            Apri
+            {t('home.fit.map.open')}
           </Link>
         </div>
       </section>
@@ -757,6 +797,7 @@ function VFitHome() {
 }
 
 function VFunHome() {
+  const { t, locale } = useI18n();
   return (
     <div className="container-mobile py-6 space-y-8 pb-24">
       {/* Featured Event Hero Banner */}
@@ -770,32 +811,32 @@ function VFunHome() {
           <div className="absolute inset-0 p-6 flex flex-col justify-between">
             <div className="flex items-start justify-between">
               <span className="rounded-full bg-red-500/90 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-white shadow-lg">
-                {vfunFeaturedEvent.tag}
+                {vfunFeaturedEvent.tagKey ? t(vfunFeaturedEvent.tagKey) : ''}
               </span>
               <div className="flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur-sm px-3 py-1.5">
                 <Users className="h-3.5 w-3.5 text-white/80" />
                 <span className="text-[11px] font-medium text-white">
-                  {vfunFeaturedEvent.attendees.toLocaleString()}
+                  {vfunFeaturedEvent.attendees.toLocaleString(toLocaleTag(locale))}
                 </span>
               </div>
             </div>
             
             <div>
               <p className="text-sm font-medium text-pink-300">
-                {vfunFeaturedEvent.date} · {vfunFeaturedEvent.location}
+                {vfunFeaturedEvent.date} · {t(vfunFeaturedEvent.locationKey)}
               </p>
               <h2 className="mt-1 text-2xl font-bold text-white leading-tight">
-                {vfunFeaturedEvent.title}
+                {t(vfunFeaturedEvent.titleKey)}
               </h2>
               <p className="mt-1 text-sm text-white/70">
-                {vfunFeaturedEvent.subtitle}
+                {t(vfunFeaturedEvent.subtitleKey)}
               </p>
               <div className="mt-4 flex items-center gap-3">
                 <span className="text-lg font-bold text-white">
                   {vfunFeaturedEvent.price}
                 </span>
                 <button className="flex-1 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-purple-900 shadow-lg shadow-white/20 transition-all hover:scale-[1.02] active:scale-95">
-                  Prenota ora
+                  {t('common.bookNow')}
                 </button>
               </div>
             </div>
@@ -824,17 +865,17 @@ function VFunHome() {
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <span className="text-[11px] font-bold uppercase tracking-wide text-red-400">
-                  Live Now
+                  {t('home.fun.live.badge')}
                 </span>
                 <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-[10px] font-semibold text-red-300">
-                  V Fun
+                  {t('home.fun.live.channel')}
                 </span>
               </div>
               <h3 className="text-base font-bold text-text-inverse">
-                DJ Set Live - Saturday Vibes
+                {t('home.fun.live.title')}
               </h3>
               <p className="text-xs text-text-tertiary">
-                Con Marco Carola · 2.4k spettatori
+                {t('home.fun.live.subtitle')}
               </p>
             </div>
             <button className="rounded-full bg-red-500/20 p-2.5 text-red-400 transition-all hover:bg-red-500/30">
@@ -847,8 +888,8 @@ function VFunHome() {
       {/* Quick Actions Grid */}
       <section>
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-text-inverse">Esplora</h3>
-          <span className="text-xs text-text-tertiary">VFun</span>
+          <h3 className="text-lg font-semibold text-text-inverse">{t('home.fun.quickActions.title')}</h3>
+          <span className="text-xs text-text-tertiary">{t('home.fun.quickActions.badge')}</span>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-4">
           {vfunQuickActions.map((action) => {
@@ -862,16 +903,16 @@ function VFunHome() {
                   <ChevronRight className="h-4 w-4 text-text-tertiary opacity-0 transition-opacity group-hover:opacity-100" />
                 </div>
                 <p className="mt-4 text-sm font-semibold text-text-inverse">
-                  {action.label}
+                  {t(action.labelKey)}
                 </p>
-                <p className="mt-1 text-xs text-text-tertiary">Scopri ora</p>
+                <p className="mt-1 text-xs text-text-tertiary">{t('common.discoverNow')}</p>
               </>
             );
 
             if (action.href) {
               return (
                 <Link
-                  key={action.label}
+                  key={`${action.labelKey}-${action.href}`}
                   href={action.href}
                   className={cn(
                     'group rounded-2xl border border-white/10 bg-white/5 p-4 transition-all',
@@ -885,7 +926,7 @@ function VFunHome() {
 
             return (
               <button
-                key={action.label}
+                key={`${action.labelKey}-${action.href}`}
                 type="button"
                 className={cn(
                   'group rounded-2xl border border-white/10 bg-white/5 p-4 transition-all',
@@ -902,12 +943,12 @@ function VFunHome() {
       {/* Prossimi Eventi - Upcoming Events Carousel */}
       <section>
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-text-inverse">Prossimi Eventi</h3>
+          <h3 className="text-lg font-semibold text-text-inverse">{t('home.fun.upcoming.title')}</h3>
           <Link
             href="/fun/events"
             className="text-sm font-medium text-section-primary"
           >
-            Vedi tutti
+            {t('home.fun.upcoming.viewAll')}
           </Link>
         </div>
         <div className="mt-4 flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
@@ -918,14 +959,14 @@ function VFunHome() {
             >
               <div className="relative h-28 bg-gradient-to-br from-purple-500/30 via-pink-500/20 to-orange-400/10">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.15),_transparent_60%)]" />
-                {event.tag && (
+                {event.tagKey && (
                   <span className={cn(
                     "absolute left-3 top-3 rounded-full px-2 py-1 text-[10px] font-semibold uppercase",
-                    event.tag === 'Hot' && "bg-orange-500/90 text-white",
-                    event.tag === 'VIP' && "bg-vip-gold/90 text-background-dark",
-                    event.tag === 'Nuovo' && "bg-section-primary/90 text-white",
+                    event.tagKey === 'home.fun.tag.hot' && "bg-orange-500/90 text-white",
+                    event.tagKey === 'home.fun.tag.vip' && "bg-vip-gold/90 text-background-dark",
+                    event.tagKey === 'home.fun.tag.new' && "bg-section-primary/90 text-white",
                   )}>
-                    {event.tag}
+                    {t(event.tagKey)}
                   </span>
                 )}
                 <div className="absolute right-3 top-3 rounded-full bg-background-dark/80 px-2 py-1 text-[11px] font-semibold text-white">
@@ -934,7 +975,7 @@ function VFunHome() {
               </div>
               <div className="p-3">
                 <h4 className="text-sm font-semibold text-text-inverse">
-                  {event.title}
+                  {t(event.titleKey)}
                 </h4>
                 <div className="mt-2 flex items-center gap-2 text-xs text-text-tertiary">
                   <Clock className="h-3.5 w-3.5" />
@@ -942,14 +983,14 @@ function VFunHome() {
                 </div>
                 <div className="mt-1 flex items-center gap-2 text-xs text-text-tertiary">
                   <MapPin className="h-3.5 w-3.5" />
-                  <span>{event.location}</span>
+                  <span>{t(event.locationKey)}</span>
                 </div>
                 <div className="mt-3 flex items-center justify-between">
                   <span className="text-sm font-bold text-section-primary">
                     {event.price}
                   </span>
                   <button className="rounded-full bg-section-primary/20 px-3 py-1 text-xs font-semibold text-section-primary">
-                    Prenota
+                    {t('common.bookNow')}
                   </button>
                 </div>
               </div>
@@ -961,12 +1002,12 @@ function VFunHome() {
       {/* VR Experiences Carousel */}
       <section>
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-text-inverse">VR Experiences</h3>
+          <h3 className="text-lg font-semibold text-text-inverse">{t('home.fun.vr.title')}</h3>
           <Link
             href="/fun/vr"
             className="text-sm font-medium text-section-primary"
           >
-            Esplora
+            {t('home.fun.vr.explore')}
           </Link>
         </div>
         <div className="mt-4 flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
@@ -987,15 +1028,15 @@ function VFunHome() {
                 </div>
               </div>
               <h4 className="mt-3 text-sm font-semibold text-text-inverse">
-                {vr.title}
+                {t(vr.titleKey)}
               </h4>
               <div className="mt-2 flex items-center gap-3 text-xs text-text-tertiary">
                 <span className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
-                  {vr.duration}
+                  {t('home.fun.vr.duration', { count: vr.durationMinutes })}
                 </span>
                 <span className="rounded-full bg-indigo-500/20 px-2 py-0.5 text-indigo-300">
-                  {vr.level}
+                  {t(vr.levelKey)}
                 </span>
               </div>
               <div className="mt-3 flex items-center justify-between">
@@ -1003,7 +1044,7 @@ function VFunHome() {
                   {vr.price}
                 </span>
                 <button className="rounded-full bg-indigo-500/20 px-3 py-1.5 text-xs font-semibold text-indigo-400">
-                  Prenota
+                  {t('common.bookNow')}
                 </button>
               </div>
             </div>
@@ -1014,18 +1055,18 @@ function VFunHome() {
       {/* Palinsesto TV Schedule */}
       <section>
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-text-inverse">Palinsesto TV</h3>
+          <h3 className="text-lg font-semibold text-text-inverse">{t('home.fun.tv.title')}</h3>
           <Link
             href="/fun/tv"
             className="text-sm font-medium text-section-primary"
           >
-            Guida TV
+            {t('home.fun.tv.guide')}
           </Link>
         </div>
         <div className="mt-4 space-y-3">
           {vfunTVSchedule.map((show, index) => (
             <div
-              key={`${show.title}-${index}`}
+              key={`${show.titleKey}-${index}`}
               className={cn(
                 "flex items-center gap-4 rounded-2xl border p-3 transition-all",
                 show.isLive
@@ -1047,21 +1088,21 @@ function VFunHome() {
                   "text-sm font-semibold truncate",
                   show.isLive ? "text-text-inverse" : "text-text-inverse"
                 )}>
-                  {show.title}
+                  {t(show.titleKey)}
                 </p>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className={cn(
                     "text-[11px] font-medium",
-                    show.channel === 'V Fit' && "text-emerald-400",
-                    show.channel === 'V Life' && "text-pink-400",
-                    show.channel === 'V Fun' && "text-purple-400",
-                    show.channel === 'V Wellness' && "text-cyan-400",
+                    show.channelKey === 'home.fun.channel.fit' && "text-emerald-400",
+                    show.channelKey === 'home.fun.channel.life' && "text-pink-400",
+                    show.channelKey === 'home.fun.channel.fun' && "text-purple-400",
+                    show.channelKey === 'home.fun.channel.wellness' && "text-cyan-400",
                   )}>
-                    {show.channel}
+                    {t(show.channelKey)}
                   </span>
                   {show.isLive && (
                     <span className="text-[10px] font-bold uppercase text-red-400">
-                      In onda
+                      {t('home.fun.tv.onAir')}
                     </span>
                   )}
                 </div>
@@ -1089,18 +1130,18 @@ function VFunHome() {
               <PartyPopper className="h-6 w-6 text-pink-400" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-text-inverse">Party Mode</h3>
-              <p className="text-sm text-text-tertiary">Organizza il tuo evento</p>
+              <h3 className="text-lg font-bold text-text-inverse">{t('home.fun.partyMode.title')}</h3>
+              <p className="text-sm text-text-tertiary">{t('home.fun.partyMode.subtitle')}</p>
             </div>
           </div>
           <p className="mt-3 text-sm text-text-secondary leading-relaxed">
-            Vuoi organizzare una festa privata o un evento aziendale? Scegli location esclusive, catering e intrattenimento su misura.
+            {t('home.fun.partyMode.description')}
           </p>
           <Link
             href="/fun/party-mode"
             className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-pink-400"
           >
-            Richiedi preventivo
+            {t('home.fun.partyMode.requestQuote')}
             <ArrowUpRight className="h-4 w-4" />
           </Link>
         </div>
@@ -1110,7 +1151,16 @@ function VFunHome() {
 }
 
 // Testimonials from Firestore
-function useTestimonials(limitCount: number = 3) {
+function useTestimonials(
+  limitCount: number = 3,
+  labels: {
+    anonymousUser: string;
+    genericService: string;
+    today: string;
+    yesterday: string;
+    daysAgo: string;
+  }
+) {
   const [testimonials, setTestimonials] = useState<Array<{
     id: string;
     name: string;
@@ -1139,11 +1189,16 @@ function useTestimonials(limitCount: number = 3) {
             return {
               id: doc.id,
               name: data.userName?.split(' ')[0] + ' ' + 
-                (data.userName?.split(' ')[1]?.charAt(0) || '') + '.' || 'Anonymous',
-              service: data.serviceName || 'Service',
+                (data.userName?.split(' ')[1]?.charAt(0) || '') + '.' || labels.anonymousUser,
+              service: data.serviceName || labels.genericService,
               rating: data.rating || 5,
               text: data.comment || data.text || '',
-              date: daysAgo === 0 ? 'Oggi' : daysAgo === 1 ? 'Ieri' : `${daysAgo} giorni fa`,
+              date:
+                daysAgo === 0
+                  ? labels.today
+                  : daysAgo === 1
+                    ? labels.yesterday
+                    : labels.daysAgo.replace(/\{\{\s*count\s*\}\}/g, String(daysAgo)),
             };
           })
           .filter(r => r.rating >= 4)
@@ -1165,40 +1220,52 @@ function useTestimonials(limitCount: number = 3) {
 
     fetchTestimonials();
     return () => clearTimeout(timeoutId);
-  }, [limitCount]);
+  }, [labels.anonymousUser, labels.daysAgo, labels.genericService, labels.today, labels.yesterday, limitCount]);
 
   return { testimonials, isLoading };
 }
 
 function VLifeHome() {
-  const { venues: centers, isLoading: loadingCenters } = useVenuesByType('wellness', 4);
-  const { testimonials, isLoading: loadingTestimonials } = useTestimonials(3);
+  const { t } = useI18n();
+  const { venues: centers, isLoading: loadingCenters } = useVenuesByType(
+    'wellness',
+    4,
+    t('home.shared.unknownVenue'),
+    t('home.shared.unknownCity')
+  );
+  const { testimonials, isLoading: loadingTestimonials } = useTestimonials(3, {
+    anonymousUser: t('home.shared.anonymous'),
+    genericService: t('home.shared.service'),
+    today: t('home.shared.today'),
+    yesterday: t('home.shared.yesterday'),
+    daysAgo: t('home.shared.daysAgo', { count: '{{count}}' }),
+  });
 
   // Fallback testimonials
   const fallbackTestimonials = [
     {
       id: '1',
       name: 'Francesca M.',
-      service: 'Massaggio Decontratturante',
+      service: t('home.life.testimonials.f1.service'),
       rating: 5,
-      text: 'Esperienza fantastica! Il massaggio ha risolto il mio mal di schiena cronico. Staff professionale e ambiente rilassante.',
-      date: '2 giorni fa',
+      text: t('home.life.testimonials.f1.text'),
+      date: t('home.life.testimonials.f1.date'),
     },
     {
       id: '2',
       name: 'Giovanni P.',
-      service: 'Seduta di Osteopatia',
+      service: t('home.life.testimonials.f2.service'),
       rating: 5,
-      text: 'Dopo anni di dolori cervicali, finalmente ho trovato sollievo. Il dottore e molto competente e attento.',
-      date: '1 settimana fa',
+      text: t('home.life.testimonials.f2.text'),
+      date: t('home.life.testimonials.f2.date'),
     },
     {
       id: '3',
       name: 'Laura B.',
-      service: 'Trattamento Viso',
+      service: t('home.life.testimonials.f3.service'),
       rating: 4,
-      text: 'Pelle luminosa e idratata dopo il trattamento. Consigliatissimo per chi vuole prendersi cura di se.',
-      date: '3 giorni fa',
+      text: t('home.life.testimonials.f3.text'),
+      date: t('home.life.testimonials.f3.date'),
     },
   ];
 
@@ -1214,20 +1281,20 @@ function VLifeHome() {
         <div className="relative flex flex-wrap items-center justify-between gap-4">
           <div>
             <span className="inline-flex items-center gap-2 rounded-full bg-vip-gold/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-vip-gold">
-              Offerta Esclusiva
+              {t('home.life.vip.badge')}
             </span>
             <h2 className="mt-3 text-xl font-bold text-text-inverse">
-              -30% su tutti i trattamenti
+              {t('home.life.vip.title')}
             </h2>
             <p className="mt-1 text-sm text-text-tertiary">
-              Valido per i membri VIP su massaggi, estetica e servizi wellness.
+              {t('home.life.vip.subtitle')}
             </p>
           </div>
           <Link
             href="/profile"
             className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-background-dark shadow-lg shadow-white/10"
           >
-            Scopri
+            {t('home.life.vip.action')}
             <ArrowUpRight className="h-4 w-4" />
           </Link>
         </div>
@@ -1236,15 +1303,15 @@ function VLifeHome() {
       {/* Quick Actions - Wellness */}
       <section>
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-text-inverse">Wellness</h3>
-          <span className="text-xs text-text-tertiary">Salute & Benessere</span>
+          <h3 className="text-lg font-semibold text-text-inverse">{t('home.life.wellness.title')}</h3>
+          <span className="text-xs text-text-tertiary">{t('home.life.wellness.subtitle')}</span>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-4">
           {vlifeWellnessActions.map((action) => {
             const Icon = action.icon;
             return (
               <Link
-                key={action.label}
+                key={`${action.labelKey}-${action.href}`}
                 href={action.href}
                 className={cn(
                   'group rounded-2xl border border-white/10 bg-white/5 p-4 transition-all',
@@ -1258,9 +1325,9 @@ function VLifeHome() {
                   <ChevronRight className="h-4 w-4 text-text-tertiary opacity-0 transition-opacity group-hover:opacity-100" />
                 </div>
                 <p className="mt-4 text-sm font-semibold text-text-inverse">
-                  {action.label}
+                  {t(action.labelKey)}
                 </p>
-                <p className="mt-1 text-xs text-text-tertiary">Prenota ora</p>
+                <p className="mt-1 text-xs text-text-tertiary">{t('common.bookNow')}</p>
               </Link>
             );
           })}
@@ -1270,15 +1337,15 @@ function VLifeHome() {
       {/* Quick Actions - Estetica */}
       <section>
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-text-inverse">Estetica</h3>
-          <span className="text-xs text-text-tertiary">Beauty & Care</span>
+          <h3 className="text-lg font-semibold text-text-inverse">{t('home.life.beauty.title')}</h3>
+          <span className="text-xs text-text-tertiary">{t('home.life.beauty.subtitle')}</span>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-4">
           {vlifeEsteticaActions.map((action) => {
             const Icon = action.icon;
             return (
               <Link
-                key={action.label}
+                key={`${action.labelKey}-${action.href}`}
                 href={action.href}
                 className={cn(
                   'group rounded-2xl border border-white/10 bg-white/5 p-4 transition-all',
@@ -1292,9 +1359,9 @@ function VLifeHome() {
                   <ChevronRight className="h-4 w-4 text-text-tertiary opacity-0 transition-opacity group-hover:opacity-100" />
                 </div>
                 <p className="mt-4 text-sm font-semibold text-text-inverse">
-                  {action.label}
+                  {t(action.labelKey)}
                 </p>
-                <p className="mt-1 text-xs text-text-tertiary">Prenota ora</p>
+                <p className="mt-1 text-xs text-text-tertiary">{t('common.bookNow')}</p>
               </Link>
             );
           })}
@@ -1310,24 +1377,24 @@ function VLifeHome() {
               <HomeIcon className="h-6 w-6 text-emerald-400" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-text-inverse">Servizi a Domicilio</h3>
-              <p className="text-sm text-text-tertiary">Comodamente a casa tua</p>
+              <h3 className="text-lg font-bold text-text-inverse">{t('home.life.homeServices.title')}</h3>
+              <p className="text-sm text-text-tertiary">{t('home.life.homeServices.subtitle')}</p>
             </div>
           </div>
           <p className="mt-3 text-sm text-text-secondary leading-relaxed">
-            Massaggi, estetista, parrucchiere e molto altro direttamente a domicilio. Professionisti certificati con tutta l&apos;attrezzatura necessaria.
+            {t('home.life.homeServices.description')}
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
-            <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-text-inverse">Massaggi</span>
-            <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-text-inverse">Estetista</span>
-            <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-text-inverse">Manicure</span>
-            <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-text-inverse">Fisioterapia</span>
+            <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-text-inverse">{t('home.life.homeServices.tag.massages')}</span>
+            <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-text-inverse">{t('home.life.homeServices.tag.beautician')}</span>
+            <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-text-inverse">{t('home.life.homeServices.tag.manicure')}</span>
+            <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-text-inverse">{t('home.life.homeServices.tag.physiotherapy')}</span>
           </div>
           <Link
             href="/life/home-services"
             className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-emerald-400"
           >
-            Scopri i servizi
+            {t('home.life.homeServices.discover')}
             <ArrowUpRight className="h-4 w-4" />
           </Link>
         </div>
@@ -1337,13 +1404,17 @@ function VLifeHome() {
       <section>
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-text-inverse">
-            {loadingCenters ? 'Caricamento...' : displayCenters.length > 0 ? 'Centri Vicini' : 'Centri Partner'}
+            {loadingCenters
+              ? t('common.loading')
+              : displayCenters.length > 0
+                ? t('home.life.centers.nearby')
+                : t('home.life.centers.partner')}
           </h3>
           <Link
             href="/life/centers"
             className="text-sm font-medium text-section-primary"
           >
-            Vedi tutti
+            {t('home.life.centers.viewAll')}
           </Link>
         </div>
         <div className="mt-4 flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
@@ -1362,7 +1433,7 @@ function VLifeHome() {
                   <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.15),_transparent_60%)]" />
                   {center.partner && (
                     <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold uppercase text-background-dark">
-                      Partner
+                      {t('home.fit.partnerBadge')}
                     </span>
                   )}
                   <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-background-dark/80 px-2 py-1">
@@ -1389,16 +1460,16 @@ function VLifeHome() {
                       <MapPin className="h-3 w-3" />
                       {center.distance}
                     </span>
-                    <span>{center.reviews} recensioni</span>
+                    <span>{t('home.fit.reviews', { count: center.reviews })}</span>
                   </div>
                 </div>
               </Link>
             ))
           ) : (
             <div className="min-w-[240px] rounded-2xl border border-white/10 bg-white/5 p-4 text-center">
-              <p className="text-sm text-text-tertiary">Nessun centro disponibile</p>
+              <p className="text-sm text-text-tertiary">{t('home.life.centers.empty')}</p>
               <Link href="/booking" className="text-sm text-section-primary mt-2 inline-block">
-                Trova un professionista
+                {t('home.life.centers.findProfessional')}
               </Link>
             </div>
           )}
@@ -1408,7 +1479,7 @@ function VLifeHome() {
       {/* Recensioni - Testimonials Carousel */}
       <section>
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-text-inverse">Recensioni</h3>
+          <h3 className="text-lg font-semibold text-text-inverse">{t('home.life.testimonials.title')}</h3>
           <Quote className="h-5 w-5 text-section-primary" />
         </div>
         <div className="mt-4 flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
@@ -1465,44 +1536,44 @@ function VLifeHome() {
             </div>
             <div className="flex-1">
               <span className="inline-flex items-center gap-1 rounded-full bg-cyan-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cyan-400">
-                Novita
+                {t('home.life.hyperbaric.badge')}
               </span>
               <h3 className="mt-2 text-lg font-bold text-text-inverse">
-                Camera Iperbarica
+                {t('home.life.hyperbaric.title')}
               </h3>
               <p className="mt-1 text-sm text-text-secondary leading-relaxed">
-                La terapia con ossigeno iperbarico favorisce la rigenerazione cellulare, accelera il recupero muscolare e migliora la circolazione.
+                {t('home.life.hyperbaric.description')}
               </p>
             </div>
           </div>
           <div className="mt-4 grid grid-cols-3 gap-3">
             <div className="rounded-xl bg-white/5 p-3 text-center">
               <p className="text-lg font-bold text-cyan-400">90</p>
-              <p className="text-[10px] text-text-tertiary">Minuti</p>
+              <p className="text-[10px] text-text-tertiary">{t('home.life.hyperbaric.metric.minutes')}</p>
             </div>
             <div className="rounded-xl bg-white/5 p-3 text-center">
               <p className="text-lg font-bold text-cyan-400">2.0</p>
-              <p className="text-[10px] text-text-tertiary">ATA Pressione</p>
+              <p className="text-[10px] text-text-tertiary">{t('home.life.hyperbaric.metric.pressure')}</p>
             </div>
             <div className="rounded-xl bg-white/5 p-3 text-center">
               <p className="text-lg font-bold text-cyan-400">100%</p>
-              <p className="text-[10px] text-text-tertiary">O2 Puro</p>
+              <p className="text-[10px] text-text-tertiary">{t('home.life.hyperbaric.metric.oxygen')}</p>
             </div>
           </div>
           <div className="mt-4 space-y-2">
-            <p className="text-xs font-semibold text-text-inverse">Benefici:</p>
+            <p className="text-xs font-semibold text-text-inverse">{t('home.life.hyperbaric.benefits')}</p>
             <div className="flex flex-wrap gap-2">
-              <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs text-text-tertiary">Recupero Sportivo</span>
-              <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs text-text-tertiary">Anti-Age</span>
-              <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs text-text-tertiary">Energia</span>
-              <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs text-text-tertiary">Detox</span>
+              <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs text-text-tertiary">{t('home.life.hyperbaric.benefit.recovery')}</span>
+              <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs text-text-tertiary">{t('home.life.hyperbaric.benefit.antiAge')}</span>
+              <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs text-text-tertiary">{t('home.life.hyperbaric.benefit.energy')}</span>
+              <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs text-text-tertiary">{t('home.life.hyperbaric.benefit.detox')}</span>
             </div>
           </div>
           <Link
             href="/life/hyperbaric"
             className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-cyan-500/20 border border-cyan-500/30 py-3 text-sm font-semibold text-cyan-400 transition-all hover:bg-cyan-500/30"
           >
-            Prenota una sessione
+            {t('home.life.hyperbaric.bookSession')}
             <ArrowUpRight className="h-4 w-4" />
           </Link>
         </div>
@@ -1514,7 +1585,7 @@ function VLifeHome() {
           className="flex items-center gap-2 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-purple-500/30 transition-all hover:shadow-purple-500/40 hover:scale-[1.02] active:scale-95"
         >
           <Phone className="h-4 w-4" />
-          Contatta per Preventivo
+          {t('home.life.contactQuote')}
         </button>
       </div>
     </div>
@@ -1523,6 +1594,7 @@ function VLifeHome() {
 
 export default function HomePage() {
   const { section } = useSection();
+  const { t } = useI18n();
   const { isRefreshing, pullPosition } = usePullToRefresh({
     onRefresh: () => new Promise(resolve => setTimeout(resolve, 2000)),
   });
@@ -1533,7 +1605,7 @@ export default function HomePage() {
         <div className="container-mobile flex items-center justify-between py-4">
           <h1 className="text-2xl font-bold text-white">V</h1>
           <SectionSwitcher />
-          <Avatar name="User" size="sm" />
+          <Avatar name={t('home.shared.user')} size="sm" />
         </div>
       </header>
       <main

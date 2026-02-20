@@ -13,11 +13,13 @@ import { Spinner } from '@/components/ui/Spinner';
 import { Apple, Mail, Phone, ChevronLeft } from 'lucide-react';
 import { FcGoogle } from 'react-icons/fc';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/hooks/useI18n';
 
 type LoginMethod = 'phone' | 'email' | null;
 
 export default function LoginPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const {
     firebaseUser,
     user,
@@ -190,9 +192,9 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <h1 className="text-3xl font-bold text-white mb-2">Benvenuto</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">{t('auth.login.welcomeTitle')}</h1>
           <p className="text-text-secondary text-center mb-8">
-            Scegli come accedere alla tua esperienza fitness
+            {t('auth.login.welcomeSubtitle')}
           </p>
 
           {/* Error Message */}
@@ -215,8 +217,8 @@ export default function LoginPage() {
                 <Phone className="h-6 w-6 text-section-primary" />
               </div>
               <div className="text-left">
-                <p className="font-semibold text-text-inverse">Telefono</p>
-                <p className="text-sm text-text-tertiary">Accedi con SMS</p>
+                <p className="font-semibold text-text-inverse">{t('auth.login.method.phone.title')}</p>
+                <p className="text-sm text-text-tertiary">{t('auth.login.method.phone.subtitle')}</p>
               </div>
             </button>
 
@@ -231,12 +233,12 @@ export default function LoginPage() {
                 <Mail className="h-6 w-6 text-section-primary" />
               </div>
               <div className="text-left">
-                <p className="font-semibold text-text-inverse">Email</p>
-                <p className="text-sm text-text-tertiary">Accedi con email e password</p>
+                <p className="font-semibold text-text-inverse">{t('auth.login.method.email.title')}</p>
+                <p className="text-sm text-text-tertiary">{t('auth.login.method.email.subtitle')}</p>
               </div>
             </button>
 
-            <Divider className="my-6" text="oppure" />
+            <Divider className="my-6" text={t('auth.login.or')} />
 
             {/* Social Login Buttons */}
             <div className="space-y-3">
@@ -248,7 +250,7 @@ export default function LoginPage() {
                 disabled={isLoading}
               >
                 <FcGoogle className="w-5 h-5 mr-2" />
-                Continua con Google
+                {t('auth.login.continueWithGoogle')}
               </Button>
 
               <Button
@@ -259,15 +261,15 @@ export default function LoginPage() {
                 disabled={isLoading}
               >
                 <Apple className="w-5 h-5 mr-2" />
-                Continua con Apple
+                {t('auth.login.continueWithApple')}
               </Button>
             </div>
 
             <div className="mt-8 text-center">
               <p className="text-text-secondary text-sm">
-                Non hai un account?{' '}
+                {t('auth.login.noAccount')}{' '}
                 <Link href="/auth/register" className="font-semibold text-primary hover:underline">
-                  Registrati
+                  {t('auth.common.register')}
                 </Link>
               </p>
             </div>
@@ -277,13 +279,13 @@ export default function LoginPage() {
         {/* Footer */}
         <div className="px-6 py-8 text-center">
           <p className="text-text-secondary text-xs mb-2">
-            Continuando, accetti i nostri{' '}
+            {t('auth.common.continuing')}{' '}
             <Link href="/terms" className="text-primary hover:underline">
-              Termini di Servizio
+              {t('auth.common.termsOfService')}
             </Link>{' '}
-            e la{' '}
+            {t('auth.common.andThe')}{' '}
             <Link href="/privacy" className="text-primary hover:underline">
-              Privacy Policy
+              {t('auth.common.privacyPolicy')}
             </Link>
           </p>
         </div>
@@ -305,15 +307,15 @@ export default function LoginPage() {
             className="flex items-center gap-2 text-text-secondary hover:text-text-inverse transition-colors"
           >
             <ChevronLeft className="h-5 w-5" />
-            <span className="text-sm">Indietro</span>
+            <span className="text-sm">{t('auth.common.back')}</span>
           </button>
         </div>
 
         {/* Content */}
         <div className="flex-1 flex flex-col items-center justify-center px-6 pt-8 pb-8">
-          <h1 className="text-2xl font-bold text-white mb-2">Accedi con Telefono</h1>
+          <h1 className="text-2xl font-bold text-white mb-2">{t('auth.login.phone.title')}</h1>
           <p className="text-text-secondary text-center mb-8">
-            Inserisci il tuo numero per ricevere un codice
+            {t('auth.login.phone.subtitle')}
           </p>
 
           {/* Error Message */}
@@ -335,7 +337,7 @@ export default function LoginPage() {
                   />
                   <Input
                     type="tel"
-                    placeholder="Numero di telefono"
+                    placeholder={t('auth.login.phone.phonePlaceholder')}
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
                     className="flex-1"
@@ -349,7 +351,7 @@ export default function LoginPage() {
                   className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
                   disabled={isLoading || phoneNumber.length < 8}
                 >
-                  {isLoading ? <Spinner size="sm" /> : 'Invia Codice'}
+                  {isLoading ? <Spinner size="sm" /> : t('auth.login.phone.sendCode')}
                 </Button>
 
                 {/* Hidden reCAPTCHA container */}
@@ -359,7 +361,7 @@ export default function LoginPage() {
               <form onSubmit={handleVerifyOtp} className="space-y-4">
                 <div className="text-center mb-4">
                   <p className="text-text-secondary text-sm mb-2">
-                    Codice inviato a {storedPhoneNumber}
+                    {t('auth.login.phone.codeSentTo', { phone: storedPhoneNumber || '' })}
                   </p>
                   <button
                     type="button"
@@ -370,7 +372,7 @@ export default function LoginPage() {
                     }}
                     className="text-primary text-sm hover:underline"
                   >
-                    Cambia numero
+                    {t('auth.login.phone.changeNumber')}
                   </button>
                 </div>
 
@@ -386,14 +388,14 @@ export default function LoginPage() {
                   className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
                   disabled={isLoading || otpCode.length !== 6}
                 >
-                  {isLoading ? <Spinner size="sm" /> : 'Verifica Codice'}
+                  {isLoading ? <Spinner size="sm" /> : t('auth.login.phone.verifyCode')}
                 </Button>
 
                 {/* Resend OTP Button */}
                 <div className="text-center">
                   {countdown > 0 ? (
                     <p className="text-text-secondary text-sm">
-                      Richiedi nuovo codice tra {countdown}s
+                      {t('auth.login.phone.resendIn', { seconds: countdown })}
                     </p>
                   ) : (
                     <button
@@ -402,7 +404,7 @@ export default function LoginPage() {
                       disabled={isLoading}
                       className="text-primary text-sm font-medium hover:underline disabled:opacity-50"
                     >
-                      Invia di nuovo il codice
+                      {t('auth.login.phone.resendCode')}
                     </button>
                   )}
                 </div>
@@ -430,15 +432,15 @@ export default function LoginPage() {
             className="flex items-center gap-2 text-text-secondary hover:text-text-inverse transition-colors"
           >
             <ChevronLeft className="h-5 w-5" />
-            <span className="text-sm">Indietro</span>
+            <span className="text-sm">{t('auth.common.back')}</span>
           </button>
         </div>
 
         {/* Content */}
         <div className="flex-1 flex flex-col items-center justify-center px-6 pt-8 pb-8">
-          <h1 className="text-2xl font-bold text-white mb-2">Accedi con Email</h1>
+          <h1 className="text-2xl font-bold text-white mb-2">{t('auth.login.email.title')}</h1>
           <p className="text-text-secondary text-center mb-8">
-            Inserisci le tue credenziali per continuare
+            {t('auth.login.email.subtitle')}
           </p>
 
           {/* Error Message */}
@@ -453,12 +455,12 @@ export default function LoginPage() {
             <form onSubmit={handleEmailLogin} className="space-y-4">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-text-secondary mb-2">
-                  Email
+                  {t('auth.common.email')}
                 </label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="nome@esempio.com"
+                  placeholder={t('auth.common.emailPlaceholder')}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full"
@@ -469,7 +471,7 @@ export default function LoginPage() {
 
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-text-secondary mb-2">
-                  Password
+                  {t('auth.common.password')}
                 </label>
                 <div className="relative">
                   <Input
@@ -488,7 +490,7 @@ export default function LoginPage() {
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-tertiary hover:text-text-inverse"
                   >
-                    {showPassword ? 'Nascondi' : 'Mostra'}
+                    {showPassword ? t('auth.common.hide') : t('auth.common.show')}
                   </button>
                 </div>
               </div>
@@ -496,10 +498,10 @@ export default function LoginPage() {
               <div className="flex items-center justify-between text-sm">
                 <label className="flex items-center gap-2 text-text-secondary cursor-pointer">
                   <input type="checkbox" className="rounded border-white/20 bg-white/5" />
-                  <span>Ricordami</span>
+                  <span>{t('auth.login.email.rememberMe')}</span>
                 </label>
                 <Link href="/auth/forgot-password" className="text-primary hover:underline">
-                  Password dimenticata?
+                  {t('auth.login.email.forgotPassword')}
                 </Link>
               </div>
 
@@ -508,15 +510,15 @@ export default function LoginPage() {
                 className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
                 disabled={isLoading || !email || password.length < 6}
               >
-                {isLoading ? <Spinner size="sm" /> : 'Accedi'}
+                {isLoading ? <Spinner size="sm" /> : t('auth.common.login')}
               </Button>
             </form>
 
             <div className="mt-8 text-center space-y-4">
               <p className="text-text-secondary text-sm">
-                Non hai un account?{' '}
+                {t('auth.login.noAccount')}{' '}
                 <Link href="/auth/register" className="font-semibold text-primary hover:underline">
-                  Registrati
+                  {t('auth.common.register')}
                 </Link>
               </p>
             </div>
@@ -526,13 +528,13 @@ export default function LoginPage() {
         {/* Footer */}
         <div className="px-6 py-8 text-center">
           <p className="text-text-secondary text-xs mb-2">
-            Continuando, accetti i nostri{' '}
+            {t('auth.common.continuing')}{' '}
             <Link href="/terms" className="text-primary hover:underline">
-              Termini di Servizio
+              {t('auth.common.termsOfService')}
             </Link>{' '}
-            e la{' '}
+            {t('auth.common.andThe')}{' '}
             <Link href="/privacy" className="text-primary hover:underline">
-              Privacy Policy
+              {t('auth.common.privacyPolicy')}
             </Link>
           </p>
         </div>

@@ -13,6 +13,8 @@ import {
   Settings,
   FileText,
 } from "lucide-react";
+import { useI18n } from "@/hooks/useI18n";
+import type { MessageKey } from "@/i18n/messages";
 
 interface ActivityFeedProps {
   activities: ActivityItem[];
@@ -38,13 +40,15 @@ const activityColors: Record<string, string> = {
 };
 
 export function ActivityFeed({ activities, className }: ActivityFeedProps) {
+  const { t } = useI18n();
+
   if (activities.length === 0) {
     return (
       <div className={cn("bg-[#1E2230] rounded-2xl border border-white/10 p-6", className)}>
-        <h3 className="text-lg font-semibold text-white mb-4">Recent Activity</h3>
+        <h3 className="text-lg font-semibold text-white mb-4">{t('admin.activity.title')}</h3>
         <div className="text-center py-8">
           <FileText className="w-10 h-10 text-white/20 mx-auto mb-3" />
-          <p className="text-white/40">No recent activity</p>
+          <p className="text-white/40">{t('admin.activity.empty')}</p>
         </div>
       </div>
     );
@@ -52,7 +56,7 @@ export function ActivityFeed({ activities, className }: ActivityFeedProps) {
 
   return (
     <div className={cn("bg-[#1E2230] rounded-2xl border border-white/10 p-6", className)}>
-      <h3 className="text-lg font-semibold text-white mb-4">Recent Activity</h3>
+      <h3 className="text-lg font-semibold text-white mb-4">{t('admin.activity.title')}</h3>
       
       <div className="space-y-4">
         {activities.map((activity) => (
@@ -79,12 +83,12 @@ export function ActivityFeed({ activities, className }: ActivityFeedProps) {
                   </p>
                   {activity.userName && (
                     <p className="text-xs text-white/40 mt-1">
-                      by {activity.userName}
+                      {t('admin.activity.byUser', { user: activity.userName })}
                     </p>
                   )}
                 </div>
                 <span className="text-xs text-white/40 whitespace-nowrap">
-                  {formatTimestamp(activity.timestamp)}
+                  {formatTimestamp(activity.timestamp, t)}
                 </span>
               </div>
             </div>
@@ -95,7 +99,10 @@ export function ActivityFeed({ activities, className }: ActivityFeedProps) {
   );
 }
 
-function formatTimestamp(timestamp: { toDate: () => Date } | Date | string): string {
+function formatTimestamp(
+  timestamp: { toDate: () => Date } | Date | string,
+  t: (key: MessageKey, values?: Record<string, string | number>) => string
+): string {
   const date = typeof timestamp === "object" && "toDate" in timestamp 
     ? timestamp.toDate() 
     : new Date(timestamp as string);
@@ -105,9 +112,9 @@ function formatTimestamp(timestamp: { toDate: () => Date } | Date | string): str
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMins < 1) return "just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffMins < 1) return t('admin.activity.time.justNow');
+  if (diffMins < 60) return t('admin.activity.time.minutesAgo', { count: diffMins });
+  if (diffHours < 24) return t('admin.activity.time.hoursAgo', { count: diffHours });
+  if (diffDays < 7) return t('admin.activity.time.daysAgo', { count: diffDays });
   return date.toLocaleDateString();
 }

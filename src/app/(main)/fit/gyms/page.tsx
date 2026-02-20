@@ -6,6 +6,8 @@ import { List, Map as MapIcon, MapPin, Search, SlidersHorizontal, Star, Navigati
 import { cn } from '@/lib/utils';
 import { GoogleMap } from '@/components/map/GoogleMap';
 import { useRouter } from 'next/navigation';
+import { useI18n } from '@/hooks/useI18n';
+import type { MessageKey } from '@/i18n/messages';
 
 const gyms = [
   {
@@ -88,20 +90,26 @@ const gyms = [
   },
 ];
 
-const filters = ['Distanza', 'Rating', 'Servizi', 'Prezzo'];
+const filterKeys: MessageKey[] = [
+  'fit.gyms.filter.distance',
+  'fit.gyms.filter.rating',
+  'fit.gyms.filter.amenities',
+  'fit.gyms.filter.price',
+];
 
 type SortOption = 'nearest' | 'top' | 'price';
 
-const sortLabels: Record<SortOption, string> = {
-  nearest: 'Piu vicine',
-  top: 'Piu votate',
-  price: 'Prezzo basso-alto',
+const sortLabels: Record<SortOption, MessageKey> = {
+  nearest: 'fit.gyms.sort.nearest',
+  top: 'fit.gyms.sort.top',
+  price: 'fit.gyms.sort.price',
 };
 
 const sortOptions: SortOption[] = ['nearest', 'top', 'price'];
 
 export default function GymsPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [view, setView] = useState<'list' | 'map'>('list');
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<SortOption>('nearest');
@@ -158,9 +166,9 @@ export default function GymsPage() {
     <div className="min-h-screen bg-background-dark pb-24">
       <div className="container-mobile py-6 space-y-6">
         <div className="space-y-3">
-          <h1 className="text-2xl font-bold text-text-inverse">Palestre</h1>
+          <h1 className="text-2xl font-bold text-text-inverse">{t('fit.gyms.title')}</h1>
           <p className="text-sm text-text-tertiary">
-            Trova la palestra perfetta vicino a te.
+            {t('fit.gyms.subtitle')}
           </p>
         </div>
 
@@ -170,7 +178,7 @@ export default function GymsPage() {
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Cerca palestre, quartieri, servizi..."
+              placeholder={t('fit.gyms.searchPlaceholder')}
               className={cn(
                 'w-full rounded-xl border border-white/10 bg-white/5 py-3 pl-11 pr-12',
                 'text-sm text-text-inverse placeholder:text-text-tertiary',
@@ -183,20 +191,20 @@ export default function GymsPage() {
                 onClick={() => setQuery('')}
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-text-tertiary"
               >
-                Cancella
+                {t('fit.gyms.clear')}
               </button>
             )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {filters.map((filter) => (
+            {filterKeys.map((filterKey) => (
               <button
-                key={filter}
+                key={filterKey}
                 type="button"
                 className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-text-tertiary hover:bg-white/10 transition-colors"
               >
                 <SlidersHorizontal className="h-3.5 w-3.5" />
-                {filter}
+                {t(filterKey)}
               </button>
             ))}
           </div>
@@ -212,10 +220,10 @@ export default function GymsPage() {
                     ? 'bg-section-primary text-background-dark'
                     : 'text-text-tertiary'
                 )}
-              >
-                <List className="h-4 w-4" />
-                Lista
-              </button>
+                  >
+                    <List className="h-4 w-4" />
+                    {t('fit.gyms.view.list')}
+                  </button>
               <button
                 type="button"
                 onClick={() => setView('map')}
@@ -225,28 +233,28 @@ export default function GymsPage() {
                     ? 'bg-section-primary text-background-dark'
                     : 'text-text-tertiary'
                 )}
-              >
-                <MapIcon className="h-4 w-4" />
-                Mappa
-              </button>
-            </div>
+                  >
+                    <MapIcon className="h-4 w-4" />
+                    {t('fit.gyms.view.map')}
+                  </button>
+                </div>
 
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={handleGetLocation}
                 className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-text-tertiary hover:bg-white/10 transition-colors"
-                title="Usa la mia posizione"
+                title={t('fit.gyms.location.useMyLocation')}
               >
                 <Navigation className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Posizione</span>
+                <span className="hidden sm:inline">{t('fit.gyms.location.label')}</span>
               </button>
               <button
                 type="button"
                 onClick={handleSort}
                 className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-text-tertiary hover:bg-white/10 transition-colors"
               >
-                {sortLabels[sort]}
+                {t(sortLabels[sort])}
               </button>
             </div>
           </div>
@@ -264,7 +272,7 @@ export default function GymsPage() {
                   <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.2),_transparent_65%)]" />
                   {gym.partner && (
                     <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold uppercase text-background-dark">
-                      Partner
+                      {t('fit.gyms.partner')}
                     </span>
                   )}
                   <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-background-dark/80 px-2 py-1 text-[11px] text-white">
@@ -294,7 +302,7 @@ export default function GymsPage() {
                       </span>
                     ))}
                     <span className="rounded-full bg-section-primary/15 px-2.5 py-1 text-[11px] font-semibold text-section-primary">
-                      {gym.reviews} recensioni
+                      {t('fit.gyms.reviews', { count: gym.reviews })}
                     </span>
                   </div>
                 </div>
@@ -313,7 +321,7 @@ export default function GymsPage() {
             {/* Gym list below map */}
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-text-inverse">
-                Palestre vicine ({filteredGyms.length})
+                {t('fit.gyms.nearby', { count: filteredGyms.length })}
               </h3>
               {filteredGyms.map((gym) => (
                 <Link

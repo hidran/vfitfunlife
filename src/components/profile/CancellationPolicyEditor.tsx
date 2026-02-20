@@ -5,6 +5,8 @@ import { FileText, Check, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { updateProviderProfile } from '@/lib/firebase/auth';
+import { useI18n } from '@/hooks/useI18n';
+import type { MessageKey } from '@/i18n/messages';
 
 interface CancellationPolicyEditorProps {
   userId: string;
@@ -13,18 +15,18 @@ interface CancellationPolicyEditorProps {
   className?: string;
 }
 
-const PRESET_POLICIES = [
+const PRESET_POLICIES: Array<{ labelKey: MessageKey; valueKey: MessageKey }> = [
   {
-    label: 'Flessibile',
-    value: 'Cancellazione gratuita fino a 24 ore prima dell\'appuntamento. Oltre questo termine, verrà addebitato il 50% del costo del servizio.',
+    labelKey: 'profile.cancellation.preset.flexible.label',
+    valueKey: 'profile.cancellation.preset.flexible.value',
   },
   {
-    label: 'Moderata',
-    value: 'Cancellazione gratuita fino a 48 ore prima dell\'appuntamento. Oltre questo termine, verrà addebitato il 50% del costo del servizio.',
+    labelKey: 'profile.cancellation.preset.moderate.label',
+    valueKey: 'profile.cancellation.preset.moderate.value',
   },
   {
-    label: 'Rigorosa',
-    value: 'Cancellazione gratuita fino a 72 ore prima dell\'appuntamento. Cancellazioni tardive o mancata presentazione comporteranno l\'addebito del 100% del costo del servizio.',
+    labelKey: 'profile.cancellation.preset.strict.label',
+    valueKey: 'profile.cancellation.preset.strict.value',
   },
 ];
 
@@ -34,6 +36,7 @@ export function CancellationPolicyEditor({
   onUpdate,
   className,
 }: CancellationPolicyEditorProps) {
+  const { t } = useI18n();
   const [currentPolicy, setCurrentPolicy] = useState(policy || '');
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -42,7 +45,7 @@ export function CancellationPolicyEditor({
 
   const handleSave = async () => {
     if (!currentPolicy.trim()) {
-      setError('Inserisci una politica di cancellazione');
+      setError(t('profile.cancellation.error.required'));
       return;
     }
 
@@ -59,7 +62,7 @@ export function CancellationPolicyEditor({
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       console.error('Error saving cancellation policy:', err);
-      setError('Errore durante il salvataggio. Riprova.');
+      setError(t('profile.cancellation.error.save'));
     } finally {
       setIsSaving(false);
     }
@@ -77,18 +80,18 @@ export function CancellationPolicyEditor({
     return (
       <div className={cn('space-y-3', className)}>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <FileText className="text-section-primary" size={20} />
-            <h3 className="text-sm font-medium text-text-tertiary">
-              Politica di Cancellazione
-            </h3>
-          </div>
+        <div className="flex items-center gap-2">
+          <FileText className="text-section-primary" size={20} />
+          <h3 className="text-sm font-medium text-text-tertiary">
+            {t('profile.cancellation.title')}
+          </h3>
+        </div>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setIsEditing(true)}
           >
-            {policy ? 'Modifica' : 'Aggiungi'}
+            {policy ? t('profile.cancellation.edit') : t('profile.cancellation.add')}
           </Button>
         </div>
 
@@ -102,10 +105,10 @@ export function CancellationPolicyEditor({
           <div className="p-4 rounded-xl bg-background-secondary/5 border border-dashed border-white/10 text-center">
             <AlertCircle size={24} className="text-text-tertiary/50 mx-auto mb-2" />
             <p className="text-sm text-text-tertiary">
-              Nessuna politica di cancellazione impostata
+              {t('profile.cancellation.empty')}
             </p>
             <p className="text-xs text-text-tertiary/70 mt-1">
-              Imposta le regole per le cancellazioni
+              {t('profile.cancellation.emptyHint')}
             </p>
           </div>
         )}
@@ -119,27 +122,27 @@ export function CancellationPolicyEditor({
         <div className="flex items-center gap-2">
           <FileText className="text-section-primary" size={20} />
           <h3 className="text-sm font-medium text-text-tertiary">
-            Modifica Politica di Cancellazione
+            {t('profile.cancellation.editTitle')}
           </h3>
         </div>
       </div>
 
       {/* Preset Options */}
       <div className="space-y-2">
-        <p className="text-xs text-text-tertiary">Scegli un modello:</p>
+        <p className="text-xs text-text-tertiary">{t('profile.cancellation.choosePreset')}</p>
         <div className="flex flex-wrap gap-2">
           {PRESET_POLICIES.map((preset) => (
             <button
-              key={preset.label}
-              onClick={() => selectPreset(preset.value)}
+              key={preset.labelKey}
+              onClick={() => selectPreset(t(preset.valueKey))}
               className={cn(
                 'px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200',
-                currentPolicy === preset.value
+                currentPolicy === t(preset.valueKey)
                   ? 'bg-section-gradient text-white'
                   : 'bg-background-secondary/20 text-text-secondary hover:bg-background-secondary/30'
               )}
             >
-              {preset.label}
+              {t(preset.labelKey)}
             </button>
           ))}
         </div>
@@ -153,7 +156,7 @@ export function CancellationPolicyEditor({
             setCurrentPolicy(e.target.value);
             setError(null);
           }}
-          placeholder="Descrivi la tua politica di cancellazione..."
+          placeholder={t('profile.cancellation.placeholder')}
           rows={4}
           maxLength={maxChars}
           className={cn(
@@ -191,7 +194,7 @@ export function CancellationPolicyEditor({
           }}
           disabled={isSaving}
         >
-          Annulla
+          {t('profile.cancellation.cancel')}
         </Button>
         <Button
           variant="primary"
@@ -202,13 +205,13 @@ export function CancellationPolicyEditor({
           disabled={isSaving || !currentPolicy.trim()}
         >
           <Check size={16} className="mr-1" />
-          Salva
+          {t('profile.cancellation.save')}
         </Button>
       </div>
 
       {success && (
         <p className="text-sm text-success-DEFAULT text-center">
-          Politica salvata con successo!
+          {t('profile.cancellation.saved')}
         </p>
       )}
     </div>

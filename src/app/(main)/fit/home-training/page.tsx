@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { Clock, Home, MapPin, ShieldCheck, Star } from 'lucide-react';
+import { useI18n } from '@/hooks/useI18n';
 
 interface HomeTrainingService {
   id: string;
@@ -40,25 +41,27 @@ const services: HomeTrainingService[] = [
 ];
 
 export default function HomeTrainingPage() {
+  const { t } = useI18n();
+
   return (
     <div className="container-mobile py-6 pb-24 space-y-5">
       <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
-        <h1 className="text-2xl font-display font-bold text-text-inverse">A Domicilio</h1>
+        <h1 className="text-2xl font-display font-bold text-text-inverse">{t('fit.homeTraining.title')}</h1>
         <p className="mt-1 text-sm text-text-secondary">
-          Sessioni fitness a casa con professionisti verificati.
+          {t('fit.homeTraining.subtitle')}
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <Link
             href="/booking"
             className="rounded-full bg-section-primary px-4 py-2 text-xs font-semibold text-background-dark"
           >
-            Inizia prenotazione
+            {t('fit.homeTraining.startBooking')}
           </Link>
           <Link
             href="/profile/addresses"
             className="rounded-full border border-white/20 bg-white/5 px-4 py-2 text-xs font-semibold text-text-inverse"
           >
-            Gestisci indirizzi
+            {t('fit.homeTraining.manageAddresses')}
           </Link>
         </div>
       </section>
@@ -66,7 +69,7 @@ export default function HomeTrainingPage() {
       <section className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
         <p className="inline-flex items-center gap-2 text-sm font-medium text-text-inverse">
           <ShieldCheck className="h-4 w-4 text-emerald-300" />
-          Trainer certificati, check-in live e supporto dedicato.
+          {t('fit.homeTraining.certifiedBanner')}
         </p>
       </section>
 
@@ -78,7 +81,7 @@ export default function HomeTrainingPage() {
             <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-text-tertiary">
               <span className="inline-flex items-center gap-1">
                 <Home className="h-3.5 w-3.5" />
-                Servizio a domicilio
+                {t('fit.homeTraining.serviceAtHome')}
               </span>
               <span className="inline-flex items-center gap-1">
                 <Clock className="h-3.5 w-3.5" />
@@ -95,7 +98,7 @@ export default function HomeTrainingPage() {
                 href="/booking"
                 className="rounded-full bg-section-primary/20 px-3 py-1.5 text-xs font-semibold text-section-primary"
               >
-                Prenota
+                {t('fit.homeTraining.book')}
               </Link>
             </div>
           </article>
@@ -105,10 +108,9 @@ export default function HomeTrainingPage() {
       <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-text-tertiary">
         <p className="inline-flex items-center gap-2">
           <MapPin className="h-4 w-4" />
-          Copertura attiva su Milano, Monza, Sesto e hinterland.
+          {t('fit.homeTraining.coverage')}
         </p>
       </div>
     </div>
   );
 }
-

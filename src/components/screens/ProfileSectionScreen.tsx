@@ -21,7 +21,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { updatePrivacySettings, updateUserProfile } from '@/lib/firebase/auth';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/hooks/useI18n';
+import type { MessageKey } from '@/i18n/messages';
 import type { NotificationSettings, PrivacySettings, Section } from '@/types/firebase';
+import type { AppLocale } from '@/types/locale';
 
 interface LocalAddress {
   id: string;
@@ -60,34 +63,41 @@ const defaultPrivacySettings: PrivacySettings = {
 
 const sectionMeta: Record<
   ProfileRouteSection,
-  { title: string; description: string; icon: typeof MapPin }
+  { titleKey: MessageKey; descriptionKey: MessageKey; icon: typeof MapPin }
 > = {
   addresses: {
-    title: 'I miei indirizzi',
-    description: 'Gestisci indirizzi per servizi a domicilio e fatturazione.',
+    titleKey: 'route.profile.addresses.title',
+    descriptionKey: 'route.profile.addresses.description',
     icon: MapPin,
   },
   payment: {
-    title: 'Metodi di pagamento',
-    description: 'Aggiungi e seleziona i metodi preferiti per checkout rapido.',
+    titleKey: 'route.profile.payment.title',
+    descriptionKey: 'route.profile.payment.description',
     icon: CreditCard,
   },
   notifications: {
-    title: 'Preferenze notifiche',
-    description: 'Configura avvisi booking, promo e comunicazioni operative.',
+    titleKey: 'route.profile.notifications.title',
+    descriptionKey: 'route.profile.notifications.description',
     icon: Bell,
   },
   settings: {
-    title: 'Impostazioni account',
-    description: 'Personalizza privacy, lingua e sezione predefinita.',
+    titleKey: 'route.profile.settings.title',
+    descriptionKey: 'route.profile.settings.description',
     icon: Settings,
   },
 };
 
 const generateId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+const CARD_BRANDS: Array<{ value: string; labelKey: MessageKey }> = [
+  { value: 'Visa', labelKey: 'profileSection.payment.brand.visa' },
+  { value: 'Mastercard', labelKey: 'profileSection.payment.brand.mastercard' },
+  { value: 'American Express', labelKey: 'profileSection.payment.brand.amex' },
+];
+
 export function ProfileSectionScreen({ section }: { section: ProfileRouteSection }) {
   const { user, refreshUserProfile } = useAuthStore();
+  const { t, setLocale, locales, localeLabels } = useI18n();
   const [addresses, setAddresses] = useState<LocalAddress[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<LocalPaymentMethod[]>([]);
   const [addressForm, setAddressForm] = useState({
@@ -97,13 +107,13 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
     postalCode: '',
   });
   const [cardForm, setCardForm] = useState({
-    brand: 'Visa',
+    brand: CARD_BRANDS[0].value,
     cardNumber: '',
     expMonth: '',
     expYear: '',
   });
   const [preferredSection, setPreferredSection] = useState<Section>('fit');
-  const [preferredLanguage, setPreferredLanguage] = useState<'it' | 'en'>('it');
+  const [preferredLanguage, setPreferredLanguage] = useState<AppLocale>('it');
   const [privacySettings, setPrivacySettings] = useState<PrivacySettings>(defaultPrivacySettings);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
@@ -115,7 +125,9 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
     if (!user?.id) return;
 
     setPreferredSection(user.preferredSection || 'fit');
-    setPreferredLanguage(user.preferredLanguage || 'it');
+    const selectedLocale = user.preferredLanguage || 'it';
+    setPreferredLanguage(selectedLocale);
+    setLocale(selectedLocale);
     setPrivacySettings(user.privacySettings || defaultPrivacySettings);
 
     if (addressesStorageKey) {
@@ -144,6 +156,7 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
     user?.preferredLanguage,
     user?.preferredSection,
     user?.privacySettings,
+    setLocale,
   ]);
 
   useEffect(() => {
@@ -160,6 +173,12 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
     () => user?.notificationSettings || defaultNotificationSettings,
     [user?.notificationSettings]
   );
+  const privacyOptions: Array<{ key: keyof PrivacySettings; labelKey: MessageKey }> = [
+    { key: 'profileVisible', labelKey: 'profileSection.privacy.profileVisible' },
+    { key: 'bookingsVisible', labelKey: 'profileSection.privacy.bookingsVisible' },
+    { key: 'showEmail', labelKey: 'profileSection.privacy.showEmail' },
+    { key: 'showPhone', labelKey: 'profileSection.privacy.showPhone' },
+  ];
 
   const meta = sectionMeta[section];
   const Icon = meta.icon;
@@ -168,7 +187,7 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
     return (
       <div className="container-mobile py-6 pb-24">
         <p className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-text-tertiary">
-          Nessun utente autenticato.
+          {t('profileSection.noUser')}
         </p>
       </div>
     );
@@ -230,7 +249,7 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
 
     setPaymentMethods((current) => [...current, method]);
     setCardForm({
-      brand: 'Visa',
+      brand: CARD_BRANDS[0].value,
       cardNumber: '',
       expMonth: '',
       expYear: '',
@@ -286,15 +305,15 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
         <div className="absolute -bottom-12 left-0 h-32 w-32 rounded-full bg-section-secondary/20 blur-3xl" />
         <div className="relative">
           <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">
-            Profilo
+            {t('profileSection.badge')}
           </span>
           <div className="mt-4 flex items-start gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-section-primary/20 text-section-primary">
               <Icon className="h-6 w-6" />
             </div>
             <div>
-              <h1 className="text-2xl font-display font-bold text-text-inverse">{meta.title}</h1>
-              <p className="mt-1 text-sm text-text-secondary">{meta.description}</p>
+              <h1 className="text-2xl font-display font-bold text-text-inverse">{t(meta.titleKey)}</h1>
+              <p className="mt-1 text-sm text-text-secondary">{t(meta.descriptionKey)}</p>
             </div>
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
@@ -302,13 +321,13 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
               href="/profile"
               className="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold text-text-inverse"
             >
-              Torna al profilo
+              {t('profileSection.backToProfile')}
             </Link>
             <Link
               href="/help"
               className="rounded-full bg-section-primary px-4 py-2 text-xs font-semibold text-background-dark"
             >
-              Centro assistenza
+              {t('profileSection.helpCenter')}
             </Link>
           </div>
         </div>
@@ -317,35 +336,37 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
       {section === 'addresses' && (
         <section className="space-y-3">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <h2 className="text-sm font-semibold text-text-inverse">Aggiungi indirizzo</h2>
+            <h2 className="text-sm font-semibold text-text-inverse">
+              {t('profileSection.addresses.addTitle')}
+            </h2>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <Input
-                label="Etichetta"
-                placeholder="Casa, Ufficio..."
+                label={t('profileSection.addresses.label')}
+                placeholder={t('profileSection.addresses.labelPlaceholder')}
                 value={addressForm.label}
                 onChange={(event) =>
                   setAddressForm((current) => ({ ...current, label: event.target.value }))
                 }
               />
               <Input
-                label="Via e numero"
-                placeholder="Via Roma 21"
+                label={t('profileSection.addresses.street')}
+                placeholder={t('profileSection.addresses.streetPlaceholder')}
                 value={addressForm.street}
                 onChange={(event) =>
                   setAddressForm((current) => ({ ...current, street: event.target.value }))
                 }
               />
               <Input
-                label="Citta"
-                placeholder="Milano"
+                label={t('profileSection.addresses.city')}
+                placeholder={t('profileSection.addresses.cityPlaceholder')}
                 value={addressForm.city}
                 onChange={(event) =>
                   setAddressForm((current) => ({ ...current, city: event.target.value }))
                 }
               />
               <Input
-                label="CAP"
-                placeholder="20100"
+                label={t('profileSection.addresses.postalCode')}
+                placeholder={t('profileSection.addresses.postalCodePlaceholder')}
                 value={addressForm.postalCode}
                 onChange={(event) =>
                   setAddressForm((current) => ({ ...current, postalCode: event.target.value }))
@@ -354,7 +375,7 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
             </div>
             <Button onClick={handleAddAddress} className="mt-3" fullWidth>
               <Plus className="mr-2 h-4 w-4" />
-              Salva indirizzo
+              {t('profileSection.addresses.saveAddress')}
             </Button>
           </div>
 
@@ -370,7 +391,7 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
                   </div>
                   {address.isDefault && (
                     <span className="rounded-full bg-success-DEFAULT/20 px-2 py-1 text-[10px] font-semibold uppercase text-success-DEFAULT">
-                      Default
+                      {t('common.default')}
                     </span>
                   )}
                 </div>
@@ -381,7 +402,7 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
                       onClick={() => setDefaultAddress(address.id)}
                       className="rounded-full border border-white/20 px-3 py-1.5 text-xs font-semibold text-text-inverse"
                     >
-                      Imposta default
+                      {t('profileSection.addresses.setDefault')}
                     </button>
                   )}
                   <button
@@ -390,14 +411,14 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
                     className="inline-flex items-center gap-1 rounded-full border border-error-DEFAULT/30 px-3 py-1.5 text-xs font-semibold text-error-DEFAULT"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
-                    Rimuovi
+                    {t('common.remove')}
                   </button>
                 </div>
               </article>
             ))}
             {addresses.length === 0 && (
               <p className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-text-tertiary">
-                Nessun indirizzo salvato.
+                {t('profileSection.addresses.empty')}
               </p>
             )}
           </div>
@@ -407,10 +428,14 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
       {section === 'payment' && (
         <section className="space-y-3">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <h2 className="text-sm font-semibold text-text-inverse">Aggiungi carta</h2>
+            <h2 className="text-sm font-semibold text-text-inverse">
+              {t('profileSection.payment.addCard')}
+            </h2>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-xs font-medium text-text-tertiary">Circuito</label>
+                <label className="text-xs font-medium text-text-tertiary">
+                  {t('profileSection.payment.network')}
+                </label>
                 <select
                   value={cardForm.brand}
                   onChange={(event) =>
@@ -418,22 +443,24 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
                   }
                   className="w-full rounded-xl border border-white/10 bg-[#2A2D3A] px-3 py-3 text-sm text-text-inverse focus:outline-none focus:ring-2 focus:ring-section-primary"
                 >
-                  <option>Visa</option>
-                  <option>Mastercard</option>
-                  <option>American Express</option>
+                  {CARD_BRANDS.map((brand) => (
+                    <option key={brand.value} value={brand.value}>
+                      {t(brand.labelKey)}
+                    </option>
+                  ))}
                 </select>
               </div>
               <Input
-                label="Numero carta"
-                placeholder="4242 4242 4242 4242"
+                label={t('profileSection.payment.cardNumber')}
+                placeholder={t('profileSection.payment.cardNumberPlaceholder')}
                 value={cardForm.cardNumber}
                 onChange={(event) =>
                   setCardForm((current) => ({ ...current, cardNumber: event.target.value }))
                 }
               />
               <Input
-                label="Mese scadenza"
-                placeholder="08"
+                label={t('profileSection.payment.expiryMonth')}
+                placeholder={t('profileSection.payment.expiryMonthPlaceholder')}
                 value={cardForm.expMonth}
                 onChange={(event) =>
                   setCardForm((current) => ({
@@ -443,8 +470,8 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
                 }
               />
               <Input
-                label="Anno scadenza"
-                placeholder="28"
+                label={t('profileSection.payment.expiryYear')}
+                placeholder={t('profileSection.payment.expiryYearPlaceholder')}
                 value={cardForm.expYear}
                 onChange={(event) =>
                   setCardForm((current) => ({
@@ -456,7 +483,7 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
             </div>
             <Button onClick={handleAddPaymentMethod} className="mt-3" fullWidth>
               <Plus className="mr-2 h-4 w-4" />
-              Aggiungi metodo
+              {t('profileSection.payment.addMethod')}
             </Button>
           </div>
 
@@ -469,12 +496,13 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
                       {method.brand} •••• {method.last4}
                     </h3>
                     <p className="mt-1 text-xs text-text-tertiary">
-                      Scadenza {method.expMonth}/{method.expYear}
+                      {t('profileSection.payment.expiry')}{' '}
+                      {method.expMonth}/{method.expYear}
                     </p>
                   </div>
                   {method.isDefault && (
                     <span className="rounded-full bg-success-DEFAULT/20 px-2 py-1 text-[10px] font-semibold uppercase text-success-DEFAULT">
-                      Default
+                      {t('common.default')}
                     </span>
                   )}
                 </div>
@@ -485,7 +513,7 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
                       onClick={() => setDefaultPayment(method.id)}
                       className="rounded-full border border-white/20 px-3 py-1.5 text-xs font-semibold text-text-inverse"
                     >
-                      Imposta default
+                      {t('profileSection.payment.setDefault')}
                     </button>
                   )}
                   <button
@@ -494,14 +522,14 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
                     className="inline-flex items-center gap-1 rounded-full border border-error-DEFAULT/30 px-3 py-1.5 text-xs font-semibold text-error-DEFAULT"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
-                    Rimuovi
+                    {t('common.remove')}
                   </button>
                 </div>
               </article>
             ))}
             {paymentMethods.length === 0 && (
               <p className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-text-tertiary">
-                Nessun metodo di pagamento salvato.
+                {t('profileSection.payment.empty')}
               </p>
             )}
           </div>
@@ -523,10 +551,14 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
       {section === 'settings' && (
         <section className="space-y-3">
           <article className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <h2 className="text-sm font-semibold text-text-inverse">Preferenze app</h2>
+            <h2 className="text-sm font-semibold text-text-inverse">
+              {t('profileSection.settings.appPreferences')}
+            </h2>
             <div className="mt-3 space-y-3">
               <div>
-                <p className="text-xs font-medium text-text-tertiary">Sezione predefinita</p>
+                <p className="text-xs font-medium text-text-tertiary">
+                  {t('profileSection.settings.defaultSection')}
+                </p>
                 <div className="mt-2 grid grid-cols-3 gap-2">
                   {(['fit', 'fun', 'life'] as Section[]).map((item) => (
                     <button
@@ -546,13 +578,18 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
                 </div>
               </div>
               <div>
-                <p className="text-xs font-medium text-text-tertiary">Lingua</p>
+                <p className="text-xs font-medium text-text-tertiary">
+                  {t('profileSection.settings.language')}
+                </p>
                 <div className="mt-2 flex gap-2">
-                  {(['it', 'en'] as Array<'it' | 'en'>).map((language) => (
+                  {locales.map((language) => (
                     <button
                       key={language}
                       type="button"
-                      onClick={() => setPreferredLanguage(language)}
+                      onClick={() => {
+                        setPreferredLanguage(language);
+                        setLocale(language);
+                      }}
                       className={cn(
                         'rounded-xl border px-3 py-2 text-xs font-semibold uppercase transition-colors',
                         preferredLanguage === language
@@ -561,7 +598,7 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
                       )}
                     >
                       <Globe className="mr-1 inline-block h-3.5 w-3.5" />
-                      {language}
+                      {localeLabels[language]}
                     </button>
                   ))}
                 </div>
@@ -570,16 +607,9 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
           </article>
 
           <article className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <h2 className="text-sm font-semibold text-text-inverse">Privacy</h2>
+            <h2 className="text-sm font-semibold text-text-inverse">{t('profileSection.privacy.title')}</h2>
             <div className="mt-3 space-y-2">
-              {(
-                [
-                  ['profileVisible', 'Profilo pubblico'],
-                  ['bookingsVisible', 'Storico prenotazioni visibile'],
-                  ['showEmail', 'Mostra email sul profilo'],
-                  ['showPhone', 'Mostra telefono sul profilo'],
-                ] as Array<[keyof PrivacySettings, string]>
-              ).map(([key, label]) => (
+              {privacyOptions.map(({ key, labelKey }) => (
                 <button
                   key={key}
                   type="button"
@@ -593,7 +623,7 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
                       : 'border-white/10 bg-black/20 text-text-tertiary'
                   )}
                 >
-                  <span>{label}</span>
+                  <span>{t(labelKey)}</span>
                   <span
                     className={cn(
                       'inline-flex h-5 w-9 items-center rounded-full p-1 transition-colors',
@@ -614,19 +644,19 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
 
           <Button onClick={handleSaveSettings} isLoading={isSavingSettings} fullWidth>
             <Save className="mr-2 h-4 w-4" />
-            Salva impostazioni
+            {t('common.save')}
           </Button>
 
           {saveStatus === 'saved' && (
             <p className="flex items-center gap-2 text-sm text-success-DEFAULT">
               <CheckCircle2 className="h-4 w-4" />
-              Impostazioni aggiornate correttamente.
+              {t('profileSection.settings.saved')}
             </p>
           )}
           {saveStatus === 'error' && (
             <p className="flex items-center gap-2 text-sm text-error-DEFAULT">
               <Shield className="h-4 w-4" />
-              Errore durante il salvataggio. Riprova.
+              {t('profileSection.settings.error')}
             </p>
           )}
         </section>

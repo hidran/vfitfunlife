@@ -25,6 +25,7 @@ import { doc, getDoc, setDoc, updateDoc, serverTimestamp, arrayUnion, arrayRemov
 import { httpsCallable } from "firebase/functions";
 import { auth, db, functions } from "./config";
 import { ProviderProfile, Certification, Education, SocialLinks, NotificationSettings, PrivacySettings } from "@/types/firebase";
+import type { AppLocale } from "@/types/locale";
 
 // Store confirmation result for OTP verification
 let confirmationResult: ConfirmationResult | null = null;
@@ -426,7 +427,7 @@ export async function updateUserProfile(
     phone?: string | null;
     dateOfBirth?: Date;
     preferredSection?: "fit" | "fun" | "life";
-    preferredLanguage?: "it" | "en";
+    preferredLanguage?: AppLocale;
     avatarUrl?: string;
   }
 ): Promise<void> {

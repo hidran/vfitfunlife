@@ -6,30 +6,33 @@ import { Button } from '@/components/ui/button';
 import { MapPin, Bell, CheckCircle2 } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
+import { useI18n } from '@/hooks/useI18n';
+import type { MessageKey } from '@/i18n/messages';
 
 interface Permission {
   id: 'location' | 'notifications';
-  title: string;
-  description: string;
+  titleKey: MessageKey;
+  descriptionKey: MessageKey;
   icon: typeof MapPin;
   granted: boolean;
 }
 
 export default function PermissionsPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [isLoading, setIsLoading] = useState(false);
   const [permissions, setPermissions] = useState<Permission[]>([
     {
       id: 'location',
-      title: 'Posizione',
-      description: 'Trova palestre, eventi e servizi vicino a te',
+      titleKey: 'auth.permissions.location.title',
+      descriptionKey: 'auth.permissions.location.description',
       icon: MapPin,
       granted: false,
     },
     {
       id: 'notifications',
-      title: 'Notifiche',
-      description: 'Ricevi aggiornamenti su prenotazioni, eventi e offerte',
+      titleKey: 'auth.permissions.notifications.title',
+      descriptionKey: 'auth.permissions.notifications.description',
       icon: Bell,
       granted: false,
     },
@@ -125,9 +128,9 @@ export default function PermissionsPage() {
           <div className="w-12 h-1 bg-white/20 rounded-full" />
           <div className="w-12 h-1 bg-gradient-to-r from-primary to-secondary rounded-full" />
         </div>
-        <h1 className="text-3xl font-bold text-white mb-2">Permessi</h1>
+        <h1 className="text-3xl font-bold text-white mb-2">{t('auth.permissions.title')}</h1>
         <p className="text-text-secondary">
-          Consenti l&apos;accesso per un&apos;esperienza completa
+          {t('auth.permissions.subtitle')}
         </p>
       </div>
 
@@ -148,14 +151,14 @@ export default function PermissionsPage() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="text-lg font-semibold text-white">
-                        {permission.title}
+                        {t(permission.titleKey)}
                       </h3>
                       {permission.granted && (
                         <CheckCircle2 className="w-5 h-5 text-green-400" />
                       )}
                     </div>
                     <p className="text-sm text-text-secondary">
-                      {permission.description}
+                      {t(permission.descriptionKey)}
                     </p>
                   </div>
                 </div>
@@ -170,7 +173,7 @@ export default function PermissionsPage() {
                     variant="outline"
                     className="w-full bg-white/5 border-white/10 hover:bg-white/10 text-white"
                   >
-                    Consenti {permission.title}
+                    {t('auth.permissions.allowAction', { permission: t(permission.titleKey) })}
                   </Button>
                 )}
               </div>
@@ -186,7 +189,7 @@ export default function PermissionsPage() {
           className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity py-3"
           disabled={isLoading}
         >
-          Continua
+          {t('auth.permissions.continue')}
         </Button>
         <button
           type="button"
@@ -194,7 +197,7 @@ export default function PermissionsPage() {
           className="w-full text-text-secondary text-sm hover:text-text-inverse transition-colors"
           disabled={isLoading}
         >
-          Salta per ora
+          {t('auth.permissions.skip')}
         </button>
       </div>
     </div>

@@ -11,22 +11,21 @@ import {
 } from "@/components/admin";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/utils";
+import { useI18n } from "@/hooks/useI18n";
+import type { MessageKey } from "@/i18n/messages";
 import {
   Users,
-  Store,
-  Calendar,
-  Euro,
   AlertCircle,
   Ticket,
   TrendingUp,
   ArrowRight,
-  Plus,
   FileText,
   Megaphone,
 } from "lucide-react";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const { user } = useAuthStore();
   const {
     dashboardStats,
@@ -49,19 +48,19 @@ export default function AdminDashboardPage() {
 
   const quickActions = [
     {
-      label: "Verify Provider",
+      labelKey: "admin.dashboard.quickAction.verifyProvider" as MessageKey,
       icon: <Users className="w-4 h-4" />,
       onClick: () => router.push("/admin/providers/verifications"),
       visible: true,
     },
     {
-      label: "View Report",
+      labelKey: "admin.dashboard.quickAction.viewReport" as MessageKey,
       icon: <FileText className="w-4 h-4" />,
       onClick: () => router.push("/admin/payments/reports"),
       visible: true,
     },
     {
-      label: "Send Announcement",
+      labelKey: "admin.dashboard.quickAction.sendAnnouncement" as MessageKey,
       icon: <Megaphone className="w-4 h-4" />,
       onClick: () => {},
       visible: isSuperadmin,
@@ -73,9 +72,9 @@ export default function AdminDashboardPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Dashboard</h1>
+          <h1 className="text-2xl font-bold text-white">{t('admin.dashboard.title')}</h1>
           <p className="text-white/50 mt-1">
-            Welcome back, {user?.fullName?.split(" ")[0]}
+            {t('admin.dashboard.welcomeBack', { name: user?.fullName?.split(" ")[0] || '' })}
           </p>
         </div>
         <div className="flex gap-2">
@@ -83,14 +82,14 @@ export default function AdminDashboardPage() {
             .filter((a) => a.visible)
             .map((action) => (
               <Button
-                key={action.label}
+                key={action.labelKey}
                 variant="secondary"
                 size="sm"
                 onClick={action.onClick}
                 className="flex items-center gap-2"
               >
                 {action.icon}
-                {action.label}
+                {t(action.labelKey)}
               </Button>
             ))}
         </div>
@@ -99,34 +98,34 @@ export default function AdminDashboardPage() {
       {/* Stats Grid */}
       <StatsGrid>
         <StatCard
-          title="Total Users"
+          title={t('admin.dashboard.stats.totalUsers')}
           value={dashboardStats?.totalUsers.toLocaleString() || "0"}
           trend={dashboardStats?.userGrowth}
-          trendLabel="vs last month"
+          trendLabel={t('admin.dashboard.trend.vsLastMonth')}
           icon="users"
           onClick={() => router.push("/admin/users")}
         />
         <StatCard
-          title="Active Providers"
+          title={t('admin.dashboard.stats.activeProviders')}
           value={dashboardStats?.activeProviders.toLocaleString() || "0"}
           trend={dashboardStats?.providerGrowth}
-          trendLabel="vs last month"
+          trendLabel={t('admin.dashboard.trend.vsLastMonth')}
           icon="providers"
           onClick={() => router.push("/admin/providers")}
         />
         <StatCard
-          title="Today's Bookings"
+          title={t('admin.dashboard.stats.todayBookings')}
           value={dashboardStats?.todayBookings.toLocaleString() || "0"}
           trend={dashboardStats?.bookingGrowth}
-          trendLabel="vs yesterday"
+          trendLabel={t('admin.dashboard.trend.vsYesterday')}
           icon="bookings"
           onClick={() => router.push("/admin/bookings")}
         />
         <StatCard
-          title="Monthly Revenue"
+          title={t('admin.dashboard.stats.monthlyRevenue')}
           value={formatPrice(dashboardStats?.monthlyRevenue || 0)}
           trend={dashboardStats?.revenueGrowth}
-          trendLabel="vs last month"
+          trendLabel={t('admin.dashboard.trend.vsLastMonth')}
           icon="revenue"
           onClick={() => router.push("/admin/payments")}
         />
@@ -142,9 +141,11 @@ export default function AdminDashboardPage() {
                 <AlertCircle className="w-5 h-5 text-[#F59E0B]" />
               </div>
               <div>
-                <h3 className="font-semibold text-white">Pending Verifications</h3>
+                <h3 className="font-semibold text-white">{t('admin.dashboard.pendingVerifications.title')}</h3>
                 <p className="text-sm text-white/50">
-                  {dashboardStats?.pendingVerifications || 0} providers awaiting review
+                  {t('admin.dashboard.pendingVerifications.subtitle', {
+                    count: dashboardStats?.pendingVerifications || 0,
+                  })}
                 </p>
               </div>
             </div>
@@ -154,7 +155,7 @@ export default function AdminDashboardPage() {
               onClick={() => router.push("/admin/providers/verifications")}
               className="text-[#F59E0B] hover:text-[#F59E0B] hover:bg-[#F59E0B]/10"
             >
-              Review
+              {t('admin.dashboard.pendingVerifications.review')}
               <ArrowRight className="w-4 h-4 ml-1" />
             </Button>
           </div>
@@ -168,9 +169,11 @@ export default function AdminDashboardPage() {
                 <Ticket className="w-5 h-5 text-[#EF4444]" />
               </div>
               <div>
-                <h3 className="font-semibold text-white">Support Tickets</h3>
+                <h3 className="font-semibold text-white">{t('admin.dashboard.supportTickets.title')}</h3>
                 <p className="text-sm text-white/50">
-                  {dashboardStats?.openTickets || 0} open tickets require attention
+                  {t('admin.dashboard.supportTickets.subtitle', {
+                    count: dashboardStats?.openTickets || 0,
+                  })}
                 </p>
               </div>
             </div>
@@ -179,7 +182,7 @@ export default function AdminDashboardPage() {
               size="sm"
               className="text-[#EF4444] hover:text-[#EF4444] hover:bg-[#EF4444]/10"
             >
-              View All
+              {t('admin.dashboard.supportTickets.viewAll')}
               <ArrowRight className="w-4 h-4 ml-1" />
             </Button>
           </div>
@@ -193,24 +196,24 @@ export default function AdminDashboardPage() {
           {/* Revenue Chart Placeholder */}
           <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-white">Revenue Overview</h3>
+              <h3 className="text-lg font-semibold text-white">{t('admin.dashboard.revenueOverview.title')}</h3>
               <div className="flex gap-2">
                 <Button variant="ghost" size="sm" className="text-white/60">
-                  Week
+                  {t('admin.dashboard.period.week')}
                 </Button>
                 <Button variant="secondary" size="sm">
-                  Month
+                  {t('admin.dashboard.period.month')}
                 </Button>
                 <Button variant="ghost" size="sm" className="text-white/60">
-                  Year
+                  {t('admin.dashboard.period.year')}
                 </Button>
               </div>
             </div>
             <div className="h-64 flex items-center justify-center bg-black/20 rounded-xl">
               <div className="text-center">
                 <TrendingUp className="w-12 h-12 text-white/20 mx-auto mb-3" />
-                <p className="text-white/40">Revenue chart will be displayed here</p>
-                <p className="text-white/30 text-sm">Connect to analytics API</p>
+                <p className="text-white/40">{t('admin.dashboard.revenueOverview.placeholder')}</p>
+                <p className="text-white/30 text-sm">{t('admin.dashboard.connectAnalytics')}</p>
               </div>
             </div>
           </div>
@@ -218,13 +221,13 @@ export default function AdminDashboardPage() {
           {/* User Growth Chart Placeholder */}
           <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-white">User Registration Trend</h3>
-              <span className="text-sm text-white/50">Last 30 days</span>
+              <h3 className="text-lg font-semibold text-white">{t('admin.dashboard.userTrend.title')}</h3>
+              <span className="text-sm text-white/50">{t('admin.dashboard.userTrend.last30Days')}</span>
             </div>
             <div className="h-48 flex items-center justify-center bg-black/20 rounded-xl">
               <div className="text-center">
                 <Users className="w-10 h-10 text-white/20 mx-auto mb-3" />
-                <p className="text-white/40">User growth chart will be displayed here</p>
+                <p className="text-white/40">{t('admin.dashboard.userTrend.placeholder')}</p>
               </div>
             </div>
           </div>
@@ -243,7 +246,7 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Bookings by Status */}
         <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
-          <h3 className="text-lg font-semibold text-white mb-6">Bookings by Status</h3>
+          <h3 className="text-lg font-semibold text-white mb-6">{t('admin.dashboard.bookingsByStatus.title')}</h3>
           <div className="space-y-4">
             {isLoadingStats ? (
               <div className="flex items-center justify-center py-8">
@@ -252,22 +255,22 @@ export default function AdminDashboardPage() {
             ) : (
               [
                 { 
-                  label: "Completed", 
+                  label: t('admin.dashboard.status.completed'),
                   value: dashboardStats?.bookingsByStatus?.completed || 0, 
                   color: "bg-[#10B981]" 
                 },
                 { 
-                  label: "Confirmed", 
+                  label: t('admin.dashboard.status.confirmed'),
                   value: dashboardStats?.bookingsByStatus?.confirmed || 0, 
                   color: "bg-[#00C9FF]" 
                 },
                 { 
-                  label: "Pending", 
+                  label: t('admin.dashboard.status.pending'),
                   value: dashboardStats?.bookingsByStatus?.pending || 0, 
                   color: "bg-[#F59E0B]" 
                 },
                 { 
-                  label: "Cancelled", 
+                  label: t('admin.dashboard.status.cancelled'),
                   value: dashboardStats?.bookingsByStatus?.cancelled || 0, 
                   color: "bg-[#EF4444]" 
                 },
@@ -292,14 +295,14 @@ export default function AdminDashboardPage() {
         {/* Top Providers */}
         <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-white">Top Providers</h3>
+            <h3 className="text-lg font-semibold text-white">{t('admin.dashboard.topProviders.title')}</h3>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => router.push("/admin/providers")}
               className="text-[#00C9FF]"
             >
-              View All
+              {t('admin.dashboard.topProviders.viewAll')}
               <ArrowRight className="w-4 h-4 ml-1" />
             </Button>
           </div>
@@ -310,7 +313,7 @@ export default function AdminDashboardPage() {
               </div>
             ) : providers.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-white/50">No providers yet</p>
+                <p className="text-white/50">{t('admin.dashboard.topProviders.empty')}</p>
               </div>
             ) : (
               providers.slice(0, 5).map((provider, index) => (
@@ -324,7 +327,9 @@ export default function AdminDashboardPage() {
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-white truncate">{provider.fullName}</p>
                     <p className="text-sm text-white/50">
-                      {(provider as any).performanceMetrics?.totalBookings || 0} bookings
+                      {t('admin.dashboard.topProviders.bookings', {
+                        count: (provider as any).performanceMetrics?.totalBookings || 0,
+                      })}
                     </p>
                   </div>
                   <span className="font-semibold text-white">

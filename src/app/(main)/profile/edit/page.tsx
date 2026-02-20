@@ -38,6 +38,8 @@ import {
 import { SectionSelector } from '@/components/ui/section-selector';
 import { Timestamp } from 'firebase/firestore';
 import { SocialLinks, NotificationSettings as NotificationSettingsType, PrivacySettings } from '@/types/firebase';
+import { useI18n } from '@/hooks/useI18n';
+import type { MessageKey } from '@/i18n/messages';
 
 // Form validation
 interface FormErrors {
@@ -50,43 +52,76 @@ interface FormErrors {
   yearsOfExperience?: string;
 }
 
-const AVAILABLE_SPECIALTIES = [
-  'Personal Training',
-  'Yoga',
-  'Pilates',
-  'CrossFit',
-  'Nutrizione',
-  'Fisioterapia',
-  'Massaggio',
-  'Mental Coaching',
-  'Group Fitness',
-  'HIIT',
-  'Strength Training',
-  'Cardio',
-  'Danza',
-  'Arti Marziali',
-  'Nuoto',
-  'Spinning',
-  'Boxe',
-  'Functional Training',
+const AVAILABLE_SPECIALTIES: { value: string; labelKey: MessageKey }[] = [
+  { value: 'Personal Training', labelKey: 'profile.specialty.personalTraining' },
+  { value: 'Yoga', labelKey: 'profile.specialty.yoga' },
+  { value: 'Pilates', labelKey: 'profile.specialty.pilates' },
+  { value: 'CrossFit', labelKey: 'profile.specialty.crossfit' },
+  { value: 'Nutrizione', labelKey: 'profile.specialty.nutrition' },
+  { value: 'Fisioterapia', labelKey: 'profile.specialty.physiotherapy' },
+  { value: 'Massaggio', labelKey: 'profile.specialty.massage' },
+  { value: 'Mental Coaching', labelKey: 'profile.specialty.mentalCoaching' },
+  { value: 'Group Fitness', labelKey: 'profile.specialty.groupFitness' },
+  { value: 'HIIT', labelKey: 'profile.specialty.hiit' },
+  { value: 'Strength Training', labelKey: 'profile.specialty.strengthTraining' },
+  { value: 'Cardio', labelKey: 'profile.specialty.cardio' },
+  { value: 'Danza', labelKey: 'profile.specialty.dance' },
+  { value: 'Arti Marziali', labelKey: 'profile.specialty.martialArts' },
+  { value: 'Nuoto', labelKey: 'profile.specialty.swimming' },
+  { value: 'Spinning', labelKey: 'profile.specialty.spinning' },
+  { value: 'Boxe', labelKey: 'profile.specialty.boxing' },
+  { value: 'Functional Training', labelKey: 'profile.specialty.functionalTraining' },
 ];
 
-const AVAILABLE_LANGUAGES = [
-  { code: 'it', name: 'Italiano', flag: '🇮🇹' },
-  { code: 'en', name: 'English', flag: '🇬🇧' },
-  { code: 'es', name: 'Español', flag: '🇪🇸' },
-  { code: 'fr', name: 'Français', flag: '🇫🇷' },
-  { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
-  { code: 'pt', name: 'Português', flag: '🇵🇹' },
-  { code: 'ru', name: 'Русский', flag: '🇷🇺' },
-  { code: 'zh', name: '中文', flag: '🇨🇳' },
-  { code: 'ar', name: 'العربية', flag: '🇸🇦' },
+const AVAILABLE_LANGUAGES: { code: string; labelKey: MessageKey; flag: string }[] = [
+  { code: 'it', labelKey: 'profile.languages.option.it', flag: '🇮🇹' },
+  { code: 'en', labelKey: 'profile.languages.option.en', flag: '🇬🇧' },
+  { code: 'es', labelKey: 'profile.languages.option.es', flag: '🇪🇸' },
+  { code: 'fr', labelKey: 'profile.languages.option.fr', flag: '🇫🇷' },
+  { code: 'de', labelKey: 'profile.languages.option.de', flag: '🇩🇪' },
+  { code: 'pt', labelKey: 'profile.languages.option.pt', flag: '🇵🇹' },
+  { code: 'ru', labelKey: 'profile.languages.option.ru', flag: '🇷🇺' },
+  { code: 'zh', labelKey: 'profile.languages.option.zh', flag: '🇨🇳' },
+  { code: 'ar', labelKey: 'profile.languages.option.ar', flag: '🇸🇦' },
+];
+
+const SOCIAL_PLATFORMS: {
+  key: keyof SocialLinks;
+  labelKey: MessageKey;
+  placeholderKey: MessageKey;
+}[] = [
+  {
+    key: 'instagram',
+    labelKey: 'profile.social.platform.instagram',
+    placeholderKey: 'profile.social.placeholder.instagram',
+  },
+  {
+    key: 'linkedin',
+    labelKey: 'profile.social.platform.linkedin',
+    placeholderKey: 'profile.social.placeholder.linkedin',
+  },
+  {
+    key: 'website',
+    labelKey: 'profile.social.platform.website',
+    placeholderKey: 'profile.social.placeholder.website',
+  },
+  {
+    key: 'facebook',
+    labelKey: 'profile.social.platform.facebook',
+    placeholderKey: 'profile.social.placeholder.facebook',
+  },
+  {
+    key: 'twitter',
+    labelKey: 'profile.social.platform.twitter',
+    placeholderKey: 'profile.social.placeholder.twitter',
+  },
 ];
 
 type TabType = 'personal' | 'notifications' | 'privacy' | 'professional';
 
 export default function EditProfilePage() {
   const router = useRouter();
+  const { t } = useI18n();
   const { user, firebaseUser, refreshUserProfile, isLoading } = useAuthStore();
   const [isSaving, setIsSaving] = useState(false);
   const [isProviderUser, setIsProviderUser] = useState(false);
@@ -217,21 +252,21 @@ export default function EditProfilePage() {
     const newErrors: FormErrors = {};
 
     if (!formData.fullName.trim()) {
-      newErrors.fullName = 'Il nome è obbligatorio';
+      newErrors.fullName = t('profile.edit.validation.fullNameRequired');
     } else if (formData.fullName.length < 2) {
-      newErrors.fullName = 'Il nome deve essere di almeno 2 caratteri';
+      newErrors.fullName = t('profile.edit.validation.fullNameMinLength');
     }
 
     if (formData.phone && !/^[\d\s\-\+\(\)]{8,}$/.test(formData.phone)) {
-      newErrors.phone = 'Numero di telefono non valido';
+      newErrors.phone = t('profile.edit.validation.phoneInvalid');
     }
 
     if (formData.bio && formData.bio.length > 500) {
-      newErrors.bio = 'La bio deve essere inferiore a 500 caratteri';
+      newErrors.bio = t('profile.edit.validation.bioMax');
     }
 
     if (professionalData.professionalBio && professionalData.professionalBio.length > 1000) {
-      newErrors.professionalBio = 'La bio professionale deve essere inferiore a 1000 caratteri';
+      newErrors.professionalBio = t('profile.edit.validation.professionalBioMax');
     }
 
     setErrors(newErrors);
@@ -290,12 +325,12 @@ export default function EditProfilePage() {
       console.error('Error saving profile:', error);
       // Check if it's a network/offline error
       if (error.code === 'unavailable' || error.code === 'network-request-failed' || error.message?.includes('offline')) {
-        alert('Sei offline. Le modifiche verranno sincronizzate quando tornerai online.');
+        alert(t('profile.edit.alert.offlineSync'));
         // Still mark as saved since Firestore will queue the write
         setSaveStatus('saved');
         setHasUnsavedChanges(false);
       } else {
-        alert('Errore durante il salvataggio. Riprova più tardi.');
+        alert(t('profile.edit.alert.saveError'));
         setSaveStatus('error');
       }
     } finally {
@@ -307,17 +342,17 @@ export default function EditProfilePage() {
     if (firebaseUser && !firebaseUser.emailVerified) {
       try {
         await verifyEmail(firebaseUser);
-        alert('Email di verifica inviata! Controlla la tua casella di posta.');
+        alert(t('profile.edit.alert.verificationEmailSent'));
       } catch (error) {
         console.error('Error sending verification email:', error);
-        alert('Errore nell\'invio dell\'email. Riprova.');
+        alert(t('profile.edit.alert.verificationEmailError'));
       }
     }
   };
 
   const handleRequestPhoneVerification = async () => {
     if (!formData.phone) {
-      alert('Inserisci prima un numero di telefono');
+      alert(t('profile.edit.alert.phoneRequired'));
       return;
     }
     router.push('/profile/verify-phone');
@@ -366,7 +401,7 @@ export default function EditProfilePage() {
     setHasUnsavedChanges(true);
   };
 
-  const displayName = user?.fullName || firebaseUser?.displayName || 'Utente';
+  const displayName = user?.fullName || firebaseUser?.displayName || t('profile.defaultUser');
 
   if (isLoading) {
     return (
@@ -376,11 +411,13 @@ export default function EditProfilePage() {
     );
   }
 
-  const tabs: { key: TabType; label: string; icon: React.ElementType }[] = [
-    { key: 'personal', label: 'Personale', icon: User },
-    { key: 'notifications', label: 'Notifiche', icon: Bell },
-    { key: 'privacy', label: 'Privacy', icon: Lock },
-    ...(isProviderUser ? [{ key: 'professional' as TabType, label: 'Professionale', icon: Briefcase }] : []),
+  const tabs: { key: TabType; labelKey: MessageKey; icon: React.ElementType }[] = [
+    { key: 'personal', labelKey: 'profile.edit.tab.personal', icon: User },
+    { key: 'notifications', labelKey: 'profile.edit.tab.notifications', icon: Bell },
+    { key: 'privacy', labelKey: 'profile.edit.tab.privacy', icon: Lock },
+    ...(isProviderUser
+      ? [{ key: 'professional' as TabType, labelKey: 'profile.edit.tab.professional' as MessageKey, icon: Briefcase }]
+      : []),
   ];
 
   return (
@@ -400,7 +437,7 @@ export default function EditProfilePage() {
           >
             <ChevronLeft size={24} />
           </button>
-          <h1 className="text-lg font-semibold text-text-inverse">Modifica Profilo</h1>
+          <h1 className="text-lg font-semibold text-text-inverse">{t('profile.edit.title')}</h1>
           <div className="w-10" />
         </div>
 
@@ -418,7 +455,7 @@ export default function EditProfilePage() {
               )}
             >
               <tab.icon size={16} />
-              {tab.label}
+              {t(tab.labelKey)}
               {activeTab === tab.key && (
                 <div className="absolute bottom-0 left-4 right-4 h-0.5 bg-section-gradient rounded-full" />
               )}
@@ -435,10 +472,10 @@ export default function EditProfilePage() {
               <div className="w-10 h-10 rounded-full bg-warning-DEFAULT/20 flex items-center justify-center">
                 <AlertCircle className="text-warning-DEFAULT" size={20} />
               </div>
-              <h3 className="text-lg font-semibold text-text-inverse">Modifiche non salvate</h3>
+              <h3 className="text-lg font-semibold text-text-inverse">{t('profile.edit.unsaved.title')}</h3>
             </div>
             <p className="text-text-secondary mb-6">
-              Hai delle modifiche non salvate. Vuoi salvare prima di uscire?
+              {t('profile.edit.unsaved.description')}
             </p>
             <div className="flex gap-3">
               <Button
@@ -451,7 +488,7 @@ export default function EditProfilePage() {
                   router.back();
                 }}
               >
-                Esci senza salvare
+                {t('profile.edit.unsaved.exitWithoutSaving')}
               </Button>
               <Button
                 variant="primary"
@@ -462,7 +499,7 @@ export default function EditProfilePage() {
                   handleSave();
                 }}
               >
-                Salva
+                {t('common.save')}
               </Button>
             </div>
           </div>
@@ -486,20 +523,20 @@ export default function EditProfilePage() {
           {saveStatus === 'saving' && (
             <span className="flex items-center gap-1 text-xs text-text-tertiary">
               <Loader2 size={12} className="animate-spin" />
-              Salvataggio...
+              {t('profile.edit.saveStatus.saving')}
             </span>
           )}
           {saveStatus === 'saved' && (
             <span className="flex items-center gap-1 text-xs text-success-DEFAULT">
               <Check size={12} />
-              Salvato
+              {t('profile.edit.saveStatus.saved')}
             </span>
           )}
           {saveStatus === 'error' && (
-            <span className="text-xs text-error">Errore di salvataggio</span>
+            <span className="text-xs text-error">{t('profile.edit.saveStatus.error')}</span>
           )}
           {hasUnsavedChanges && saveStatus === 'idle' && (
-            <span className="text-xs text-warning-DEFAULT">Modifiche non salvate</span>
+            <span className="text-xs text-warning-DEFAULT">{t('profile.edit.saveStatus.unsaved')}</span>
           )}
         </div>
 
@@ -508,23 +545,23 @@ export default function EditProfilePage() {
           <div className="space-y-5">
             {/* Full Name */}
             <Input
-              label="Nome Completo *"
+              label={t('profile.edit.fullNameLabel')}
               value={formData.fullName}
               onChange={(e) => updateFormField('fullName', e.target.value)}
               error={errors.fullName}
               leftIcon={<User size={18} />}
-              placeholder="Inserisci il tuo nome completo"
+              placeholder={t('profile.edit.fullNamePlaceholder')}
             />
 
             {/* Bio */}
             <div>
               <label className="block text-sm font-medium text-text-tertiary mb-2">
-                Bio
+                {t('profile.edit.bioLabel')}
               </label>
               <textarea
                 value={formData.bio}
                 onChange={(e) => updateFormField('bio', e.target.value)}
-                placeholder="Parlaci di te..."
+                placeholder={t('profile.edit.bioPlaceholder')}
                 rows={4}
                 maxLength={500}
                 className={cn(
@@ -547,20 +584,20 @@ export default function EditProfilePage() {
             {/* Phone */}
             <div>
               <Input
-                label="Numero di Telefono"
+                label={t('profile.edit.phoneLabel')}
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => updateFormField('phone', e.target.value)}
                 error={errors.phone}
                 leftIcon={<Phone size={18} />}
-                placeholder="+39 123 456 7890"
+                placeholder={t('profile.edit.phonePlaceholder')}
               />
               {formData.phone && !user?.phoneVerified && (
                 <button
                   onClick={handleRequestPhoneVerification}
                   className="mt-2 text-xs text-section-primary hover:underline"
                 >
-                  Verifica numero di telefono →
+                  {t('profile.edit.verifyPhoneAction')}
                 </button>
               )}
             </div>
@@ -568,7 +605,7 @@ export default function EditProfilePage() {
             {/* Date of Birth */}
             <div>
               <label className="block text-sm font-medium text-text-tertiary mb-2">
-                Data di Nascita
+                {t('profile.edit.dateOfBirthLabel')}
               </label>
               <div className="relative">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-text-tertiary">
@@ -586,7 +623,7 @@ export default function EditProfilePage() {
             {/* Preferred Section */}
             <div>
               <label className="block text-sm font-medium text-text-tertiary mb-2">
-                Sezione Preferita
+                {t('profile.edit.preferredSectionLabel')}
               </label>
               <SectionSelector
                 value={formData.preferredSection}
@@ -601,22 +638,16 @@ export default function EditProfilePage() {
             <div className="pt-4 border-t border-white/10">
               <h3 className="text-sm font-medium text-text-tertiary mb-3 flex items-center gap-2">
                 <Globe size={16} />
-                Link Social
+                {t('profile.social.title')}
               </h3>
               <div className="space-y-3">
-                {[
-                  { key: 'instagram', label: 'Instagram', placeholder: '@username' },
-                  { key: 'linkedin', label: 'LinkedIn', placeholder: 'linkedin.com/in/username' },
-                  { key: 'website', label: 'Sito Web', placeholder: 'tuosito.com' },
-                  { key: 'facebook', label: 'Facebook', placeholder: 'facebook.com/username' },
-                  { key: 'twitter', label: 'Twitter/X', placeholder: '@username' },
-                ].map((platform) => (
+                {SOCIAL_PLATFORMS.map((platform) => (
                   <Input
                     key={platform.key}
-                    label={platform.label}
-                    placeholder={platform.placeholder}
-                    value={socialLinks[platform.key as keyof SocialLinks] || ''}
-                    onChange={(e) => updateSocialLink(platform.key as keyof SocialLinks, e.target.value)}
+                    label={t(platform.labelKey)}
+                    placeholder={t(platform.placeholderKey)}
+                    value={socialLinks[platform.key] || ''}
+                    onChange={(e) => updateSocialLink(platform.key, e.target.value)}
                   />
                 ))}
               </div>
@@ -630,16 +661,18 @@ export default function EditProfilePage() {
                     <Mail size={18} className="text-text-tertiary" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-text-inverse">Verifica Email</p>
+                    <p className="text-sm font-medium text-text-inverse">{t('profile.edit.emailVerificationTitle')}</p>
                     <p className="text-xs text-text-tertiary">
-                      {firebaseUser?.emailVerified ? 'Verificata' : 'Non verificata'}
+                      {firebaseUser?.emailVerified
+                        ? t('profile.verification.emailVerifiedTitle')
+                        : t('profile.verification.emailUnverifiedTitle')}
                     </p>
                   </div>
                 </div>
                 {firebaseUser?.emailVerified ? (
                   <span className="flex items-center gap-1 text-xs text-success-DEFAULT">
                     <Shield size={14} />
-                    Verificata
+                    {t('profile.edit.verification.verified')}
                   </span>
                 ) : (
                   <Button
@@ -647,7 +680,7 @@ export default function EditProfilePage() {
                     size="sm"
                     onClick={handleSendVerificationEmail}
                   >
-                    Verifica
+                    {t('profile.edit.verification.verify')}
                   </Button>
                 )}
               </div>
@@ -661,16 +694,18 @@ export default function EditProfilePage() {
                     <Phone size={18} className="text-text-tertiary" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-text-inverse">Verifica Telefono</p>
+                    <p className="text-sm font-medium text-text-inverse">{t('profile.edit.phoneVerificationTitle')}</p>
                     <p className="text-xs text-text-tertiary">
-                      {user?.phoneVerified ? 'Verificato' : 'Non verificato'}
+                      {user?.phoneVerified
+                        ? t('profile.verification.phoneVerifiedTitle')
+                        : t('profile.verification.phoneUnverifiedTitle')}
                     </p>
                   </div>
                 </div>
                 {user?.phoneVerified ? (
                   <span className="flex items-center gap-1 text-xs text-success-DEFAULT">
                     <Shield size={14} />
-                    Verificato
+                    {t('profile.edit.verification.verified')}
                   </span>
                 ) : (
                   <Button
@@ -678,7 +713,7 @@ export default function EditProfilePage() {
                     size="sm"
                     onClick={handleRequestPhoneVerification}
                   >
-                    Verifica
+                    {t('profile.edit.verification.verify')}
                   </Button>
                 )}
               </div>
@@ -690,17 +725,45 @@ export default function EditProfilePage() {
         {activeTab === 'notifications' && (
           <div className="space-y-4">
             <h3 className="text-sm font-medium text-text-tertiary mb-4">
-              Preferenze Notifiche
+              {t('profile.notifications.preferencesTitle')}
             </h3>
 
             {[
-              { key: 'email', label: 'Notifiche Email', description: 'Ricevi aggiornamenti via email' },
-              { key: 'push', label: 'Notifiche Push', description: 'Ricevi notifiche sul dispositivo' },
-              { key: 'sms', label: 'Notifiche SMS', description: 'Ricevi messaggi per aggiornamenti importanti' },
-              { key: 'bookingReminders', label: 'Promemoria Prenotazioni', description: 'Ricevi promemoria per le prenotazioni imminenti' },
-              { key: 'promotions', label: 'Promozioni e Offerte', description: 'Ricevi offerte speciali e sconti' },
-              { key: 'newMessages', label: 'Nuovi Messaggi', description: 'Ricevi notifiche per i nuovi messaggi' },
-              { key: 'marketing', label: 'Comunicazioni Marketing', description: 'Ricevi novità, aggiornamenti e email marketing' },
+              {
+                key: 'email',
+                labelKey: 'profile.notifications.option.email.label',
+                descriptionKey: 'profile.notifications.option.email.description',
+              },
+              {
+                key: 'push',
+                labelKey: 'profile.notifications.option.push.label',
+                descriptionKey: 'profile.notifications.option.push.description',
+              },
+              {
+                key: 'sms',
+                labelKey: 'profile.notifications.option.sms.label',
+                descriptionKey: 'profile.notifications.option.sms.description',
+              },
+              {
+                key: 'bookingReminders',
+                labelKey: 'profile.notifications.option.bookingReminders.label',
+                descriptionKey: 'profile.notifications.option.bookingReminders.description',
+              },
+              {
+                key: 'promotions',
+                labelKey: 'profile.notifications.option.promotions.label',
+                descriptionKey: 'profile.notifications.option.promotions.description',
+              },
+              {
+                key: 'newMessages',
+                labelKey: 'profile.notifications.option.newMessages.label',
+                descriptionKey: 'profile.notifications.option.newMessages.description',
+              },
+              {
+                key: 'marketing',
+                labelKey: 'profile.notifications.option.marketing.label',
+                descriptionKey: 'profile.notifications.option.marketing.description',
+              },
             ].map((option) => {
               const isEnabled = notificationSettings[option.key as keyof NotificationSettingsType];
               return (
@@ -719,10 +782,10 @@ export default function EditProfilePage() {
                       'font-medium text-sm',
                       isEnabled ? 'text-text-inverse' : 'text-text-secondary'
                     )}>
-                      {option.label}
+                      {t(option.labelKey as MessageKey)}
                     </p>
                     <p className="text-xs text-text-tertiary">
-                      {option.description}
+                      {t(option.descriptionKey as MessageKey)}
                     </p>
                   </div>
                   <div
@@ -748,14 +811,30 @@ export default function EditProfilePage() {
         {activeTab === 'privacy' && (
           <div className="space-y-4">
             <h3 className="text-sm font-medium text-text-tertiary mb-4">
-              Impostazioni Privacy
+              {t('profile.edit.privacy.title')}
             </h3>
 
             {[
-              { key: 'profileVisible', label: 'Profilo Pubblico', description: 'Rendi il tuo profilo visibile agli altri utenti' },
-              { key: 'bookingsVisible', label: 'Mostra Prenotazioni', description: 'Mostra le tue prenotazioni sul profilo' },
-              { key: 'showEmail', label: 'Mostra Email', description: 'Rendi visibile il tuo indirizzo email' },
-              { key: 'showPhone', label: 'Mostra Telefono', description: 'Rendi visibile il tuo numero di telefono' },
+              {
+                key: 'profileVisible',
+                labelKey: 'profile.edit.privacy.option.profileVisible.label',
+                descriptionKey: 'profile.edit.privacy.option.profileVisible.description',
+              },
+              {
+                key: 'bookingsVisible',
+                labelKey: 'profile.edit.privacy.option.bookingsVisible.label',
+                descriptionKey: 'profile.edit.privacy.option.bookingsVisible.description',
+              },
+              {
+                key: 'showEmail',
+                labelKey: 'profile.edit.privacy.option.showEmail.label',
+                descriptionKey: 'profile.edit.privacy.option.showEmail.description',
+              },
+              {
+                key: 'showPhone',
+                labelKey: 'profile.edit.privacy.option.showPhone.label',
+                descriptionKey: 'profile.edit.privacy.option.showPhone.description',
+              },
             ].map((option) => {
               const isEnabled = privacySettings[option.key as keyof PrivacySettings];
               return (
@@ -774,10 +853,10 @@ export default function EditProfilePage() {
                       'font-medium text-sm',
                       isEnabled ? 'text-text-inverse' : 'text-text-secondary'
                     )}>
-                      {option.label}
+                      {t(option.labelKey as MessageKey)}
                     </p>
                     <p className="text-xs text-text-tertiary">
-                      {option.description}
+                      {t(option.descriptionKey as MessageKey)}
                     </p>
                   </div>
                   <div
@@ -805,7 +884,7 @@ export default function EditProfilePage() {
             {/* Professional Bio */}
             <div>
               <label className="block text-sm font-medium text-text-tertiary mb-2">
-                Bio Professionale
+                {t('profile.edit.professionalBioLabel')}
               </label>
               <textarea
                 value={professionalData.professionalBio}
@@ -813,7 +892,7 @@ export default function EditProfilePage() {
                   setProfessionalData((prev) => ({ ...prev, professionalBio: e.target.value }));
                   setHasUnsavedChanges(true);
                 }}
-                placeholder="Descrivi la tua esperienza professionale e il tuo approccio..."
+                placeholder={t('profile.edit.professionalBioPlaceholder')}
                 rows={5}
                 maxLength={1000}
                 className="w-full bg-[#2A2D3A] border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-section-primary focus:border-transparent transition-all duration-200 resize-none"
@@ -826,7 +905,7 @@ export default function EditProfilePage() {
             {/* Years of Experience */}
             <div>
               <label className="block text-sm font-medium text-text-tertiary mb-2">
-                Anni di Esperienza
+                {t('profile.edit.yearsOfExperienceLabel')}
               </label>
               <input
                 type="number"
@@ -846,34 +925,34 @@ export default function EditProfilePage() {
 
             {/* License Number */}
             <Input
-              label="Numero Licenza Professionale"
+              label={t('profile.edit.licenseNumberLabel')}
               value={professionalData.licenseNumber}
               onChange={(e) => {
                 setProfessionalData((prev) => ({ ...prev, licenseNumber: e.target.value }));
                 setHasUnsavedChanges(true);
               }}
-              placeholder="Inserisci il numero di licenza"
+              placeholder={t('profile.edit.licenseNumberPlaceholder')}
               leftIcon={<Shield size={18} />}
             />
 
             {/* Specialties */}
             <div>
               <label className="block text-sm font-medium text-text-tertiary mb-2">
-                Specializzazioni
+                {t('profile.edit.specialtiesLabel')}
               </label>
               <div className="flex flex-wrap gap-2">
                 {AVAILABLE_SPECIALTIES.map((specialty) => (
                   <button
-                    key={specialty}
-                    onClick={() => toggleSpecialty(specialty)}
+                    key={specialty.value}
+                    onClick={() => toggleSpecialty(specialty.value)}
                     className={cn(
                       'px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200',
-                      professionalData.specialties.includes(specialty)
+                      professionalData.specialties.includes(specialty.value)
                         ? 'bg-section-gradient text-white'
                         : 'bg-background-secondary/20 text-text-secondary hover:bg-background-secondary/30'
                     )}
                   >
-                    {specialty}
+                    {t(specialty.labelKey)}
                   </button>
                 ))}
               </div>
@@ -882,7 +961,7 @@ export default function EditProfilePage() {
             {/* Languages */}
             <div>
               <label className="block text-sm font-medium text-text-tertiary mb-2">
-                Lingue Parlate
+                {t('profile.edit.languagesLabel')}
               </label>
               <div className="flex flex-wrap gap-2">
                 {AVAILABLE_LANGUAGES.map((language) => (
@@ -897,7 +976,7 @@ export default function EditProfilePage() {
                     )}
                   >
                     <span>{language.flag}</span>
-                    <span>{language.name}</span>
+                    <span>{t(language.labelKey)}</span>
                   </button>
                 ))}
               </div>
@@ -906,7 +985,7 @@ export default function EditProfilePage() {
             {/* Cancellation Policy */}
             <div>
               <label className="block text-sm font-medium text-text-tertiary mb-2">
-                Politica di Cancellazione
+                {t('profile.edit.cancellationPolicyLabel')}
               </label>
               <textarea
                 value={professionalData.cancellationPolicy}
@@ -914,7 +993,7 @@ export default function EditProfilePage() {
                   setProfessionalData((prev) => ({ ...prev, cancellationPolicy: e.target.value }));
                   setHasUnsavedChanges(true);
                 }}
-                placeholder="Descrivi la tua politica di cancellazione..."
+                placeholder={t('profile.edit.cancellationPolicyPlaceholder')}
                 rows={3}
                 maxLength={500}
                 className="w-full bg-[#2A2D3A] border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-section-primary focus:border-transparent transition-all duration-200 resize-none"
@@ -931,7 +1010,7 @@ export default function EditProfilePage() {
                 fullWidth
                 onClick={() => router.push('/profile')}
               >
-                Gestisci Portfolio e Servizi
+                {t('profile.edit.managePortfolioAndServices')}
               </Button>
             </div>
           </div>
@@ -951,12 +1030,12 @@ export default function EditProfilePage() {
           {isSaving ? (
             <>
               <Loader2 size={20} className="animate-spin mr-2" />
-              Salvataggio...
+              {t('profile.edit.saveStatus.saving')}
             </>
           ) : (
             <>
               <Save size={20} className="mr-2" />
-              Salva Modifiche
+              {t('profile.edit.saveChanges')}
             </>
           )}
         </Button>

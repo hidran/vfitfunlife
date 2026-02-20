@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ServicePricing } from '@/types/firebase';
 import { formatPrice } from '@/lib/utils';
+import { useI18n } from '@/hooks/useI18n';
 
 interface ServicePricingCardProps {
   services: ServicePricing[];
@@ -33,6 +34,7 @@ export function ServicePricingCard({
   isEditable = true,
   className,
 }: ServicePricingCardProps) {
+  const { t } = useI18n();
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newService, setNewService] = useState(defaultService);
@@ -69,18 +71,18 @@ export function ServicePricingCard({
   };
 
   const formatDuration = (minutes: number): string => {
-    if (minutes < 60) return `${minutes} min`;
+    if (minutes < 60) return t('profile.services.duration.minutes', { minutes });
     const hours = Math.floor(minutes / 60);
     const remainingMinutes = minutes % 60;
-    if (remainingMinutes === 0) return `${hours} hr`;
-    return `${hours} hr ${remainingMinutes} min`;
+    if (remainingMinutes === 0) return t('profile.services.duration.hours', { hours });
+    return t('profile.services.duration.hoursMinutes', { hours, minutes: remainingMinutes });
   };
 
   return (
     <div className={cn('space-y-4', className)}>
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium text-text-tertiary">
-          Services & Pricing ({services.length})
+          {t('profile.services.title', { count: services.length })}
         </h3>
         {isEditable && !isAdding && (
           <Button
@@ -89,7 +91,7 @@ export function ServicePricingCard({
             onClick={() => setIsAdding(true)}
           >
             <Plus size={16} className="mr-1" />
-            Add
+            {t('profile.services.add')}
           </Button>
         )}
       </div>
@@ -110,20 +112,20 @@ export function ServicePricingCard({
               // Edit Mode
               <div className="space-y-3">
                 <Input
-                  label="Service Name"
+                  label={t('profile.services.field.serviceName')}
                   value={editService.serviceName}
                   onChange={(e) => setEditService({ ...editService, serviceName: e.target.value })}
-                  placeholder="e.g., Personal Training Session"
+                  placeholder={t('profile.services.placeholder.serviceName')}
                 />
                 <Input
-                  label="Description"
+                  label={t('profile.services.field.description')}
                   value={editService.description}
                   onChange={(e) => setEditService({ ...editService, description: e.target.value })}
-                  placeholder="Brief description of the service"
+                  placeholder={t('profile.services.placeholder.description')}
                 />
                 <div className="grid grid-cols-2 gap-3">
                   <Input
-                    label="Price (€)"
+                    label={t('profile.services.field.price')}
                     type="number"
                     min="0"
                     step="0.01"
@@ -132,7 +134,7 @@ export function ServicePricingCard({
                     leftIcon={<DollarSign size={16} />}
                   />
                   <Input
-                    label="Duration (minutes)"
+                    label={t('profile.services.field.duration')}
                     type="number"
                     min="15"
                     step="15"
@@ -150,17 +152,17 @@ export function ServicePricingCard({
                     className="w-4 h-4 rounded border-white/20 bg-background-secondary/10 text-section-primary focus:ring-section-primary"
                   />
                   <label htmlFor={`edit-active-${service.id}`} className="text-sm text-text-secondary">
-                    Service is active
+                    {t('profile.services.field.active')}
                   </label>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="secondary" size="sm" fullWidth onClick={handleCancel}>
                     <X size={16} className="mr-1" />
-                    Cancel
+                    {t('profile.services.cancel')}
                   </Button>
                   <Button variant="primary" size="sm" fullWidth onClick={handleUpdate}>
                     <Check size={16} className="mr-1" />
-                    Save
+                    {t('profile.services.save')}
                   </Button>
                 </div>
               </div>
@@ -172,7 +174,7 @@ export function ServicePricingCard({
                     <h4 className="font-semibold text-text-inverse">{service.serviceName}</h4>
                     {!service.isActive && (
                       <span className="px-2 py-0.5 text-xs bg-text-tertiary/20 text-text-tertiary rounded-full">
-                        Inactive
+                        {t('profile.services.inactive')}
                       </span>
                     )}
                   </div>
@@ -214,22 +216,22 @@ export function ServicePricingCard({
       {/* Add New Service Form */}
       {isAdding && (
         <div className="p-4 rounded-xl bg-background-secondary/10 border border-section-primary/30 space-y-3">
-          <h4 className="text-sm font-medium text-text-inverse">Add New Service</h4>
+          <h4 className="text-sm font-medium text-text-inverse">{t('profile.services.addTitle')}</h4>
           <Input
-            label="Service Name"
+            label={t('profile.services.field.serviceName')}
             value={newService.serviceName}
             onChange={(e) => setNewService({ ...newService, serviceName: e.target.value })}
-            placeholder="e.g., Personal Training Session"
+            placeholder={t('profile.services.placeholder.serviceName')}
           />
           <Input
-            label="Description"
+            label={t('profile.services.field.description')}
             value={newService.description}
             onChange={(e) => setNewService({ ...newService, description: e.target.value })}
-            placeholder="Brief description of the service"
+            placeholder={t('profile.services.placeholder.description')}
           />
           <div className="grid grid-cols-2 gap-3">
             <Input
-              label="Price (€)"
+              label={t('profile.services.field.price')}
               type="number"
               min="0"
               step="0.01"
@@ -238,7 +240,7 @@ export function ServicePricingCard({
               leftIcon={<DollarSign size={16} />}
             />
             <Input
-              label="Duration (minutes)"
+              label={t('profile.services.field.duration')}
               type="number"
               min="15"
               step="15"
@@ -256,12 +258,12 @@ export function ServicePricingCard({
               className="w-4 h-4 rounded border-white/20 bg-background-secondary/10 text-section-primary focus:ring-section-primary"
             />
             <label htmlFor="new-service-active" className="text-sm text-text-secondary">
-              Service is active
+              {t('profile.services.field.active')}
             </label>
           </div>
           <div className="flex gap-2">
             <Button variant="secondary" size="sm" fullWidth onClick={handleCancel}>
-              Cancel
+              {t('profile.services.cancel')}
             </Button>
             <Button
               variant="primary"
@@ -270,7 +272,7 @@ export function ServicePricingCard({
               onClick={handleAdd}
               disabled={!newService.serviceName.trim() || newService.price <= 0}
             >
-              Add Service
+              {t('profile.services.addService')}
             </Button>
           </div>
         </div>
@@ -278,10 +280,10 @@ export function ServicePricingCard({
 
       {services.length === 0 && !isAdding && (
         <div className="text-center py-6 bg-background-secondary/5 rounded-xl">
-          <p className="text-text-tertiary text-sm">No services added yet</p>
+          <p className="text-text-tertiary text-sm">{t('profile.services.empty')}</p>
           {isEditable && (
             <p className="text-text-tertiary/70 text-xs mt-1">
-              Click &quot;Add&quot; to create your first service
+              {t('profile.services.emptyHint')}
             </p>
           )}
         </div>
