@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/hooks/useI18n';
 
 interface Country {
   code: string;
@@ -37,6 +38,7 @@ interface CountryCodePickerProps {
 }
 
 export function CountryCodePicker({ value, onChange, className }: CountryCodePickerProps) {
+  const { t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -66,13 +68,13 @@ export function CountryCodePicker({ value, onChange, className }: CountryCodePic
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          'flex items-center gap-2 px-3 py-3 bg-[#2A2D3A] border border-white/10 rounded-xl',
-          'hover:bg-[#3A3D4A] transition-colors min-h-[52px]',
+          'flex items-center gap-2 px-3 py-3 bg-background-secondary/20 border border-white/10 rounded-xl',
+          'hover:bg-background-secondary/35 transition-colors min-h-[52px]',
           'focus:outline-none focus:ring-2 focus:ring-section-primary'
         )}
       >
         <span className="text-xl">{selectedCountry.flag}</span>
-        <span className="text-white font-medium">{selectedCountry.dialCode}</span>
+        <span className="text-text-inverse font-medium">{selectedCountry.dialCode}</span>
         <ChevronDown
           className={cn(
             'w-4 h-4 text-text-tertiary transition-transform',
@@ -82,7 +84,7 @@ export function CountryCodePicker({ value, onChange, className }: CountryCodePic
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-64 bg-[#2A2D3A] border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden animate-fade-in">
+        <div className="absolute top-full left-0 mt-2 w-64 bg-background-dark border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden animate-fade-in">
           <div className="p-2 border-b border-white/10">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary" />
@@ -90,8 +92,8 @@ export function CountryCodePicker({ value, onChange, className }: CountryCodePic
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Cerca paese..."
-                className="w-full bg-[#1A1D29] border-0 rounded-lg pl-10 pr-3 py-2 text-sm text-white placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-section-primary"
+                placeholder={`${t('common.search')}...`}
+                className="w-full bg-background-secondary/20 border-0 rounded-lg pl-10 pr-3 py-2 text-sm text-text-inverse placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-section-primary"
               />
             </div>
           </div>
@@ -111,7 +113,7 @@ export function CountryCodePicker({ value, onChange, className }: CountryCodePic
                 )}
               >
                 <span className="text-xl">{country.flag}</span>
-                <span className="text-white flex-1">{country.name}</span>
+                <span className="text-text-inverse flex-1">{country.name}</span>
                 <span className="text-text-tertiary">{country.dialCode}</span>
               </button>
             ))}

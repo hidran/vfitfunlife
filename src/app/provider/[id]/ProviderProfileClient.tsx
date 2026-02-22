@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useRouter, useParams } from 'next/navigation';
 import {
   ChevronLeft,
@@ -201,9 +202,12 @@ export default function ProviderProfileClient() {
           <div className="w-24 h-24 rounded-full bg-gradient-to-br from-vfit-primary via-vfun-primary to-vlife-primary p-0.5 flex-shrink-0">
             <div className="w-full h-full rounded-full bg-background-dark flex items-center justify-center overflow-hidden">
               {profile.avatarUrl ? (
-                <img
+                <Image
                   src={profile.avatarUrl}
                   alt={profile.fullName}
+                  width={96}
+                  height={96}
+                  unoptimized
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -336,12 +340,15 @@ export default function ProviderProfileClient() {
               <button
                 key={index}
                 onClick={() => setSelectedImage(image)}
-                className="aspect-square rounded-xl overflow-hidden bg-background-secondary/10"
+                className="relative aspect-square rounded-xl overflow-hidden bg-background-secondary/10"
               >
-                <img
+                <Image
                   src={image}
                   alt={`Portfolio ${index + 1}`}
-                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                  fill
+                  sizes="(max-width: 768px) 33vw, 160px"
+                  unoptimized
+                  className="object-cover hover:scale-105 transition-transform duration-300"
                 />
               </button>
             ))}
@@ -517,9 +524,12 @@ export default function ProviderProfileClient() {
           >
             <ChevronLeft size={24} className="rotate-90" />
           </button>
-          <img
+          <Image
             src={selectedImage}
             alt="Portfolio"
+            width={1600}
+            height={1200}
+            unoptimized
             className="max-w-full max-h-full object-contain rounded-lg"
             onClick={(e) => e.stopPropagation()}
           />

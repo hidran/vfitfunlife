@@ -51,6 +51,8 @@ import type { MessageKey } from '@/i18n/messages';
 interface ProfileMenuItem {
   icon: typeof User;
   labelKey: MessageKey;
+  subtitleKey?: MessageKey;
+  accentClass?: string;
   href: string;
 }
 
@@ -63,23 +65,72 @@ const menuItems: ProfileMenuSection[] = [
   {
     sectionKey: 'profile.menu.account',
     items: [
-      { icon: User, labelKey: 'profile.menu.personalData', href: '/profile/edit' },
-      { icon: MapPin, labelKey: 'profile.menu.addresses', href: '/profile/addresses' },
-      { icon: CreditCard, labelKey: 'profile.menu.paymentMethods', href: '/profile/payment' },
+      {
+        icon: User,
+        labelKey: 'profile.menu.personalData',
+        subtitleKey: 'profile.menu.subtitle.personalData',
+        accentClass: 'text-success-DEFAULT',
+        href: '/profile/edit',
+      },
+      {
+        icon: Calendar,
+        labelKey: 'profile.menu.myBookings',
+        subtitleKey: 'profile.menu.subtitle.myBookings',
+        accentClass: 'text-warning-DEFAULT',
+        href: '/booking',
+      },
+      {
+        icon: CreditCard,
+        labelKey: 'profile.menu.paymentMethods',
+        subtitleKey: 'profile.menu.subtitle.paymentMethods',
+        accentClass: 'text-vfun-primary',
+        href: '/profile/payment',
+      },
+      {
+        icon: Settings,
+        labelKey: 'profile.menu.settings',
+        subtitleKey: 'profile.menu.subtitle.settings',
+        accentClass: 'text-text-inverse',
+        href: '/profile/settings',
+      },
     ],
   },
   {
     sectionKey: 'profile.menu.preferences',
     items: [
-      { icon: Bell, labelKey: 'profile.menu.notifications', href: '/profile/notifications' },
-      { icon: Settings, labelKey: 'profile.menu.settings', href: '/profile/settings' },
+      {
+        icon: Bell,
+        labelKey: 'profile.menu.notifications',
+        subtitleKey: 'profile.menu.subtitle.notifications',
+        accentClass: 'text-vfit-primary',
+        href: '/profile/notifications',
+      },
+      {
+        icon: MapPin,
+        labelKey: 'profile.menu.addresses',
+        subtitleKey: 'profile.menu.subtitle.addresses',
+        accentClass: 'text-section-primary',
+        href: '/profile/addresses',
+      },
     ],
   },
   {
     sectionKey: 'profile.menu.support',
     items: [
-      { icon: HelpCircle, labelKey: 'profile.menu.helpCenter', href: '/help' },
-      { icon: Star, labelKey: 'profile.menu.rateApp', href: '/feedback' },
+      {
+        icon: HelpCircle,
+        labelKey: 'profile.menu.helpCenter',
+        subtitleKey: 'profile.menu.subtitle.helpCenter',
+        accentClass: 'text-info-DEFAULT',
+        href: '/help',
+      },
+      {
+        icon: Star,
+        labelKey: 'profile.menu.rateApp',
+        subtitleKey: 'profile.menu.subtitle.rateApp',
+        accentClass: 'text-vip-gold',
+        href: '/feedback',
+      },
     ],
   },
 ];
@@ -143,10 +194,8 @@ export default function ProfilePage() {
   const { user, firebaseUser, logout, isLoading, refreshUserProfile } = useAuthStore();
   const [isProviderUser, setIsProviderUser] = useState(false);
   const [isCheckingProvider, setIsCheckingProvider] = useState(true);
-  const [stats, setStats] = useState({
-    totalBookings: 0,
+  const [stats] = useState({
     totalEarnings: 0,
-    upcomingAppointments: 0,
   });
 
   // Check if user is a provider
@@ -174,11 +223,13 @@ export default function ProfilePage() {
   const displayName = user?.fullName || firebaseUser?.displayName || t('profile.defaultUser');
   const contactInfo = user?.phone || user?.email || firebaseUser?.phoneNumber || firebaseUser?.email || '';
   const pointsBalance = user?.pointsBalance || 0;
+  const walletBalance = user?.walletBalance || 0;
   const isVip = user?.isVip || false;
   const emailVerified = firebaseUser?.emailVerified || user?.emailVerified || false;
   const phoneVerified = user?.phoneVerified || false;
   const bio = user?.bio;
   const role = user?.role || 'customer';
+  const isProfessionalMode = role === 'provider' || isProviderUser;
 
   // Provider profile data
   const providerProfile = user?.providerProfile;
@@ -240,42 +291,72 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-background-dark pb-20">
       {/* Profile Header */}
       <div className="p-4 pt-6">
-        {/* Photo and Basic Info */}
-        <div className="flex flex-col items-center mb-6">
-          <ProfilePhotoUploader
-            userId={user?.id || ''}
-            currentPhotoUrl={user?.avatarUrl || firebaseUser?.photoURL}
-            displayName={displayName}
-            onPhotoUpdated={handlePhotoUpdated}
-            size="xl"
-            className="mb-4"
-          />
-          
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-2">
-              <h1 className="text-xl font-display font-bold text-text-inverse">
-                {displayName}
-              </h1>
-              {isVip && (
-                <span className="px-2 py-0.5 bg-vip-gold/20 text-vip-gold text-xs font-medium rounded-full">
-                  {t('profile.badge.vip')}
-                </span>
-              )}
-              {isProviderUser && (
-                <span className="px-2 py-0.5 bg-section-gradient text-white text-xs font-medium rounded-full">
-                  {t('profile.badge.provider')}
-                </span>
+        <div className="rounded-[28px] border border-white/10 bg-gradient-to-b from-white/10 to-white/[0.03] p-5 shadow-[0_14px_40px_rgba(0,0,0,0.28)]">
+          <div className="flex flex-col items-center">
+            <ProfilePhotoUploader
+              userId={user?.id || ''}
+              currentPhotoUrl={user?.avatarUrl || firebaseUser?.photoURL}
+              displayName={displayName}
+              onPhotoUpdated={handlePhotoUpdated}
+              size="xl"
+              className="mb-3"
+            />
+
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-2 flex-wrap">
+                <h1 className="text-2xl font-display font-bold text-text-inverse">
+                  {displayName}
+                </h1>
+                {isVip && (
+                  <span className="rounded-full bg-vip-gold/20 px-2 py-0.5 text-xs font-medium text-vip-gold">
+                    {t('profile.badge.vip')}
+                  </span>
+                )}
+                {isProviderUser && (
+                  <span className="rounded-full bg-section-gradient px-2 py-0.5 text-xs font-medium text-white">
+                    {t('profile.badge.provider')}
+                  </span>
+                )}
+              </div>
+
+              <p className="mt-1 text-sm text-text-secondary">
+                {contactInfo || (isVip ? t('profile.badge.vip') : t('profile.defaultUser'))}
+              </p>
+
+              {bio && (
+                <p className="mx-auto mt-2 max-w-xs text-xs text-text-tertiary">
+                  {bio}
+                </p>
               )}
             </div>
-            
-            {bio && (
-              <p className="text-sm text-text-secondary mt-1 max-w-xs mx-auto">
-                {bio}
-              </p>
-            )}
-            
+
+            <div className="mt-4 w-full max-w-[240px] rounded-full bg-white/5 p-1">
+              <div className="grid grid-cols-2 gap-1">
+                <div
+                  className={cn(
+                    'rounded-full px-3 py-2 text-center text-sm font-semibold transition-colors',
+                    isProfessionalMode
+                      ? 'bg-vlife-primary text-background-dark shadow-[0_0_16px_rgba(0,230,118,0.32)]'
+                      : 'text-text-tertiary'
+                  )}
+                >
+                  {t('profile.mode.professional')}
+                </div>
+                <div
+                  className={cn(
+                    'rounded-full px-3 py-2 text-center text-sm font-semibold transition-colors',
+                    !isProfessionalMode
+                      ? 'bg-white text-text-primary'
+                      : 'text-text-tertiary'
+                  )}
+                >
+                  {t('profile.mode.private')}
+                </div>
+              </div>
+            </div>
+
             {/* Contact & Verification Status */}
-            <div className="flex items-center justify-center gap-3 mt-2 flex-wrap">
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-3">
               {user?.email && (
                 <div className="flex items-center gap-1 text-xs text-text-tertiary">
                   <Mail size={12} />
@@ -309,7 +390,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-center justify-center gap-2 mt-3">
+            <div className="mt-4 flex items-center justify-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -333,25 +414,39 @@ export default function ProfilePage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-3 gap-3 mb-6">
-          <div className="bg-background-secondary/10 rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-text-inverse">
-              {isProviderUser ? stats.totalBookings : 0}
-            </p>
-            <p className="text-xs text-text-tertiary">
-              {t('common.bookings')}
-            </p>
+        <div className="grid grid-cols-3 gap-3 mt-4 mb-6">
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#1f332b] to-[#15241e] p-4">
+            <div className="absolute -top-6 -right-6 h-14 w-14 rounded-full bg-vlife-primary/20 blur-xl" />
+            <div className="mb-1 flex items-center gap-1 text-vlife-primary">
+              <Star size={14} />
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">
+                {t('profile.stats.points')}
+              </p>
+            </div>
+            <p className="text-xl font-bold text-text-inverse">{pointsBalance.toLocaleString()}</p>
           </div>
-          <div className="bg-background-secondary/10 rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-vip-gold">{pointsBalance}</p>
-            <p className="text-xs text-text-tertiary">{t('profile.stats.points')}</p>
+
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#30261c] to-[#211b14] p-4">
+            <div className="absolute -top-6 -right-6 h-14 w-14 rounded-full bg-warning-DEFAULT/20 blur-xl" />
+            <div className="mb-1 flex items-center gap-1 text-warning-DEFAULT">
+              <CreditCard size={14} />
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">
+                {t('profile.stats.balance')}
+              </p>
+            </div>
+            <p className="text-xl font-bold text-text-inverse">{formatPrice(walletBalance)}</p>
           </div>
-          <div className="bg-background-secondary/10 rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-text-inverse">
+
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#2b1f37] to-[#1b1524] p-4">
+            <div className="absolute -top-6 -right-6 h-14 w-14 rounded-full bg-vfun-primary/20 blur-xl" />
+            <div className="mb-1 flex items-center gap-1 text-vfun-primary">
+              <Award size={14} />
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">
+                {isProviderUser ? t('profile.stats.earnings') : t('profile.stats.reviews')}
+              </p>
+            </div>
+            <p className="text-xl font-bold text-text-inverse">
               {isProviderUser ? formatPrice(stats.totalEarnings) : providerProfile?.reviewCount || 0}
-            </p>
-            <p className="text-xs text-text-tertiary">
-              {isProviderUser ? t('profile.stats.earnings') : t('profile.stats.reviews')}
             </p>
           </div>
         </div>
@@ -381,9 +476,9 @@ export default function ProfilePage() {
         )}
 
         {/* VIP Banner */}
-        <button 
+        <button
           onClick={() => router.push('/vip')}
-          className="w-full bg-gradient-to-r from-vip-gold/20 to-vip-gold/5 border border-vip-gold/30 rounded-xl p-4 flex items-center gap-4 mb-6"
+          className="w-full bg-gradient-to-r from-vip-gold/20 to-vip-gold/5 border border-vip-gold/30 rounded-2xl p-4 flex items-center gap-4 mb-4"
         >
           <div className="w-12 h-12 rounded-full bg-vip-gold/20 flex items-center justify-center">
             <Crown className="w-6 h-6 text-vip-gold" />
@@ -400,9 +495,9 @@ export default function ProfilePage() {
         </button>
 
         {/* Referral Banner */}
-        <button 
+        <button
           onClick={() => router.push('/referral')}
-          className="w-full bg-gradient-to-r from-vfit-primary/20 to-vfun-primary/20 border border-vfit-primary/30 rounded-xl p-4 flex items-center gap-4 mb-6"
+          className="w-full bg-gradient-to-r from-vfit-primary/20 to-vfun-primary/20 border border-vfit-primary/30 rounded-2xl p-4 flex items-center gap-4 mb-6"
         >
           <div className="w-12 h-12 rounded-full bg-vfit-primary/20 flex items-center justify-center">
             <Gift className="w-6 h-6 text-vfit-primary" />
@@ -664,21 +759,27 @@ export default function ProfilePage() {
         {/* Menu Sections */}
         {menuItems.map((section) => (
           <div key={section.sectionKey}>
-            <h3 className="text-sm font-medium text-text-tertiary mb-2 px-1">
+            <h3 className="mb-2 px-1 text-sm font-semibold uppercase tracking-[0.12em] text-text-tertiary">
               {t(section.sectionKey)}
             </h3>
-            <div className="bg-background-secondary/5 rounded-xl overflow-hidden">
+            <div className="space-y-2">
               {section.items.map((item, index) => (
                 <button
-                  key={item.labelKey}
+                  key={`${item.labelKey}-${index}`}
                   onClick={() => router.push(item.href)}
                   className={cn(
-                    'w-full flex items-center gap-4 p-4 text-left hover:bg-background-secondary/10 transition-colors',
-                    index !== section.items.length - 1 && 'border-b border-border/10'
+                    'w-full flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-left transition-all hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/10'
                   )}
                 >
-                  <item.icon className="w-5 h-5 text-text-secondary" />
-                  <span className="flex-1 text-text-inverse">{t(item.labelKey)}</span>
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10">
+                    <item.icon className={cn('h-5 w-5', item.accentClass ?? 'text-text-secondary')} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-base font-medium text-text-inverse">{t(item.labelKey)}</p>
+                    {item.subtitleKey && (
+                      <p className="truncate text-xs text-text-tertiary">{t(item.subtitleKey)}</p>
+                    )}
+                  </div>
                   <ChevronRight className="w-5 h-5 text-text-tertiary" />
                 </button>
               ))}
@@ -690,10 +791,10 @@ export default function ProfilePage() {
         <button
           onClick={handleLogout}
           disabled={isLoading}
-          className="w-full flex items-center gap-4 p-4 text-left text-error hover:bg-error/10 rounded-xl transition-colors disabled:opacity-50"
+          className="w-full flex items-center justify-center gap-3 rounded-2xl border border-error-DEFAULT/25 p-4 text-error transition-colors hover:bg-error/10 disabled:opacity-50"
         >
           <LogOut className="w-5 h-5" />
-          <span>{isLoading ? t('profile.logout.loading') : t('profile.logout.action')}</span>
+          <span className="font-medium">{isLoading ? t('profile.logout.loading') : t('profile.logout.action')}</span>
         </button>
       </div>
 

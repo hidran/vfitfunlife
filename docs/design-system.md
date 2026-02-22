@@ -14,6 +14,10 @@
 
 ## Color System
 
+**Canonical implementation:** `/Users/hidranarias/projects/vfit/src/styles/globals.css`
+
+The code tokens in `globals.css` are authoritative for runtime theming. Wireframe palettes can differ in exploratory mockups.
+
 ### Section-Based Theming
 
 The app uses **context-aware theming** where colors change based on the active section (VFit, VFun, VLife).

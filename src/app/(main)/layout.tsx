@@ -67,6 +67,11 @@ export default function MainAppLayout({ children }: MainAppLayoutProps) {
     <MainLayout
       notificationCount={notificationCount}
       userAvatarUrl={user.avatarUrl || firebaseUser.photoURL}
+      userName={user.fullName || firebaseUser.displayName || undefined}
+      userEmail={user.email || firebaseUser.email || undefined}
+      pointsBalance={user.pointsBalance || 0}
+      walletBalance={user.walletBalance || 0}
+      isProfessionalMode={user.role === 'provider'}
     >
       {children}
     </MainLayout>

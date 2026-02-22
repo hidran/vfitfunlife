@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAdminStore } from "@/stores/adminStore";
 import { Button } from "@/components/ui/button";
@@ -112,9 +113,12 @@ export default function ProviderDetailClient({ providerId }: ProviderDetailClien
           {/* Avatar */}
           <div className="flex-shrink-0">
             {provider.avatarUrl ? (
-              <img
+              <Image
                 src={provider.avatarUrl}
                 alt={provider.fullName}
+                width={96}
+                height={96}
+                unoptimized
                 className="w-24 h-24 rounded-2xl object-cover border border-white/10"
               />
             ) : (

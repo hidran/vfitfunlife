@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, ChangeEvent } from 'react';
+import Image from 'next/image';
 import { Camera, Upload, X, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Spinner } from '@/components/ui/Spinner';
@@ -125,12 +126,15 @@ export function ProfilePhotoUploader({
           )}
           onClick={handleClick}
         >
-          <div className="w-full h-full rounded-full bg-background-dark flex items-center justify-center overflow-hidden">
+          <div className="relative w-full h-full rounded-full bg-background-dark flex items-center justify-center overflow-hidden">
             {displayUrl ? (
-              <img
+              <Image
                 src={displayUrl}
                 alt={displayName || t('profile.photo.alt')}
-                className="w-full h-full object-cover"
+                fill
+                sizes="(max-width: 768px) 144px, 144px"
+                unoptimized
+                className="object-cover"
               />
             ) : (
               <span className="text-text-inverse font-semibold text-lg">

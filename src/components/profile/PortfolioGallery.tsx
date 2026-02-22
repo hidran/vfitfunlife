@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, ChangeEvent } from 'react';
+import NextImage from 'next/image';
 import { Image as ImageIcon, Plus, X, Trash2, ZoomIn, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -171,10 +172,13 @@ export function PortfolioGallery({
               className="relative aspect-square rounded-xl overflow-hidden group cursor-pointer"
               onClick={() => openLightbox(index)}
             >
-              <img
+              <NextImage
                 src={url}
                 alt={t('profile.portfolio.imageAlt', { index: index + 1 })}
-                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                fill
+                sizes="(max-width: 640px) 50vw, 33vw"
+                unoptimized
+                className="object-cover transition-transform duration-300 group-hover:scale-110"
               />
               
               {/* Overlay */}
@@ -286,9 +290,12 @@ export function PortfolioGallery({
           </div>
 
           {/* Image */}
-          <img
+          <NextImage
             src={images[currentImageIndex]}
             alt={t('profile.portfolio.imageAlt', { index: currentImageIndex + 1 })}
+            width={1600}
+            height={1200}
+            unoptimized
             className="max-w-full max-h-[90vh] object-contain"
             onClick={(e) => e.stopPropagation()}
           />

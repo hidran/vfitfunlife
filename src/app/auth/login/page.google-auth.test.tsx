@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import LoginPage from './page';
 
 // Mock useRouter
@@ -43,11 +43,41 @@ vi.mock('@capacitor/core', () => ({
 // Mock useAuthStore
 const mockLoginWithGoogle = vi.fn();
 const mockLoginWithApple = vi.fn();
+const mockLoginWithEmail = vi.fn();
 const mockClearError = vi.fn();
+const mockInitPhoneAuth = vi.fn();
+const mockSendPhoneOtp = vi.fn();
+const mockVerifyPhoneOtp = vi.fn();
+
+type MockAuthState = {
+  firebaseUser: { uid: string; email: string } | null;
+  user: { id: string; fullName: string } | null;
+  isLoading: boolean;
+  isInitialized: boolean;
+  error: string | null;
+  isOtpSent: boolean;
+  phoneNumber: string | null;
+  loginWithGoogle: typeof mockLoginWithGoogle;
+  loginWithApple: typeof mockLoginWithApple;
+  loginWithEmail: typeof mockLoginWithEmail;
+  clearError: typeof mockClearError;
+  initPhoneAuth: typeof mockInitPhoneAuth;
+  sendPhoneOtp: typeof mockSendPhoneOtp;
+  verifyPhoneOtp: typeof mockVerifyPhoneOtp;
+};
+
+let mockAuthState: MockAuthState;
 
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: (selector?: (state: unknown) => unknown) => {
-    const state = {
+    return selector ? selector(mockAuthState) : mockAuthState;
+  },
+}));
+
+describe('LoginPage Google Sign-in', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockAuthState = {
       firebaseUser: null,
       user: null,
       isLoading: false,
@@ -57,18 +87,12 @@ vi.mock('@/stores/authStore', () => ({
       phoneNumber: null,
       loginWithGoogle: mockLoginWithGoogle,
       loginWithApple: mockLoginWithApple,
+      loginWithEmail: mockLoginWithEmail,
       clearError: mockClearError,
-      initPhoneAuth: vi.fn(),
-      sendPhoneOtp: vi.fn(),
-      verifyPhoneOtp: vi.fn(),
+      initPhoneAuth: mockInitPhoneAuth,
+      sendPhoneOtp: mockSendPhoneOtp,
+      verifyPhoneOtp: mockVerifyPhoneOtp,
     };
-    return selector ? selector(state) : state;
-  },
-}));
-
-describe('LoginPage Google Sign-in', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
   });
 
   it('calls loginWithGoogle when Google button is clicked', async () => {
@@ -84,26 +108,8 @@ describe('LoginPage Google Sign-in', () => {
   });
 
   it('redirects to home when user is authenticated', async () => {
-    // Mock authenticated state
-    const mockUseAuthStore = vi.fn();
-    vi.mocked(mockUseAuthStore).mockImplementation((selector: (state: unknown) => unknown) => {
-      const state = {
-        firebaseUser: { uid: '123', email: 'test@example.com' },
-        user: { id: '123', fullName: 'Test User' },
-        isLoading: false,
-        isInitialized: true,
-        error: null,
-        isOtpSent: false,
-        phoneNumber: null,
-        loginWithGoogle: mockLoginWithGoogle,
-        loginWithApple: mockLoginWithApple,
-        clearError: mockClearError,
-        initPhoneAuth: vi.fn(),
-        sendPhoneOtp: vi.fn(),
-        verifyPhoneOtp: vi.fn(),
-      };
-      return selector ? selector(state) : state;
-    });
+    mockAuthState.firebaseUser = { uid: '123', email: 'test@example.com' };
+    mockAuthState.user = { id: '123', fullName: 'Test User' };
 
     render(<LoginPage />);
 
@@ -113,26 +119,8 @@ describe('LoginPage Google Sign-in', () => {
   });
 
   it('redirects to registration when firebaseUser exists but profile is incomplete', async () => {
-    // Mock incomplete profile state
-    const mockUseAuthStore = vi.fn();
-    vi.mocked(mockUseAuthStore).mockImplementation((selector: (state: unknown) => unknown) => {
-      const state = {
-        firebaseUser: { uid: '123', email: 'test@example.com' },
-        user: null,
-        isLoading: false,
-        isInitialized: true,
-        error: null,
-        isOtpSent: false,
-        phoneNumber: null,
-        loginWithGoogle: mockLoginWithGoogle,
-        loginWithApple: mockLoginWithApple,
-        clearError: mockClearError,
-        initPhoneAuth: vi.fn(),
-        sendPhoneOtp: vi.fn(),
-        verifyPhoneOtp: vi.fn(),
-      };
-      return selector ? selector(state) : state;
-    });
+    mockAuthState.firebaseUser = { uid: '123', email: 'test@example.com' };
+    mockAuthState.user = null;
 
     render(<LoginPage />);
 
@@ -142,26 +130,7 @@ describe('LoginPage Google Sign-in', () => {
   });
 
   it('shows loading state during Google sign-in', async () => {
-    // Mock loading state
-    const mockUseAuthStore = vi.fn();
-    vi.mocked(mockUseAuthStore).mockImplementation((selector: (state: unknown) => unknown) => {
-      const state = {
-        firebaseUser: null,
-        user: null,
-        isLoading: true,
-        isInitialized: true,
-        error: null,
-        isOtpSent: false,
-        phoneNumber: null,
-        loginWithGoogle: mockLoginWithGoogle,
-        loginWithApple: mockLoginWithApple,
-        clearError: mockClearError,
-        initPhoneAuth: vi.fn(),
-        sendPhoneOtp: vi.fn(),
-        verifyPhoneOtp: vi.fn(),
-      };
-      return selector ? selector(state) : state;
-    });
+    mockAuthState.isLoading = true;
 
     render(<LoginPage />);
 
@@ -170,26 +139,7 @@ describe('LoginPage Google Sign-in', () => {
   });
 
   it('clears error when Google sign-in is clicked', async () => {
-    // Mock error state
-    const mockUseAuthStore = vi.fn();
-    vi.mocked(mockUseAuthStore).mockImplementation((selector: (state: unknown) => unknown) => {
-      const state = {
-        firebaseUser: null,
-        user: null,
-        isLoading: false,
-        isInitialized: true,
-        error: 'Previous error message',
-        isOtpSent: false,
-        phoneNumber: null,
-        loginWithGoogle: mockLoginWithGoogle,
-        loginWithApple: mockLoginWithApple,
-        clearError: mockClearError,
-        initPhoneAuth: vi.fn(),
-        sendPhoneOtp: vi.fn(),
-        verifyPhoneOtp: vi.fn(),
-      };
-      return selector ? selector(state) : state;
-    });
+    mockAuthState.error = 'Previous error message';
 
     render(<LoginPage />);
 

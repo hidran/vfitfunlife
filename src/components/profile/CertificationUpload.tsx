@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, ChangeEvent } from 'react';
+import Image from 'next/image';
 import { Upload, X, FileText, Check, Trash2, Award, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -332,11 +333,14 @@ export function CertificationUpload({
               
               {/* Preview */}
               {previewUrl && previewType === 'image' && (
-                <div className="relative mb-3 rounded-xl overflow-hidden bg-background-secondary/10">
-                  <img
+                <div className="relative mb-3 h-40 rounded-xl overflow-hidden bg-background-secondary/10">
+                  <Image
                     src={previewUrl}
                     alt={t('profile.certifications.previewAlt')}
-                    className="w-full h-40 object-contain"
+                    fill
+                    sizes="(max-width: 768px) 100vw, 640px"
+                    unoptimized
+                    className="object-contain"
                   />
                   <button
                     onClick={clearFileSelection}

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/authStore";
 import { DataTable, UserRoleBadge } from "@/components/admin";
@@ -87,9 +88,12 @@ export default function UserRolesPage() {
       cell: (user) => (
         <div className="flex items-center gap-3">
           {user.avatarUrl ? (
-            <img
+            <Image
               src={user.avatarUrl}
               alt={user.fullName}
+              width={40}
+              height={40}
+              unoptimized
               className="w-10 h-10 rounded-xl object-cover border border-white/10"
             />
           ) : (

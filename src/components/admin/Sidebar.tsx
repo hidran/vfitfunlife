@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -247,9 +248,12 @@ export function Sidebar({
           >
             <div className="relative">
               {userAvatar ? (
-                <img
+                <Image
                   src={userAvatar}
                   alt={userName}
+                  width={40}
+                  height={40}
+                  unoptimized
                   className="w-10 h-10 rounded-xl object-cover border border-white/10"
                 />
               ) : (

@@ -4,6 +4,14 @@
 
 VFit is a mobile-first fitness and wellness platform with a section-based theming system (Fit/Fun/Life). The design system uses Tailwind CSS v4 with CSS custom properties for dynamic theming.
 
+## Canonical Source
+
+The runtime source of truth for visual tokens is:
+
+- `/Users/hidranarias/projects/vfit/src/styles/globals.css` (`@theme` tokens + `data-section` variables)
+
+Wireframe files under `/Users/hidranarias/projects/vfit/docs/wireframe/` are reference layouts and interaction direction. When a wireframe color differs from token values, token values in `globals.css` take precedence.
+
 ---
 
 ## Available UI Components

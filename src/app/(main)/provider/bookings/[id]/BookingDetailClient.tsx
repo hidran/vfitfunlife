@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
+import Image from 'next/image';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -173,9 +174,12 @@ export default function BookingDetailClient() {
             <h3 className="text-lg font-semibold text-white mb-4">Client Information</h3>
             <div className="flex items-start gap-4">
               {booking.clientPhotoUrl ? (
-                <img
+                <Image
                   src={booking.clientPhotoUrl}
                   alt={booking.userName}
+                  width={64}
+                  height={64}
+                  unoptimized
                   className="w-16 h-16 rounded-full object-cover"
                 />
               ) : (

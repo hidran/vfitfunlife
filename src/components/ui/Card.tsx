@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Image, { type ImageProps } from 'next/image';
 import { cn } from '@/lib/utils';
 
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -42,29 +43,45 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
 
 Card.displayName = 'Card';
 
-export interface CardImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
+export interface CardImageProps extends Omit<ImageProps, 'width' | 'height' | 'alt'> {
   /** Aspect ratio preset */
   aspectRatio?: '16/9' | '4/3' | '1/1' | 'auto';
+  alt?: string;
 }
 
-const CardImage = React.forwardRef<HTMLImageElement, CardImageProps>(
-  ({ className, aspectRatio = '16/9', alt = '', ...props }, ref) => {
-    return (
-      <img
-        ref={ref}
-        className={cn(
-          'w-full object-cover',
-          aspectRatio === '16/9' && 'aspect-video',
-          aspectRatio === '4/3' && 'aspect-[4/3]',
-          aspectRatio === '1/1' && 'aspect-square',
-          className
-        )}
-        alt={alt}
-        {...props}
-      />
-    );
-  }
-);
+const CardImage = ({
+  className,
+  aspectRatio = '16/9',
+  alt = '',
+  unoptimized = true,
+  ...props
+}: CardImageProps) => {
+  const dimensions =
+    aspectRatio === '4/3'
+      ? { width: 800, height: 600 }
+      : aspectRatio === '1/1'
+        ? { width: 800, height: 800 }
+        : aspectRatio === 'auto'
+          ? { width: 1200, height: 800 }
+          : { width: 1280, height: 720 };
+
+  return (
+    <Image
+      className={cn(
+        'w-full object-cover',
+        aspectRatio === '16/9' && 'aspect-video',
+        aspectRatio === '4/3' && 'aspect-[4/3]',
+        aspectRatio === '1/1' && 'aspect-square',
+        className
+      )}
+      alt={alt}
+      unoptimized={unoptimized}
+      width={dimensions.width}
+      height={dimensions.height}
+      {...props}
+    />
+  );
+};
 
 CardImage.displayName = 'CardImage';
 

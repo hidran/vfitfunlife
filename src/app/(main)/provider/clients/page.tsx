@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Search, Users, Calendar, DollarSign, ChevronRight, FileText } from 'lucide-react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { useProviderStore } from '@/stores/providerStore';
 import { ProviderClient } from '@/types/provider';
@@ -77,9 +78,12 @@ export default function ProviderClientsPage() {
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-4">
                 {client.photoUrl ? (
-                  <img
+                  <Image
                     src={client.photoUrl}
                     alt={client.name}
+                    width={56}
+                    height={56}
+                    unoptimized
                     className="w-14 h-14 rounded-full object-cover"
                   />
                 ) : (

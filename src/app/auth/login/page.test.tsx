@@ -16,6 +16,7 @@ vi.mock('@/stores/authStore', () => ({
     firebaseUser: null,
     user: null,
     isLoading: false,
+    isInitialized: true,
     error: null,
     isOtpSent: false,
     phoneNumber: '',
@@ -24,6 +25,7 @@ vi.mock('@/stores/authStore', () => ({
     verifyPhoneOtp: vi.fn(),
     loginWithGoogle: vi.fn(),
     loginWithApple: vi.fn(),
+    loginWithEmail: vi.fn(),
     clearError: vi.fn(),
   }),
 }));

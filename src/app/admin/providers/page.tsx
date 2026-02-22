@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAdminStore } from "@/stores/adminStore";
 import { DataTable, FilterBar, VerificationBadge, StatusBadge } from "@/components/admin";
@@ -74,9 +75,12 @@ export default function ProvidersPage() {
       cell: (provider) => (
         <div className="flex items-center gap-3">
           {provider.avatarUrl ? (
-            <img
+            <Image
               src={provider.avatarUrl}
               alt={provider.fullName}
+              width={40}
+              height={40}
+              unoptimized
               className="w-10 h-10 rounded-xl object-cover border border-white/10"
             />
           ) : (

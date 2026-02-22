@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { cn, formatDate, toDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { AdminProvider } from "@/types/admin";
@@ -80,9 +81,12 @@ export function VerificationQueue({
             >
               {/* Avatar */}
               {provider.avatarUrl ? (
-                <img
+                <Image
                   src={provider.avatarUrl}
                   alt={provider.fullName}
+                  width={48}
+                  height={48}
+                  unoptimized
                   className="w-12 h-12 rounded-xl object-cover border border-white/10"
                 />
               ) : (

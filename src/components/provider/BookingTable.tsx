@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { MoreVertical, Check, X, Calendar, Clock, User } from 'lucide-react';
 import { ProviderBooking, BookingFilters } from '@/types/provider';
 import { Badge } from '@/components/ui/Badge';
@@ -139,9 +140,12 @@ export function BookingTable({
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-3">
                       {booking.clientPhotoUrl ? (
-                        <img
+                        <Image
                           src={booking.clientPhotoUrl}
                           alt={booking.userName}
+                          width={40}
+                          height={40}
+                          unoptimized
                           className="w-10 h-10 rounded-full object-cover"
                         />
                       ) : (

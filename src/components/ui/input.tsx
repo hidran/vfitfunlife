@@ -34,12 +34,12 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             id={inputId}
             className={cn(
-              'w-full bg-[#2A2D3A] border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-text-tertiary',
+              'w-full bg-background-secondary/20 border border-white/10 rounded-xl px-4 py-3 text-text-inverse placeholder:text-text-tertiary',
               'focus:outline-none focus:ring-2 focus:ring-section-primary focus:border-transparent',
               'transition-all duration-200 min-h-[52px]',
               leftIcon && 'pl-12',
               rightIcon && 'pr-12',
-              error && 'border-error ring-1 ring-error',
+              error && 'border-error-DEFAULT ring-1 ring-error-DEFAULT',
               className
             )}
             {...props}
@@ -51,7 +51,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           )}
         </div>
         {error && (
-          <p className="mt-1.5 text-sm text-error animate-fade-in">{error}</p>
+          <p className="mt-1.5 text-sm text-error-DEFAULT animate-fade-in">{error}</p>
         )}
       </div>
     );

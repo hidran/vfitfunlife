@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 export interface AvatarProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -54,6 +55,13 @@ const sizeClasses = {
   xl: 'h-24 w-24 text-xl',
 };
 
+const sizePixels = {
+  sm: 32,
+  md: 48,
+  lg: 64,
+  xl: 96,
+} as const;
+
 const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
   ({ className, src, alt = '', name = '', size = 'md', ...props }, ref) => {
     const [imageError, setImageError] = React.useState(false);
@@ -74,9 +82,12 @@ const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
         {...props}
       >
         {!showFallback ? (
-          <img
+          <Image
             src={src}
             alt={alt || name}
+            fill
+            sizes={`${sizePixels[size]}px`}
+            unoptimized
             className="h-full w-full object-cover"
             onError={() => setImageError(true)}
           />

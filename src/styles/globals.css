@@ -3,6 +3,7 @@
 :root {
   /* Section-based theming - defaults to VFit */
   --section-primary: var(--color-vfit-primary);
+  --section-primary-dark: var(--color-vfit-secondary);
   --section-secondary: var(--color-vfit-secondary);
   --section-accent: var(--color-vfit-accent);
   --section-gradient: linear-gradient(135deg, #00C9FF 0%, #0066FF 50%, #7B61FF 100%);
@@ -22,6 +23,7 @@
 /* VFit Theme */
 [data-section='fit'] {
   --section-primary: var(--color-vfit-primary);
+  --section-primary-dark: var(--color-vfit-secondary);
   --section-secondary: var(--color-vfit-secondary);
   --section-accent: var(--color-vfit-accent);
   --section-gradient: linear-gradient(135deg, #00C9FF 0%, #0066FF 50%, #7B61FF 100%);
@@ -30,6 +32,7 @@
 /* VFun Theme */
 [data-section='fun'] {
   --section-primary: var(--color-vfun-primary);
+  --section-primary-dark: var(--color-vfun-secondary);
   --section-secondary: var(--color-vfun-secondary);
   --section-accent: var(--color-vfun-accent);
   --section-gradient: linear-gradient(135deg, #B461FF 0%, #FF00E5 50%, #FF6B9D 100%);
@@ -38,6 +41,7 @@
 /* VLife Theme */
 [data-section='life'] {
   --section-primary: var(--color-vlife-primary);
+  --section-primary-dark: var(--color-vlife-secondary);
   --section-secondary: var(--color-vlife-secondary);
   --section-accent: var(--color-vlife-accent);
   --section-gradient: linear-gradient(135deg, #00E676 0%, #76FF03 50%, #FFD600 100%);
@@ -58,6 +62,12 @@
   --color-vlife-primary: #00E676;
   --color-vlife-secondary: #76FF03;
   --color-vlife-accent: #FFD600;
+
+  /* Compatibility aliases for legacy utility classes */
+  --color-primary: var(--section-primary);
+  --color-primary-dark: var(--section-primary-dark);
+  --color-secondary: var(--section-secondary);
+  --color-accent: var(--section-accent);
 
   /* Neutral Colors */
   --color-background-DEFAULT: #FFFFFF;

@@ -2,11 +2,13 @@
 
 import { forwardRef, type ButtonHTMLAttributes } from 'react';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/hooks/useI18n';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'social';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
+  loadingText?: string;
   fullWidth?: boolean;
 }
 
@@ -17,6 +19,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       variant = 'primary',
       size = 'md',
       isLoading = false,
+      loadingText,
       fullWidth = false,
       disabled,
       children,
@@ -24,6 +27,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     },
     ref
   ) => {
+    const { t } = useI18n();
     const baseStyles =
       'inline-flex items-center justify-center font-semibold transition-all duration-200 touch-target rounded-xl focus-ring disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]';
 
@@ -33,7 +37,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       outline: 'border-2 border-section-primary text-section-primary hover:bg-section-primary/10',
       ghost: 'text-text-inverse hover:bg-white/10',
       social:
-        'bg-[#2A2D3A] text-white border border-white/10 hover:bg-[#3A3D4A] hover:border-white/20',
+        'bg-background-secondary/20 text-white border border-white/10 hover:bg-background-secondary/35 hover:border-white/20',
     };
 
     const sizes = {
@@ -77,7 +81,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
               />
             </svg>
-            Caricamento...
+            {loadingText || t('common.loading')}
           </>
         ) : (
           children

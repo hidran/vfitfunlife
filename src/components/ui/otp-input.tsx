@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect, type KeyboardEvent, type ClipboardEvent } from 'react';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/hooks/useI18n';
 
 interface OtpInputProps {
   length?: number;
@@ -22,6 +23,7 @@ export function OtpInput({
   disabled = false,
   autoFocus = true,
 }: OtpInputProps) {
+  const { t } = useI18n();
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -144,16 +146,16 @@ export function OtpInput({
           disabled={disabled}
           className={cn(
             'w-12 h-14 sm:w-14 sm:h-16 text-center text-2xl font-bold',
-            'bg-[#2A2D3A] border-2 rounded-xl',
-            'text-white placeholder:text-text-tertiary',
+            'bg-background-secondary/20 border-2 rounded-xl',
+            'text-text-inverse placeholder:text-text-tertiary',
             'focus:outline-none transition-all duration-200',
             activeIndex === index
               ? 'border-section-primary ring-2 ring-section-primary/20'
               : 'border-white/10',
-            error && 'border-error animate-shake',
+            error && 'border-error-DEFAULT animate-shake',
             disabled && 'opacity-50 cursor-not-allowed'
           )}
-          aria-label={`Digit ${index + 1}`}
+          aria-label={`${t('auth.login.phone.verifyCode')} ${index + 1}`}
         />
       ))}
     </div>

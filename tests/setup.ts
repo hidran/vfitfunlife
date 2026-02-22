@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
+import { itMessages } from '@/i18n/messages/it';
 
 // Cleanup after each test
 afterEach(() => {
@@ -21,6 +22,23 @@ vi.mock('@capacitor/core', () => ({
     isNativePlatform: () => false,
     getPlatform: () => 'web',
   },
+}));
+
+// Mock i18n hook with Italian dictionary so tests can assert localized copy.
+vi.mock('@/hooks/useI18n', () => ({
+  useI18n: () => ({
+    locale: 'it',
+    setLocale: vi.fn(),
+    t: (key: string, params?: Record<string, string | number>) => {
+      const raw = (itMessages as Record<string, string>)[key] ?? key;
+      if (!params) return raw;
+
+      return Object.entries(params).reduce(
+        (result, [name, value]) => result.replace(new RegExp(`{{\\s*${name}\\s*}}`, 'g'), String(value)),
+        raw
+      );
+    },
+  }),
 }));
 
 // Mock localStorage

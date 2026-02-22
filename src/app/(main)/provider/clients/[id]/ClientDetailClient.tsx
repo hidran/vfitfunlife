@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import Image from 'next/image';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -113,9 +114,12 @@ export default function ClientDetailClient() {
       <div className="bg-[#2A2D3A] rounded-xl border border-white/5 p-6">
         <div className="flex flex-col sm:flex-row items-start gap-6">
           {client.photoUrl ? (
-            <img
+            <Image
               src={client.photoUrl}
               alt={client.name}
+              width={96}
+              height={96}
+              unoptimized
               className="w-24 h-24 rounded-full object-cover"
             />
           ) : (

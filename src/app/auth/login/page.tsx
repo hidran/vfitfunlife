@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
@@ -10,12 +10,25 @@ import { CountryCodePicker } from '@/components/ui/country-code-picker';
 import { OtpInput } from '@/components/ui/otp-input';
 import { Divider } from '@/components/ui/divider';
 import { Spinner } from '@/components/ui/Spinner';
-import { Apple, Mail, Phone, ChevronLeft } from 'lucide-react';
+import { Apple, Mail, Phone, Lock, ChevronLeft, Eye, EyeOff } from 'lucide-react';
 import { FcGoogle } from 'react-icons/fc';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
 
 type LoginMethod = 'phone' | 'email' | null;
+
+function AuthFrame({ children }: { children: ReactNode }) {
+  return (
+    <div className="relative min-h-screen overflow-hidden bg-background-dark">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop')] bg-cover bg-center opacity-25 mix-blend-overlay" />
+        <div className="absolute inset-0 bg-gradient-to-b from-background-dark/80 via-background-dark/90 to-background-dark" />
+        <div className="absolute -top-24 left-1/2 h-72 w-[120%] -translate-x-1/2 rounded-full bg-vlife-primary/20 blur-3xl" />
+      </div>
+      <div className="relative z-10">{children}</div>
+    </div>
+  );
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -75,19 +88,12 @@ export default function LoginPage() {
 
   // Redirect based on auth state
   useEffect(() => {
-    console.log('[Login] Redirect check - isInitialized:', isInitialized, 'firebaseUser:', firebaseUser?.uid, 'user:', user?.uid);
     if (!isInitialized) return;
 
     if (user) {
-      // Fully authenticated with complete profile
-      console.log('[Login] User authenticated, redirecting to /home');
       router.replace('/home');
     } else if (firebaseUser && !user) {
-      // Authenticated but profile incomplete
-      console.log('[Login] Profile incomplete, redirecting to /auth/register');
       router.replace('/auth/register');
-    } else {
-      console.log('[Login] No user, staying on login page');
     }
   }, [user, firebaseUser, isInitialized, router]);
 
@@ -140,14 +146,8 @@ export default function LoginPage() {
   };
 
   const handleGoogleLogin = async () => {
-    console.log('[Login] Google login clicked');
     clearError();
-    try {
-      await loginWithGoogle();
-      console.log('[Login] Google login completed');
-    } catch (error) {
-      console.error('[Login] Google login error:', error);
-    }
+    await loginWithGoogle();
   };
 
   const handleAppleLogin = async () => {
@@ -164,31 +164,36 @@ export default function LoginPage() {
   // Show loading while initializing or during auth operations
   if (!isInitialized || (isLoading && !isOtpSent && loginMethod !== 'email')) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background-dark via-background-dark to-primary-dark/20">
-        <Spinner size="lg" />
-      </div>
+      <AuthFrame>
+        <div className="min-h-screen flex items-center justify-center">
+          <Spinner size="lg" />
+        </div>
+      </AuthFrame>
     );
   }
 
   // Don't show login form if user is authenticated (will redirect)
   if (user || (firebaseUser && !user)) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background-dark via-background-dark to-primary-dark/20">
-        <Spinner size="lg" />
-      </div>
+      <AuthFrame>
+        <div className="min-h-screen flex items-center justify-center">
+          <Spinner size="lg" />
+        </div>
+      </AuthFrame>
     );
   }
 
   // Method Selection Screen
   if (!loginMethod) {
     return (
-      <div className="min-h-screen flex flex-col bg-gradient-to-br from-background-dark via-background-dark to-primary-dark/20">
+      <AuthFrame>
+        <div className="min-h-screen flex flex-col">
         {/* Logo Section */}
         <div className="flex-1 flex flex-col items-center justify-center px-6 pt-12 pb-8">
           <div className="w-24 h-24 mb-6 relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary to-secondary rounded-2xl opacity-20 blur-xl" />
-            <div className="relative w-full h-full bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center">
-              <span className="text-4xl font-bold text-white">V</span>
+            <div className="absolute inset-0 bg-vlife-primary/20 rounded-full blur-xl" />
+            <div className="relative w-full h-full bg-white/5 border border-white/10 rounded-full flex items-center justify-center shadow-[0_0_24px_rgba(0,230,118,0.25)]">
+              <span className="text-4xl font-bold text-vlife-primary">V</span>
             </div>
           </div>
 
@@ -210,7 +215,7 @@ export default function LoginPage() {
               onClick={() => setLoginMethod('phone')}
               className={cn(
                 'w-full flex items-center gap-4 p-4 rounded-2xl border transition-all',
-                'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
+                'border-white/10 bg-white/5 hover:bg-white/10 hover:border-vlife-primary/30'
               )}
             >
               <div className="h-12 w-12 rounded-xl bg-section-primary/20 flex items-center justify-center">
@@ -226,7 +231,7 @@ export default function LoginPage() {
               onClick={() => setLoginMethod('email')}
               className={cn(
                 'w-full flex items-center gap-4 p-4 rounded-2xl border transition-all',
-                'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
+                'border-white/10 bg-white/5 hover:bg-white/10 hover:border-vlife-primary/30'
               )}
             >
               <div className="h-12 w-12 rounded-xl bg-section-primary/20 flex items-center justify-center">
@@ -289,14 +294,16 @@ export default function LoginPage() {
             </Link>
           </p>
         </div>
-      </div>
+        </div>
+      </AuthFrame>
     );
   }
 
   // Phone Login Screen
   if (loginMethod === 'phone') {
     return (
-      <div className="min-h-screen flex flex-col bg-gradient-to-br from-background-dark via-background-dark to-primary-dark/20">
+      <AuthFrame>
+        <div className="min-h-screen flex flex-col">
         {/* Header */}
         <div className="px-6 pt-6">
           <button
@@ -412,133 +419,178 @@ export default function LoginPage() {
             )}
           </div>
         </div>
-      </div>
+        </div>
+      </AuthFrame>
     );
   }
 
   // Email Login Screen
   if (loginMethod === 'email') {
     return (
-      <div className="min-h-screen flex flex-col bg-gradient-to-br from-background-dark via-background-dark to-primary-dark/20">
-        {/* Header */}
-        <div className="px-6 pt-6">
-          <button
-            onClick={() => {
-              setLoginMethod(null);
-              clearError();
-              setEmail('');
-              setPassword('');
-            }}
-            className="flex items-center gap-2 text-text-secondary hover:text-text-inverse transition-colors"
-          >
-            <ChevronLeft className="h-5 w-5" />
-            <span className="text-sm">{t('auth.common.back')}</span>
-          </button>
-        </div>
+      <AuthFrame>
+        <div className="min-h-screen flex flex-col">
+          {/* Header */}
+          <div className="px-6 pt-6">
+            <button
+              onClick={() => {
+                setLoginMethod(null);
+                clearError();
+                setEmail('');
+                setPassword('');
+              }}
+              className="flex items-center gap-2 text-text-secondary hover:text-text-inverse transition-colors"
+            >
+              <ChevronLeft className="h-5 w-5" />
+              <span className="text-sm">{t('auth.common.back')}</span>
+            </button>
+          </div>
 
-        {/* Content */}
-        <div className="flex-1 flex flex-col items-center justify-center px-6 pt-8 pb-8">
-          <h1 className="text-2xl font-bold text-white mb-2">{t('auth.login.email.title')}</h1>
-          <p className="text-text-secondary text-center mb-8">
-            {t('auth.login.email.subtitle')}
-          </p>
+          {/* Content */}
+          <div className="flex-1 flex flex-col justify-center px-6 pb-8">
+            <div className="mx-auto w-full max-w-md">
+              <div className="flex flex-col items-center mb-8">
+                <div className="relative mb-6">
+                  <div className="absolute inset-0 rounded-full bg-vlife-primary/25 blur-xl" />
+                  <div className="relative flex h-20 w-20 items-center justify-center rounded-full border border-white/10 bg-white/5 shadow-[0_0_24px_rgba(0,230,118,0.25)]">
+                    <span className="text-4xl font-bold text-vlife-primary">V</span>
+                  </div>
+                </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className="w-full max-w-md mb-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
-              <p className="text-red-400 text-sm text-center">{error}</p>
-            </div>
-          )}
-
-          {/* Email Login Form */}
-          <div className="w-full max-w-md">
-            <form onSubmit={handleEmailLogin} className="space-y-4">
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-text-secondary mb-2">
-                  {t('auth.common.email')}
-                </label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder={t('auth.common.emailPlaceholder')}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full"
-                  disabled={isLoading}
-                  required
-                />
+                <h1 className="text-3xl font-display font-bold text-white text-center">
+                  {t('auth.login.email.title')}
+                </h1>
+                <p className="mt-2 text-sm text-text-secondary text-center">
+                  {t('auth.login.email.subtitle')}
+                </p>
               </div>
 
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-text-secondary mb-2">
-                  {t('auth.common.password')}
-                </label>
-                <div className="relative">
+              {/* Error Message */}
+              {error && (
+                <div className="mb-4 rounded-xl border border-red-500/25 bg-red-500/10 p-4">
+                  <p className="text-sm text-red-400 text-center">{error}</p>
+                </div>
+              )}
+
+              {/* Email Login Form */}
+              <form onSubmit={handleEmailLogin} className="space-y-4">
+                <div>
+                  <label htmlFor="email" className="sr-only">
+                    {t('auth.common.email')}
+                  </label>
                   <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pr-20"
+                    id="email"
+                    type="email"
+                    placeholder={t('auth.common.emailPlaceholder')}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    leftIcon={<Mail className="h-5 w-5" />}
+                    className="h-14 rounded-full border-white/10 bg-white/[0.04] placeholder:text-text-tertiary/80"
                     disabled={isLoading}
                     required
-                    minLength={6}
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-tertiary hover:text-text-inverse"
-                  >
-                    {showPassword ? t('auth.common.hide') : t('auth.common.show')}
-                  </button>
                 </div>
+
+                <div>
+                  <label htmlFor="password" className="sr-only">
+                    {t('auth.common.password')}
+                  </label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      leftIcon={<Lock className="h-5 w-5" />}
+                      className="h-14 rounded-full border-white/10 bg-white/[0.04] pr-24 placeholder:text-text-tertiary/80"
+                      disabled={isLoading}
+                      required
+                      minLength={6}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 inline-flex -translate-y-1/2 items-center gap-1 text-xs font-medium text-text-tertiary hover:text-text-inverse"
+                      aria-label={showPassword ? t('auth.common.hide') : t('auth.common.show')}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      <span>{showPassword ? t('auth.common.hide') : t('auth.common.show')}</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end text-sm">
+                  <Link href="/auth/forgot-password" className="text-vlife-primary hover:text-vlife-secondary">
+                    {t('auth.login.email.forgotPassword')}
+                  </Link>
+                </div>
+
+                <Button
+                  type="submit"
+                  className="h-14 w-full rounded-full bg-gradient-to-r from-vlife-primary to-vlife-secondary text-background-dark text-base font-bold uppercase tracking-wide shadow-[0_0_22px_rgba(0,230,118,0.3)] hover:opacity-95"
+                  disabled={isLoading || !email || password.length < 6}
+                >
+                  {isLoading ? <Spinner size="sm" /> : t('auth.common.login')}
+                </Button>
+              </form>
+
+              <Divider className="my-7" text={t('auth.login.or')} />
+
+              <div className="flex items-center justify-center gap-4">
+                <button
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  disabled={isLoading}
+                  className="h-14 w-14 rounded-full border border-white/10 bg-white/[0.04] flex items-center justify-center transition-colors hover:bg-white/10 disabled:opacity-50"
+                  aria-label={t('auth.login.continueWithGoogle')}
+                >
+                  <FcGoogle className="h-6 w-6" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAppleLogin}
+                  disabled={isLoading}
+                  className="h-14 w-14 rounded-full border border-white/10 bg-white/[0.04] flex items-center justify-center transition-colors hover:bg-white/10 disabled:opacity-50"
+                  aria-label={t('auth.login.continueWithApple')}
+                >
+                  <Apple className="h-6 w-6 text-white" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLoginMethod('phone')}
+                  disabled={isLoading}
+                  className="h-14 rounded-full border border-white/10 bg-white/[0.04] px-4 text-sm font-medium text-text-inverse transition-colors hover:bg-white/10 disabled:opacity-50"
+                >
+                  {t('auth.login.method.phone.title')}
+                </button>
               </div>
 
-              <div className="flex items-center justify-between text-sm">
-                <label className="flex items-center gap-2 text-text-secondary cursor-pointer">
-                  <input type="checkbox" className="rounded border-white/20 bg-white/5" />
-                  <span>{t('auth.login.email.rememberMe')}</span>
-                </label>
-                <Link href="/auth/forgot-password" className="text-primary hover:underline">
-                  {t('auth.login.email.forgotPassword')}
-                </Link>
+              <div className="mt-8 text-center">
+                <p className="text-sm text-text-secondary">
+                  {t('auth.login.noAccount')}{' '}
+                  <Link href="/auth/register" className="font-semibold text-vlife-primary hover:underline">
+                    {t('auth.common.register')}
+                  </Link>
+                </p>
               </div>
-
-              <Button
-                type="submit"
-                className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
-                disabled={isLoading || !email || password.length < 6}
-              >
-                {isLoading ? <Spinner size="sm" /> : t('auth.common.login')}
-              </Button>
-            </form>
-
-            <div className="mt-8 text-center space-y-4">
-              <p className="text-text-secondary text-sm">
-                {t('auth.login.noAccount')}{' '}
-                <Link href="/auth/register" className="font-semibold text-primary hover:underline">
-                  {t('auth.common.register')}
-                </Link>
-              </p>
             </div>
           </div>
-        </div>
 
-        {/* Footer */}
-        <div className="px-6 py-8 text-center">
-          <p className="text-text-secondary text-xs mb-2">
-            {t('auth.common.continuing')}{' '}
-            <Link href="/terms" className="text-primary hover:underline">
-              {t('auth.common.termsOfService')}
-            </Link>{' '}
-            {t('auth.common.andThe')}{' '}
-            <Link href="/privacy" className="text-primary hover:underline">
-              {t('auth.common.privacyPolicy')}
-            </Link>
-          </p>
+          {/* Footer */}
+          <div className="px-6 py-8 text-center">
+            <p className="text-xs text-text-secondary">
+              {t('auth.common.continuing')}{' '}
+              <Link href="/terms" className="text-vlife-primary hover:underline">
+                {t('auth.common.termsOfService')}
+              </Link>{' '}
+              {t('auth.common.andThe')}{' '}
+              <Link href="/privacy" className="text-vlife-primary hover:underline">
+                {t('auth.common.privacyPolicy')}
+              </Link>
+            </p>
+          </div>
         </div>
-      </div>
+      </AuthFrame>
     );
   }
 
