@@ -2,7 +2,9 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
 import {
   NotificationSettingsSchema,
+  PrivacySettingsSchema,
   type NotificationSettings,
+  type PrivacySettings,
 } from '../types';
 
 if (admin.apps.length === 0) admin.initializeApp();
@@ -56,6 +58,40 @@ export const updateNotificationSettings = onCall<UpdateNotificationSettingsData>
       });
     });
 
+    return { success: true } as const;
+  }
+);
+
+interface UpdatePrivacySettingsData { settings: PrivacySettings; }
+
+export const updatePrivacySettings = onCall<UpdatePrivacySettingsData>(
+  { region: 'europe-west1' },
+  async (request) => {
+    if (!request.auth) throw new HttpsError('unauthenticated', 'Must be authenticated.');
+    const parsed = PrivacySettingsSchema.safeParse(request.data?.settings);
+    if (!parsed.success) {
+      throw new HttpsError('invalid-argument', `Invalid privacy settings: ${parsed.error.message}`);
+    }
+    const uid = request.auth.uid;
+    const userRef = db().collection('users').doc(uid);
+
+    await db().runTransaction(async (tx) => {
+      const snap = await tx.get(userRef);
+      if (!snap.exists) throw new HttpsError('not-found', 'User document does not exist.');
+      const before = snap.data()?.privacySettings ?? null;
+      tx.update(userRef, {
+        privacySettings: parsed.data,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      tx.set(db().collection('auditLogs').doc(), {
+        uid, actor: uid,
+        action: 'profile.privacy.update',
+        changes: { before, after: parsed.data },
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        ip: request.rawRequest?.ip ?? null,
+        userAgent: request.rawRequest?.headers?.['user-agent'] ?? null,
+      });
+    });
     return { success: true } as const;
   }
 );

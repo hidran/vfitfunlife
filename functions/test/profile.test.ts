@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import functionsTest from 'firebase-functions-test';
 import * as admin from 'firebase-admin';
-import { defaultNotificationSettings } from '../src/types';
+import { defaultNotificationSettings, defaultPrivacySettings } from '../src/types';
 
 const testEnv = functionsTest({ projectId: 'demo-vfit-test' });
 
@@ -89,5 +89,45 @@ describe('updateNotificationSettings', () => {
       .where('action', '==', 'profile.notifications.update')
       .get();
     expect(logs.size).toBe(1);
+  });
+});
+
+describe('updatePrivacySettings', () => {
+  it('writes the provided settings and logs audit', async () => {
+    const uid = 'priv-1';
+    await admin.firestore().collection('users').doc(uid).set({ uid, role: 'customer' });
+    const wrapped = testEnv.wrap(profileModule.updatePrivacySettings);
+    await wrapped({
+      data: { settings: defaultPrivacySettings },
+      auth: { uid, token: {} as admin.auth.DecodedIdToken },
+    });
+    const after = await admin.firestore().collection('users').doc(uid).get();
+    expect(after.data()?.privacySettings).toEqual(defaultPrivacySettings);
+
+    const logs = await admin.firestore()
+      .collection('auditLogs')
+      .where('uid', '==', uid)
+      .where('action', '==', 'profile.privacy.update')
+      .get();
+    expect(logs.size).toBe(1);
+  });
+
+  it('rejects invalid profileVisibility', async () => {
+    const uid = 'priv-2';
+    await admin.firestore().collection('users').doc(uid).set({ uid, role: 'customer' });
+    const wrapped = testEnv.wrap(profileModule.updatePrivacySettings);
+    await expect(
+      wrapped({
+        data: { settings: { ...defaultPrivacySettings, profileVisibility: 'invalid' } as any },
+        auth: { uid, token: {} as admin.auth.DecodedIdToken },
+      })
+    ).rejects.toMatchObject({ code: 'invalid-argument' });
+  });
+
+  it('rejects unauthenticated', async () => {
+    const wrapped = testEnv.wrap(profileModule.updatePrivacySettings);
+    await expect(
+      wrapped({ data: { settings: defaultPrivacySettings }, auth: undefined as any })
+    ).rejects.toMatchObject({ code: 'unauthenticated' });
   });
 });
