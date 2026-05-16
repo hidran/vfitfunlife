@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import functionsTest from 'firebase-functions-test';
 import * as admin from 'firebase-admin';
-import { defaultNotificationSettings, defaultPrivacySettings } from '../src/types';
+import { defaultNotificationSettings, defaultPrivacySettings, makeAvatarUrlSchema } from '../src/types';
 
 const testEnv = functionsTest({ projectId: 'demo-vfit-test' });
 
@@ -175,5 +175,73 @@ describe('updateSocialLinks', () => {
     });
     const after = await admin.firestore().collection('users').doc(uid).get();
     expect(after.data()?.socialLinks).toEqual({ instagram: '' });
+  });
+});
+
+describe('updateAvatar', () => {
+  const bucket = 'demo-vfit-test.appspot.com';
+
+  beforeEach(() => {
+    // Stub Storage so old-avatar deletion attempts don't error.
+    vi.spyOn(admin.storage(), 'bucket').mockReturnValue({
+      file: vi.fn().mockReturnValue({ delete: vi.fn().mockResolvedValue([]) }),
+    } as any);
+  });
+
+  it('accepts a valid bucket+uid URL and writes to user doc', async () => {
+    const uid = 'av-1';
+    const url = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/avatars%2F${uid}%2F1234-abc.jpg?alt=media&token=xyz`;
+    await admin.firestore().collection('users').doc(uid).set({ uid, role: 'customer' });
+    const wrapped = testEnv.wrap(profileModule.updateAvatar);
+    const result = await wrapped({
+      data: { avatarUrl: url },
+      auth: { uid, token: {} as admin.auth.DecodedIdToken },
+    });
+    expect(result.success).toBe(true);
+    expect(result.avatarUrl).toBe(url);
+    const after = await admin.firestore().collection('users').doc(uid).get();
+    expect(after.data()?.avatarUrl).toBe(url);
+  });
+
+  it('rejects a URL pointing at someone else\'s avatar', async () => {
+    const uid = 'av-2';
+    const otherUid = 'av-other';
+    const url = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/avatars%2F${otherUid}%2Ffoo.jpg`;
+    await admin.firestore().collection('users').doc(uid).set({ uid, role: 'customer' });
+    const wrapped = testEnv.wrap(profileModule.updateAvatar);
+    await expect(
+      wrapped({ data: { avatarUrl: url }, auth: { uid, token: {} as admin.auth.DecodedIdToken } })
+    ).rejects.toMatchObject({ code: 'invalid-argument' });
+  });
+
+  it('rejects a non-bucket URL', async () => {
+    const uid = 'av-3';
+    await admin.firestore().collection('users').doc(uid).set({ uid, role: 'customer' });
+    const wrapped = testEnv.wrap(profileModule.updateAvatar);
+    await expect(
+      wrapped({
+        data: { avatarUrl: 'https://evil.example.com/me.jpg' },
+        auth: { uid, token: {} as admin.auth.DecodedIdToken },
+      })
+    ).rejects.toMatchObject({ code: 'invalid-argument' });
+  });
+
+  it('succeeds even when old-avatar deletion fails', async () => {
+    const uid = 'av-4';
+    const oldUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/avatars%2F${uid}%2Fold.jpg`;
+    const newUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/avatars%2F${uid}%2Fnew.jpg`;
+    await admin.firestore().collection('users').doc(uid).set({
+      uid, role: 'customer', avatarUrl: oldUrl,
+    });
+    // Make delete fail
+    (admin.storage().bucket as any).mockReturnValue({
+      file: vi.fn().mockReturnValue({ delete: vi.fn().mockRejectedValue(new Error('boom')) }),
+    });
+    const wrapped = testEnv.wrap(profileModule.updateAvatar);
+    const result = await wrapped({
+      data: { avatarUrl: newUrl },
+      auth: { uid, token: {} as admin.auth.DecodedIdToken },
+    });
+    expect(result.success).toBe(true);
   });
 });
