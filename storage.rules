@@ -40,6 +40,15 @@ service firebase.storage {
       allow read: if true;
     }
 
+    // User avatars - Simplified avatar path
+    match /avatars/{uid}/{file} {
+      allow read: if true;
+      allow write: if request.auth != null
+                    && request.auth.uid == uid
+                    && request.resource.size < 5 * 1024 * 1024
+                    && request.resource.contentType.matches('image/.*');
+    }
+
     // Certifications - Allow providers to upload certifications
     match /certifications/{userId}/{fileName} {
       allow write: if isOwner(userId) && isValidDocument();
