@@ -39,7 +39,15 @@ interface User {
   fullName: string;
   avatarUrl: string | null;
   dateOfBirth: Timestamp | null;
-  
+
+  // Role & access control (audit sync 2026-05)
+  role: 'superadmin' | 'admin' | 'provider' | 'customer';
+  permissions: Permission[];        // string[]; see functions/src/types.ts for the full Permission union
+  userType: UserType | null;        // provider category (e.g. 'personal_trainer', 'yoga_teacher'); null for non-providers. Also referenced by firestore.rules.
+  providerProfile: ProviderProfile | null; // populated for providers; see ProviderProfile in functions/src/types.ts
+  isActive: boolean;                // soft-deactivation flag enforced by admin tooling
+  isVerified: boolean;              // top-level verification (mirrors providerProfile.isVerified for providers)
+
   // VIP Status
   isVip: boolean;
   vipExpiresAt: Timestamp | null;
@@ -554,6 +562,8 @@ interface StreamingSchedule {
 
 ## Firestore Indexes
 
+> **Note (audit sync 2026-05):** As of 2026-05, `firestore.indexes.json` is empty (only commented examples and empty `indexes`/`fieldOverrides` arrays). Composite indexes are currently auto-created from query patterns at runtime via the Firebase console error link. The block below is the **intended** index set and should be added to `firestore.indexes.json` before relying on it in production.
+
 Create these composite indexes in `firestore.indexes.json`:
 
 ```json
@@ -607,6 +617,106 @@ Create these composite indexes in `firestore.indexes.json`:
   ]
 }
 ```
+
+## Additional Collections (Audit Sync 2026-05)
+
+The following top-level collections exist in `firestore.rules` and/or `functions/src/` but were not previously documented. Field shapes are derived from the rules and from `functions/src/types.ts` / `functions/src/users/roles.ts`. Where source is ambiguous, the entry is marked `Schema TBD — see firestore.rules`.
+
+### userTypes
+- **Path:** `/userTypes/{userTypeId}`
+- **Purpose:** Catalog of provider categories (e.g. Personal Trainer, Yoga Instructor) with their services and requirements.
+- **Key fields:** `id`, `name`, `slug`, `description`, `shortDescription`, `icon`, `category` (`'fitness' | 'wellness' | 'beauty' | 'mental_health' | 'education' | 'medical'`), `services: UserTypeService[]`, `requirements: UserTypeRequirements`, `isActive`, `displayOrder`, `tags?`, `createdAt`, `updatedAt`. See `UserTypeDefinition` in `functions/src/types.ts`.
+- **Access:** Public read; admin write.
+
+### serviceTypes
+- **Path:** `/serviceTypes/{serviceTypeId}`
+- **Purpose:** Service-offering catalog linking specific services to one or more `userTypes`.
+- **Key fields:** `id`, `name`, `slug`, `description`, `applicableUserTypeIds: string[]`, `defaultDuration`, `durationOptions: number[]`, `pricingType: 'fixed' | 'hourly' | 'session'`, `requirements?`, `isActive`, `tags: string[]`, `createdAt`, `updatedAt`. See `ServiceType` in `functions/src/types.ts`.
+- **Access:** Public read; admin write.
+
+### providerApplications
+- **Path:** `/providerApplications/{applicationId}`
+- **Purpose:** Pending "apply to become a provider" submissions awaiting admin review.
+- **Key fields:** `userId`, `userType`, `providerProfile`, `status: 'pending' | ...`, `submittedAt`, `reviewedAt: Timestamp | null`, `reviewedBy: string | null`, `notes: string | null`. (Written from `functions/src/users/roles.ts`.)
+- **Access:** Read by the owner (`resource.data.userId == auth.uid`) or admin; create by the authenticated owner; update by admin; delete by superadmin.
+
+### venueStaff
+- **Path:** `/venueStaff/{staffId}` (staffId == auth uid)
+- **Purpose:** Maps a user to a venue for venue-scoped staff permissions (used by the `isVenueStaff(venueId)` rule helper).
+- **Key fields:** `venueId` (verified from `firestore.rules`). Other fields Schema TBD — see firestore.rules.
+- **Access:** Read by the staff user themselves or admin; write admin only.
+
+### payments
+- **Path:** `/payments/{paymentId}`
+- **Purpose:** Payment records (created by Cloud Functions, typically from Stripe webhooks).
+- **Key fields:** `userId` (verified from `firestore.rules`). Full payload Schema TBD — see firestore.rules / Stripe webhook handlers in `functions/src/payments/`.
+- **Access:** Read by owner (`resource.data.userId == auth.uid`) or admin; create only via Cloud Functions; update by admin; delete by superadmin.
+
+### stripeCustomers
+- **Path:** `/stripeCustomers/{customerId}`
+- **Purpose:** Maps Firebase users to their Stripe customer records (managed by Cloud Functions / Stripe Firebase extension).
+- **Key fields:** `userId` (verified from `firestore.rules`). Other fields Schema TBD — see firestore.rules and the Stripe extension's documented shape.
+- **Access:** Read by owner (`resource.data.userId == auth.uid`) or admin; write only via Cloud Functions.
+
+### auditLogs
+- **Path:** `/auditLogs/{logId}`
+- **Purpose:** Generic admin audit trail for sensitive actions.
+- **Key fields:** Schema TBD — see firestore.rules. (Rule allows reads only; writes restricted to Cloud Functions.)
+- **Access:** Admin read; write only via Cloud Functions.
+
+### roleChangeLogs
+- **Path:** `/roleChangeLogs/{logId}`
+- **Purpose:** Append-only log of user role changes performed via `setUserRole`.
+- **Key fields:** `userId`, `previousRole`, `newRole`, `changedBy`, `reason: string | null`, `timestamp`. (From `functions/src/users/roles.ts`.)
+- **Access:** Admin read; write only via Cloud Functions.
+
+### verificationLogs
+- **Path:** `/verificationLogs/{logId}`
+- **Purpose:** Append-only log of provider verification (verify/unverify) actions.
+- **Key fields:** `providerId`, `verified: boolean`, `verifiedBy`, `notes: string | null`, `timestamp`. (From `functions/src/users/roles.ts`.)
+- **Access:** Admin read; write only via Cloud Functions.
+
+### userStatusLogs
+- **Path:** `/userStatusLogs/{logId}`
+- **Purpose:** Append-only log of user activation/deactivation actions.
+- **Key fields:** `userId`, `isActive: boolean`, `changedBy`, `reason: string | null`, `timestamp`. (From `functions/src/users/roles.ts`.)
+- **Access:** Admin read; write only via Cloud Functions.
+
+### deletedUsers
+- **Path:** `/deletedUsers/{userId}`
+- **Purpose:** Tombstone collection that triggers `onUserDeleted` cleanup (see `functions/src/auth/index.ts`).
+- **Key fields:** Schema TBD — see firestore.rules and the `onUserDeleted` trigger.
+- **Access:** Superadmin read/write.
+
+### config
+- **Path:** `/config/{configId}`
+- **Purpose:** Application-level configuration documents readable/writable by admins.
+- **Key fields:** Schema TBD — see firestore.rules.
+- **Access:** Admin read; admin write.
+
+### systemSettings
+- **Path:** `/systemSettings/{settingId}`
+- **Purpose:** Platform-wide system settings restricted to superadmins.
+- **Key fields:** Schema TBD — see firestore.rules.
+- **Access:** Superadmin read; superadmin write.
+
+### notifications (global)
+- **Path:** `/notifications/{notificationId}` (top-level, distinct from `/users/{userId}/notifications/{notificationId}`)
+- **Purpose:** Global / broadcast notifications stream maintained by Cloud Functions; per-user delivery still lives under the user subcollection documented above.
+- **Key fields:** Schema TBD — see firestore.rules. (Rule allows admin read only; writes restricted to Cloud Functions.)
+- **Access:** Admin read; write only via Cloud Functions.
+
+### analytics
+- **Path:** `/analytics/{docId}`
+- **Purpose:** Aggregated analytics documents written by scheduled / event-driven Cloud Functions.
+- **Key fields:** Schema TBD — see firestore.rules.
+- **Access:** Admin read; write only via Cloud Functions.
+
+### admins (deprecated)
+- **Path:** `/admins/{adminId}`
+- **Purpose:** Legacy admin marker collection. **Deprecated** — the platform now derives admin status from `users/{userId}.role in ['admin', 'superadmin']`. Retained in `firestore.rules` for backwards compatibility only; do not write new code against this collection.
+- **Key fields:** Schema TBD — see firestore.rules.
+- **Access:** Admin read/write (legacy).
 
 ## Security Rules
 

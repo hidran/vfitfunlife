@@ -1,6 +1,8 @@
-# VFit Demo Data Seeding
+# VFit Demo Data Seeding — Local Scripts
 
-This folder contains scripts to populate Firestore with demo data for testing and development.
+This folder contains **local Node.js scripts** to populate Firestore with demo data — useful when running against the local emulator or seeding from a CI/dev machine.
+
+> For **production seeding via Cloud Functions** (`seedAllData`, `seedQuickData`, `clearAllData`), see [`docs/backend/seeding.md`](../docs/backend/seeding.md). Use the Cloud Functions path when seeding against a live project from the admin panel.
 
 ## Prerequisites
 

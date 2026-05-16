@@ -15,12 +15,13 @@ The app serves a fitness center network with multiple activities and venues acro
 * Refer to .claude/agents agents folder for assistance with complex tasks.
 ## TECH STACK
 ### Frontend (Hybrid Web + Mobile)
-- **Framework:** Next.js latest version (App Router) with Static Export
-- **Styling:** Tailwind CSS
+- **Framework:** Next.js (App Router) with Static Export
+- **Styling:** Tailwind CSS v4 (configured via `@tailwindcss/postcss`; no `tailwind.config.ts`)
 - **UI Components:** Custom components with shadcn/ui
-- **State Management:** TankStack Query
+- **State Management:** Zustand (client stores: auth, booking, provider, admin) + TanStack Query (server state)
 - **Forms:** React Hook Form + Zod
-- **Maps:** Mapbox GL JS (works on all platforms)
+- **Maps:** Google Maps (`@react-google-maps/api`)
+- **i18n:** Sprint i18n, locale messages in `src/i18n/` (it, en, es)
 - **Icons:** Lucide React
 
 ### Mobile Packaging
@@ -41,7 +42,8 @@ The app serves a fitness center network with multiple activities and venues acro
 - **Authentication:** Firebase Auth (Phone, Email, Google, Apple)
 - **Database:** Cloud Firestore
 - **Storage:** Firebase Storage
-- **Functions:** Cloud Functions for Firebase (Node.js 18)
+- **Functions:** Cloud Functions for Firebase (Node.js 24, region `europe-west1`)
+- **Data Layer:** Firebase Data Connect (GraphQL) — generated client in `src/dataconnect-generated/`
 - **Messaging:** Firebase Cloud Messaging (FCM)
 - **Analytics:** Firebase Analytics
 - **Crash Reporting:** Firebase Crashlytics
@@ -58,7 +60,10 @@ v-fitness/
 ├── src/
 │   ├── app/                    # Next.js App Router pages
 │   ├── components/             # React components
+│   ├── contexts/               # React contexts (section theme, etc.)
+│   ├── dataconnect-generated/  # Firebase Data Connect generated client
 │   ├── hooks/                  # Custom React hooks
+│   ├── i18n/                   # Locale messages (it, en, es)
 │   ├── lib/                    # Libraries & utilities
 │   ├── stores/                 # Zustand stores
 │   ├── types/                  # TypeScript types

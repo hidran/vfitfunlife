@@ -2,7 +2,12 @@
 
 ## Overview
 
-Three HTTP-triggered Firebase Functions seed and manage demo data for testing and development. See `functions/docs/SEEDING.md` for a code-adjacent endpoint reference with full response JSON examples.
+Three HTTP-triggered Firebase Functions seed and manage demo data for testing and development.
+
+**Related docs:**
+- [`functions/docs/SEEDING.md`](../../functions/docs/SEEDING.md) — code-adjacent endpoint reference with response JSON examples
+- [`scripts/README.md`](../../scripts/README.md) — alternative local Node.js seed scripts (run from a dev machine, useful with the Firebase emulator)
+- [`scripts/DEMO_DATA.md`](../../scripts/DEMO_DATA.md) — reference of what the local scripts generate
 
 ## Functions Created
 

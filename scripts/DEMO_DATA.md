@@ -1,6 +1,6 @@
 # VFit Demo Data Reference
 
-This document describes all the demo data that gets seeded into Firestore for testing and development.
+This document describes all the demo data that gets seeded into Firestore by the **local seed scripts** (see [`scripts/README.md`](README.md)). The Cloud Functions seeder ([`docs/backend/seeding.md`](../docs/backend/seeding.md)) generates a similar but separately defined dataset.
 
 ## Collections
 

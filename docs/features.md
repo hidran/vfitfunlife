@@ -167,6 +167,34 @@ Bottom tabs with section-aware theming:
 - [x] "Servizi" tab - list of services with prices
 - [x] "Corsi" tab
 
+## 5.3 VFun Screens
+
+### Destination Detail (`/fun/[slug]`)
+- [x] Dedicated screens for VFun entertainment destinations (events, parties, VR experiences, streaming hubs)
+- [x] Hero, description, related media
+- [x] Booking / RSVP entry point where applicable
+
+## 5.4 VLife Screens
+
+### Destination Detail (`/life/[slug]`)
+- [x] Dedicated screens for VLife wellness destinations (spa, aesthetics, massage, mental wellness)
+- [x] Provider/venue info, services, pricing
+- [x] Booking flow
+
+## 6. Secondary Routes
+
+These routes are reachable from the main tabs, profile menu, or notifications.
+
+| Route | Purpose |
+|---|---|
+| `/chat/[id]` | Direct messaging between customer and provider |
+| `/notifications` | Notifications inbox |
+| `/feedback` | Submit feedback / bug reports |
+| `/help` | Help center and support resources |
+| `/vip` | VIP membership management, benefits, billing |
+| `/referral` | Referral program — share code, track invites, claim rewards |
+| `/provider/schedule` | Provider availability and schedule management (provider role only) |
+
 ---
 
 ## User Profile

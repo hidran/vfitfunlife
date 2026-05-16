@@ -15,6 +15,12 @@
 - [Admin APIs](#admin-apis)
 - [Error Handling](#error-handling)
 - [Webhooks](#webhooks)
+- [Address & Engagement](#address--engagement)
+- [Role & User Management (additional)](#role--user-management-additional)
+- [Demo Data Seeding](#demo-data-seeding)
+- [Notifications](#notifications)
+- [Scheduled Functions](#scheduled-functions)
+- [Triggered Functions](#triggered-functions)
 
 ---
 
@@ -196,6 +202,8 @@ POST /setUserRole
 
 ### Update Personal Information
 
+> ⚠️ **Documented signature is partially out of date (audit 2026-05).** The actual exported `updateProfile` (see [`../../functions/src/users/index.ts`](../../functions/src/users/index.ts)) accepts a different set of fields. See [Update Profile](#update-profile) under User Functions for the canonical signature. The variant below documents an unimplemented superset.
+
 ```typescript
 POST /updateProfile
 
@@ -219,6 +227,8 @@ POST /updateProfile
 
 ### Update Avatar
 
+> ⚠️ **Not currently exported (audit 2026-05).** This function is documented for historical reference; verify before relying on it.
+
 ```typescript
 POST /updateAvatar
 
@@ -239,6 +249,8 @@ POST /updateAvatar
 ```
 
 ### Update Social Links
+
+> ⚠️ **Not currently exported (audit 2026-05).** This function is documented for historical reference; verify before relying on it.
 
 ```typescript
 POST /updateSocialLinks
@@ -261,6 +273,8 @@ POST /updateSocialLinks
 ```
 
 ### Update Notification Settings
+
+> ⚠️ **Not currently exported (audit 2026-05).** This function is documented for historical reference; verify before relying on it. The current `updateProfile` exposes a single `notificationsEnabled` boolean.
 
 ```typescript
 POST /updateNotificationSettings
@@ -286,6 +300,8 @@ POST /updateNotificationSettings
 
 ### Update Privacy Settings
 
+> ⚠️ **Not currently exported (audit 2026-05).** This function is documented for historical reference; verify before relying on it.
+
 ```typescript
 POST /updatePrivacySettings
 
@@ -305,6 +321,8 @@ POST /updatePrivacySettings
 ```
 
 ### Add Certification (Provider Only)
+
+> ⚠️ **Not currently exported (audit 2026-05).** This function is documented for historical reference; verify before relying on it.
 
 ```typescript
 POST /addCertification
@@ -339,6 +357,8 @@ POST /addCertification
 
 ### Remove Certification
 
+> ⚠️ **Not currently exported (audit 2026-05).** This function is documented for historical reference; verify before relying on it.
+
 ```typescript
 POST /removeCertification
 
@@ -354,6 +374,8 @@ POST /removeCertification
 ```
 
 ### Add Education Entry (Provider Only)
+
+> ⚠️ **Not currently exported (audit 2026-05).** This function is documented for historical reference; verify before relying on it.
 
 ```typescript
 POST /addEducation
@@ -384,6 +406,8 @@ POST /addEducation
 ```
 
 ### Update Availability (Provider Only)
+
+> ⚠️ **Not currently exported (audit 2026-05).** This function is documented for historical reference; verify before relying on it.
 
 ```typescript
 POST /updateAvailability
@@ -421,30 +445,51 @@ POST /updateAvailability
 
 ### Create Provider Profile
 
+Behavior depends on caller role:
+- **Customer** → submits a `providerApplications` record (status `"pending"`).
+- **Admin / Superadmin** → creates the Firebase Auth user and provider account directly.
+
+See [`../../functions/src/users/roles.ts`](../../functions/src/users/roles.ts).
+
 ```typescript
 POST /createProviderProfile
 
 // Request
 {
-  userTypeId: string;           // e.g., "personal_trainer"
-  bio: string;
-  shortBio: string;
-  specialties: string[];
-  certifications: string[];
-  experienceYears: number;
-  languages: string[];
-  workingHours: {
-    day: number;                // 0-6 (Sunday-Saturday)
-    start: string;              // "09:00"
-    end: string;                // "18:00"
-    isAvailable: boolean;
-  }[];
+  email: string;                // Required when staff creates
+  fullName: string;             // Required when staff creates
+  phone: string;
+  userType: UserType;           // Enum value, NOT an ID. See listProviderTypes.
+  providerProfile?: {
+    bio?: string;
+    specialties?: string[];
+    yearsExperience?: number;
+    certifications?: string[];
+    languages?: string[];
+    hourlyRate?: number;
+    availabilitySchedule?: Record<string, unknown>;
+    serviceArea?: {
+      latitude: number;
+      longitude: number;
+      radiusKm: number;
+    };
+  };
+  sendWelcomeEmail?: boolean;
 }
 
-// Response
+// Response (staff create)
 {
-  providerId: string;
-  status: 'pending_verification';
+  success: true;
+  userId: string;
+  role: 'provider';
+  message: string;
+}
+
+// Response (customer application)
+{
+  success: true;
+  status: 'pending';
+  message: string;
 }
 ```
 
@@ -477,6 +522,8 @@ POST /updateProviderProfile
 ```
 
 ### Get Provider Profile
+
+> ⚠️ **Not currently exported (audit 2026-05).** This function is documented for historical reference; verify before relying on it. Use `listProviders` or read the user document directly.
 
 ```typescript
 POST /getProviderProfile
@@ -524,6 +571,8 @@ POST /getProviderProfile
 
 ### List Providers
 
+> ⚠️ **Documented filter set is broader than what is implemented (audit 2026-05).** The exported handler in [`../../functions/src/users/roles.ts`](../../functions/src/users/roles.ts) accepts only `userType`, `isVerified`, `limit`, `offset`. See the canonical signature under [Role & User Management (additional)](#role--user-management-additional). The richer search shape below is unimplemented.
+
 ```typescript
 POST /listProviders
 
@@ -567,6 +616,8 @@ POST /listProviders
 
 ### Add/Update Provider Service
 
+> ⚠️ **Not currently exported (audit 2026-05).** This function is documented for historical reference; verify before relying on it.
+
 ```typescript
 POST /updateProviderService
 
@@ -591,6 +642,8 @@ POST /updateProviderService
 ```
 
 ### Set Provider Availability
+
+> ⚠️ **Not currently exported (audit 2026-05).** This function is documented for historical reference; verify before relying on it.
 
 ```typescript
 POST /setProviderAvailability
@@ -712,6 +765,8 @@ POST /confirmBooking
 
 ### Complete Booking
 
+> ⚠️ **Not currently exported as a standalone function (audit 2026-05).** Completion is handled by `updateBookingStatus` and by the scheduled `processCompletedBookings` job. This entry is kept for historical reference.
+
 ```typescript
 POST /completeBooking
 
@@ -733,6 +788,8 @@ POST /completeBooking
 
 ### Reschedule Booking
 
+> ⚠️ **Not currently exported (audit 2026-05).** This function is documented for historical reference; verify before relying on it.
+
 ```typescript
 POST /rescheduleBooking
 
@@ -752,6 +809,8 @@ POST /rescheduleBooking
 ```
 
 ### Get Booking Details
+
+> ⚠️ **Not currently exported under this name (audit 2026-05).** The canonical export is `getBooking` (see [`../../functions/src/bookings/index.ts`](../../functions/src/bookings/index.ts)). The response shape below is aspirational.
 
 ```typescript
 POST /getBookingDetails
@@ -811,35 +870,35 @@ POST /getBookingDetails
 }
 ```
 
-### List User Bookings
+### List Bookings
+
+Exported as `listBookings` (not `listUserBookings`). Role-aware:
+- Customers receive only their own bookings.
+- Providers receive their own bookings or, when `asProvider: true`, bookings assigned to them.
+- Admins / superadmins receive all bookings.
+
+See [`../../functions/src/bookings/index.ts`](../../functions/src/bookings/index.ts).
 
 ```typescript
-POST /listUserBookings
+POST /listBookings
 
 // Request
 {
-  status?: ('pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show')[];
-  fromDate?: string;
-  toDate?: string;
-  limit?: number;
-  cursor?: string;
+  status?: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
+  asProvider?: boolean;         // Providers only - list bookings assigned to me
+  limit?: number;               // Default 20
+  offset?: number;              // Default 0
 }
 
 // Response
 {
-  bookings: {
-    id: string;
-    serviceName: string;
-    providerName?: string;
-    venueName?: string;
-    scheduledAt: string;
-    status: string;
-    finalPrice: number;
-    canCancel: boolean;
-    avatarUrl?: string;
-  }[];
-  nextCursor?: string;
-  totalCount: number;
+  bookings: Array<{ bookingId: string; [key: string]: unknown }>;
+  pagination: {
+    limit: number;
+    offset: number;
+    count: number;
+    hasMore: boolean;
+  };
 }
 ```
 
@@ -848,6 +907,8 @@ POST /listUserBookings
 ## Customer Booking APIs
 
 ### Search Providers
+
+> ⚠️ **Not currently exported (audit 2026-05).** This function is documented for historical reference; verify before relying on it. Use `listProviders` for the implemented (more limited) provider listing.
 
 ```typescript
 POST /searchProviders
@@ -895,6 +956,8 @@ POST /searchProviders
 ```
 
 ### Get Provider Availability
+
+> ⚠️ **Not currently exported (audit 2026-05).** This function is documented for historical reference; verify before relying on it.
 
 ```typescript
 POST /getProviderAvailability
@@ -954,6 +1017,8 @@ POST /createBooking
 
 ### Get User Bookings
 
+> ⚠️ **Not currently exported (audit 2026-05).** Use `listBookings` (no `asProvider` flag) for the equivalent customer view. This entry remains for historical reference.
+
 ```typescript
 POST /getUserBookings
 
@@ -974,7 +1039,9 @@ POST /getUserBookings
 }
 ```
 
-### Cancel Booking
+### Cancel Booking (customer variant)
+
+> ⚠️ **This alternate signature is not currently exported (audit 2026-05).** See the canonical [Cancel Booking](#cancel-booking) under Booking Functions for the implemented signature.
 
 ```typescript
 POST /cancelBooking
@@ -995,7 +1062,9 @@ POST /cancelBooking
 }
 ```
 
-### Reschedule Booking
+### Reschedule Booking (customer variant)
+
+> ⚠️ **Not currently exported (audit 2026-05).** This function is documented for historical reference; verify before relying on it.
 
 ```typescript
 POST /rescheduleBooking
@@ -1018,6 +1087,8 @@ POST /rescheduleBooking
 ---
 
 ## Provider Booking APIs
+
+> ⚠️ **Audit 2026-05:** None of the functions in this section (`getProviderBookings`, the provider-side `confirmBooking`/`completeBooking` variants, `getProviderSchedule`, `rejectBooking`) are currently exported. Provider workflows are handled today through `listBookings` (with `asProvider: true`), `updateBookingStatus`, and `cancelBooking`. Sections kept for historical reference.
 
 ### Get Provider Bookings
 
@@ -1179,41 +1250,40 @@ POST /createStripeCustomer
 
 ### Create Payment Intent
 
+See [`../../functions/src/payments/index.ts`](../../functions/src/payments/index.ts).
+
 ```typescript
 POST /createPaymentIntent
 
 // Request
 {
   bookingId: string;
-  isDeposit?: boolean;          // Pay deposit only vs full amount
-  paymentMethodId?: string;     // Saved payment method
+  isDeposit: boolean;           // Pay deposit only vs full amount
 }
 
 // Response
 {
   clientSecret: string;         // For Stripe.js
   paymentIntentId: string;
-  amount: number;
-  currency: 'eur';
 }
 ```
 
 ### Create VIP Subscription
+
+See [`../../functions/src/payments/index.ts`](../../functions/src/payments/index.ts). The plan ID must match a document in the `vipPlans` collection that exposes a `stripePriceId`.
 
 ```typescript
 POST /createVipSubscription
 
 // Request
 {
-  planId: string;               // 'monthly' | 'quarterly' | 'yearly'
-  paymentMethodId: string;
+  planId: string;               // Document ID in `vipPlans` collection
 }
 
 // Response
 {
   subscriptionId: string;
-  clientSecret: string;         // For 3D Secure
-  status: 'active' | 'requires_action';
+  clientSecret: string;         // From latest_invoice.payment_intent, for 3D Secure
 }
 ```
 
@@ -1239,6 +1309,8 @@ POST /addWalletFunds
 ## Admin Functions
 
 ### Create User Type
+
+> ⚠️ **Not currently exported (audit 2026-05).** User types are created via the `seedUserTypes` callable and edited with `updateUserType` (see [`../../functions/src/users/userTypes.ts`](../../functions/src/users/userTypes.ts)).
 
 ```typescript
 POST /admin/createUserType
@@ -1292,6 +1364,8 @@ POST /admin/verifyProvider
 ---
 
 ## Admin APIs
+
+> ⚠️ **Audit 2026-05:** The `/admin/*`-prefixed handlers below (`getDashboardStats`, `getUsers`, `updateUserRole`, `suspendUser`, `getBookings`, `processRefund`, `updatePlatformSettings`, `getSystemLogs`) are **not currently exported as cloud functions**. Equivalent functionality is provided today by the callables documented under [Role & User Management (additional)](#role--user-management-additional) (`listUsers`, `setUserActiveStatus`, `setUserRole`) and via direct Firestore reads. Sections kept for historical reference.
 
 ### Get Dashboard Stats
 
@@ -1700,6 +1774,8 @@ Events handled:
 
 ### Internal Webhooks
 
+> ⚠️ **Audit 2026-05:** The HTTP `/webhooks/*` endpoints below are not currently exported. The equivalent work is performed by the Firestore triggers documented in [Triggered Functions](#triggered-functions) (`onBookingStatusChange`, `onUserDeleted`). Sections kept for historical reference.
+
 #### Booking Status Changed
 
 ```typescript
@@ -1739,3 +1815,380 @@ Triggers:
 - Provider notification
 - Profile update
 - Search index update
+
+---
+
+## Address & Engagement
+
+Implemented in [`../../functions/src/users/index.ts`](../../functions/src/users/index.ts).
+
+### Save Address
+
+Adds a new address or updates an existing one. Exported as `saveAddress` (also referred to as `addAddress` in the audit).
+
+```typescript
+POST /saveAddress
+
+// Request
+{
+  addressId?: string;           // Omit to create new
+  address: {
+    label: string;
+    street: string;
+    streetNumber: string;
+    city: string;
+    postalCode: string;
+    province: string;
+    country?: string;           // Defaults to "Italia"
+    latitude: number;
+    longitude: number;
+    geohash: string;
+    isDefault?: boolean;
+  };
+}
+
+// Response
+{
+  addressId: string;
+}
+```
+
+### Delete Address
+
+```typescript
+POST /deleteAddress
+
+// Request
+{
+  addressId: string;
+}
+
+// Response
+{
+  success: true;
+}
+```
+
+### Get Leaderboard
+
+Public (no auth required).
+
+```typescript
+POST /getLeaderboard
+
+// Request
+{
+  type?: 'points' | 'bookings'; // Default: 'points'
+  limit?: number;               // Default: 10
+}
+
+// Response
+{
+  leaderboard: Array<{
+    rank: number;
+    userId: string;
+    fullName: string;
+    avatarUrl?: string;
+    value: number;
+    isVip: boolean;
+  }>;
+}
+```
+
+### Submit Review
+
+Awards 50 bonus points and updates aggregated venue/instructor ratings.
+
+```typescript
+POST /submitReview
+
+// Request
+{
+  bookingId: string;
+  rating: number;               // 1-5
+  comment?: string;
+  images?: string[];
+}
+
+// Response
+{
+  reviewId: string;
+  pointsEarned: number;         // 50
+}
+```
+
+---
+
+## Role & User Management (additional)
+
+Implemented in [`../../functions/src/users/roles.ts`](../../functions/src/users/roles.ts).
+
+### Get User Permissions
+
+Returns the authenticated user's role, permissions, and admin flags.
+
+```typescript
+POST /getUserPermissions
+
+// Request (uses auth context)
+{}
+
+// Response
+{
+  userId: string;
+  role: 'customer' | 'provider' | 'admin' | 'superadmin';
+  permissions: string[];
+  isActive: boolean;
+  userType: string | null;
+  isProvider: boolean;
+  isAdmin: boolean;
+  isSuperAdmin: boolean;
+  canAccessAdminPanel: boolean;
+}
+```
+
+### List Providers (implemented)
+
+Public for verified providers; staff see all.
+
+```typescript
+POST /listProviders
+
+// Request
+{
+  userType?: UserType;
+  isVerified?: boolean;         // Staff-only filter
+  limit?: number;               // Default 20
+  offset?: number;              // Default 0
+}
+
+// Response
+{
+  providers: Array<{
+    uid: string;
+    fullName: string;
+    email: string;
+    phone: string;
+    userType: string;
+    providerProfile: {
+      bio: string;
+      specialties: string[];
+      yearsExperience: number;
+      languages: string[];
+      isVerified: boolean;
+      rating: number;
+      reviewCount: number;
+      hourlyRate?: number;
+    };
+    avatarUrl?: string;
+    createdAt: Timestamp;
+    // Staff-only:
+    isActive?: boolean;
+    isVerified?: boolean;
+    walletBalance?: number;
+  }>;
+  pagination: {
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  };
+}
+```
+
+### List Provider Types
+
+Public. Returns the static enum of provider categories with localized labels.
+
+```typescript
+POST /listProviderTypes
+
+// Request
+{}
+
+// Response
+{
+  types: Array<{
+    value: string;              // e.g. "trainer", "yoga_teacher"
+    label: string;
+    labelIt: string;
+  }>;
+}
+```
+
+### List Users
+
+Admin / superadmin only.
+
+```typescript
+POST /listUsers
+
+// Request
+{
+  role?: 'customer' | 'provider' | 'admin' | 'superadmin';
+  limit?: number;               // Default 50
+  offset?: number;              // Default 0
+}
+
+// Response
+{
+  users: Array<{
+    uid: string;
+    email: string;
+    fullName: string;
+    phone: string;
+    role: string;
+    userType?: string;
+    isActive: boolean;
+    isVerified: boolean;
+    isVip: boolean;
+    createdAt: Timestamp;
+    lastLoginAt?: Timestamp;
+  }>;
+}
+```
+
+### Set User Active Status
+
+Admin / superadmin only. Superadmin accounts are protected from non-superadmin callers.
+
+```typescript
+POST /setUserActiveStatus
+
+// Request
+{
+  userId: string;
+  isActive: boolean;
+  reason?: string;
+}
+
+// Response
+{
+  success: true;
+  userId: string;
+  isActive: boolean;
+  message: string;
+}
+```
+
+---
+
+## Demo Data Seeding
+
+Functions for populating Firestore with demo data. See [`../backend/seeding.md`](../backend/seeding.md) for full request/response payloads, role gating, and operational notes.
+
+| Function | Type | Auth | Source |
+|---|---|---|---|
+| `seedUserTypes` | Callable (`onCall`) | Admin/Superadmin | [`../../functions/src/users/userTypes.ts`](../../functions/src/users/userTypes.ts) |
+| `seedAllData` | HTTP (`onRequest`, POST) | Bearer ID token + Admin/Superadmin | [`../../functions/src/seed/seedData.ts`](../../functions/src/seed/seedData.ts) |
+| `seedQuickData` | HTTP (`onRequest`, POST) | Bearer ID token + Admin/Superadmin | [`../../functions/src/seed/seedData.ts`](../../functions/src/seed/seedData.ts) |
+| `clearAllData` | HTTP (`onRequest`, POST) | Bearer ID token + Superadmin | [`../../functions/src/seed/seedData.ts`](../../functions/src/seed/seedData.ts) |
+
+---
+
+## Notifications
+
+Implemented in [`../../functions/src/notifications/index.ts`](../../functions/src/notifications/index.ts).
+
+### Register FCM Token
+
+Stores up to the 5 most recent tokens for the user.
+
+```typescript
+POST /registerFcmToken
+
+// Request
+{
+  token: string;
+  platform: string;             // e.g. "ios", "android", "web"
+}
+
+// Response
+{
+  success: true;
+}
+```
+
+### Mark Notification Read
+
+```typescript
+POST /markNotificationRead
+
+// Request
+{
+  notificationId: string;
+}
+
+// Response
+{
+  success: true;
+}
+```
+
+### Mark All Notifications Read
+
+```typescript
+POST /markAllNotificationsRead
+
+// Request (uses auth context)
+{}
+
+// Response
+{
+  markedCount: number;
+}
+```
+
+### Send VIP Notification
+
+Broadcasts a push notification to every VIP user with notifications enabled and stores an in-app copy.
+
+```typescript
+POST /sendVipNotification
+
+// Request
+{
+  title: string;
+  body: string;
+  imageUrl?: string;
+}
+
+// Response
+{
+  sentTo: number;               // Count of VIP recipients
+}
+```
+
+---
+
+## Scheduled Functions
+
+Cloud Scheduler jobs implemented in [`../../functions/src/scheduled/index.ts`](../../functions/src/scheduled/index.ts). All run in `Europe/Rome`.
+
+| Function | Schedule (cron) | Purpose |
+|---|---|---|
+| `sendBookingReminders` | `0 * * * *` (hourly) | Sends 24h and 2h push reminders for confirmed bookings. |
+| `processCompletedBookings` | `*/30 * * * *` (every 30 min) | Marks past confirmed bookings as `completed` and awards points. |
+| `expireVipSubscriptions` | `0 0 * * *` (daily, midnight) | Flips expired VIP users back to non-VIP and notifies them. |
+| `expirePromotions` | `0 1 * * *` (daily, 01:00) | Deactivates promotions whose `validUntil` has passed. |
+| `aggregateDailyStats` | `0 2 * * *` (daily, 02:00) | Writes yesterday's user/booking/revenue counters to `dailyStats/{date}`. |
+| `cleanupOldNotifications` | `0 3 * * 0` (weekly, Sunday 03:00) | Deletes read in-app notifications older than 30 days. |
+| `updateChallengeProgress` | Firestore trigger (`onDocumentUpdated bookings/{bookingId}`) | Despite living in `scheduled/`, this is a Firestore trigger that increments challenge progress on booking completion. |
+
+---
+
+## Triggered Functions
+
+Firestore-triggered handlers (no direct invocation).
+
+### onBookingStatusChange
+
+- **Source:** [`../../functions/src/notifications/index.ts`](../../functions/src/notifications/index.ts)
+- **Trigger:** `onDocumentUpdated` on `bookings/{bookingId}`
+- **Behavior:** When `status` changes to `confirmed`, `cancelled` (by non-user), or `completed`, sends a push notification to the booking owner and writes an in-app notification document.
+
+### onUserDeleted
+
+- **Source:** [`../../functions/src/auth/index.ts`](../../functions/src/auth/index.ts)
+- **Trigger:** `onDocumentCreated` on `deletedUsers/{userId}`
+- **Behavior:** Logs the deletion. Hook for future cleanup logic (Firestore data, Auth user, storage).

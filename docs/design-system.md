@@ -51,6 +51,7 @@ Wireframe files under `docs/wireframe/` are reference layouts and interaction di
 | **SectionSwitcher** | `section-switcher.tsx` | Compact section toggle | - |
 | **Divider** | `divider.tsx` | Horizontal divider with optional text | `text` |
 | **CountryCodePicker** | `country-code-picker.tsx` | Phone country selector | `value`, `onChange` |
+| **Modal** | `Modal.tsx` | Modal/dialog overlay | `isOpen`, `onClose`, `title`, `size` |
 
 ### Layout Components (`src/components/layout/`)
 
@@ -59,6 +60,7 @@ Wireframe files under `docs/wireframe/` are reference layouts and interaction di
 | **MainLayout** | App shell with Header + TabBar |
 | **Header** | Fixed header with section switcher |
 | **TabBar** | Bottom navigation (Home, Search, Bookings, Profile) |
+| **SideDrawer** | Slide-in drawer for secondary navigation/menus |
 
 ### Card Components (`src/components/cards/`)
 

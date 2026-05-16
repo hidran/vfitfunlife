@@ -15,12 +15,16 @@
 
 | Layer | Technology | Purpose |
 |-------|------------|---------|
-| Frontend | Next.js 16, React 19, TypeScript | Web application framework |
-| Styling | Tailwind CSS, shadcn/ui | Component styling and UI library |
-| State Management | Zustand | Global state management |
+| Frontend | Next.js 16 (App Router, static export), React 19, TypeScript | Web application framework |
+| Styling | Tailwind CSS v4 (configured via `@tailwindcss/postcss`), shadcn/ui | Component styling and UI library |
+| State Management | Zustand (client stores) + TanStack Query (server state) | Global + cached server state |
+| Forms | React Hook Form + Zod | Form state and runtime validation |
+| i18n | Sprint i18n (messages in `src/i18n/`: it, en, es) | Multi-locale support |
 | Mobile | Capacitor | Native iOS/Android apps |
-| Backend | Firebase | Serverless backend platform |
-| Maps | Google Maps API | Location services and mapping |
+| Backend | Firebase (Auth, Firestore, Storage, Functions on Node.js 24, FCM, Analytics, Crashlytics, Remote Config) | Serverless backend platform |
+| Data Layer | Firebase Data Connect (GraphQL) — client in `src/dataconnect-generated/` | Typed GraphQL data access |
+| Maps | Google Maps API (`@react-google-maps/api`) | Location services and mapping |
+| Payments | Stripe | Payment processing |
 
 ## System Architecture
 
