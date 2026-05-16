@@ -497,7 +497,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           break;
         case 'auth/operation-not-allowed':
           errorMessage = 'Email/Password authentication is not enabled. Please contact support or use Google/Apple sign-in.';
-          console.error('[Firebase] Email/Password auth not enabled in Firebase Console. See docs/FIREBASE_AUTH_SETUP.md');
+          console.error('[Firebase] Email/Password auth not enabled in Firebase Console. See docs/backend/firebase-auth-setup.md');
           break;
         default:
           errorMessage = error.message || 'Failed to sign in';
@@ -546,7 +546,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           break;
         case 'auth/operation-not-allowed':
           errorMessage = 'Email/Password authentication is not enabled. Please contact support or use Google/Apple sign-in.';
-          console.error('[Firebase] Email/Password auth not enabled in Firebase Console. See docs/FIREBASE_AUTH_SETUP.md');
+          console.error('[Firebase] Email/Password auth not enabled in Firebase Console. See docs/backend/firebase-auth-setup.md');
           break;
         default:
           errorMessage = error.message || 'Failed to create account';

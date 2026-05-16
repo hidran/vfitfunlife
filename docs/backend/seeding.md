@@ -1,8 +1,8 @@
-# VFit Demo Data Seeding - Firebase Functions
+# Demo Data Seeding (Firebase Functions)
 
 ## Overview
 
-Three HTTP-triggered Firebase Functions have been created to seed and manage demo data for testing and development.
+Three HTTP-triggered Firebase Functions seed and manage demo data for testing and development. See `functions/docs/SEEDING.md` for a code-adjacent endpoint reference with full response JSON examples.
 
 ## Functions Created
 

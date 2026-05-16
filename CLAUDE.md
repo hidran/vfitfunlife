@@ -145,10 +145,15 @@ NEXT_PUBLIC_APP_URL=
 
 ## Related Documentation
 
-- `docs/database-schema.md` - Firestore collections & security rules
-- `docs/features.md` - Detailed feature requirements & screens
-- `docs/cloud-functions.md` - Backend API & Cloud Functions
-- `docs/design-system.md` - Colors, typography, components
+Start at [`docs/README.md`](docs/README.md) for the full index. Key references:
+
+- `docs/database-schema.md` — Firestore collections & security rules
+- `docs/features.md` — Detailed feature requirements & screens
+- `docs/backend/cloud-functions.md` — Backend API & Cloud Functions
+- `docs/backend/roles-and-permissions.md` — RBAC, Firestore rules, dev API
+- `docs/design-system.md` — Brand, tokens, typography, components
+- `docs/mobile/capacitor-guide.md` — iOS/Android build via Capacitor
+- `docs/deployment/guide.md` — Deployment
 
 ## Development Guidelines
 

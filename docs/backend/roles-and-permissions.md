@@ -601,3 +601,225 @@ A: Yes, but you'll lose provider features and any active bookings must be comple
 
 **Q: How long are admin actions logged?**
 A: Admin actions are logged indefinitely for compliance and security purposes.
+
+---
+
+# Developer API Reference
+
+The previous sections are the conceptual guide. The reference below documents the actual code surface: function signatures, permission strings, and data shapes implemented in `functions/`.
+
+## Implementation Files
+
+| Concern | Location |
+|---------|----------|
+| Role/permission/user types | `functions/src/types.ts` |
+| Role checking + permission validation utilities | `functions/src/utils/roles.ts` |
+| Role management cloud functions | `functions/src/users/roles.ts` |
+| User management cloud functions | `functions/src/users/index.ts` |
+| Booking permission checks | `functions/src/bookings/index.ts` |
+| Firestore security rules | `firestore.rules` |
+
+## Cloud Function Reference
+
+### Role Management
+
+#### `setUserRole` (superadmin only)
+```typescript
+{
+  userId: string;
+  role: 'superadmin' | 'admin' | 'provider' | 'customer';
+  customPermissions?: string[];
+  reason?: string;
+}
+```
+
+#### `getUserPermissions`
+Returns the current user's permissions and role info.
+```typescript
+{
+  userId: string;
+  role: UserRole;
+  permissions: Permission[];
+  isActive: boolean;
+  userType: string | null;
+  isProvider: boolean;
+  isAdmin: boolean;
+  isSuperAdmin: boolean;
+  canAccessAdminPanel: boolean;
+}
+```
+
+### Provider Management
+
+#### `createProviderProfile` (admin/superadmin creates; customer submits application)
+```typescript
+{
+  email: string;
+  fullName: string;
+  phone: string;
+  userType: UserType;
+  providerProfile?: {
+    bio?: string;
+    specialties?: string[];
+    yearsExperience?: number;
+    certifications?: string[];
+    languages?: string[];
+    hourlyRate?: number;
+  };
+  sendWelcomeEmail?: boolean;
+}
+```
+
+#### `updateProviderProfile`
+Providers update their own profile.
+
+#### `verifyProvider` (admin/superadmin only)
+```typescript
+{
+  providerId: string;
+  verified: boolean;
+  notes?: string;
+}
+```
+
+#### `listProviders`
+Public sees verified providers; staff sees all.
+```typescript
+{
+  userType?: UserType;
+  isVerified?: boolean;
+  limit?: number;
+  offset?: number;
+}
+```
+
+#### `listProviderTypes`
+Returns the list of available provider types.
+
+### User Management
+
+- `listUsers` (admin/superadmin only) — list all users
+- `setUserActiveStatus` (admin/superadmin only) — activate/deactivate accounts
+
+### Booking Functions
+
+- `getBooking` — users see own; providers see assigned; admins see all
+- `listBookings` — scoped by role (customer: own; provider: assigned; admin: all)
+- `cancelBooking` — users cancel own; providers cancel assigned; admins cancel any
+- `updateBookingStatus` — admin/superadmin only
+
+## Permission Strings
+
+| Permission | Description | Default Roles |
+|------------|-------------|---------------|
+| `users:read` | Read user data | superadmin, admin |
+| `users:write` | Write user data | superadmin, admin |
+| `users:delete` | Delete users | superadmin |
+| `users:manage_roles` | Manage user roles | superadmin |
+| `providers:read` | Read provider data | superadmin, admin, provider |
+| `providers:write` | Write provider data | superadmin, admin |
+| `providers:verify` | Verify providers | superadmin, admin |
+| `bookings:read` | Read bookings | superadmin, admin, provider, customer |
+| `bookings:write` | Create bookings | superadmin, admin, customer |
+| `bookings:cancel` | Cancel bookings | superadmin, admin, provider, customer |
+| `bookings:confirm` | Confirm bookings | superadmin, admin |
+| `venues:read` | Read venues | All roles |
+| `venues:write` | Write venues | superadmin, admin |
+| `venues:delete` | Delete venues | superadmin |
+| `services:read` | Read services | All roles |
+| `services:write` | Write services | superadmin, admin |
+| `services:delete` | Delete services | superadmin |
+| `config:read` | Read configuration | superadmin, admin |
+| `config:write` | Write configuration | superadmin, admin |
+| `reports:read` | Read reports | superadmin, admin |
+| `content:read` | Read content | All roles |
+| `content:write` | Write content | superadmin, admin |
+| `promotions:read` | Read promotions | All roles |
+| `promotions:write` | Write promotions | superadmin, admin |
+| `financial:read` | Read financial data | superadmin, admin |
+| `financial:write` | Write financial data | superadmin |
+
+## User Data Structure
+
+```typescript
+interface User {
+  // Core fields
+  uid: string;
+  email: string;
+  phone: string;
+  fullName: string;
+
+  // Role and permissions
+  role: 'superadmin' | 'admin' | 'provider' | 'customer';
+  userType?: string; // For providers
+  permissions: string[];
+
+  // Provider profile (when role === 'provider')
+  providerProfile?: {
+    bio: string;
+    specialties: string[];
+    certifications: string[];
+    yearsExperience: number;
+    languages: string[];
+    isVerified: boolean;
+    rating: number;
+    reviewCount: number;
+    hourlyRate?: number;
+  };
+
+  // Status
+  isActive: boolean;
+  isVerified: boolean;
+  isVip: boolean;
+}
+```
+
+## Provider Types
+
+`trainer`, `hairstylist`, `yoga_teacher`, `psychologist`, `pronunciation_coach`, `nutritionist`, `massage_therapist`, `personal_trainer`, `pilates_instructor`, `dance_instructor`, `other`
+
+## Audit Logging
+
+| Collection | Logs |
+|------------|------|
+| `roleChangeLogs` | Role assignments and changes |
+| `verificationLogs` | Provider verification decisions |
+| `userStatusLogs` | User activate/deactivate events |
+
+## Usage Example
+
+```javascript
+// Set user as provider (superadmin only)
+const setRole = firebase.functions().httpsCallable('setUserRole');
+await setRole({
+  userId: 'user123',
+  role: 'provider',
+  reason: 'New trainer hired',
+});
+
+// Create provider profile (admin/superadmin)
+const createProvider = firebase.functions().httpsCallable('createProviderProfile');
+await createProvider({
+  email: 'trainer@example.com',
+  fullName: 'John Doe',
+  phone: '+1234567890',
+  userType: 'personal_trainer',
+  providerProfile: {
+    bio: 'Certified personal trainer with 5 years experience',
+    specialties: ['weight loss', 'muscle building'],
+    yearsExperience: 5,
+  },
+});
+
+// Get current user permissions
+const getPerms = firebase.functions().httpsCallable('getUserPermissions');
+const result = await getPerms();
+console.log(result.data); // { role: 'customer', permissions: [...], ... }
+```
+
+## Migration Notes
+
+When migrating existing users:
+1. Default role is `customer`.
+2. Default permissions are calculated based on role.
+3. Existing providers must be updated with `userType` and `providerProfile`.
