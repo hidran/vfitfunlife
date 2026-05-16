@@ -1,6 +1,6 @@
 # Personal Profile Management (Cycle C1)
 
-**Status:** Draft → awaiting user review
+**Status:** ✅ Shipped 2026-05-16
 **Created:** 2026-05-16
 **Parent initiative:** Close API/backend gaps — sub-cycle 1 of 2 (C1 = personal profile; C2 = provider credentials, to follow)
 **Owner:** TBD
