@@ -38,4 +38,56 @@ describe('updateNotificationSettings', () => {
     const after = await admin.firestore().collection('users').doc(uid).get();
     expect(after.data()?.notificationSettings).toEqual(defaultNotificationSettings);
   });
+
+  it('rejects unauthenticated calls', async () => {
+    const wrapped = testEnv.wrap(profileModule.updateNotificationSettings);
+    await expect(
+      wrapped({ data: { settings: defaultNotificationSettings }, auth: undefined as any })
+    ).rejects.toMatchObject({ code: 'unauthenticated' });
+  });
+
+  it('rejects invalid shape', async () => {
+    const uid = 'user-2';
+    await admin.firestore().collection('users').doc(uid).set({ uid, role: 'customer' });
+    const wrapped = testEnv.wrap(profileModule.updateNotificationSettings);
+    await expect(
+      wrapped({
+        data: { settings: { push: { booking: 'yes' } } as any },
+        auth: { uid, token: {} as admin.auth.DecodedIdToken },
+      })
+    ).rejects.toMatchObject({ code: 'invalid-argument' });
+  });
+
+  it('migrates legacy notificationsEnabled on first write', async () => {
+    const uid = 'user-3';
+    await admin.firestore().collection('users').doc(uid).set({
+      uid,
+      role: 'customer',
+      notificationsEnabled: true,
+    });
+    const wrapped = testEnv.wrap(profileModule.updateNotificationSettings);
+    await wrapped({
+      data: { settings: defaultNotificationSettings },
+      auth: { uid, token: {} as admin.auth.DecodedIdToken },
+    });
+    const after = await admin.firestore().collection('users').doc(uid).get();
+    expect(after.data()?.notificationSettings).toEqual(defaultNotificationSettings);
+    expect(after.data()?.notificationsEnabled).toBeUndefined();
+  });
+
+  it('writes one auditLogs entry per successful call', async () => {
+    const uid = 'user-4';
+    await admin.firestore().collection('users').doc(uid).set({ uid, role: 'customer' });
+    const wrapped = testEnv.wrap(profileModule.updateNotificationSettings);
+    await wrapped({
+      data: { settings: defaultNotificationSettings },
+      auth: { uid, token: {} as admin.auth.DecodedIdToken },
+    });
+    const logs = await admin.firestore()
+      .collection('auditLogs')
+      .where('uid', '==', uid)
+      .where('action', '==', 'profile.notifications.update')
+      .get();
+    expect(logs.size).toBe(1);
+  });
 });
