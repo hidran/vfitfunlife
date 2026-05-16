@@ -40,6 +40,11 @@ import { Timestamp } from 'firebase/firestore';
 import { SocialLinks, NotificationSettings as NotificationSettingsType, PrivacySettings } from '@/types/firebase';
 import { useI18n } from '@/hooks/useI18n';
 import type { MessageKey } from '@/i18n/messages';
+import { AvatarUploader } from '@/components/profile/AvatarUploader';
+import { SocialLinksForm } from '@/components/profile/SocialLinksForm';
+import { NotificationSettingsForm } from '@/components/profile/NotificationSettingsForm';
+import { PrivacySettingsForm } from '@/components/profile/PrivacySettingsForm';
+import { defaultNotificationSettings, defaultPrivacySettings } from '@/types/profile';
 
 // Form validation
 interface FormErrors {
@@ -1014,6 +1019,30 @@ export default function EditProfilePage() {
               </Button>
             </div>
           </div>
+        )}
+
+        {user && (
+          <>
+            <section id="avatar" className="mt-8 space-y-3">
+              <h2 className="text-lg font-semibold">Avatar</h2>
+              <AvatarUploader currentUrl={user.avatarUrl ?? null} uid={user.uid} />
+            </section>
+
+            <section id="social" className="mt-8 space-y-3">
+              <h2 className="text-lg font-semibold">Social links</h2>
+              <SocialLinksForm initial={(user as any).socialLinks ?? {}} />
+            </section>
+
+            <section id="notifications" className="mt-8 space-y-3">
+              <h2 className="text-lg font-semibold">Notification preferences</h2>
+              <NotificationSettingsForm initial={(user as any).notificationSettings ?? defaultNotificationSettings} />
+            </section>
+
+            <section id="privacy" className="mt-8 space-y-3">
+              <h2 className="text-lg font-semibold">Privacy</h2>
+              <PrivacySettingsForm initial={(user as any).privacySettings ?? defaultPrivacySettings} />
+            </section>
+          </>
         )}
       </div>
 
