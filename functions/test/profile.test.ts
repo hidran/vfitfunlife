@@ -131,3 +131,49 @@ describe('updatePrivacySettings', () => {
     ).rejects.toMatchObject({ code: 'unauthenticated' });
   });
 });
+
+describe('updateSocialLinks', () => {
+  it('writes valid social links', async () => {
+    const uid = 'soc-1';
+    await admin.firestore().collection('users').doc(uid).set({ uid, role: 'customer' });
+    const wrapped = testEnv.wrap(profileModule.updateSocialLinks);
+    const links = {
+      instagram: 'https://instagram.com/test_user',
+      twitter: 'https://x.com/test_user',
+      website: 'https://example.com',
+    };
+    await wrapped({
+      data: { socialLinks: links },
+      auth: { uid, token: {} as admin.auth.DecodedIdToken },
+    });
+    const after = await admin.firestore().collection('users').doc(uid).get();
+    expect(after.data()?.socialLinks).toEqual(links);
+  });
+
+  it('rejects invalid instagram URL', async () => {
+    const uid = 'soc-2';
+    await admin.firestore().collection('users').doc(uid).set({ uid, role: 'customer' });
+    const wrapped = testEnv.wrap(profileModule.updateSocialLinks);
+    await expect(
+      wrapped({
+        data: { socialLinks: { instagram: 'not-a-url' } },
+        auth: { uid, token: {} as admin.auth.DecodedIdToken },
+      })
+    ).rejects.toMatchObject({ code: 'invalid-argument' });
+  });
+
+  it('treats empty string as clear', async () => {
+    const uid = 'soc-3';
+    await admin.firestore().collection('users').doc(uid).set({
+      uid, role: 'customer',
+      socialLinks: { instagram: 'https://instagram.com/old_handle' },
+    });
+    const wrapped = testEnv.wrap(profileModule.updateSocialLinks);
+    await wrapped({
+      data: { socialLinks: { instagram: '' } },
+      auth: { uid, token: {} as admin.auth.DecodedIdToken },
+    });
+    const after = await admin.firestore().collection('users').doc(uid).get();
+    expect(after.data()?.socialLinks).toEqual({ instagram: '' });
+  });
+});

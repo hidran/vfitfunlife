@@ -3,8 +3,10 @@ import * as admin from 'firebase-admin';
 import {
   NotificationSettingsSchema,
   PrivacySettingsSchema,
+  SocialLinksSchema,
   type NotificationSettings,
   type PrivacySettings,
+  type SocialLinks,
 } from '../types';
 
 if (admin.apps.length === 0) admin.initializeApp();
@@ -86,6 +88,40 @@ export const updatePrivacySettings = onCall<UpdatePrivacySettingsData>(
       tx.set(db().collection('auditLogs').doc(), {
         uid, actor: uid,
         action: 'profile.privacy.update',
+        changes: { before, after: parsed.data },
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        ip: request.rawRequest?.ip ?? null,
+        userAgent: request.rawRequest?.headers?.['user-agent'] ?? null,
+      });
+    });
+    return { success: true } as const;
+  }
+);
+
+interface UpdateSocialLinksData { socialLinks: SocialLinks; }
+
+export const updateSocialLinks = onCall<UpdateSocialLinksData>(
+  { region: 'europe-west1' },
+  async (request) => {
+    if (!request.auth) throw new HttpsError('unauthenticated', 'Must be authenticated.');
+    const parsed = SocialLinksSchema.safeParse(request.data?.socialLinks);
+    if (!parsed.success) {
+      throw new HttpsError('invalid-argument', `Invalid social links: ${parsed.error.message}`);
+    }
+    const uid = request.auth.uid;
+    const userRef = db().collection('users').doc(uid);
+
+    await db().runTransaction(async (tx) => {
+      const snap = await tx.get(userRef);
+      if (!snap.exists) throw new HttpsError('not-found', 'User document does not exist.');
+      const before = snap.data()?.socialLinks ?? null;
+      tx.update(userRef, {
+        socialLinks: parsed.data,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      tx.set(db().collection('auditLogs').doc(), {
+        uid, actor: uid,
+        action: 'profile.social.update',
         changes: { before, after: parsed.data },
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
         ip: request.rawRequest?.ip ?? null,
