@@ -74,7 +74,6 @@ export const initializeUserProfile = onCall(
       // Preferences
       preferredLanguage: "it",
       preferredSection: "fit",
-      notificationsEnabled: true,
 
       // Push tokens
       fcmTokens: [],

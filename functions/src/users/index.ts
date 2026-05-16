@@ -88,7 +88,6 @@ export const updateProfile = onCall<UserUpdateData>(
       "dateOfBirth",
       "preferredLanguage",
       "preferredSection",
-      "notificationsEnabled",
       "avatarUrl",
     ];
 

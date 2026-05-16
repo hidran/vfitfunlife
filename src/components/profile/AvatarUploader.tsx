@@ -12,9 +12,10 @@ interface Props { currentUrl: string | null; uid: string; onUploaded?: (url: str
 async function resizeToSquare(file: File, size = 512): Promise<Blob> {
   const img = await new Promise<HTMLImageElement>((resolve, reject) => {
     const el = new Image();
-    el.onload = () => resolve(el);
-    el.onerror = reject;
-    el.src = URL.createObjectURL(file);
+    const objectUrl = URL.createObjectURL(file);
+    el.onload = () => { URL.revokeObjectURL(objectUrl); resolve(el); };
+    el.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('Image load failed')); };
+    el.src = objectUrl;
   });
   const canvas = document.createElement('canvas');
   canvas.width = size; canvas.height = size;
