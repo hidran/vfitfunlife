@@ -21,9 +21,9 @@ describe('NotificationSettingsForm', () => {
 
   it('saves toggled state on submit', async () => {
     render(wrap(<NotificationSettingsForm initial={defaultNotificationSettings} />));
-    const promoToggle = screen.getByLabelText(/push.*promotion/i);
+    const promoToggle = screen.getByLabelText(/push.*(promotion|promozioni)/i);
     fireEvent.click(promoToggle);
-    fireEvent.click(screen.getByRole('button', { name: /save/i }));
+    fireEvent.click(screen.getByRole('button', { name: /save|salva/i }));
     await vi.waitFor(() => {
       expect(mockMutate).toHaveBeenCalledWith(expect.objectContaining({
         push: expect.objectContaining({ promotion: true }),

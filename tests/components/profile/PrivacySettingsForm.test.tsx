@@ -14,16 +14,16 @@ function wrap(ui: React.ReactNode) { return <QueryClientProvider client={new Que
 describe('PrivacySettingsForm', () => {
   it('renders visibility radio + toggles', () => {
     render(wrap(<PrivacySettingsForm initial={defaultPrivacySettings} />));
-    expect(screen.getByLabelText(/^public$/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/verified.*only/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^private$/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/show email/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^(public|pubblico)$/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/verified.*only|solo.*verificati/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^(private|privato)$/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/show email|mostra email/i)).toBeInTheDocument();
   });
 
   it('submits changed visibility', async () => {
     render(wrap(<PrivacySettingsForm initial={defaultPrivacySettings} />));
-    fireEvent.click(screen.getByLabelText(/^private$/i));
-    fireEvent.click(screen.getByRole('button', { name: /save/i }));
+    fireEvent.click(screen.getByLabelText(/^(private|privato)$/i));
+    fireEvent.click(screen.getByRole('button', { name: /save|salva/i }));
     await vi.waitFor(() => {
       expect(mockMutate).toHaveBeenCalledWith(expect.objectContaining({ profileVisibility: 'private' }));
     });

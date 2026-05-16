@@ -18,7 +18,7 @@ function wrap(ui: React.ReactNode) { return <QueryClientProvider client={new Que
 describe('AvatarUploader', () => {
   it('renders a file picker', () => {
     render(wrap(<AvatarUploader currentUrl={null} uid="u1" />));
-    expect(screen.getByLabelText(/upload.*avatar/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/upload.*avatar|carica.*avatar/i)).toBeInTheDocument();
   });
 
   it('shows current avatar when provided', () => {

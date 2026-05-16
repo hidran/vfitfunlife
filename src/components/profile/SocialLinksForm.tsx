@@ -6,19 +6,23 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useUpdateSocialLinks } from '@/lib/profile-mutations';
 import { Instagram, Facebook, Twitter, Linkedin, Globe, Music } from 'lucide-react';
+import { useI18n } from '@/hooks/useI18n';
 
 interface Props { initial: SocialLinks; onSaved?: () => void; }
 
-const fields: Array<{ name: keyof SocialLinks; label: string; icon: React.ComponentType<any>; placeholder: string }> = [
-  { name: 'instagram', label: 'Instagram',   icon: Instagram, placeholder: 'https://instagram.com/your_handle' },
-  { name: 'facebook',  label: 'Facebook',    icon: Facebook,  placeholder: 'https://facebook.com/your.page' },
-  { name: 'twitter',   label: 'Twitter / X', icon: Twitter,   placeholder: 'https://x.com/your_handle' },
-  { name: 'linkedin',  label: 'LinkedIn',    icon: Linkedin,  placeholder: 'https://linkedin.com/in/your-name' },
-  { name: 'tiktok',    label: 'TikTok',      icon: Music,     placeholder: 'https://tiktok.com/@your_handle' },
-  { name: 'website',   label: 'Website',     icon: Globe,     placeholder: 'https://example.com' },
+type SocialFieldDef = { name: keyof SocialLinks; icon: React.ComponentType<any>; placeholder: string };
+
+const fieldDefs: SocialFieldDef[] = [
+  { name: 'instagram', icon: Instagram, placeholder: 'https://instagram.com/your_handle' },
+  { name: 'facebook',  icon: Facebook,  placeholder: 'https://facebook.com/your.page' },
+  { name: 'twitter',   icon: Twitter,   placeholder: 'https://x.com/your_handle' },
+  { name: 'linkedin',  icon: Linkedin,  placeholder: 'https://linkedin.com/in/your-name' },
+  { name: 'tiktok',    icon: Music,     placeholder: 'https://tiktok.com/@your_handle' },
+  { name: 'website',   icon: Globe,     placeholder: 'https://example.com' },
 ];
 
 export function SocialLinksForm({ initial, onSaved }: Props) {
+  const { t } = useI18n();
   const mut = useUpdateSocialLinks();
   const { register, handleSubmit, formState } = useForm<SocialLinks>({
     resolver: zodResolver(SocialLinksSchema),
@@ -33,10 +37,10 @@ export function SocialLinksForm({ initial, onSaved }: Props) {
         onSaved?.();
       })}
     >
-      {fields.map(({ name, label, icon: Icon, placeholder }) => (
+      {fieldDefs.map(({ name, icon: Icon, placeholder }) => (
         <div key={name}>
           <label htmlFor={`social-${name}`} className="flex items-center gap-2 text-sm font-medium">
-            <Icon className="h-4 w-4" /> {label}
+            <Icon className="h-4 w-4" /> {t(`profile.settings.social.${name}` as any)}
           </label>
           <Input id={`social-${name}`} type="text" placeholder={placeholder} {...register(name)} />
           {formState.errors[name] && (
@@ -44,7 +48,7 @@ export function SocialLinksForm({ initial, onSaved }: Props) {
           )}
         </div>
       ))}
-      <Button type="submit" isLoading={mut.isPending}>Save</Button>
+      <Button type="submit" isLoading={mut.isPending}>{t('profile.settings.save')}</Button>
     </form>
   );
 }

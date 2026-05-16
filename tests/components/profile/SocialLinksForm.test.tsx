@@ -29,7 +29,7 @@ describe('SocialLinksForm', () => {
   it('shows validation error for malformed instagram URL', async () => {
     render(wrap(<SocialLinksForm initial={{}} />));
     fireEvent.change(screen.getByLabelText(/instagram/i), { target: { value: 'not-a-url' } });
-    fireEvent.click(screen.getByRole('button', { name: /save/i }));
+    fireEvent.click(screen.getByRole('button', { name: /save|salva/i }));
     await waitFor(() => expect(screen.getByText(/Invalid Instagram URL/i)).toBeInTheDocument());
   });
 });

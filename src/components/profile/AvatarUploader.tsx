@@ -4,6 +4,7 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Button } from '@/components/ui/button';
 import { useUpdateAvatar } from '@/lib/profile-mutations';
 import { Camera } from 'lucide-react';
+import { useI18n } from '@/hooks/useI18n';
 
 interface Props { currentUrl: string | null; uid: string; onUploaded?: (url: string) => void; }
 
@@ -26,6 +27,7 @@ async function resizeToSquare(file: File, size = 512): Promise<Blob> {
 }
 
 export function AvatarUploader({ currentUrl, uid, onUploaded }: Props) {
+  const { t } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,10 +68,10 @@ export function AvatarUploader({ currentUrl, uid, onUploaded }: Props) {
           accept="image/*"
           onChange={onPick}
           className="sr-only"
-          aria-label="Upload avatar"
+          aria-label={t('profile.settings.avatar.uploadCta')}
         />
         <Button type="button" isLoading={busy || mut.isPending} onClick={() => inputRef.current?.click()}>
-          <Camera className="mr-2 h-4 w-4" /> Upload avatar
+          <Camera className="mr-2 h-4 w-4" /> {t('profile.settings.avatar.uploadCta')}
         </Button>
       </label>
       {error && <p className="text-xs text-error">{error}</p>}
