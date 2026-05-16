@@ -11,6 +11,9 @@ export * from "./roles";
 // Export user type functions
 export * from "./userTypes";
 
+// Export profile functions
+export * from "./profile";
+
 interface UserUpdateData {
   fullName?: string;
   dateOfBirth?: string;

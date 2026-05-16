@@ -39,7 +39,8 @@ export const updateNotificationSettings = onCall<UpdateNotificationSettingsData>
       }
       const before = snap.data()?.notificationSettings ?? null;
 
-      const update: Record<string, unknown> = {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const update: any = {
         notificationSettings: parsed.data,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       };
