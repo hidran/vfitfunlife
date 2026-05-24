@@ -1416,6 +1416,388 @@ export async function generateDemoData(): Promise<SeedingResult[]> {
   return results;
 }
 
+export async function generateDemoContent(): Promise<SeedingResult[]> {
+  const results: SeedingResult[] = [];
+  const now = Timestamp.now();
+
+  // ===== fitnessClasses =====
+  try {
+    const FITNESS_CLASS_DATA = [
+      {
+        id: "class-yoga-01", title: "Morning Power Yoga",
+        category: "yoga", trainer: "Elisa Serra", time: "08:30",
+        durationMinutes: 60, spotsLeft: 6,
+      },
+      {
+        id: "class-yoga-02", title: "Yoga Restorativo",
+        category: "yoga", trainer: "Giulia Neri", time: "17:00",
+        durationMinutes: 60, spotsLeft: 8,
+      },
+      {
+        id: "class-hiit-01", title: "HIIT Burn",
+        category: "hiit", trainer: "Marco Vitali", time: "12:15",
+        durationMinutes: 45, spotsLeft: 4,
+      },
+      {
+        id: "class-hiit-02", title: "HIIT Express",
+        category: "hiit", trainer: "Andrea Rossi", time: "07:00",
+        durationMinutes: 30, spotsLeft: 3,
+      },
+      {
+        id: "class-pilates-01", title: "Pilates Core Flow",
+        category: "pilates", trainer: "Giulia Neri", time: "17:30",
+        durationMinutes: 50, spotsLeft: 8,
+      },
+      {
+        id: "class-pilates-02", title: "Pilates Reformer",
+        category: "pilates", trainer: "Sara Bianchi", time: "19:30",
+        durationMinutes: 55, spotsLeft: 6,
+      },
+      {
+        id: "class-functional-01", title: "Functional Circuit",
+        category: "functional", trainer: "Andrea Rossi", time: "19:00",
+        durationMinutes: 55, spotsLeft: 3,
+      },
+      {
+        id: "class-functional-02", title: "Functional 360",
+        category: "functional", trainer: "Luca Ferri", time: "12:00",
+        durationMinutes: 60, spotsLeft: 5,
+      },
+      {
+        id: "class-cardio-01", title: "Spinning Class",
+        category: "cardio", trainer: "Davide Marino", time: "18:30",
+        durationMinutes: 45, spotsLeft: 4,
+      },
+      {
+        id: "class-cardio-02", title: "Zumba Dance",
+        category: "cardio", trainer: "Valentina Esposito", time: "20:00",
+        durationMinutes: 60, spotsLeft: 12,
+      },
+      {
+        id: "class-strength-01", title: "Body Pump",
+        category: "strength", trainer: "Marco Vitali", time: "18:00",
+        durationMinutes: 55, spotsLeft: 5,
+      },
+      {
+        id: "class-strength-02", title: "Strength & Power",
+        category: "strength", trainer: "Anna Conti", time: "06:30",
+        durationMinutes: 60, spotsLeft: 4,
+      },
+    ];
+    const batch = db.batch();
+    for (const c of FITNESS_CLASS_DATA) {
+      batch.set(
+        db.collection("fitnessClasses").doc(c.id),
+        { ...c, rating: 4.7, isActive: true, createdAt: now, updatedAt: now },
+        { merge: true }
+      );
+    }
+    await batch.commit();
+    results.push({
+      success: true,
+      collection: "fitnessClasses",
+      count: FITNESS_CLASS_DATA.length,
+    });
+  } catch (error) {
+    results.push({
+      success: false,
+      collection: "fitnessClasses",
+      count: 0,
+      error: error instanceof Error ? error.message : "Unknown",
+    });
+  }
+
+  // ===== homeTrainingServices =====
+  try {
+    const HOME_SERVICES = [
+      {
+        id: "home-1", title: "Personal Training 1:1",
+        coach: "Luca Ferri", eta: "Disponibile oggi 18:00",
+        rating: 4.9, fromPrice: "Da EUR 55",
+      },
+      {
+        id: "home-2", title: "Mobility & Recovery",
+        coach: "Giulia Neri", eta: "Disponibile domani 09:30",
+        rating: 4.8, fromPrice: "Da EUR 49",
+      },
+      {
+        id: "home-3", title: "Functional Duo Session",
+        coach: "Andrea Rossi", eta: "Disponibile domani 19:00",
+        rating: 4.7, fromPrice: "Da EUR 62",
+      },
+      {
+        id: "home-4", title: "Personal Training Outdoor",
+        coach: "Marco Vitali", eta: "Disponibile sabato 10:00",
+        rating: 4.8, fromPrice: "Da EUR 60",
+      },
+      {
+        id: "home-5", title: "Recupero Posturale",
+        coach: "Sara Bianchi", eta: "Disponibile lunedi 17:30",
+        rating: 4.9, fromPrice: "Da EUR 70",
+      },
+      {
+        id: "home-6", title: "Coaching Online Live",
+        coach: "Valentina Esposito", eta: "Disponibile stasera 21:00",
+        rating: 4.6, fromPrice: "Da EUR 35",
+      },
+    ];
+    const batch = db.batch();
+    for (const s of HOME_SERVICES) {
+      batch.set(
+        db.collection("homeTrainingServices").doc(s.id),
+        { ...s, isActive: true, createdAt: now, updatedAt: now },
+        { merge: true }
+      );
+    }
+    await batch.commit();
+    results.push({
+      success: true,
+      collection: "homeTrainingServices",
+      count: HOME_SERVICES.length,
+    });
+  } catch (error) {
+    results.push({
+      success: false,
+      collection: "homeTrainingServices",
+      count: 0,
+      error: error instanceof Error ? error.message : "Unknown",
+    });
+  }
+
+  // ===== virtualPrograms =====
+  try {
+    const VIRTUAL_PROGRAMS = [
+      {
+        id: "virtual-1", title: "Live HIIT Express",
+        level: "Intermedio", durationMinutes: 30, rating: 4.8, live: true,
+      },
+      {
+        id: "virtual-2", title: "Yoga Mobility Flow",
+        level: "Tutti", durationMinutes: 40, rating: 4.7, live: false,
+      },
+      {
+        id: "virtual-3", title: "Strength at Home",
+        level: "Avanzato", durationMinutes: 50, rating: 4.9, live: false,
+      },
+      {
+        id: "virtual-4", title: "Cardio Dance Live",
+        level: "Tutti", durationMinutes: 35, rating: 4.6, live: true,
+      },
+      {
+        id: "virtual-5", title: "Pilates Foundations",
+        level: "Principiante", durationMinutes: 45, rating: 4.8, live: false,
+      },
+      {
+        id: "virtual-6", title: "Functional Express",
+        level: "Intermedio", durationMinutes: 25, rating: 4.7, live: false,
+      },
+    ];
+    const batch = db.batch();
+    for (const p of VIRTUAL_PROGRAMS) {
+      batch.set(
+        db.collection("virtualPrograms").doc(p.id),
+        { ...p, isActive: true, createdAt: now, updatedAt: now },
+        { merge: true }
+      );
+    }
+    await batch.commit();
+    results.push({
+      success: true,
+      collection: "virtualPrograms",
+      count: VIRTUAL_PROGRAMS.length,
+    });
+  } catch (error) {
+    results.push({
+      success: false,
+      collection: "virtualPrograms",
+      count: 0,
+      error: error instanceof Error ? error.message : "Unknown",
+    });
+  }
+
+  // ===== testimonials =====
+  try {
+    const TESTIMONIALS = [
+      {
+        id: "test-1", userName: "Sofia M.", rating: 5,
+        text: "Esperienza fantastica! Lo staff e super professionale.",
+        serviceLabel: "Personal Training", date: "2 giorni fa",
+      },
+      {
+        id: "test-2", userName: "Andrea L.", rating: 5,
+        text: "Risultati visibili gia dopo il primo mese.",
+        serviceLabel: "Personal Training", date: "1 settimana fa",
+      },
+      {
+        id: "test-3", userName: "Chiara F.", rating: 4,
+        text: "Le lezioni di yoga sono rilassanti e ben strutturate.",
+        serviceLabel: "Yoga", date: "3 giorni fa",
+      },
+      {
+        id: "test-4", userName: "Marco P.", rating: 5,
+        text: "Coach Marco e davvero motivante. Lo consiglio!",
+        serviceLabel: "Personal Training", date: "2 settimane fa",
+      },
+      {
+        id: "test-5", userName: "Elena R.", rating: 5,
+        text: "Centro pulito, attrezzature nuove, prezzi onesti.",
+        serviceLabel: "Abbonamento mensile", date: "5 giorni fa",
+      },
+      {
+        id: "test-6", userName: "Davide S.", rating: 4,
+        text: "Ambiente accogliente e personale qualificato.",
+        serviceLabel: "Functional", date: "1 mese fa",
+      },
+    ];
+    const batch = db.batch();
+    for (const t of TESTIMONIALS) {
+      batch.set(
+        db.collection("testimonials").doc(t.id),
+        { ...t, avatarUrl: null, createdAt: now },
+        { merge: true }
+      );
+    }
+    await batch.commit();
+    results.push({
+      success: true,
+      collection: "testimonials",
+      count: TESTIMONIALS.length,
+    });
+  } catch (error) {
+    results.push({
+      success: false,
+      collection: "testimonials",
+      count: 0,
+      error: error instanceof Error ? error.message : "Unknown",
+    });
+  }
+
+  // ===== transactions (admin/payments) =====
+  try {
+    const TRANSACTIONS = [
+      {
+        id: "tx-1", type: "booking_payment", amount: 150, status: "completed",
+        description: "Personal Training Session",
+        customerName: "Marco Rossi", providerName: "Luca Ferri",
+      },
+      {
+        id: "tx-2", type: "commission", amount: 22.5, status: "completed",
+        description: "Platform commission (15%)",
+        customerName: "-", providerName: "Luca Ferri",
+      },
+      {
+        id: "tx-3", type: "payout", amount: 127.5, status: "pending",
+        description: "Provider payout",
+        customerName: "-", providerName: "Luca Ferri",
+      },
+      {
+        id: "tx-4", type: "refund", amount: 150, status: "completed",
+        description: "Refund for cancelled booking",
+        customerName: "Anna Bianchi", providerName: "Sara Bianchi",
+      },
+      {
+        id: "tx-5", type: "booking_payment", amount: 70, status: "completed",
+        description: "Pilates Reformer",
+        customerName: "Chiara Fontana", providerName: "Sara Bianchi",
+      },
+      {
+        id: "tx-6", type: "booking_payment", amount: 90, status: "completed",
+        description: "Mobility & Recovery",
+        customerName: "Davide Marino", providerName: "Giulia Neri",
+      },
+      {
+        id: "tx-7", type: "commission", amount: 13.5, status: "completed",
+        description: "Platform commission (15%)",
+        customerName: "-", providerName: "Giulia Neri",
+      },
+      {
+        id: "tx-8", type: "payout", amount: 76.5, status: "completed",
+        description: "Provider payout",
+        customerName: "-", providerName: "Giulia Neri",
+      },
+      {
+        id: "tx-9", type: "booking_payment", amount: 60, status: "pending",
+        description: "Yoga Flow Session",
+        customerName: "Elena Romano", providerName: "Elisa Serra",
+      },
+      {
+        id: "tx-10", type: "booking_payment", amount: 55, status: "failed",
+        description: "HIIT Class",
+        customerName: "Paolo Greco", providerName: "Marco Vitali",
+      },
+    ];
+    const batch = db.batch();
+    const baseTime = Date.now();
+    for (let i = 0; i < TRANSACTIONS.length; i++) {
+      const t = TRANSACTIONS[i];
+      // one per day going back
+      const created = Timestamp.fromMillis(baseTime - i * 24 * 60 * 60 * 1000);
+      batch.set(
+        db.collection("transactions").doc(t.id),
+        { ...t, createdAt: created },
+        { merge: true }
+      );
+    }
+    await batch.commit();
+    results.push({
+      success: true,
+      collection: "transactions",
+      count: TRANSACTIONS.length,
+    });
+  } catch (error) {
+    results.push({
+      success: false,
+      collection: "transactions",
+      count: 0,
+      error: error instanceof Error ? error.message : "Unknown",
+    });
+  }
+
+  // ===== reviews on a few instructors =====
+  try {
+    const SAMPLE_REVIEWS = [
+      { userName: "Sofia M.", rating: 5, text: "Allenamento perfetto, motivante e ben strutturato." },
+      { userName: "Andrea L.", rating: 5, text: "Marco e davvero preparato. Consigliato!" },
+      { userName: "Chiara F.", rating: 4, text: "Buon coach, sempre disponibile." },
+      { userName: "Marco P.", rating: 5, text: "Risultati visibili dopo poche settimane." },
+      { userName: "Elena R.", rating: 4, text: "Sessioni intense ma personalizzate." },
+    ];
+    const targetInstructors = [
+      "provider-1",
+      "demo-trainer-yoga-01",
+      "demo-trainer-personal-training-01",
+      "demo-trainer-pilates-01",
+    ];
+    const batch = db.batch();
+    let count = 0;
+    for (const instructorId of targetInstructors) {
+      for (let i = 0; i < SAMPLE_REVIEWS.length; i++) {
+        const r = SAMPLE_REVIEWS[i];
+        batch.set(
+          db.collection("instructors")
+            .doc(instructorId)
+            .collection("reviews")
+            .doc(`review-${i + 1}`),
+          { ...r, avatarUrl: null, createdAt: now },
+          { merge: true }
+        );
+        count++;
+      }
+    }
+    await batch.commit();
+    results.push({ success: true, collection: "instructor reviews", count });
+  } catch (error) {
+    results.push({
+      success: false,
+      collection: "instructor reviews",
+      count: 0,
+      error: error instanceof Error ? error.message : "Unknown",
+    });
+  }
+
+  return results;
+}
+
 // ============================================================================
 // HTTP Cloud Functions
 // ============================================================================
