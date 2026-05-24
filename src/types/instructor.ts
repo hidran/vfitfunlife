@@ -18,7 +18,7 @@ export interface Provider {
   updatedAt?: Timestamp;
 }
 
-export interface ProviderService {
+export interface InstructorService {
   id: string;
   name: string;
   description?: string;

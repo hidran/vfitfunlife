@@ -4,10 +4,12 @@ import type { Timestamp } from 'firebase/firestore';
 export type VenueType = 'gym' | 'wellness_center' | 'spa' | 'beauty_salon';
 
 export type AmenityKind =
-  | 'sala_pesi'
+  | 'weights'
   | 'wifi'
-  | 'parcheggio'
-  | 'docce'
+  | 'parking'
+  | 'showers'
+  | 'lockers'
+  | 'bar'
   | 'sauna'
   | 'pool'
   | 'crossfit'
@@ -16,7 +18,6 @@ export type AmenityKind =
   | 'pilates'
   | 'spa'
   | 'tennis'
-  | 'weights'
   | 'cardio';
 
 export interface AmenityRef {

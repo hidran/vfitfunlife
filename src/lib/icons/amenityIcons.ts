@@ -4,6 +4,8 @@ import {
   Wifi,
   Car,
   Droplet,
+  Lock,
+  Coffee,
   Bath,
   Waves,
   Flame,
@@ -16,10 +18,12 @@ import {
 import type { AmenityKind } from '@/types/venue';
 
 export const AMENITY_ICONS: Record<AmenityKind, LucideIcon> = {
-  sala_pesi: Dumbbell,
+  weights: Dumbbell,
   wifi: Wifi,
-  parcheggio: Car,
-  docce: Droplet,
+  parking: Car,
+  showers: Droplet,
+  lockers: Lock,
+  bar: Coffee,
   sauna: Bath,
   pool: Waves,
   crossfit: Flame,
@@ -28,7 +32,6 @@ export const AMENITY_ICONS: Record<AmenityKind, LucideIcon> = {
   pilates: Sparkles,
   spa: Sparkles,
   tennis: Square,
-  weights: Dumbbell,
   cardio: Activity,
 };
 
