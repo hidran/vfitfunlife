@@ -1,12 +1,16 @@
-import { venues } from './data';
 import VenueDetailClient from './VenueDetailClient';
 
-export async function generateStaticParams() {
-  return venues.map((venue) => ({
-    id: venue.id,
-  }));
+export const dynamicParams = false;
+
+export function generateStaticParams() {
+  return [{ id: 'placeholder' }];
 }
 
-export default function VenueDetailPage({ params }: { params: { id: string } }) {
-  return <VenueDetailClient id={params.id} />;
+export default async function VenueDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  await params;
+  return <VenueDetailClient />;
 }
