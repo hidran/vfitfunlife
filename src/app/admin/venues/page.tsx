@@ -12,6 +12,8 @@ import {
   Store,
   Phone,
 } from "lucide-react";
+import { useVenues } from "@/hooks/useVenues";
+import { Spinner } from "@/components/ui/Spinner";
 
 interface Venue {
   id: string;
@@ -32,48 +34,21 @@ export default function VenuesPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
 
-  // Mock data
-  const venues: Venue[] = [
-    {
-      id: "1",
-      name: "Fitness Hub Milano",
-      type: "gym",
-      address: "Via Roma 123",
-      city: "Milano",
-      phone: "+39 02 1234567",
-      rating: 4.8,
-      reviewCount: 124,
-      isActive: true,
-      isPartner: true,
-      createdAt: new Date("2024-01-15"),
-    },
-    {
-      id: "2",
-      name: "Zen Wellness Center",
-      type: "wellness_center",
-      address: "Corso Buenos Aires 456",
-      city: "Milano",
-      phone: "+39 02 7654321",
-      rating: 4.5,
-      reviewCount: 89,
-      isActive: true,
-      isPartner: true,
-      createdAt: new Date("2024-02-01"),
-    },
-    {
-      id: "3",
-      name: "Beauty Spa Roma",
-      type: "beauty_salon",
-      address: "Via del Corso 789",
-      city: "Roma",
-      phone: "+39 06 1234567",
-      rating: 4.2,
-      reviewCount: 56,
-      isActive: false,
-      isPartner: false,
-      createdAt: new Date("2024-02-15"),
-    },
-  ];
+  const { data: firestoreVenues = [], isLoading } = useVenues({});
+
+  const venues: Venue[] = firestoreVenues.map((v) => ({
+    id: v.id,
+    name: v.name,
+    type: v.type,
+    address: v.address,
+    city: v.city,
+    phone: '',
+    rating: v.rating,
+    reviewCount: v.reviewCount,
+    isActive: v.isActive,
+    isPartner: v.isPartner,
+    createdAt: v.createdAt?.toDate?.() ?? new Date(),
+  }));
 
   const columns: Column<Venue>[] = [
     {
@@ -230,20 +205,24 @@ export default function VenuesPage() {
       />
 
       {/* Data Table */}
-      <DataTable
-        data={filteredVenues}
-        columns={columns}
-        keyExtractor={(venue) => venue.id}
-        onRowClick={(venue) => {
-          console.log("View venue:", venue.id);
-        }}
-        actions={{
-          view: (venue) => console.log("View:", venue.id),
-          edit: (venue) => console.log("Edit:", venue.id),
-          delete: (venue) => console.log("Delete:", venue.id),
-        }}
-        emptyMessage="No venues found"
-      />
+      {isLoading ? (
+        <div className="flex justify-center p-8"><Spinner size="md" /></div>
+      ) : (
+        <DataTable
+          data={filteredVenues}
+          columns={columns}
+          keyExtractor={(venue) => venue.id}
+          onRowClick={(venue) => {
+            console.log("View venue:", venue.id);
+          }}
+          actions={{
+            view: (venue) => console.log("View:", venue.id),
+            edit: (venue) => console.log("Edit:", venue.id),
+            delete: (venue) => console.log("Delete:", venue.id),
+          }}
+          emptyMessage="No venues found"
+        />
+      )}
     </div>
   );
 }
