@@ -138,7 +138,7 @@ export default function GymsPage() {
   };
 
   const handleGymSelect = useCallback((gymId: string) => {
-    router.push(`/venue/${gymId}`);
+    router.push(`/venue?id=${gymId}`);
   }, [router]);
 
   const filteredGyms = useMemo(() => {
@@ -265,7 +265,7 @@ export default function GymsPage() {
             {filteredGyms.map((gym) => (
               <Link
                 key={gym.id}
-                href={`/venue/${gym.id}`}
+                href={`/venue?id=${gym.id}`}
                 className="block overflow-hidden rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors"
               >
                 <div className="relative h-32 bg-gradient-to-br from-vfit-secondary/40 via-vfit-primary/25 to-transparent">
@@ -326,7 +326,7 @@ export default function GymsPage() {
               {filteredGyms.map((gym) => (
                 <Link
                   key={gym.id}
-                  href={`/venue/${gym.id}`}
+                  href={`/venue?id=${gym.id}`}
                   className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 hover:bg-white/10 transition-colors"
                 >
                   <div className="flex items-center gap-3">

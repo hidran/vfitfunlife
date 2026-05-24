@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { ChevronLeft, Clock, MapPin, Star } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
 import { useVenue, useVenueServices, useVenueCourses } from '@/hooks/useVenues';
@@ -13,8 +13,8 @@ import { Spinner } from '@/components/ui/Spinner';
 type TabOption = 'services' | 'classes';
 
 export default function VenueDetailClient() {
-  const params = useParams<{ id: string }>();
-  const id = params?.id;
+  const searchParams = useSearchParams();
+  const id = searchParams?.get('id') ?? undefined;
 
   const venueQuery = useVenue(id);
   const servicesQuery = useVenueServices(id);
@@ -24,6 +24,10 @@ export default function VenueDetailClient() {
   const [showAllHours, setShowAllHours] = useState(false);
   const [showDescription, setShowDescription] = useState(false);
   const [activeTab, setActiveTab] = useState<TabOption>('services');
+
+  if (!id) {
+    return <VenueNotFound message="Venue non specificato" />;
+  }
 
   if (venueQuery.isLoading) {
     return (

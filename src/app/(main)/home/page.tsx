@@ -402,7 +402,7 @@ function VFitHome() {
               displayGyms.slice(0, 4).map((gym, index) => (
                 <Link
                   key={gym.id}
-                  href={`/venue/${gym.id}`}
+                  href={`/venue?id=${gym.id}`}
                   className="min-w-[240px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
                 >
                   <div
@@ -1067,7 +1067,7 @@ function VLifeHome() {
           ) : (
             <>
               <Link
-                href={displayCenters[0] ? `/venue/${displayCenters[0].id}` : '/life/centers'}
+                href={displayCenters[0] ? `/venue?id=${displayCenters[0].id}` : '/life/centers'}
                 className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-sm"
               >
                 <div className="h-20 rounded-xl bg-[linear-gradient(135deg,#3e8d68,#86c8a4)]" />
@@ -1076,7 +1076,7 @@ function VLifeHome() {
                 </p>
               </Link>
               <Link
-                href={displayCenters[1] ? `/venue/${displayCenters[1].id}` : '/life/hyperbaric'}
+                href={displayCenters[1] ? `/venue?id=${displayCenters[1].id}` : '/life/hyperbaric'}
                 className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-sm"
               >
                 <div className="relative h-20 rounded-xl bg-[linear-gradient(135deg,#dbe3ef,#aab7d2)]">
