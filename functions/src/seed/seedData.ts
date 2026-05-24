@@ -1798,6 +1798,170 @@ export async function generateDemoContent(): Promise<SeedingResult[]> {
   return results;
 }
 
+export async function generateDemoClients(): Promise<SeedingResult[]> {
+  const results: SeedingResult[] = [];
+  const now = Timestamp.now();
+  const PROVIDER_ID = "provider-1";
+
+  const CLIENTS = [
+    {
+      id: "demo-client-1",
+      userId: "demo-user-1",
+      name: "Marco Bianchi",
+      email: "marco.bianchi@example.com",
+      phone: "+39 333 1234567",
+      photoUrl: "",
+      totalBookings: 12,
+      totalSpent: 720,
+      notes: "Preferisce sessioni mattutine. Obiettivi: postura e core.",
+      tags: ["Mattino", "Postura", "Core"],
+      lastVisitDaysAgo: 4,
+      firstVisitDaysAgo: 220,
+    },
+    {
+      id: "demo-client-2",
+      userId: "demo-user-2",
+      name: "Anna Esposito",
+      email: "anna.esposito@example.com",
+      phone: "+39 333 7654321",
+      photoUrl: "",
+      totalBookings: 8,
+      totalSpent: 480,
+      notes: "Focalizzata su forza e mobilita. Disponibile mercoledi e venerdi.",
+      tags: ["Forza", "Mobilita"],
+      lastVisitDaysAgo: 10,
+      firstVisitDaysAgo: 150,
+    },
+    {
+      id: "demo-client-3",
+      userId: "demo-user-3",
+      name: "Sofia Greco",
+      email: "sofia.greco@example.com",
+      phone: "+39 333 9876543",
+      photoUrl: "",
+      totalBookings: 5,
+      totalSpent: 300,
+      notes: "Nuova cliente, preferenza per allenamento HIIT pomeridiano.",
+      tags: ["HIIT", "Pomeriggio"],
+      lastVisitDaysAgo: 2,
+      firstVisitDaysAgo: 75,
+    },
+    {
+      id: "demo-client-4",
+      userId: "demo-user-4",
+      name: "Davide Conti",
+      email: "davide.conti@example.com",
+      phone: "+39 333 5556677",
+      photoUrl: "",
+      totalBookings: 20,
+      totalSpent: 1200,
+      notes: "Cliente di lunga data, sessioni regolari due volte a settimana.",
+      tags: ["Veterano", "Settimanale"],
+      lastVisitDaysAgo: 1,
+      firstVisitDaysAgo: 540,
+    },
+  ];
+
+  // Write clients
+  try {
+    const batch = db.batch();
+    const dayMs = 24 * 60 * 60 * 1000;
+    const nowMs = now.toMillis();
+    for (const c of CLIENTS) {
+      const { lastVisitDaysAgo, firstVisitDaysAgo, ...rest } = c;
+      batch.set(
+        db.collection("clients").doc(c.id),
+        {
+          ...rest,
+          providerId: PROVIDER_ID,
+          lastVisit: Timestamp.fromMillis(nowMs - lastVisitDaysAgo * dayMs),
+          firstVisit: Timestamp.fromMillis(nowMs - firstVisitDaysAgo * dayMs),
+          createdAt: now,
+          updatedAt: now,
+        },
+        { merge: true }
+      );
+    }
+    await batch.commit();
+    results.push({ success: true, collection: "clients", count: CLIENTS.length });
+  } catch (error) {
+    results.push({
+      success: false,
+      collection: "clients",
+      count: 0,
+      error: error instanceof Error ? error.message : "Unknown",
+    });
+  }
+
+  // Write a small booking history per client. Mix of completed/upcoming/cancelled.
+  try {
+    const SERVICE_TEMPLATES = [
+      { id: "svc-1", name: "Personal Training 1-to-1", price: 60, durationMinutes: 60 },
+      { id: "svc-2", name: "Consulenza Nutrizionale", price: 45, durationMinutes: 45 },
+    ];
+    const batch = db.batch();
+    const dayMs = 24 * 60 * 60 * 1000;
+    const nowMs = now.toMillis();
+    let bookingsCount = 0;
+    for (const c of CLIENTS) {
+      // 4 bookings per client: 2 past (completed), 1 recent (completed), 1 upcoming
+      const offsets = [-30, -14, -7, 7];
+      for (let i = 0; i < offsets.length; i++) {
+        const svc = SERVICE_TEMPLATES[i % SERVICE_TEMPLATES.length];
+        const scheduled = Timestamp.fromMillis(nowMs + offsets[i] * dayMs);
+        const status = offsets[i] > 0 ? "confirmed" : "completed";
+        const bookingId = `demo-booking-${c.id}-${i + 1}`;
+        batch.set(
+          db.collection("bookings").doc(bookingId),
+          {
+            id: bookingId,
+            userId: c.userId,
+            providerId: PROVIDER_ID,
+            serviceId: svc.id,
+            serviceName: svc.name,
+            providerName: "Marco Rossi",
+            providerAvatar: null,
+            scheduledAt: scheduled,
+            scheduledEndAt: Timestamp.fromMillis(
+              scheduled.toMillis() + svc.durationMinutes * 60 * 1000
+            ),
+            duration: svc.durationMinutes,
+            locationType: "in_person",
+            location: null,
+            servicePrice: svc.price,
+            platformFee: svc.price * 0.05,
+            discountAmount: 0,
+            pointsUsed: 0,
+            pointsValue: 0,
+            totalPrice: svc.price * 1.05,
+            finalPrice: svc.price,
+            status,
+            paymentStatus: status === "completed" ? "paid" : "pending",
+            paymentMethod: "card",
+            userNotes: null,
+            hasReviewed: false,
+            createdAt: now,
+            updatedAt: now,
+          },
+          { merge: true }
+        );
+        bookingsCount++;
+      }
+    }
+    await batch.commit();
+    results.push({ success: true, collection: "bookings (demo)", count: bookingsCount });
+  } catch (error) {
+    results.push({
+      success: false,
+      collection: "bookings (demo)",
+      count: 0,
+      error: error instanceof Error ? error.message : "Unknown",
+    });
+  }
+
+  return results;
+}
+
 // ============================================================================
 // HTTP Cloud Functions
 // ============================================================================
