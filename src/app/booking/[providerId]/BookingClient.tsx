@@ -5,7 +5,6 @@ import { useParams, useRouter } from 'next/navigation';
 import {
   ChevronLeft,
   Star,
-  MapPin,
   Globe,
   Award,
   Clock,
@@ -22,52 +21,10 @@ import { Spinner } from '@/components/ui/Spinner';
 import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
 import { ServiceCard, AvailabilityPicker } from '@/components/booking';
-import type { Service, ProviderSearchResult } from '@/types/booking';
+import type { Service } from '@/types/booking';
+import { useProvider, useProviderServices } from '@/hooks/useProviders';
+import { VenueNotFound } from '@/components/venue/VenueNotFound';
 
-// Mock data for provider - in real app, fetch from API
-const MOCK_PROVIDER: ProviderSearchResult = {
-  id: 'provider-1',
-  fullName: 'Marco Rossi',
-  avatarUrl: '/images/placeholder.jpg',
-  rating: 4.8,
-  reviewCount: 127,
-  isVerified: true,
-  specialties: ['Personal Training', 'Nutrizione', 'Bodybuilding'],
-  yearsOfExperience: 8,
-  languages: ['Italiano', 'English'],
-  services: [
-    {
-      id: 'svc-1',
-      name: 'Personal Training 1-to-1',
-      description: 'Sessione di allenamento personalizzata in palestra o all\'aperto',
-      durationMinutes: 60,
-      price: 60,
-      isActive: true,
-    },
-    {
-      id: 'svc-2',
-      name: 'Consulenza Nutrizionale',
-      description: 'Piano alimentare personalizzato e follow-up mensile',
-      durationMinutes: 45,
-      price: 45,
-      isActive: true,
-    },
-    {
-      id: 'svc-3',
-      name: 'Online Coaching',
-      description: 'Allenamento via video call con programma personalizzato',
-      durationMinutes: 45,
-      price: 35,
-      isActive: true,
-    },
-  ],
-  location: {
-    address: 'Via Roma 123, Milano',
-    lat: 45.4642,
-    lng: 9.1900,
-  },
-  distance: 2.5,
-};
 
 const MOCK_REVIEWS = [
   {
@@ -94,12 +51,11 @@ const MOCK_REVIEWS = [
 ];
 
 export default function ProviderBookingPage() {
-  const params = useParams();
+  const params = useParams<{ providerId: string }>();
   const router = useRouter();
-  const providerId = params.providerId as string;
+  const providerId = params?.providerId;
 
   const {
-    selectedProvider,
     selectedService,
     selectedDate,
     selectedTime,
@@ -110,23 +66,9 @@ export default function ProviderBookingPage() {
     fetchAvailability,
   } = useBookingStore();
 
-  const [provider, setProvider] = useState<ProviderSearchResult | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: provider, isLoading: providerLoading } = useProvider(providerId);
+  const { data: services = [] } = useProviderServices(providerId);
   const [activeTab, setActiveTab] = useState<'services' | 'reviews' | 'about'>('services');
-
-  // Load provider data
-  useEffect(() => {
-    // In real app, fetch from API
-    const loadProvider = async () => {
-      setLoading(true);
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      setProvider(MOCK_PROVIDER);
-      setLoading(false);
-    };
-
-    loadProvider();
-  }, [providerId]);
 
   // Fetch availability when date changes
   useEffect(() => {
@@ -157,12 +99,15 @@ export default function ProviderBookingPage() {
 
   const canContinue = selectedService && selectedDate && selectedTime;
 
-  if (loading || !provider) {
+  if (providerLoading) {
     return (
-      <div className="min-h-screen bg-background-dark flex items-center justify-center">
-        <Spinner size="xl" />
+      <div className="flex min-h-screen items-center justify-center">
+        <Spinner size="md" />
       </div>
     );
+  }
+  if (!provider) {
+    return <VenueNotFound message="Provider non trovato" />;
   }
 
   return (
@@ -226,15 +171,6 @@ export default function ProviderBookingPage() {
               )}
             </div>
 
-            {provider.location && (
-              <div className="flex items-center gap-1 mt-2 text-sm text-text-secondary">
-                <MapPin className="w-4 h-4 text-[var(--section-primary)]" />
-                <span className="truncate">{provider.location.address}</span>
-                {provider.distance && (
-                  <span className="text-text-tertiary">({provider.distance} km)</span>
-                )}
-              </div>
-            )}
           </div>
         </div>
 
@@ -305,10 +241,10 @@ export default function ProviderBookingPage() {
               className="space-y-4"
             >
               <h3 className="font-semibold text-white mb-4">Seleziona un servizio</h3>
-              {provider.services.map((service) => (
+              {services.map((service) => (
                 <ServiceCard
                   key={service.id}
-                  service={service}
+                  service={{ ...service, description: service.description ?? '' }}
                   isSelected={selectedService?.id === service.id}
                   onSelect={handleServiceSelect}
                 />
