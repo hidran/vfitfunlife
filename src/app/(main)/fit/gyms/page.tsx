@@ -81,7 +81,7 @@ export default function GymsPage() {
       // price and nearest sorting require fields not in Firestore schema; fall back to rating
       return b.rating - a.rating;
     });
-  }, [query, sort]);
+  }, [query, sort, gyms]);
 
   return (
     <div className="min-h-screen bg-background-dark pb-24">
