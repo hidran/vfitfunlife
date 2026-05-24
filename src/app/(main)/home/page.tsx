@@ -34,10 +34,12 @@ import { Avatar } from '@/components/ui/Avatar';
 import { cn } from '@/lib/utils';
 import { usePullToRefresh } from 'use-pull-to-refresh';
 import { useEffect, useState } from 'react';
-import { collection, collectionGroup, query, where, limit, getDocs } from 'firebase/firestore';
+import { collection, collectionGroup, query, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { Spinner } from '@/components/ui/Spinner';
 import { useI18n } from '@/hooks/useI18n';
+import { useVenues } from '@/hooks/useVenues';
+import { useProviders } from '@/hooks/useProviders';
 import type { MessageKey } from '@/i18n/messages';
 import { toLocaleTag, type AppLocale } from '@/types/locale';
 
@@ -172,121 +174,7 @@ const vfunTVSchedule: VFunTVShow[] = [
 const vfunIsStreamingLive = true;
 
 // Firestore data fetching hooks
-function useTopProviders(limitCount: number = 6, unknownName: string) {
-  const [providers, setProviders] = useState<Provider[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchProviders = async () => {
-      try {
-        // Query public instructor profiles to avoid restricted user documents
-        const q = query(
-          collection(db, 'instructors'),
-          where('providerProfile.isVerified', '==', true),
-          limit(limitCount * 2) // Fetch more to filter locally
-        );
-        
-        const snapshot = await getDocs(q);
-        let providersData = snapshot.docs
-          .map(doc => {
-            const data = doc.data();
-            const profile = data.providerProfile || {};
-            return {
-              id: doc.id,
-              fullName: data.fullName || data.name || unknownName,
-              avatarUrl: data.avatarUrl || null,
-              specialties: data.specialties || profile.specialties || [],
-              rating: data.ratingAvg || profile.rating || 0,
-              reviewCount: data.reviewCount || profile.reviewCount || 0,
-              yearsOfExperience: data.experienceYears || profile.yearsOfExperience || 0,
-              isVerified: profile.isVerified ?? true,
-              isActive: data.isActive ?? profile.isActive ?? true,
-            };
-          })
-          .filter(p => p.isActive)
-          .sort((a, b) => b.rating - a.rating)
-          .slice(0, limitCount);
-        
-        setProviders(providersData);
-      } catch (error) {
-        console.error('Error fetching providers:', error);
-        setProviders([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    // Add timeout to prevent infinite loading
-    const timeoutId = setTimeout(() => {
-      setIsLoading(false);
-    }, 5000);
-
-    fetchProviders();
-    return () => clearTimeout(timeoutId);
-  }, [limitCount, unknownName]);
-
-  return { providers, isLoading };
-}
-
-function useVenuesByType(
-  type: 'fitness' | 'wellness',
-  limitCount: number = 4,
-  fallbackVenueName: string,
-  fallbackCityName: string
-) {
-  const [venues, setVenues] = useState<Venue[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchVenues = async () => {
-      try {
-        // Simpler query without composite index requirement
-        const q = query(
-          collection(db, 'venues'),
-          where('type', '==', type),
-          limit(limitCount * 2)
-        );
-        
-        const snapshot = await getDocs(q);
-        const venuesData = snapshot.docs
-          .map(doc => {
-            const data = doc.data();
-            return {
-              id: doc.id,
-              name: data.name || fallbackVenueName,
-              city: data.city || data.address?.city || fallbackCityName,
-              rating: data.rating || 0,
-              reviews: data.reviewCount || 0,
-              distance: `${(Math.random() * 3 + 0.5).toFixed(1)} km`,
-              partner: data.isPartner || false,
-              specialties: data.specialties || [],
-              isActive: data.isActive !== false,
-            };
-          })
-          .filter(v => v.isActive)
-          .sort((a, b) => b.rating - a.rating)
-          .slice(0, limitCount);
-        
-        setVenues(venuesData);
-      } catch (error) {
-        console.error('Error fetching venues:', error);
-        setVenues([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    const timeoutId = setTimeout(() => {
-      setIsLoading(false);
-    }, 5000);
-
-    fetchVenues();
-    return () => clearTimeout(timeoutId);
-  }, [type, limitCount, fallbackVenueName, fallbackCityName]);
-
-  return { venues, isLoading };
-}
-
+// TODO(fake-data-migration): extract to shared hooks once class + testimonials types are defined.
 function useTodayClasses(
   limitCount: number = 3,
   locale: AppLocale,
@@ -354,16 +242,8 @@ function useTodayClasses(
 
 function VFitHome() {
   const { t, locale } = useI18n();
-  const { providers: trainers, isLoading: loadingTrainers } = useTopProviders(
-    6,
-    t('home.shared.unknownPerson')
-  );
-  const { venues: gyms, isLoading: loadingGyms } = useVenuesByType(
-    'fitness',
-    4,
-    t('home.shared.unknownVenue'),
-    t('home.shared.unknownCity')
-  );
+  const { data: trainers = [], isLoading: loadingTrainers } = useProviders({ onlyVerified: true, limit: 6 });
+  const { data: gyms = [], isLoading: loadingGyms } = useVenues({ type: 'gym', limit: 4 });
   const { classes: classSessions, isLoading: loadingClasses } = useTodayClasses(3, locale, {
     unnamedClass: t('home.shared.unnamedClass'),
     unknownInstructor: t('home.shared.unknownPerson'),
@@ -841,12 +721,7 @@ function useTestimonials(
 
 function VLifeHome() {
   const { t } = useI18n();
-  const { venues: centers, isLoading: loadingCenters } = useVenuesByType(
-    'wellness',
-    4,
-    t('home.shared.unknownVenue'),
-    t('home.shared.unknownCity')
-  );
+  const { data: centers = [], isLoading: loadingCenters } = useVenues({ type: 'wellness_center', limit: 4 });
   const { testimonials, isLoading: loadingTestimonials } = useTestimonials(3, {
     anonymousUser: t('home.shared.anonymous'),
     genericService: t('home.shared.service'),
