@@ -11,7 +11,11 @@ import {
   Star,
   Store,
   Phone,
+  Camera,
 } from "lucide-react";
+import { PhotoUploader } from "@/components/gallery/PhotoUploader";
+import { PhotoEditorOverlay } from "@/components/gallery/PhotoEditorOverlay";
+import { useUpdateVenuePhotos } from "@/hooks/usePhotoUpload";
 import { useVenues } from "@/hooks/useVenues";
 import { Spinner } from "@/components/ui/Spinner";
 
@@ -27,12 +31,15 @@ interface Venue {
   isActive: boolean;
   isPartner: boolean;
   createdAt: Date;
+  photoUrls?: string[];
 }
 
 export default function VenuesPage() {
   const [searchValue, setSearchValue] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [editingVenue, setEditingVenue] = useState<{ id: string; name: string; photoUrls: string[] } | null>(null);
+  const updateVenuePhotosM = useUpdateVenuePhotos(editingVenue?.id);
 
   const { data: firestoreVenues = [], isLoading } = useVenues({});
 
@@ -48,6 +55,7 @@ export default function VenuesPage() {
     isActive: v.isActive,
     isPartner: v.isPartner,
     createdAt: v.createdAt?.toDate?.() ?? new Date(),
+    photoUrls: v.photoUrls ?? [],
   }));
 
   const columns: Column<Venue>[] = [
@@ -130,6 +138,26 @@ export default function VenuesPage() {
       ),
       sortable: true,
       width: "w-24",
+    },
+    {
+      key: "photos",
+      header: "Foto",
+      cell: (venue) => (
+        <button
+          type="button"
+          onClick={() =>
+            setEditingVenue({
+              id: venue.id,
+              name: venue.name,
+              photoUrls: venue.photoUrls ?? [],
+            })
+          }
+          className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
+          aria-label="Modifica foto"
+        >
+          <Camera className="h-4 w-4" />
+        </button>
+      ),
     },
   ];
 
@@ -222,6 +250,24 @@ export default function VenuesPage() {
           }}
           emptyMessage="No venues found"
         />
+      )}
+
+      {editingVenue && (
+        <PhotoEditorOverlay
+          title={`Foto — ${editingVenue.name}`}
+          onClose={() => setEditingVenue(null)}
+        >
+          <PhotoUploader
+            scope="venues"
+            entityId={editingVenue.id}
+            photos={editingVenue.photoUrls}
+            onChange={(newPhotos) => {
+              setEditingVenue({ ...editingVenue, photoUrls: newPhotos });
+              updateVenuePhotosM.mutate(newPhotos);
+            }}
+            disabled={updateVenuePhotosM.isPending}
+          />
+        </PhotoEditorOverlay>
       )}
     </div>
   );
