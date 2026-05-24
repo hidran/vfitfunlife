@@ -616,7 +616,7 @@ interface SampleVenueData {
   id: string;
   name: string;
   slug: string;
-  type: 'gym' | 'wellness_center' | 'spa' | 'beauty_salon';
+  type: "gym" | "wellness_center" | "spa" | "beauty_salon";
   city: string;
   address: string;
   lat: number;
@@ -635,12 +635,12 @@ interface SampleVenueData {
 
 const SAMPLE_VENUES: SampleVenueData[] = [
   {
-    id: 'carosello',
-    name: 'Carosello Fitness',
-    slug: 'carosello-fitness',
-    type: 'gym',
-    city: 'Milano',
-    address: 'Via Torino 21, Milano',
+    id: "carosello",
+    name: "Carosello Fitness",
+    slug: "carosello-fitness",
+    type: "gym",
+    city: "Milano",
+    address: "Via Torino 21, Milano",
     lat: 45.4642,
     lng: 9.19,
     rating: 4.8,
@@ -648,38 +648,38 @@ const SAMPLE_VENUES: SampleVenueData[] = [
     isPartner: true,
     isActive: true,
     description:
-      'Un centro fitness moderno con spazi ampi, area functional e sale corsi dedicate.',
+      "Un centro fitness moderno con spazi ampi, area functional e sale corsi dedicate.",
     heroGradients: [
-      'from-vfit-secondary/40 via-vfit-primary/30 to-transparent',
-      'from-vfit-primary/35 via-vfit-accent/25 to-transparent',
-      'from-vfit-secondary/30 via-vfit-accent/25 to-transparent',
+      "from-vfit-secondary/40 via-vfit-primary/30 to-transparent",
+      "from-vfit-primary/35 via-vfit-accent/25 to-transparent",
+      "from-vfit-secondary/30 via-vfit-accent/25 to-transparent",
     ],
     amenities: [
-      { kind: 'weights' }, { kind: 'wifi' }, { kind: 'parking' }, { kind: 'showers' },
+      { kind: "weights" }, { kind: "wifi" }, { kind: "parking" }, { kind: "showers" },
     ],
     hours: [
-      { day: 'Lun - Ven', time: '06:00 - 22:00' },
-      { day: 'Sabato', time: '08:00 - 20:00' },
-      { day: 'Domenica', time: '09:00 - 18:00' },
+      { day: "Lun - Ven", time: "06:00 - 22:00" },
+      { day: "Sabato", time: "08:00 - 20:00" },
+      { day: "Domenica", time: "09:00 - 18:00" },
     ],
     services: [
-      { id: 'svc-1', name: 'Accesso giornaliero', price: 18, isActive: true },
-      { id: 'svc-2', name: 'Abbonamento mensile', price: 59, isActive: true },
-      { id: 'svc-3', name: 'Personal training', price: 45, durationMinutes: 60, isActive: true },
+      { id: "svc-1", name: "Accesso giornaliero", price: 18, isActive: true },
+      { id: "svc-2", name: "Abbonamento mensile", price: 59, isActive: true },
+      { id: "svc-3", name: "Personal training", price: 45, durationMinutes: 60, isActive: true },
     ],
     courses: [
-      { id: 'course-1', name: 'HIIT Power', time: '07:30', coach: 'Marco R.', spots: 3 },
-      { id: 'course-2', name: 'Pilates Flow', time: '12:15', coach: 'Elena B.', spots: 6 },
-      { id: 'course-3', name: 'Functional 360', time: '19:00', coach: 'Luca S.', spots: 2 },
+      { id: "course-1", name: "HIIT Power", time: "07:30", coach: "Marco R.", spots: 3 },
+      { id: "course-2", name: "Pilates Flow", time: "12:15", coach: "Elena B.", spots: 6 },
+      { id: "course-3", name: "Functional 360", time: "19:00", coach: "Luca S.", spots: 2 },
     ],
   },
   {
-    id: 'urban-core',
-    name: 'Urban Core Gym',
-    slug: 'urban-core-gym',
-    type: 'gym',
-    city: 'Milano',
-    address: 'Viale Liberazione 12, Milano',
+    id: "urban-core",
+    name: "Urban Core Gym",
+    slug: "urban-core-gym",
+    type: "gym",
+    city: "Milano",
+    address: "Viale Liberazione 12, Milano",
     lat: 45.4789,
     lng: 9.1965,
     rating: 4.9,
@@ -687,104 +687,104 @@ const SAMPLE_VENUES: SampleVenueData[] = [
     isPartner: false,
     isActive: true,
     description:
-      'Allenamenti ad alta intensita in un ambiente urbano con coach dedicati e attrezzatura premium.',
+      "Allenamenti ad alta intensita in un ambiente urbano con coach dedicati e attrezzatura premium.",
     heroGradients: [
-      'from-vfit-primary/40 via-vfit-secondary/30 to-transparent',
-      'from-vfit-accent/35 via-vfit-primary/25 to-transparent',
+      "from-vfit-primary/40 via-vfit-secondary/30 to-transparent",
+      "from-vfit-accent/35 via-vfit-primary/25 to-transparent",
     ],
-    amenities: [{ kind: 'weights' }, { kind: 'wifi' }, { kind: 'showers' }],
+    amenities: [{ kind: "weights" }, { kind: "wifi" }, { kind: "showers" }],
     hours: [
-      { day: 'Lun - Ven', time: '06:30 - 23:00' },
-      { day: 'Sabato', time: '08:00 - 21:00' },
-      { day: 'Domenica', time: '09:00 - 17:00' },
+      { day: "Lun - Ven", time: "06:30 - 23:00" },
+      { day: "Sabato", time: "08:00 - 21:00" },
+      { day: "Domenica", time: "09:00 - 17:00" },
     ],
     services: [
-      { id: 'svc-1', name: 'Accesso giornaliero', price: 22, isActive: true },
-      { id: 'svc-2', name: 'Mensile All-in', price: 75, isActive: true },
+      { id: "svc-1", name: "Accesso giornaliero", price: 22, isActive: true },
+      { id: "svc-2", name: "Mensile All-in", price: 75, isActive: true },
     ],
     courses: [
-      { id: 'course-1', name: 'CrossFit AM', time: '07:00', coach: 'Anna T.', spots: 4 },
-      { id: 'course-2', name: 'Boxe Tecnica', time: '20:00', coach: 'Davide M.', spots: 5 },
+      { id: "course-1", name: "CrossFit AM", time: "07:00", coach: "Anna T.", spots: 4 },
+      { id: "course-2", name: "Boxe Tecnica", time: "20:00", coach: "Davide M.", spots: 5 },
     ],
   },
   {
-    id: 'village-fit',
-    name: 'Village Fit Club',
-    slug: 'village-fit-club',
-    type: 'gym',
-    city: 'Milano',
-    address: 'Navigli, Milano',
+    id: "village-fit",
+    name: "Village Fit Club",
+    slug: "village-fit-club",
+    type: "gym",
+    city: "Milano",
+    address: "Navigli, Milano",
     lat: 45.4523,
     lng: 9.1756,
     rating: 4.7,
     reviewCount: 142,
     isPartner: true,
     isActive: true,
-    description: 'Club fitness con focus su yoga e spa.',
-    heroGradients: ['from-vfit-secondary/30 via-vfit-primary/20 to-transparent'],
-    amenities: [{ kind: 'yoga' }, { kind: 'spa' }],
-    hours: [{ day: 'Lun - Dom', time: '07:00 - 22:00' }],
-    services: [{ id: 'svc-1', name: 'Drop-in', price: 20, isActive: true }],
+    description: "Club fitness con focus su yoga e spa.",
+    heroGradients: ["from-vfit-secondary/30 via-vfit-primary/20 to-transparent"],
+    amenities: [{ kind: "yoga" }, { kind: "spa" }],
+    hours: [{ day: "Lun - Dom", time: "07:00 - 22:00" }],
+    services: [{ id: "svc-1", name: "Drop-in", price: 20, isActive: true }],
     courses: [],
   },
   {
-    id: 'pulse-studio',
-    name: 'Pulse Studio',
-    slug: 'pulse-studio',
-    type: 'gym',
-    city: 'Milano',
-    address: 'Isola, Milano',
+    id: "pulse-studio",
+    name: "Pulse Studio",
+    slug: "pulse-studio",
+    type: "gym",
+    city: "Milano",
+    address: "Isola, Milano",
     lat: 45.4834,
     lng: 9.1856,
     rating: 4.6,
     reviewCount: 67,
     isPartner: false,
     isActive: true,
-    description: 'Studio specializzato in Pilates e HIIT.',
-    heroGradients: ['from-vfit-accent/30 via-vfit-primary/20 to-transparent'],
-    amenities: [{ kind: 'pilates' }, { kind: 'cardio' }],
-    hours: [{ day: 'Lun - Sab', time: '08:00 - 21:00' }],
-    services: [{ id: 'svc-1', name: 'Lezione Pilates', price: 25, durationMinutes: 55, isActive: true }],
+    description: "Studio specializzato in Pilates e HIIT.",
+    heroGradients: ["from-vfit-accent/30 via-vfit-primary/20 to-transparent"],
+    amenities: [{ kind: "pilates" }, { kind: "cardio" }],
+    hours: [{ day: "Lun - Sab", time: "08:00 - 21:00" }],
+    services: [{ id: "svc-1", name: "Lezione Pilates", price: 25, durationMinutes: 55, isActive: true }],
     courses: [],
   },
   {
-    id: 'elite-fitness',
-    name: 'Elite Fitness Center',
-    slug: 'elite-fitness-center',
-    type: 'gym',
-    city: 'Milano',
-    address: 'Brera, Milano',
+    id: "elite-fitness",
+    name: "Elite Fitness Center",
+    slug: "elite-fitness-center",
+    type: "gym",
+    city: "Milano",
+    address: "Brera, Milano",
     lat: 45.4701,
     lng: 9.1854,
     rating: 4.9,
     reviewCount: 215,
     isPartner: true,
     isActive: true,
-    description: 'Centro premium con piscina e campi da tennis.',
-    heroGradients: ['from-vfit-secondary/40 via-vfit-accent/30 to-transparent'],
-    amenities: [{ kind: 'pool' }, { kind: 'tennis' }, { kind: 'spa' }],
-    hours: [{ day: 'Lun - Dom', time: '06:00 - 23:00' }],
-    services: [{ id: 'svc-1', name: 'Day pass', price: 35, isActive: true }],
+    description: "Centro premium con piscina e campi da tennis.",
+    heroGradients: ["from-vfit-secondary/40 via-vfit-accent/30 to-transparent"],
+    amenities: [{ kind: "pool" }, { kind: "tennis" }, { kind: "spa" }],
+    hours: [{ day: "Lun - Dom", time: "06:00 - 23:00" }],
+    services: [{ id: "svc-1", name: "Day pass", price: 35, isActive: true }],
     courses: [],
   },
   {
-    id: 'power-gym',
-    name: 'Power Gym Milano',
-    slug: 'power-gym-milano',
-    type: 'gym',
-    city: 'Milano',
-    address: 'Porta Romana, Milano',
+    id: "power-gym",
+    name: "Power Gym Milano",
+    slug: "power-gym-milano",
+    type: "gym",
+    city: "Milano",
+    address: "Porta Romana, Milano",
     lat: 45.4456,
     lng: 9.2056,
     rating: 4.5,
     reviewCount: 89,
     isPartner: false,
     isActive: true,
-    description: 'Sala pesi essenziale con focus su forza e cardio.',
-    heroGradients: ['from-vfit-primary/30 via-vfit-accent/20 to-transparent'],
-    amenities: [{ kind: 'weights' }, { kind: 'cardio' }],
-    hours: [{ day: 'Lun - Dom', time: '06:00 - 22:00' }],
-    services: [{ id: 'svc-1', name: 'Mensile', price: 39, isActive: true }],
+    description: "Sala pesi essenziale con focus su forza e cardio.",
+    heroGradients: ["from-vfit-primary/30 via-vfit-accent/20 to-transparent"],
+    amenities: [{ kind: "weights" }, { kind: "cardio" }],
+    hours: [{ day: "Lun - Dom", time: "06:00 - 22:00" }],
+    services: [{ id: "svc-1", name: "Mensile", price: 39, isActive: true }],
     courses: [],
   },
 ];
@@ -799,7 +799,7 @@ export async function seedSampleVenues(): Promise<SeedingResult> {
     const now = Timestamp.now();
 
     for (const v of SAMPLE_VENUES) {
-      const venueRef = db.collection('venues').doc(v.id);
+      const venueRef = db.collection("venues").doc(v.id);
       const { services, courses, ...venueDoc } = v;
       batch.set(
         venueRef,
@@ -807,18 +807,104 @@ export async function seedSampleVenues(): Promise<SeedingResult> {
         { merge: true }
       );
       for (const s of services) {
-        batch.set(venueRef.collection('services').doc(s.id), s, { merge: true });
+        batch.set(venueRef.collection("services").doc(s.id), s, { merge: true });
       }
       for (const c of courses) {
-        batch.set(venueRef.collection('courses').doc(c.id), c, { merge: true });
+        batch.set(venueRef.collection("courses").doc(c.id), c, { merge: true });
       }
     }
 
     await batch.commit();
-    return { success: true, collection: 'venues (sample)', count: SAMPLE_VENUES.length };
+    return { success: true, collection: "venues (sample)", count: SAMPLE_VENUES.length };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return { success: false, collection: 'venues (sample)', count: 0, error: errorMessage };
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return { success: false, collection: "venues (sample)", count: 0, error: errorMessage };
+  }
+}
+
+// ===== Sample instructor seed data =====
+
+interface SampleInstructorData {
+  id: string;
+  fullName: string;
+  avatarUrl: string | null;
+  isActive: boolean;
+  providerProfile: {
+    isVerified: boolean;
+    isActive: boolean;
+    rating: number;
+    reviewCount: number;
+    specialties: string[];
+    yearsOfExperience: number;
+    languages: string[];
+  };
+  services: {
+    id: string;
+    name: string;
+    description: string;
+    durationMinutes: number;
+    price: number;
+    isActive: boolean;
+  }[];
+}
+
+const SAMPLE_INSTRUCTORS: SampleInstructorData[] = [
+  {
+    id: "provider-1",
+    fullName: "Marco Rossi",
+    avatarUrl: null,
+    isActive: true,
+    providerProfile: {
+      isVerified: true,
+      isActive: true,
+      rating: 4.8,
+      reviewCount: 127,
+      specialties: ["Personal Training", "Nutrizione", "Bodybuilding"],
+      yearsOfExperience: 8,
+      languages: ["Italiano", "English"],
+    },
+    services: [
+      {
+        id: "svc-1",
+        name: "Personal Training 1-to-1",
+        description: "Sessione di allenamento personalizzata in palestra o all'aperto",
+        durationMinutes: 60,
+        price: 60,
+        isActive: true,
+      },
+      {
+        id: "svc-2",
+        name: "Consulenza Nutrizionale",
+        description: "Piano alimentare personalizzato e follow-up mensile",
+        durationMinutes: 45,
+        price: 45,
+        isActive: true,
+      },
+    ],
+  },
+];
+
+export async function seedSampleInstructors(): Promise<SeedingResult> {
+  try {
+    const batch = db.batch();
+    const now = Timestamp.now();
+    for (const i of SAMPLE_INSTRUCTORS) {
+      const ref = db.collection("instructors").doc(i.id);
+      const { services, ...doc } = i;
+      batch.set(
+        ref,
+        { ...doc, uid: i.id, createdAt: now, updatedAt: now },
+        { merge: true }
+      );
+      for (const s of services) {
+        batch.set(ref.collection("services").doc(s.id), s, { merge: true });
+      }
+    }
+    await batch.commit();
+    return { success: true, collection: "instructors (sample)", count: SAMPLE_INSTRUCTORS.length };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return { success: false, collection: "instructors (sample)", count: 0, error: errorMessage };
   }
 }
 
