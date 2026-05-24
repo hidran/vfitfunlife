@@ -1962,6 +1962,125 @@ export async function generateDemoClients(): Promise<SeedingResult[]> {
   return results;
 }
 
+// ===== Demo photo pools =====
+
+const GYM_PHOTOS = [
+  "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800",
+  "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=800",
+  "https://images.unsplash.com/photo-1540497077202-7c8a3999166f?w=800",
+  "https://images.unsplash.com/photo-1554284126-aa88f22d8b74?w=800",
+  "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800",
+  "https://images.unsplash.com/photo-1576678927484-cc907957088c?w=800",
+  "https://images.unsplash.com/photo-1593079831268-3381b0db4a77?w=800",
+  "https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=800",
+];
+
+const WELLNESS_PHOTOS = [
+  "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=800",
+  "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=800",
+  "https://images.unsplash.com/photo-1545205597-3d9d02c29597?w=800",
+  "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=800",
+  "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800",
+];
+
+const SPA_PHOTOS = [
+  "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=800",
+  "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=800",
+  "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=800",
+];
+
+const BEAUTY_PHOTOS = [
+  "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800",
+  "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800",
+  "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=800",
+];
+
+const TRAINER_PHOTOS = [
+  "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800",
+  "https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?w=800",
+  "https://images.unsplash.com/photo-1583500178690-f7fd39f6e7b9?w=800",
+  "https://images.unsplash.com/photo-1518611012118-696072aa579a?w=800",
+  "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=800",
+  "https://images.unsplash.com/photo-1594381898411-846e7d193883?w=800",
+  "https://images.unsplash.com/photo-1599058917212-d750089bc07e?w=800",
+  "https://images.unsplash.com/photo-1530549387789-4c1017266635?w=800",
+];
+
+// Deterministic per-id pick using a simple hash.
+function pickPhotos(id: string, pool: string[], count: number): string[] {
+  let seed = 0;
+  for (let i = 0; i < id.length; i++) {
+    seed = (seed * 31 + id.charCodeAt(i)) >>> 0;
+  }
+  const indexes = new Set<number>();
+  let n = seed;
+  while (indexes.size < Math.min(count, pool.length)) {
+    n = (n * 1103515245 + 12345) >>> 0;
+    indexes.add(n % pool.length);
+  }
+  return Array.from(indexes).map((i) => pool[i]);
+}
+
+export async function generateDemoPhotos(): Promise<SeedingResult[]> {
+  const results: SeedingResult[] = [];
+
+  // ===== Venues =====
+  try {
+    const venuesSnap = await db.collection("venues").get();
+    const batch = db.batch();
+    let count = 0;
+    for (const docSnap of venuesSnap.docs) {
+      const type = docSnap.data().type as string | undefined;
+      let pool = GYM_PHOTOS;
+      if (type === "spa") pool = SPA_PHOTOS;
+      else if (type === "beauty_salon") pool = BEAUTY_PHOTOS;
+      else if (type === "wellness_center") pool = WELLNESS_PHOTOS;
+      const photoUrls = pickPhotos(docSnap.id, pool, 5);
+      batch.set(docSnap.ref, { photoUrls }, { merge: true });
+      count++;
+    }
+    await batch.commit();
+    results.push({ success: true, collection: "venues (photos)", count });
+  } catch (error) {
+    results.push({
+      success: false,
+      collection: "venues (photos)",
+      count: 0,
+      error: error instanceof Error ? error.message : "Unknown",
+    });
+  }
+
+  // ===== Instructors =====
+  try {
+    const instructorsSnap = await db.collection("instructors").get();
+    let batch = db.batch();
+    let opCount = 0;
+    let total = 0;
+    for (const docSnap of instructorsSnap.docs) {
+      const photoUrls = pickPhotos(docSnap.id, TRAINER_PHOTOS, 4);
+      batch.set(docSnap.ref, { photoUrls }, { merge: true });
+      opCount++;
+      total++;
+      if (opCount >= 400) {
+        await batch.commit();
+        batch = db.batch();
+        opCount = 0;
+      }
+    }
+    if (opCount > 0) await batch.commit();
+    results.push({ success: true, collection: "instructors (photos)", count: total });
+  } catch (error) {
+    results.push({
+      success: false,
+      collection: "instructors (photos)",
+      count: 0,
+      error: error instanceof Error ? error.message : "Unknown",
+    });
+  }
+
+  return results;
+}
+
 // ============================================================================
 // HTTP Cloud Functions
 // ============================================================================
