@@ -9,6 +9,7 @@ import { useVenue, useVenueServices, useVenueCourses } from '@/hooks/useVenues';
 import { amenityIcon } from '@/lib/icons/amenityIcons';
 import { VenueNotFound } from '@/components/venue/VenueNotFound';
 import { Spinner } from '@/components/ui/Spinner';
+import { PhotoGallery } from '@/components/gallery/PhotoGallery';
 
 type TabOption = 'services' | 'classes';
 
@@ -60,19 +61,25 @@ export default function VenueDetailClient() {
           </Link>
         </div>
 
-        <div className="relative h-72 overflow-hidden">
-          {slides.map((gradient, idx) => (
-            <div
-              key={idx}
-              className={cn(
-                'absolute inset-0 bg-gradient-to-br transition-opacity duration-500',
-                gradient,
-                activeSlide === idx ? 'opacity-100' : 'opacity-0'
-              )}
-              onClick={() => setActiveSlide((activeSlide + 1) % Math.max(slides.length, 1))}
-            />
-          ))}
-        </div>
+        {venue.photoUrls && venue.photoUrls.length > 0 ? (
+          <div className="px-4 pt-4">
+            <PhotoGallery photos={venue.photoUrls} />
+          </div>
+        ) : (
+          <div className="relative h-72 overflow-hidden">
+            {slides.map((gradient, idx) => (
+              <div
+                key={idx}
+                className={cn(
+                  'absolute inset-0 bg-gradient-to-br transition-opacity duration-500',
+                  gradient,
+                  activeSlide === idx ? 'opacity-100' : 'opacity-0'
+                )}
+                onClick={() => setActiveSlide((activeSlide + 1) % Math.max(slides.length, 1))}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="-mt-6 rounded-t-3xl bg-white p-5">

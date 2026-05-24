@@ -25,6 +25,7 @@ import type { Service } from '@/types/booking';
 import { useProvider, useProviderServices } from '@/hooks/useProviders';
 import { useInstructorReviews } from '@/hooks/useCommunity';
 import { VenueNotFound } from '@/components/venue/VenueNotFound';
+import { PhotoGallery } from '@/components/gallery/PhotoGallery';
 
 export default function ProviderBookingPage() {
   const searchParams = useSearchParams();
@@ -166,6 +167,13 @@ export default function ProviderBookingPage() {
             </span>
           ))}
         </div>
+
+        {/* Photo Gallery */}
+        {provider.photoUrls && provider.photoUrls.length > 0 && (
+          <div className="mt-4 px-4">
+            <PhotoGallery photos={provider.photoUrls} />
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div className="flex gap-3 mt-4">
