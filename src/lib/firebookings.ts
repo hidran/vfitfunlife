@@ -200,12 +200,40 @@ export async function createBooking(data: BookingData): Promise<Booking> {
     throw new Error('Provider not found');
   }
   const providerData = providerDoc.data();
-  const providerProfile = providerData.providerProfile || {};
-  
-  // Get service details
-  const service = providerProfile.servicePricing?.find(
-    (s: any) => s.id === data.serviceId
+
+  // Get service details from /instructors/{id}/services/{serviceId}.
+  // Falls back to the legacy inline providerProfile.servicePricing[] for older
+  // documents that still embed services on the provider doc.
+  let service: {
+    name: string;
+    price: number;
+    durationMinutes?: number;
+    description?: string;
+  } | null = null;
+  const serviceDoc = await getDoc(
+    doc(db, INSTRUCTORS_COLLECTION, data.providerId, 'services', data.serviceId)
   );
+  if (serviceDoc.exists()) {
+    const s = serviceDoc.data();
+    service = {
+      name: s.name ?? s.serviceName ?? 'Service',
+      price: s.price,
+      durationMinutes: s.durationMinutes,
+      description: s.description,
+    };
+  } else {
+    const inline = (providerData.providerProfile?.servicePricing ?? []).find(
+      (s: { id: string }) => s.id === data.serviceId
+    );
+    if (inline) {
+      service = {
+        name: inline.serviceName ?? inline.name ?? 'Service',
+        price: inline.price,
+        durationMinutes: inline.durationMinutes,
+        description: inline.description,
+      };
+    }
+  }
   if (!service) {
     throw new Error('Service not found');
   }
@@ -221,7 +249,7 @@ export async function createBooking(data: BookingData): Promise<Booking> {
     userId: '', // Will be set from auth context
     providerId: data.providerId,
     serviceId: data.serviceId,
-    serviceName: service.serviceName,
+    serviceName: service.name,
     providerName: providerData.fullName || 'Unknown',
     providerAvatar: providerData.avatarUrl || null,
     
