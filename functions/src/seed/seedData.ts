@@ -793,7 +793,7 @@ const SAMPLE_VENUES: SampleVenueData[] = [
  * Seeds the deterministic sample venues used by the app's seeded demo flows.
  * Idempotent via merge: safe to run repeatedly.
  */
-async function seedSampleVenues(): Promise<SeedingResult> {
+export async function seedSampleVenues(): Promise<SeedingResult> {
   try {
     const batch = db.batch();
     const now = Timestamp.now();
@@ -884,7 +884,7 @@ const SAMPLE_INSTRUCTORS: SampleInstructorData[] = [
   },
 ];
 
-async function seedSampleInstructors(): Promise<SeedingResult> {
+export async function seedSampleInstructors(): Promise<SeedingResult> {
   try {
     const batch = db.batch();
     const now = Timestamp.now();
@@ -926,7 +926,7 @@ function toSlug(s: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-async function generateDemoData(): Promise<SeedingResult[]> {
+export async function generateDemoData(): Promise<SeedingResult[]> {
   const results: SeedingResult[] = [];
 
   // ── Inline constants (local only, don't pollute file scope) ──────────────
