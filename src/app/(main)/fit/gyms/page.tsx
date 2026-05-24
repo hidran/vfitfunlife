@@ -10,6 +10,7 @@ import { useI18n } from '@/hooks/useI18n';
 import type { MessageKey } from '@/i18n/messages';
 import { useVenues } from '@/hooks/useVenues';
 import { Spinner } from '@/components/ui/Spinner';
+import { PhotoCover } from '@/components/gallery/PhotoCover';
 
 const filterKeys: MessageKey[] = [
   'fit.gyms.filter.distance',
@@ -191,8 +192,15 @@ export default function GymsPage() {
                 href={`/venue?id=${gym.id}`}
                 className="block overflow-hidden rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors"
               >
-                <div className="relative h-32 bg-gradient-to-br from-vfit-secondary/40 via-vfit-primary/25 to-transparent">
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.2),_transparent_65%)]" />
+                <div className="relative">
+                  <PhotoCover
+                    src={gym.photoUrls?.[0]}
+                    alt={gym.name}
+                    className="h-28"
+                    fallback={
+                      <div className="h-28 bg-gradient-to-br from-vfit-secondary/40 via-vfit-primary/30 to-transparent" />
+                    }
+                  />
                   {gym.isPartner && (
                     <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold uppercase text-background-dark">
                       {t('fit.gyms.partner')}

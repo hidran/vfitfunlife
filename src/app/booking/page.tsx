@@ -335,9 +335,19 @@ export default function BookingPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   onClick={() => handleProviderSelect(provider)}
-                  className="bg-[#2A2D3A]/50 rounded-2xl p-4 cursor-pointer hover:bg-[#2A2D3A] transition-colors"
+                  className="bg-[#2A2D3A]/50 rounded-2xl overflow-hidden cursor-pointer hover:bg-[#2A2D3A] transition-colors"
                 >
-                  <div className="flex gap-4">
+                  {provider.photoUrls && provider.photoUrls[0] && (
+                    <div className="h-28 overflow-hidden rounded-t-2xl">
+                      <img
+                        src={provider.photoUrls[0]}
+                        alt={provider.fullName}
+                        loading="lazy"
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  )}
+                  <div className="flex gap-4 p-4">
                     <Avatar
                       src={provider.avatarUrl}
                       alt={provider.fullName}
