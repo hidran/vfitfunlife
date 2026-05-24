@@ -793,7 +793,7 @@ const SAMPLE_VENUES: SampleVenueData[] = [
  * Seeds the deterministic sample venues used by the app's seeded demo flows.
  * Idempotent via merge: safe to run repeatedly.
  */
-export async function seedSampleVenues(): Promise<SeedingResult> {
+async function seedSampleVenues(): Promise<SeedingResult> {
   try {
     const batch = db.batch();
     const now = Timestamp.now();
@@ -884,7 +884,7 @@ const SAMPLE_INSTRUCTORS: SampleInstructorData[] = [
   },
 ];
 
-export async function seedSampleInstructors(): Promise<SeedingResult> {
+async function seedSampleInstructors(): Promise<SeedingResult> {
   try {
     const batch = db.batch();
     const now = Timestamp.now();
@@ -1145,7 +1145,10 @@ export const seedQuickData = functions.onRequest(
 
       const reviewResult = await seedReviews(3);
 
-      const allResults = [...results, ...moreResults, reviewResult];
+      const sampleVenuesResult = await seedSampleVenues();
+      const sampleInstructorsResult = await seedSampleInstructors();
+
+      const allResults = [...results, ...moreResults, reviewResult, sampleVenuesResult, sampleInstructorsResult];
 
       response.json({
         success: true,
