@@ -271,9 +271,9 @@ service cloud.firestore {
 
     match /instructors/{instructorId} {
       // Public read for verified instructors
-      allow read: if resource.data.providerProfile.isVerified == true ||
+      allow read: if (resource.data.get('providerProfile', {}).get('isVerified', false) == true) ||
                     isAdmin() ||
-                    request.auth.uid == resource.data.uid;
+                    (isAuthenticated() && request.auth.uid == resource.data.uid);
 
       // Write: Admin or the instructor themselves
       allow write: if isAdmin() ||
