@@ -12,6 +12,7 @@ export interface Provider {
   specialties: string[];
   yearsOfExperience: number;
   languages: string[];
+  photoUrls?: string[]; // max 10. photoUrls[0] is the cover.
   bioKey?: string;
   city?: string;
   createdAt?: Timestamp;

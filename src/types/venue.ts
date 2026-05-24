@@ -47,6 +47,7 @@ export interface Venue {
   heroGradients: string[];
   amenities: AmenityRef[];
   hours: VenueHours[];
+  photoUrls?: string[]; // max 10. photoUrls[0] is the cover.
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
