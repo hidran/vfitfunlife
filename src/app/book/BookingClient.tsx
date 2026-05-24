@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import {
   ChevronLeft,
   Star,
@@ -51,9 +51,9 @@ const MOCK_REVIEWS = [
 ];
 
 export default function ProviderBookingPage() {
-  const params = useParams<{ providerId: string }>();
+  const searchParams = useSearchParams();
   const router = useRouter();
-  const providerId = params?.providerId;
+  const providerId = searchParams?.get('providerId') ?? undefined;
 
   const {
     selectedService,
@@ -98,6 +98,10 @@ export default function ProviderBookingPage() {
   };
 
   const canContinue = selectedService && selectedDate && selectedTime;
+
+  if (!providerId) {
+    return <VenueNotFound message="Provider non specificato" />;
+  }
 
   if (providerLoading) {
     return (

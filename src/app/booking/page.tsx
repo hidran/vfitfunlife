@@ -71,7 +71,7 @@ export default function BookingPage() {
 
   const handleProviderSelect = useCallback((provider: ProviderSearchResult) => {
     selectProvider(provider);
-    router.push(`/booking/${provider.id}`);
+    router.push(`/book?providerId=${provider.id}`);
   }, [selectProvider, router]);
 
   const handleSortChange = (sortBy: SearchParams['sortBy']) => {
