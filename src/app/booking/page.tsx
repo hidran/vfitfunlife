@@ -149,10 +149,10 @@ export default function BookingPage() {
             {CATEGORIES.map((cat) => (
               <button
                 key={cat.id}
-                onClick={() => setSearchFilters({ category: cat.id })}
+                onClick={() => setSearchFilters({ category: cat.name })}
                 className={cn(
                   'flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5',
-                  searchFilters.category === cat.id
+                  searchFilters.category === cat.name
                     ? 'bg-[var(--section-primary)] text-white'
                     : 'bg-[#2A2D3A] text-text-secondary hover:text-white'
                 )}

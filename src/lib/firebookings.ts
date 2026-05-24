@@ -32,11 +32,16 @@ const AVAILABILITY_COLLECTION = 'availability';
 // Search providers based on filters. Reads the public /instructors mirror
 // (allowed under firestore.rules for unauthenticated and authenticated users).
 export async function searchProviders(params: SearchParams): Promise<ProviderSearchResult[]> {
-  const providersQuery = query(
-    collection(db, INSTRUCTORS_COLLECTION),
-    where('providerProfile.isVerified', '==', true),
-    limit(50)
-  );
+  // When a category is specified, push it into the Firestore query as an
+  // array-contains constraint so the limit doesn't burn through unrelated docs
+  // before in-memory filtering can apply (with 300+ seeded trainers, plain
+  // limit(50) starves rare categories whose docs sort late by doc id).
+  const constraints = [where('providerProfile.isVerified', '==', true)];
+  if (params.category) {
+    constraints.push(where('providerProfile.specialties', 'array-contains', params.category));
+  }
+  constraints.push(limit(50));
+  const providersQuery = query(collection(db, INSTRUCTORS_COLLECTION), ...constraints);
 
   const snapshot = await getDocs(providersQuery);
   let providers = snapshot.docs.map((doc) => {
