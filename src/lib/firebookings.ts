@@ -26,15 +26,15 @@ import type {
 } from '@/types/booking';
 
 const BOOKINGS_COLLECTION = 'bookings';
-const PROVIDERS_COLLECTION = 'users';
+const INSTRUCTORS_COLLECTION = 'instructors';
 const AVAILABILITY_COLLECTION = 'availability';
 
-// Search providers based on filters
+// Search providers based on filters. Reads the public /instructors mirror
+// (allowed under firestore.rules for unauthenticated and authenticated users).
 export async function searchProviders(params: SearchParams): Promise<ProviderSearchResult[]> {
   const providersQuery = query(
-    collection(db, PROVIDERS_COLLECTION),
-    where('role', '==', 'provider'),
-    where('providerProfile.isActive', '==', true),
+    collection(db, INSTRUCTORS_COLLECTION),
+    where('providerProfile.isVerified', '==', true),
     limit(50)
   );
 
@@ -42,7 +42,7 @@ export async function searchProviders(params: SearchParams): Promise<ProviderSea
   let providers = snapshot.docs.map((doc) => {
     const data = doc.data();
     const profile = data.providerProfile || {};
-    
+
     return {
       id: doc.id,
       fullName: data.fullName || 'Unknown',
@@ -53,14 +53,10 @@ export async function searchProviders(params: SearchParams): Promise<ProviderSea
       specialties: profile.specialties || [],
       yearsOfExperience: profile.yearsOfExperience || 0,
       languages: profile.languages || [],
-      services: (profile.servicePricing || []).map((s: any) => ({
-        id: s.id,
-        name: s.serviceName,
-        description: s.description,
-        durationMinutes: s.durationMinutes,
-        price: s.price,
-        isActive: s.isActive,
-      })),
+      // Services live in the /instructors/{id}/services subcollection and are
+      // fetched lazily on the detail page (useProviderServices). Search cards
+      // don't render service-level info, so we return an empty array here.
+      services: [],
     } as ProviderSearchResult;
   });
 
@@ -149,7 +145,7 @@ export async function getProviderAvailability(
   const dateStr = date.toISOString().split('T')[0];
   
   const availabilityDoc = await getDoc(
-    doc(db, PROVIDERS_COLLECTION, providerId, AVAILABILITY_COLLECTION, dateStr)
+    doc(db, INSTRUCTORS_COLLECTION, providerId, AVAILABILITY_COLLECTION, dateStr)
   );
 
   if (!availabilityDoc.exists()) {
@@ -199,7 +195,7 @@ export async function createBooking(data: BookingData): Promise<Booking> {
   const batch = writeBatch(db);
   
   // Get provider data for denormalization
-  const providerDoc = await getDoc(doc(db, PROVIDERS_COLLECTION, data.providerId));
+  const providerDoc = await getDoc(doc(db, INSTRUCTORS_COLLECTION, data.providerId));
   if (!providerDoc.exists()) {
     throw new Error('Provider not found');
   }
@@ -274,7 +270,7 @@ export async function createBooking(data: BookingData): Promise<Booking> {
   const timeStr = data.scheduledAt.toTimeString().slice(0, 5);
   const availabilityRef = doc(
     db,
-    PROVIDERS_COLLECTION,
+    INSTRUCTORS_COLLECTION,
     data.providerId,
     AVAILABILITY_COLLECTION,
     dateStr
