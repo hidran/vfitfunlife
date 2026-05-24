@@ -309,3 +309,18 @@ export interface BulkActionResult {
   failed: number;
   errors: { id: string; error: string }[];
 }
+
+// Firestore Transaction (payments page)
+export type TransactionType = 'booking_payment' | 'payout' | 'refund' | 'commission';
+export type TransactionStatus = 'completed' | 'pending' | 'failed';
+
+export interface Transaction {
+  id: string;
+  type: TransactionType;
+  amount: number;
+  status: TransactionStatus;
+  description: string;
+  customerName: string;
+  providerName: string;
+  createdAt: import('firebase/firestore').Timestamp;
+}
