@@ -553,5 +553,41 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+
+    // ============================================
+    // HOME TRAINING SERVICES (Public catalog)
+    // ============================================
+
+    match /homeTrainingServices/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ============================================
+    // VIRTUAL PROGRAMS (Public catalog)
+    // ============================================
+
+    match /virtualPrograms/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ============================================
+    // TESTIMONIALS (Public read, admin write)
+    // ============================================
+
+    match /testimonials/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ============================================
+    // TRANSACTIONS (Admin-only view of platform finances)
+    // ============================================
+
+    match /transactions/{id} {
+      allow read: if isAdmin();
+      allow write: if false; // Only Cloud Functions / admin SDK
+    }
   }
 }
