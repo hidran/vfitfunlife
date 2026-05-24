@@ -33,15 +33,12 @@ import {
 import { Avatar } from '@/components/ui/Avatar';
 import { cn } from '@/lib/utils';
 import { usePullToRefresh } from 'use-pull-to-refresh';
-import { useEffect, useState } from 'react';
-import { collection, collectionGroup, query, limit, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
 import { Spinner } from '@/components/ui/Spinner';
 import { useI18n } from '@/hooks/useI18n';
 import { useVenues } from '@/hooks/useVenues';
 import { useProviders } from '@/hooks/useProviders';
+import { useTodayClasses, useTestimonials } from '@/hooks';
 import type { MessageKey } from '@/i18n/messages';
-import { toLocaleTag, type AppLocale } from '@/types/locale';
 
 // Types
 interface Provider {
@@ -64,15 +61,6 @@ interface Venue {
   distance: string;
   partner: boolean;
   specialties?: string[];
-}
-
-interface ClassSession {
-  id: string;
-  time: string;
-  name: string;
-  instructor: string;
-  spots: number;
-  tag: string;
 }
 
 interface QuickActionItem {
@@ -173,90 +161,18 @@ const vfunTVSchedule: VFunTVShow[] = [
 
 const vfunIsStreamingLive = true;
 
-// Firestore data fetching hooks
-// TODO(fake-data-migration): extract to shared hooks once class + testimonials types are defined.
-function useTodayClasses(
-  limitCount: number = 3,
-  locale: AppLocale,
-  labels: {
-    unnamedClass: string;
-    unknownInstructor: string;
-    allLevels: string;
-  }
-) {
-  const [classes, setClasses] = useState<ClassSession[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchClasses = async () => {
-      try {
-        // fitnessClasses is public-read in firestore.rules
-        const q = query(
-          collection(db, 'fitnessClasses'),
-          limit(limitCount * 3)
-        );
-        
-        const snapshot = await getDocs(q);
-        const now = new Date();
-        const classesData = snapshot.docs
-          .map(doc => {
-            const data = doc.data();
-            const startTime = data.startTime?.toDate?.() || new Date();
-            return {
-              id: doc.id,
-              time: startTime.toLocaleTimeString(toLocaleTag(locale), {
-                hour: '2-digit',
-                minute: '2-digit',
-              }),
-              name: data.name || labels.unnamedClass,
-              instructor: data.instructorName || data.instructor?.fullName || labels.unknownInstructor,
-              spots: (data.maxParticipants || data.maxCapacity || 20) - (data.bookedCount || 0),
-              tag: data.level || labels.allLevels,
-              startTime,
-              isActive: data.isActive !== false,
-            };
-          })
-          .filter(c => c.isActive && c.startTime >= now)
-          .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
-          .slice(0, limitCount);
-        
-        setClasses(classesData);
-      } catch (error) {
-        console.error('Error fetching classes:', error);
-        setClasses([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    const timeoutId = setTimeout(() => {
-      setIsLoading(false);
-    }, 5000);
-
-    fetchClasses();
-    return () => clearTimeout(timeoutId);
-  }, [limitCount, labels.allLevels, labels.unnamedClass, labels.unknownInstructor, locale]);
-
-  return { classes, isLoading };
-}
-
 function VFitHome() {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const { data: trainers = [], isLoading: loadingTrainers } = useProviders({ onlyVerified: true, limit: 6 });
   const { data: gyms = [], isLoading: loadingGyms } = useVenues({ type: 'gym', limit: 4 });
-  const { classes: classSessions, isLoading: loadingClasses } = useTodayClasses(3, locale, {
-    unnamedClass: t('home.shared.unnamedClass'),
-    unknownInstructor: t('home.shared.unknownPerson'),
-    allLevels: t('home.fit.classLevel.all'),
-  });
+  const { data: classSessions = [], isLoading: loadingClasses } = useTodayClasses(3);
 
   // Fallback data while loading
   const displayTrainers = trainers.length > 0 ? trainers.slice(0, 3) : [];
   const displayGyms = gyms.length > 0 ? gyms : [];
-  const displayClasses = classSessions.length > 0 ? classSessions : [];
   const featuredTrainers = displayTrainers.slice(0, 2);
-  const activeClassTags = displayClasses
-    .map((session) => session.name)
+  const activeClassTags = classSessions
+    .map((session) => session.title)
     .filter((value, index, arr) => arr.indexOf(value) === index)
     .slice(0, 4);
 
@@ -644,114 +560,36 @@ function VFunHome() {
   );
 }
 
-// Testimonials from Firestore
-function useTestimonials(
-  limitCount: number = 3,
-  labels: {
-    anonymousUser: string;
-    genericService: string;
-    today: string;
-    yesterday: string;
-    daysAgo: string;
-  }
-) {
-  const [testimonials, setTestimonials] = useState<Array<{
-    id: string;
-    name: string;
-    service: string;
-    rating: number;
-    text: string;
-    date: string;
-  }>>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchTestimonials = async () => {
-      try {
-        // Pull reviews from venue/instructor review subcollections
-        const q = query(
-          collectionGroup(db, 'reviews'),
-          limit(limitCount * 3)
-        );
-        
-        const snapshot = await getDocs(q);
-        const reviewsData = snapshot.docs
-          .map(doc => {
-            const data = doc.data();
-            const createdAt = data.createdAt?.toDate?.() || new Date();
-            const daysAgo = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
-            return {
-              id: doc.id,
-              name: data.userName?.split(' ')[0] + ' ' + 
-                (data.userName?.split(' ')[1]?.charAt(0) || '') + '.' || labels.anonymousUser,
-              service: data.serviceName || labels.genericService,
-              rating: data.rating || 5,
-              text: data.comment || data.text || '',
-              date:
-                daysAgo === 0
-                  ? labels.today
-                  : daysAgo === 1
-                    ? labels.yesterday
-                    : labels.daysAgo.replace(/\{\{\s*count\s*\}\}/g, String(daysAgo)),
-            };
-          })
-          .filter(r => r.rating >= 4)
-          .sort((a, b) => b.rating - a.rating)
-          .slice(0, limitCount);
-        
-        setTestimonials(reviewsData);
-      } catch (error) {
-        console.error('Error fetching testimonials:', error);
-        setTestimonials([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    const timeoutId = setTimeout(() => {
-      setIsLoading(false);
-    }, 5000);
-
-    fetchTestimonials();
-    return () => clearTimeout(timeoutId);
-  }, [labels.anonymousUser, labels.daysAgo, labels.genericService, labels.today, labels.yesterday, limitCount]);
-
-  return { testimonials, isLoading };
-}
-
 function VLifeHome() {
   const { t } = useI18n();
   const { data: centers = [], isLoading: loadingCenters } = useVenues({ type: 'wellness_center', limit: 4 });
-  const { testimonials, isLoading: loadingTestimonials } = useTestimonials(3, {
-    anonymousUser: t('home.shared.anonymous'),
-    genericService: t('home.shared.service'),
-    today: t('home.shared.today'),
-    yesterday: t('home.shared.yesterday'),
-    daysAgo: t('home.shared.daysAgo', { count: '{{count}}' }),
-  });
+  const { data: testimonials = [], isLoading: loadingTestimonials } = useTestimonials({ limit: 3 });
 
-  // Fallback testimonials
+  // Fallback testimonials (i18n-keyed, shown when Firestore returns empty)
   const fallbackTestimonials = [
     {
       id: '1',
-      name: 'Francesca M.',
-      service: t('home.life.testimonials.f1.service'),
+      userName: 'Francesca M.',
+      avatarUrl: null,
+      serviceLabel: t('home.life.testimonials.f1.service'),
       rating: 5,
       text: t('home.life.testimonials.f1.text'),
       date: t('home.life.testimonials.f1.date'),
     },
     {
       id: '2',
-      name: 'Giovanni P.',
-      service: t('home.life.testimonials.f2.service'),
+      userName: 'Giovanni P.',
+      avatarUrl: null,
+      serviceLabel: t('home.life.testimonials.f2.service'),
       rating: 5,
       text: t('home.life.testimonials.f2.text'),
       date: t('home.life.testimonials.f2.date'),
     },
     {
       id: '3',
-      name: 'Laura B.',
-      service: t('home.life.testimonials.f3.service'),
+      userName: 'Laura B.',
+      avatarUrl: null,
+      serviceLabel: t('home.life.testimonials.f3.service'),
       rating: 4,
       text: t('home.life.testimonials.f3.text'),
       date: t('home.life.testimonials.f3.date'),

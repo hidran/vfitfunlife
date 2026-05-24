@@ -23,32 +23,8 @@ import { Avatar } from '@/components/ui/Avatar';
 import { ServiceCard, AvailabilityPicker } from '@/components/booking';
 import type { Service } from '@/types/booking';
 import { useProvider, useProviderServices } from '@/hooks/useProviders';
+import { useInstructorReviews } from '@/hooks/useCommunity';
 import { VenueNotFound } from '@/components/venue/VenueNotFound';
-
-
-const MOCK_REVIEWS = [
-  {
-    id: '1',
-    userName: 'Giulia B.',
-    rating: 5,
-    comment: 'Marco è un professionista eccezionale! Mi ha aiutato a raggiungere i miei obiettivi in pochi mesi.',
-    date: '2026-01-15',
-  },
-  {
-    id: '2',
-    userName: 'Alessandro M.',
-    rating: 5,
-    comment: 'Ottimo trainer, molto professionale e attento alle esigenze.',
-    date: '2026-01-10',
-  },
-  {
-    id: '3',
-    userName: 'Francesca L.',
-    rating: 4,
-    comment: 'Buona esperienza, consigliato per chi vuole iniziare a fare sport.',
-    date: '2026-01-05',
-  },
-];
 
 export default function ProviderBookingPage() {
   const searchParams = useSearchParams();
@@ -68,6 +44,7 @@ export default function ProviderBookingPage() {
 
   const { data: provider, isLoading: providerLoading } = useProvider(providerId);
   const { data: services = [] } = useProviderServices(providerId);
+  const { data: reviews = [] } = useInstructorReviews(providerId);
   const [activeTab, setActiveTab] = useState<'services' | 'reviews' | 'about'>('services');
 
   // Fetch availability when date changes
@@ -282,24 +259,27 @@ export default function ProviderBookingPage() {
               exit={{ opacity: 0, y: -10 }}
               className="space-y-4"
             >
-              {MOCK_REVIEWS.map((review) => (
-                <div
-                  key={review.id}
-                  className="bg-[#2A2D3A]/50 rounded-xl p-4"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-white">{review.userName}</span>
-                    <div className="flex items-center gap-1">
-                      <Star className="w-4 h-4 text-warning fill-warning" />
-                      <span className="text-white">{review.rating}</span>
+              {reviews.map((review) => {
+                const dateLabel = review.createdAt?.toDate
+                  ? review.createdAt.toDate().toLocaleDateString('it-IT')
+                  : 'Recente';
+                return (
+                  <div
+                    key={review.id}
+                    className="bg-[#2A2D3A]/50 rounded-xl p-4"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium text-white">{review.userName}</span>
+                      <div className="flex items-center gap-1">
+                        <Star className="w-4 h-4 text-warning fill-warning" />
+                        <span className="text-white">{review.rating}</span>
+                      </div>
                     </div>
+                    <p className="text-text-secondary text-sm">{review.text}</p>
+                    <p className="text-text-tertiary text-xs mt-2">{dateLabel}</p>
                   </div>
-                  <p className="text-text-secondary text-sm">{review.comment}</p>
-                  <p className="text-text-tertiary text-xs mt-2">
-                    {new Date(review.date).toLocaleDateString('it-IT')}
-                  </p>
-                </div>
-              ))}
+                );
+              })}
             </motion.div>
           )}
 

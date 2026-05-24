@@ -5,82 +5,32 @@ import { useMemo, useState } from 'react';
 import { Calendar, Clock, Filter, Star, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
+import { useFitnessClasses } from '@/hooks/useFitness';
+import { Spinner } from '@/components/ui/Spinner';
+import type { ClassCategory } from '@/types/fitness';
 
-type ClassCategory = 'all' | 'yoga' | 'hiit' | 'pilates' | 'functional';
-
-interface FitnessClassItem {
-  id: string;
-  title: string;
-  category: Exclude<ClassCategory, 'all'>;
-  trainer: string;
-  time: string;
-  duration: string;
-  spotsLeft: number;
-  rating: number;
-}
-
-const classes: FitnessClassItem[] = [
-  {
-    id: 'c1',
-    title: 'Morning Power Yoga',
-    category: 'yoga',
-    trainer: 'Elisa Serra',
-    time: '08:30',
-    duration: '60 min',
-    spotsLeft: 6,
-    rating: 4.8,
-  },
-  {
-    id: 'c2',
-    title: 'HIIT Burn',
-    category: 'hiit',
-    trainer: 'Marco Vitali',
-    time: '12:15',
-    duration: '45 min',
-    spotsLeft: 4,
-    rating: 4.9,
-  },
-  {
-    id: 'c3',
-    title: 'Pilates Core Flow',
-    category: 'pilates',
-    trainer: 'Giulia Neri',
-    time: '17:30',
-    duration: '50 min',
-    spotsLeft: 8,
-    rating: 4.7,
-  },
-  {
-    id: 'c4',
-    title: 'Functional Circuit',
-    category: 'functional',
-    trainer: 'Andrea Rossi',
-    time: '19:00',
-    duration: '55 min',
-    spotsLeft: 3,
-    rating: 4.8,
-  },
-];
+type CategoryFilter = ClassCategory | 'all';
 
 export default function FitClassesPage() {
-  const [category, setCategory] = useState<ClassCategory>('all');
+  const [category, setCategory] = useState<CategoryFilter>('all');
   const { t } = useI18n();
 
-  const categoryLabels = useMemo<Record<ClassCategory, string>>(
+  const { data: classes = [], isLoading } = useFitnessClasses(
+    category === 'all' ? {} : { category }
+  );
+
+  const categoryLabels = useMemo<Record<CategoryFilter, string>>(
     () => ({
       all: t('fit.classes.category.all'),
       yoga: t('fit.classes.category.yoga'),
       hiit: t('fit.classes.category.hiit'),
       pilates: t('fit.classes.category.pilates'),
       functional: t('fit.classes.category.functional'),
+      cardio: 'Cardio',
+      strength: 'Forza',
     }),
     [t]
   );
-
-  const filteredClasses = useMemo(() => {
-    if (category === 'all') return classes;
-    return classes.filter((item) => item.category === category);
-  }, [category]);
 
   return (
     <div className="container-mobile py-6 pb-24 space-y-5">
@@ -107,7 +57,7 @@ export default function FitClassesPage() {
 
       <section className="flex flex-wrap gap-2">
         {Object.keys(categoryLabels).map((value) => {
-          const key = value as ClassCategory;
+          const key = value as CategoryFilter;
           return (
             <button
               key={key}
@@ -127,40 +77,44 @@ export default function FitClassesPage() {
       </section>
 
       <section className="space-y-3">
-        {filteredClasses.map((item) => (
-          <article key={item.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-semibold text-text-inverse">{item.title}</h2>
-                <p className="mt-1 text-xs text-text-tertiary">{item.trainer}</p>
+        {isLoading ? (
+          <Spinner size="md" />
+        ) : (
+          classes.map((item) => (
+            <article key={item.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-semibold text-text-inverse">{item.title}</h2>
+                  <p className="mt-1 text-xs text-text-tertiary">{item.trainer}</p>
+                </div>
+                <span className="rounded-full bg-white/10 px-2 py-1 text-[10px] uppercase text-text-tertiary">
+                  {categoryLabels[item.category]}
+                </span>
               </div>
-              <span className="rounded-full bg-white/10 px-2 py-1 text-[10px] uppercase text-text-tertiary">
-                {categoryLabels[item.category]}
-              </span>
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-text-tertiary">
-              <span className="inline-flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5" />
-                {item.time} · {item.duration}
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <Users className="h-3.5 w-3.5" />
-                {t('fit.classes.spots', { count: item.spotsLeft })}
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <Star className="h-3.5 w-3.5 text-yellow-400" />
-                {item.rating.toFixed(1)}
-              </span>
-            </div>
-            <Link
-              href="/booking"
-              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-section-primary/20 px-4 py-2 text-sm font-semibold text-section-primary"
-            >
-              <Calendar className="h-4 w-4" />
-              {t('fit.classes.bookClass')}
-            </Link>
-          </article>
-        ))}
+              <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-text-tertiary">
+                <span className="inline-flex items-center gap-1">
+                  <Clock className="h-3.5 w-3.5" />
+                  {item.time} · {item.durationMinutes} min
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <Users className="h-3.5 w-3.5" />
+                  {t('fit.classes.spots', { count: item.spotsLeft })}
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <Star className="h-3.5 w-3.5 text-yellow-400" />
+                  {item.rating.toFixed(1)}
+                </span>
+              </div>
+              <Link
+                href="/booking"
+                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-section-primary/20 px-4 py-2 text-sm font-semibold text-section-primary"
+              >
+                <Calendar className="h-4 w-4" />
+                {t('fit.classes.bookClass')}
+              </Link>
+            </article>
+          ))
+        )}
       </section>
 
       <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-text-tertiary">

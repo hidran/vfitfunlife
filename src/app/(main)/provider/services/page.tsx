@@ -7,71 +7,22 @@ import { useProviderStore } from '@/stores/providerStore';
 import { ProviderService } from '@/types/provider';
 import { Modal } from '@/components/ui/Modal';
 import { cn } from '@/lib/utils';
-
-// Mock data for demo
-const MOCK_SERVICES: ProviderService[] = [
-  {
-    id: '1',
-    serviceName: 'Personal Training',
-    description: 'One-on-one personal training session tailored to your fitness goals.',
-    price: 70,
-    durationMinutes: 60,
-    isActive: true,
-    categoryId: 'fitness',
-    categoryName: 'Fitness',
-    bookingCount: 45,
-    revenue: 3150,
-    createdAt: new Date('2023-06-01') as any,
-    updatedAt: new Date('2024-01-01') as any,
-  },
-  {
-    id: '2',
-    serviceName: 'Nutrition Consultation',
-    description: 'Comprehensive nutrition assessment and personalized meal planning.',
-    price: 50,
-    durationMinutes: 45,
-    isActive: true,
-    categoryId: 'wellness',
-    categoryName: 'Wellness',
-    bookingCount: 23,
-    revenue: 1150,
-    createdAt: new Date('2023-07-15') as any,
-    updatedAt: new Date('2024-01-01') as any,
-  },
-  {
-    id: '3',
-    serviceName: 'Group Fitness Class',
-    description: 'High-energy group workout session for up to 10 participants.',
-    price: 25,
-    durationMinutes: 45,
-    isActive: true,
-    categoryId: 'fitness',
-    categoryName: 'Fitness',
-    bookingCount: 120,
-    revenue: 3000,
-    createdAt: new Date('2023-08-01') as any,
-    updatedAt: new Date('2024-01-01') as any,
-  },
-  {
-    id: '4',
-    serviceName: 'Online Coaching',
-    description: 'Virtual training session via video call.',
-    price: 55,
-    durationMinutes: 60,
-    isActive: false,
-    categoryId: 'fitness',
-    categoryName: 'Fitness',
-    bookingCount: 8,
-    revenue: 440,
-    createdAt: new Date('2023-09-01') as any,
-    updatedAt: new Date('2024-01-01') as any,
-  },
-];
+import { useAuthStore } from '@/stores/authStore';
+import { fetchProviderServices } from '@/lib/firebase/providers';
 
 export default function ProviderServicesPage() {
   const { services, isLoadingServices, fetchServices, updateService, deleteService } = useProviderStore();
-  const [displayServices, setDisplayServices] = useState<ProviderService[]>(MOCK_SERVICES);
-  const nextServiceIdRef = useRef(MOCK_SERVICES.length + 1);
+  const [displayServices, setDisplayServices] = useState<ProviderService[]>([]);
+  const nextServiceIdRef = useRef(1);
+  const firebaseUser = useAuthStore((s) => s.firebaseUser);
+
+  useEffect(() => {
+    if (!firebaseUser?.uid) return;
+    void fetchProviderServices(firebaseUser.uid).then((firestoreServices) => {
+      setDisplayServices(firestoreServices as unknown as ProviderService[]);
+      nextServiceIdRef.current = firestoreServices.length + 1;
+    });
+  }, [firebaseUser?.uid]);
   const [editingService, setEditingService] = useState<ProviderService | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newService, setNewService] = useState<Partial<ProviderService>>({
