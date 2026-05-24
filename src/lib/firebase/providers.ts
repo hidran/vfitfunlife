@@ -4,6 +4,7 @@ import {
   getDoc,
   getDocs,
   query,
+  updateDoc,
   where,
   limit as limitQuery,
   type Query,
@@ -81,4 +82,8 @@ export async function fetchProviderServices(providerId: string): Promise<Instruc
     console.error('[fetchProviderServices]', providerId, error);
     return [];
   }
+}
+
+export async function updateProviderPhotos(providerId: string, photoUrls: string[]): Promise<void> {
+  await updateDoc(doc(db, 'instructors', providerId), { photoUrls });
 }

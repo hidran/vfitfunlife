@@ -5,3 +5,4 @@ export { useProvider, useProviders, useProviderServices } from './useProviders';
 export { useFitnessClasses, useTodayClasses, useHomeTrainingServices, useVirtualPrograms } from './useFitness';
 export { useTestimonials, useInstructorReviews } from './useCommunity';
 export { useTransactions } from './useTransactions';
+export { useUpdateVenuePhotos, useUpdateProviderPhotos } from './usePhotoUpload';

@@ -4,6 +4,7 @@ import {
   getDoc,
   getDocs,
   query,
+  updateDoc,
   where,
   limit as limitQuery,
   type Query,
@@ -63,4 +64,8 @@ export async function fetchVenueCourses(venueId: string): Promise<VenueCourse[]>
     console.error('[fetchVenueCourses]', venueId, error);
     return [];
   }
+}
+
+export async function updateVenuePhotos(venueId: string, photoUrls: string[]): Promise<void> {
+  await updateDoc(doc(db, 'venues', venueId), { photoUrls });
 }
