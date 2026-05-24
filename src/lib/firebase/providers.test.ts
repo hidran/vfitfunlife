@@ -9,7 +9,6 @@ vi.mock('firebase/firestore', () => ({
   query: vi.fn(() => ({ __query: true })),
   where: vi.fn(),
   limit: vi.fn(),
-  orderBy: vi.fn(),
 }));
 
 import { getDoc, getDocs } from 'firebase/firestore';
@@ -66,6 +65,30 @@ describe('fetchProviders', () => {
     const all = await fetchProviders({ onlyVerified: true });
     expect(all).toHaveLength(1);
     expect(all[0].id).toBe('a');
+  });
+
+  it('filters out inactive providers regardless of onlyVerified', async () => {
+    mockGetDocs.mockResolvedValueOnce({
+      docs: [
+        { id: 'a', data: () => ({ fullName: 'A', isActive: true, providerProfile: { isVerified: true, rating: 5 } }) },
+        { id: 'b', data: () => ({ fullName: 'B', isActive: false, providerProfile: { isVerified: true, rating: 4 } }) },
+      ],
+    } as never);
+    const all = await fetchProviders({ onlyVerified: true });
+    expect(all).toHaveLength(1);
+    expect(all[0].id).toBe('a');
+  });
+
+  it('filters by specialty when provided', async () => {
+    mockGetDocs.mockResolvedValueOnce({
+      docs: [
+        { id: 'a', data: () => ({ fullName: 'A', isActive: true, specialties: ['Yoga'] }) },
+        { id: 'b', data: () => ({ fullName: 'B', isActive: true, specialties: ['Pilates'] }) },
+      ],
+    } as never);
+    const result = await fetchProviders({ specialty: 'Yoga' });
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('a');
   });
 });
 

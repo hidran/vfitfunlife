@@ -6,6 +6,8 @@ import {
   query,
   where,
   limit as limitQuery,
+  type Query,
+  type CollectionReference,
 } from 'firebase/firestore';
 import { db } from './config';
 import type {
@@ -14,6 +16,12 @@ import type {
   ProviderListOptions,
 } from '@/types/instructor';
 
+/**
+ * Normalizes the various shapes /instructors documents take in this app's data —
+ * some fields live at the root, some inside providerProfile, with home/page.tsx's
+ * reader (line 184) as the canonical fallback ordering. The defaults match that
+ * reader so legacy documents (no `isActive` field) continue to appear in lists.
+ */
 function flattenProvider(id: string, data: Record<string, unknown>): Provider {
   const profile = (data.providerProfile ?? {}) as Record<string, unknown>;
   return {
@@ -23,7 +31,7 @@ function flattenProvider(id: string, data: Record<string, unknown>): Provider {
     rating: (data.ratingAvg as number) ?? (profile.rating as number) ?? 0,
     reviewCount: (data.reviewCount as number) ?? (profile.reviewCount as number) ?? 0,
     isVerified: (profile.isVerified as boolean) ?? false,
-    isActive: (data.isActive as boolean) ?? (profile.isActive as boolean) ?? true,
+    isActive: (data.isActive as boolean) ?? (profile.isActive as boolean) ?? true, // matches home/page.tsx legacy reader
     specialties: (data.specialties as string[]) ?? (profile.specialties as string[]) ?? [],
     yearsOfExperience:
       (data.experienceYears as number) ?? (profile.yearsOfExperience as number) ?? 0,
@@ -51,10 +59,10 @@ export async function fetchProviders(opts: ProviderListOptions = {}): Promise<Pr
       constraints.push(where('providerProfile.isVerified', '==', true));
     }
     if (opts.limit) constraints.push(limitQuery(opts.limit));
-    const q = constraints.length
+    const q: Query | CollectionReference = constraints.length
       ? query(collection(db, 'instructors'), ...constraints)
       : collection(db, 'instructors');
-    const snap = await getDocs(q as never);
+    const snap = await getDocs(q);
     return snap.docs
       .map((d) => flattenProvider(d.id, d.data() as Record<string, unknown>))
       .filter((p) => p.isActive && (!opts.onlyVerified || p.isVerified))

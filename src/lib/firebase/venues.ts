@@ -6,6 +6,8 @@ import {
   query,
   where,
   limit as limitQuery,
+  type Query,
+  type CollectionReference,
 } from 'firebase/firestore';
 import { db } from './config';
 import type {
@@ -32,10 +34,10 @@ export async function fetchVenues(opts: VenueListOptions = {}): Promise<Venue[]>
     if (opts.type) constraints.push(where('type', '==', opts.type));
     if (opts.city) constraints.push(where('city', '==', opts.city));
     if (opts.limit) constraints.push(limitQuery(opts.limit));
-    const q = constraints.length
+    const q: Query | CollectionReference = constraints.length
       ? query(collection(db, 'venues'), ...constraints)
       : collection(db, 'venues');
-    const snap = await getDocs(q as never);
+    const snap = await getDocs(q);
     return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Venue, 'id'>) }));
   } catch (error) {
     console.error('[fetchVenues]', opts, error);
