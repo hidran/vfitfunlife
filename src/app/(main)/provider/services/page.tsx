@@ -9,12 +9,20 @@ import { Modal } from '@/components/ui/Modal';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
 import { fetchProviderServices } from '@/lib/firebase/providers';
+import { useProvider } from '@/hooks/useProviders';
+import { useUpdateProviderPhotos } from '@/hooks/usePhotoUpload';
+import { PhotoUploader } from '@/components/gallery/PhotoUploader';
 
 export default function ProviderServicesPage() {
   const { services, isLoadingServices, fetchServices, updateService, deleteService } = useProviderStore();
   const [displayServices, setDisplayServices] = useState<ProviderService[]>([]);
   const nextServiceIdRef = useRef(1);
   const firebaseUser = useAuthStore((s) => s.firebaseUser);
+  const [activeTab, setActiveTab] = useState<'services' | 'gallery'>('services');
+  const uid = firebaseUser?.uid;
+  const { data: provider } = useProvider(uid);
+  const updatePhotos = useUpdateProviderPhotos(uid);
+  const photos = provider?.photoUrls ?? [];
 
   useEffect(() => {
     if (!firebaseUser?.uid) return;
@@ -120,6 +128,52 @@ export default function ProviderServicesPage() {
           Add Service
         </Button>
       </div>
+
+      {/* Tab Bar */}
+      <div className="mb-4 flex gap-2 border-b border-white/10">
+        <button
+          type="button"
+          onClick={() => setActiveTab('services')}
+          className={cn(
+            'border-b-2 px-3 py-2 text-sm font-medium',
+            activeTab === 'services'
+              ? 'border-section-primary text-text-inverse'
+              : 'border-transparent text-text-secondary'
+          )}
+        >
+          Servizi
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('gallery')}
+          className={cn(
+            'border-b-2 px-3 py-2 text-sm font-medium',
+            activeTab === 'gallery'
+              ? 'border-section-primary text-text-inverse'
+              : 'border-transparent text-text-secondary'
+          )}
+        >
+          Galleria
+        </button>
+      </div>
+
+      {activeTab === 'gallery' && (
+        <div>
+          {!uid ? (
+            <p className="text-sm text-text-secondary">Accedi per gestire la tua galleria.</p>
+          ) : (
+            <PhotoUploader
+              scope="instructors"
+              entityId={uid}
+              photos={photos}
+              onChange={(newPhotos) => updatePhotos.mutate(newPhotos)}
+              disabled={updatePhotos.isPending}
+            />
+          )}
+        </div>
+      )}
+
+      {activeTab === 'services' && <>
 
       {/* Services Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -295,7 +349,7 @@ export default function ProviderServicesPage() {
         <Modal onClose={() => setShowAddModal(false)}>
           <div className="bg-[#2A2D3A] rounded-xl p-6 max-w-md w-full mx-4">
             <h3 className="text-xl font-semibold text-white mb-6">Add New Service</h3>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm text-gray-400 mb-2">Service Name</label>
@@ -347,8 +401,8 @@ export default function ProviderServicesPage() {
             </div>
 
             <div className="flex gap-3 mt-6">
-              <Button 
-                onClick={handleAddService} 
+              <Button
+                onClick={handleAddService}
                 disabled={!newService.serviceName}
                 fullWidth
               >
@@ -361,6 +415,8 @@ export default function ProviderServicesPage() {
           </div>
         </Modal>
       )}
+
+      </>}
     </div>
   );
 }
