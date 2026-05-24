@@ -8,87 +8,8 @@ import { GoogleMap } from '@/components/map/GoogleMap';
 import { useRouter } from 'next/navigation';
 import { useI18n } from '@/hooks/useI18n';
 import type { MessageKey } from '@/i18n/messages';
-
-const gyms = [
-  {
-    id: 'carosello',
-    name: 'Carosello Fitness',
-    city: 'Milano Centro',
-    rating: 4.8,
-    reviews: 124,
-    distanceKm: 1.2,
-    amenities: ['Sauna', 'Pool'],
-    priceLevel: 2,
-    partner: true,
-    lat: 45.4642,
-    lng: 9.1900,
-  },
-  {
-    id: 'urban-core',
-    name: 'Urban Core Gym',
-    city: 'Porta Nuova',
-    rating: 4.9,
-    reviews: 98,
-    distanceKm: 2.4,
-    amenities: ['CrossFit', 'Boxing'],
-    priceLevel: 3,
-    partner: false,
-    lat: 45.4789,
-    lng: 9.1965,
-  },
-  {
-    id: 'village-fit',
-    name: 'Village Fit Club',
-    city: 'Navigli',
-    rating: 4.7,
-    reviews: 142,
-    distanceKm: 3.1,
-    amenities: ['Yoga', 'Spa'],
-    priceLevel: 1,
-    partner: true,
-    lat: 45.4523,
-    lng: 9.1756,
-  },
-  {
-    id: 'pulse-studio',
-    name: 'Pulse Studio',
-    city: 'Isola',
-    rating: 4.6,
-    reviews: 67,
-    distanceKm: 3.8,
-    amenities: ['Pilates', 'HIIT'],
-    priceLevel: 2,
-    partner: false,
-    lat: 45.4834,
-    lng: 9.1856,
-  },
-  {
-    id: 'elite-fitness',
-    name: 'Elite Fitness Center',
-    city: 'Brera',
-    rating: 4.9,
-    reviews: 215,
-    distanceKm: 1.8,
-    amenities: ['Pool', 'Tennis', 'Spa'],
-    priceLevel: 3,
-    partner: true,
-    lat: 45.4701,
-    lng: 9.1854,
-  },
-  {
-    id: 'power-gym',
-    name: 'Power Gym Milano',
-    city: 'Porta Romana',
-    rating: 4.5,
-    reviews: 89,
-    distanceKm: 4.2,
-    amenities: ['Weights', 'Cardio'],
-    priceLevel: 1,
-    partner: false,
-    lat: 45.4456,
-    lng: 9.2056,
-  },
-];
+import { useVenues } from '@/hooks/useVenues';
+import { Spinner } from '@/components/ui/Spinner';
 
 const filterKeys: MessageKey[] = [
   'fit.gyms.filter.distance',
@@ -114,6 +35,8 @@ export default function GymsPage() {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<SortOption>('nearest');
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | undefined>();
+
+  const { data: gyms = [], isLoading: gymsLoading } = useVenues({ type: 'gym' });
 
   const handleSort = () => {
     const currentIndex = sortOptions.indexOf(sort);
@@ -155,10 +78,8 @@ export default function GymsPage() {
       if (sort === 'top') {
         return b.rating - a.rating;
       }
-      if (sort === 'price') {
-        return a.priceLevel - b.priceLevel;
-      }
-      return a.distanceKm - b.distanceKm;
+      // price and nearest sorting require fields not in Firestore schema; fall back to rating
+      return b.rating - a.rating;
     });
   }, [query, sort]);
 
@@ -260,7 +181,9 @@ export default function GymsPage() {
           </div>
         </div>
 
-        {view === 'list' ? (
+        {gymsLoading ? (
+          <div className="flex justify-center p-8"><Spinner size="md" /></div>
+        ) : view === 'list' ? (
           <div className="space-y-4">
             {filteredGyms.map((gym) => (
               <Link
@@ -270,7 +193,7 @@ export default function GymsPage() {
               >
                 <div className="relative h-32 bg-gradient-to-br from-vfit-secondary/40 via-vfit-primary/25 to-transparent">
                   <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.2),_transparent_65%)]" />
-                  {gym.partner && (
+                  {gym.isPartner && (
                     <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold uppercase text-background-dark">
                       {t('fit.gyms.partner')}
                     </span>
@@ -289,20 +212,20 @@ export default function GymsPage() {
                       <p className="text-xs text-text-tertiary">{gym.city}</p>
                     </div>
                     <span className="text-xs text-text-tertiary">
-                      {gym.distanceKm.toFixed(1)} km
+                      {'—'}
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {gym.amenities.map((amenity) => (
+                    {gym.amenities.map((a) => (
                       <span
-                        key={amenity}
+                        key={a.kind}
                         className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-text-tertiary"
                       >
-                        {amenity}
+                        {a.kind}
                       </span>
                     ))}
                     <span className="rounded-full bg-section-primary/15 px-2.5 py-1 text-[11px] font-semibold text-section-primary">
-                      {t('fit.gyms.reviews', { count: gym.reviews })}
+                      {t('fit.gyms.reviews', { count: gym.reviewCount })}
                     </span>
                   </div>
                 </div>
@@ -345,7 +268,7 @@ export default function GymsPage() {
                       <Star className="h-3 w-3 text-yellow-400" />
                       {gym.rating.toFixed(1)}
                     </div>
-                    <span>{gym.distanceKm.toFixed(1)} km</span>
+                    <span>{'—'}</span>
                   </div>
                 </Link>
               ))}

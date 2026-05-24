@@ -304,11 +304,10 @@ export default function BookingPage() {
                 name: p.fullName,
                 city: p.location?.address || 'Milano',
                 rating: p.rating,
-                reviews: p.reviewCount,
-                distanceKm: p.distance || 0,
+                reviewCount: p.reviewCount,
                 lat: p.location?.lat,
                 lng: p.location?.lng,
-                partner: p.isVerified,
+                isPartner: p.isVerified,
               }))}
               onGymSelect={(id) => {
                 const provider = searchResults.find((p) => p.id === id);
