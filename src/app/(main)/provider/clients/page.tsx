@@ -72,7 +72,7 @@ export default function ProviderClientsPage() {
         {filteredClients.map((client) => (
           <Link
             key={client.id}
-            href={`/provider/clients/${client.id}`}
+            href={`/provider/clients/detail?id=${client.id}`}
             className="bg-[#2A2D3A] rounded-xl border border-white/5 p-5 hover:border-section-primary/50 transition-colors group"
           >
             <div className="flex items-start justify-between">
