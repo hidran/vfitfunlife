@@ -589,5 +589,21 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow write: if false; // Only Cloud Functions / admin SDK
     }
+
+    // ============================================
+    // CLIENTS (Provider's denormalized client roster)
+    // ============================================
+
+    match /clients/{clientId} {
+      allow read: if isAdmin() ||
+                    (isAuthenticated() && resource.data.providerId == request.auth.uid);
+      allow write: if isAdmin() ||
+                     (isAuthenticated() && request.resource.data.providerId == request.auth.uid);
+
+      match /notes/{noteId} {
+        allow read, write: if isAdmin() ||
+          (isAuthenticated() && get(/databases/$(database)/documents/clients/$(clientId)).data.providerId == request.auth.uid);
+      }
+    }
   }
 }
