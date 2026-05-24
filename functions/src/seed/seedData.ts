@@ -2006,19 +2006,23 @@ const TRAINER_PHOTOS = [
   "https://images.unsplash.com/photo-1530549387789-4c1017266635?w=800",
 ];
 
-// Deterministic per-id pick using a simple hash.
+// Deterministic per-id pick. Walks the pool consecutively from a seeded
+// start index — always terminates and returns `min(count, pool.length)`
+// distinct photos. (A prior LCG version infinite-looped for pools whose
+// length shared a factor with the multiplier, e.g. size-3 pools.)
 function pickPhotos(id: string, pool: string[], count: number): string[] {
+  if (pool.length === 0) return [];
   let seed = 0;
   for (let i = 0; i < id.length; i++) {
     seed = (seed * 31 + id.charCodeAt(i)) >>> 0;
   }
-  const indexes = new Set<number>();
-  let n = seed;
-  while (indexes.size < Math.min(count, pool.length)) {
-    n = (n * 1103515245 + 12345) >>> 0;
-    indexes.add(n % pool.length);
+  const take = Math.min(count, pool.length);
+  const start = seed % pool.length;
+  const result: string[] = [];
+  for (let k = 0; k < take; k++) {
+    result.push(pool[(start + k) % pool.length]);
   }
-  return Array.from(indexes).map((i) => pool[i]);
+  return result;
 }
 
 export async function generateDemoPhotos(): Promise<SeedingResult[]> {
