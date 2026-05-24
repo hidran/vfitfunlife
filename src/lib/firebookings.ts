@@ -13,6 +13,7 @@ import {
   Timestamp,
   serverTimestamp,
   writeBatch,
+  type QueryConstraint,
 } from 'firebase/firestore';
 import { db } from './firebase/config';
 import type {
@@ -36,7 +37,7 @@ export async function searchProviders(params: SearchParams): Promise<ProviderSea
   // array-contains constraint so the limit doesn't burn through unrelated docs
   // before in-memory filtering can apply (with 300+ seeded trainers, plain
   // limit(50) starves rare categories whose docs sort late by doc id).
-  const constraints = [where('providerProfile.isVerified', '==', true)];
+  const constraints: QueryConstraint[] = [where('providerProfile.isVerified', '==', true)];
   if (params.category) {
     constraints.push(where('providerProfile.specialties', 'array-contains', params.category));
   }
