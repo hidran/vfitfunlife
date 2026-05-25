@@ -50,6 +50,20 @@ const NEIGHBORHOODS = [
   "Centro", "Navigli", "Porta Nuova", "Brera", "Isola",
   "Porta Venezia", "Garibaldi", "Loreto", "Corso Como", "Ticinese",
 ];
+const DEMO_CITY_COORDS: { name: string; lat: number; lng: number }[] = [
+  { name: "Milano", lat: 45.4642, lng: 9.19 },
+  { name: "Roma", lat: 41.9028, lng: 12.4964 },
+  { name: "Torino", lat: 45.0703, lng: 7.6869 },
+  { name: "Bologna", lat: 44.4949, lng: 11.3426 },
+  { name: "Firenze", lat: 43.7696, lng: 11.2558 },
+  { name: "Napoli", lat: 40.8518, lng: 14.2681 },
+  { name: "Venezia", lat: 45.4408, lng: 12.3155 },
+  { name: "Verona", lat: 45.4384, lng: 10.9916 },
+  { name: "Genova", lat: 44.4056, lng: 8.9463 },
+  { name: "Bari", lat: 41.1171, lng: 16.8719 },
+  { name: "Palermo", lat: 38.1157, lng: 13.3615 },
+  { name: "Catania", lat: 37.5079, lng: 15.083 },
+];
 
 // Helper functions
 const randomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
@@ -2176,6 +2190,50 @@ export async function generateDemoProviderPrices(): Promise<SeedingResult[]> {
     results.push({
       success: false,
       collection: "instructors (lowestPrice)",
+      count: 0,
+      error: error instanceof Error ? error.message : "Unknown",
+    });
+  }
+  return results;
+}
+
+function cityCoords(city: string): { lat: number; lng: number } {
+  const found = DEMO_CITY_COORDS.find((c) => c.name === city);
+  return found ?? DEMO_CITY_COORDS[0]; // default Milano
+}
+
+export async function generateDemoProviderCoords(): Promise<SeedingResult[]> {
+  const results: SeedingResult[] = [];
+  try {
+    const snap = await db.collection("instructors").get();
+    let batch = db.batch();
+    let opCount = 0;
+    let total = 0;
+    for (const docSnap of snap.docs) {
+      const city = (docSnap.data().city as string) ?? "Milano";
+      const base = cityCoords(city);
+      let seed = 0;
+      const id = docSnap.id;
+      for (let i = 0; i < id.length; i++) seed = (seed * 31 + id.charCodeAt(i)) >>> 0;
+      const jLat = (((seed % 1000) / 1000) - 0.5) * 0.04;
+      const jLng = ((((seed >> 10) % 1000) / 1000) - 0.5) * 0.04;
+      const lat = base.lat + jLat;
+      const lng = base.lng + jLng;
+      batch.set(docSnap.ref, { lat, lng }, { merge: true });
+      opCount++;
+      total++;
+      if (opCount >= 400) {
+        await batch.commit();
+        batch = db.batch();
+        opCount = 0;
+      }
+    }
+    if (opCount > 0) await batch.commit();
+    results.push({ success: true, collection: "instructors (coords)", count: total });
+  } catch (error) {
+    results.push({
+      success: false,
+      collection: "instructors (coords)",
       count: 0,
       error: error instanceof Error ? error.message : "Unknown",
     });
