@@ -1,11 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import {
   ChevronLeft,
   Star,
-  MapPin,
   Globe,
   Award,
   Clock,
@@ -22,84 +21,18 @@ import { Spinner } from '@/components/ui/Spinner';
 import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
 import { ServiceCard, AvailabilityPicker } from '@/components/booking';
-import type { Service, ProviderSearchResult } from '@/types/booking';
-
-// Mock data for provider - in real app, fetch from API
-const MOCK_PROVIDER: ProviderSearchResult = {
-  id: 'provider-1',
-  fullName: 'Marco Rossi',
-  avatarUrl: '/images/placeholder.jpg',
-  rating: 4.8,
-  reviewCount: 127,
-  isVerified: true,
-  specialties: ['Personal Training', 'Nutrizione', 'Bodybuilding'],
-  yearsOfExperience: 8,
-  languages: ['Italiano', 'English'],
-  services: [
-    {
-      id: 'svc-1',
-      name: 'Personal Training 1-to-1',
-      description: 'Sessione di allenamento personalizzata in palestra o all\'aperto',
-      durationMinutes: 60,
-      price: 60,
-      isActive: true,
-    },
-    {
-      id: 'svc-2',
-      name: 'Consulenza Nutrizionale',
-      description: 'Piano alimentare personalizzato e follow-up mensile',
-      durationMinutes: 45,
-      price: 45,
-      isActive: true,
-    },
-    {
-      id: 'svc-3',
-      name: 'Online Coaching',
-      description: 'Allenamento via video call con programma personalizzato',
-      durationMinutes: 45,
-      price: 35,
-      isActive: true,
-    },
-  ],
-  location: {
-    address: 'Via Roma 123, Milano',
-    lat: 45.4642,
-    lng: 9.1900,
-  },
-  distance: 2.5,
-};
-
-const MOCK_REVIEWS = [
-  {
-    id: '1',
-    userName: 'Giulia B.',
-    rating: 5,
-    comment: 'Marco è un professionista eccezionale! Mi ha aiutato a raggiungere i miei obiettivi in pochi mesi.',
-    date: '2026-01-15',
-  },
-  {
-    id: '2',
-    userName: 'Alessandro M.',
-    rating: 5,
-    comment: 'Ottimo trainer, molto professionale e attento alle esigenze.',
-    date: '2026-01-10',
-  },
-  {
-    id: '3',
-    userName: 'Francesca L.',
-    rating: 4,
-    comment: 'Buona esperienza, consigliato per chi vuole iniziare a fare sport.',
-    date: '2026-01-05',
-  },
-];
+import type { Service } from '@/types/booking';
+import { useProvider, useProviderServices } from '@/hooks/useProviders';
+import { useInstructorReviews } from '@/hooks/useCommunity';
+import { VenueNotFound } from '@/components/venue/VenueNotFound';
+import { PhotoGallery } from '@/components/gallery/PhotoGallery';
 
 export default function ProviderBookingPage() {
-  const params = useParams();
+  const searchParams = useSearchParams();
   const router = useRouter();
-  const providerId = params.providerId as string;
+  const providerId = searchParams?.get('providerId') ?? undefined;
 
   const {
-    selectedProvider,
     selectedService,
     selectedDate,
     selectedTime,
@@ -110,23 +43,10 @@ export default function ProviderBookingPage() {
     fetchAvailability,
   } = useBookingStore();
 
-  const [provider, setProvider] = useState<ProviderSearchResult | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: provider, isLoading: providerLoading } = useProvider(providerId);
+  const { data: services = [] } = useProviderServices(providerId);
+  const { data: reviews = [] } = useInstructorReviews(providerId);
   const [activeTab, setActiveTab] = useState<'services' | 'reviews' | 'about'>('services');
-
-  // Load provider data
-  useEffect(() => {
-    // In real app, fetch from API
-    const loadProvider = async () => {
-      setLoading(true);
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      setProvider(MOCK_PROVIDER);
-      setLoading(false);
-    };
-
-    loadProvider();
-  }, [providerId]);
 
   // Fetch availability when date changes
   useEffect(() => {
@@ -157,12 +77,19 @@ export default function ProviderBookingPage() {
 
   const canContinue = selectedService && selectedDate && selectedTime;
 
-  if (loading || !provider) {
+  if (!providerId) {
+    return <VenueNotFound message="Provider non specificato" />;
+  }
+
+  if (providerLoading) {
     return (
-      <div className="min-h-screen bg-background-dark flex items-center justify-center">
-        <Spinner size="xl" />
+      <div className="flex min-h-screen items-center justify-center">
+        <Spinner size="md" />
       </div>
     );
+  }
+  if (!provider) {
+    return <VenueNotFound message="Provider non trovato" />;
   }
 
   return (
@@ -226,15 +153,6 @@ export default function ProviderBookingPage() {
               )}
             </div>
 
-            {provider.location && (
-              <div className="flex items-center gap-1 mt-2 text-sm text-text-secondary">
-                <MapPin className="w-4 h-4 text-[var(--section-primary)]" />
-                <span className="truncate">{provider.location.address}</span>
-                {provider.distance && (
-                  <span className="text-text-tertiary">({provider.distance} km)</span>
-                )}
-              </div>
-            )}
           </div>
         </div>
 
@@ -249,6 +167,13 @@ export default function ProviderBookingPage() {
             </span>
           ))}
         </div>
+
+        {/* Photo Gallery */}
+        {provider.photoUrls && provider.photoUrls.length > 0 && (
+          <div className="mt-4 px-4">
+            <PhotoGallery photos={provider.photoUrls} />
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div className="flex gap-3 mt-4">
@@ -305,10 +230,10 @@ export default function ProviderBookingPage() {
               className="space-y-4"
             >
               <h3 className="font-semibold text-white mb-4">Seleziona un servizio</h3>
-              {provider.services.map((service) => (
+              {services.map((service) => (
                 <ServiceCard
                   key={service.id}
-                  service={service}
+                  service={{ ...service, description: service.description ?? '' }}
                   isSelected={selectedService?.id === service.id}
                   onSelect={handleServiceSelect}
                 />
@@ -342,24 +267,27 @@ export default function ProviderBookingPage() {
               exit={{ opacity: 0, y: -10 }}
               className="space-y-4"
             >
-              {MOCK_REVIEWS.map((review) => (
-                <div
-                  key={review.id}
-                  className="bg-[#2A2D3A]/50 rounded-xl p-4"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-white">{review.userName}</span>
-                    <div className="flex items-center gap-1">
-                      <Star className="w-4 h-4 text-warning fill-warning" />
-                      <span className="text-white">{review.rating}</span>
+              {reviews.map((review) => {
+                const dateLabel = review.createdAt?.toDate
+                  ? review.createdAt.toDate().toLocaleDateString('it-IT')
+                  : 'Recente';
+                return (
+                  <div
+                    key={review.id}
+                    className="bg-[#2A2D3A]/50 rounded-xl p-4"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium text-white">{review.userName}</span>
+                      <div className="flex items-center gap-1">
+                        <Star className="w-4 h-4 text-warning fill-warning" />
+                        <span className="text-white">{review.rating}</span>
+                      </div>
                     </div>
+                    <p className="text-text-secondary text-sm">{review.text}</p>
+                    <p className="text-text-tertiary text-xs mt-2">{dateLabel}</p>
                   </div>
-                  <p className="text-text-secondary text-sm">{review.comment}</p>
-                  <p className="text-text-tertiary text-xs mt-2">
-                    {new Date(review.date).toLocaleDateString('it-IT')}
-                  </p>
-                </div>
-              ))}
+                );
+              })}
             </motion.div>
           )}
 

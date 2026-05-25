@@ -227,96 +227,110 @@ POST /updateProfile
 
 ### Update Avatar
 
-> ⚠️ **Not currently exported (audit 2026-05).** This function is documented for historical reference; verify before relying on it.
+> ✅ **Implemented (cycle C1, 2026-05).**
 
 ```typescript
 POST /updateAvatar
 
-// Request - FormData
+// Request
 {
-  file: File;                     // Image file (JPG, PNG, max 5MB)
+  avatarUrl: string;              // Firebase Storage URL from client upload
 }
 
 // Response
 {
-  success: boolean;
+  success: true;
   avatarUrl: string;              // New avatar URL
+  previousUrl: string | null;     // Previous avatar URL or null if none
 }
 
 // Error Codes
-// - invalid-argument: Invalid file type or size
-// - resource-exhausted: Storage quota exceeded
+// - invalid-argument: Avatar URL outside project bucket or wrong user path
+// - not-found: User document does not exist
 ```
 
 ### Update Social Links
 
-> ⚠️ **Not currently exported (audit 2026-05).** This function is documented for historical reference; verify before relying on it.
+> ✅ **Implemented (cycle C1, 2026-05).**
 
 ```typescript
 POST /updateSocialLinks
 
 // Request
 {
-  instagram?: string;
-  facebook?: string;
-  linkedin?: string;
-  website?: string;
-  twitter?: string;
-  youtube?: string;
+  socialLinks: {
+    instagram?: string;
+    facebook?: string;
+    twitter?: string;
+    linkedin?: string;
+    tiktok?: string;
+    website?: string;
+  };
 }
 
 // Response
 {
-  success: boolean;
-  socialLinks: SocialLinks;
+  success: true;
 }
 ```
 
 ### Update Notification Settings
 
-> ⚠️ **Not currently exported (audit 2026-05).** This function is documented for historical reference; verify before relying on it. The current `updateProfile` exposes a single `notificationsEnabled` boolean.
+> ✅ **Implemented (cycle C1, 2026-05).**
 
 ```typescript
 POST /updateNotificationSettings
 
 // Request
 {
-  email?: boolean;                // Email notifications
-  push?: boolean;                 // Push notifications
-  sms?: boolean;                  // SMS notifications
-  marketing?: boolean;            // Marketing emails
-  bookingReminders?: boolean;     // Booking reminder notifications
-  promotionalOffers?: boolean;    // Promotional offers
-  quietHoursStart?: string;       // "22:00"
-  quietHoursEnd?: string;         // "08:00"
+  settings: {
+    push: {
+      booking: boolean;
+      promotion: boolean;
+      system: boolean;
+      chat: boolean;
+    };
+    email: {
+      booking: boolean;
+      promotion: boolean;
+      system: boolean;
+      chat: boolean;
+      weeklyDigest: boolean;
+    };
+    sms: {
+      booking: boolean;
+      reminder: boolean;
+    };
+  };
 }
 
 // Response
 {
-  success: boolean;
-  settings: NotificationSettings;
+  success: true;
 }
 ```
 
 ### Update Privacy Settings
 
-> ⚠️ **Not currently exported (audit 2026-05).** This function is documented for historical reference; verify before relying on it.
+> ✅ **Implemented (cycle C1, 2026-05).**
 
 ```typescript
 POST /updatePrivacySettings
 
 // Request
 {
-  profileVisible?: boolean;       // Show profile to public
-  showContactInfo?: boolean;      // Show email/phone
-  showBookingHistory?: boolean;   // Show booking history to providers
-  allowSearchIndexing?: boolean;  // Allow search engines
+  settings: {
+    profileVisibility: 'public' | 'verified_only' | 'private';
+    showEmail: boolean;
+    showPhone: boolean;
+    allowDirectMessages: boolean;
+    shareAnalytics: boolean;
+  };
 }
 
 // Response
 {
-  success: boolean;
-  settings: PrivacySettings;
+  success: true;
 }
 ```
 

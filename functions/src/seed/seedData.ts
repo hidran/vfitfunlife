@@ -610,6 +610,1481 @@ async function seedReviews(count: number): Promise<SeedingResult> {
   }
 }
 
+// ===== Sample venue seed data =====
+
+interface SampleVenueData {
+  id: string;
+  name: string;
+  slug: string;
+  type: "gym" | "wellness_center" | "spa" | "beauty_salon";
+  city: string;
+  address: string;
+  lat: number;
+  lng: number;
+  rating: number;
+  reviewCount: number;
+  isPartner: boolean;
+  isActive: boolean;
+  description: string;
+  heroGradients: string[];
+  amenities: { kind: string }[];
+  hours: { day: string; time: string }[];
+  services: { id: string; name: string; price: number; durationMinutes?: number; isActive: boolean }[];
+  courses: { id: string; name: string; time: string; coach: string; spots: number }[];
+}
+
+const SAMPLE_VENUES: SampleVenueData[] = [
+  {
+    id: "carosello",
+    name: "Carosello Fitness",
+    slug: "carosello-fitness",
+    type: "gym",
+    city: "Milano",
+    address: "Via Torino 21, Milano",
+    lat: 45.4642,
+    lng: 9.19,
+    rating: 4.8,
+    reviewCount: 124,
+    isPartner: true,
+    isActive: true,
+    description:
+      "Un centro fitness moderno con spazi ampi, area functional e sale corsi dedicate.",
+    heroGradients: [
+      "from-vfit-secondary/40 via-vfit-primary/30 to-transparent",
+      "from-vfit-primary/35 via-vfit-accent/25 to-transparent",
+      "from-vfit-secondary/30 via-vfit-accent/25 to-transparent",
+    ],
+    amenities: [
+      { kind: "weights" }, { kind: "wifi" }, { kind: "parking" }, { kind: "showers" },
+    ],
+    hours: [
+      { day: "Lun - Ven", time: "06:00 - 22:00" },
+      { day: "Sabato", time: "08:00 - 20:00" },
+      { day: "Domenica", time: "09:00 - 18:00" },
+    ],
+    services: [
+      { id: "svc-1", name: "Accesso giornaliero", price: 18, isActive: true },
+      { id: "svc-2", name: "Abbonamento mensile", price: 59, isActive: true },
+      { id: "svc-3", name: "Personal training", price: 45, durationMinutes: 60, isActive: true },
+    ],
+    courses: [
+      { id: "course-1", name: "HIIT Power", time: "07:30", coach: "Marco R.", spots: 3 },
+      { id: "course-2", name: "Pilates Flow", time: "12:15", coach: "Elena B.", spots: 6 },
+      { id: "course-3", name: "Functional 360", time: "19:00", coach: "Luca S.", spots: 2 },
+    ],
+  },
+  {
+    id: "urban-core",
+    name: "Urban Core Gym",
+    slug: "urban-core-gym",
+    type: "gym",
+    city: "Milano",
+    address: "Viale Liberazione 12, Milano",
+    lat: 45.4789,
+    lng: 9.1965,
+    rating: 4.9,
+    reviewCount: 98,
+    isPartner: false,
+    isActive: true,
+    description:
+      "Allenamenti ad alta intensita in un ambiente urbano con coach dedicati e attrezzatura premium.",
+    heroGradients: [
+      "from-vfit-primary/40 via-vfit-secondary/30 to-transparent",
+      "from-vfit-accent/35 via-vfit-primary/25 to-transparent",
+    ],
+    amenities: [{ kind: "weights" }, { kind: "wifi" }, { kind: "showers" }],
+    hours: [
+      { day: "Lun - Ven", time: "06:30 - 23:00" },
+      { day: "Sabato", time: "08:00 - 21:00" },
+      { day: "Domenica", time: "09:00 - 17:00" },
+    ],
+    services: [
+      { id: "svc-1", name: "Accesso giornaliero", price: 22, isActive: true },
+      { id: "svc-2", name: "Mensile All-in", price: 75, isActive: true },
+    ],
+    courses: [
+      { id: "course-1", name: "CrossFit AM", time: "07:00", coach: "Anna T.", spots: 4 },
+      { id: "course-2", name: "Boxe Tecnica", time: "20:00", coach: "Davide M.", spots: 5 },
+    ],
+  },
+  {
+    id: "village-fit",
+    name: "Village Fit Club",
+    slug: "village-fit-club",
+    type: "gym",
+    city: "Milano",
+    address: "Navigli, Milano",
+    lat: 45.4523,
+    lng: 9.1756,
+    rating: 4.7,
+    reviewCount: 142,
+    isPartner: true,
+    isActive: true,
+    description: "Club fitness con focus su yoga e spa.",
+    heroGradients: ["from-vfit-secondary/30 via-vfit-primary/20 to-transparent"],
+    amenities: [{ kind: "yoga" }, { kind: "spa" }],
+    hours: [{ day: "Lun - Dom", time: "07:00 - 22:00" }],
+    services: [{ id: "svc-1", name: "Drop-in", price: 20, isActive: true }],
+    courses: [],
+  },
+  {
+    id: "pulse-studio",
+    name: "Pulse Studio",
+    slug: "pulse-studio",
+    type: "gym",
+    city: "Milano",
+    address: "Isola, Milano",
+    lat: 45.4834,
+    lng: 9.1856,
+    rating: 4.6,
+    reviewCount: 67,
+    isPartner: false,
+    isActive: true,
+    description: "Studio specializzato in Pilates e HIIT.",
+    heroGradients: ["from-vfit-accent/30 via-vfit-primary/20 to-transparent"],
+    amenities: [{ kind: "pilates" }, { kind: "cardio" }],
+    hours: [{ day: "Lun - Sab", time: "08:00 - 21:00" }],
+    services: [{ id: "svc-1", name: "Lezione Pilates", price: 25, durationMinutes: 55, isActive: true }],
+    courses: [],
+  },
+  {
+    id: "elite-fitness",
+    name: "Elite Fitness Center",
+    slug: "elite-fitness-center",
+    type: "gym",
+    city: "Milano",
+    address: "Brera, Milano",
+    lat: 45.4701,
+    lng: 9.1854,
+    rating: 4.9,
+    reviewCount: 215,
+    isPartner: true,
+    isActive: true,
+    description: "Centro premium con piscina e campi da tennis.",
+    heroGradients: ["from-vfit-secondary/40 via-vfit-accent/30 to-transparent"],
+    amenities: [{ kind: "pool" }, { kind: "tennis" }, { kind: "spa" }],
+    hours: [{ day: "Lun - Dom", time: "06:00 - 23:00" }],
+    services: [{ id: "svc-1", name: "Day pass", price: 35, isActive: true }],
+    courses: [],
+  },
+  {
+    id: "power-gym",
+    name: "Power Gym Milano",
+    slug: "power-gym-milano",
+    type: "gym",
+    city: "Milano",
+    address: "Porta Romana, Milano",
+    lat: 45.4456,
+    lng: 9.2056,
+    rating: 4.5,
+    reviewCount: 89,
+    isPartner: false,
+    isActive: true,
+    description: "Sala pesi essenziale con focus su forza e cardio.",
+    heroGradients: ["from-vfit-primary/30 via-vfit-accent/20 to-transparent"],
+    amenities: [{ kind: "weights" }, { kind: "cardio" }],
+    hours: [{ day: "Lun - Dom", time: "06:00 - 22:00" }],
+    services: [{ id: "svc-1", name: "Mensile", price: 39, isActive: true }],
+    courses: [],
+  },
+];
+
+/**
+ * Seeds the deterministic sample venues used by the app's seeded demo flows.
+ * Idempotent via merge: safe to run repeatedly.
+ */
+export async function seedSampleVenues(): Promise<SeedingResult> {
+  try {
+    const batch = db.batch();
+    const now = Timestamp.now();
+
+    for (const v of SAMPLE_VENUES) {
+      const venueRef = db.collection("venues").doc(v.id);
+      const { services, courses, ...venueDoc } = v;
+      batch.set(
+        venueRef,
+        { ...venueDoc, createdAt: now, updatedAt: now },
+        { merge: true }
+      );
+      for (const s of services) {
+        batch.set(venueRef.collection("services").doc(s.id), s, { merge: true });
+      }
+      for (const c of courses) {
+        batch.set(venueRef.collection("courses").doc(c.id), c, { merge: true });
+      }
+    }
+
+    await batch.commit();
+    return { success: true, collection: "venues (sample)", count: SAMPLE_VENUES.length };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return { success: false, collection: "venues (sample)", count: 0, error: errorMessage };
+  }
+}
+
+// ===== Sample instructor seed data =====
+
+interface SampleInstructorData {
+  id: string;
+  fullName: string;
+  avatarUrl: string | null;
+  isActive: boolean;
+  providerProfile: {
+    isVerified: boolean;
+    isActive: boolean;
+    rating: number;
+    reviewCount: number;
+    specialties: string[];
+    yearsOfExperience: number;
+    languages: string[];
+  };
+  services: {
+    id: string;
+    name: string;
+    description: string;
+    durationMinutes: number;
+    price: number;
+    isActive: boolean;
+  }[];
+}
+
+const SAMPLE_INSTRUCTORS: SampleInstructorData[] = [
+  {
+    id: "provider-1",
+    fullName: "Marco Rossi",
+    avatarUrl: null,
+    isActive: true,
+    providerProfile: {
+      isVerified: true,
+      isActive: true,
+      rating: 4.8,
+      reviewCount: 127,
+      specialties: ["Personal Training", "Nutrizione", "Bodybuilding"],
+      yearsOfExperience: 8,
+      languages: ["Italiano", "English"],
+    },
+    services: [
+      {
+        id: "svc-1",
+        name: "Personal Training 1-to-1",
+        description: "Sessione di allenamento personalizzata in palestra o all'aperto",
+        durationMinutes: 60,
+        price: 60,
+        isActive: true,
+      },
+      {
+        id: "svc-2",
+        name: "Consulenza Nutrizionale",
+        description: "Piano alimentare personalizzato e follow-up mensile",
+        durationMinutes: 45,
+        price: 45,
+        isActive: true,
+      },
+    ],
+  },
+];
+
+export async function seedSampleInstructors(): Promise<SeedingResult> {
+  try {
+    const batch = db.batch();
+    const now = Timestamp.now();
+    for (const i of SAMPLE_INSTRUCTORS) {
+      const ref = db.collection("instructors").doc(i.id);
+      const { services, ...doc } = i;
+      batch.set(
+        ref,
+        { ...doc, uid: i.id, createdAt: now, updatedAt: now },
+        { merge: true }
+      );
+      for (const s of services) {
+        batch.set(ref.collection("services").doc(s.id), s, { merge: true });
+      }
+    }
+    await batch.commit();
+    return { success: true, collection: "instructors (sample)", count: SAMPLE_INSTRUCTORS.length };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return { success: false, collection: "instructors (sample)", count: 0, error: errorMessage };
+  }
+}
+
+// ============================================================================
+// Demo data seeder — 20 trainers per specialty + 120 venues across 12 cities
+// ============================================================================
+
+/**
+ * Converts a string to a URL-safe kebab-case ASCII slug.
+ * e.g. "Personal Training" → "personal-training"
+ *      "Boxe" → "boxe"
+ */
+function toSlug(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "") // strip combining diacritics
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+export async function generateDemoData(): Promise<SeedingResult[]> {
+  const results: SeedingResult[] = [];
+
+  // ── Inline constants (local only, don't pollute file scope) ──────────────
+
+  const DEMO_CITIES: { name: string; lat: number; lng: number }[] = [
+    { name: "Milano", lat: 45.4642, lng: 9.19 },
+    { name: "Roma", lat: 41.9028, lng: 12.4964 },
+    { name: "Torino", lat: 45.0703, lng: 7.6869 },
+    { name: "Bologna", lat: 44.4949, lng: 11.3426 },
+    { name: "Firenze", lat: 43.7696, lng: 11.2558 },
+    { name: "Napoli", lat: 40.8518, lng: 14.2681 },
+    { name: "Venezia", lat: 45.4408, lng: 12.3155 },
+    { name: "Verona", lat: 45.4384, lng: 10.9916 },
+    { name: "Genova", lat: 44.4056, lng: 8.9463 },
+    { name: "Bari", lat: 41.1171, lng: 16.8719 },
+    { name: "Palermo", lat: 38.1157, lng: 13.3615 },
+    { name: "Catania", lat: 37.5079, lng: 15.083 },
+  ];
+
+  const STREETS = [
+    "Via Roma", "Via Garibaldi", "Corso Italia", "Via Mazzini",
+    "Viale della Liberta", "Via Dante", "Corso Vittorio", "Via Cavour",
+  ];
+
+  const HERO_GRADIENTS = [
+    "from-vfit-secondary/40 via-vfit-primary/30 to-transparent",
+    "from-vfit-primary/35 via-vfit-accent/25 to-transparent",
+    "from-vfit-secondary/30 via-vfit-accent/25 to-transparent",
+    "from-vfit-accent/30 via-vfit-primary/20 to-transparent",
+  ];
+
+  const SPA_NAMES = ["Oasi Spa", "Zen Spa", "Aurora Spa", "Lumina Spa", "Pure Spa"];
+  const BEAUTY_NAMES = ["Belle Beauty", "Glow Studio", "Lumiere Beauty", "Charme Salon"];
+
+  type AmenityKind =
+    | "weights" | "wifi" | "parking" | "showers" | "lockers"
+    | "bar" | "sauna" | "pool" | "crossfit" | "boxing" | "yoga"
+    | "pilates" | "spa" | "tennis" | "cardio";
+
+  const GYM_AMENITIES: AmenityKind[] = [
+    "weights", "cardio", "crossfit", "showers", "lockers", "wifi", "parking", "boxing",
+  ];
+  const WELLNESS_AMENITIES: AmenityKind[] = ["sauna", "pool", "yoga", "pilates", "showers", "wifi", "parking", "spa"];
+  const SPA_AMENITIES: AmenityKind[] = ["sauna", "pool", "spa", "showers", "wifi", "parking", "bar"];
+  const BEAUTY_AMENITIES: AmenityKind[] = ["wifi", "parking", "lockers"];
+
+  const GYM_DESCRIPTIONS = [
+    "Centro fitness moderno con spazi ampi, area functional e sale corsi dedicate.",
+    "Palestra di ultima generazione con attrezzatura premium e staff qualificato.",
+    "Ambiente dinamico per allenamenti efficaci, dal cardio alla forza.",
+    "Spazio fitness curato, ideale per chi vuole allenarsi con serietà.",
+    "Palestra urban con coach dedicati e programmi personalizzati.",
+  ];
+  const WELLNESS_DESCRIPTIONS = [
+    "Centro benessere con trattamenti olistici e spazi relax di alto livello.",
+    "Oasi di equilibrio tra corpo e mente con programmi wellness integrati.",
+    "Ambiente armonioso dedicato al benessere fisico e mentale.",
+    "Centro specializzato in trattamenti rigenerativi e attività mindfulness.",
+  ];
+  const SPA_DESCRIPTIONS = [
+    "Spa esclusiva con cabine trattamento, sauna e area relax.",
+    "Rifugio di lusso per rituali benessere e massaggi professionali.",
+    "Centro termale urbano con piscina, sauna e percorsi relax.",
+    "Spa boutique con trattamenti personalizzati e atmosfera unica.",
+  ];
+  const BEAUTY_DESCRIPTIONS = [
+    "Salone di bellezza specializzato in trattamenti viso e corpo.",
+    "Studio estetico con le ultime tecnologie per la cura della persona.",
+    "Centro estetico professionale con trattamenti su misura.",
+  ];
+
+  // Per-type service templates
+  const GYM_SERVICES = [
+    { name: "Accesso giornaliero", price: 18, isActive: true },
+    { name: "Abbonamento mensile", price: 59, isActive: true },
+    { name: "Abbonamento trimestrale", price: 149, isActive: true },
+    { name: "Personal training", price: 50, durationMinutes: 60, isActive: true },
+    { name: "Lezione di gruppo", price: 20, durationMinutes: 55, isActive: true },
+  ];
+  const WELLNESS_SERVICES = [
+    { name: "Sessione Yoga", price: 25, durationMinutes: 60, isActive: true },
+    { name: "Sessione Pilates", price: 30, durationMinutes: 55, isActive: true },
+    { name: "Pacchetto wellness mensile", price: 90, isActive: true },
+    { name: "Consulenza benessere", price: 45, durationMinutes: 45, isActive: true },
+    { name: "Accesso giornaliero", price: 22, isActive: true },
+  ];
+  const SPA_SERVICES = [
+    { name: "Massaggio rilassante 60min", price: 65, durationMinutes: 60, isActive: true },
+    { name: "Massaggio decontratturante", price: 75, durationMinutes: 60, isActive: true },
+    { name: "Pacchetto wellness coppia", price: 140, durationMinutes: 90, isActive: true },
+    { name: "Percorso spa completo", price: 110, durationMinutes: 120, isActive: true },
+    { name: "Trattamento viso premium", price: 80, durationMinutes: 75, isActive: true },
+  ];
+  const BEAUTY_SERVICES = [
+    { name: "Manicure", price: 25, durationMinutes: 45, isActive: true },
+    { name: "Pedicure", price: 30, durationMinutes: 50, isActive: true },
+    { name: "Trattamento viso", price: 55, durationMinutes: 60, isActive: true },
+    { name: "Colorazione capelli", price: 70, durationMinutes: 90, isActive: true },
+    { name: "Ceretta completa", price: 40, durationMinutes: 60, isActive: true },
+  ];
+
+  // Per-specialty service name library (name + description pairs)
+  const SPECIALTY_SERVICES: Record<string, { name: string; description: string }[]> = {
+    "Personal Training": [
+      { name: "Sessione 1-to-1", description: "Sessione personalizzata con piano di allenamento dedicato." },
+      { name: "Pacchetto 10 sessioni", description: "Dieci incontri con progressione monitorata." },
+      { name: "Consulenza online", description: "Video call per pianificazione e analisi posturale." },
+      { name: "Allenamento outdoor", description: "Sessione all'aperto con circuiti funzionali." },
+    ],
+    "Yoga": [
+      { name: "Lezione Yoga individuale", description: "Pratica personalizzata per ogni livello." },
+      { name: "Pacchetto 8 lezioni", description: "Percorso progressivo di otto sessioni di yoga." },
+      { name: "Yoga Nidra", description: "Sessione guidata di rilassamento profondo." },
+      { name: "Morning Flow", description: "Sequenza energizzante per iniziare la giornata." },
+    ],
+    "Pilates": [
+      { name: "Pilates individuale", description: "Sessione one-to-one di Pilates riformer o mat." },
+      { name: "Pacchetto 5 sessioni", description: "Cinque incontri con progressione sul core." },
+      { name: "Pilates posturale", description: "Lavoro specifico su postura e allineamento." },
+      { name: "Pilates & Stretching", description: "Combinazione di Pilates e allungamento profondo." },
+    ],
+    "HIIT": [
+      { name: "HIIT 1-to-1", description: "Allenamento ad alta intensità personalizzato." },
+      { name: "Pacchetto 8 sessioni HIIT", description: "Ciclo di allenamenti intervallati per dimagrire." },
+      { name: "HIIT Online", description: "Sessione live via video con coaching in tempo reale." },
+      { name: "Metabolic Blast", description: "Circuito brucia-grassi con esercizi composti." },
+    ],
+    "CrossFit": [
+      { name: "Sessione CrossFit privata", description: "WOD personalizzato con coach dedicato." },
+      { name: "Intro CrossFit", description: "Introduzione ai fondamentali del CrossFit." },
+      { name: "Strength & Conditioning", description: "Lavoro di forza e condizionamento atletico." },
+      { name: "Olympic Lifting", description: "Tecnica sui movimenti olimpici sotto supervisione." },
+    ],
+    "Functional Training": [
+      { name: "Functional 1-to-1", description: "Allenamento funzionale adattato alle esigenze reali." },
+      { name: "Pacchetto 6 sessioni", description: "Sei incontri progressivi con valutazione iniziale." },
+      { name: "Mobility & Function", description: "Lavoro su mobilità, stabilità e schemi motori." },
+      { name: "Sport Specific Training", description: "Preparazione atletica specifica per il tuo sport." },
+    ],
+    "Strength Training": [
+      { name: "Forza 1-to-1", description: "Programmazione periodizzata per la crescita muscolare." },
+      { name: "Powerlifting coaching", description: "Preparazione alla competizione o al test massimale." },
+      { name: "Pacchetto 10 sessioni forza", description: "Ciclo completo di forza con tracking dei carichi." },
+      { name: "Corpo libero avanzato", description: "Calisthenics e forza relativa senza attrezzi." },
+    ],
+    "Cardio": [
+      { name: "Cardio coaching", description: "Piano di allenamento cardiovascolare progressivo." },
+      { name: "Running coaching", description: "Programmazione per migliorare resistenza e tecnica." },
+      { name: "Interval Training", description: "Sessione di interval training per aumentare la VO2max." },
+      { name: "Cycling indoor", description: "Sessione bike ad intensità variabile." },
+    ],
+    "Boxe": [
+      { name: "Boxe tecnica 1-to-1", description: "Fondamentali, guardia e combinazioni con mitts." },
+      { name: "Boxe fitness", description: "Allenamento boxe orientato al fitness, no sparring." },
+      { name: "Pacchetto 8 lezioni boxe", description: "Ciclo intensivo con progressione tecnica." },
+      { name: "Sparring & Strategia", description: "Sessione avanzata con analisi tattica." },
+    ],
+    "Nutrizione": [
+      { name: "Consulenza nutrizionale", description: "Analisi delle abitudini alimentari e piano personalizzato." },
+      { name: "Piano alimentare mensile", description: "Piano settimanale con follow-up bisettimanale." },
+      { name: "Nutrizione sportiva", description: "Strategie alimentari per performance e recupero." },
+      { name: "Dieta e composizione corporea", description: "Protocollo per ricomposizione corporea guidata." },
+    ],
+    "Massaggio": [
+      { name: "Massaggio rilassante", description: "Sessione di massaggio decontratturante e rilassante." },
+      { name: "Massaggio sportivo", description: "Trattamento pre/post gara per atleti." },
+      { name: "Massaggio ayurvedico", description: "Tecnica tradizionale con oli essenziali." },
+      { name: "Pacchetto 5 massaggi", description: "Cinque sessioni a prezzo vantaggioso." },
+    ],
+    "Fisioterapia": [
+      { name: "Valutazione fisioterapica", description: "Esame posturale e valutazione funzionale completa." },
+      { name: "Rieducazione motoria", description: "Percorso di recupero post-infortunio o post-operatorio." },
+      { name: "Terapia manuale", description: "Tecniche osteoarticolari e miofasciali." },
+      { name: "Fisioterapia sportiva", description: "Recupero atletico rapido per sportivi." },
+    ],
+    "Osteopatia": [
+      { name: "Seduta osteopatica", description: "Trattamento osteopatico globale con approccio cranio-sacrale." },
+      { name: "Valutazione posturale", description: "Analisi posturale e piano di trattamento." },
+      { name: "Osteopatia viscerale", description: "Approccio viscerale per equilibrio organico." },
+      { name: "Pacchetto 4 sedute", description: "Ciclo di quattro trattamenti osteopatici." },
+    ],
+    "Mental Coaching": [
+      { name: "Sessione mental coaching", description: "Seduta individuale per potenziamento personale." },
+      { name: "Programma 8 settimane", description: "Percorso strutturato di mental training." },
+      { name: "Coaching online", description: "Sessione via video per obiettivi di vita e sport." },
+      { name: "Workshop mindset", description: "Workshop di gruppo su resilienza e focus." },
+    ],
+    "Psicologia": [
+      { name: "Colloquio psicologico", description: "Seduta individuale di supporto psicologico." },
+      { name: "Psicoterapia breve", description: "Percorso terapeutico orientato alla soluzione." },
+      { name: "Psicologia dello sport", description: "Sostegno mentale per atleti e sportivi." },
+      { name: "Consulenza di coppia", description: "Incontro di supporto per coppie." },
+    ],
+    "Yoga Therapy": [
+      { name: "Yoga terapeutico individuale", description: "Pratica adattata a patologie e limitazioni fisiche." },
+      { name: "Pranayama avanzato", description: "Tecniche respiratorie per equilibrio neuro-vegetativo." },
+      { name: "Meditazione guidata", description: "Sessione di meditazione mindfulness o vipassana." },
+      { name: "Yoga restorative", description: "Sequenza di recupero profondo con supporti." },
+    ],
+  };
+
+  // Fallback service template for any specialty not found
+  const defaultServices = (specialty: string) => [
+    { name: `Sessione ${specialty}`, description: `Sessione personalizzata di ${specialty}.` },
+    { name: `Pacchetto 5 sessioni ${specialty}`, description: "Cinque incontri con progressione monitorata." },
+    { name: `Consulenza ${specialty}`, description: "Consulenza iniziale e definizione degli obiettivi." },
+    { name: `${specialty} online`, description: "Sessione live via video con coaching in tempo reale." },
+  ];
+
+  // Course times to pick from
+  const COURSE_TIMES = ["07:30", "09:00", "10:30", "12:15", "14:00", "17:00", "18:30", "19:30", "20:00", "20:30"];
+
+  // Hours variants
+  const HOURS_VARIANTS = [
+    [
+      { day: "Lun - Ven", time: "07:00 - 22:00" },
+      { day: "Sabato", time: "08:00 - 21:00" },
+      { day: "Domenica", time: "09:00 - 18:00" },
+    ],
+    [
+      { day: "Lun - Ven", time: "06:30 - 23:00" },
+      { day: "Sabato", time: "08:00 - 20:00" },
+      { day: "Domenica", time: "09:00 - 17:00" },
+    ],
+    [
+      { day: "Lun - Ven", time: "07:30 - 21:30" },
+      { day: "Sabato", time: "09:00 - 21:00" },
+      { day: "Domenica", time: "10:00 - 19:00" },
+    ],
+    [
+      { day: "Lun - Dom", time: "07:00 - 22:00" },
+    ],
+  ];
+
+  // ── Batched writer ────────────────────────────────────────────────────────
+
+  let batch = db.batch();
+  let opCount = 0;
+  const MAX_BATCH_OPS = 400;
+
+  const queueWrite = async (
+    ref: FirebaseFirestore.DocumentReference,
+    data: Record<string, unknown>
+  ) => {
+    batch.set(ref, data, { merge: true });
+    opCount++;
+    if (opCount >= MAX_BATCH_OPS) {
+      await batch.commit();
+      batch = db.batch();
+      opCount = 0;
+    }
+  };
+
+  // ── 1. Instructors ────────────────────────────────────────────────────────
+
+  try {
+    const allSpecialties = [...new Set([...FITNESS_SPECIALTIES, ...WELLNESS_SPECIALTIES])];
+    const wellnessSet = new Set(WELLNESS_SPECIALTIES);
+
+    let instructorCount = 0;
+    let instructorServiceCount = 0;
+    const now = Timestamp.now();
+
+    for (const specialty of allSpecialties) {
+      const specialtySlug = toSlug(specialty);
+      const pool = wellnessSet.has(specialty) ? WELLNESS_SPECIALTIES : FITNESS_SPECIALTIES;
+      const serviceDefs = SPECIALTY_SERVICES[specialty] ?? defaultServices(specialty);
+
+      for (let i = 1; i <= 20; i++) {
+        const pad = String(i).padStart(2, "0");
+        const id = `demo-trainer-${specialtySlug}-${pad}`;
+        const firstName = randomItem(FIRST_NAMES);
+        const lastName = randomItem(LAST_NAMES);
+        const city = DEMO_CITIES[(i - 1) % DEMO_CITIES.length].name;
+
+        // Build secondary specialties from same pool, excluding primary
+        const otherSpecialties = pool.filter((s) => s !== specialty);
+        const secondaryCount = randomInt(1, 2);
+        const secondaries = randomItems(otherSpecialties, Math.min(secondaryCount, otherSpecialties.length));
+
+        const languages = Math.random() < 0.7 ? ["Italiano"] : ["Italiano", "English"];
+
+        const instructorDoc: Record<string, unknown> = {
+          fullName: `${firstName} ${lastName}`,
+          avatarUrl: null,
+          uid: id,
+          isActive: true,
+          city,
+          providerProfile: {
+            isVerified: true,
+            isActive: true,
+            rating: randomFloat(4.2, 5.0, 1),
+            reviewCount: randomInt(15, 320),
+            specialties: [specialty, ...secondaries],
+            yearsOfExperience: randomInt(2, 18),
+            languages,
+          },
+          createdAt: now,
+          updatedAt: now,
+        };
+
+        const ref = db.collection("instructors").doc(id);
+        await queueWrite(ref, instructorDoc);
+        instructorCount++;
+
+        // Services subcollection: 2–4 services
+        const serviceCount = randomInt(2, 4);
+        const shuffled = [...serviceDefs].sort(() => 0.5 - Math.random()).slice(0, serviceCount);
+        for (let si = 0; si < shuffled.length; si++) {
+          const svcId = `svc-${si + 1}`;
+          const dur = randomItem([30, 45, 60, 90]);
+          const price = Math.round(randomInt(30, 120) / 5) * 5;
+          const svcData: Record<string, unknown> = {
+            name: shuffled[si].name,
+            description: shuffled[si].description,
+            durationMinutes: dur,
+            price,
+            isActive: true,
+          };
+          await queueWrite(ref.collection("services").doc(svcId), svcData);
+          instructorServiceCount++;
+        }
+      }
+    }
+
+    results.push({ success: true, collection: "instructors (demo)", count: instructorCount });
+    results.push({ success: true, collection: "instructor services (demo)", count: instructorServiceCount });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    results.push({ success: false, collection: "instructors (demo)", count: 0, error: msg });
+  }
+
+  // ── 2. Venues ─────────────────────────────────────────────────────────────
+
+  try {
+    let venueCount = 0;
+    let venueSvcCount = 0;
+    let venueCourseCount = 0;
+    const now = Timestamp.now();
+
+    type VenueType = "gym" | "wellness_center" | "spa" | "beauty_salon";
+
+    interface VenueSlot {
+      type: VenueType;
+      index: number; // within this type for this city
+    }
+
+    for (const city of DEMO_CITIES) {
+      const citySlug = toSlug(city.name);
+
+      const slots: VenueSlot[] = [
+        ...Array.from({ length: 5 }, (_, i) => ({ type: "gym" as VenueType, index: i + 1 })),
+        ...Array.from({ length: 2 }, (_, i) => ({ type: "wellness_center" as VenueType, index: i + 1 })),
+        ...Array.from({ length: 2 }, (_, i) => ({ type: "spa" as VenueType, index: i + 1 })),
+        { type: "beauty_salon" as VenueType, index: 1 },
+      ];
+
+      for (const slot of slots) {
+        const { type, index } = slot;
+        const id = `demo-venue-${citySlug}-${type.replace("_", "-")}-${index}`;
+
+        // Resolve name
+        let baseName: string;
+        if (type === "gym") {
+          baseName = `${GYM_NAMES[(index - 1) % GYM_NAMES.length]} ${city.name}`;
+        } else if (type === "wellness_center") {
+          const wcBaseName = WELLNESS_CENTER_NAMES[(index - 1) % WELLNESS_CENTER_NAMES.length].split(" ")[0];
+          baseName = `${wcBaseName} Wellness ${city.name}`;
+        } else if (type === "spa") {
+          baseName = `${SPA_NAMES[(index - 1) % SPA_NAMES.length]} ${city.name}`;
+        } else {
+          baseName = `${BEAUTY_NAMES[(index - 1) % BEAUTY_NAMES.length]} ${city.name}`;
+        }
+
+        const slug = toSlug(baseName);
+
+        // Address
+        const street = `${STREETS[(index + DEMO_CITIES.indexOf(city)) % STREETS.length]} ${randomInt(1, 150)}`;
+        const address = `${street}, ${city.name}`;
+
+        // Coordinates with jitter
+        const jitterLat = (Math.random() - 0.5) * 0.04; // ±0.02
+        const jitterLng = (Math.random() - 0.5) * 0.04;
+        const lat = parseFloat((city.lat + jitterLat).toFixed(6));
+        const lng = parseFloat((city.lng + jitterLng).toFixed(6));
+
+        // Amenities
+        let amenityPool: AmenityKind[];
+        if (type === "gym") amenityPool = GYM_AMENITIES;
+        else if (type === "wellness_center") amenityPool = WELLNESS_AMENITIES;
+        else if (type === "spa") amenityPool = SPA_AMENITIES;
+        else amenityPool = BEAUTY_AMENITIES;
+
+        const amenityCount = type === "beauty_salon" ? Math.min(randomInt(2, 3), amenityPool.length) : randomInt(3, 6);
+        const amenities = randomItems(amenityPool, amenityCount).map((k) => ({ kind: k }));
+
+        // Description
+        let description: string;
+        if (type === "gym") description = randomItem(GYM_DESCRIPTIONS);
+        else if (type === "wellness_center") description = randomItem(WELLNESS_DESCRIPTIONS);
+        else if (type === "spa") description = randomItem(SPA_DESCRIPTIONS);
+        else description = randomItem(BEAUTY_DESCRIPTIONS);
+
+        // heroGradients: 1-3
+        const gradientCount = randomInt(1, 3);
+        const heroGradients = randomItems(HERO_GRADIENTS, gradientCount);
+
+        // Hours
+        const hours = HOURS_VARIANTS[(index - 1) % HOURS_VARIANTS.length];
+
+        // isPartner: 35% chance
+        const isPartner = Math.random() < 0.35;
+
+        const venueDoc: Record<string, unknown> = {
+          name: baseName,
+          slug,
+          type,
+          city: city.name,
+          address,
+          lat,
+          lng,
+          rating: randomFloat(4.2, 5.0, 1),
+          reviewCount: randomInt(20, 280),
+          isPartner,
+          isActive: true,
+          description,
+          heroGradients,
+          amenities,
+          hours,
+          createdAt: now,
+          updatedAt: now,
+        };
+
+        const venueRef = db.collection("venues").doc(id);
+        await queueWrite(venueRef, venueDoc);
+        venueCount++;
+
+        // Services subcollection: 2–5 services
+        let serviceTemplates: { name: string; price: number; durationMinutes?: number; isActive: boolean }[];
+        if (type === "gym") serviceTemplates = GYM_SERVICES;
+        else if (type === "wellness_center") serviceTemplates = WELLNESS_SERVICES;
+        else if (type === "spa") serviceTemplates = SPA_SERVICES;
+        else serviceTemplates = BEAUTY_SERVICES;
+
+        const svcCount = randomInt(2, Math.min(5, serviceTemplates.length));
+        const selectedSvcs = randomItems(serviceTemplates, svcCount);
+        for (let si = 0; si < selectedSvcs.length; si++) {
+          const svc = selectedSvcs[si];
+          const svcId = `svc-${si + 1}`;
+          await queueWrite(venueRef.collection("services").doc(svcId), { ...svc } as Record<string, unknown>);
+          venueSvcCount++;
+        }
+
+        // Courses subcollection: only gyms and wellness_centers, 2–4 courses
+        if (type === "gym" || type === "wellness_center") {
+          const courseCount = randomInt(2, 4);
+          for (let ci = 0; ci < courseCount; ci++) {
+            const cId = `course-${ci + 1}`;
+            const coachFirst = randomItem(FIRST_NAMES);
+            const coachLastInit = randomItem(LAST_NAMES)[0];
+            const courseDoc: Record<string, unknown> = {
+              name: randomItem(CLASS_NAMES),
+              time: randomItem(COURSE_TIMES),
+              coach: `${coachFirst} ${coachLastInit}.`,
+              spots: randomInt(2, 10),
+            };
+            await queueWrite(venueRef.collection("courses").doc(cId), courseDoc);
+            venueCourseCount++;
+          }
+        }
+      }
+    }
+
+    // Flush remaining ops
+    if (opCount > 0) {
+      await batch.commit();
+      opCount = 0;
+    }
+
+    results.push({ success: true, collection: "venues (demo)", count: venueCount });
+    results.push({ success: true, collection: "services + courses (demo)", count: venueSvcCount + venueCourseCount });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    results.push({ success: false, collection: "venues (demo)", count: 0, error: msg });
+  }
+
+  return results;
+}
+
+export async function generateDemoContent(): Promise<SeedingResult[]> {
+  const results: SeedingResult[] = [];
+  const now = Timestamp.now();
+
+  // ===== fitnessClasses =====
+  try {
+    const FITNESS_CLASS_DATA = [
+      {
+        id: "class-yoga-01", title: "Morning Power Yoga",
+        category: "yoga", trainer: "Elisa Serra", time: "08:30",
+        durationMinutes: 60, spotsLeft: 6,
+      },
+      {
+        id: "class-yoga-02", title: "Yoga Restorativo",
+        category: "yoga", trainer: "Giulia Neri", time: "17:00",
+        durationMinutes: 60, spotsLeft: 8,
+      },
+      {
+        id: "class-hiit-01", title: "HIIT Burn",
+        category: "hiit", trainer: "Marco Vitali", time: "12:15",
+        durationMinutes: 45, spotsLeft: 4,
+      },
+      {
+        id: "class-hiit-02", title: "HIIT Express",
+        category: "hiit", trainer: "Andrea Rossi", time: "07:00",
+        durationMinutes: 30, spotsLeft: 3,
+      },
+      {
+        id: "class-pilates-01", title: "Pilates Core Flow",
+        category: "pilates", trainer: "Giulia Neri", time: "17:30",
+        durationMinutes: 50, spotsLeft: 8,
+      },
+      {
+        id: "class-pilates-02", title: "Pilates Reformer",
+        category: "pilates", trainer: "Sara Bianchi", time: "19:30",
+        durationMinutes: 55, spotsLeft: 6,
+      },
+      {
+        id: "class-functional-01", title: "Functional Circuit",
+        category: "functional", trainer: "Andrea Rossi", time: "19:00",
+        durationMinutes: 55, spotsLeft: 3,
+      },
+      {
+        id: "class-functional-02", title: "Functional 360",
+        category: "functional", trainer: "Luca Ferri", time: "12:00",
+        durationMinutes: 60, spotsLeft: 5,
+      },
+      {
+        id: "class-cardio-01", title: "Spinning Class",
+        category: "cardio", trainer: "Davide Marino", time: "18:30",
+        durationMinutes: 45, spotsLeft: 4,
+      },
+      {
+        id: "class-cardio-02", title: "Zumba Dance",
+        category: "cardio", trainer: "Valentina Esposito", time: "20:00",
+        durationMinutes: 60, spotsLeft: 12,
+      },
+      {
+        id: "class-strength-01", title: "Body Pump",
+        category: "strength", trainer: "Marco Vitali", time: "18:00",
+        durationMinutes: 55, spotsLeft: 5,
+      },
+      {
+        id: "class-strength-02", title: "Strength & Power",
+        category: "strength", trainer: "Anna Conti", time: "06:30",
+        durationMinutes: 60, spotsLeft: 4,
+      },
+    ];
+    const batch = db.batch();
+    for (const c of FITNESS_CLASS_DATA) {
+      batch.set(
+        db.collection("fitnessClasses").doc(c.id),
+        { ...c, rating: 4.7, isActive: true, createdAt: now, updatedAt: now },
+        { merge: true }
+      );
+    }
+    await batch.commit();
+    results.push({
+      success: true,
+      collection: "fitnessClasses",
+      count: FITNESS_CLASS_DATA.length,
+    });
+  } catch (error) {
+    results.push({
+      success: false,
+      collection: "fitnessClasses",
+      count: 0,
+      error: error instanceof Error ? error.message : "Unknown",
+    });
+  }
+
+  // ===== homeTrainingServices =====
+  try {
+    const HOME_SERVICES = [
+      {
+        id: "home-1", title: "Personal Training 1:1",
+        coach: "Luca Ferri", eta: "Disponibile oggi 18:00",
+        rating: 4.9, fromPrice: "Da EUR 55",
+      },
+      {
+        id: "home-2", title: "Mobility & Recovery",
+        coach: "Giulia Neri", eta: "Disponibile domani 09:30",
+        rating: 4.8, fromPrice: "Da EUR 49",
+      },
+      {
+        id: "home-3", title: "Functional Duo Session",
+        coach: "Andrea Rossi", eta: "Disponibile domani 19:00",
+        rating: 4.7, fromPrice: "Da EUR 62",
+      },
+      {
+        id: "home-4", title: "Personal Training Outdoor",
+        coach: "Marco Vitali", eta: "Disponibile sabato 10:00",
+        rating: 4.8, fromPrice: "Da EUR 60",
+      },
+      {
+        id: "home-5", title: "Recupero Posturale",
+        coach: "Sara Bianchi", eta: "Disponibile lunedi 17:30",
+        rating: 4.9, fromPrice: "Da EUR 70",
+      },
+      {
+        id: "home-6", title: "Coaching Online Live",
+        coach: "Valentina Esposito", eta: "Disponibile stasera 21:00",
+        rating: 4.6, fromPrice: "Da EUR 35",
+      },
+    ];
+    const batch = db.batch();
+    for (const s of HOME_SERVICES) {
+      batch.set(
+        db.collection("homeTrainingServices").doc(s.id),
+        { ...s, isActive: true, createdAt: now, updatedAt: now },
+        { merge: true }
+      );
+    }
+    await batch.commit();
+    results.push({
+      success: true,
+      collection: "homeTrainingServices",
+      count: HOME_SERVICES.length,
+    });
+  } catch (error) {
+    results.push({
+      success: false,
+      collection: "homeTrainingServices",
+      count: 0,
+      error: error instanceof Error ? error.message : "Unknown",
+    });
+  }
+
+  // ===== virtualPrograms =====
+  try {
+    const VIRTUAL_PROGRAMS = [
+      {
+        id: "virtual-1", title: "Live HIIT Express",
+        level: "Intermedio", durationMinutes: 30, rating: 4.8, live: true,
+      },
+      {
+        id: "virtual-2", title: "Yoga Mobility Flow",
+        level: "Tutti", durationMinutes: 40, rating: 4.7, live: false,
+      },
+      {
+        id: "virtual-3", title: "Strength at Home",
+        level: "Avanzato", durationMinutes: 50, rating: 4.9, live: false,
+      },
+      {
+        id: "virtual-4", title: "Cardio Dance Live",
+        level: "Tutti", durationMinutes: 35, rating: 4.6, live: true,
+      },
+      {
+        id: "virtual-5", title: "Pilates Foundations",
+        level: "Principiante", durationMinutes: 45, rating: 4.8, live: false,
+      },
+      {
+        id: "virtual-6", title: "Functional Express",
+        level: "Intermedio", durationMinutes: 25, rating: 4.7, live: false,
+      },
+    ];
+    const batch = db.batch();
+    for (const p of VIRTUAL_PROGRAMS) {
+      batch.set(
+        db.collection("virtualPrograms").doc(p.id),
+        { ...p, isActive: true, createdAt: now, updatedAt: now },
+        { merge: true }
+      );
+    }
+    await batch.commit();
+    results.push({
+      success: true,
+      collection: "virtualPrograms",
+      count: VIRTUAL_PROGRAMS.length,
+    });
+  } catch (error) {
+    results.push({
+      success: false,
+      collection: "virtualPrograms",
+      count: 0,
+      error: error instanceof Error ? error.message : "Unknown",
+    });
+  }
+
+  // ===== testimonials =====
+  try {
+    const TESTIMONIALS = [
+      {
+        id: "test-1", userName: "Sofia M.", rating: 5,
+        text: "Esperienza fantastica! Lo staff e super professionale.",
+        serviceLabel: "Personal Training", date: "2 giorni fa",
+      },
+      {
+        id: "test-2", userName: "Andrea L.", rating: 5,
+        text: "Risultati visibili gia dopo il primo mese.",
+        serviceLabel: "Personal Training", date: "1 settimana fa",
+      },
+      {
+        id: "test-3", userName: "Chiara F.", rating: 4,
+        text: "Le lezioni di yoga sono rilassanti e ben strutturate.",
+        serviceLabel: "Yoga", date: "3 giorni fa",
+      },
+      {
+        id: "test-4", userName: "Marco P.", rating: 5,
+        text: "Coach Marco e davvero motivante. Lo consiglio!",
+        serviceLabel: "Personal Training", date: "2 settimane fa",
+      },
+      {
+        id: "test-5", userName: "Elena R.", rating: 5,
+        text: "Centro pulito, attrezzature nuove, prezzi onesti.",
+        serviceLabel: "Abbonamento mensile", date: "5 giorni fa",
+      },
+      {
+        id: "test-6", userName: "Davide S.", rating: 4,
+        text: "Ambiente accogliente e personale qualificato.",
+        serviceLabel: "Functional", date: "1 mese fa",
+      },
+    ];
+    const batch = db.batch();
+    for (const t of TESTIMONIALS) {
+      batch.set(
+        db.collection("testimonials").doc(t.id),
+        { ...t, avatarUrl: null, createdAt: now },
+        { merge: true }
+      );
+    }
+    await batch.commit();
+    results.push({
+      success: true,
+      collection: "testimonials",
+      count: TESTIMONIALS.length,
+    });
+  } catch (error) {
+    results.push({
+      success: false,
+      collection: "testimonials",
+      count: 0,
+      error: error instanceof Error ? error.message : "Unknown",
+    });
+  }
+
+  // ===== transactions (admin/payments) =====
+  try {
+    const TRANSACTIONS = [
+      {
+        id: "tx-1", type: "booking_payment", amount: 150, status: "completed",
+        description: "Personal Training Session",
+        customerName: "Marco Rossi", providerName: "Luca Ferri",
+      },
+      {
+        id: "tx-2", type: "commission", amount: 22.5, status: "completed",
+        description: "Platform commission (15%)",
+        customerName: "-", providerName: "Luca Ferri",
+      },
+      {
+        id: "tx-3", type: "payout", amount: 127.5, status: "pending",
+        description: "Provider payout",
+        customerName: "-", providerName: "Luca Ferri",
+      },
+      {
+        id: "tx-4", type: "refund", amount: 150, status: "completed",
+        description: "Refund for cancelled booking",
+        customerName: "Anna Bianchi", providerName: "Sara Bianchi",
+      },
+      {
+        id: "tx-5", type: "booking_payment", amount: 70, status: "completed",
+        description: "Pilates Reformer",
+        customerName: "Chiara Fontana", providerName: "Sara Bianchi",
+      },
+      {
+        id: "tx-6", type: "booking_payment", amount: 90, status: "completed",
+        description: "Mobility & Recovery",
+        customerName: "Davide Marino", providerName: "Giulia Neri",
+      },
+      {
+        id: "tx-7", type: "commission", amount: 13.5, status: "completed",
+        description: "Platform commission (15%)",
+        customerName: "-", providerName: "Giulia Neri",
+      },
+      {
+        id: "tx-8", type: "payout", amount: 76.5, status: "completed",
+        description: "Provider payout",
+        customerName: "-", providerName: "Giulia Neri",
+      },
+      {
+        id: "tx-9", type: "booking_payment", amount: 60, status: "pending",
+        description: "Yoga Flow Session",
+        customerName: "Elena Romano", providerName: "Elisa Serra",
+      },
+      {
+        id: "tx-10", type: "booking_payment", amount: 55, status: "failed",
+        description: "HIIT Class",
+        customerName: "Paolo Greco", providerName: "Marco Vitali",
+      },
+    ];
+    const batch = db.batch();
+    const baseTime = Date.now();
+    for (let i = 0; i < TRANSACTIONS.length; i++) {
+      const t = TRANSACTIONS[i];
+      // one per day going back
+      const created = Timestamp.fromMillis(baseTime - i * 24 * 60 * 60 * 1000);
+      batch.set(
+        db.collection("transactions").doc(t.id),
+        { ...t, createdAt: created },
+        { merge: true }
+      );
+    }
+    await batch.commit();
+    results.push({
+      success: true,
+      collection: "transactions",
+      count: TRANSACTIONS.length,
+    });
+  } catch (error) {
+    results.push({
+      success: false,
+      collection: "transactions",
+      count: 0,
+      error: error instanceof Error ? error.message : "Unknown",
+    });
+  }
+
+  // ===== reviews on a few instructors =====
+  try {
+    const SAMPLE_REVIEWS = [
+      { userName: "Sofia M.", rating: 5, text: "Allenamento perfetto, motivante e ben strutturato." },
+      { userName: "Andrea L.", rating: 5, text: "Marco e davvero preparato. Consigliato!" },
+      { userName: "Chiara F.", rating: 4, text: "Buon coach, sempre disponibile." },
+      { userName: "Marco P.", rating: 5, text: "Risultati visibili dopo poche settimane." },
+      { userName: "Elena R.", rating: 4, text: "Sessioni intense ma personalizzate." },
+    ];
+    const targetInstructors = [
+      "provider-1",
+      "demo-trainer-yoga-01",
+      "demo-trainer-personal-training-01",
+      "demo-trainer-pilates-01",
+    ];
+    const batch = db.batch();
+    let count = 0;
+    for (const instructorId of targetInstructors) {
+      for (let i = 0; i < SAMPLE_REVIEWS.length; i++) {
+        const r = SAMPLE_REVIEWS[i];
+        batch.set(
+          db.collection("instructors")
+            .doc(instructorId)
+            .collection("reviews")
+            .doc(`review-${i + 1}`),
+          { ...r, avatarUrl: null, createdAt: now },
+          { merge: true }
+        );
+        count++;
+      }
+    }
+    await batch.commit();
+    results.push({ success: true, collection: "instructor reviews", count });
+  } catch (error) {
+    results.push({
+      success: false,
+      collection: "instructor reviews",
+      count: 0,
+      error: error instanceof Error ? error.message : "Unknown",
+    });
+  }
+
+  return results;
+}
+
+export async function generateDemoClients(): Promise<SeedingResult[]> {
+  const results: SeedingResult[] = [];
+  const now = Timestamp.now();
+  const PROVIDER_ID = "provider-1";
+
+  const CLIENTS = [
+    {
+      id: "demo-client-1",
+      userId: "demo-user-1",
+      name: "Marco Bianchi",
+      email: "marco.bianchi@example.com",
+      phone: "+39 333 1234567",
+      photoUrl: "",
+      totalBookings: 12,
+      totalSpent: 720,
+      notes: "Preferisce sessioni mattutine. Obiettivi: postura e core.",
+      tags: ["Mattino", "Postura", "Core"],
+      lastVisitDaysAgo: 4,
+      firstVisitDaysAgo: 220,
+    },
+    {
+      id: "demo-client-2",
+      userId: "demo-user-2",
+      name: "Anna Esposito",
+      email: "anna.esposito@example.com",
+      phone: "+39 333 7654321",
+      photoUrl: "",
+      totalBookings: 8,
+      totalSpent: 480,
+      notes: "Focalizzata su forza e mobilita. Disponibile mercoledi e venerdi.",
+      tags: ["Forza", "Mobilita"],
+      lastVisitDaysAgo: 10,
+      firstVisitDaysAgo: 150,
+    },
+    {
+      id: "demo-client-3",
+      userId: "demo-user-3",
+      name: "Sofia Greco",
+      email: "sofia.greco@example.com",
+      phone: "+39 333 9876543",
+      photoUrl: "",
+      totalBookings: 5,
+      totalSpent: 300,
+      notes: "Nuova cliente, preferenza per allenamento HIIT pomeridiano.",
+      tags: ["HIIT", "Pomeriggio"],
+      lastVisitDaysAgo: 2,
+      firstVisitDaysAgo: 75,
+    },
+    {
+      id: "demo-client-4",
+      userId: "demo-user-4",
+      name: "Davide Conti",
+      email: "davide.conti@example.com",
+      phone: "+39 333 5556677",
+      photoUrl: "",
+      totalBookings: 20,
+      totalSpent: 1200,
+      notes: "Cliente di lunga data, sessioni regolari due volte a settimana.",
+      tags: ["Veterano", "Settimanale"],
+      lastVisitDaysAgo: 1,
+      firstVisitDaysAgo: 540,
+    },
+  ];
+
+  // Write clients
+  try {
+    const batch = db.batch();
+    const dayMs = 24 * 60 * 60 * 1000;
+    const nowMs = now.toMillis();
+    for (const c of CLIENTS) {
+      const { lastVisitDaysAgo, firstVisitDaysAgo, ...rest } = c;
+      batch.set(
+        db.collection("clients").doc(c.id),
+        {
+          ...rest,
+          providerId: PROVIDER_ID,
+          lastVisit: Timestamp.fromMillis(nowMs - lastVisitDaysAgo * dayMs),
+          firstVisit: Timestamp.fromMillis(nowMs - firstVisitDaysAgo * dayMs),
+          createdAt: now,
+          updatedAt: now,
+        },
+        { merge: true }
+      );
+    }
+    await batch.commit();
+    results.push({ success: true, collection: "clients", count: CLIENTS.length });
+  } catch (error) {
+    results.push({
+      success: false,
+      collection: "clients",
+      count: 0,
+      error: error instanceof Error ? error.message : "Unknown",
+    });
+  }
+
+  // Write a small booking history per client. Mix of completed/upcoming/cancelled.
+  try {
+    const SERVICE_TEMPLATES = [
+      { id: "svc-1", name: "Personal Training 1-to-1", price: 60, durationMinutes: 60 },
+      { id: "svc-2", name: "Consulenza Nutrizionale", price: 45, durationMinutes: 45 },
+    ];
+    const batch = db.batch();
+    const dayMs = 24 * 60 * 60 * 1000;
+    const nowMs = now.toMillis();
+    let bookingsCount = 0;
+    for (const c of CLIENTS) {
+      // 4 bookings per client: 2 past (completed), 1 recent (completed), 1 upcoming
+      const offsets = [-30, -14, -7, 7];
+      for (let i = 0; i < offsets.length; i++) {
+        const svc = SERVICE_TEMPLATES[i % SERVICE_TEMPLATES.length];
+        const scheduled = Timestamp.fromMillis(nowMs + offsets[i] * dayMs);
+        const status = offsets[i] > 0 ? "confirmed" : "completed";
+        const bookingId = `demo-booking-${c.id}-${i + 1}`;
+        batch.set(
+          db.collection("bookings").doc(bookingId),
+          {
+            id: bookingId,
+            userId: c.userId,
+            providerId: PROVIDER_ID,
+            serviceId: svc.id,
+            serviceName: svc.name,
+            providerName: "Marco Rossi",
+            providerAvatar: null,
+            scheduledAt: scheduled,
+            scheduledEndAt: Timestamp.fromMillis(
+              scheduled.toMillis() + svc.durationMinutes * 60 * 1000
+            ),
+            duration: svc.durationMinutes,
+            locationType: "in_person",
+            location: null,
+            servicePrice: svc.price,
+            platformFee: svc.price * 0.05,
+            discountAmount: 0,
+            pointsUsed: 0,
+            pointsValue: 0,
+            totalPrice: svc.price * 1.05,
+            finalPrice: svc.price,
+            status,
+            paymentStatus: status === "completed" ? "paid" : "pending",
+            paymentMethod: "card",
+            userNotes: null,
+            hasReviewed: false,
+            createdAt: now,
+            updatedAt: now,
+          },
+          { merge: true }
+        );
+        bookingsCount++;
+      }
+    }
+    await batch.commit();
+    results.push({ success: true, collection: "bookings (demo)", count: bookingsCount });
+  } catch (error) {
+    results.push({
+      success: false,
+      collection: "bookings (demo)",
+      count: 0,
+      error: error instanceof Error ? error.message : "Unknown",
+    });
+  }
+
+  return results;
+}
+
+// ===== Demo photo pools =====
+
+const GYM_PHOTOS = [
+  "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800",
+  "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=800",
+  "https://images.unsplash.com/photo-1540497077202-7c8a3999166f?w=800",
+  "https://images.unsplash.com/photo-1554284126-aa88f22d8b74?w=800",
+  "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800",
+  "https://images.unsplash.com/photo-1576678927484-cc907957088c?w=800",
+  "https://images.unsplash.com/photo-1593079831268-3381b0db4a77?w=800",
+  "https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=800",
+];
+
+const WELLNESS_PHOTOS = [
+  "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=800",
+  "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=800",
+  "https://images.unsplash.com/photo-1545205597-3d9d02c29597?w=800",
+  "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=800",
+  "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800",
+];
+
+const SPA_PHOTOS = [
+  "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=800",
+  "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=800",
+  "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=800",
+];
+
+const BEAUTY_PHOTOS = [
+  "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800",
+  "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800",
+  "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=800",
+];
+
+const TRAINER_PHOTOS = [
+  "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800",
+  "https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?w=800",
+  "https://images.unsplash.com/photo-1583500178690-f7fd39f6e7b9?w=800",
+  "https://images.unsplash.com/photo-1518611012118-696072aa579a?w=800",
+  "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=800",
+  "https://images.unsplash.com/photo-1594381898411-846e7d193883?w=800",
+  "https://images.unsplash.com/photo-1599058917212-d750089bc07e?w=800",
+  "https://images.unsplash.com/photo-1530549387789-4c1017266635?w=800",
+];
+
+// Deterministic per-id pick. Walks the pool consecutively from a seeded
+// start index — always terminates and returns `min(count, pool.length)`
+// distinct photos. (A prior LCG version infinite-looped for pools whose
+// length shared a factor with the multiplier, e.g. size-3 pools.)
+function pickPhotos(id: string, pool: string[], count: number): string[] {
+  if (pool.length === 0) return [];
+  let seed = 0;
+  for (let i = 0; i < id.length; i++) {
+    seed = (seed * 31 + id.charCodeAt(i)) >>> 0;
+  }
+  const take = Math.min(count, pool.length);
+  const start = seed % pool.length;
+  const result: string[] = [];
+  for (let k = 0; k < take; k++) {
+    result.push(pool[(start + k) % pool.length]);
+  }
+  return result;
+}
+
+export async function generateDemoPhotos(): Promise<SeedingResult[]> {
+  const results: SeedingResult[] = [];
+
+  // ===== Venues =====
+  try {
+    const venuesSnap = await db.collection("venues").get();
+    const batch = db.batch();
+    let count = 0;
+    for (const docSnap of venuesSnap.docs) {
+      const type = docSnap.data().type as string | undefined;
+      let pool = GYM_PHOTOS;
+      if (type === "spa") pool = SPA_PHOTOS;
+      else if (type === "beauty_salon") pool = BEAUTY_PHOTOS;
+      else if (type === "wellness_center") pool = WELLNESS_PHOTOS;
+      const photoUrls = pickPhotos(docSnap.id, pool, 5);
+      batch.set(docSnap.ref, { photoUrls }, { merge: true });
+      count++;
+    }
+    await batch.commit();
+    results.push({ success: true, collection: "venues (photos)", count });
+  } catch (error) {
+    results.push({
+      success: false,
+      collection: "venues (photos)",
+      count: 0,
+      error: error instanceof Error ? error.message : "Unknown",
+    });
+  }
+
+  // ===== Instructors =====
+  try {
+    const instructorsSnap = await db.collection("instructors").get();
+    let batch = db.batch();
+    let opCount = 0;
+    let total = 0;
+    for (const docSnap of instructorsSnap.docs) {
+      const photoUrls = pickPhotos(docSnap.id, TRAINER_PHOTOS, 4);
+      batch.set(docSnap.ref, { photoUrls }, { merge: true });
+      opCount++;
+      total++;
+      if (opCount >= 400) {
+        await batch.commit();
+        batch = db.batch();
+        opCount = 0;
+      }
+    }
+    if (opCount > 0) await batch.commit();
+    results.push({ success: true, collection: "instructors (photos)", count: total });
+  } catch (error) {
+    results.push({
+      success: false,
+      collection: "instructors (photos)",
+      count: 0,
+      error: error instanceof Error ? error.message : "Unknown",
+    });
+  }
+
+  return results;
+}
+
 // ============================================================================
 // HTTP Cloud Functions
 // ============================================================================
@@ -847,7 +2322,10 @@ export const seedQuickData = functions.onRequest(
 
       const reviewResult = await seedReviews(3);
 
-      const allResults = [...results, ...moreResults, reviewResult];
+      const sampleVenuesResult = await seedSampleVenues();
+      const sampleInstructorsResult = await seedSampleInstructors();
+
+      const allResults = [...results, ...moreResults, reviewResult, sampleVenuesResult, sampleInstructorsResult];
 
       response.json({
         success: true,
@@ -858,6 +2336,77 @@ export const seedQuickData = functions.onRequest(
       });
     } catch (error) {
       console.error("Error in quick seed:", error);
+      response.status(500).json({ error: error instanceof Error ? error.message : "Unknown error" });
+    }
+  }
+);
+
+/**
+ * HTTP endpoint to seed demo-ready data for presentations.
+ * POST /seedDemoData
+ * Generates ~340 trainers (20 per specialty) + 120 venues across 12 Italian cities,
+ * each with services and courses subcollections.
+ * Idempotent (merge: true with deterministic IDs).
+ * Requires: Authentication + Admin role
+ */
+export const seedDemoData = functions.onRequest(
+  {
+    cors: true,
+    region: "europe-west1",
+    maxInstances: 1,
+    timeoutSeconds: 540,
+    memory: "512MiB",
+  },
+  async (request, response) => {
+    try {
+      if (request.method !== "POST") {
+        response.status(405).json({ error: "Method not allowed" });
+        return;
+      }
+
+      const authHeader = request.headers.authorization;
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        response.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const token = authHeader.split("Bearer ")[1];
+      let decodedToken;
+
+      try {
+        decodedToken = await admin.auth().verifyIdToken(token);
+      } catch (error) {
+        response.status(401).json({ error: "Unauthorized - Invalid token" });
+        return;
+      }
+
+      const isUserAdmin = await isAdmin(decodedToken.uid);
+      if (!isUserAdmin) {
+        response.status(403).json({ error: "Forbidden - Admin access required" });
+        return;
+      }
+
+      console.log(`Starting demo data seed by user ${decodedToken.uid}`);
+
+      const results = await generateDemoData();
+
+      const totalCount = results.reduce((sum, r) => sum + r.count, 0);
+      const successCount = results.filter((r) => r.success).length;
+
+      response.json({
+        success: true,
+        summary: {
+          totalCollections: results.length,
+          successful: successCount,
+          failed: results.length - successCount,
+          totalRecords: totalCount,
+        },
+        details: results,
+        seededBy: decodedToken.uid,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("Error in demo seed:", error);
       response.status(500).json({ error: error instanceof Error ? error.message : "Unknown error" });
     }
   }

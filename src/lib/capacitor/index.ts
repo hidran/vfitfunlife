@@ -266,7 +266,7 @@ export const handleDeepLink = (url: string) => {
   if (path.startsWith('/booking/')) {
     const providerId = path.split('/')[2];
     // Navigate to booking
-    window.location.href = `/booking/${providerId}`;
+    window.location.href = `/book?providerId=${providerId}`;
   } else if (path.startsWith('/provider/')) {
     const providerId = path.split('/')[2];
     window.location.href = `/provider/${providerId}`;

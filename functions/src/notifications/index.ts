@@ -1,6 +1,7 @@
 import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https";
 import { onDocumentUpdated } from "firebase-functions/v2/firestore";
 import * as admin from "firebase-admin";
+import { defaultNotificationSettings, allFalseNotificationSettings } from "../types";
 
 const db = admin.firestore();
 const messaging = admin.messaging();
@@ -55,7 +56,16 @@ export async function sendPushToUser(
   const userDoc = await db.collection("users").doc(userId).get();
   const userData = userDoc.data();
 
-  if (!userData || !userData.notificationsEnabled) {
+  if (!userData) {
+    return;
+  }
+
+  const notifSettings = userData.notificationSettings ??
+    (userData.notificationsEnabled === false ? allFalseNotificationSettings : defaultNotificationSettings);
+
+  // Check at least one push channel is enabled before attempting delivery
+  const anyPushEnabled = Object.values(notifSettings.push).some(Boolean);
+  if (!anyPushEnabled) {
     return;
   }
 
@@ -147,10 +157,11 @@ export const sendVipNotification = onCall<VipNotificationData>(
     // Admin check would go here
     const { title, body, imageUrl } = request.data;
 
+    // Filter by isVip only; per-user push gating is handled inside sendPushToUser
+    // (legacy notificationsEnabled filter removed — new users use notificationSettings)
     const vipUsers = await db
       .collection("users")
       .where("isVip", "==", true)
-      .where("notificationsEnabled", "==", true)
       .get();
 
     const userIds = vipUsers.docs.map((doc) => doc.id);

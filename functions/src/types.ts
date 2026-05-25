@@ -322,3 +322,24 @@ export interface ServiceType {
   createdAt: admin.firestore.Timestamp | null;
   updatedAt: admin.firestore.Timestamp | null;
 }
+
+// ============================================
+// Profile types (shared with frontend)
+// ============================================
+export type {
+  SocialLinks,
+  NotificationSettings,
+  PrivacySettings,
+  ProfileVisibility,
+} from "./types/profile";
+
+export {
+  SocialLinksSchema,
+  NotificationSettingsSchema,
+  PrivacySettingsSchema,
+  ProfileVisibilitySchema,
+  defaultNotificationSettings,
+  allFalseNotificationSettings,
+  defaultPrivacySettings,
+  makeAvatarUrlSchema,
+} from "./types/profile";

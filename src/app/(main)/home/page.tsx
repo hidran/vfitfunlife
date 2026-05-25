@@ -33,13 +33,12 @@ import {
 import { Avatar } from '@/components/ui/Avatar';
 import { cn } from '@/lib/utils';
 import { usePullToRefresh } from 'use-pull-to-refresh';
-import { useEffect, useState } from 'react';
-import { collection, collectionGroup, query, where, limit, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
 import { Spinner } from '@/components/ui/Spinner';
 import { useI18n } from '@/hooks/useI18n';
+import { useVenues } from '@/hooks/useVenues';
+import { useProviders } from '@/hooks/useProviders';
+import { useTodayClasses, useTestimonials } from '@/hooks';
 import type { MessageKey } from '@/i18n/messages';
-import { toLocaleTag, type AppLocale } from '@/types/locale';
 
 // Types
 interface Provider {
@@ -62,15 +61,6 @@ interface Venue {
   distance: string;
   partner: boolean;
   specialties?: string[];
-}
-
-interface ClassSession {
-  id: string;
-  time: string;
-  name: string;
-  instructor: string;
-  spots: number;
-  tag: string;
 }
 
 interface QuickActionItem {
@@ -171,212 +161,18 @@ const vfunTVSchedule: VFunTVShow[] = [
 
 const vfunIsStreamingLive = true;
 
-// Firestore data fetching hooks
-function useTopProviders(limitCount: number = 6, unknownName: string) {
-  const [providers, setProviders] = useState<Provider[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchProviders = async () => {
-      try {
-        // Query public instructor profiles to avoid restricted user documents
-        const q = query(
-          collection(db, 'instructors'),
-          where('providerProfile.isVerified', '==', true),
-          limit(limitCount * 2) // Fetch more to filter locally
-        );
-        
-        const snapshot = await getDocs(q);
-        let providersData = snapshot.docs
-          .map(doc => {
-            const data = doc.data();
-            const profile = data.providerProfile || {};
-            return {
-              id: doc.id,
-              fullName: data.fullName || data.name || unknownName,
-              avatarUrl: data.avatarUrl || null,
-              specialties: data.specialties || profile.specialties || [],
-              rating: data.ratingAvg || profile.rating || 0,
-              reviewCount: data.reviewCount || profile.reviewCount || 0,
-              yearsOfExperience: data.experienceYears || profile.yearsOfExperience || 0,
-              isVerified: profile.isVerified ?? true,
-              isActive: data.isActive ?? profile.isActive ?? true,
-            };
-          })
-          .filter(p => p.isActive)
-          .sort((a, b) => b.rating - a.rating)
-          .slice(0, limitCount);
-        
-        setProviders(providersData);
-      } catch (error) {
-        console.error('Error fetching providers:', error);
-        setProviders([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    // Add timeout to prevent infinite loading
-    const timeoutId = setTimeout(() => {
-      setIsLoading(false);
-    }, 5000);
-
-    fetchProviders();
-    return () => clearTimeout(timeoutId);
-  }, [limitCount, unknownName]);
-
-  return { providers, isLoading };
-}
-
-function useVenuesByType(
-  type: 'fitness' | 'wellness',
-  limitCount: number = 4,
-  fallbackVenueName: string,
-  fallbackCityName: string
-) {
-  const [venues, setVenues] = useState<Venue[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchVenues = async () => {
-      try {
-        // Simpler query without composite index requirement
-        const q = query(
-          collection(db, 'venues'),
-          where('type', '==', type),
-          limit(limitCount * 2)
-        );
-        
-        const snapshot = await getDocs(q);
-        const venuesData = snapshot.docs
-          .map(doc => {
-            const data = doc.data();
-            return {
-              id: doc.id,
-              name: data.name || fallbackVenueName,
-              city: data.city || data.address?.city || fallbackCityName,
-              rating: data.rating || 0,
-              reviews: data.reviewCount || 0,
-              distance: `${(Math.random() * 3 + 0.5).toFixed(1)} km`,
-              partner: data.isPartner || false,
-              specialties: data.specialties || [],
-              isActive: data.isActive !== false,
-            };
-          })
-          .filter(v => v.isActive)
-          .sort((a, b) => b.rating - a.rating)
-          .slice(0, limitCount);
-        
-        setVenues(venuesData);
-      } catch (error) {
-        console.error('Error fetching venues:', error);
-        setVenues([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    const timeoutId = setTimeout(() => {
-      setIsLoading(false);
-    }, 5000);
-
-    fetchVenues();
-    return () => clearTimeout(timeoutId);
-  }, [type, limitCount, fallbackVenueName, fallbackCityName]);
-
-  return { venues, isLoading };
-}
-
-function useTodayClasses(
-  limitCount: number = 3,
-  locale: AppLocale,
-  labels: {
-    unnamedClass: string;
-    unknownInstructor: string;
-    allLevels: string;
-  }
-) {
-  const [classes, setClasses] = useState<ClassSession[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchClasses = async () => {
-      try {
-        // fitnessClasses is public-read in firestore.rules
-        const q = query(
-          collection(db, 'fitnessClasses'),
-          limit(limitCount * 3)
-        );
-        
-        const snapshot = await getDocs(q);
-        const now = new Date();
-        const classesData = snapshot.docs
-          .map(doc => {
-            const data = doc.data();
-            const startTime = data.startTime?.toDate?.() || new Date();
-            return {
-              id: doc.id,
-              time: startTime.toLocaleTimeString(toLocaleTag(locale), {
-                hour: '2-digit',
-                minute: '2-digit',
-              }),
-              name: data.name || labels.unnamedClass,
-              instructor: data.instructorName || data.instructor?.fullName || labels.unknownInstructor,
-              spots: (data.maxParticipants || data.maxCapacity || 20) - (data.bookedCount || 0),
-              tag: data.level || labels.allLevels,
-              startTime,
-              isActive: data.isActive !== false,
-            };
-          })
-          .filter(c => c.isActive && c.startTime >= now)
-          .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
-          .slice(0, limitCount);
-        
-        setClasses(classesData);
-      } catch (error) {
-        console.error('Error fetching classes:', error);
-        setClasses([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    const timeoutId = setTimeout(() => {
-      setIsLoading(false);
-    }, 5000);
-
-    fetchClasses();
-    return () => clearTimeout(timeoutId);
-  }, [limitCount, labels.allLevels, labels.unnamedClass, labels.unknownInstructor, locale]);
-
-  return { classes, isLoading };
-}
-
 function VFitHome() {
-  const { t, locale } = useI18n();
-  const { providers: trainers, isLoading: loadingTrainers } = useTopProviders(
-    6,
-    t('home.shared.unknownPerson')
-  );
-  const { venues: gyms, isLoading: loadingGyms } = useVenuesByType(
-    'fitness',
-    4,
-    t('home.shared.unknownVenue'),
-    t('home.shared.unknownCity')
-  );
-  const { classes: classSessions, isLoading: loadingClasses } = useTodayClasses(3, locale, {
-    unnamedClass: t('home.shared.unnamedClass'),
-    unknownInstructor: t('home.shared.unknownPerson'),
-    allLevels: t('home.fit.classLevel.all'),
-  });
+  const { t } = useI18n();
+  const { data: trainers = [], isLoading: loadingTrainers } = useProviders({ onlyVerified: true, limit: 6 });
+  const { data: gyms = [], isLoading: loadingGyms } = useVenues({ type: 'gym', limit: 4 });
+  const { data: classSessions = [], isLoading: loadingClasses } = useTodayClasses(3);
 
   // Fallback data while loading
   const displayTrainers = trainers.length > 0 ? trainers.slice(0, 3) : [];
   const displayGyms = gyms.length > 0 ? gyms : [];
-  const displayClasses = classSessions.length > 0 ? classSessions : [];
   const featuredTrainers = displayTrainers.slice(0, 2);
-  const activeClassTags = displayClasses
-    .map((session) => session.name)
+  const activeClassTags = classSessions
+    .map((session) => session.title)
     .filter((value, index, arr) => arr.indexOf(value) === index)
     .slice(0, 4);
 
@@ -402,7 +198,7 @@ function VFitHome() {
               displayGyms.slice(0, 4).map((gym, index) => (
                 <Link
                   key={gym.id}
-                  href={`/venue/${gym.id}`}
+                  href={`/venue?id=${gym.id}`}
                   className="min-w-[240px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
                 >
                   <div
@@ -764,119 +560,36 @@ function VFunHome() {
   );
 }
 
-// Testimonials from Firestore
-function useTestimonials(
-  limitCount: number = 3,
-  labels: {
-    anonymousUser: string;
-    genericService: string;
-    today: string;
-    yesterday: string;
-    daysAgo: string;
-  }
-) {
-  const [testimonials, setTestimonials] = useState<Array<{
-    id: string;
-    name: string;
-    service: string;
-    rating: number;
-    text: string;
-    date: string;
-  }>>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchTestimonials = async () => {
-      try {
-        // Pull reviews from venue/instructor review subcollections
-        const q = query(
-          collectionGroup(db, 'reviews'),
-          limit(limitCount * 3)
-        );
-        
-        const snapshot = await getDocs(q);
-        const reviewsData = snapshot.docs
-          .map(doc => {
-            const data = doc.data();
-            const createdAt = data.createdAt?.toDate?.() || new Date();
-            const daysAgo = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
-            return {
-              id: doc.id,
-              name: data.userName?.split(' ')[0] + ' ' + 
-                (data.userName?.split(' ')[1]?.charAt(0) || '') + '.' || labels.anonymousUser,
-              service: data.serviceName || labels.genericService,
-              rating: data.rating || 5,
-              text: data.comment || data.text || '',
-              date:
-                daysAgo === 0
-                  ? labels.today
-                  : daysAgo === 1
-                    ? labels.yesterday
-                    : labels.daysAgo.replace(/\{\{\s*count\s*\}\}/g, String(daysAgo)),
-            };
-          })
-          .filter(r => r.rating >= 4)
-          .sort((a, b) => b.rating - a.rating)
-          .slice(0, limitCount);
-        
-        setTestimonials(reviewsData);
-      } catch (error) {
-        console.error('Error fetching testimonials:', error);
-        setTestimonials([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    const timeoutId = setTimeout(() => {
-      setIsLoading(false);
-    }, 5000);
-
-    fetchTestimonials();
-    return () => clearTimeout(timeoutId);
-  }, [labels.anonymousUser, labels.daysAgo, labels.genericService, labels.today, labels.yesterday, limitCount]);
-
-  return { testimonials, isLoading };
-}
-
 function VLifeHome() {
   const { t } = useI18n();
-  const { venues: centers, isLoading: loadingCenters } = useVenuesByType(
-    'wellness',
-    4,
-    t('home.shared.unknownVenue'),
-    t('home.shared.unknownCity')
-  );
-  const { testimonials, isLoading: loadingTestimonials } = useTestimonials(3, {
-    anonymousUser: t('home.shared.anonymous'),
-    genericService: t('home.shared.service'),
-    today: t('home.shared.today'),
-    yesterday: t('home.shared.yesterday'),
-    daysAgo: t('home.shared.daysAgo', { count: '{{count}}' }),
-  });
+  const { data: centers = [], isLoading: loadingCenters } = useVenues({ type: 'wellness_center', limit: 4 });
+  const { data: testimonials = [], isLoading: loadingTestimonials } = useTestimonials({ limit: 3 });
 
-  // Fallback testimonials
+  // Fallback testimonials (i18n-keyed, shown when Firestore returns empty)
   const fallbackTestimonials = [
     {
       id: '1',
-      name: 'Francesca M.',
-      service: t('home.life.testimonials.f1.service'),
+      userName: 'Francesca M.',
+      avatarUrl: null,
+      serviceLabel: t('home.life.testimonials.f1.service'),
       rating: 5,
       text: t('home.life.testimonials.f1.text'),
       date: t('home.life.testimonials.f1.date'),
     },
     {
       id: '2',
-      name: 'Giovanni P.',
-      service: t('home.life.testimonials.f2.service'),
+      userName: 'Giovanni P.',
+      avatarUrl: null,
+      serviceLabel: t('home.life.testimonials.f2.service'),
       rating: 5,
       text: t('home.life.testimonials.f2.text'),
       date: t('home.life.testimonials.f2.date'),
     },
     {
       id: '3',
-      name: 'Laura B.',
-      service: t('home.life.testimonials.f3.service'),
+      userName: 'Laura B.',
+      avatarUrl: null,
+      serviceLabel: t('home.life.testimonials.f3.service'),
       rating: 4,
       text: t('home.life.testimonials.f3.text'),
       date: t('home.life.testimonials.f3.date'),
@@ -1067,7 +780,7 @@ function VLifeHome() {
           ) : (
             <>
               <Link
-                href={displayCenters[0] ? `/venue/${displayCenters[0].id}` : '/life/centers'}
+                href={displayCenters[0] ? `/venue?id=${displayCenters[0].id}` : '/life/centers'}
                 className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-sm"
               >
                 <div className="h-20 rounded-xl bg-[linear-gradient(135deg,#3e8d68,#86c8a4)]" />
@@ -1076,7 +789,7 @@ function VLifeHome() {
                 </p>
               </Link>
               <Link
-                href={displayCenters[1] ? `/venue/${displayCenters[1].id}` : '/life/hyperbaric'}
+                href={displayCenters[1] ? `/venue?id=${displayCenters[1].id}` : '/life/hyperbaric'}
                 className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-sm"
               >
                 <div className="relative h-20 rounded-xl bg-[linear-gradient(135deg,#dbe3ef,#aab7d2)]">

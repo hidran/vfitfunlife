@@ -3,45 +3,12 @@
 import Link from 'next/link';
 import { MonitorPlay, Play, Signal, Star, Timer } from 'lucide-react';
 import { useI18n } from '@/hooks/useI18n';
-
-interface VirtualProgram {
-  id: string;
-  title: string;
-  level: string;
-  duration: string;
-  rating: number;
-  live: boolean;
-}
-
-const programs: VirtualProgram[] = [
-  {
-    id: 'v1',
-    title: 'Live HIIT Express',
-    level: 'Intermedio',
-    duration: '30 min',
-    rating: 4.8,
-    live: true,
-  },
-  {
-    id: 'v2',
-    title: 'Yoga Mobility Flow',
-    level: 'Tutti',
-    duration: '40 min',
-    rating: 4.7,
-    live: false,
-  },
-  {
-    id: 'v3',
-    title: 'Strength at Home',
-    level: 'Avanzato',
-    duration: '50 min',
-    rating: 4.9,
-    live: false,
-  },
-];
+import { useVirtualPrograms } from '@/hooks/useFitness';
+import { Spinner } from '@/components/ui/Spinner';
 
 export default function FitVirtualPage() {
   const { t } = useI18n();
+  const { data: programs = [], isLoading } = useVirtualPrograms();
 
   return (
     <div className="container-mobile py-6 pb-24 space-y-5">
@@ -74,39 +41,43 @@ export default function FitVirtualPage() {
       </section>
 
       <section className="space-y-3">
-        {programs.map((program) => (
-          <article key={program.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <div className="flex items-start justify-between gap-2">
-              <h2 className="text-sm font-semibold text-text-inverse">{program.title}</h2>
-              {program.live && (
-                <span className="rounded-full bg-red-500/80 px-2 py-1 text-[10px] font-semibold uppercase text-white">
-                  {t('common.live')}
+        {isLoading ? (
+          <Spinner size="md" />
+        ) : (
+          programs.map((program) => (
+            <article key={program.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div className="flex items-start justify-between gap-2">
+                <h2 className="text-sm font-semibold text-text-inverse">{program.title}</h2>
+                {program.live && (
+                  <span className="rounded-full bg-red-500/80 px-2 py-1 text-[10px] font-semibold uppercase text-white">
+                    {t('common.live')}
+                  </span>
+                )}
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-text-tertiary">
+                <span className="inline-flex items-center gap-1">
+                  <Timer className="h-3.5 w-3.5" />
+                  {program.durationMinutes} min
                 </span>
-              )}
-            </div>
-            <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-text-tertiary">
-              <span className="inline-flex items-center gap-1">
-                <Timer className="h-3.5 w-3.5" />
-                {program.duration}
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <MonitorPlay className="h-3.5 w-3.5" />
-                {program.level}
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <Star className="h-3.5 w-3.5 text-yellow-400" />
-                {program.rating.toFixed(1)}
-              </span>
-            </div>
-            <Link
-              href="/booking"
-              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-section-primary/20 px-4 py-2 text-sm font-semibold text-section-primary"
-            >
-              <Play className="h-4 w-4" />
-              {t('fit.virtual.startProgram')}
-            </Link>
-          </article>
-        ))}
+                <span className="inline-flex items-center gap-1">
+                  <MonitorPlay className="h-3.5 w-3.5" />
+                  {program.level}
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <Star className="h-3.5 w-3.5 text-yellow-400" />
+                  {program.rating.toFixed(1)}
+                </span>
+              </div>
+              <Link
+                href="/booking"
+                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-section-primary/20 px-4 py-2 text-sm font-semibold text-section-primary"
+              >
+                <Play className="h-4 w-4" />
+                {t('fit.virtual.startProgram')}
+              </Link>
+            </article>
+          ))
+        )}
       </section>
     </div>
   );

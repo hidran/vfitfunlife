@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { UserRoleBadge, StatusBadge } from "@/components/admin";
 import { formatDate, formatPrice, toDate } from "@/lib/utils";
 import { User, UserRole } from "@/types/firebase";
+import { defaultNotificationSettings, allFalseNotificationSettings } from "@/types/profile";
 import {
   ArrowLeft,
   Mail,
@@ -393,12 +394,18 @@ export default function UserDetailClient({ userId }: UserDetailClientProps) {
             <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
               <h3 className="text-lg font-semibold text-white mb-4">Notification Settings</h3>
               <div className="space-y-3">
-                {[
-                  { label: "Email Notifications", enabled: user.emailVerified },
-                  { label: "Push Notifications", enabled: user.notificationsEnabled },
-                  { label: "SMS Notifications", enabled: user.phoneVerified },
-                  { label: "Marketing Emails", enabled: (user as any).notificationSettings?.marketing },
-                ].map((setting) => (
+                {(() => {
+                  const ns = (user as any).notificationSettings
+                    ?? ((user as any).notificationsEnabled === false
+                      ? allFalseNotificationSettings
+                      : defaultNotificationSettings);
+                  return [
+                    { label: "Email Notifications", enabled: user.emailVerified },
+                    { label: "Push Notifications", enabled: Object.values(ns.push).some(Boolean) },
+                    { label: "SMS Notifications", enabled: user.phoneVerified },
+                    { label: "Marketing Emails", enabled: ns.email?.promotion ?? false },
+                  ];
+                })().map((setting) => (
                   <div key={setting.label} className="flex justify-between items-center">
                     <span className="text-white/70">{setting.label}</span>
                     <span

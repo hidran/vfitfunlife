@@ -46,6 +46,15 @@
   //     ]
   //   },
   // ]
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "instructors",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "providerProfile.isVerified", "order": "ASCENDING" },
+        { "fieldPath": "providerProfile.specialties", "arrayConfig": "CONTAINS" }
+      ]
+    }
+  ],
   "fieldOverrides": []
 }

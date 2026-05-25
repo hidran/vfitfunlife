@@ -71,7 +71,7 @@ export default function BookingPage() {
 
   const handleProviderSelect = useCallback((provider: ProviderSearchResult) => {
     selectProvider(provider);
-    router.push(`/booking/${provider.id}`);
+    router.push(`/book?providerId=${provider.id}`);
   }, [selectProvider, router]);
 
   const handleSortChange = (sortBy: SearchParams['sortBy']) => {
@@ -149,10 +149,10 @@ export default function BookingPage() {
             {CATEGORIES.map((cat) => (
               <button
                 key={cat.id}
-                onClick={() => setSearchFilters({ category: cat.id })}
+                onClick={() => setSearchFilters({ category: cat.name })}
                 className={cn(
                   'flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5',
-                  searchFilters.category === cat.id
+                  searchFilters.category === cat.name
                     ? 'bg-[var(--section-primary)] text-white'
                     : 'bg-[#2A2D3A] text-text-secondary hover:text-white'
                 )}
@@ -304,11 +304,10 @@ export default function BookingPage() {
                 name: p.fullName,
                 city: p.location?.address || 'Milano',
                 rating: p.rating,
-                reviews: p.reviewCount,
-                distanceKm: p.distance || 0,
+                reviewCount: p.reviewCount,
                 lat: p.location?.lat,
                 lng: p.location?.lng,
-                partner: p.isVerified,
+                isPartner: p.isVerified,
               }))}
               onGymSelect={(id) => {
                 const provider = searchResults.find((p) => p.id === id);
@@ -336,9 +335,19 @@ export default function BookingPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   onClick={() => handleProviderSelect(provider)}
-                  className="bg-[#2A2D3A]/50 rounded-2xl p-4 cursor-pointer hover:bg-[#2A2D3A] transition-colors"
+                  className="bg-[#2A2D3A]/50 rounded-2xl overflow-hidden cursor-pointer hover:bg-[#2A2D3A] transition-colors"
                 >
-                  <div className="flex gap-4">
+                  {provider.photoUrls && provider.photoUrls[0] && (
+                    <div className="h-28 overflow-hidden rounded-t-2xl">
+                      <img
+                        src={provider.photoUrls[0]}
+                        alt={provider.fullName}
+                        loading="lazy"
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  )}
+                  <div className="flex gap-4 p-4">
                     <Avatar
                       src={provider.avatarUrl}
                       alt={provider.fullName}

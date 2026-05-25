@@ -290,7 +290,6 @@ export async function completeRegistration(
       pointsBalance: 100, // Welcome points
       walletBalance: 0,
       preferredLanguage: "it",
-      notificationsEnabled: true,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
       lastLoginAt: serverTimestamp(),

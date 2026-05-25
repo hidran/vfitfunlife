@@ -12,8 +12,6 @@ import {
   Check,
   Shield,
   Calendar,
-  Bell,
-  Lock,
   Briefcase,
   AlertCircle,
   Camera,
@@ -31,15 +29,18 @@ import {
   updateProviderProfile,
   isProvider,
   updateSocialLinks,
-  updateNotificationSettings,
-  updatePrivacySettings,
   verifyPhoneNumber,
 } from '@/lib/firebase/auth';
 import { SectionSelector } from '@/components/ui/section-selector';
 import { Timestamp } from 'firebase/firestore';
-import { SocialLinks, NotificationSettings as NotificationSettingsType, PrivacySettings } from '@/types/firebase';
+import { SocialLinks } from '@/types/firebase';
 import { useI18n } from '@/hooks/useI18n';
 import type { MessageKey } from '@/i18n/messages';
+import { AvatarUploader } from '@/components/profile/AvatarUploader';
+import { SocialLinksForm } from '@/components/profile/SocialLinksForm';
+import { NotificationSettingsForm } from '@/components/profile/NotificationSettingsForm';
+import { PrivacySettingsForm } from '@/components/profile/PrivacySettingsForm';
+import { defaultNotificationSettings, defaultPrivacySettings } from '@/types/profile';
 
 // Form validation
 interface FormErrors {
@@ -117,7 +118,7 @@ const SOCIAL_PLATFORMS: {
   },
 ];
 
-type TabType = 'personal' | 'notifications' | 'privacy' | 'professional';
+type TabType = 'personal' | 'professional';
 
 export default function EditProfilePage() {
   const router = useRouter();
@@ -149,25 +150,6 @@ export default function EditProfilePage() {
     twitter: '',
   });
 
-  // Notification Settings State
-  const [notificationSettings, setNotificationSettings] = useState<NotificationSettingsType>({
-    email: true,
-    push: true,
-    sms: false,
-    marketing: true,
-    bookingReminders: true,
-    promotions: true,
-    newMessages: true,
-  });
-
-  // Privacy Settings State
-  const [privacySettings, setPrivacySettings] = useState<PrivacySettings>({
-    profileVisible: true,
-    bookingsVisible: false,
-    showEmail: false,
-    showPhone: false,
-  });
-
   // Professional Info State
   const [professionalData, setProfessionalData] = useState({
     professionalBio: '',
@@ -193,14 +175,6 @@ export default function EditProfilePage() {
 
       if (user.socialLinks) {
         setSocialLinks(user.socialLinks);
-      }
-
-      if (user.notificationSettings) {
-        setNotificationSettings(user.notificationSettings);
-      }
-
-      if (user.privacySettings) {
-        setPrivacySettings(user.privacySettings);
       }
 
       if (user.providerProfile) {
@@ -300,12 +274,6 @@ export default function EditProfilePage() {
       // Update social links
       await updateSocialLinks(user.id, socialLinks);
 
-      // Update notification settings
-      await updateNotificationSettings(user.id, notificationSettings);
-
-      // Update privacy settings
-      await updatePrivacySettings(user.id, privacySettings);
-
       // Update professional info if provider
       if (isProviderUser) {
         await updateProviderProfile(user.id, {
@@ -391,16 +359,6 @@ export default function EditProfilePage() {
     setHasUnsavedChanges(true);
   };
 
-  const toggleNotification = (key: keyof NotificationSettingsType) => {
-    setNotificationSettings((prev) => ({ ...prev, [key]: !prev[key] }));
-    setHasUnsavedChanges(true);
-  };
-
-  const togglePrivacy = (key: keyof PrivacySettings) => {
-    setPrivacySettings((prev) => ({ ...prev, [key]: !prev[key] }));
-    setHasUnsavedChanges(true);
-  };
-
   const displayName = user?.fullName || firebaseUser?.displayName || t('profile.defaultUser');
 
   if (isLoading) {
@@ -413,8 +371,6 @@ export default function EditProfilePage() {
 
   const tabs: { key: TabType; labelKey: MessageKey; icon: React.ElementType }[] = [
     { key: 'personal', labelKey: 'profile.edit.tab.personal', icon: User },
-    { key: 'notifications', labelKey: 'profile.edit.tab.notifications', icon: Bell },
-    { key: 'privacy', labelKey: 'profile.edit.tab.privacy', icon: Lock },
     ...(isProviderUser
       ? [{ key: 'professional' as TabType, labelKey: 'profile.edit.tab.professional' as MessageKey, icon: Briefcase }]
       : []),
@@ -721,163 +677,6 @@ export default function EditProfilePage() {
           </div>
         )}
 
-        {/* Notifications Tab */}
-        {activeTab === 'notifications' && (
-          <div className="space-y-4">
-            <h3 className="text-sm font-medium text-text-tertiary mb-4">
-              {t('profile.notifications.preferencesTitle')}
-            </h3>
-
-            {[
-              {
-                key: 'email',
-                labelKey: 'profile.notifications.option.email.label',
-                descriptionKey: 'profile.notifications.option.email.description',
-              },
-              {
-                key: 'push',
-                labelKey: 'profile.notifications.option.push.label',
-                descriptionKey: 'profile.notifications.option.push.description',
-              },
-              {
-                key: 'sms',
-                labelKey: 'profile.notifications.option.sms.label',
-                descriptionKey: 'profile.notifications.option.sms.description',
-              },
-              {
-                key: 'bookingReminders',
-                labelKey: 'profile.notifications.option.bookingReminders.label',
-                descriptionKey: 'profile.notifications.option.bookingReminders.description',
-              },
-              {
-                key: 'promotions',
-                labelKey: 'profile.notifications.option.promotions.label',
-                descriptionKey: 'profile.notifications.option.promotions.description',
-              },
-              {
-                key: 'newMessages',
-                labelKey: 'profile.notifications.option.newMessages.label',
-                descriptionKey: 'profile.notifications.option.newMessages.description',
-              },
-              {
-                key: 'marketing',
-                labelKey: 'profile.notifications.option.marketing.label',
-                descriptionKey: 'profile.notifications.option.marketing.description',
-              },
-            ].map((option) => {
-              const isEnabled = notificationSettings[option.key as keyof NotificationSettingsType];
-              return (
-                <button
-                  key={option.key}
-                  onClick={() => toggleNotification(option.key as keyof NotificationSettingsType)}
-                  className={cn(
-                    'w-full flex items-center gap-3 p-4 rounded-xl transition-all duration-200 text-left',
-                    isEnabled
-                      ? 'bg-section-gradient/10 border border-section-primary/30'
-                      : 'bg-background-secondary/5 border border-transparent hover:bg-background-secondary/10'
-                  )}
-                >
-                  <div className="flex-1">
-                    <p className={cn(
-                      'font-medium text-sm',
-                      isEnabled ? 'text-text-inverse' : 'text-text-secondary'
-                    )}>
-                      {t(option.labelKey as MessageKey)}
-                    </p>
-                    <p className="text-xs text-text-tertiary">
-                      {t(option.descriptionKey as MessageKey)}
-                    </p>
-                  </div>
-                  <div
-                    className={cn(
-                      'w-12 h-6 rounded-full relative transition-colors duration-200',
-                      isEnabled ? 'bg-section-primary' : 'bg-background-secondary/30'
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        'absolute top-1 w-4 h-4 rounded-full bg-white transition-transform duration-200',
-                        isEnabled ? 'translate-x-7' : 'translate-x-1'
-                      )}
-                    />
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Privacy Tab */}
-        {activeTab === 'privacy' && (
-          <div className="space-y-4">
-            <h3 className="text-sm font-medium text-text-tertiary mb-4">
-              {t('profile.edit.privacy.title')}
-            </h3>
-
-            {[
-              {
-                key: 'profileVisible',
-                labelKey: 'profile.edit.privacy.option.profileVisible.label',
-                descriptionKey: 'profile.edit.privacy.option.profileVisible.description',
-              },
-              {
-                key: 'bookingsVisible',
-                labelKey: 'profile.edit.privacy.option.bookingsVisible.label',
-                descriptionKey: 'profile.edit.privacy.option.bookingsVisible.description',
-              },
-              {
-                key: 'showEmail',
-                labelKey: 'profile.edit.privacy.option.showEmail.label',
-                descriptionKey: 'profile.edit.privacy.option.showEmail.description',
-              },
-              {
-                key: 'showPhone',
-                labelKey: 'profile.edit.privacy.option.showPhone.label',
-                descriptionKey: 'profile.edit.privacy.option.showPhone.description',
-              },
-            ].map((option) => {
-              const isEnabled = privacySettings[option.key as keyof PrivacySettings];
-              return (
-                <button
-                  key={option.key}
-                  onClick={() => togglePrivacy(option.key as keyof PrivacySettings)}
-                  className={cn(
-                    'w-full flex items-center gap-3 p-4 rounded-xl transition-all duration-200 text-left',
-                    isEnabled
-                      ? 'bg-section-gradient/10 border border-section-primary/30'
-                      : 'bg-background-secondary/5 border border-transparent hover:bg-background-secondary/10'
-                  )}
-                >
-                  <div className="flex-1">
-                    <p className={cn(
-                      'font-medium text-sm',
-                      isEnabled ? 'text-text-inverse' : 'text-text-secondary'
-                    )}>
-                      {t(option.labelKey as MessageKey)}
-                    </p>
-                    <p className="text-xs text-text-tertiary">
-                      {t(option.descriptionKey as MessageKey)}
-                    </p>
-                  </div>
-                  <div
-                    className={cn(
-                      'w-12 h-6 rounded-full relative transition-colors duration-200',
-                      isEnabled ? 'bg-section-primary' : 'bg-background-secondary/30'
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        'absolute top-1 w-4 h-4 rounded-full bg-white transition-transform duration-200',
-                        isEnabled ? 'translate-x-7' : 'translate-x-1'
-                      )}
-                    />
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        )}
-
         {/* Professional Tab */}
         {activeTab === 'professional' && isProviderUser && (
           <div className="space-y-6">
@@ -1014,6 +813,30 @@ export default function EditProfilePage() {
               </Button>
             </div>
           </div>
+        )}
+
+        {user && (
+          <>
+            <section id="avatar" className="mt-8 space-y-3">
+              <h2 className="text-lg font-semibold">{t('profile.settings.avatar.sectionTitle')}</h2>
+              <AvatarUploader currentUrl={user.avatarUrl ?? null} uid={user.uid} />
+            </section>
+
+            <section id="social" className="mt-8 space-y-3">
+              <h2 className="text-lg font-semibold">{t('profile.settings.social.sectionTitle')}</h2>
+              <SocialLinksForm initial={(user as any).socialLinks ?? {}} />
+            </section>
+
+            <section id="notifications" className="mt-8 space-y-3">
+              <h2 className="text-lg font-semibold">{t('profile.settings.notifications.sectionTitle')}</h2>
+              <NotificationSettingsForm initial={(user as any).notificationSettings ?? defaultNotificationSettings} />
+            </section>
+
+            <section id="privacy" className="mt-8 space-y-3">
+              <h2 className="text-lg font-semibold">{t('profile.settings.privacy.sectionTitle')}</h2>
+              <PrivacySettingsForm initial={(user as any).privacySettings ?? defaultPrivacySettings} />
+            </section>
+          </>
         )}
       </div>
 

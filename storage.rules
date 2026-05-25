@@ -12,6 +12,11 @@ service firebase.storage {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    function isAdminStorage() {
+      return isAuthenticated() &&
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role in ['admin', 'superadmin'];
+    }
+
     function isValidImage() {
       return request.resource.contentType.matches('image/.*') &&
              request.resource.size < 10 * 1024 * 1024; // 10MB max
@@ -40,6 +45,15 @@ service firebase.storage {
       allow read: if true;
     }
 
+    // User avatars - Simplified avatar path
+    match /avatars/{uid}/{file} {
+      allow read: if true;
+      allow write: if request.auth != null
+                    && request.auth.uid == uid
+                    && request.resource.size < 5 * 1024 * 1024
+                    && request.resource.contentType.matches('image/.*');
+    }
+
     // Certifications - Allow providers to upload certifications
     match /certifications/{userId}/{fileName} {
       allow write: if isOwner(userId) && isValidDocument();
@@ -59,12 +73,22 @@ service firebase.storage {
     }
 
     // Venue images (admin/staff only via Cloud Functions)
+    match /venues/{venueId}/gallery/{fileName} {
+      allow read: if true;
+      allow create, update: if isValidImage() && isAdminStorage();
+      allow delete: if isAdminStorage();
+    }
     match /venues/{venueId}/{allPaths=**} {
       allow read: if true;
       allow write: if false; // Managed by Cloud Functions
     }
 
     // Instructor images
+    match /instructors/{instructorId}/gallery/{fileName} {
+      allow read: if true;
+      allow create, update: if isValidImage() && (isAdminStorage() || isOwner(instructorId));
+      allow delete: if isAdminStorage() || isOwner(instructorId);
+    }
     match /instructors/{instructorId}/{allPaths=**} {
       allow read: if true;
       allow write: if false; // Managed by Cloud Functions

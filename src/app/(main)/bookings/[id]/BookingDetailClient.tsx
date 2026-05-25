@@ -395,8 +395,7 @@ export default function BookingDetailPage() {
                     name: booking.providerName || 'Provider',
                     city: 'Milano',
                     rating: 5,
-                    reviews: 0,
-                    distanceKm: 0,
+                    reviewCount: 0,
                     lat: booking.location.lat,
                     lng: booking.location.lng,
                   }]}

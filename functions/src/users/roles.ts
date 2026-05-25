@@ -324,7 +324,6 @@ export const createProviderProfile = onCall<CreateProviderProfileData>(
       // Preferences
       preferredLanguage: "it",
       preferredSection: "fit",
-      notificationsEnabled: true,
 
       // Push tokens
       fcmTokens: [],

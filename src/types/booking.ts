@@ -158,6 +158,7 @@ export interface ProviderSearchResult {
   distance?: number;
   nextAvailable?: Date;
   lowestPrice?: number;
+  photoUrls?: string[];
 }
 
 export interface BookingData {

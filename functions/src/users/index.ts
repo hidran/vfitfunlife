@@ -11,6 +11,9 @@ export * from "./roles";
 // Export user type functions
 export * from "./userTypes";
 
+// Export profile functions
+export * from "./profile";
+
 interface UserUpdateData {
   fullName?: string;
   dateOfBirth?: string;
@@ -85,7 +88,6 @@ export const updateProfile = onCall<UserUpdateData>(
       "dateOfBirth",
       "preferredLanguage",
       "preferredSection",
-      "notificationsEnabled",
       "avatarUrl",
     ];
 

@@ -13,7 +13,11 @@ interface MainAppLayoutProps {
 }
 
 export default function MainAppLayout({ children }: MainAppLayoutProps) {
-  const { firebaseUser, user, isLoading, isInitialized } = useAuthStore();
+  const firebaseUser = useAuthStore((state) => state.firebaseUser);
+  const user = useAuthStore((state) => state.user);
+  const isLoading = useAuthStore((state) => state.isLoading);
+  const isInitialized = useAuthStore((state) => state.isInitialized);
+
   const { t, setLocale } = useI18n();
   const notificationCount = useNotificationStore((state) =>
     state.notifications.reduce((count, notification) => count + (notification.read ? 0 : 1), 0)

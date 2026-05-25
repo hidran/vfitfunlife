@@ -1,84 +1,70 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
   ArrowLeft,
-  User,
   Mail,
   Phone,
   Calendar,
-  DollarSign,
-  FileText,
   MessageSquare,
   Plus,
   Edit,
   Trash2,
   Save,
   X,
-  Clock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/Spinner';
 import { cn } from '@/lib/utils';
-
-// Mock data
-const MOCK_CLIENT = {
-  id: '1',
-  userId: 'user1',
-  name: 'John Smith',
-  email: 'john.smith@example.com',
-  phone: '+39 123 456 7890',
-  photoUrl: '',
-  totalBookings: 12,
-  totalSpent: 850,
-  lastVisit: new Date('2024-01-20'),
-  firstVisit: new Date('2023-06-15'),
-  notes: 'Prefers morning sessions. Works as a software engineer, has a sedentary lifestyle. Goals: improve posture and build core strength.',
-  tags: ['Morning preference', 'Posture focus', 'Core strength'],
-};
-
-const MOCK_BOOKING_HISTORY = [
-  {
-    id: 'b1',
-    serviceName: 'Personal Training',
-    date: new Date('2024-01-20'),
-    status: 'completed',
-    amount: 70,
-  },
-  {
-    id: 'b2',
-    serviceName: 'Personal Training',
-    date: new Date('2024-01-15'),
-    status: 'completed',
-    amount: 70,
-  },
-  {
-    id: 'b3',
-    serviceName: 'Nutrition Consultation',
-    date: new Date('2024-01-10'),
-    status: 'completed',
-    amount: 50,
-  },
-  {
-    id: 'b4',
-    serviceName: 'Personal Training',
-    date: new Date('2024-01-25'),
-    status: 'confirmed',
-    amount: 70,
-  },
-];
+import { useProviderStore } from '@/stores/providerStore';
 
 export default function ClientDetailClient() {
-  const { id } = useParams();
-  const [client, setClient] = useState(MOCK_CLIENT);
+  const searchParams = useSearchParams();
+  const clientId = searchParams?.get('id') ?? undefined;
+
+  const {
+    currentClient: client,
+    clientBookingHistory: bookingHistory,
+    isLoading,
+    fetchClientDetails,
+  } = useProviderStore();
+
   const [isEditingNotes, setIsEditingNotes] = useState(false);
-  const [editedNotes, setEditedNotes] = useState(client.notes);
+  const [editedNotes, setEditedNotes] = useState('');
   const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'notes'>('overview');
 
+  useEffect(() => {
+    if (clientId) {
+      void fetchClientDetails(clientId);
+    }
+  }, [clientId, fetchClientDetails]);
+
+  useEffect(() => {
+    if (client) {
+      setEditedNotes(client.notes ?? '');
+    }
+  }, [client]);
+
+  if (!clientId) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-sm text-text-secondary">Client non specificato</p>
+      </div>
+    );
+  }
+
+  if (isLoading || !client) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Spinner size="md" />
+      </div>
+    );
+  }
+
   const handleSaveNotes = () => {
-    setClient({ ...client, notes: editedNotes });
     setIsEditingNotes(false);
   };
 
@@ -137,12 +123,14 @@ export default function ClientDetailClient() {
                 <Mail className="w-4 h-4" />
                 {client.email}
               </a>
-              <a href={`tel:${client.phone}`} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm">
-                <Phone className="w-4 h-4" />
-                {client.phone}
-              </a>
+              {client.phone && (
+                <a href={`tel:${client.phone}`} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm">
+                  <Phone className="w-4 h-4" />
+                  {client.phone}
+                </a>
+              )}
             </div>
-            
+
             {client.tags && (
               <div className="flex flex-wrap gap-2 mt-4">
                 {client.tags.map((tag) => (
@@ -252,19 +240,19 @@ export default function ClientDetailClient() {
             <div className="bg-[#2A2D3A] rounded-xl border border-white/5 p-6">
               <h3 className="text-lg font-semibold text-white mb-4">Recent Activity</h3>
               <div className="space-y-4">
-                {MOCK_BOOKING_HISTORY.slice(0, 3).map((booking) => (
+                {bookingHistory.slice(0, 3).map((entry) => (
                   <div
-                    key={booking.id}
+                    key={entry.booking.id}
                     className="flex items-center justify-between p-3 bg-[#1A1D29] rounded-lg"
                   >
                     <div>
-                      <p className="font-medium text-white">{booking.serviceName}</p>
-                      <p className="text-sm text-gray-400">{formatDate(booking.date)}</p>
+                      <p className="font-medium text-white">{entry.serviceName}</p>
+                      <p className="text-sm text-gray-400">{formatDate(entry.date)}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium text-white">€{booking.amount}</p>
-                      <span className={cn('text-xs px-2 py-0.5 rounded', STATUS_COLORS[booking.status as keyof typeof STATUS_COLORS])}>
-                        {booking.status}
+                      <p className="font-medium text-white">€{entry.amount}</p>
+                      <span className={cn('text-xs px-2 py-0.5 rounded', STATUS_COLORS[entry.status as keyof typeof STATUS_COLORS])}>
+                        {entry.status}
                       </span>
                     </div>
                   </div>
@@ -280,9 +268,9 @@ export default function ClientDetailClient() {
               <h3 className="text-lg font-semibold text-white">Booking History</h3>
             </div>
             <div className="divide-y divide-white/5">
-              {MOCK_BOOKING_HISTORY.map((booking) => (
+              {bookingHistory.map((entry) => (
                 <div
-                  key={booking.id}
+                  key={entry.booking.id}
                   className="flex items-center justify-between p-4 hover:bg-[#1A1D29]/30"
                 >
                   <div className="flex items-center gap-4">
@@ -290,15 +278,15 @@ export default function ClientDetailClient() {
                       <Calendar className="w-6 h-6 text-section-primary" />
                     </div>
                     <div>
-                      <p className="font-medium text-white">{booking.serviceName}</p>
-                      <p className="text-sm text-gray-400">{formatDate(booking.date)}</p>
+                      <p className="font-medium text-white">{entry.serviceName}</p>
+                      <p className="text-sm text-gray-400">{formatDate(entry.date)}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <span className={cn('text-xs px-3 py-1 rounded-full', STATUS_COLORS[booking.status as keyof typeof STATUS_COLORS])}>
-                      {booking.status}
+                    <span className={cn('text-xs px-3 py-1 rounded-full', STATUS_COLORS[entry.status as keyof typeof STATUS_COLORS])}>
+                      {entry.status}
                     </span>
-                    <p className="font-medium text-white">€{booking.amount}</p>
+                    <p className="font-medium text-white">€{entry.amount}</p>
                   </div>
                 </div>
               ))}

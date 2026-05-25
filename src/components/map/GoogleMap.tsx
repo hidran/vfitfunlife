@@ -10,11 +10,10 @@ interface Gym {
   name: string;
   city: string;
   rating: number;
-  reviews: number;
-  distanceKm: number;
+  reviewCount: number;
   lat?: number;
   lng?: number;
-  partner?: boolean;
+  isPartner?: boolean;
 }
 
 interface GoogleMapProps {
@@ -165,7 +164,7 @@ export function GoogleMap({ gyms, userLocation, onGymSelect, className }: Google
       const markerDiv = document.createElement('div');
       markerDiv.innerHTML = `
         <div style="
-          background: ${gym.partner ? '#00C9FF' : '#7B61FF'};
+          background: ${gym.isPartner ? '#00C9FF' : '#7B61FF'};
           border: 2px solid white;
           border-radius: 50%;
           width: 36px;
@@ -189,7 +188,7 @@ export function GoogleMap({ gyms, userLocation, onGymSelect, className }: Google
         icon: {
           url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
             <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
-              <circle cx="18" cy="18" r="16" fill="${gym.partner ? '#00C9FF' : '#7B61FF'}" stroke="white" stroke-width="2"/>
+              <circle cx="18" cy="18" r="16" fill="${gym.isPartner ? '#00C9FF' : '#7B61FF'}" stroke="white" stroke-width="2"/>
               <text x="18" y="22" text-anchor="middle" fill="white" font-size="12" font-weight="bold">${gym.rating.toFixed(1)}</text>
             </svg>
           `)}`,
@@ -219,9 +218,9 @@ export function GoogleMap({ gyms, userLocation, onGymSelect, className }: Google
             <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
               <span style="color: #fbbf24;">★</span>
               <span style="font-weight: 600;">${gym.rating}</span>
-              <span style="color: #8a8d99;">(${t('map.google.reviews', { count: gym.reviews })})</span>
+              <span style="color: #8a8d99;">(${t('map.google.reviews', { count: gym.reviewCount })})</span>
             </div>
-            ${gym.partner ? `<span style="display: inline-block; margin-top: 8px; padding: 4px 8px; background: rgba(0, 201, 255, 0.2); color: #00C9FF; border-radius: 4px; font-size: 12px; font-weight: 500;">${t('map.google.partner')}</span>` : ''}
+            ${gym.isPartner ? `<span style="display: inline-block; margin-top: 8px; padding: 4px 8px; background: rgba(0, 201, 255, 0.2); color: #00C9FF; border-radius: 4px; font-size: 12px; font-weight: 500;">${t('map.google.partner')}</span>` : ''}
           </div>
         `,
       });

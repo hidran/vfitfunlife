@@ -11,7 +11,13 @@ import {
   Star,
   Store,
   Phone,
+  Camera,
 } from "lucide-react";
+import { PhotoUploader } from "@/components/gallery/PhotoUploader";
+import { PhotoEditorOverlay } from "@/components/gallery/PhotoEditorOverlay";
+import { useUpdateVenuePhotos } from "@/hooks/usePhotoUpload";
+import { useVenues } from "@/hooks/useVenues";
+import { Spinner } from "@/components/ui/Spinner";
 
 interface Venue {
   id: string;
@@ -25,55 +31,32 @@ interface Venue {
   isActive: boolean;
   isPartner: boolean;
   createdAt: Date;
+  photoUrls?: string[];
 }
 
 export default function VenuesPage() {
   const [searchValue, setSearchValue] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [editingVenue, setEditingVenue] = useState<{ id: string; name: string; photoUrls: string[] } | null>(null);
+  const updateVenuePhotosM = useUpdateVenuePhotos(editingVenue?.id);
 
-  // Mock data
-  const venues: Venue[] = [
-    {
-      id: "1",
-      name: "Fitness Hub Milano",
-      type: "gym",
-      address: "Via Roma 123",
-      city: "Milano",
-      phone: "+39 02 1234567",
-      rating: 4.8,
-      reviewCount: 124,
-      isActive: true,
-      isPartner: true,
-      createdAt: new Date("2024-01-15"),
-    },
-    {
-      id: "2",
-      name: "Zen Wellness Center",
-      type: "wellness_center",
-      address: "Corso Buenos Aires 456",
-      city: "Milano",
-      phone: "+39 02 7654321",
-      rating: 4.5,
-      reviewCount: 89,
-      isActive: true,
-      isPartner: true,
-      createdAt: new Date("2024-02-01"),
-    },
-    {
-      id: "3",
-      name: "Beauty Spa Roma",
-      type: "beauty_salon",
-      address: "Via del Corso 789",
-      city: "Roma",
-      phone: "+39 06 1234567",
-      rating: 4.2,
-      reviewCount: 56,
-      isActive: false,
-      isPartner: false,
-      createdAt: new Date("2024-02-15"),
-    },
-  ];
+  const { data: firestoreVenues = [], isLoading } = useVenues({});
+
+  const venues: Venue[] = firestoreVenues.map((v) => ({
+    id: v.id,
+    name: v.name,
+    type: v.type,
+    address: v.address,
+    city: v.city,
+    phone: '',
+    rating: v.rating,
+    reviewCount: v.reviewCount,
+    isActive: v.isActive,
+    isPartner: v.isPartner,
+    createdAt: v.createdAt?.toDate?.() ?? new Date(),
+    photoUrls: v.photoUrls ?? [],
+  }));
 
   const columns: Column<Venue>[] = [
     {
@@ -156,6 +139,26 @@ export default function VenuesPage() {
       sortable: true,
       width: "w-24",
     },
+    {
+      key: "photos",
+      header: "Foto",
+      cell: (venue) => (
+        <button
+          type="button"
+          onClick={() =>
+            setEditingVenue({
+              id: venue.id,
+              name: venue.name,
+              photoUrls: venue.photoUrls ?? [],
+            })
+          }
+          className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
+          aria-label="Modifica foto"
+        >
+          <Camera className="h-4 w-4" />
+        </button>
+      ),
+    },
   ];
 
   const filteredVenues = venues.filter((v) => {
@@ -230,20 +233,42 @@ export default function VenuesPage() {
       />
 
       {/* Data Table */}
-      <DataTable
-        data={filteredVenues}
-        columns={columns}
-        keyExtractor={(venue) => venue.id}
-        onRowClick={(venue) => {
-          console.log("View venue:", venue.id);
-        }}
-        actions={{
-          view: (venue) => console.log("View:", venue.id),
-          edit: (venue) => console.log("Edit:", venue.id),
-          delete: (venue) => console.log("Delete:", venue.id),
-        }}
-        emptyMessage="No venues found"
-      />
+      {isLoading ? (
+        <div className="flex justify-center p-8"><Spinner size="md" /></div>
+      ) : (
+        <DataTable
+          data={filteredVenues}
+          columns={columns}
+          keyExtractor={(venue) => venue.id}
+          onRowClick={(venue) => {
+            console.log("View venue:", venue.id);
+          }}
+          actions={{
+            view: (venue) => console.log("View:", venue.id),
+            edit: (venue) => console.log("Edit:", venue.id),
+            delete: (venue) => console.log("Delete:", venue.id),
+          }}
+          emptyMessage="No venues found"
+        />
+      )}
+
+      {editingVenue && (
+        <PhotoEditorOverlay
+          title={`Foto — ${editingVenue.name}`}
+          onClose={() => setEditingVenue(null)}
+        >
+          <PhotoUploader
+            scope="venues"
+            entityId={editingVenue.id}
+            photos={editingVenue.photoUrls}
+            onChange={(newPhotos) => {
+              setEditingVenue({ ...editingVenue, photoUrls: newPhotos });
+              updateVenuePhotosM.mutate(newPhotos);
+            }}
+            disabled={updateVenuePhotosM.isPending}
+          />
+        </PhotoEditorOverlay>
+      )}
     </div>
   );
 }

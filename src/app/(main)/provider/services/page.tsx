@@ -7,71 +7,30 @@ import { useProviderStore } from '@/stores/providerStore';
 import { ProviderService } from '@/types/provider';
 import { Modal } from '@/components/ui/Modal';
 import { cn } from '@/lib/utils';
-
-// Mock data for demo
-const MOCK_SERVICES: ProviderService[] = [
-  {
-    id: '1',
-    serviceName: 'Personal Training',
-    description: 'One-on-one personal training session tailored to your fitness goals.',
-    price: 70,
-    durationMinutes: 60,
-    isActive: true,
-    categoryId: 'fitness',
-    categoryName: 'Fitness',
-    bookingCount: 45,
-    revenue: 3150,
-    createdAt: new Date('2023-06-01') as any,
-    updatedAt: new Date('2024-01-01') as any,
-  },
-  {
-    id: '2',
-    serviceName: 'Nutrition Consultation',
-    description: 'Comprehensive nutrition assessment and personalized meal planning.',
-    price: 50,
-    durationMinutes: 45,
-    isActive: true,
-    categoryId: 'wellness',
-    categoryName: 'Wellness',
-    bookingCount: 23,
-    revenue: 1150,
-    createdAt: new Date('2023-07-15') as any,
-    updatedAt: new Date('2024-01-01') as any,
-  },
-  {
-    id: '3',
-    serviceName: 'Group Fitness Class',
-    description: 'High-energy group workout session for up to 10 participants.',
-    price: 25,
-    durationMinutes: 45,
-    isActive: true,
-    categoryId: 'fitness',
-    categoryName: 'Fitness',
-    bookingCount: 120,
-    revenue: 3000,
-    createdAt: new Date('2023-08-01') as any,
-    updatedAt: new Date('2024-01-01') as any,
-  },
-  {
-    id: '4',
-    serviceName: 'Online Coaching',
-    description: 'Virtual training session via video call.',
-    price: 55,
-    durationMinutes: 60,
-    isActive: false,
-    categoryId: 'fitness',
-    categoryName: 'Fitness',
-    bookingCount: 8,
-    revenue: 440,
-    createdAt: new Date('2023-09-01') as any,
-    updatedAt: new Date('2024-01-01') as any,
-  },
-];
+import { useAuthStore } from '@/stores/authStore';
+import { fetchProviderServices } from '@/lib/firebase/providers';
+import { useProvider } from '@/hooks/useProviders';
+import { useUpdateProviderPhotos } from '@/hooks/usePhotoUpload';
+import { PhotoUploader } from '@/components/gallery/PhotoUploader';
 
 export default function ProviderServicesPage() {
   const { services, isLoadingServices, fetchServices, updateService, deleteService } = useProviderStore();
-  const [displayServices, setDisplayServices] = useState<ProviderService[]>(MOCK_SERVICES);
-  const nextServiceIdRef = useRef(MOCK_SERVICES.length + 1);
+  const [displayServices, setDisplayServices] = useState<ProviderService[]>([]);
+  const nextServiceIdRef = useRef(1);
+  const firebaseUser = useAuthStore((s) => s.firebaseUser);
+  const [activeTab, setActiveTab] = useState<'services' | 'gallery'>('services');
+  const uid = firebaseUser?.uid;
+  const { data: provider } = useProvider(uid);
+  const updatePhotos = useUpdateProviderPhotos(uid);
+  const photos = provider?.photoUrls ?? [];
+
+  useEffect(() => {
+    if (!firebaseUser?.uid) return;
+    void fetchProviderServices(firebaseUser.uid).then((firestoreServices) => {
+      setDisplayServices(firestoreServices as unknown as ProviderService[]);
+      nextServiceIdRef.current = firestoreServices.length + 1;
+    });
+  }, [firebaseUser?.uid]);
   const [editingService, setEditingService] = useState<ProviderService | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newService, setNewService] = useState<Partial<ProviderService>>({
@@ -169,6 +128,52 @@ export default function ProviderServicesPage() {
           Add Service
         </Button>
       </div>
+
+      {/* Tab Bar */}
+      <div className="mb-4 flex gap-2 border-b border-white/10">
+        <button
+          type="button"
+          onClick={() => setActiveTab('services')}
+          className={cn(
+            'border-b-2 px-3 py-2 text-sm font-medium',
+            activeTab === 'services'
+              ? 'border-section-primary text-text-inverse'
+              : 'border-transparent text-text-secondary'
+          )}
+        >
+          Servizi
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('gallery')}
+          className={cn(
+            'border-b-2 px-3 py-2 text-sm font-medium',
+            activeTab === 'gallery'
+              ? 'border-section-primary text-text-inverse'
+              : 'border-transparent text-text-secondary'
+          )}
+        >
+          Galleria
+        </button>
+      </div>
+
+      {activeTab === 'gallery' && (
+        <div>
+          {!uid ? (
+            <p className="text-sm text-text-secondary">Accedi per gestire la tua galleria.</p>
+          ) : (
+            <PhotoUploader
+              scope="instructors"
+              entityId={uid}
+              photos={photos}
+              onChange={(newPhotos) => updatePhotos.mutate(newPhotos)}
+              disabled={updatePhotos.isPending}
+            />
+          )}
+        </div>
+      )}
+
+      {activeTab === 'services' && <>
 
       {/* Services Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -344,7 +349,7 @@ export default function ProviderServicesPage() {
         <Modal onClose={() => setShowAddModal(false)}>
           <div className="bg-[#2A2D3A] rounded-xl p-6 max-w-md w-full mx-4">
             <h3 className="text-xl font-semibold text-white mb-6">Add New Service</h3>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm text-gray-400 mb-2">Service Name</label>
@@ -396,8 +401,8 @@ export default function ProviderServicesPage() {
             </div>
 
             <div className="flex gap-3 mt-6">
-              <Button 
-                onClick={handleAddService} 
+              <Button
+                onClick={handleAddService}
                 disabled={!newService.serviceName}
                 fullWidth
               >
@@ -410,6 +415,8 @@ export default function ProviderServicesPage() {
           </div>
         </Modal>
       )}
+
+      </>}
     </div>
   );
 }
