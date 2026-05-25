@@ -63,6 +63,10 @@ export async function searchProviders(params: SearchParams): Promise<ProviderSea
       // /services subcollection) so cards can show "Da X €" without fetching
       // every provider's services.
       lowestPrice: typeof data.lowestPrice === 'number' ? data.lowestPrice : undefined,
+      location:
+        typeof data.lat === 'number' && typeof data.lng === 'number'
+          ? { lat: data.lat, lng: data.lng, address: (data.city as string) ?? '' }
+          : undefined,
       // Services live in the /instructors/{id}/services subcollection and are
       // fetched lazily on the detail page (useProviderServices). Search cards
       // don't render service-level info, so we return an empty array here.
@@ -105,22 +109,6 @@ export async function searchProviders(params: SearchParams): Promise<ProviderSea
     providers = providers.filter((p) => p.rating >= params.rating!);
   }
 
-  // Calculate distance if location provided
-  if (params.location && providers.some((p) => p.location)) {
-    providers = providers.map((p) => {
-      if (p.location) {
-        const distance = calculateDistance(
-          params.location!.lat,
-          params.location!.lng,
-          p.location.lat,
-          p.location.lng
-        );
-        return { ...p, distance };
-      }
-      return p;
-    });
-  }
-
   // Apply sorting
   if (params.sortBy) {
     switch (params.sortBy) {
@@ -129,9 +117,6 @@ export async function searchProviders(params: SearchParams): Promise<ProviderSea
         break;
       case 'rating':
         providers.sort((a, b) => b.rating - a.rating);
-        break;
-      case 'distance':
-        providers.sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
         break;
       case 'availability':
         // Sort by next available date
@@ -181,23 +166,6 @@ function generateDefaultTimeSlots(): TimeSlot[] {
     );
   }
   return slots;
-}
-
-// Calculate distance between two coordinates using Haversine formula
-function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371; // Earth radius in km
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
 }
 
 // Create a new booking
