@@ -15,6 +15,8 @@ export interface Provider {
   photoUrls?: string[]; // max 10. photoUrls[0] is the cover.
   bioKey?: string;
   city?: string;
+  lat?: number;
+  lng?: number;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 }

@@ -39,6 +39,8 @@ function flattenProvider(id: string, data: Record<string, unknown>): Provider {
     languages: (data.languages as string[]) ?? (profile.languages as string[]) ?? [],
     bioKey: (data.bioKey as string) ?? undefined,
     city: (data.city as string) ?? undefined,
+    lat: typeof data.lat === 'number' ? (data.lat as number) : undefined,
+    lng: typeof data.lng === 'number' ? (data.lng as number) : undefined,
     photoUrls: (data.photoUrls as string[]) ?? undefined,
   };
 }
