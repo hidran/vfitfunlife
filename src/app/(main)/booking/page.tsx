@@ -406,9 +406,13 @@ export default function BookingPage() {
                       {/* Price & Availability */}
                       <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/10">
                         <div>
-                          <span className="text-lg font-bold text-[var(--section-primary)]">
-                            Da {formatPrice(Math.min(...provider.services.map((s) => s.price)))}
-                          </span>
+                          {provider.lowestPrice != null ? (
+                            <span className="text-lg font-bold text-[var(--section-primary)]">
+                              Da {formatPrice(provider.lowestPrice)}
+                            </span>
+                          ) : (
+                            <span className="text-sm text-text-secondary">Vedi disponibilità</span>
+                          )}
                         </div>
                         <div className="flex items-center gap-2 text-sm text-text-secondary">
                           <Clock className="w-4 h-4" />

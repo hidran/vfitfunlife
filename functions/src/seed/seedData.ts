@@ -2144,6 +2144,45 @@ export async function generateDemoAvatars(): Promise<SeedingResult[]> {
   return results;
 }
 
+// Denormalizes the cheapest service price onto each instructor doc as
+// `lowestPrice`, so the booking search cards can show "Da X €" without
+// fetching every provider's /services subcollection.
+export async function generateDemoProviderPrices(): Promise<SeedingResult[]> {
+  const results: SeedingResult[] = [];
+  try {
+    const snap = await db.collection("instructors").get();
+    let batch = db.batch();
+    let opCount = 0;
+    let total = 0;
+    for (const docSnap of snap.docs) {
+      const servicesSnap = await docSnap.ref.collection("services").get();
+      const prices = servicesSnap.docs
+        .map((s) => s.data().price as number)
+        .filter((p) => typeof p === "number" && p > 0);
+      if (prices.length === 0) continue;
+      const lowestPrice = Math.min(...prices);
+      batch.set(docSnap.ref, { lowestPrice }, { merge: true });
+      opCount++;
+      total++;
+      if (opCount >= 400) {
+        await batch.commit();
+        batch = db.batch();
+        opCount = 0;
+      }
+    }
+    if (opCount > 0) await batch.commit();
+    results.push({ success: true, collection: "instructors (lowestPrice)", count: total });
+  } catch (error) {
+    results.push({
+      success: false,
+      collection: "instructors (lowestPrice)",
+      count: 0,
+      error: error instanceof Error ? error.message : "Unknown",
+    });
+  }
+  return results;
+}
+
 // ============================================================================
 // HTTP Cloud Functions
 // ============================================================================

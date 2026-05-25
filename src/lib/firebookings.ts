@@ -59,6 +59,10 @@ export async function searchProviders(params: SearchParams): Promise<ProviderSea
       specialties: profile.specialties || [],
       yearsOfExperience: profile.yearsOfExperience || 0,
       languages: profile.languages || [],
+      // Denormalized cheapest service price (written by the seeder from the
+      // /services subcollection) so cards can show "Da X €" without fetching
+      // every provider's services.
+      lowestPrice: typeof data.lowestPrice === 'number' ? data.lowestPrice : undefined,
       // Services live in the /instructors/{id}/services subcollection and are
       // fetched lazily on the detail page (useProviderServices). Search cards
       // don't render service-level info, so we return an empty array here.
