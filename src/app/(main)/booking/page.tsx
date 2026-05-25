@@ -80,8 +80,8 @@ export default function BookingPage() {
 
   return (
     <div className="min-h-screen bg-background-dark">
-      {/* Header */}
-      <div className="sticky top-0 z-20 bg-background-dark/95 backdrop-blur-md border-b border-white/10">
+      {/* Search/filter sub-header — non-sticky so it sits below the app header (MainLayout) */}
+      <div className="border-b border-white/10 bg-background-dark/95 backdrop-blur-md">
         <div className="p-4 space-y-4">
           {/* Title and view toggle */}
           <div className="flex items-center justify-between">
