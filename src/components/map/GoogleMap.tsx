@@ -127,11 +127,13 @@ export function GoogleMap({ gyms, userLocation, onGymSelect, className }: Google
 
   // Add/update markers when gyms change
   useEffect(() => {
-    if (!googleMapRef.current || gyms.length === 0) return;
+    if (!googleMapRef.current) return;
 
-    // Clear existing markers
+    // Clear previous markers regardless of the new count
     markersRef.current.forEach(marker => marker.setMap(null));
     markersRef.current = [];
+
+    if (gyms.length === 0) return; // cleanup done; nothing to draw
 
     // Add gym markers
     const bounds = new google.maps.LatLngBounds();
