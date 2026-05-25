@@ -27,6 +27,7 @@ import { useSection, type Section } from '@/contexts/SectionContext';
 import { cn, formatPrice } from '@/lib/utils';
 import { Avatar } from '@/components/ui/Avatar';
 import { useAuthStore } from '@/stores/authStore';
+import { useShallow } from 'zustand/react/shallow';
 import type { MessageKey } from '@/i18n/messages';
 
 interface SideDrawerProps {
@@ -101,10 +102,8 @@ export function SideDrawer({
   const pathname = usePathname();
   const { section, setSection } = useSection();
   const { t } = useI18n();
-  const { logout, isLoading } = useAuthStore((state) => ({
-    logout: state.logout,
-    isLoading: state.isLoading,
-  }));
+  const logout = useAuthStore((state) => state.logout);
+  const isLoading = useAuthStore((state) => state.isLoading);
 
   useEffect(() => {
     if (!isOpen) {

@@ -1,10 +1,10 @@
-import { collection, getDocs, query, limit as limitQuery } from 'firebase/firestore';
+import { collection, getDocs, query, limit as limitQuery, type QueryConstraint } from 'firebase/firestore';
 import { db } from './config';
 import type { Testimonial, Review } from '@/types/community';
 
 export async function fetchTestimonials(opts: { limit?: number } = {}): Promise<Testimonial[]> {
   try {
-    const constraints = [];
+    const constraints: QueryConstraint[] = [];
     if (opts.limit) constraints.push(limitQuery(opts.limit));
     const q = constraints.length
       ? query(collection(db, 'testimonials'), ...constraints)
@@ -19,7 +19,7 @@ export async function fetchTestimonials(opts: { limit?: number } = {}): Promise<
 
 export async function fetchInstructorReviews(instructorId: string, opts: { limit?: number } = {}): Promise<Review[]> {
   try {
-    const constraints = [];
+    const constraints: QueryConstraint[] = [];
     if (opts.limit) constraints.push(limitQuery(opts.limit));
     const q = constraints.length
       ? query(collection(db, 'instructors', instructorId, 'reviews'), ...constraints)

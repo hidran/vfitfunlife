@@ -187,7 +187,7 @@ Aligned with `docs/database-schema.md`:
   name, slug, type, city, address, lat, lng,
   rating, reviewCount, isPartner, isActive,
   description, heroGradients, amenities[], hours[],
-  createdAt, updatedAt
+  createdAt, updatedAtmpc
 
 /venues/{id}/services/{serviceId}     ← subcollection
   name, price, durationMinutes?, description?, isActive
@@ -292,7 +292,8 @@ The plan will be detailed by `writing-plans`, but the high-level sequence is:
 4. Migrate `fit/gyms`, `booking/[providerId]`, `admin/venues` in sequence.
 5. Refactor `home/page.tsx` inline hooks last (lowest risk; just consolidation).
 6. Delete `data.ts` and `mockData.ts`. Verify build.
-7. Update `docs/database-schema.md` if any schema clarifications emerged during implementation.
+7. Update `docs/database-schema.md` if any schema clar
+ifications emerged during implementation.
 
 Each step is its own commit with passing build + tests.
 

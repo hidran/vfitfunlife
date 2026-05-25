@@ -1,6 +1,6 @@
 import {
   collection, query, where, getDocs, limit as limitQuery,
-  type Query, type CollectionReference,
+  type Query, type CollectionReference, type QueryConstraint,
 } from 'firebase/firestore';
 import { db } from './config';
 import type {
@@ -9,7 +9,7 @@ import type {
 
 export async function fetchFitnessClasses(opts: { category?: ClassCategory; limit?: number } = {}): Promise<FitnessClass[]> {
   try {
-    const constraints = [where('isActive', '==', true)];
+    const constraints: QueryConstraint[] = [where('isActive', '==', true)];
     if (opts.category) constraints.push(where('category', '==', opts.category));
     if (opts.limit) constraints.push(limitQuery(opts.limit));
     const q: Query | CollectionReference = constraints.length
@@ -25,7 +25,7 @@ export async function fetchFitnessClasses(opts: { category?: ClassCategory; limi
 
 export async function fetchHomeTrainingServices(opts: { limit?: number } = {}): Promise<HomeTrainingService[]> {
   try {
-    const constraints = [where('isActive', '==', true)];
+    const constraints: QueryConstraint[] = [where('isActive', '==', true)];
     if (opts.limit) constraints.push(limitQuery(opts.limit));
     const q: Query | CollectionReference = query(collection(db, 'homeTrainingServices'), ...constraints);
     const snap = await getDocs(q);
@@ -38,7 +38,7 @@ export async function fetchHomeTrainingServices(opts: { limit?: number } = {}): 
 
 export async function fetchVirtualPrograms(opts: { limit?: number } = {}): Promise<VirtualProgram[]> {
   try {
-    const constraints = [where('isActive', '==', true)];
+    const constraints: QueryConstraint[] = [where('isActive', '==', true)];
     if (opts.limit) constraints.push(limitQuery(opts.limit));
     const q: Query | CollectionReference = query(collection(db, 'virtualPrograms'), ...constraints);
     const snap = await getDocs(q);
