@@ -60,8 +60,8 @@ export async function sendPushToUser(
     return;
   }
 
-  const notifSettings = userData.notificationSettings
-    ?? (userData.notificationsEnabled === false ? allFalseNotificationSettings : defaultNotificationSettings);
+  const notifSettings = userData.notificationSettings ??
+    (userData.notificationsEnabled === false ? allFalseNotificationSettings : defaultNotificationSettings);
 
   // Check at least one push channel is enabled before attempting delivery
   const anyPushEnabled = Object.values(notifSettings.push).some(Boolean);

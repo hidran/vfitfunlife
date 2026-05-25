@@ -22,6 +22,8 @@ module.exports = {
     "/node_modules/**/*",
     ".eslintrc.js",
     "src/**/*.d.ts",
+    "test/**/*",
+    "vitest.config.ts",
   ],
   plugins: [
     "@typescript-eslint",

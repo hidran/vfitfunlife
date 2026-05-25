@@ -1,5 +1,5 @@
-import { onCall, HttpsError } from 'firebase-functions/v2/https';
-import * as admin from 'firebase-admin';
+import { onCall, HttpsError } from "firebase-functions/v2/https";
+import * as admin from "firebase-admin";
 import {
   NotificationSettingsSchema,
   PrivacySettingsSchema,
@@ -8,7 +8,7 @@ import {
   type NotificationSettings,
   type PrivacySettings,
   type SocialLinks,
-} from '../types';
+} from "../types";
 
 if (admin.apps.length === 0) admin.initializeApp();
 
@@ -19,23 +19,23 @@ interface UpdateNotificationSettingsData {
 }
 
 export const updateNotificationSettings = onCall<UpdateNotificationSettingsData>(
-  { region: 'europe-west1' },
+  { region: "europe-west1" },
   async (request) => {
     if (!request.auth) {
-      throw new HttpsError('unauthenticated', 'Must be authenticated.');
+      throw new HttpsError("unauthenticated", "Must be authenticated.");
     }
     const parsed = NotificationSettingsSchema.safeParse(request.data?.settings);
     if (!parsed.success) {
-      throw new HttpsError('invalid-argument', `Invalid notification settings: ${parsed.error.message}`);
+      throw new HttpsError("invalid-argument", `Invalid notification settings: ${parsed.error.message}`);
     }
 
     const uid = request.auth.uid;
-    const userRef = db().collection('users').doc(uid);
+    const userRef = db().collection("users").doc(uid);
 
     await db().runTransaction(async (tx) => {
       const snap = await tx.get(userRef);
       if (!snap.exists) {
-        throw new HttpsError('not-found', 'User document does not exist.');
+        throw new HttpsError("not-found", "User document does not exist.");
       }
       const before = snap.data()?.notificationSettings ?? null;
 
@@ -49,15 +49,15 @@ export const updateNotificationSettings = onCall<UpdateNotificationSettingsData>
       }
       tx.update(userRef, update);
 
-      const auditRef = db().collection('auditLogs').doc();
+      const auditRef = db().collection("auditLogs").doc();
       tx.set(auditRef, {
         uid,
         actor: uid,
-        action: 'profile.notifications.update',
+        action: "profile.notifications.update",
         changes: { before, after: parsed.data },
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
         ip: request.rawRequest?.ip ?? null,
-        userAgent: request.rawRequest?.headers?.['user-agent'] ?? null,
+        userAgent: request.rawRequest?.headers?.["user-agent"] ?? null,
       });
     });
 
@@ -68,31 +68,31 @@ export const updateNotificationSettings = onCall<UpdateNotificationSettingsData>
 interface UpdatePrivacySettingsData { settings: PrivacySettings; }
 
 export const updatePrivacySettings = onCall<UpdatePrivacySettingsData>(
-  { region: 'europe-west1' },
+  { region: "europe-west1" },
   async (request) => {
-    if (!request.auth) throw new HttpsError('unauthenticated', 'Must be authenticated.');
+    if (!request.auth) throw new HttpsError("unauthenticated", "Must be authenticated.");
     const parsed = PrivacySettingsSchema.safeParse(request.data?.settings);
     if (!parsed.success) {
-      throw new HttpsError('invalid-argument', `Invalid privacy settings: ${parsed.error.message}`);
+      throw new HttpsError("invalid-argument", `Invalid privacy settings: ${parsed.error.message}`);
     }
     const uid = request.auth.uid;
-    const userRef = db().collection('users').doc(uid);
+    const userRef = db().collection("users").doc(uid);
 
     await db().runTransaction(async (tx) => {
       const snap = await tx.get(userRef);
-      if (!snap.exists) throw new HttpsError('not-found', 'User document does not exist.');
+      if (!snap.exists) throw new HttpsError("not-found", "User document does not exist.");
       const before = snap.data()?.privacySettings ?? null;
       tx.update(userRef, {
         privacySettings: parsed.data,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
-      tx.set(db().collection('auditLogs').doc(), {
+      tx.set(db().collection("auditLogs").doc(), {
         uid, actor: uid,
-        action: 'profile.privacy.update',
+        action: "profile.privacy.update",
         changes: { before, after: parsed.data },
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
         ip: request.rawRequest?.ip ?? null,
-        userAgent: request.rawRequest?.headers?.['user-agent'] ?? null,
+        userAgent: request.rawRequest?.headers?.["user-agent"] ?? null,
       });
     });
     return { success: true } as const;
@@ -102,31 +102,31 @@ export const updatePrivacySettings = onCall<UpdatePrivacySettingsData>(
 interface UpdateSocialLinksData { socialLinks: SocialLinks; }
 
 export const updateSocialLinks = onCall<UpdateSocialLinksData>(
-  { region: 'europe-west1' },
+  { region: "europe-west1" },
   async (request) => {
-    if (!request.auth) throw new HttpsError('unauthenticated', 'Must be authenticated.');
+    if (!request.auth) throw new HttpsError("unauthenticated", "Must be authenticated.");
     const parsed = SocialLinksSchema.safeParse(request.data?.socialLinks);
     if (!parsed.success) {
-      throw new HttpsError('invalid-argument', `Invalid social links: ${parsed.error.message}`);
+      throw new HttpsError("invalid-argument", `Invalid social links: ${parsed.error.message}`);
     }
     const uid = request.auth.uid;
-    const userRef = db().collection('users').doc(uid);
+    const userRef = db().collection("users").doc(uid);
 
     await db().runTransaction(async (tx) => {
       const snap = await tx.get(userRef);
-      if (!snap.exists) throw new HttpsError('not-found', 'User document does not exist.');
+      if (!snap.exists) throw new HttpsError("not-found", "User document does not exist.");
       const before = snap.data()?.socialLinks ?? null;
       tx.update(userRef, {
         socialLinks: parsed.data,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
-      tx.set(db().collection('auditLogs').doc(), {
+      tx.set(db().collection("auditLogs").doc(), {
         uid, actor: uid,
-        action: 'profile.social.update',
+        action: "profile.social.update",
         changes: { before, after: parsed.data },
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
         ip: request.rawRequest?.ip ?? null,
-        userAgent: request.rawRequest?.headers?.['user-agent'] ?? null,
+        userAgent: request.rawRequest?.headers?.["user-agent"] ?? null,
       });
     });
     return { success: true } as const;
@@ -135,8 +135,8 @@ export const updateSocialLinks = onCall<UpdateSocialLinksData>(
 
 interface UpdateAvatarData { avatarUrl: string; }
 
-const STORAGE_BUCKET = process.env.STORAGE_BUCKET
-  || `${process.env.GCLOUD_PROJECT}.appspot.com`;
+const STORAGE_BUCKET = process.env.STORAGE_BUCKET ||
+  `${process.env.GCLOUD_PROJECT}.appspot.com`;
 
 /** Extract the Storage object path from a Firebase Storage download URL. */
 function extractObjectPath(url: string): string | null {
@@ -147,34 +147,34 @@ function extractObjectPath(url: string): string | null {
 }
 
 export const updateAvatar = onCall<UpdateAvatarData>(
-  { region: 'europe-west1' },
+  { region: "europe-west1" },
   async (request) => {
-    if (!request.auth) throw new HttpsError('unauthenticated', 'Must be authenticated.');
+    if (!request.auth) throw new HttpsError("unauthenticated", "Must be authenticated.");
     const uid = request.auth.uid;
     const schema = makeAvatarUrlSchema(uid, STORAGE_BUCKET);
     const parsed = schema.safeParse(request.data?.avatarUrl);
     if (!parsed.success) {
-      throw new HttpsError('invalid-argument', `Invalid avatar URL: ${parsed.error.message}`);
+      throw new HttpsError("invalid-argument", `Invalid avatar URL: ${parsed.error.message}`);
     }
     const newUrl = parsed.data;
-    const userRef = db().collection('users').doc(uid);
+    const userRef = db().collection("users").doc(uid);
 
     let previousUrl: string | null = null;
     await db().runTransaction(async (tx) => {
       const snap = await tx.get(userRef);
-      if (!snap.exists) throw new HttpsError('not-found', 'User document does not exist.');
+      if (!snap.exists) throw new HttpsError("not-found", "User document does not exist.");
       previousUrl = snap.data()?.avatarUrl ?? null;
       tx.update(userRef, {
         avatarUrl: newUrl,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
-      tx.set(db().collection('auditLogs').doc(), {
+      tx.set(db().collection("auditLogs").doc(), {
         uid, actor: uid,
-        action: 'profile.avatar.update',
+        action: "profile.avatar.update",
         changes: { before: previousUrl, after: newUrl },
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
         ip: request.rawRequest?.ip ?? null,
-        userAgent: request.rawRequest?.headers?.['user-agent'] ?? null,
+        userAgent: request.rawRequest?.headers?.["user-agent"] ?? null,
       });
     });
 

@@ -331,7 +331,7 @@ export type {
   NotificationSettings,
   PrivacySettings,
   ProfileVisibility,
-} from '../../src/types/profile';
+} from "./types/profile";
 
 export {
   SocialLinksSchema,
@@ -342,4 +342,4 @@ export {
   allFalseNotificationSettings,
   defaultPrivacySettings,
   makeAvatarUrlSchema,
-} from '../../src/types/profile';
+} from "./types/profile";
