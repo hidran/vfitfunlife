@@ -23,21 +23,6 @@ interface GoogleMapProps {
   className?: string;
 }
 
-// Generate consistent mock coordinates for gyms around Milan
-const getGymCoordinates = (gymId: string, index: number) => {
-  // Base coordinates for Milan city center
-  const baseLat = 45.4642;
-  const baseLng = 9.1900;
-  
-  // Generate offset based on gym id to keep it consistent
-  const latOffset = (Math.sin(index * 1.5) * 0.02) + (Math.random() * 0.005);
-  const lngOffset = (Math.cos(index * 1.2) * 0.02) + (Math.random() * 0.005);
-  
-  return {
-    lat: baseLat + latOffset,
-    lng: baseLng + lngOffset,
-  };
-};
 
 export function GoogleMap({ gyms, userLocation, onGymSelect, className }: GoogleMapProps) {
   const { t } = useI18n();
@@ -151,11 +136,9 @@ export function GoogleMap({ gyms, userLocation, onGymSelect, className }: Google
     // Add gym markers
     const bounds = new google.maps.LatLngBounds();
 
-    gyms.forEach((gym, index) => {
-      // Use gym coordinates or generate mock ones
-      const coords = gym.lat && gym.lng 
-        ? { lat: gym.lat, lng: gym.lng }
-        : getGymCoordinates(gym.id, index);
+    gyms.forEach((gym) => {
+      if (typeof gym.lat !== 'number' || typeof gym.lng !== 'number') return;
+      const coords = { lat: gym.lat, lng: gym.lng };
 
       const position = new google.maps.LatLng(coords.lat, coords.lng);
       bounds.extend(position);
@@ -232,11 +215,29 @@ export function GoogleMap({ gyms, userLocation, onGymSelect, className }: Google
       markersRef.current.push(marker);
     });
 
+    if (userLocation) {
+      const userMarker = new google.maps.Marker({
+        position: new google.maps.LatLng(userLocation.lat, userLocation.lng),
+        map: googleMapRef.current,
+        title: 'La tua posizione',
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 8,
+          fillColor: '#2563eb',
+          fillOpacity: 1,
+          strokeColor: '#ffffff',
+          strokeWeight: 2,
+        },
+        zIndex: 9999,
+      });
+      markersRef.current.push(userMarker);
+    }
+
     // Fit map to show all markers if we have gyms
     if (gyms.length > 0) {
       googleMapRef.current.fitBounds(bounds, 50);
     }
-  }, [gyms, onGymSelect, t]);
+  }, [gyms, onGymSelect, t, userLocation]);
 
   if (error) {
     return (
