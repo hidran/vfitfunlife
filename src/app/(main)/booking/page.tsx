@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Search,
@@ -24,6 +24,9 @@ import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
 import { GoogleMap } from '@/components/map/GoogleMap';
 import type { ProviderSearchResult, SearchParams } from '@/types/booking';
+import { useNearMe } from '@/hooks/useNearMe';
+import { RadiusFilter } from '@/components/map/RadiusFilter';
+import { annotateAndSortByDistance, filterByRadius } from '@/lib/geo';
 
 const CATEGORIES = [
   { id: 'personal_training', name: 'Personal Training', icon: '💪' },
@@ -52,6 +55,8 @@ export default function BookingPage() {
     selectProvider,
   } = useBookingStore();
 
+  const { userLocation, radiusKm, isLocating, error, requestLocation, clearLocation, setRadiusKm } = useNearMe();
+
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [showFilters, setShowFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState(searchFilters.query || '');
@@ -77,6 +82,14 @@ export default function BookingPage() {
   const handleSortChange = (sortBy: SearchParams['sortBy']) => {
     setSearchFilters({ sortBy });
   };
+
+  const displayedProviders = useMemo(() => {
+    if (!userLocation) return searchResults;
+    const annotated = annotateAndSortByDistance(searchResults, userLocation, (p) =>
+      p.location ? { lat: p.location.lat, lng: p.location.lng } : null
+    );
+    return radiusKm == null ? annotated : filterByRadius(annotated, radiusKm);
+  }, [searchResults, userLocation, radiusKm]);
 
   return (
     <div className="min-h-screen bg-background-dark">
@@ -162,6 +175,17 @@ export default function BookingPage() {
               </button>
             ))}
           </div>
+        </div>
+        <div className="px-4 pb-3">
+          <RadiusFilter
+            userLocation={userLocation}
+            radiusKm={radiusKm}
+            isLocating={isLocating}
+            error={error}
+            onRequestLocation={requestLocation}
+            onClearLocation={clearLocation}
+            onRadiusChange={setRadiusKm}
+          />
         </div>
       </div>
 
@@ -299,7 +323,7 @@ export default function BookingPage() {
         ) : viewMode === 'map' ? (
           <div className="h-[calc(100vh-240px)] rounded-2xl overflow-hidden">
             <GoogleMap
-              gyms={searchResults.map((p) => ({
+              gyms={displayedProviders.map((p) => ({
                 id: p.id,
                 name: p.fullName,
                 city: p.location?.address || 'Milano',
@@ -310,7 +334,7 @@ export default function BookingPage() {
                 isPartner: p.isVerified,
               }))}
               onGymSelect={(id) => {
-                const provider = searchResults.find((p) => p.id === id);
+                const provider = displayedProviders.find((p) => p.id === id);
                 if (provider) handleProviderSelect(provider);
               }}
               className="h-full"
@@ -318,7 +342,7 @@ export default function BookingPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {searchResults.length === 0 ? (
+            {displayedProviders.length === 0 ? (
               <div className="text-center py-12">
                 <Search className="w-12 h-12 text-text-tertiary mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-white mb-2">
@@ -329,7 +353,7 @@ export default function BookingPage() {
                 </p>
               </div>
             ) : (
-              searchResults.map((provider) => (
+              displayedProviders.map((provider) => (
                 <motion.div
                   key={provider.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -415,6 +439,11 @@ export default function BookingPage() {
                           )}
                         </div>
                         <div className="flex items-center gap-2 text-sm text-text-secondary">
+                          {Number.isFinite((provider as unknown as { distanceKm?: number }).distanceKm) && (
+                            <span className="text-xs text-text-tertiary">
+                              {(provider as unknown as { distanceKm: number }).distanceKm.toFixed(1)} km
+                            </span>
+                          )}
                           <Clock className="w-4 h-4" />
                           {provider.nextAvailable ? (
                             <span>Disponibile dal {provider.nextAvailable.toLocaleDateString('it-IT')}</span>
