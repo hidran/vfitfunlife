@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo, useState, useCallback } from 'react';
-import { List, Map as MapIcon, MapPin, Search, SlidersHorizontal, Star, Navigation } from 'lucide-react';
+import { List, Map as MapIcon, MapPin, Search, SlidersHorizontal, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { GoogleMap } from '@/components/map/GoogleMap';
 import { useRouter } from 'next/navigation';
@@ -11,6 +11,9 @@ import type { MessageKey } from '@/i18n/messages';
 import { useVenues } from '@/hooks/useVenues';
 import { Spinner } from '@/components/ui/Spinner';
 import { PhotoCover } from '@/components/gallery/PhotoCover';
+import { useNearMe } from '@/hooks/useNearMe';
+import { RadiusFilter } from '@/components/map/RadiusFilter';
+import { annotateAndSortByDistance, filterByRadius } from '@/lib/geo';
 
 const filterKeys: MessageKey[] = [
   'fit.gyms.filter.distance',
@@ -19,47 +22,15 @@ const filterKeys: MessageKey[] = [
   'fit.gyms.filter.price',
 ];
 
-type SortOption = 'nearest' | 'top' | 'price';
-
-const sortLabels: Record<SortOption, MessageKey> = {
-  nearest: 'fit.gyms.sort.nearest',
-  top: 'fit.gyms.sort.top',
-  price: 'fit.gyms.sort.price',
-};
-
-const sortOptions: SortOption[] = ['nearest', 'top', 'price'];
-
 export default function GymsPage() {
   const router = useRouter();
   const { t } = useI18n();
   const [view, setView] = useState<'list' | 'map'>('list');
   const [query, setQuery] = useState('');
-  const [sort, setSort] = useState<SortOption>('nearest');
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | undefined>();
 
   const { data: gyms = [], isLoading: gymsLoading } = useVenues({ type: 'gym' });
 
-  const handleSort = () => {
-    const currentIndex = sortOptions.indexOf(sort);
-    const nextSort = sortOptions[(currentIndex + 1) % sortOptions.length];
-    setSort(nextSort);
-  };
-
-  const handleGetLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-        },
-        (error) => {
-          console.error('Geolocation error:', error);
-        }
-      );
-    }
-  };
+  const { userLocation, radiusKm, isLocating, error, requestLocation, clearLocation, setRadiusKm } = useNearMe();
 
   const handleGymSelect = useCallback((gymId: string) => {
     router.push(`/venue?id=${gymId}`);
@@ -75,14 +46,15 @@ export default function GymsPage() {
       );
     });
 
-    return results.sort((a, b) => {
-      if (sort === 'top') {
-        return b.rating - a.rating;
-      }
-      // price and nearest sorting require fields not in Firestore schema; fall back to rating
-      return b.rating - a.rating;
-    });
-  }, [query, sort, gyms]);
+    if (userLocation) {
+      const annotated = annotateAndSortByDistance(results, userLocation, (g) =>
+        typeof g.lat === 'number' && typeof g.lng === 'number' ? { lat: g.lat, lng: g.lng } : null
+      );
+      return radiusKm == null ? annotated : filterByRadius(annotated, radiusKm);
+    }
+
+    return [...results].sort((a, b) => b.rating - a.rating);
+  }, [query, gyms, userLocation, radiusKm]);
 
   return (
     <div className="min-h-screen bg-background-dark pb-24">
@@ -161,24 +133,15 @@ export default function GymsPage() {
                   </button>
                 </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleGetLocation}
-                className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-text-tertiary hover:bg-white/10 transition-colors"
-                title={t('fit.gyms.location.useMyLocation')}
-              >
-                <Navigation className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">{t('fit.gyms.location.label')}</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleSort}
-                className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-text-tertiary hover:bg-white/10 transition-colors"
-              >
-                {t(sortLabels[sort])}
-              </button>
-            </div>
+            <RadiusFilter
+              userLocation={userLocation}
+              radiusKm={radiusKm}
+              isLocating={isLocating}
+              error={error}
+              onRequestLocation={requestLocation}
+              onClearLocation={clearLocation}
+              onRadiusChange={setRadiusKm}
+            />
           </div>
         </div>
 
@@ -219,9 +182,11 @@ export default function GymsPage() {
                       </h3>
                       <p className="text-xs text-text-tertiary">{gym.city}</p>
                     </div>
-                    <span className="text-xs text-text-tertiary">
-                      {'—'}
-                    </span>
+                    {Number.isFinite((gym as unknown as { distanceKm?: number }).distanceKm) && (
+                      <span className="text-xs text-text-tertiary">
+                        {(gym as unknown as { distanceKm: number }).distanceKm.toFixed(1)} km
+                      </span>
+                    )}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {gym.amenities.map((a) => (
@@ -244,7 +209,7 @@ export default function GymsPage() {
           <div className="space-y-4">
             <GoogleMap
               gyms={filteredGyms}
-              userLocation={userLocation}
+              userLocation={userLocation ?? undefined}
               onGymSelect={handleGymSelect}
               className="h-[60vh] min-h-[500px]"
             />
@@ -276,7 +241,11 @@ export default function GymsPage() {
                       <Star className="h-3 w-3 text-yellow-400" />
                       {gym.rating.toFixed(1)}
                     </div>
-                    <span>{'—'}</span>
+                    {Number.isFinite((gym as unknown as { distanceKm?: number }).distanceKm) && (
+                      <span>
+                        {(gym as unknown as { distanceKm: number }).distanceKm.toFixed(1)} km
+                      </span>
+                    )}
                   </div>
                 </Link>
               ))}
