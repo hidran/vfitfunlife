@@ -1,5 +1,7 @@
 import UserDetailClient from "./UserDetailClient";
 
+export const dynamicParams = false;
+
 // Static params for build
 export function generateStaticParams() {
   return [{ id: "dummy" }];
