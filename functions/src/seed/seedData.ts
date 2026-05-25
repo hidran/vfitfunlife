@@ -2085,6 +2085,65 @@ export async function generateDemoPhotos(): Promise<SeedingResult[]> {
   return results;
 }
 
+// ===== Demo avatar generation =====
+
+const MALE_FIRST_NAMES = new Set([
+  "Marco", "Luca", "Francesco", "Alessandro", "Matteo",
+  "Davide", "Andrea", "Simone", "Paolo",
+]);
+const FEMALE_FIRST_NAMES = new Set([
+  "Elena", "Giulia", "Sofia", "Chiara", "Anna",
+  "Laura", "Valentina", "Roberta", "Martina",
+]);
+
+// Deterministic portrait avatar from randomuser.me (men|women / 0-99),
+// gender-matched to the instructor's first name where known.
+function pickAvatarUrl(id: string, fullName: string): string {
+  const firstName = (fullName || "").trim().split(/\s+/)[0] ?? "";
+  let seed = 0;
+  for (let i = 0; i < id.length; i++) {
+    seed = (seed * 31 + id.charCodeAt(i)) >>> 0;
+  }
+  let gender: "men" | "women";
+  if (MALE_FIRST_NAMES.has(firstName)) gender = "men";
+  else if (FEMALE_FIRST_NAMES.has(firstName)) gender = "women";
+  else gender = seed % 2 === 0 ? "men" : "women";
+  const index = seed % 100; // randomuser.me has portraits 0-99 per gender
+  return `https://randomuser.me/api/portraits/${gender}/${index}.jpg`;
+}
+
+export async function generateDemoAvatars(): Promise<SeedingResult[]> {
+  const results: SeedingResult[] = [];
+  try {
+    const snap = await db.collection("instructors").get();
+    let batch = db.batch();
+    let opCount = 0;
+    let total = 0;
+    for (const docSnap of snap.docs) {
+      const fullName = (docSnap.data().fullName as string) ?? "";
+      const avatarUrl = pickAvatarUrl(docSnap.id, fullName);
+      batch.set(docSnap.ref, { avatarUrl }, { merge: true });
+      opCount++;
+      total++;
+      if (opCount >= 400) {
+        await batch.commit();
+        batch = db.batch();
+        opCount = 0;
+      }
+    }
+    if (opCount > 0) await batch.commit();
+    results.push({ success: true, collection: "instructors (avatars)", count: total });
+  } catch (error) {
+    results.push({
+      success: false,
+      collection: "instructors (avatars)",
+      count: 0,
+      error: error instanceof Error ? error.message : "Unknown",
+    });
+  }
+  return results;
+}
+
 // ============================================================================
 // HTTP Cloud Functions
 // ============================================================================
