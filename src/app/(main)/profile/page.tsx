@@ -41,6 +41,7 @@ import {
   SpecialtiesSelector,
   LanguagesSelector,
   CancellationPolicyEditor,
+  BecomeProviderCard,
 } from '@/components/profile';
 import { isProvider, updateProviderProfile } from '@/lib/firebase/auth';
 import { ServicePricing, AvailabilitySchedule, ProviderProfile } from '@/types/firebase';
@@ -508,6 +509,13 @@ export default function ProfilePage() {
           </div>
           <ChevronRight className="w-5 h-5 text-text-tertiary" />
         </button>
+
+        {/* Become a Provider CTA */}
+        {!isProviderUser && (
+          <div className="mt-4">
+            <BecomeProviderCard />
+          </div>
+        )}
       </div>
 
       {/* Profile Settings */}
