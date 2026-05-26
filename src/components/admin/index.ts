@@ -6,3 +6,4 @@ export { UserRoleBadge, StatusBadge, VerificationBadge } from "./UserRoleBadge";
 export { VerificationQueue } from "./VerificationQueue";
 export { ActivityFeed } from "./ActivityFeed";
 export { SeedDataPanel } from "./SeedDataPanel";
+export { ProviderApplicationsPanel } from "./ProviderApplicationsPanel";

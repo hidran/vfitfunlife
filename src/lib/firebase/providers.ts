@@ -89,6 +89,17 @@ export async function fetchProviderServices(providerId: string): Promise<Instruc
   }
 }
 
+export async function fetchProviderApplications(): Promise<Provider[]> {
+  try {
+    const q = query(collection(db, 'instructors'), where('applicationStatus', '==', 'pending'));
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => flattenProvider(d.id, d.data() as Record<string, unknown>));
+  } catch (error) {
+    console.error('[fetchProviderApplications]', error);
+    return [];
+  }
+}
+
 export async function updateProviderPhotos(providerId: string, photoUrls: string[]): Promise<void> {
   await updateDoc(doc(db, 'instructors', providerId), { photoUrls });
 }

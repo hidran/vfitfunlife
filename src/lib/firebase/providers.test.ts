@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fetchProvider, fetchProviders, fetchProviderServices } from './providers';
+import { fetchProvider, fetchProviders, fetchProviderServices, fetchProviderApplications } from './providers';
 
 vi.mock('firebase/firestore', () => ({
   collection: vi.fn(),
@@ -99,5 +99,19 @@ describe('fetchProviderServices', () => {
     } as never);
     const result = await fetchProviderServices('provider-1');
     expect(result[0].name).toBe('PT 1-to-1');
+  });
+});
+
+describe('fetchProviderApplications', () => {
+  it('returns instructors with a pending application', async () => {
+    mockGetDocs.mockResolvedValueOnce({
+      docs: [
+        { id: 'u1', data: () => ({ fullName: 'Mia', isActive: true, applicationStatus: 'pending', providerProfile: { isVerified: false, specialties: ['Yoga'] } }) },
+      ],
+    } as never);
+    const apps = await fetchProviderApplications();
+    expect(apps).toHaveLength(1);
+    expect(apps[0].id).toBe('u1');
+    expect(apps[0].applicationStatus).toBe('pending');
   });
 });

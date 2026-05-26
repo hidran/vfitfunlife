@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAdminStore } from "@/stores/adminStore";
-import { DataTable, FilterBar, VerificationBadge, StatusBadge } from "@/components/admin";
+import { DataTable, FilterBar, VerificationBadge, StatusBadge, ProviderApplicationsPanel } from "@/components/admin";
 import { Button } from "@/components/ui/button";
 import { AdminProvider, ProviderFilters } from "@/types/admin";
 import { Column } from "@/components/admin/DataTable";
@@ -221,6 +221,9 @@ export default function ProvidersPage() {
           </Button>
         </div>
       )}
+
+      {/* Pending provider self-registration applications */}
+      <ProviderApplicationsPanel />
 
       {/* Filters */}
       <FilterBar
