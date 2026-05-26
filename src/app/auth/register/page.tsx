@@ -136,7 +136,19 @@ export default function RegisterPage() {
     try {
       // Register with email/password
       await registerWithEmail(email.trim(), password, fullName.trim());
-      
+
+      if (wantsProvider) {
+        if (!providerCategory) {
+          setError('Seleziona il tipo di servizio che offri.');
+          setIsLoading(false);
+          return;
+        }
+        const uid = useAuthStore.getState().firebaseUser?.uid;
+        if (uid) {
+          await submitProviderApplication(uid, { fullName: fullName.trim(), categoryName: providerCategory });
+        }
+      }
+
       // Navigate to permissions or home
       router.push('/auth/permissions');
     } catch (err: any) {
@@ -451,6 +463,44 @@ export default function RegisterPage() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Provider opt-in */}
+            <div className="mt-4 rounded-xl border border-white/10 p-4">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={wantsProvider}
+                  onChange={(e) => setWantsProvider(e.target.checked)}
+                  className="w-5 h-5 accent-vfit-primary"
+                />
+                <span className="text-sm text-white">
+                  Voglio anche offrire servizi come professionista
+                </span>
+              </label>
+
+              {wantsProvider && (
+                <div className="mt-3">
+                  <p className="text-sm text-white/60 mb-2">Che tipo di servizio offri?</p>
+                  <div className="flex flex-wrap gap-2">
+                    {SERVICE_CATEGORIES.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setProviderCategory(c.name)}
+                        className={cn(
+                          'px-3 py-2 rounded-lg text-sm border transition-colors',
+                          providerCategory === c.name
+                            ? 'border-vfit-primary bg-vfit-primary/10 text-white'
+                            : 'border-white/10 text-white/70 hover:bg-white/5'
+                        )}
+                      >
+                        <span className="mr-1">{c.icon}</span>{c.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Terms & Privacy */}
