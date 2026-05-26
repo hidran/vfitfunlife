@@ -511,11 +511,9 @@ export default function ProfilePage() {
         </button>
 
         {/* Become a Provider CTA */}
-        {!isProviderUser && (
-          <div className="mt-4">
-            <BecomeProviderCard />
-          </div>
-        )}
+        <div className="mt-4">
+          <BecomeProviderCard />
+        </div>
       </div>
 
       {/* Profile Settings */}
