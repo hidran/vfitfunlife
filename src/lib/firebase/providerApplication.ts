@@ -1,5 +1,6 @@
 import { doc, writeBatch, serverTimestamp } from 'firebase/firestore';
 import { db } from './config';
+import type { ProviderApplicationStatus } from '@/types/firebase';
 
 /**
  * User opts in as a provider. Creates/merges instructors/{uid} as an unverified
@@ -7,6 +8,7 @@ import { db } from './config';
  * written in one batch so the mirrored status never drifts. Idempotent: re-running
  * merges into an existing instructor doc (does not reset a verified provider's
  * isVerified — callers gate this behind providerStatus === 'none').
+ * Throws on Firestore failure; callers (TanStack mutation / form handler) surface the error.
  */
 export async function submitProviderApplication(
   uid: string,
@@ -44,10 +46,11 @@ export async function submitProviderApplication(
 /**
  * Admin decision on a pending application. Sets instructors/{uid}.applicationStatus
  * and providerProfile.isVerified together with users/{uid}.providerStatus, in one batch.
+ * Throws on Firestore failure; callers (TanStack mutation / form handler) surface the error.
  */
 export async function setProviderApplicationStatus(
   uid: string,
-  status: 'verified' | 'rejected'
+  status: Exclude<ProviderApplicationStatus, 'pending'>
 ): Promise<void> {
   const batch = writeBatch(db);
   const instructorRef = doc(db, 'instructors', uid);
