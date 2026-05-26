@@ -27,15 +27,7 @@ import type { ProviderSearchResult, SearchParams } from '@/types/booking';
 import { useNearMe } from '@/hooks/useNearMe';
 import { RadiusFilter } from '@/components/map/RadiusFilter';
 import { annotateAndSortByDistance, filterByRadius } from '@/lib/geo';
-
-const CATEGORIES = [
-  { id: 'personal_training', name: 'Personal Training', icon: '💪' },
-  { id: 'yoga', name: 'Yoga', icon: '🧘' },
-  { id: 'pilates', name: 'Pilates', icon: '🤸' },
-  { id: 'massage', name: 'Massaggio', icon: '💆' },
-  { id: 'nutrition', name: 'Nutrizione', icon: '🥗' },
-  { id: 'physio', name: 'Fisioterapia', icon: '🏥' },
-];
+import { SERVICE_CATEGORIES } from '@/lib/serviceCategories';
 
 const SORT_OPTIONS = [
   { value: 'availability', label: 'Disponibilità' },
@@ -159,7 +151,7 @@ export default function BookingPage() {
             >
               Tutti
             </button>
-            {CATEGORIES.map((cat) => (
+            {SERVICE_CATEGORIES.map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => setSearchFilters({ category: cat.name })}

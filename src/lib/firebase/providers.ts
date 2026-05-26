@@ -32,6 +32,7 @@ function flattenProvider(id: string, data: Record<string, unknown>): Provider {
     rating: (data.ratingAvg as number) ?? (profile.rating as number) ?? 0,
     reviewCount: (data.reviewCount as number) ?? (profile.reviewCount as number) ?? 0,
     isVerified: (profile.isVerified as boolean) ?? false,
+    applicationStatus: (data.applicationStatus as 'pending' | 'verified' | 'rejected') ?? undefined,
     isActive: (data.isActive as boolean) ?? (profile.isActive as boolean) ?? true, // matches home/page.tsx legacy reader
     specialties: (data.specialties as string[]) ?? (profile.specialties as string[]) ?? [],
     yearsOfExperience:

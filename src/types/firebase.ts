@@ -7,6 +7,9 @@ export type Section = "fit" | "fun" | "life";
 // User role type
 export type UserRole = "superadmin" | "admin" | "provider" | "customer";
 
+// Provider application status (layered on top of role; role stays "customer")
+export type ProviderStatus = "none" | "pending" | "verified" | "rejected";
+
 // Certification type
 export interface Certification {
   id: string;
@@ -119,6 +122,8 @@ export interface User {
   
   // Role
   role: UserRole;
+  // Provider application status (absent ⇒ "none")
+  providerStatus?: ProviderStatus;
 
   // VIP Status
   isVip: boolean;

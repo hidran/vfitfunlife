@@ -8,6 +8,7 @@ export interface Provider {
   rating: number;
   reviewCount: number;
   isVerified: boolean;
+  applicationStatus?: 'pending' | 'verified' | 'rejected';
   isActive: boolean;
   specialties: string[];
   yearsOfExperience: number;
