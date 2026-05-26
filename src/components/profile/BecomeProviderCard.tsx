@@ -94,7 +94,7 @@ export function BecomeProviderCard() {
             <Button size="sm" disabled={!category || submit.isPending} onClick={() => submit.mutate(category)}>
               {submit.isPending ? 'Invio…' : 'Invia richiesta'}
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>Annulla</Button>
+            <Button size="sm" variant="ghost" onClick={() => { submit.reset(); setOpen(false); }}>Annulla</Button>
           </div>
         </div>
       )}
