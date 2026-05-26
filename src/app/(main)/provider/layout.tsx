@@ -1,8 +1,8 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
   Calendar,
@@ -13,11 +13,14 @@ import {
   Briefcase,
   Menu,
   X,
+  Clock,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { useI18n } from '@/hooks/useI18n';
+import { useAuthStore } from '@/stores/authStore';
+import { canAccessProviderArea } from '@/lib/providerStatus';
 import type { MessageKey } from '@/i18n/messages';
 
 interface ProviderLayoutProps {
@@ -38,6 +41,20 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { t } = useI18n();
+  const router = useRouter();
+  const user = useAuthStore((s) => s.user);
+  const isInitialized = useAuthStore((s) => s.isInitialized);
+  const status = user?.providerStatus ?? 'none';
+
+  useEffect(() => {
+    if (isInitialized && user && !canAccessProviderArea(status)) {
+      router.replace('/profile');
+    }
+  }, [isInitialized, user, status, router]);
+
+  if (isInitialized && user && !canAccessProviderArea(status)) {
+    return null; // redirecting
+  }
 
   return (
     <div className="flex min-h-[calc(100vh-64px)]">
@@ -119,6 +136,14 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
       {/* Main Content */}
       <main className="flex-1 lg:ml-0 pt-16 lg:pt-0">
         <div className="p-4 lg:p-8 max-w-7xl mx-auto">
+          {status === 'pending' && (
+            <div className="mb-4 flex items-center gap-3 rounded-xl border border-[#F59E0B]/30 bg-[#F59E0B]/10 p-4">
+              <Clock className="w-5 h-5 text-[#F59E0B]" />
+              <p className="text-sm text-white/80">
+                Profilo in revisione — sarai visibile dopo l'approvazione.
+              </p>
+            </div>
+          )}
           {children}
         </div>
       </main>
