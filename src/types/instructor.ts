@@ -1,5 +1,6 @@
 // src/types/instructor.ts
 import type { Timestamp } from 'firebase/firestore';
+import type { ProviderApplicationStatus } from '@/types/firebase';
 
 export interface Provider {
   id: string;
@@ -8,7 +9,7 @@ export interface Provider {
   rating: number;
   reviewCount: number;
   isVerified: boolean;
-  applicationStatus?: 'pending' | 'verified' | 'rejected';
+  applicationStatus?: ProviderApplicationStatus;
   isActive: boolean;
   specialties: string[];
   yearsOfExperience: number;

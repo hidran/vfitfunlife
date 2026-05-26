@@ -10,6 +10,9 @@ export type UserRole = "superadmin" | "admin" | "provider" | "customer";
 // Provider application status (layered on top of role; role stays "customer")
 export type ProviderStatus = "none" | "pending" | "verified" | "rejected";
 
+// Stored application status on the instructor doc (never "none" — absence means not an applicant)
+export type ProviderApplicationStatus = Exclude<ProviderStatus, "none">;
+
 // Certification type
 export interface Certification {
   id: string;
