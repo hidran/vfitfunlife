@@ -12,6 +12,8 @@ import { completeRegistration } from '@/lib/firebase/auth';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
+import { SERVICE_CATEGORIES } from '@/lib/serviceCategories';
+import { submitProviderApplication } from '@/lib/firebase/providerApplication';
 
 const SECTIONS = [
   { id: 'fit' as const, label: 'VFit', color: 'from-vfit-primary to-vfit-secondary' },
@@ -41,6 +43,8 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [wantsProvider, setWantsProvider] = useState(false);
+  const [providerCategory, setProviderCategory] = useState('');
 
   const handleSocialSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,6 +74,18 @@ export default function RegisterPage() {
         dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
         preferredSection,
       });
+
+      if (wantsProvider) {
+        if (!providerCategory) {
+          setError('Seleziona il tipo di servizio che offri.');
+          setIsLoading(false);
+          return;
+        }
+        await submitProviderApplication(firebaseUser.uid, {
+          fullName,
+          categoryName: providerCategory,
+        });
+      }
 
       // Refresh user profile in store
       await refreshUserProfile();
@@ -586,6 +602,44 @@ export default function RegisterPage() {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Provider opt-in */}
+          <div className="mt-4 rounded-xl border border-white/10 p-4">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={wantsProvider}
+                onChange={(e) => setWantsProvider(e.target.checked)}
+                className="w-5 h-5 accent-vfit-primary"
+              />
+              <span className="text-sm text-white">
+                Voglio anche offrire servizi come professionista
+              </span>
+            </label>
+
+            {wantsProvider && (
+              <div className="mt-3">
+                <p className="text-sm text-white/60 mb-2">Che tipo di servizio offri?</p>
+                <div className="flex flex-wrap gap-2">
+                  {SERVICE_CATEGORIES.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setProviderCategory(c.name)}
+                      className={cn(
+                        'px-3 py-2 rounded-lg text-sm border transition-colors',
+                        providerCategory === c.name
+                          ? 'border-vfit-primary bg-vfit-primary/10 text-white'
+                          : 'border-white/10 text-white/70 hover:bg-white/5'
+                      )}
+                    >
+                      <span className="mr-1">{c.icon}</span>{c.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Terms & Privacy */}
