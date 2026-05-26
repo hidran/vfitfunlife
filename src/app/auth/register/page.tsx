@@ -12,8 +12,8 @@ import { completeRegistration } from '@/lib/firebase/auth';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
-import { SERVICE_CATEGORIES } from '@/lib/serviceCategories';
 import { submitProviderApplication } from '@/lib/firebase/providerApplication';
+import { ProviderOptInField } from '@/components/auth/ProviderOptInField';
 
 const SECTIONS = [
   { id: 'fit' as const, label: 'VFit', color: 'from-vfit-primary to-vfit-secondary' },
@@ -65,6 +65,11 @@ export default function RegisterPage() {
       return;
     }
 
+    if (wantsProvider && !providerCategory) {
+      setError('Seleziona il tipo di servizio che offri.');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -76,15 +81,7 @@ export default function RegisterPage() {
       });
 
       if (wantsProvider) {
-        if (!providerCategory) {
-          setError('Seleziona il tipo di servizio che offri.');
-          setIsLoading(false);
-          return;
-        }
-        await submitProviderApplication(firebaseUser.uid, {
-          fullName,
-          categoryName: providerCategory,
-        });
+        await submitProviderApplication(firebaseUser.uid, { fullName: fullName.trim(), categoryName: providerCategory });
       }
 
       // Refresh user profile in store
@@ -131,6 +128,11 @@ export default function RegisterPage() {
       return;
     }
 
+    if (wantsProvider && !providerCategory) {
+      setError('Seleziona il tipo di servizio che offri.');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -138,11 +140,6 @@ export default function RegisterPage() {
       await registerWithEmail(email.trim(), password, fullName.trim());
 
       if (wantsProvider) {
-        if (!providerCategory) {
-          setError('Seleziona il tipo di servizio che offri.');
-          setIsLoading(false);
-          return;
-        }
         const uid = useAuthStore.getState().firebaseUser?.uid;
         if (uid) {
           await submitProviderApplication(uid, { fullName: fullName.trim(), categoryName: providerCategory });
@@ -466,42 +463,12 @@ export default function RegisterPage() {
             </div>
 
             {/* Provider opt-in */}
-            <div className="mt-4 rounded-xl border border-white/10 p-4">
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={wantsProvider}
-                  onChange={(e) => setWantsProvider(e.target.checked)}
-                  className="w-5 h-5 accent-vfit-primary"
-                />
-                <span className="text-sm text-white">
-                  Voglio anche offrire servizi come professionista
-                </span>
-              </label>
-
-              {wantsProvider && (
-                <div className="mt-3">
-                  <p className="text-sm text-white/60 mb-2">Che tipo di servizio offri?</p>
-                  <div className="flex flex-wrap gap-2">
-                    {SERVICE_CATEGORIES.map((c) => (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() => setProviderCategory(c.name)}
-                        className={cn(
-                          'px-3 py-2 rounded-lg text-sm border transition-colors',
-                          providerCategory === c.name
-                            ? 'border-vfit-primary bg-vfit-primary/10 text-white'
-                            : 'border-white/10 text-white/70 hover:bg-white/5'
-                        )}
-                      >
-                        <span className="mr-1">{c.icon}</span>{c.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+            <ProviderOptInField
+              enabled={wantsProvider}
+              onToggle={setWantsProvider}
+              category={providerCategory}
+              onSelectCategory={setProviderCategory}
+            />
 
             {/* Terms & Privacy */}
             <div className="flex items-start gap-3 p-4 bg-white/5 rounded-lg">
@@ -655,42 +622,12 @@ export default function RegisterPage() {
           </div>
 
           {/* Provider opt-in */}
-          <div className="mt-4 rounded-xl border border-white/10 p-4">
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={wantsProvider}
-                onChange={(e) => setWantsProvider(e.target.checked)}
-                className="w-5 h-5 accent-vfit-primary"
-              />
-              <span className="text-sm text-white">
-                Voglio anche offrire servizi come professionista
-              </span>
-            </label>
-
-            {wantsProvider && (
-              <div className="mt-3">
-                <p className="text-sm text-white/60 mb-2">Che tipo di servizio offri?</p>
-                <div className="flex flex-wrap gap-2">
-                  {SERVICE_CATEGORIES.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => setProviderCategory(c.name)}
-                      className={cn(
-                        'px-3 py-2 rounded-lg text-sm border transition-colors',
-                        providerCategory === c.name
-                          ? 'border-vfit-primary bg-vfit-primary/10 text-white'
-                          : 'border-white/10 text-white/70 hover:bg-white/5'
-                      )}
-                    >
-                      <span className="mr-1">{c.icon}</span>{c.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          <ProviderOptInField
+            enabled={wantsProvider}
+            onToggle={setWantsProvider}
+            category={providerCategory}
+            onSelectCategory={setProviderCategory}
+          />
 
           {/* Terms & Privacy */}
           <div className="flex items-start gap-3 p-4 bg-white/5 rounded-lg">
