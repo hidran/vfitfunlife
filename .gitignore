@@ -70,3 +70,10 @@ temp/
 # Cache
 .cache/
 .parcel-cache/
+
+# Demo/QA artifacts (screenshots, debug logs, playwright output)
+/*.png
+firestore-debug.log
+.playwright-mcp/
+playwright-report/
+test-results/
