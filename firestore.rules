@@ -101,7 +101,7 @@ service cloud.firestore {
     function isValidUserCreate() {
       return request.resource.data.keys().hasOnly([
         'uid', 'email', 'phone', 'fullName', 'avatarUrl', 'dateOfBirth',
-        'role', 'userType', 'permissions', 'providerProfile',
+        'role', 'userType', 'permissions', 'providerProfile', 'providerStatus',
         'isActive', 'isVip', 'isVerified',
         'vipExpiresAt', 'vipPlanId', 'stripeCustomerId', 'stripeSubscriptionId',
         'pointsBalance', 'walletBalance',
@@ -119,7 +119,7 @@ service cloud.firestore {
         'fullName', 'email', 'phone', 'bio', 'dateOfBirth', 'preferredLanguage',
         'preferredSection', 'avatarUrl', 'notificationsEnabled', 'fcmTokens',
         'updatedAt', 'lastLoginAt', 'phoneVerified', 'emailVerified',
-        'socialLinks', 'notificationSettings', 'privacySettings', 'providerProfile'
+        'socialLinks', 'notificationSettings', 'privacySettings', 'providerProfile', 'providerStatus'
       ]);
     }
 
@@ -142,14 +142,17 @@ service cloud.firestore {
 
       // Create rules - superadmin can create any user, new users can create their own profile
       allow create: if isSuperAdmin() || 
-                       (isOwner(userId) && 
+                       (isOwner(userId) &&
                         request.resource.data.role in ['customer', 'provider'] &&
+                        request.resource.data.get('providerStatus', 'none') in ['none', 'pending'] &&
                         isValidUserCreate());
 
       // Update rules
       allow update: if (
         // Users can update their own basic profile
-        (isOwner(userId) && isValidUserUpdate() && !isValidRoleUpdate())
+        (isOwner(userId) && isValidUserUpdate() && !isValidRoleUpdate() &&
+         (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['providerStatus']) ||
+          request.resource.data.providerStatus in ['none', 'pending']))
       ) || (
         // Superadmin can update anything
         isSuperAdmin()
@@ -275,9 +278,24 @@ service cloud.firestore {
                     isAdmin() ||
                     (isAuthenticated() && request.auth.uid == resource.data.uid);
 
-      // Write: Admin or the instructor themselves
-      allow write: if isAdmin() ||
-        (isAuthenticated() && resource.data.uid == request.auth.uid);
+      // Create: admin, or the user creating their OWN unverified pending profile
+      allow create: if isAdmin() ||
+        (isAuthenticated() &&
+         request.resource.data.uid == request.auth.uid &&
+         request.resource.data.get(['providerProfile', 'isVerified'], false) == false &&
+         request.resource.data.get('applicationStatus', 'pending') == 'pending');
+
+      // Update: admin can change anything; the owner may edit their profile but may
+      // NOT change isVerified or applicationStatus (only admin verifies/rejects).
+      allow update: if isAdmin() ||
+        (isAuthenticated() &&
+         resource.data.uid == request.auth.uid &&
+         request.resource.data.get(['providerProfile', 'isVerified'], false) ==
+           resource.data.get(['providerProfile', 'isVerified'], false) &&
+         request.resource.data.get('applicationStatus', 'pending') ==
+           resource.data.get('applicationStatus', 'pending'));
+
+      allow delete: if isAdmin();
 
       match /reviews/{reviewId} {
         allow read: if true;
