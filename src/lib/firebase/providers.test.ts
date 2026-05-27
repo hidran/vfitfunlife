@@ -102,6 +102,19 @@ describe('fetchProviderServices', () => {
   });
 });
 
+describe('fetchProviders activity exclusion', () => {
+  it('excludes docs with an activityKind (VFun activities, not trainers)', async () => {
+    mockGetDocs.mockResolvedValueOnce({
+      docs: [
+        { id: 'trainer-1', data: () => ({ fullName: 'Real Trainer', isActive: true, providerProfile: { isVerified: true, rating: 5 } }) },
+        { id: 'event-1', data: () => ({ fullName: 'Sunset Party', isActive: true, activityKind: 'event', providerProfile: { isVerified: true } }) },
+      ],
+    } as never);
+    const all = await fetchProviders();
+    expect(all.map((p) => p.id)).toEqual(['trainer-1']);
+  });
+});
+
 describe('fetchProviderApplications', () => {
   it('returns instructors with a pending application', async () => {
     mockGetDocs.mockResolvedValueOnce({

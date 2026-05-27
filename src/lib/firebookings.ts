@@ -45,7 +45,9 @@ export async function searchProviders(params: SearchParams): Promise<ProviderSea
   const providersQuery = query(collection(db, INSTRUCTORS_COLLECTION), ...constraints);
 
   const snapshot = await getDocs(providersQuery);
-  let providers = snapshot.docs.map((doc) => {
+  let providers = snapshot.docs
+    .filter((doc) => !doc.data().activityKind)
+    .map((doc) => {
     const data = doc.data();
     const profile = data.providerProfile || {};
 

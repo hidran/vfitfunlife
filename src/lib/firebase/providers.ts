@@ -80,7 +80,7 @@ export async function fetchProviders(opts: ProviderListOptions = {}): Promise<Pr
     const snap = await getDocs(q);
     return snap.docs
       .map((d) => flattenProvider(d.id, d.data() as Record<string, unknown>))
-      .filter((p) => p.isActive && (!opts.onlyVerified || p.isVerified))
+      .filter((p) => !p.activityKind && p.isActive && (!opts.onlyVerified || p.isVerified))
       .filter((p) => !opts.specialty || p.specialties.includes(opts.specialty));
   } catch (error) {
     console.error('[fetchProviders]', opts, error);
