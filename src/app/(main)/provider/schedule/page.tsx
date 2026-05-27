@@ -6,9 +6,11 @@ import { ScheduleEvent, CalendarView } from '@/types/provider';
 import { useProviderStore } from '@/stores/providerStore';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/button';
+import { useI18n } from '@/hooks/useI18n';
 import { X, Clock, MapPin, User, FileText } from 'lucide-react';
 
 export default function ProviderSchedulePage() {
+  const { t } = useI18n();
   const { schedule, fetchSchedule, isLoadingSchedule } = useProviderStore();
   const [view, setView] = useState<CalendarView>('month');
   const [selectedEvent, setSelectedEvent] = useState<ScheduleEvent | null>(null);
@@ -41,17 +43,17 @@ export default function ProviderSchedulePage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Schedule</h1>
+          <h1 className="text-2xl font-bold text-white">{t('provider.schedule.title')}</h1>
           <p className="text-gray-400 mt-1">
-            Manage your appointments and availability
+            {t('provider.schedule.subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-3">
           <Button variant="secondary" size="sm">
-            Sync Calendar
+            {t('provider.schedule.btn.syncCalendar')}
           </Button>
           <Button size="sm">
-            Block Time
+            {t('provider.schedule.btn.blockTime')}
           </Button>
         </div>
       </div>
@@ -72,7 +74,7 @@ export default function ProviderSchedulePage() {
           <div className="bg-[#2A2D3A] rounded-xl p-6 max-w-md w-full mx-4">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-semibold text-white">
-                {selectedEvent.type === 'blocked' ? 'Blocked Time' : 'Appointment'}
+                {selectedEvent.type === 'blocked' ? t('provider.schedule.modal.blockedTime') : t('provider.schedule.modal.appointment')}
               </h3>
               <button
                 onClick={() => setSelectedEvent(null)}
@@ -88,7 +90,7 @@ export default function ProviderSchedulePage() {
                   <Clock className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-400">Time</p>
+                  <p className="text-sm text-gray-400">{t('provider.schedule.modal.time')}</p>
                   <p className="text-white font-medium">
                     {formatTime(selectedEvent.start)} - {formatTime(selectedEvent.end)}
                   </p>
@@ -102,7 +104,7 @@ export default function ProviderSchedulePage() {
                       <User className="w-5 h-5 text-gray-400" />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-400">Client</p>
+                      <p className="text-sm text-gray-400">{t('provider.schedule.modal.client')}</p>
                       <p className="text-white font-medium">{selectedEvent.clientName}</p>
                     </div>
                   </div>
@@ -112,7 +114,7 @@ export default function ProviderSchedulePage() {
                       <FileText className="w-5 h-5 text-gray-400" />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-400">Service</p>
+                      <p className="text-sm text-gray-400">{t('provider.schedule.modal.service')}</p>
                       <p className="text-white font-medium">{selectedEvent.serviceName}</p>
                     </div>
                   </div>
@@ -123,7 +125,7 @@ export default function ProviderSchedulePage() {
                         <MapPin className="w-5 h-5 text-gray-400" />
                       </div>
                       <div>
-                        <p className="text-sm text-gray-400">Location</p>
+                        <p className="text-sm text-gray-400">{t('provider.schedule.modal.location')}</p>
                         <p className="text-white font-medium">{selectedEvent.location}</p>
                       </div>
                     </div>
@@ -147,7 +149,7 @@ export default function ProviderSchedulePage() {
 
               {selectedEvent.notes && (
                 <div className="pt-4 border-t border-white/5">
-                  <p className="text-sm text-gray-400 mb-1">Notes</p>
+                  <p className="text-sm text-gray-400 mb-1">{t('provider.schedule.modal.notes')}</p>
                   <p className="text-white">{selectedEvent.notes}</p>
                 </div>
               )}
@@ -159,7 +161,7 @@ export default function ProviderSchedulePage() {
                   onClick={() => window.location.href = `/provider/bookings/${selectedEvent.bookingId}`}
                   fullWidth
                 >
-                  View Booking Details
+                  {t('provider.schedule.modal.viewBookingDetails')}
                 </Button>
               )}
               <Button
@@ -167,7 +169,7 @@ export default function ProviderSchedulePage() {
                 onClick={() => setSelectedEvent(null)}
                 fullWidth
               >
-                Close
+                {t('provider.schedule.modal.close')}
               </Button>
             </div>
           </div>
@@ -196,13 +198,13 @@ export default function ProviderSchedulePage() {
 
             <div className="space-y-3">
               <Button fullWidth>
-                Add Appointment
+                {t('provider.schedule.dateModal.addAppointment')}
               </Button>
               <Button variant="secondary" fullWidth>
-                Block Time
+                {t('provider.schedule.dateModal.blockTime')}
               </Button>
               <Button variant="outline" fullWidth>
-                Set Day Off
+                {t('provider.schedule.dateModal.setDayOff')}
               </Button>
             </div>
           </div>

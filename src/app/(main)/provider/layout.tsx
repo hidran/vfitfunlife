@@ -140,7 +140,7 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
             <div className="mb-4 flex items-center gap-3 rounded-xl border border-[#F59E0B]/30 bg-[#F59E0B]/10 p-4">
               <Clock className="w-5 h-5 text-[#F59E0B]" />
               <p className="text-sm text-white/80">
-                Profilo in revisione — sarai visibile dopo l'approvazione.
+                {t('provider.banner.pending')}
               </p>
             </div>
           )}

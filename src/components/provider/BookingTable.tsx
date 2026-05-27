@@ -7,6 +7,7 @@ import { ProviderBooking, BookingFilters } from '@/types/provider';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/button';
 import { BookingStatus } from '@/types/firebase';
+import { useI18n } from '@/hooks/useI18n';
 import { cn } from '@/lib/utils';
 
 interface BookingTableProps {
@@ -22,13 +23,13 @@ interface BookingTableProps {
   loading?: boolean;
 }
 
-const STATUS_BADGES: Record<BookingStatus, { variant: any; label: string }> = {
-  pending: { variant: 'warning', label: 'Pending' },
-  confirmed: { variant: 'success', label: 'Confirmed' },
-  in_progress: { variant: 'info', label: 'In Progress' },
-  completed: { variant: 'default', label: 'Completed' },
-  cancelled: { variant: 'error', label: 'Cancelled' },
-  no_show: { variant: 'error', label: 'No Show' },
+const STATUS_BADGE_VARIANTS: Record<BookingStatus, { variant: any }> = {
+  pending: { variant: 'warning' },
+  confirmed: { variant: 'success' },
+  in_progress: { variant: 'info' },
+  completed: { variant: 'default' },
+  cancelled: { variant: 'error' },
+  no_show: { variant: 'error' },
 };
 
 export function BookingTable({
@@ -43,7 +44,17 @@ export function BookingTable({
   onSelectAll,
   loading = false,
 }: BookingTableProps) {
+  const { t } = useI18n();
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  const STATUS_BADGE_LABELS: Record<BookingStatus, string> = {
+    pending: t('provider.bookingTable.status.pending'),
+    confirmed: t('provider.bookingTable.status.confirmed'),
+    in_progress: t('provider.bookingTable.status.inProgress'),
+    completed: t('provider.bookingTable.status.completed'),
+    cancelled: t('provider.bookingTable.status.cancelled'),
+    no_show: t('provider.bookingTable.status.noShow'),
+  };
 
   const formatDate = (date: Date | { toDate(): Date }) => {
     const d = typeof date === 'object' && 'toDate' in date ? date.toDate() : date;
@@ -81,8 +92,8 @@ export function BookingTable({
         <div className="w-16 h-16 bg-[#1A1D29] rounded-full flex items-center justify-center mx-auto mb-4">
           <Calendar className="w-8 h-8 text-gray-500" />
         </div>
-        <h3 className="text-lg font-medium text-white mb-2">No bookings found</h3>
-        <p className="text-gray-400">Try adjusting your filters or check back later.</p>
+        <h3 className="text-lg font-medium text-white mb-2">{t('provider.bookingTable.empty.title')}</h3>
+        <p className="text-gray-400">{t('provider.bookingTable.empty.subtitle')}</p>
       </div>
     );
   }
@@ -106,18 +117,18 @@ export function BookingTable({
                   />
                 </th>
               )}
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-400">Client</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-400">Service</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-400">Date & Time</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-400">Price</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-400">Status</th>
-              <th className="px-4 py-3 text-right text-sm font-medium text-gray-400">Actions</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-gray-400">{t('provider.bookingTable.col.client')}</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-gray-400">{t('provider.bookingTable.col.service')}</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-gray-400">{t('provider.bookingTable.col.dateTime')}</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-gray-400">{t('provider.bookingTable.col.price')}</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-gray-400">{t('provider.bookingTable.col.status')}</th>
+              <th className="px-4 py-3 text-right text-sm font-medium text-gray-400">{t('provider.bookingTable.col.actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
             {bookings.map((booking) => {
               const isSelected = selectedIds.includes(booking.id);
-              const statusBadge = STATUS_BADGES[booking.status];
+              const statusBadge = { variant: STATUS_BADGE_VARIANTS[booking.status].variant, label: STATUS_BADGE_LABELS[booking.status] };
 
               return (
                 <tr
@@ -176,7 +187,7 @@ export function BookingTable({
                   <td className="px-4 py-4">
                     <p className="text-white font-medium">€{booking.finalPrice.toFixed(2)}</p>
                     {booking.depositPaid && (
-                      <p className="text-xs text-green-400">Deposit paid</p>
+                      <p className="text-xs text-green-400">{t('provider.bookingTable.depositPaid')}</p>
                     )}
                   </td>
                   <td className="px-4 py-4">
@@ -195,7 +206,7 @@ export function BookingTable({
                             className="px-3 py-1.5"
                           >
                             <Check className="w-4 h-4 mr-1" />
-                            Confirm
+                            {t('provider.bookingTable.action.confirm')}
                           </Button>
                           <Button
                             variant="outline"
@@ -204,7 +215,7 @@ export function BookingTable({
                             className="px-3 py-1.5 border-red-500/50 text-red-400 hover:bg-red-500/10"
                           >
                             <X className="w-4 h-4 mr-1" />
-                            Decline
+                            {t('provider.bookingTable.action.decline')}
                           </Button>
                         </>
                       )}
@@ -216,7 +227,7 @@ export function BookingTable({
                           className="px-3 py-1.5"
                         >
                           <Check className="w-4 h-4 mr-1" />
-                          Complete
+                          {t('provider.bookingTable.action.complete')}
                         </Button>
                       )}
                       
@@ -237,7 +248,7 @@ export function BookingTable({
                               }}
                               className="w-full px-4 py-2 text-left text-sm text-white hover:bg-white/5"
                             >
-                              View Details
+                              {t('provider.bookingTable.action.viewDetails')}
                             </button>
                             <button
                               onClick={() => {
@@ -246,7 +257,7 @@ export function BookingTable({
                               }}
                               className="w-full px-4 py-2 text-left text-sm text-white hover:bg-white/5"
                             >
-                              Message Client
+                              {t('provider.bookingTable.action.messageClient')}
                             </button>
                             {(booking.status === 'confirmed' || booking.status === 'pending') && (
                               <button
@@ -256,7 +267,7 @@ export function BookingTable({
                                 }}
                                 className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-red-500/10"
                               >
-                                Cancel Booking
+                                {t('provider.bookingTable.action.cancelBooking')}
                               </button>
                             )}
                           </div>

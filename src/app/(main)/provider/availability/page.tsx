@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { AvailabilityEditor } from '@/components/provider/AvailabilityEditor';
 import { useProviderStore } from '@/stores/providerStore';
+import { useI18n } from '@/hooks/useI18n';
 import { AvailabilitySettings } from '@/types/provider';
 
 const DEFAULT_AVAILABILITY: AvailabilitySettings = {
@@ -23,6 +24,7 @@ const DEFAULT_AVAILABILITY: AvailabilitySettings = {
 };
 
 export default function ProviderAvailabilityPage() {
+  const { t } = useI18n();
   const { availability, isLoading, fetchAvailability, updateAvailability } = useProviderStore();
 
   useEffect(() => {
@@ -37,9 +39,9 @@ export default function ProviderAvailabilityPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white">Availability</h1>
+        <h1 className="text-2xl font-bold text-white">{t('provider.availability.title')}</h1>
         <p className="text-gray-400 mt-1">
-          Set your working hours and manage when clients can book appointments
+          {t('provider.availability.subtitle')}
         </p>
       </div>
 

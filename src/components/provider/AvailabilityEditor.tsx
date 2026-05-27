@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Plus, Trash2, Copy, ChevronDown, Clock, Calendar, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AvailabilitySettings, DayOfWeek, DayAvailability, TimeRange, DateOverride } from '@/types/provider';
+import { useI18n } from '@/hooks/useI18n';
 import { cn } from '@/lib/utils';
 
 interface AvailabilityEditorProps {
@@ -12,15 +13,7 @@ interface AvailabilityEditorProps {
   loading?: boolean;
 }
 
-const DAYS: { key: DayOfWeek; label: string }[] = [
-  { key: 'monday', label: 'Monday' },
-  { key: 'tuesday', label: 'Tuesday' },
-  { key: 'wednesday', label: 'Wednesday' },
-  { key: 'thursday', label: 'Thursday' },
-  { key: 'friday', label: 'Friday' },
-  { key: 'saturday', label: 'Saturday' },
-  { key: 'sunday', label: 'Sunday' },
-];
+const DAY_KEYS: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
 const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   const hour = Math.floor(i / 2);
@@ -29,7 +22,18 @@ const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
 });
 
 export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEditorProps) {
+  const { t } = useI18n();
   const [localSettings, setLocalSettings] = useState<AvailabilitySettings>(settings);
+
+  const DAYS: { key: DayOfWeek; label: string }[] = [
+    { key: 'monday', label: t('provider.availabilityEditor.day.monday') },
+    { key: 'tuesday', label: t('provider.availabilityEditor.day.tuesday') },
+    { key: 'wednesday', label: t('provider.availabilityEditor.day.wednesday') },
+    { key: 'thursday', label: t('provider.availabilityEditor.day.thursday') },
+    { key: 'friday', label: t('provider.availabilityEditor.day.friday') },
+    { key: 'saturday', label: t('provider.availabilityEditor.day.saturday') },
+    { key: 'sunday', label: t('provider.availabilityEditor.day.sunday') },
+  ];
   const [activeTab, setActiveTab] = useState<'weekly' | 'overrides'>('weekly');
   const [expandedDay, setExpandedDay] = useState<DayOfWeek | null>(null);
   const [newOverrideDate, setNewOverrideDate] = useState('');
@@ -73,8 +77,8 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
   const copyToAllDays = (sourceDay: DayOfWeek) => {
     const sourceSchedule = localSettings.weeklySchedule[sourceDay];
     const newSchedule = { ...localSettings.weeklySchedule };
-    
-    DAYS.forEach(({ key }) => {
+
+    DAY_KEYS.forEach((key) => {
       if (key !== sourceDay) {
         newSchedule[key] = {
           isAvailable: sourceSchedule.isAvailable,
@@ -141,7 +145,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
           )}
         >
           <Clock className="w-4 h-4" />
-          Weekly Schedule
+          {t('provider.availabilityEditor.tab.weekly')}
         </button>
         <button
           onClick={() => setActiveTab('overrides')}
@@ -153,7 +157,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
           )}
         >
           <Calendar className="w-4 h-4" />
-          Date Overrides
+          {t('provider.availabilityEditor.tab.overrides')}
           {localSettings.dateOverrides.length > 0 && (
             <span className="bg-section-primary text-white text-xs px-1.5 py-0.5 rounded-full">
               {localSettings.dateOverrides.length}
@@ -202,7 +206,9 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                   <div className="flex items-center gap-3">
                     {daySchedule.isAvailable && daySchedule.slots.length > 0 && (
                       <span className="text-sm text-gray-400">
-                        {daySchedule.slots.length} slot{daySchedule.slots.length > 1 ? 's' : ''}
+                        {daySchedule.slots.length > 1
+                          ? t('provider.availabilityEditor.slots', { count: daySchedule.slots.length })
+                          : t('provider.availabilityEditor.slot', { count: daySchedule.slots.length })}
                       </span>
                     )}
                     <ChevronDown
@@ -230,8 +236,8 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                           </select>
                         </div>
                         
-                        <span className="text-gray-500">to</span>
-                        
+                        <span className="text-gray-500">{t('provider.availabilityEditor.slotTo')}</span>
+
                         <div className="flex items-center gap-2 bg-[#2A2D3A] rounded-lg px-3 py-2">
                           <select
                             value={slot.end}
@@ -260,15 +266,15 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                         onClick={() => addTimeSlot(key)}
                       >
                         <Plus className="w-4 h-4 mr-1" />
-                        Add Slot
+                        {t('provider.availabilityEditor.addSlot')}
                       </Button>
-                      
+
                       <button
                         onClick={() => copyToAllDays(key)}
                         className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white transition-colors"
                       >
                         <Copy className="w-4 h-4" />
-                        Copy to all days
+                        {t('provider.availabilityEditor.copyToAll')}
                       </button>
                     </div>
                   </div>
@@ -284,7 +290,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
         <div className="p-6 space-y-4">
           <div className="flex items-end gap-3">
             <div className="flex-1">
-              <label className="block text-sm text-gray-400 mb-2">Add Date Override</label>
+              <label className="block text-sm text-gray-400 mb-2">{t('provider.availabilityEditor.override.addLabel')}</label>
               <input
                 type="date"
                 value={newOverrideDate}
@@ -294,16 +300,16 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
             </div>
             <Button onClick={addDateOverride} disabled={!newOverrideDate}>
               <Plus className="w-4 h-4 mr-1" />
-              Add
+              {t('provider.availabilityEditor.override.add')}
             </Button>
           </div>
 
           {localSettings.dateOverrides.length === 0 ? (
             <div className="text-center py-8">
               <AlertCircle className="w-12 h-12 text-gray-500 mx-auto mb-3" />
-              <p className="text-gray-400">No date overrides yet</p>
+              <p className="text-gray-400">{t('provider.availabilityEditor.override.empty')}</p>
               <p className="text-sm text-gray-500 mt-1">
-                Add specific dates to block or modify availability
+                {t('provider.availabilityEditor.override.emptyHint')}
               </p>
             </div>
           ) : (
@@ -332,7 +338,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                             onChange={() => updateDateOverride(override.id, { isAvailable: false })}
                             className="w-4 h-4 text-section-primary focus:ring-section-primary"
                           />
-                          <span className="text-sm text-gray-400">Unavailable</span>
+                          <span className="text-sm text-gray-400">{t('provider.availabilityEditor.override.unavailable')}</span>
                         </label>
                         <label className="flex items-center gap-2">
                           <input
@@ -341,7 +347,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                             onChange={() => updateDateOverride(override.id, { isAvailable: true })}
                             className="w-4 h-4 text-section-primary focus:ring-section-primary"
                           />
-                          <span className="text-sm text-gray-400">Custom hours</span>
+                          <span className="text-sm text-gray-400">{t('provider.availabilityEditor.override.customHours')}</span>
                         </label>
                       </div>
 
@@ -357,7 +363,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                                   <option key={time} value={time}>{time}</option>
                                 ))}
                               </select>
-                              <span className="text-gray-500">to</span>
+                              <span className="text-gray-500">{t('provider.availabilityEditor.slotTo')}</span>
                               <select
                                 value={slot.end}
                                 className="bg-[#2A2D3A] rounded px-2 py-1 text-sm text-white outline-none"
@@ -370,14 +376,14 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                           ))}
                           <Button variant="secondary" size="sm">
                             <Plus className="w-3 h-3 mr-1" />
-                            Add Slot
+                            {t('provider.availabilityEditor.addSlot')}
                           </Button>
                         </div>
                       )}
 
                       <input
                         type="text"
-                        placeholder="Reason (optional)"
+                        placeholder={t('provider.availabilityEditor.override.reason')}
                         value={override.reason || ''}
                         onChange={(e) => updateDateOverride(override.id, { reason: e.target.value })}
                         className="mt-3 w-full bg-[#2A2D3A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 outline-none focus:border-section-primary"
@@ -400,32 +406,32 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
 
       {/* Settings */}
       <div className="border-t border-white/5 p-6">
-        <h4 className="font-medium text-white mb-4">General Settings</h4>
-        
+        <h4 className="font-medium text-white mb-4">{t('provider.availabilityEditor.settings.title')}</h4>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Buffer Time (minutes)</label>
+            <label className="block text-sm text-gray-400 mb-2">{t('provider.availabilityEditor.settings.bufferTime')}</label>
             <select
               value={localSettings.bufferMinutes}
               onChange={(e) => setLocalSettings(prev => ({ ...prev, bufferMinutes: parseInt(e.target.value) }))}
               className="w-full bg-[#1A1D29] border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-section-primary"
             >
-              <option value={0}>No buffer</option>
-              <option value={5}>5 minutes</option>
-              <option value={10}>10 minutes</option>
-              <option value={15}>15 minutes</option>
-              <option value={30}>30 minutes</option>
+              <option value={0}>{t('provider.availabilityEditor.settings.bufferNone')}</option>
+              <option value={5}>{t('provider.availabilityEditor.settings.buffer5')}</option>
+              <option value={10}>{t('provider.availabilityEditor.settings.buffer10')}</option>
+              <option value={15}>{t('provider.availabilityEditor.settings.buffer15')}</option>
+              <option value={30}>{t('provider.availabilityEditor.settings.buffer30')}</option>
             </select>
           </div>
           
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Min. Advance Notice (hours)</label>
+            <label className="block text-sm text-gray-400 mb-2">{t('provider.availabilityEditor.settings.advanceNotice')}</label>
             <select
               value={localSettings.minAdvanceNoticeHours}
               onChange={(e) => setLocalSettings(prev => ({ ...prev, minAdvanceNoticeHours: parseInt(e.target.value) }))}
               className="w-full bg-[#1A1D29] border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-section-primary"
             >
-              <option value={0}>Same day</option>
+              <option value={0}>{t('provider.availabilityEditor.settings.sameDay')}</option>
               <option value={1}>1 hour</option>
               <option value={2}>2 hours</option>
               <option value={6}>6 hours</option>
@@ -436,7 +442,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
           </div>
           
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Max Bookings per Day</label>
+            <label className="block text-sm text-gray-400 mb-2">{t('provider.availabilityEditor.settings.maxBookings')}</label>
             <input
               type="number"
               min={1}
@@ -448,7 +454,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
           </div>
           
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Timezone</label>
+            <label className="block text-sm text-gray-400 mb-2">{t('provider.availabilityEditor.settings.timezone')}</label>
             <select
               value={localSettings.timezone}
               onChange={(e) => setLocalSettings(prev => ({ ...prev, timezone: e.target.value }))}
@@ -472,7 +478,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
           isLoading={loading}
           fullWidth
         >
-          Save Availability Settings
+          {t('provider.availabilityEditor.save')}
         </Button>
       </div>
     </div>

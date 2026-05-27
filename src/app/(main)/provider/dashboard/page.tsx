@@ -15,9 +15,11 @@ import {
 import { StatCard } from '@/components/provider/StatCard';
 import { Button } from '@/components/ui/button';
 import { useProviderStore } from '@/stores/providerStore';
+import { useI18n } from '@/hooks/useI18n';
 import Link from 'next/link';
 
 export default function ProviderDashboardPage() {
+  const { t } = useI18n();
   const {
     dashboardStats,
     bookings,
@@ -68,22 +70,22 @@ export default function ProviderDashboardPage() {
       {/* Welcome Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Welcome back! 👋</h1>
+          <h1 className="text-2xl font-bold text-white">{t('provider.dashboard.title')}</h1>
           <p className="text-gray-400 mt-1">
-            Here&apos;s what&apos;s happening with your business today.
+            {t('provider.dashboard.subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-3">
           <Link href="/provider/availability">
             <Button variant="secondary" size="sm">
               <Clock className="w-4 h-4 mr-2" />
-              Set Availability
+              {t('provider.dashboard.btn.setAvailability')}
             </Button>
           </Link>
           <Link href="/provider/schedule">
             <Button size="sm">
               <Calendar className="w-4 h-4 mr-2" />
-              View Calendar
+              {t('provider.dashboard.btn.viewCalendar')}
             </Button>
           </Link>
         </div>
@@ -92,46 +94,46 @@ export default function ProviderDashboardPage() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard
-          title="Today's Appointments"
+          title={t('provider.dashboard.stats.todayAppointments')}
           value={stats.todayAppointments}
           icon={Calendar}
           trend={12}
-          trendLabel="vs yesterday"
+          trendLabel={t('provider.dashboard.trend.vsYesterday')}
         />
         <StatCard
-          title="This Week's Bookings"
+          title={t('provider.dashboard.stats.weekBookings')}
           value={stats.weekBookings}
           icon={TrendingUp}
           trend={8}
-          trendLabel="vs last week"
+          trendLabel={t('provider.dashboard.trend.vsLastWeek')}
         />
         <StatCard
-          title="This Month's Earnings"
+          title={t('provider.dashboard.stats.monthEarnings')}
           value={`€${stats.monthEarnings.toLocaleString()}`}
           icon={Wallet}
           trend={15}
-          trendLabel="vs last month"
+          trendLabel={t('provider.dashboard.trend.vsLastMonth')}
         />
         <StatCard
-          title="New Clients"
+          title={t('provider.dashboard.stats.newClients')}
           value={stats.newClients}
           icon={Users}
           trend={20}
-          trendLabel="vs last month"
+          trendLabel={t('provider.dashboard.trend.vsLastMonth')}
         />
         <StatCard
-          title="Completion Rate"
+          title={t('provider.dashboard.stats.completionRate')}
           value={`${stats.completionRate}%`}
           icon={CheckCircle}
           trend={2}
-          trendLabel="vs last month"
+          trendLabel={t('provider.dashboard.trend.vsLastMonth')}
         />
         <StatCard
-          title="Average Rating"
+          title={t('provider.dashboard.stats.averageRating')}
           value={stats.averageRating}
           icon={Star}
           trend={5}
-          trendLabel="vs last month"
+          trendLabel={t('provider.dashboard.trend.vsLastMonth')}
         />
       </div>
 
@@ -140,12 +142,12 @@ export default function ProviderDashboardPage() {
         <div className="lg:col-span-2">
           <div className="bg-[#2A2D3A] rounded-xl border border-white/5 overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b border-white/5">
-              <h2 className="text-lg font-semibold text-white">Upcoming Appointments</h2>
+              <h2 className="text-lg font-semibold text-white">{t('provider.dashboard.upcoming.title')}</h2>
               <Link
                 href="/provider/bookings"
                 className="text-sm text-section-primary hover:underline flex items-center gap-1"
               >
-                View all
+                {t('provider.dashboard.upcoming.viewAll')}
                 <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
@@ -154,9 +156,9 @@ export default function ProviderDashboardPage() {
               {upcomingBookings.length === 0 ? (
                 <div className="p-8 text-center">
                   <Calendar className="w-12 h-12 text-gray-500 mx-auto mb-3" />
-                  <p className="text-gray-400">No upcoming appointments</p>
+                  <p className="text-gray-400">{t('provider.dashboard.upcoming.empty.title')}</p>
                   <p className="text-sm text-gray-500 mt-1">
-                    Your schedule is clear for now
+                    {t('provider.dashboard.upcoming.empty.subtitle')}
                   </p>
                 </div>
               ) : (
@@ -178,7 +180,7 @@ export default function ProviderDashboardPage() {
                         <p className="font-medium text-white">{booking.userName}</p>
                         <p className="text-sm text-gray-400">{booking.serviceName}</p>
                         {booking.bookingType === 'virtual' && (
-                          <span className="text-xs text-blue-400">Virtual</span>
+                          <span className="text-xs text-blue-400">{t('provider.dashboard.upcoming.virtual')}</span>
                         )}
                       </div>
                     </div>
@@ -192,7 +194,7 @@ export default function ProviderDashboardPage() {
                       </span>
                       <Link href={`/provider/bookings/${booking.id}`}>
                         <Button variant="secondary" size="sm">
-                          Details
+                          {t('provider.dashboard.upcoming.details')}
                         </Button>
                       </Link>
                     </div>
@@ -207,7 +209,7 @@ export default function ProviderDashboardPage() {
         <div>
           <div className="bg-[#2A2D3A] rounded-xl border border-white/5 overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b border-white/5">
-              <h2 className="text-lg font-semibold text-white">Recent Activity</h2>
+              <h2 className="text-lg font-semibold text-white">{t('provider.dashboard.activity.title')}</h2>
               <Bell className="w-5 h-5 text-gray-400" />
             </div>
 
@@ -215,9 +217,9 @@ export default function ProviderDashboardPage() {
               {activities.length === 0 ? (
                 <div className="text-center py-8">
                   <Bell className="w-10 h-10 text-gray-600 mx-auto mb-3" />
-                  <p className="text-sm text-gray-400">No recent activity</p>
+                  <p className="text-sm text-gray-400">{t('provider.dashboard.activity.empty.title')}</p>
                   <p className="text-xs text-gray-500 mt-1">
-                    Activities will appear here when you get bookings
+                    {t('provider.dashboard.activity.empty.subtitle')}
                   </p>
                 </div>
               ) : (
@@ -240,13 +242,13 @@ export default function ProviderDashboardPage() {
 
           {/* Quick Stats */}
           <div className="mt-6 bg-section-gradient rounded-xl p-6">
-            <h3 className="text-lg font-semibold text-white mb-2">Ready to grow?</h3>
+            <h3 className="text-lg font-semibold text-white mb-2">{t('provider.dashboard.grow.title')}</h3>
             <p className="text-sm text-white/80 mb-4">
-              Complete your profile to attract more clients and increase your visibility.
+              {t('provider.dashboard.grow.subtitle')}
             </p>
             <Link href="/profile/edit">
               <Button variant="secondary" fullWidth>
-                Complete Profile
+                {t('provider.dashboard.grow.cta')}
               </Button>
             </Link>
           </div>

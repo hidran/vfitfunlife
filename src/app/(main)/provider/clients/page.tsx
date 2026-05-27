@@ -5,12 +5,14 @@ import { Search, Users, Calendar, DollarSign, ChevronRight, FileText } from 'luc
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { useProviderStore } from '@/stores/providerStore';
+import { useI18n } from '@/hooks/useI18n';
 import { ProviderClient } from '@/types/provider';
 import Link from 'next/link';
 
 // Real data is fetched from Firestore via providerStore
 
 export default function ProviderClientsPage() {
+  const { t } = useI18n();
   const { clients, isLoadingClients, fetchClients } = useProviderStore();
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -27,7 +29,7 @@ export default function ProviderClientsPage() {
   );
 
   const formatDate = (date?: Date) => {
-    if (!date) return 'Never';
+    if (!date) return t('provider.clients.never');
     return new Date(date).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -40,15 +42,15 @@ export default function ProviderClientsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Clients</h1>
+          <h1 className="text-2xl font-bold text-white">{t('provider.clients.title')}</h1>
           <p className="text-gray-400 mt-1">
-            Manage your client relationships and history
+            {t('provider.clients.subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-3">
           <div className="text-right">
             <p className="text-2xl font-bold text-white">{displayClients.length}</p>
-            <p className="text-sm text-gray-400">Total Clients</p>
+            <p className="text-sm text-gray-400">{t('provider.clients.totalClients')}</p>
           </div>
         </div>
       </div>
@@ -59,7 +61,7 @@ export default function ProviderClientsPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
             type="text"
-            placeholder="Search clients by name or email..."
+            placeholder={t('provider.clients.search.placeholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-[#2A2D3A] border border-white/5 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder-gray-500 outline-none focus:border-section-primary"
@@ -101,7 +103,7 @@ export default function ProviderClientsPage() {
                   {client.notes && (
                     <div className="flex items-center gap-1 mt-1">
                       <FileText className="w-3 h-3 text-gray-500" />
-                      <span className="text-xs text-gray-500">Has notes</span>
+                      <span className="text-xs text-gray-500">{t('provider.clients.hasNotes')}</span>
                     </div>
                   )}
                 </div>
@@ -115,14 +117,14 @@ export default function ProviderClientsPage() {
                   <Calendar className="w-4 h-4" />
                 </div>
                 <p className="text-lg font-semibold text-white">{client.totalBookings}</p>
-                <p className="text-xs text-gray-500">Bookings</p>
+                <p className="text-xs text-gray-500">{t('provider.clients.stat.bookings')}</p>
               </div>
               <div className="text-center border-x border-white/5">
                 <div className="flex items-center justify-center gap-1 text-gray-400 mb-1">
                   <DollarSign className="w-4 h-4" />
                 </div>
                 <p className="text-lg font-semibold text-white">€{client.totalSpent}</p>
-                <p className="text-xs text-gray-500">Total Spent</p>
+                <p className="text-xs text-gray-500">{t('provider.clients.stat.totalSpent')}</p>
               </div>
               <div className="text-center">
                 <div className="flex items-center justify-center gap-1 text-gray-400 mb-1">
@@ -131,7 +133,7 @@ export default function ProviderClientsPage() {
                 <p className="text-lg font-semibold text-white">
                   {formatDate(client.lastVisit)}
                 </p>
-                <p className="text-xs text-gray-500">Last Visit</p>
+                <p className="text-xs text-gray-500">{t('provider.clients.stat.lastVisit')}</p>
               </div>
             </div>
           </Link>
@@ -141,8 +143,8 @@ export default function ProviderClientsPage() {
       {filteredClients.length === 0 && (
         <div className="text-center py-12">
           <Users className="w-12 h-12 text-gray-500 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-white mb-2">No clients found</h3>
-          <p className="text-gray-400">Try adjusting your search terms</p>
+          <h3 className="text-lg font-medium text-white mb-2">{t('provider.clients.empty.title')}</h3>
+          <p className="text-gray-400">{t('provider.clients.empty.subtitle')}</p>
         </div>
       )}
     </div>

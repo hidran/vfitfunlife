@@ -5,22 +5,24 @@ import { Search, Filter, Download, Calendar, ChevronDown } from 'lucide-react';
 import { BookingTable } from '@/components/provider/BookingTable';
 import { Button } from '@/components/ui/button';
 import { useProviderStore } from '@/stores/providerStore';
+import { useI18n } from '@/hooks/useI18n';
 import { BookingFilters, ProviderBooking } from '@/types/provider';
 import { BookingStatus } from '@/types/firebase';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
-const TABS: { id: BookingStatus | 'all'; label: string }[] = [
-  { id: 'all', label: 'All' },
-  { id: 'pending', label: 'Pending' },
-  { id: 'confirmed', label: 'Confirmed' },
-  { id: 'completed', label: 'Completed' },
-  { id: 'cancelled', label: 'Cancelled' },
-];
-
 export default function ProviderBookingsPage() {
+  const { t } = useI18n();
   const { bookings, isLoadingBookings, fetchBookings, confirmBooking, completeBooking, cancelBooking } = useProviderStore();
   const [activeTab, setActiveTab] = useState<BookingStatus | 'all'>('all');
+
+  const TABS: { id: BookingStatus | 'all'; label: string }[] = [
+    { id: 'all', label: t('provider.bookings.tab.all') },
+    { id: 'pending', label: t('provider.bookings.tab.pending') },
+    { id: 'confirmed', label: t('provider.bookings.tab.confirmed') },
+    { id: 'completed', label: t('provider.bookings.tab.completed') },
+    { id: 'cancelled', label: t('provider.bookings.tab.cancelled') },
+  ];
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -60,7 +62,7 @@ export default function ProviderBookingsPage() {
   };
 
   const handleCancel = async (id: string) => {
-    if (confirm('Are you sure you want to cancel this booking?')) {
+    if (confirm(t('provider.bookings.confirm.cancel'))) {
       await cancelBooking(id);
     }
   };
@@ -104,15 +106,15 @@ export default function ProviderBookingsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Bookings</h1>
+          <h1 className="text-2xl font-bold text-white">{t('provider.bookings.title')}</h1>
           <p className="text-gray-400 mt-1">
-            Manage and track all your appointments
+            {t('provider.bookings.subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-3">
           {selectedIds.length > 0 && (
             <Button variant="secondary" size="sm">
-              Bulk Actions ({selectedIds.length})
+              {t('provider.bookings.btn.bulkActions', { count: selectedIds.length })}
             </Button>
           )}
           <Button
@@ -121,7 +123,7 @@ export default function ProviderBookingsPage() {
             onClick={handleExport}
           >
             <Download className="w-4 h-4 mr-2" />
-            Export
+            {t('provider.bookings.btn.export')}
           </Button>
         </div>
       </div>
@@ -150,7 +152,7 @@ export default function ProviderBookingsPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
             type="text"
-            placeholder="Search by client name..."
+            placeholder={t('provider.bookings.search.placeholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-[#2A2D3A] border border-white/5 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder-gray-500 outline-none focus:border-section-primary"
@@ -162,7 +164,7 @@ export default function ProviderBookingsPage() {
           className={showFilters ? 'bg-white/10' : ''}
         >
           <Filter className="w-4 h-4 mr-2" />
-          Filters
+          {t('provider.bookings.btn.filters')}
           <ChevronDown className={cn('w-4 h-4 ml-2 transition-transform', showFilters && 'rotate-180')} />
         </Button>
       </div>
@@ -172,14 +174,14 @@ export default function ProviderBookingsPage() {
         <div className="bg-[#2A2D3A] rounded-xl border border-white/5 p-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-2">Date Range</label>
+              <label className="block text-sm text-gray-400 mb-2">{t('provider.bookings.filter.dateRange')}</label>
               <div className="flex items-center gap-2">
                 <input
                   type="date"
                   onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.valueAsDate || undefined }))}
                   className="flex-1 bg-[#1A1D29] border border-white/10 rounded-lg px-3 py-2 text-white outline-none focus:border-section-primary"
                 />
-                <span className="text-gray-400">to</span>
+                <span className="text-gray-400">{t('provider.bookings.filter.dateTo')}</span>
                 <input
                   type="date"
                   onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.valueAsDate || undefined }))}
@@ -196,7 +198,7 @@ export default function ProviderBookingsPage() {
                 }}
                 fullWidth
               >
-                Clear Filters
+                {t('provider.bookings.filter.clear')}
               </Button>
             </div>
           </div>

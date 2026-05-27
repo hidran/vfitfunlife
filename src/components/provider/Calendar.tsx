@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScheduleEvent, CalendarView, ScheduleEventStatus } from '@/types/provider';
+import { useI18n } from '@/hooks/useI18n';
 import { cn } from '@/lib/utils';
 
 interface CalendarProps {
@@ -16,11 +17,7 @@ interface CalendarProps {
   loading?: boolean;
 }
 
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December'
-];
+const VIEW_KEYS: CalendarView[] = ['month', 'week', 'day', 'agenda'];
 
 const STATUS_COLORS: Record<ScheduleEventStatus | string, string> = {
   pending: 'bg-yellow-500/20 border-yellow-500/50 text-yellow-400',
@@ -39,8 +36,39 @@ export function Calendar({
   onViewChange,
   loading = false,
 }: CalendarProps) {
+  const { t } = useI18n();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+
+  const DAYS = [
+    t('provider.calendar.day.sun'),
+    t('provider.calendar.day.mon'),
+    t('provider.calendar.day.tue'),
+    t('provider.calendar.day.wed'),
+    t('provider.calendar.day.thu'),
+    t('provider.calendar.day.fri'),
+    t('provider.calendar.day.sat'),
+  ];
+  const MONTHS = [
+    t('provider.calendar.month.january'),
+    t('provider.calendar.month.february'),
+    t('provider.calendar.month.march'),
+    t('provider.calendar.month.april'),
+    t('provider.calendar.month.may'),
+    t('provider.calendar.month.june'),
+    t('provider.calendar.month.july'),
+    t('provider.calendar.month.august'),
+    t('provider.calendar.month.september'),
+    t('provider.calendar.month.october'),
+    t('provider.calendar.month.november'),
+    t('provider.calendar.month.december'),
+  ];
+  const VIEW_LABELS: Record<CalendarView, string> = {
+    month: t('provider.calendar.view.month'),
+    week: t('provider.calendar.view.week'),
+    day: t('provider.calendar.view.day'),
+    agenda: t('provider.calendar.view.agenda'),
+  };
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -137,7 +165,7 @@ export function Calendar({
         
         <div className="flex items-center gap-2">
           <div className="flex bg-[#1A1D29] rounded-lg p-1">
-            {(['month', 'week', 'day', 'agenda'] as CalendarView[]).map((v) => (
+            {VIEW_KEYS.map((v) => (
               <button
                 key={v}
                 onClick={() => onViewChange?.(v)}
@@ -148,7 +176,7 @@ export function Calendar({
                     : 'text-gray-400 hover:text-white'
                 )}
               >
-                {v}
+                {VIEW_LABELS[v]}
               </button>
             ))}
           </div>
@@ -158,7 +186,7 @@ export function Calendar({
             onClick={() => setCurrentDate(new Date())}
           >
             <CalendarIcon className="w-4 h-4 mr-1" />
-            Today
+            {t('provider.calendar.today')}
           </Button>
         </div>
       </div>
@@ -167,23 +195,23 @@ export function Calendar({
       <div className="flex items-center gap-4 px-4 py-2 border-b border-white/5 text-xs">
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-full bg-green-500/50" />
-          <span className="text-gray-400">Confirmed</span>
+          <span className="text-gray-400">{t('provider.calendar.legend.confirmed')}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-full bg-yellow-500/50" />
-          <span className="text-gray-400">Pending</span>
+          <span className="text-gray-400">{t('provider.calendar.legend.pending')}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-full bg-gray-500/50" />
-          <span className="text-gray-400">Completed</span>
+          <span className="text-gray-400">{t('provider.calendar.legend.completed')}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-full bg-red-500/50" />
-          <span className="text-gray-400">Cancelled</span>
+          <span className="text-gray-400">{t('provider.calendar.legend.cancelled')}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-full bg-[#1A1D29] border border-white/20" />
-          <span className="text-gray-400">Blocked</span>
+          <span className="text-gray-400">{t('provider.calendar.legend.blocked')}</span>
         </div>
       </div>
 
@@ -262,7 +290,7 @@ export function Calendar({
                   ))}
                   {dateEvents.length > 3 && (
                     <div className="text-xs text-gray-500 pl-1">
-                      +{dateEvents.length - 3} more
+                      {t('provider.calendar.more', { count: dateEvents.length - 3 })}
                     </div>
                   )}
                 </div>

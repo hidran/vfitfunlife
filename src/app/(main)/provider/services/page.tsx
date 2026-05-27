@@ -8,12 +8,14 @@ import { ProviderService } from '@/types/provider';
 import { Modal } from '@/components/ui/Modal';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
+import { useI18n } from '@/hooks/useI18n';
 import { fetchProviderServices } from '@/lib/firebase/providers';
 import { useProvider } from '@/hooks/useProviders';
 import { useUpdateProviderPhotos } from '@/hooks/usePhotoUpload';
 import { PhotoUploader } from '@/components/gallery/PhotoUploader';
 
 export default function ProviderServicesPage() {
+  const { t } = useI18n();
   const { services, isLoadingServices, fetchServices, updateService, deleteService } = useProviderStore();
   const [displayServices, setDisplayServices] = useState<ProviderService[]>([]);
   const nextServiceIdRef = useRef(1);
@@ -72,7 +74,7 @@ export default function ProviderServicesPage() {
   };
 
   const handleDelete = (serviceId: string) => {
-    if (confirm('Are you sure you want to delete this service?')) {
+    if (confirm(t('provider.services.confirm.delete'))) {
       setDisplayServices(displayServices.filter(s => s.id !== serviceId));
     }
   };
@@ -118,14 +120,14 @@ export default function ProviderServicesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Services</h1>
+          <h1 className="text-2xl font-bold text-white">{t('provider.services.title')}</h1>
           <p className="text-gray-400 mt-1">
-            Manage the services you offer to clients
+            {t('provider.services.subtitle')}
           </p>
         </div>
         <Button onClick={() => setShowAddModal(true)}>
           <Plus className="w-4 h-4 mr-2" />
-          Add Service
+          {t('provider.services.btn.addService')}
         </Button>
       </div>
 
@@ -141,7 +143,7 @@ export default function ProviderServicesPage() {
               : 'border-transparent text-text-secondary'
           )}
         >
-          Servizi
+          {t('provider.services.tab.services')}
         </button>
         <button
           type="button"
@@ -153,14 +155,14 @@ export default function ProviderServicesPage() {
               : 'border-transparent text-text-secondary'
           )}
         >
-          Galleria
+          {t('provider.services.tab.gallery')}
         </button>
       </div>
 
       {activeTab === 'gallery' && (
         <div>
           {!uid ? (
-            <p className="text-sm text-text-secondary">Accedi per gestire la tua galleria.</p>
+            <p className="text-sm text-text-secondary">{t('provider.services.gallery.loginHint')}</p>
           ) : (
             <PhotoUploader
               scope="instructors"
@@ -191,7 +193,7 @@ export default function ProviderServicesPage() {
                   <h3 className="font-semibold text-white">{service.serviceName}</h3>
                   {!service.isActive && (
                     <span className="px-2 py-0.5 bg-gray-500/20 text-gray-400 text-xs rounded-full">
-                      Inactive
+                      {t('provider.services.card.inactive')}
                     </span>
                   )}
                 </div>
@@ -207,23 +209,23 @@ export default function ProviderServicesPage() {
                     className="w-full px-4 py-2 text-left text-sm text-white hover:bg-white/5 flex items-center gap-2"
                   >
                     <Edit className="w-4 h-4" />
-                    Edit
+                    {t('provider.services.menu.edit')}
                   </button>
                   <button
                     onClick={() => handleDuplicate(service)}
                     className="w-full px-4 py-2 text-left text-sm text-white hover:bg-white/5 flex items-center gap-2"
                   >
                     <Copy className="w-4 h-4" />
-                    Duplicate
+                    {t('provider.services.menu.duplicate')}
                   </button>
                   <button
                     onClick={() => handleToggleActive(service)}
                     className="w-full px-4 py-2 text-left text-sm text-white hover:bg-white/5 flex items-center gap-2"
                   >
                     {service.isActive ? (
-                      <><X className="w-4 h-4" /> Deactivate</>
+                      <><X className="w-4 h-4" /> {t('provider.services.menu.deactivate')}</>
                     ) : (
-                      <><Check className="w-4 h-4" /> Activate</>
+                      <><Check className="w-4 h-4" /> {t('provider.services.menu.activate')}</>
                     )}
                   </button>
                   {service.bookingCount === 0 && (
@@ -232,7 +234,7 @@ export default function ProviderServicesPage() {
                       className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-2"
                     >
                       <Trash2 className="w-4 h-4" />
-                      Delete
+                      {t('provider.services.menu.delete')}
                     </button>
                   )}
                 </div>
@@ -247,14 +249,14 @@ export default function ProviderServicesPage() {
               <div className="bg-[#1A1D29] rounded-lg p-3">
                 <div className="flex items-center gap-1 text-gray-400 text-xs mb-1">
                   <DollarSign className="w-3 h-3" />
-                  Price
+                  {t('provider.services.card.price')}
                 </div>
                 <p className="text-lg font-semibold text-white">€{service.price}</p>
               </div>
               <div className="bg-[#1A1D29] rounded-lg p-3">
                 <div className="flex items-center gap-1 text-gray-400 text-xs mb-1">
                   <Clock className="w-3 h-3" />
-                  Duration
+                  {t('provider.services.card.duration')}
                 </div>
                 <p className="text-lg font-semibold text-white">{service.durationMinutes} min</p>
               </div>
@@ -263,10 +265,10 @@ export default function ProviderServicesPage() {
             <div className="flex items-center justify-between text-sm text-gray-400 pt-4 border-t border-white/5">
               <div className="flex items-center gap-1">
                 <Users className="w-4 h-4" />
-                {service.bookingCount} bookings
+                {t('provider.services.card.bookings', { count: service.bookingCount })}
               </div>
               <div>
-                €{service.revenue} earned
+                {t('provider.services.card.earned', { amount: `€${service.revenue}` })}
               </div>
             </div>
           </div>
@@ -277,11 +279,11 @@ export default function ProviderServicesPage() {
       {editingService && (
         <Modal onClose={() => setEditingService(null)}>
           <div className="bg-[#2A2D3A] rounded-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-xl font-semibold text-white mb-6">Edit Service</h3>
-            
+            <h3 className="text-xl font-semibold text-white mb-6">{t('provider.services.edit.title')}</h3>
+
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Service Name</label>
+                <label className="block text-sm text-gray-400 mb-2">{t('provider.services.edit.serviceName')}</label>
                 <input
                   type="text"
                   value={editingService.serviceName}
@@ -291,7 +293,7 @@ export default function ProviderServicesPage() {
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Description</label>
+                <label className="block text-sm text-gray-400 mb-2">{t('provider.services.edit.description')}</label>
                 <textarea
                   value={editingService.description}
                   onChange={(e) => setEditingService({ ...editingService, description: e.target.value })}
@@ -301,7 +303,7 @@ export default function ProviderServicesPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">Price (€)</label>
+                  <label className="block text-sm text-gray-400 mb-2">{t('provider.services.edit.price')}</label>
                   <input
                     type="number"
                     value={editingService.price}
@@ -310,7 +312,7 @@ export default function ProviderServicesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">Duration (min)</label>
+                  <label className="block text-sm text-gray-400 mb-2">{t('provider.services.edit.duration')}</label>
                   <input
                     type="number"
                     value={editingService.durationMinutes}
@@ -328,16 +330,16 @@ export default function ProviderServicesPage() {
                   onChange={(e) => setEditingService({ ...editingService, isActive: e.target.checked })}
                   className="w-5 h-5 rounded border-white/20 bg-transparent text-section-primary focus:ring-section-primary"
                 />
-                <label htmlFor="isActive" className="text-white">Service is active</label>
+                <label htmlFor="isActive" className="text-white">{t('provider.services.edit.isActive')}</label>
               </div>
             </div>
 
             <div className="flex gap-3 mt-6">
               <Button onClick={handleSaveEdit} fullWidth>
-                Save Changes
+                {t('provider.services.edit.save')}
               </Button>
               <Button variant="secondary" onClick={() => setEditingService(null)}>
-                Cancel
+                {t('provider.services.edit.cancel')}
               </Button>
             </div>
           </div>
@@ -348,33 +350,33 @@ export default function ProviderServicesPage() {
       {showAddModal && (
         <Modal onClose={() => setShowAddModal(false)}>
           <div className="bg-[#2A2D3A] rounded-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-xl font-semibold text-white mb-6">Add New Service</h3>
+            <h3 className="text-xl font-semibold text-white mb-6">{t('provider.services.add.title')}</h3>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Service Name</label>
+                <label className="block text-sm text-gray-400 mb-2">{t('provider.services.edit.serviceName')}</label>
                 <input
                   type="text"
                   value={newService.serviceName}
                   onChange={(e) => setNewService({ ...newService, serviceName: e.target.value })}
                   className="w-full bg-[#1A1D29] border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-section-primary"
-                  placeholder="e.g., Personal Training"
+                  placeholder={t('provider.services.add.serviceNamePlaceholder')}
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Description</label>
+                <label className="block text-sm text-gray-400 mb-2">{t('provider.services.edit.description')}</label>
                 <textarea
                   value={newService.description}
                   onChange={(e) => setNewService({ ...newService, description: e.target.value })}
                   className="w-full bg-[#1A1D29] border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-section-primary min-h-[80px]"
-                  placeholder="Describe your service..."
+                  placeholder={t('provider.services.add.descriptionPlaceholder')}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">Price (€)</label>
+                  <label className="block text-sm text-gray-400 mb-2">{t('provider.services.edit.price')}</label>
                   <input
                     type="number"
                     value={newService.price}
@@ -384,7 +386,7 @@ export default function ProviderServicesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">Duration (min)</label>
+                  <label className="block text-sm text-gray-400 mb-2">{t('provider.services.edit.duration')}</label>
                   <select
                     value={newService.durationMinutes}
                     onChange={(e) => setNewService({ ...newService, durationMinutes: parseInt(e.target.value) })}
@@ -406,10 +408,10 @@ export default function ProviderServicesPage() {
                 disabled={!newService.serviceName}
                 fullWidth
               >
-                Add Service
+                {t('provider.services.add.submit')}
               </Button>
               <Button variant="secondary" onClick={() => setShowAddModal(false)}>
-                Cancel
+                {t('provider.services.add.cancel')}
               </Button>
             </div>
           </div>
