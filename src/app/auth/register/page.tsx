@@ -15,6 +15,8 @@ import { useI18n } from '@/hooks/useI18n';
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import { submitProviderApplication } from '@/lib/firebase/providerApplication';
 import { ProviderOptInField } from '@/components/auth/ProviderOptInField';
+import { validatePasswordStrength } from '@/lib/auth/passwordPolicy';
+import { PasswordRequirements } from '@/components/auth/PasswordRequirements';
 
 const SECTIONS = [
   { id: 'fit' as const, label: 'VFit', color: 'from-vfit-primary to-vfit-secondary' },
@@ -115,8 +117,8 @@ export default function RegisterPage() {
       return;
     }
 
-    if (!password || password.length < 6) {
-      setError(t('auth.register.error.passwordMinLength'));
+    if (!validatePasswordStrength(password).valid) {
+      setError(t('auth.register.error.passwordWeak'));
       return;
     }
 
@@ -388,7 +390,7 @@ export default function RegisterPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-10 pr-20"
                   required
-                  minLength={6}
+                  minLength={12}
                   disabled={isLoading}
                 />
                 <button
@@ -399,7 +401,7 @@ export default function RegisterPage() {
                   {showPassword ? t('auth.common.hide') : t('auth.common.show')}
                 </button>
               </div>
-              <p className="text-xs text-text-tertiary">{t('auth.register.passwordMinHint')}</p>
+              <PasswordRequirements password={password} />
             </div>
 
             {/* Confirm Password */}
