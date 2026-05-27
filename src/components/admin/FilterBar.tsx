@@ -4,6 +4,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/hooks/useI18n";
+import { toLocaleTag } from "@/types/locale";
 import {
   Search,
   Filter,
@@ -49,7 +50,7 @@ export function FilterBar({
   onClearFilters,
   className,
 }: FilterBarProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [showFilters, setShowFilters] = useState(false);
 
   const hasActiveFilters =
@@ -222,7 +223,7 @@ export function FilterBar({
           )}
           {dateRange?.from && (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white/10 text-white/70 text-xs rounded-full">
-              {t('admin.filter.tagFrom', { date: dateRange.from.toLocaleDateString() })}
+              {t('admin.filter.tagFrom', { date: dateRange.from.toLocaleDateString(toLocaleTag(locale)) })}
               <button
                 onClick={() => dateRange.onChange(null, dateRange.to)}
                 className="hover:text-white"
@@ -233,7 +234,7 @@ export function FilterBar({
           )}
           {dateRange?.to && (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white/10 text-white/70 text-xs rounded-full">
-              {t('admin.filter.tagTo', { date: dateRange.to.toLocaleDateString() })}
+              {t('admin.filter.tagTo', { date: dateRange.to.toLocaleDateString(toLocaleTag(locale)) })}
               <button
                 onClick={() => dateRange.onChange(dateRange.from, null)}
                 className="hover:text-white"

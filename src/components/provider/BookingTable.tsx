@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/button';
 import { BookingStatus } from '@/types/firebase';
 import { useI18n } from '@/hooks/useI18n';
+import { toLocaleTag } from '@/types/locale';
 import { cn } from '@/lib/utils';
 
 interface BookingTableProps {
@@ -44,7 +45,7 @@ export function BookingTable({
   onSelectAll,
   loading = false,
 }: BookingTableProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   const STATUS_BADGE_LABELS: Record<BookingStatus, string> = {
@@ -58,7 +59,7 @@ export function BookingTable({
 
   const formatDate = (date: Date | { toDate(): Date }) => {
     const d = typeof date === 'object' && 'toDate' in date ? date.toDate() : date;
-    return new Date(d).toLocaleDateString('en-US', {
+    return new Date(d).toLocaleDateString(toLocaleTag(locale), {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -67,7 +68,7 @@ export function BookingTable({
 
   const formatTime = (date: Date | { toDate(): Date }) => {
     const d = typeof date === 'object' && 'toDate' in date ? date.toDate() : date;
-    return new Date(d).toLocaleTimeString('en-US', {
+    return new Date(d).toLocaleTimeString(toLocaleTag(locale), {
       hour: '2-digit',
       minute: '2-digit',
     });

@@ -14,6 +14,7 @@ import {
   FileText,
 } from "lucide-react";
 import { useI18n } from "@/hooks/useI18n";
+import { toLocaleTag } from "@/types/locale";
 import type { MessageKey } from "@/i18n/messages";
 
 interface ActivityFeedProps {
@@ -40,7 +41,7 @@ const activityColors: Record<string, string> = {
 };
 
 export function ActivityFeed({ activities, className }: ActivityFeedProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   if (activities.length === 0) {
     return (
@@ -88,7 +89,7 @@ export function ActivityFeed({ activities, className }: ActivityFeedProps) {
                   )}
                 </div>
                 <span className="text-xs text-white/40 whitespace-nowrap">
-                  {formatTimestamp(activity.timestamp, t)}
+                  {formatTimestamp(activity.timestamp, t, locale)}
                 </span>
               </div>
             </div>
@@ -101,7 +102,8 @@ export function ActivityFeed({ activities, className }: ActivityFeedProps) {
 
 function formatTimestamp(
   timestamp: { toDate: () => Date } | Date | string,
-  t: (key: MessageKey, values?: Record<string, string | number>) => string
+  t: (key: MessageKey, values?: Record<string, string | number>) => string,
+  locale: import("@/types/locale").AppLocale
 ): string {
   const date = typeof timestamp === "object" && "toDate" in timestamp 
     ? timestamp.toDate() 
@@ -116,5 +118,5 @@ function formatTimestamp(
   if (diffMins < 60) return t('admin.activity.time.minutesAgo', { count: diffMins });
   if (diffHours < 24) return t('admin.activity.time.hoursAgo', { count: diffHours });
   if (diffDays < 7) return t('admin.activity.time.daysAgo', { count: diffDays });
-  return date.toLocaleDateString();
+  return date.toLocaleDateString(toLocaleTag(locale));
 }

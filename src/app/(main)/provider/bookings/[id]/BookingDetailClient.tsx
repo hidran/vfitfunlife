@@ -27,6 +27,7 @@ import { Badge } from '@/components/ui/Badge';
 import { useProviderStore } from '@/stores/providerStore';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
+import { toLocaleTag } from '@/types/locale';
 
 const STATUS_BADGE_VARIANTS = {
   pending: 'warning' as const,
@@ -38,7 +39,7 @@ const STATUS_BADGE_VARIANTS = {
 };
 
 export default function BookingDetailClient() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { id } = useParams<{ id: string }>();
   const { bookings, confirmBooking, completeBooking, cancelBooking } = useProviderStore();
   const booking = bookings.find((entry) => entry.id === id);
@@ -90,7 +91,7 @@ export default function BookingDetailClient() {
   const formatDate = (date: Date | { toDate(): Date } | null | undefined) => {
     if (!date) return 'N/A';
     const d = typeof date === 'object' && 'toDate' in date ? date.toDate() : date;
-    return new Date(d).toLocaleDateString('en-US', {
+    return new Date(d).toLocaleDateString(toLocaleTag(locale), {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -101,7 +102,7 @@ export default function BookingDetailClient() {
   const formatTime = (date: Date | { toDate(): Date } | null | undefined) => {
     if (!date) return 'N/A';
     const d = typeof date === 'object' && 'toDate' in date ? date.toDate() : date;
-    return new Date(d).toLocaleTimeString('en-US', {
+    return new Date(d).toLocaleTimeString(toLocaleTag(locale), {
       hour: '2-digit',
       minute: '2-digit',
     });
@@ -110,7 +111,7 @@ export default function BookingDetailClient() {
   const formatDateTime = (date: Date | { toDate(): Date } | null | undefined) => {
     if (!date) return 'N/A';
     const d = typeof date === 'object' && 'toDate' in date ? date.toDate() : date;
-    return new Date(d).toLocaleString('en-US');
+    return new Date(d).toLocaleString(toLocaleTag(locale));
   };
 
   const statusBadgeVariant = STATUS_BADGE_VARIANTS[booking.status as keyof typeof STATUS_BADGE_VARIANTS] ?? 'default';

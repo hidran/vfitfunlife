@@ -16,10 +16,11 @@ import { StatCard } from '@/components/provider/StatCard';
 import { Button } from '@/components/ui/button';
 import { useProviderStore } from '@/stores/providerStore';
 import { useI18n } from '@/hooks/useI18n';
+import { toLocaleTag } from '@/types/locale';
 import Link from 'next/link';
 
 export default function ProviderDashboardPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const {
     dashboardStats,
     bookings,
@@ -51,7 +52,7 @@ export default function ProviderDashboardPage() {
 
   const formatTime = (date: Date | { toDate(): Date }) => {
     const d = typeof date === 'object' && 'toDate' in date ? date.toDate() : date;
-    return new Date(d).toLocaleTimeString('en-US', {
+    return new Date(d).toLocaleTimeString(toLocaleTag(locale), {
       hour: '2-digit',
       minute: '2-digit',
     });
@@ -59,7 +60,7 @@ export default function ProviderDashboardPage() {
 
   const formatDate = (date: Date | { toDate(): Date }) => {
     const d = typeof date === 'object' && 'toDate' in date ? date.toDate() : date;
-    return new Date(d).toLocaleDateString('en-US', {
+    return new Date(d).toLocaleDateString(toLocaleTag(locale), {
       month: 'short',
       day: 'numeric',
     });

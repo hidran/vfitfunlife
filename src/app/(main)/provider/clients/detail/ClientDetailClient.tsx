@@ -21,9 +21,10 @@ import { Spinner } from '@/components/ui/Spinner';
 import { cn } from '@/lib/utils';
 import { useProviderStore } from '@/stores/providerStore';
 import { useI18n } from '@/hooks/useI18n';
+import { toLocaleTag } from '@/types/locale';
 
 export default function ClientDetailClient() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const searchParams = useSearchParams();
   const clientId = searchParams?.get('id') ?? undefined;
 
@@ -73,7 +74,7 @@ export default function ClientDetailClient() {
   const formatDate = (date: Date | { toDate(): Date } | undefined) => {
     if (!date) return t('provider.clientDetail.dateNever');
     const d = typeof date === 'object' && 'toDate' in date ? date.toDate() : date;
-    return new Date(d).toLocaleDateString('en-US', {
+    return new Date(d).toLocaleDateString(toLocaleTag(locale), {
       month: 'long',
       day: 'numeric',
       year: 'numeric',

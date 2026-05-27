@@ -7,10 +7,11 @@ import { useProviderStore } from '@/stores/providerStore';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/button';
 import { useI18n } from '@/hooks/useI18n';
+import { toLocaleTag } from '@/types/locale';
 import { X, Clock, MapPin, User, FileText } from 'lucide-react';
 
 export default function ProviderSchedulePage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { schedule, fetchSchedule, isLoadingSchedule } = useProviderStore();
   const [view, setView] = useState<CalendarView>('month');
   const [selectedEvent, setSelectedEvent] = useState<ScheduleEvent | null>(null);
@@ -32,7 +33,7 @@ export default function ProviderSchedulePage() {
   };
 
   const formatTime = (date: Date) => {
-    return new Date(date).toLocaleTimeString('en-US', {
+    return new Date(date).toLocaleTimeString(toLocaleTag(locale), {
       hour: '2-digit',
       minute: '2-digit',
     });
@@ -182,7 +183,7 @@ export default function ProviderSchedulePage() {
           <div className="bg-[#2A2D3A] rounded-xl p-6 max-w-md w-full mx-4">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-semibold text-white">
-                {selectedDate.toLocaleDateString('en-US', {
+                {selectedDate.toLocaleDateString(toLocaleTag(locale), {
                   weekday: 'long',
                   month: 'long',
                   day: 'numeric',

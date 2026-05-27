@@ -6,6 +6,7 @@ import { EarningsChart } from '@/components/provider/EarningsChart';
 import { Button } from '@/components/ui/button';
 import { useProviderStore } from '@/stores/providerStore';
 import { useI18n } from '@/hooks/useI18n';
+import { toLocaleTag } from '@/types/locale';
 import { EarningsFilters } from '@/types/provider';
 import { cn } from '@/lib/utils';
 import { Transaction } from '@/types/provider';
@@ -60,7 +61,7 @@ function generateEmptyChartData() {
 }
 
 export default function ProviderEarningsPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { earnings, isLoadingEarnings, fetchEarnings, requestWithdrawal } = useProviderStore();
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
@@ -95,7 +96,7 @@ export default function ProviderEarningsPage() {
 
   const formatDate = (date: Date | { toDate(): Date }) => {
     const d = typeof date === 'object' && 'toDate' in date ? date.toDate() : date;
-    return new Date(d).toLocaleDateString();
+    return new Date(d).toLocaleDateString(toLocaleTag(locale));
   };
 
   const handleExport = () => {

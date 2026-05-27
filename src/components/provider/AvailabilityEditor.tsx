@@ -5,6 +5,7 @@ import { Plus, Trash2, Copy, ChevronDown, Clock, Calendar, AlertCircle } from 'l
 import { Button } from '@/components/ui/button';
 import { AvailabilitySettings, DayOfWeek, DayAvailability, TimeRange, DateOverride } from '@/types/provider';
 import { useI18n } from '@/hooks/useI18n';
+import { toLocaleTag } from '@/types/locale';
 import { cn } from '@/lib/utils';
 
 interface AvailabilityEditorProps {
@@ -22,7 +23,7 @@ const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
 });
 
 export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEditorProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [localSettings, setLocalSettings] = useState<AvailabilitySettings>(settings);
 
   const DAYS: { key: DayOfWeek; label: string }[] = [
@@ -322,7 +323,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <p className="font-medium text-white">
-                        {new Date(override.date).toLocaleDateString('en-US', {
+                        {new Date(override.date).toLocaleDateString(toLocaleTag(locale), {
                           weekday: 'long',
                           year: 'numeric',
                           month: 'long',

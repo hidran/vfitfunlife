@@ -6,13 +6,14 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { useProviderStore } from '@/stores/providerStore';
 import { useI18n } from '@/hooks/useI18n';
+import { toLocaleTag } from '@/types/locale';
 import { ProviderClient } from '@/types/provider';
 import Link from 'next/link';
 
 // Real data is fetched from Firestore via providerStore
 
 export default function ProviderClientsPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { clients, isLoadingClients, fetchClients } = useProviderStore();
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -30,7 +31,7 @@ export default function ProviderClientsPage() {
 
   const formatDate = (date?: Date) => {
     if (!date) return t('provider.clients.never');
-    return new Date(date).toLocaleDateString('en-US', {
+    return new Date(date).toLocaleDateString(toLocaleTag(locale), {
       month: 'short',
       day: 'numeric',
       year: 'numeric',

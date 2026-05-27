@@ -6,13 +6,14 @@ import { BookingTable } from '@/components/provider/BookingTable';
 import { Button } from '@/components/ui/button';
 import { useProviderStore } from '@/stores/providerStore';
 import { useI18n } from '@/hooks/useI18n';
+import { toLocaleTag } from '@/types/locale';
 import { BookingFilters, ProviderBooking } from '@/types/provider';
 import { BookingStatus } from '@/types/firebase';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
 export default function ProviderBookingsPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { bookings, isLoadingBookings, fetchBookings, confirmBooking, completeBooking, cancelBooking } = useProviderStore();
   const [activeTab, setActiveTab] = useState<BookingStatus | 'all'>('all');
 
@@ -69,12 +70,12 @@ export default function ProviderBookingsPage() {
 
   const formatDate = (date: Date | { toDate(): Date }) => {
     const d = typeof date === 'object' && 'toDate' in date ? date.toDate() : date;
-    return new Date(d).toLocaleDateString();
+    return new Date(d).toLocaleDateString(toLocaleTag(locale));
   };
 
   const formatTime = (date: Date | { toDate(): Date }) => {
     const d = typeof date === 'object' && 'toDate' in date ? date.toDate() : date;
-    return new Date(d).toLocaleTimeString();
+    return new Date(d).toLocaleTimeString(toLocaleTag(locale));
   };
 
   const handleExport = () => {

@@ -5,6 +5,7 @@ import { TrendingUp, TrendingDown, DollarSign, BarChart3, LineChart as LineChart
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
+import { toLocaleTag } from '@/types/locale';
 
 interface ChartData {
   date: string;
@@ -21,7 +22,7 @@ type ChartType = 'line' | 'bar';
 type TimeRange = '7d' | '30d' | '90d' | '1y';
 
 export function EarningsChart({ data, className }: EarningsChartProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [chartType, setChartType] = useState<ChartType>('line');
   const [timeRange, setTimeRange] = useState<TimeRange>('30d');
 
@@ -60,7 +61,7 @@ export function EarningsChart({ data, className }: EarningsChartProps) {
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return date.toLocaleDateString(toLocaleTag(locale), { month: 'short', day: 'numeric' });
   };
 
   return (
