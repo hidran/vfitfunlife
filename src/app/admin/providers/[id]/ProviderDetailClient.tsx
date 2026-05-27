@@ -9,6 +9,7 @@ import { VerificationBadge, StatusBadge } from "@/components/admin";
 import { formatDate, formatPrice, toDate } from "@/lib/utils";
 import { AdminProvider } from "@/types/admin";
 import { Timestamp } from "firebase/firestore";
+import { useI18n } from "@/hooks/useI18n";
 import {
   ArrowLeft,
   Mail,
@@ -30,6 +31,7 @@ interface ProviderDetailClientProps {
 }
 
 export default function ProviderDetailClient({ providerId }: ProviderDetailClientProps) {
+  const { t } = useI18n();
   const router = useRouter();
   const { providers, fetchProviders, verifyProviderAction, rejectProviderAction } = useAdminStore();
   const [provider, setProvider] = useState<AdminProvider | null>(null);
@@ -88,9 +90,9 @@ export default function ProviderDetailClient({ providerId }: ProviderDetailClien
   if (!provider) {
     return (
       <div className="text-center py-12">
-        <p className="text-white/50">Provider not found</p>
+        <p className="text-white/50">{t('admin.providerDetail.notFound')}</p>
         <Button variant="secondary" onClick={() => router.push("/admin/providers")} className="mt-4">
-          Back to Providers
+          {t('admin.providerDetail.backToProviders')}
         </Button>
       </div>
     );
@@ -104,7 +106,7 @@ export default function ProviderDetailClient({ providerId }: ProviderDetailClien
       {/* Back Button */}
       <Button variant="ghost" onClick={() => router.push("/admin/providers")} className="text-white/60">
         <ArrowLeft className="w-4 h-4 mr-2" />
-        Back to Providers
+        {t('admin.providerDetail.backToProviders')}
       </Button>
 
       {/* Profile Header */}
@@ -158,7 +160,7 @@ export default function ProviderDetailClient({ providerId }: ProviderDetailClien
                         className="flex items-center gap-2 text-[#EF4444] hover:text-[#EF4444]"
                       >
                         <XCircle className="w-4 h-4" />
-                        Reject
+                        {t('admin.providerDetail.reject')}
                       </Button>
                       <Button
                         variant="primary"
@@ -166,13 +168,13 @@ export default function ProviderDetailClient({ providerId }: ProviderDetailClien
                         className="flex items-center gap-2 bg-[#10B981] hover:bg-[#059669]"
                       >
                         <CheckCircle className="w-4 h-4" />
-                        Verify
+                        {t('admin.providerDetail.verify')}
                       </Button>
                     </>
                   ) : (
                     <div className="flex gap-2">
                       <Button variant="ghost" onClick={() => setShowRejectForm(false)}>
-                        Cancel
+                        {t('admin.providerDetail.cancel')}
                       </Button>
                       <Button
                         variant="primary"
@@ -180,7 +182,7 @@ export default function ProviderDetailClient({ providerId }: ProviderDetailClien
                         disabled={!rejectReason.trim()}
                         className="bg-[#EF4444] hover:bg-[#DC2626]"
                       >
-                        Confirm Reject
+                        {t('admin.providerDetail.confirmReject')}
                       </Button>
                     </div>
                   )}
@@ -191,12 +193,12 @@ export default function ProviderDetailClient({ providerId }: ProviderDetailClien
             {showRejectForm && (
               <div className="mt-4 p-4 bg-[#EF4444]/10 border border-[#EF4444]/30 rounded-xl">
                 <label className="block text-sm font-medium text-white mb-2">
-                  Rejection Reason
+                  {t('admin.providerDetail.rejectionReason')}
                 </label>
                 <textarea
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
-                  placeholder="Enter reason for rejection..."
+                  placeholder={t('admin.providerDetail.rejectionPlaceholder')}
                   className="w-full px-3 py-2 bg-black/20 border border-white/10 rounded-lg text-white text-sm placeholder:text-white/40 focus:outline-none focus:border-[#EF4444]/50 resize-none"
                   rows={2}
                 />
@@ -210,8 +212,8 @@ export default function ProviderDetailClient({ providerId }: ProviderDetailClien
                   <Mail className="w-5 h-5 text-white/50" />
                 </div>
                 <div>
-                  <p className="text-xs text-white/40">Email</p>
-                  <p className="text-sm text-white truncate">{provider.email || "N/A"}</p>
+                  <p className="text-xs text-white/40">{t('admin.providerDetail.field.email')}</p>
+                  <p className="text-sm text-white truncate">{provider.email || t('admin.providerDetail.field.naValue')}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -219,8 +221,8 @@ export default function ProviderDetailClient({ providerId }: ProviderDetailClien
                   <Phone className="w-5 h-5 text-white/50" />
                 </div>
                 <div>
-                  <p className="text-xs text-white/40">Phone</p>
-                  <p className="text-sm text-white">{provider.phone || "N/A"}</p>
+                  <p className="text-xs text-white/40">{t('admin.providerDetail.field.phone')}</p>
+                  <p className="text-sm text-white">{provider.phone || t('admin.providerDetail.field.naValue')}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -228,9 +230,9 @@ export default function ProviderDetailClient({ providerId }: ProviderDetailClien
                   <Star className="w-5 h-5 text-[#F59E0B]" />
                 </div>
                 <div>
-                  <p className="text-xs text-white/40">Rating</p>
+                  <p className="text-xs text-white/40">{t('admin.providerDetail.field.rating')}</p>
                   <p className="text-sm text-white">
-                    {profile?.rating?.toFixed(1) || "0.0"} ({profile?.reviewCount || 0} reviews)
+                    {profile?.rating?.toFixed(1) || "0.0"} ({t('admin.providerDetail.reviews', { count: String(profile?.reviewCount || 0) })})
                   </p>
                 </div>
               </div>
@@ -239,8 +241,8 @@ export default function ProviderDetailClient({ providerId }: ProviderDetailClien
                   <Briefcase className="w-5 h-5 text-white/50" />
                 </div>
                 <div>
-                  <p className="text-xs text-white/40">Experience</p>
-                  <p className="text-sm text-white">{profile?.yearsOfExperience || 0} years</p>
+                  <p className="text-xs text-white/40">{t('admin.providerDetail.field.experience')}</p>
+                  <p className="text-sm text-white">{t('admin.providerDetail.field.experienceYears', { count: String(profile?.yearsOfExperience || 0) })}</p>
                 </div>
               </div>
             </div>
@@ -256,7 +258,7 @@ export default function ProviderDetailClient({ providerId }: ProviderDetailClien
               <Calendar className="w-5 h-5 text-[#00C9FF]" />
             </div>
             <div>
-              <p className="text-xs text-white/40">Total Bookings</p>
+              <p className="text-xs text-white/40">{t('admin.providerDetail.stat.totalBookings')}</p>
               <p className="text-xl font-bold text-white">{metrics.totalBookings || 0}</p>
             </div>
           </div>
@@ -267,7 +269,7 @@ export default function ProviderDetailClient({ providerId }: ProviderDetailClien
               <CheckCircle className="w-5 h-5 text-[#10B981]" />
             </div>
             <div>
-              <p className="text-xs text-white/40">Completion Rate</p>
+              <p className="text-xs text-white/40">{t('admin.providerDetail.stat.completionRate')}</p>
               <p className="text-xl font-bold text-white">
                 {metrics.totalBookings
                   ? Math.round((metrics.completedBookings / metrics.totalBookings) * 100)
@@ -283,7 +285,7 @@ export default function ProviderDetailClient({ providerId }: ProviderDetailClien
               <CreditCard className="w-5 h-5 text-[#7B61FF]" />
             </div>
             <div>
-              <p className="text-xs text-white/40">Total Revenue</p>
+              <p className="text-xs text-white/40">{t('admin.providerDetail.stat.totalRevenue')}</p>
               <p className="text-xl font-bold text-white">
                 {formatPrice(metrics.totalRevenue || 0)}
               </p>
@@ -296,7 +298,7 @@ export default function ProviderDetailClient({ providerId }: ProviderDetailClien
               <TrendingUp className="w-5 h-5 text-[#F59E0B]" />
             </div>
             <div>
-              <p className="text-xs text-white/40">Commission Paid</p>
+              <p className="text-xs text-white/40">{t('admin.providerDetail.stat.commissionPaid')}</p>
               <p className="text-xl font-bold text-white">
                 {formatPrice(metrics.commissionPaid || 0)}
               </p>
@@ -309,10 +311,10 @@ export default function ProviderDetailClient({ providerId }: ProviderDetailClien
       <div className="border-b border-white/10">
         <div className="flex gap-6">
           {[
-            { id: "overview", label: "Overview", icon: Briefcase },
-            { id: "documents", label: "Documents", icon: FileText },
-            { id: "bookings", label: "Bookings", icon: Calendar },
-            { id: "reviews", label: "Reviews", icon: Star },
+            { id: "overview", label: t('admin.providerDetail.tab.overview'), icon: Briefcase },
+            { id: "documents", label: t('admin.providerDetail.tab.documents'), icon: FileText },
+            { id: "bookings", label: t('admin.providerDetail.tab.bookings'), icon: Calendar },
+            { id: "reviews", label: t('admin.providerDetail.tab.reviews'), icon: Star },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -336,15 +338,15 @@ export default function ProviderDetailClient({ providerId }: ProviderDetailClien
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Professional Bio */}
             <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Professional Bio</h3>
+              <h3 className="text-lg font-semibold text-white mb-4">{t('admin.providerDetail.professionalBio')}</h3>
               <p className="text-white/70 whitespace-pre-wrap">
-                {profile?.professionalBio || "No bio provided"}
+                {profile?.professionalBio || t('admin.providerDetail.noBio')}
               </p>
             </div>
 
             {/* Certifications */}
             <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Certifications</h3>
+              <h3 className="text-lg font-semibold text-white mb-4">{t('admin.providerDetail.certifications')}</h3>
               {profile?.certifications && profile.certifications.length > 0 ? (
                 <div className="space-y-3">
                   {profile.certifications.map((cert) => (
@@ -354,21 +356,21 @@ export default function ProviderDetailClient({ providerId }: ProviderDetailClien
                         <p className="font-medium text-white">{cert.name}</p>
                         <p className="text-sm text-white/50">{cert.issuingOrganization}</p>
                         <p className="text-xs text-white/40 mt-1">
-                          Issued: {formatDate(toDate(cert.issueDate) || new Date())}
-                          {cert.expiryDate && ` · Expires: ${formatDate(toDate(cert.expiryDate) || new Date())}`}
+                          {t('admin.providerDetail.certIssuedPrefix')} {formatDate(toDate(cert.issueDate) || new Date())}
+                          {cert.expiryDate && ` ${t('admin.providerDetail.certExpiresPrefix')} ${formatDate(toDate(cert.expiryDate) || new Date())}`}
                         </p>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-white/50">No certifications added</p>
+                <p className="text-white/50">{t('admin.providerDetail.noCertifications')}</p>
               )}
             </div>
 
             {/* Services */}
             <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Services</h3>
+              <h3 className="text-lg font-semibold text-white mb-4">{t('admin.providerDetail.services')}</h3>
               {profile?.servicePricing && profile.servicePricing.length > 0 ? (
                 <div className="space-y-3">
                   {profile.servicePricing.map((service) => (
@@ -376,7 +378,7 @@ export default function ProviderDetailClient({ providerId }: ProviderDetailClien
                       <div>
                         <p className="font-medium text-white">{service.serviceName}</p>
                         <p className="text-sm text-white/50">
-                          {service.durationMinutes} minutes
+                          {t('admin.providerDetail.serviceDurationMinutes', { count: String(service.durationMinutes) })}
                         </p>
                       </div>
                       <span className="font-semibold text-white">
@@ -386,13 +388,13 @@ export default function ProviderDetailClient({ providerId }: ProviderDetailClien
                   ))}
                 </div>
               ) : (
-                <p className="text-white/50">No services added</p>
+                <p className="text-white/50">{t('admin.providerDetail.noServices')}</p>
               )}
             </div>
 
             {/* Languages */}
             <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Languages</h3>
+              <h3 className="text-lg font-semibold text-white mb-4">{t('admin.providerDetail.languages')}</h3>
               {profile?.languages && profile.languages.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {profile.languages.map((lang) => (
@@ -405,7 +407,7 @@ export default function ProviderDetailClient({ providerId }: ProviderDetailClien
                   ))}
                 </div>
               ) : (
-                <p className="text-white/50">No languages specified</p>
+                <p className="text-white/50">{t('admin.providerDetail.noLanguages')}</p>
               )}
             </div>
           </div>
@@ -413,7 +415,7 @@ export default function ProviderDetailClient({ providerId }: ProviderDetailClien
 
         {activeTab === "documents" && (
           <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">Verification Documents</h3>
+            <h3 className="text-lg font-semibold text-white mb-4">{t('admin.providerDetail.verificationDocuments')}</h3>
             {(provider as any).verificationDocuments?.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {(provider as any).verificationDocuments.map((doc: any) => (
@@ -431,7 +433,7 @@ export default function ProviderDetailClient({ providerId }: ProviderDetailClien
                       <p className="font-medium text-white truncate">{doc.name}</p>
                       <p className="text-sm text-white/50 capitalize">{doc.type}</p>
                       <p className="text-xs text-white/40">
-                        Uploaded: {formatDate(doc.uploadedAt.toDate())}
+                        {t('admin.providerDetail.documentUploadedPrefix')} {formatDate(doc.uploadedAt.toDate())}
                       </p>
                     </div>
                     <ExternalLink className="w-5 h-5 text-white/40 group-hover:text-white" />
@@ -441,7 +443,7 @@ export default function ProviderDetailClient({ providerId }: ProviderDetailClien
             ) : (
               <div className="text-center py-12">
                 <FileText className="w-12 h-12 text-white/20 mx-auto mb-4" />
-                <p className="text-white/50">No documents uploaded</p>
+                <p className="text-white/50">{t('admin.providerDetail.noDocuments')}</p>
               </div>
             )}
           </div>
@@ -450,14 +452,14 @@ export default function ProviderDetailClient({ providerId }: ProviderDetailClien
         {activeTab === "bookings" && (
           <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-8 text-center">
             <Calendar className="w-12 h-12 text-white/20 mx-auto mb-4" />
-            <p className="text-white/50">Provider bookings will be displayed here</p>
+            <p className="text-white/50">{t('admin.providerDetail.bookingsPlaceholder')}</p>
           </div>
         )}
 
         {activeTab === "reviews" && (
           <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-8 text-center">
             <Star className="w-12 h-12 text-white/20 mx-auto mb-4" />
-            <p className="text-white/50">Provider reviews will be displayed here</p>
+            <p className="text-white/50">{t('admin.providerDetail.reviewsPlaceholder')}</p>
           </div>
         )}
       </div>

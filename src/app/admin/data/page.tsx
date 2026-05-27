@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/authStore";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/hooks/useI18n";
 import {
   Database,
   Trash2,
@@ -35,6 +36,7 @@ interface Operation {
 }
 
 export default function DataManagementPage() {
+  const { t } = useI18n();
   const router = useRouter();
   const { user, firebaseUser } = useAuthStore();
   const [operations, setOperations] = useState<Operation[]>([]);
@@ -112,9 +114,9 @@ export default function DataManagementPage() {
 
   const getOperationLabel = (type: string) => {
     switch (type) {
-      case "quick": return "Quick Seed";
-      case "full": return "Full Seed";
-      case "clear": return "Clear All Data";
+      case "quick": return t('admin.data.operationLabel.quick');
+      case "full": return t('admin.data.operationLabel.full');
+      case "clear": return t('admin.data.operationLabel.clear');
       default: return type;
     }
   };
@@ -128,15 +130,15 @@ export default function DataManagementPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Data Management</h1>
+          <h1 className="text-2xl font-bold text-white">{t('admin.data.title')}</h1>
           <p className="text-white/50 mt-1">
-            Seed demo data for testing or clear existing data
+            {t('admin.data.subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-2 px-4 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
           <Shield className="w-4 h-4 text-yellow-400" />
           <span className="text-sm text-yellow-400">
-            {user?.role === "superadmin" ? "Superadmin" : "Admin"} Access
+            {user?.role === "superadmin" ? t('admin.data.accessLabel.superadmin') : t('admin.data.accessLabel.admin')}
           </span>
         </div>
       </div>
@@ -150,8 +152,8 @@ export default function DataManagementPage() {
               <Zap className="w-6 h-6 text-blue-400" />
             </div>
             <div>
-              <h3 className="font-semibold text-white">Quick Seed</h3>
-              <p className="text-xs text-white/50">3 providers, 2 customers, etc.</p>
+              <h3 className="font-semibold text-white">{t('admin.data.quickSeed.title')}</h3>
+              <p className="text-xs text-white/50">{t('admin.data.quickSeed.subtitle')}</p>
             </div>
           </div>
           <Button
@@ -161,9 +163,9 @@ export default function DataManagementPage() {
             fullWidth
           >
             {currentOperation?.startsWith("quick") ? (
-              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Seeding...</>
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {t('admin.data.quickSeed.running')}</>
             ) : (
-              <><Zap className="w-4 h-4 mr-2" /> Run Quick Seed</>
+              <><Zap className="w-4 h-4 mr-2" /> {t('admin.data.quickSeed.run')}</>
             )}
           </Button>
         </div>
@@ -175,8 +177,8 @@ export default function DataManagementPage() {
               <Database className="w-6 h-6 text-green-400" />
             </div>
             <div>
-              <h3 className="font-semibold text-white">Full Seed</h3>
-              <p className="text-xs text-white/50">10+ providers, 15+ customers, etc.</p>
+              <h3 className="font-semibold text-white">{t('admin.data.fullSeed.title')}</h3>
+              <p className="text-xs text-white/50">{t('admin.data.fullSeed.subtitle')}</p>
             </div>
           </div>
           <Button
@@ -186,9 +188,9 @@ export default function DataManagementPage() {
             fullWidth
           >
             {currentOperation?.startsWith("full") ? (
-              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Seeding...</>
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {t('admin.data.fullSeed.running')}</>
             ) : (
-              <><Database className="w-4 h-4 mr-2" /> Run Full Seed</>
+              <><Database className="w-4 h-4 mr-2" /> {t('admin.data.fullSeed.run')}</>
             )}
           </Button>
         </div>
@@ -200,8 +202,8 @@ export default function DataManagementPage() {
               <Trash2 className="w-6 h-6 text-red-400" />
             </div>
             <div>
-              <h3 className="font-semibold text-white">Clear All Data</h3>
-              <p className="text-xs text-red-400/70">Superadmin only</p>
+              <h3 className="font-semibold text-white">{t('admin.data.clearAll.title')}</h3>
+              <p className="text-xs text-red-400/70">{t('admin.data.clearAll.superadminOnly')}</p>
             </div>
           </div>
           <Button
@@ -212,9 +214,9 @@ export default function DataManagementPage() {
             className="border border-red-500/30 text-red-400 hover:bg-red-500/10"
           >
             {currentOperation?.startsWith("clear") ? (
-              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Clearing...</>
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {t('admin.data.clearAll.running')}</>
             ) : (
-              <><Trash2 className="w-4 h-4 mr-2" /> Clear All Data</>
+              <><Trash2 className="w-4 h-4 mr-2" /> {t('admin.data.clearAll.run')}</>
             )}
           </Button>
         </div>
@@ -225,16 +227,16 @@ export default function DataManagementPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
           <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6 max-w-md w-full">
             <h3 className="text-lg font-semibold text-white mb-2">
-              Confirm {getOperationLabel(showConfirmDialog)}
+              {t('admin.data.confirm.title', { label: getOperationLabel(showConfirmDialog) })}
             </h3>
             <p className="text-sm text-white/50 mb-6">
               {showConfirmDialog === "clear"
-                ? "This will permanently delete ALL data. This action cannot be undone."
-                : "This will add demo data to your database."}
+                ? t('admin.data.confirm.messageClear')
+                : t('admin.data.confirm.messageSeed')}
             </p>
             <div className="flex gap-3">
               <Button variant="secondary" onClick={() => setShowConfirmDialog(null)} fullWidth>
-                Cancel
+                {t('admin.data.confirm.cancel')}
               </Button>
               <Button
                 variant="primary"
@@ -242,7 +244,7 @@ export default function DataManagementPage() {
                 className={showConfirmDialog === "clear" ? "bg-red-500 hover:bg-red-600" : ""}
                 fullWidth
               >
-                Confirm
+                {t('admin.data.confirm.confirm')}
               </Button>
             </div>
           </div>
@@ -254,7 +256,7 @@ export default function DataManagementPage() {
         <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
           <div className="flex items-center gap-3 mb-6">
             <History className="w-5 h-5 text-purple-400" />
-            <h3 className="text-lg font-semibold text-white">Operation History</h3>
+            <h3 className="text-lg font-semibold text-white">{t('admin.data.history.title')}</h3>
           </div>
           <div className="space-y-3">
             {operations.map((op) => (
@@ -287,7 +289,7 @@ export default function DataManagementPage() {
                         {op.result.summary.totalRecords ?? op.result.summary.totalDeleted ?? 0}
                       </p>
                       <p className="text-xs text-white/50">
-                        {op.result.summary.totalRecords ? "Records" : "Deleted"}
+                        {op.result.summary.totalRecords ? t('admin.data.history.records') : t('admin.data.history.deleted')}
                       </p>
                     </div>
                   )}

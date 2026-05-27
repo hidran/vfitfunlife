@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { AdminProvider, ProviderFilters } from "@/types/admin";
 import { Column } from "@/components/admin/DataTable";
 import { formatPrice } from "@/lib/utils";
+import { useI18n } from "@/hooks/useI18n";
 import {
   User,
   Star,
@@ -19,6 +20,7 @@ import {
 } from "lucide-react";
 
 export default function ProvidersPage() {
+  const { t } = useI18n();
   const router = useRouter();
   const {
     providers,
@@ -71,7 +73,7 @@ export default function ProvidersPage() {
   const columns: Column<AdminProvider>[] = [
     {
       key: "provider",
-      header: "Provider",
+      header: t('admin.providers.col.provider'),
       cell: (provider) => (
         <div className="flex items-center gap-3">
           {provider.avatarUrl ? (
@@ -98,17 +100,17 @@ export default function ProvidersPage() {
     },
     {
       key: "type",
-      header: "Type",
+      header: t('admin.providers.col.type'),
       cell: (provider) => (
         <span className="text-sm text-white/70 capitalize">
-          {provider.providerProfile?.specialties?.[0] || "General"}
+          {provider.providerProfile?.specialties?.[0] || t('admin.providers.col.general')}
         </span>
       ),
       width: "w-24",
     },
     {
       key: "verification",
-      header: "Verification",
+      header: t('admin.providers.col.verification'),
       cell: (provider) => (
         <VerificationBadge isVerified={provider.providerProfile?.isVerified ?? false} size="sm" />
       ),
@@ -117,7 +119,7 @@ export default function ProvidersPage() {
     },
     {
       key: "rating",
-      header: "Rating",
+      header: t('admin.providers.col.rating'),
       cell: (provider) => (
         <div className="flex items-center gap-1">
           <Star className="w-4 h-4 text-[#F59E0B] fill-[#F59E0B]" />
@@ -134,7 +136,7 @@ export default function ProvidersPage() {
     },
     {
       key: "bookings",
-      header: "Bookings",
+      header: t('admin.providers.col.bookings'),
       cell: (provider) => (
         <span className="text-sm text-white/70">
           {(provider as any).performanceMetrics?.totalBookings || 0}
@@ -145,7 +147,7 @@ export default function ProvidersPage() {
     },
     {
       key: "earnings",
-      header: "Earnings",
+      header: t('admin.providers.col.earnings'),
       cell: (provider) => (
         <span className="text-sm text-white font-medium">
           {formatPrice((provider as any).performanceMetrics?.totalRevenue || 0)}
@@ -156,7 +158,7 @@ export default function ProvidersPage() {
     },
     {
       key: "status",
-      header: "Status",
+      header: t('admin.providers.col.status'),
       cell: (provider) => (
         <StatusBadge
           status={(provider as any).isSuspended ? "suspended" : "active"}
@@ -175,9 +177,9 @@ export default function ProvidersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Providers</h1>
+          <h1 className="text-2xl font-bold text-white">{t('admin.providers.title')}</h1>
           <p className="text-white/50 mt-1">
-            Manage service providers and verifications
+            {t('admin.providers.subtitle')}
           </p>
         </div>
         <Button
@@ -186,7 +188,7 @@ export default function ProvidersPage() {
           onClick={() => router.push("/admin/providers/verifications")}
         >
           <AlertCircle className="w-4 h-4" />
-          Verifications
+          {t('admin.providers.verificationsBtn')}
           {pendingVerifications.length > 0 && (
             <span className="ml-1 px-2 py-0.5 bg-white/20 rounded-full text-xs">
               {pendingVerifications.length}
@@ -204,10 +206,10 @@ export default function ProvidersPage() {
             </div>
             <div>
               <h3 className="font-medium text-white">
-                {pendingVerifications.length} provider(s) awaiting verification
+                {t('admin.providers.alert.awaitingVerification', { count: String(pendingVerifications.length) })}
               </h3>
               <p className="text-sm text-white/50">
-                Review and approve provider applications
+                {t('admin.providers.alert.reviewMessage')}
               </p>
             </div>
           </div>
@@ -216,7 +218,7 @@ export default function ProvidersPage() {
             onClick={() => router.push("/admin/providers/verifications")}
             className="flex items-center gap-2"
           >
-            Review Now
+            {t('admin.providers.alert.reviewNow')}
             <ArrowRight className="w-4 h-4" />
           </Button>
         </div>
@@ -227,29 +229,29 @@ export default function ProvidersPage() {
 
       {/* Filters */}
       <FilterBar
-        searchPlaceholder="Search providers by name or email..."
+        searchPlaceholder={t('admin.providers.search')}
         searchValue={filters.search || ""}
         onSearchChange={handleSearchChange}
         filters={[
           {
             key: "verificationStatus",
-            label: "Verification",
+            label: t('admin.providers.filter.verification'),
             options: [
-              { value: "all", label: "All" },
-              { value: "verified", label: "Verified" },
-              { value: "pending", label: "Pending" },
-              { value: "rejected", label: "Rejected" },
+              { value: "all", label: t('admin.providers.filter.all') },
+              { value: "verified", label: t('admin.providers.filter.verified') },
+              { value: "pending", label: t('admin.providers.filter.pending') },
+              { value: "rejected", label: t('admin.providers.filter.rejected') },
             ],
             value: filters.verificationStatus || "all",
             onChange: handleVerificationStatusChange,
           },
           {
             key: "status",
-            label: "Status",
+            label: t('admin.providers.filter.status'),
             options: [
-              { value: "all", label: "All Status" },
-              { value: "active", label: "Active" },
-              { value: "suspended", label: "Suspended" },
+              { value: "all", label: t('admin.providers.filter.allStatus') },
+              { value: "active", label: t('admin.providers.filter.active') },
+              { value: "suspended", label: t('admin.providers.filter.suspended') },
             ],
             value: filters.status || "all",
             onChange: handleStatusChange,
@@ -272,7 +274,7 @@ export default function ProvidersPage() {
           pageSize: filters.limit || 20,
           onPageChange: handlePageChange,
         }}
-        emptyMessage="No providers found"
+        emptyMessage={t('admin.providers.empty')}
       />
     </div>
   );

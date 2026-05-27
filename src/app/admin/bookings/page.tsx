@@ -8,6 +8,7 @@ import { BookingFilters } from "@/types/admin";
 import { Booking as BookingType } from "@/types/firebase";
 import { Column } from "@/components/admin/DataTable";
 import { formatPrice, formatDate, toDate } from "@/lib/utils";
+import { useI18n } from "@/hooks/useI18n";
 import {
   Calendar,
   User,
@@ -17,6 +18,7 @@ import {
 } from "lucide-react";
 
 export default function BookingsPage() {
+  const { t } = useI18n();
   const {
     bookings,
     bookingsTotal,
@@ -89,7 +91,7 @@ export default function BookingsPage() {
   const columns: Column<BookingType>[] = [
     {
       key: "bookingId",
-      header: "Booking ID",
+      header: t('admin.bookings.col.bookingId'),
       cell: (booking) => (
         <div>
           <p className="font-medium text-white">#{booking.id.slice(-6).toUpperCase()}</p>
@@ -107,7 +109,7 @@ export default function BookingsPage() {
     },
     {
       key: "customer",
-      header: "Customer",
+      header: t('admin.bookings.col.customer'),
       cell: (booking) => (
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#00C9FF] to-[#7B61FF] flex items-center justify-center text-white text-sm font-semibold">
@@ -123,7 +125,7 @@ export default function BookingsPage() {
     },
     {
       key: "provider",
-      header: "Provider",
+      header: t('admin.bookings.col.provider'),
       cell: (booking) => (
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
@@ -139,7 +141,7 @@ export default function BookingsPage() {
     },
     {
       key: "service",
-      header: "Service",
+      header: t('admin.bookings.col.service'),
       cell: (booking) => (
         <div>
           <p className="text-sm text-white">{booking.serviceName}</p>
@@ -157,7 +159,7 @@ export default function BookingsPage() {
     },
     {
       key: "amount",
-      header: "Amount",
+      header: t('admin.bookings.col.amount'),
       cell: (booking) => (
         <span className="font-medium text-white">
           {formatPrice(booking.finalPrice || 0)}
@@ -168,14 +170,14 @@ export default function BookingsPage() {
     },
     {
       key: "status",
-      header: "Status",
+      header: t('admin.bookings.col.status'),
       cell: (booking) => <StatusBadge status={booking.status as any} size="sm" />,
       sortable: true,
       width: "w-28",
     },
     {
       key: "payment",
-      header: "Payment",
+      header: t('admin.bookings.col.payment'),
       cell: (booking) => (
         <div className="flex items-center gap-2">
           <CreditCard className="w-4 h-4 text-white/40" />
@@ -198,12 +200,12 @@ export default function BookingsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Bookings</h1>
-          <p className="text-white/50 mt-1">Manage all platform bookings</p>
+          <h1 className="text-2xl font-bold text-white">{t('admin.bookings.title')}</h1>
+          <p className="text-white/50 mt-1">{t('admin.bookings.subtitle')}</p>
         </div>
         <Button variant="secondary" className="flex items-center gap-2">
           <Download className="w-4 h-4" />
-          Export
+          {t('admin.bookings.export')}
         </Button>
       </div>
 
@@ -215,7 +217,7 @@ export default function BookingsPage() {
               <Calendar className="w-5 h-5 text-[#00C9FF]" />
             </div>
             <div>
-              <p className="text-xs text-white/40">Total Bookings</p>
+              <p className="text-xs text-white/40">{t('admin.bookings.stat.totalBookings')}</p>
               <p className="text-xl font-bold text-white">{bookingsTotal}</p>
             </div>
           </div>
@@ -226,7 +228,7 @@ export default function BookingsPage() {
               <CreditCard className="w-5 h-5 text-[#10B981]" />
             </div>
             <div>
-              <p className="text-xs text-white/40">Total Revenue</p>
+              <p className="text-xs text-white/40">{t('admin.bookings.stat.totalRevenue')}</p>
               <p className="text-xl font-bold text-white">{formatPrice(totalRevenue)}</p>
             </div>
           </div>
@@ -237,7 +239,7 @@ export default function BookingsPage() {
               <Calendar className="w-5 h-5 text-[#F59E0B]" />
             </div>
             <div>
-              <p className="text-xs text-white/40">Pending</p>
+              <p className="text-xs text-white/40">{t('admin.bookings.stat.pending')}</p>
               <p className="text-xl font-bold text-white">{pendingCount}</p>
             </div>
           </div>
@@ -248,7 +250,7 @@ export default function BookingsPage() {
               <Calendar className="w-5 h-5 text-[#7B61FF]" />
             </div>
             <div>
-              <p className="text-xs text-white/40">Completed</p>
+              <p className="text-xs text-white/40">{t('admin.bookings.stat.completed')}</p>
               <p className="text-xl font-bold text-white">{completedCount}</p>
             </div>
           </div>
@@ -257,20 +259,20 @@ export default function BookingsPage() {
 
       {/* Filters */}
       <FilterBar
-        searchPlaceholder="Search by booking ID, customer, or provider..."
+        searchPlaceholder={t('admin.bookings.search')}
         searchValue={filters.search || ""}
         onSearchChange={handleSearchChange}
         filters={[
           {
             key: "status",
-            label: "Status",
+            label: t('admin.bookings.filter.status'),
             options: [
-              { value: "all", label: "All Status" },
-              { value: "pending", label: "Pending" },
-              { value: "confirmed", label: "Confirmed" },
-              { value: "in_progress", label: "In Progress" },
-              { value: "completed", label: "Completed" },
-              { value: "cancelled", label: "Cancelled" },
+              { value: "all", label: t('admin.bookings.filter.allStatus') },
+              { value: "pending", label: t('admin.bookings.filter.pending') },
+              { value: "confirmed", label: t('admin.bookings.filter.confirmed') },
+              { value: "in_progress", label: t('admin.bookings.filter.inProgress') },
+              { value: "completed", label: t('admin.bookings.filter.completed') },
+              { value: "cancelled", label: t('admin.bookings.filter.cancelled') },
             ],
             value: filters.status || "all",
             onChange: handleStatusChange,
@@ -302,7 +304,7 @@ export default function BookingsPage() {
             }
           },
         }}
-        emptyMessage="No bookings found"
+        emptyMessage={t('admin.bookings.empty')}
       />
     </div>
   );

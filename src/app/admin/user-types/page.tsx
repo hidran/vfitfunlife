@@ -5,6 +5,7 @@ import { DataTable, FilterBar } from "@/components/admin";
 import { Button } from "@/components/ui/button";
 import { Column } from "@/components/admin/DataTable";
 import { formatDate } from "@/lib/utils";
+import { useI18n } from "@/hooks/useI18n";
 import {
   Plus,
   Tag,
@@ -27,6 +28,7 @@ interface UserType {
 }
 
 export default function UserTypesPage() {
+  const { t } = useI18n();
   const [searchValue, setSearchValue] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -81,7 +83,7 @@ export default function UserTypesPage() {
   const columns: Column<UserType>[] = [
     {
       key: "name",
-      header: "User Type",
+      header: t('admin.userTypes.col.userType'),
       cell: (userType) => (
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00C9FF]/20 to-[#7B61FF]/20 flex items-center justify-center">
@@ -97,7 +99,7 @@ export default function UserTypesPage() {
     },
     {
       key: "description",
-      header: "Description",
+      header: t('admin.userTypes.col.description'),
       cell: (userType) => (
         <p className="text-sm text-white/70 truncate max-w-xs">
           {userType.description}
@@ -107,7 +109,7 @@ export default function UserTypesPage() {
     },
     {
       key: "providers",
-      header: "Providers",
+      header: t('admin.userTypes.col.providers'),
       cell: (userType) => (
         <div className="flex items-center gap-2">
           <Users className="w-4 h-4 text-white/40" />
@@ -119,7 +121,7 @@ export default function UserTypesPage() {
     },
     {
       key: "status",
-      header: "Status",
+      header: t('admin.userTypes.col.status'),
       cell: (userType) => (
         <button
           onClick={(e) => {
@@ -132,7 +134,7 @@ export default function UserTypesPage() {
               : "bg-white/10 text-white/50"
           }`}
         >
-          {userType.isActive ? "Active" : "Inactive"}
+          {userType.isActive ? t('admin.userTypes.status.active') : t('admin.userTypes.status.inactive')}
         </button>
       ),
       sortable: true,
@@ -140,7 +142,7 @@ export default function UserTypesPage() {
     },
     {
       key: "created",
-      header: "Created",
+      header: t('admin.userTypes.col.created'),
       cell: (userType) => (
         <span className="text-sm text-white/50">
           {formatDate(userType.createdAt)}
@@ -169,9 +171,9 @@ export default function UserTypesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">User Types</h1>
+          <h1 className="text-2xl font-bold text-white">{t('admin.userTypes.title')}</h1>
           <p className="text-white/50 mt-1">
-            Manage provider categories and specializations
+            {t('admin.userTypes.subtitle')}
           </p>
         </div>
         <Button
@@ -180,23 +182,23 @@ export default function UserTypesPage() {
           onClick={() => {/* TODO: Add user type modal */}}
         >
           <Plus className="w-4 h-4" />
-          Add User Type
+          {t('admin.userTypes.addUserType')}
         </Button>
       </div>
 
       {/* Filters */}
       <FilterBar
-        searchPlaceholder="Search user types..."
+        searchPlaceholder={t('admin.userTypes.search')}
         searchValue={searchValue}
         onSearchChange={setSearchValue}
         filters={[
           {
             key: "status",
-            label: "Status",
+            label: t('admin.userTypes.filter.status'),
             options: [
-              { value: "all", label: "All" },
-              { value: "active", label: "Active" },
-              { value: "inactive", label: "Inactive" },
+              { value: "all", label: t('admin.userTypes.filter.all') },
+              { value: "active", label: t('admin.userTypes.filter.active') },
+              { value: "inactive", label: t('admin.userTypes.filter.inactive') },
             ],
             value: statusFilter,
             onChange: setStatusFilter,
@@ -221,7 +223,7 @@ export default function UserTypesPage() {
           edit: (userType) => console.log("Edit:", userType.id),
           delete: (userType) => console.log("Delete:", userType.id),
         }}
-        emptyMessage="No user types found"
+        emptyMessage={t('admin.userTypes.empty')}
       />
     </div>
   );

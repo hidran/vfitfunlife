@@ -7,6 +7,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { Button } from "@/components/ui/button";
 import { PlatformSettings } from "@/types/admin";
 import { SeedDataPanel } from "@/components/admin";
+import { useI18n } from "@/hooks/useI18n";
 import {
   Save,
   Shield,
@@ -19,6 +20,7 @@ import {
 } from "lucide-react";
 
 export default function SettingsPage() {
+  const { t } = useI18n();
   const router = useRouter();
   const { user } = useAuthStore();
   const { platformSettings, fetchPlatformSettings, updatePlatformSettingsAction } = useAdminStore();
@@ -58,7 +60,7 @@ export default function SettingsPage() {
     setIsSaving(true);
     try {
       await updatePlatformSettingsAction(settings);
-      alert("Settings saved successfully!");
+      alert(t('admin.settings.savedSuccess'));
     } catch (error) {
       console.error("Failed to save settings:", error);
     } finally {
@@ -81,9 +83,9 @@ export default function SettingsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Platform Settings</h1>
+          <h1 className="text-2xl font-bold text-white">{t('admin.settings.title')}</h1>
           <p className="text-white/50 mt-1">
-            Configure platform-wide settings and preferences
+            {t('admin.settings.subtitle')}
           </p>
         </div>
         <Button
@@ -93,7 +95,7 @@ export default function SettingsPage() {
           className="flex items-center gap-2"
         >
           <Save className="w-4 h-4" />
-          Save Changes
+          {t('admin.settings.saveChanges')}
         </Button>
       </div>
 
@@ -101,9 +103,9 @@ export default function SettingsPage() {
       <div className="bg-[#FFD700]/10 border border-[#FFD700]/30 rounded-xl p-4 flex items-start gap-3">
         <Shield className="w-5 h-5 text-[#FFD700] flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-sm font-medium text-[#FFD700]">Superadmin Only</p>
+          <p className="text-sm font-medium text-[#FFD700]">{t('admin.settings.superadminOnly.label')}</p>
           <p className="text-sm text-white/70">
-            These settings affect the entire platform. Changes will be applied immediately.
+            {t('admin.settings.superadminOnly.description')}
           </p>
         </div>
       </div>
@@ -116,15 +118,15 @@ export default function SettingsPage() {
               <Shield className="w-5 h-5 text-[#00C9FF]" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-white">General Settings</h3>
-              <p className="text-sm text-white/50">Basic platform configuration</p>
+              <h3 className="text-lg font-semibold text-white">{t('admin.settings.general.title')}</h3>
+              <p className="text-sm text-white/50">{t('admin.settings.general.subtitle')}</p>
             </div>
           </div>
 
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-white/70 mb-2">
-                Platform Name
+                {t('admin.settings.general.platformName')}
               </label>
               <input
                 type="text"
@@ -138,7 +140,7 @@ export default function SettingsPage() {
 
             <div>
               <label className="block text-sm font-medium text-white/70 mb-2">
-                Support Email
+                {t('admin.settings.general.supportEmail')}
               </label>
               <input
                 type="email"
@@ -152,7 +154,7 @@ export default function SettingsPage() {
 
             <div>
               <label className="block text-sm font-medium text-white/70 mb-2">
-                Support Phone
+                {t('admin.settings.general.supportPhone')}
               </label>
               <input
                 type="tel"
@@ -166,7 +168,7 @@ export default function SettingsPage() {
 
             <div>
               <label className="block text-sm font-medium text-white/70 mb-2">
-                Default Currency
+                {t('admin.settings.general.currency')}
               </label>
               <select
                 value={settings.currency}
@@ -190,15 +192,15 @@ export default function SettingsPage() {
               <CreditCard className="w-5 h-5 text-[#10B981]" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-white">Payment Settings</h3>
-              <p className="text-sm text-white/50">Commission and payment rules</p>
+              <h3 className="text-lg font-semibold text-white">{t('admin.settings.payment.title')}</h3>
+              <p className="text-sm text-white/50">{t('admin.settings.payment.subtitle')}</p>
             </div>
           </div>
 
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-white/70 mb-2">
-                Commission Percentage (%)
+                {t('admin.settings.payment.commissionLabel')}
               </label>
               <input
                 type="number"
@@ -214,13 +216,13 @@ export default function SettingsPage() {
                 className="w-full px-4 py-2.5 bg-[#2A2D3A] border border-white/10 rounded-xl text-white focus:outline-none focus:border-[#00C9FF]/50"
               />
               <p className="text-xs text-white/40 mt-1">
-                Percentage taken from each booking as platform fee
+                {t('admin.settings.payment.commissionHint')}
               </p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-white/70 mb-2">
-                Cancellation Policy
+                {t('admin.settings.payment.cancellationPolicy')}
               </label>
               <select
                 value={settings.cancellationPolicy}
@@ -232,10 +234,10 @@ export default function SettingsPage() {
                 }
                 className="w-full px-4 py-2.5 bg-[#2A2D3A] border border-white/10 rounded-xl text-white focus:outline-none focus:border-[#00C9FF]/50"
               >
-                <option value="12 hours">12 hours notice</option>
-                <option value="24 hours">24 hours notice</option>
-                <option value="48 hours">48 hours notice</option>
-                <option value="72 hours">72 hours notice</option>
+                <option value="12 hours">{t('admin.settings.payment.policy12h')}</option>
+                <option value="24 hours">{t('admin.settings.payment.policy24h')}</option>
+                <option value="48 hours">{t('admin.settings.payment.policy48h')}</option>
+                <option value="72 hours">{t('admin.settings.payment.policy72h')}</option>
               </select>
             </div>
           </div>
@@ -248,8 +250,8 @@ export default function SettingsPage() {
               <ToggleLeft className="w-5 h-5 text-[#7B61FF]" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-white">Feature Flags</h3>
-              <p className="text-sm text-white/50">Enable or disable platform features</p>
+              <h3 className="text-lg font-semibold text-white">{t('admin.settings.featureFlags.title')}</h3>
+              <p className="text-sm text-white/50">{t('admin.settings.featureFlags.subtitle')}</p>
             </div>
           </div>
 
@@ -264,7 +266,7 @@ export default function SettingsPage() {
                     {key.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase())}
                   </p>
                   <p className="text-xs text-white/50">
-                    {enabled ? "Enabled" : "Disabled"}
+                    {enabled ? t('admin.settings.featureFlags.enabled') : t('admin.settings.featureFlags.disabled')}
                   </p>
                 </div>
                 <button
@@ -291,12 +293,12 @@ export default function SettingsPage() {
               <AlertTriangle className="w-5 h-5 text-[#EF4444]" />
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-white">Maintenance Mode</h3>
+              <h3 className="text-lg font-semibold text-white">{t('admin.settings.maintenance.title')}</h3>
               <p className="text-sm text-white/70 mt-1">
-                When enabled, the platform will be unavailable to users. Only admins will be able to access the system.
+                {t('admin.settings.maintenance.description')}
               </p>
               <div className="flex items-center justify-between mt-4 p-4 bg-black/20 rounded-xl">
-                <span className="text-white font-medium">Enable Maintenance Mode</span>
+                <span className="text-white font-medium">{t('admin.settings.maintenance.enableLabel')}</span>
                 <button
                   onClick={() =>
                     setSettings((prev) => ({
@@ -326,8 +328,8 @@ export default function SettingsPage() {
               <Database className="w-5 h-5 text-purple-400" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-white">Demo Data Management</h3>
-              <p className="text-sm text-white/50">Seed or clear demo data for testing</p>
+              <h3 className="text-lg font-semibold text-white">{t('admin.settings.demoData.title')}</h3>
+              <p className="text-sm text-white/50">{t('admin.settings.demoData.subtitle')}</p>
             </div>
           </div>
           

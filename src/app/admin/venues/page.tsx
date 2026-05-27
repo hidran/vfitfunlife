@@ -5,6 +5,7 @@ import { DataTable, FilterBar, StatusBadge } from "@/components/admin";
 import { Button } from "@/components/ui/button";
 import { Column } from "@/components/admin/DataTable";
 import { formatDate } from "@/lib/utils";
+import { useI18n } from "@/hooks/useI18n";
 import {
   Plus,
   MapPin,
@@ -35,6 +36,7 @@ interface Venue {
 }
 
 export default function VenuesPage() {
+  const { t } = useI18n();
   const [searchValue, setSearchValue] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -61,7 +63,7 @@ export default function VenuesPage() {
   const columns: Column<Venue>[] = [
     {
       key: "name",
-      header: "Venue",
+      header: t('admin.venues.col.venue'),
       cell: (venue) => (
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00C9FF]/20 to-[#7B61FF]/20 flex items-center justify-center">
@@ -77,7 +79,7 @@ export default function VenuesPage() {
     },
     {
       key: "location",
-      header: "Location",
+      header: t('admin.venues.col.location'),
       cell: (venue) => (
         <div className="flex items-start gap-2">
           <MapPin className="w-4 h-4 text-white/40 mt-0.5 flex-shrink-0" />
@@ -91,7 +93,7 @@ export default function VenuesPage() {
     },
     {
       key: "contact",
-      header: "Contact",
+      header: t('admin.venues.col.contact'),
       cell: (venue) => (
         <div className="flex items-center gap-2">
           <Phone className="w-4 h-4 text-white/40" />
@@ -102,7 +104,7 @@ export default function VenuesPage() {
     },
     {
       key: "rating",
-      header: "Rating",
+      header: t('admin.venues.col.rating'),
       cell: (venue) => (
         <div className="flex items-center gap-1">
           <Star className="w-4 h-4 text-[#F59E0B] fill-[#F59E0B]" />
@@ -115,7 +117,7 @@ export default function VenuesPage() {
     },
     {
       key: "partner",
-      header: "Partner",
+      header: t('admin.venues.col.partner'),
       cell: (venue) => (
         <span
           className={`px-2.5 py-1 rounded-full text-xs font-medium ${
@@ -124,7 +126,7 @@ export default function VenuesPage() {
               : "bg-white/10 text-white/50"
           }`}
         >
-          {venue.isPartner ? "Partner" : "Standard"}
+          {venue.isPartner ? t('admin.venues.partner.partner') : t('admin.venues.partner.standard')}
         </span>
       ),
       sortable: true,
@@ -132,7 +134,7 @@ export default function VenuesPage() {
     },
     {
       key: "status",
-      header: "Status",
+      header: t('admin.venues.col.status'),
       cell: (venue) => (
         <StatusBadge status={venue.isActive ? "active" : "suspended"} size="sm" />
       ),
@@ -141,7 +143,7 @@ export default function VenuesPage() {
     },
     {
       key: "photos",
-      header: "Foto",
+      header: t('admin.venues.col.photos'),
       cell: (venue) => (
         <button
           type="button"
@@ -153,7 +155,7 @@ export default function VenuesPage() {
             })
           }
           className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
-          aria-label="Modifica foto"
+          aria-label={t('admin.venues.col.editPhotosAria')}
         >
           <Camera className="h-4 w-4" />
         </button>
@@ -180,8 +182,8 @@ export default function VenuesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Venues</h1>
-          <p className="text-white/50 mt-1">Manage partner venues and locations</p>
+          <h1 className="text-2xl font-bold text-white">{t('admin.venues.title')}</h1>
+          <p className="text-white/50 mt-1">{t('admin.venues.subtitle')}</p>
         </div>
         <Button
           variant="primary"
@@ -189,37 +191,37 @@ export default function VenuesPage() {
           onClick={() => {/* TODO: Add venue modal */}}
         >
           <Plus className="w-4 h-4" />
-          Add Venue
+          {t('admin.venues.addVenue')}
         </Button>
       </div>
 
       {/* Filters */}
       <FilterBar
-        searchPlaceholder="Search venues by name or city..."
+        searchPlaceholder={t('admin.venues.search')}
         searchValue={searchValue}
         onSearchChange={setSearchValue}
         filters={[
           {
             key: "type",
-            label: "Type",
+            label: t('admin.venues.filter.type'),
             options: [
-              { value: "all", label: "All Types" },
-              { value: "gym", label: "Gym" },
-              { value: "wellness_center", label: "Wellness Center" },
-              { value: "beauty_salon", label: "Beauty Salon" },
-              { value: "outdoor_space", label: "Outdoor Space" },
-              { value: "event_space", label: "Event Space" },
+              { value: "all", label: t('admin.venues.filter.allTypes') },
+              { value: "gym", label: t('admin.venues.filter.gym') },
+              { value: "wellness_center", label: t('admin.venues.filter.wellnessCenter') },
+              { value: "beauty_salon", label: t('admin.venues.filter.beautySalon') },
+              { value: "outdoor_space", label: t('admin.venues.filter.outdoorSpace') },
+              { value: "event_space", label: t('admin.venues.filter.eventSpace') },
             ],
             value: typeFilter,
             onChange: setTypeFilter,
           },
           {
             key: "status",
-            label: "Status",
+            label: t('admin.venues.filter.status'),
             options: [
-              { value: "all", label: "All Status" },
-              { value: "active", label: "Active" },
-              { value: "suspended", label: "Suspended" },
+              { value: "all", label: t('admin.venues.filter.allStatus') },
+              { value: "active", label: t('admin.venues.filter.active') },
+              { value: "suspended", label: t('admin.venues.filter.suspended') },
             ],
             value: statusFilter,
             onChange: setStatusFilter,
@@ -248,7 +250,7 @@ export default function VenuesPage() {
             edit: (venue) => console.log("Edit:", venue.id),
             delete: (venue) => console.log("Delete:", venue.id),
           }}
-          emptyMessage="No venues found"
+          emptyMessage={t('admin.venues.empty')}
         />
       )}
 

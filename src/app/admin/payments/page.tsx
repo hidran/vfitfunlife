@@ -6,6 +6,7 @@ import { DataTable, FilterBar, StatusBadge } from "@/components/admin";
 import { Button } from "@/components/ui/button";
 import { Column } from "@/components/admin/DataTable";
 import { formatPrice, formatDate } from "@/lib/utils";
+import { useI18n } from "@/hooks/useI18n";
 import {
   CreditCard,
   Download,
@@ -31,6 +32,7 @@ interface TransactionRow {
 }
 
 export default function PaymentsPage() {
+  const { t } = useI18n();
   const router = useRouter();
   const [searchValue, setSearchValue] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -47,7 +49,7 @@ export default function PaymentsPage() {
   const columns: Column<TransactionRow>[] = [
     {
       key: "transactionId",
-      header: "Transaction ID",
+      header: t('admin.payments.col.transactionId'),
       cell: (tx) => (
         <div>
           <p className="font-medium text-white">{tx.id.toUpperCase()}</p>
@@ -60,7 +62,7 @@ export default function PaymentsPage() {
     },
     {
       key: "type",
-      header: "Type",
+      header: t('admin.payments.col.type'),
       cell: (tx) => (
         <span
           className={`px-2.5 py-1 rounded-full text-xs font-medium ${
@@ -80,13 +82,13 @@ export default function PaymentsPage() {
     },
     {
       key: "description",
-      header: "Description",
+      header: t('admin.payments.col.description'),
       cell: (tx) => (
         <div>
           <p className="text-sm text-white">{tx.description}</p>
           <p className="text-xs text-white/50">
-            {tx.customerName !== "-" && `Customer: ${tx.customerName} · `}
-            Provider: {tx.providerName}
+            {tx.customerName !== "-" && `${t('admin.payments.col.customerPrefix')} ${tx.customerName} · `}
+            {t('admin.payments.col.providerPrefix')} {tx.providerName}
           </p>
         </div>
       ),
@@ -94,7 +96,7 @@ export default function PaymentsPage() {
     },
     {
       key: "amount",
-      header: "Amount",
+      header: t('admin.payments.col.amount'),
       cell: (tx) => (
         <span
           className={`font-medium ${
@@ -114,7 +116,7 @@ export default function PaymentsPage() {
     },
     {
       key: "status",
-      header: "Status",
+      header: t('admin.payments.col.status'),
       cell: (tx) => <StatusBadge status={tx.status} size="sm" />,
       sortable: true,
       width: "w-24",
@@ -147,8 +149,8 @@ export default function PaymentsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Payments</h1>
-          <p className="text-white/50 mt-1">Manage transactions and payouts</p>
+          <h1 className="text-2xl font-bold text-white">{t('admin.payments.title')}</h1>
+          <p className="text-white/50 mt-1">{t('admin.payments.subtitle')}</p>
         </div>
         <div className="flex gap-2">
           <Button
@@ -157,11 +159,11 @@ export default function PaymentsPage() {
             className="flex items-center gap-2"
           >
             <FileText className="w-4 h-4" />
-            Reports
+            {t('admin.payments.reports')}
           </Button>
           <Button variant="primary" className="flex items-center gap-2">
             <Download className="w-4 h-4" />
-            Export
+            {t('admin.payments.export')}
           </Button>
         </div>
       </div>
@@ -174,7 +176,7 @@ export default function PaymentsPage() {
               <TrendingUp className="w-5 h-5 text-[#10B981]" />
             </div>
             <div>
-              <p className="text-xs text-white/40">Total Revenue</p>
+              <p className="text-xs text-white/40">{t('admin.payments.stat.totalRevenue')}</p>
               <p className="text-xl font-bold text-white">{formatPrice(totalRevenue)}</p>
             </div>
           </div>
@@ -185,7 +187,7 @@ export default function PaymentsPage() {
               <TrendingDown className="w-5 h-5 text-[#00C9FF]" />
             </div>
             <div>
-              <p className="text-xs text-white/40">Total Payouts</p>
+              <p className="text-xs text-white/40">{t('admin.payments.stat.totalPayouts')}</p>
               <p className="text-xl font-bold text-white">{formatPrice(totalPayouts)}</p>
             </div>
           </div>
@@ -196,7 +198,7 @@ export default function PaymentsPage() {
               <CreditCard className="w-5 h-5 text-[#F59E0B]" />
             </div>
             <div>
-              <p className="text-xs text-white/40">Commission</p>
+              <p className="text-xs text-white/40">{t('admin.payments.stat.commission')}</p>
               <p className="text-xl font-bold text-white">{formatPrice(totalCommissions)}</p>
             </div>
           </div>
@@ -207,7 +209,7 @@ export default function PaymentsPage() {
               <Calendar className="w-5 h-5 text-[#7B61FF]" />
             </div>
             <div>
-              <p className="text-xs text-white/40">This Month</p>
+              <p className="text-xs text-white/40">{t('admin.payments.stat.thisMonth')}</p>
               <p className="text-xl font-bold text-white">{formatPrice(totalRevenue * 0.3)}</p>
             </div>
           </div>
@@ -216,31 +218,31 @@ export default function PaymentsPage() {
 
       {/* Filters */}
       <FilterBar
-        searchPlaceholder="Search transactions..."
+        searchPlaceholder={t('admin.payments.search')}
         searchValue={searchValue}
         onSearchChange={setSearchValue}
         filters={[
           {
             key: "type",
-            label: "Type",
+            label: t('admin.payments.filter.type'),
             options: [
-              { value: "all", label: "All Types" },
-              { value: "booking_payment", label: "Booking Payment" },
-              { value: "payout", label: "Payout" },
-              { value: "refund", label: "Refund" },
-              { value: "commission", label: "Commission" },
+              { value: "all", label: t('admin.payments.filter.allTypes') },
+              { value: "booking_payment", label: t('admin.payments.filter.bookingPayment') },
+              { value: "payout", label: t('admin.payments.filter.payout') },
+              { value: "refund", label: t('admin.payments.filter.refund') },
+              { value: "commission", label: t('admin.payments.filter.commission') },
             ],
             value: typeFilter,
             onChange: setTypeFilter,
           },
           {
             key: "status",
-            label: "Status",
+            label: t('admin.payments.filter.status'),
             options: [
-              { value: "all", label: "All Status" },
-              { value: "completed", label: "Completed" },
-              { value: "pending", label: "Pending" },
-              { value: "failed", label: "Failed" },
+              { value: "all", label: t('admin.payments.filter.allStatus') },
+              { value: "completed", label: t('admin.payments.filter.completed') },
+              { value: "pending", label: t('admin.payments.filter.pending') },
+              { value: "failed", label: t('admin.payments.filter.failed') },
             ],
             value: statusFilter,
             onChange: setStatusFilter,
@@ -262,7 +264,7 @@ export default function PaymentsPage() {
         actions={{
           view: (tx) => console.log("View:", tx.id),
         }}
-        emptyMessage="No transactions found"
+        emptyMessage={t('admin.payments.empty')}
       />
     </div>
   );

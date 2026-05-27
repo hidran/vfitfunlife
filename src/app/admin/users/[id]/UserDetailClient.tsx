@@ -9,6 +9,7 @@ import { UserRoleBadge, StatusBadge } from "@/components/admin";
 import { formatDate, formatPrice, toDate } from "@/lib/utils";
 import { User, UserRole } from "@/types/firebase";
 import { defaultNotificationSettings, allFalseNotificationSettings } from "@/types/profile";
+import { useI18n } from "@/hooks/useI18n";
 import {
   ArrowLeft,
   Mail,
@@ -31,6 +32,7 @@ interface UserDetailClientProps {
 }
 
 export default function UserDetailClient({ userId }: UserDetailClientProps) {
+  const { t } = useI18n();
   const router = useRouter();
   const { users, fetchUsers, updateUserRoleAction, suspendUserAction, activateUserAction } = useAdminStore();
   const [user, setUser] = useState<User | null>(null);
@@ -87,15 +89,15 @@ export default function UserDetailClient({ userId }: UserDetailClientProps) {
 
   const handleResetPassword = async () => {
     if (!user) return;
-    const confirmed = confirm(`Send password reset email to ${user.email}?`);
+    const confirmed = confirm(t('admin.userDetail.confirmResetPassword', { email: user.email || '' }));
     if (!confirmed) return;
-    alert("Password reset email sent!");
+    alert(t('admin.userDetail.resetPasswordSuccess'));
   };
 
   const handleDeleteAccount = async () => {
     if (!user) return;
     const confirmed = confirm(
-      `Are you sure you want to delete ${user.fullName}'s account? This action cannot be undone.`
+      t('admin.userDetail.confirmDelete', { name: user.fullName })
     );
     if (!confirmed) return;
     router.push("/admin/users");
@@ -112,9 +114,9 @@ export default function UserDetailClient({ userId }: UserDetailClientProps) {
   if (!user) {
     return (
       <div className="text-center py-12">
-        <p className="text-white/50">User not found</p>
+        <p className="text-white/50">{t('admin.userDetail.notFound')}</p>
         <Button variant="secondary" onClick={() => router.push("/admin/users")} className="mt-4">
-          Back to Users
+          {t('admin.userDetail.backToUsers')}
         </Button>
       </div>
     );
@@ -125,7 +127,7 @@ export default function UserDetailClient({ userId }: UserDetailClientProps) {
       {/* Back Button */}
       <Button variant="ghost" onClick={() => router.push("/admin/users")} className="text-white/60">
         <ArrowLeft className="w-4 h-4 mr-2" />
-        Back to Users
+        {t('admin.userDetail.backToUsers')}
       </Button>
 
       {/* Profile Header */}
@@ -169,7 +171,7 @@ export default function UserDetailClient({ userId }: UserDetailClientProps) {
                   className="flex items-center gap-2"
                 >
                   <Lock className="w-4 h-4" />
-                  Reset Password
+                  {t('admin.userDetail.resetPassword')}
                 </Button>
                 {(user as any).isSuspended ? (
                   <Button
@@ -179,7 +181,7 @@ export default function UserDetailClient({ userId }: UserDetailClientProps) {
                     className="flex items-center gap-2 bg-[#10B981] hover:bg-[#059669]"
                   >
                     <CheckCircle className="w-4 h-4" />
-                    Activate
+                    {t('admin.userDetail.activate')}
                   </Button>
                 ) : (
                   <Button
@@ -189,7 +191,7 @@ export default function UserDetailClient({ userId }: UserDetailClientProps) {
                     className="flex items-center gap-2 text-[#F59E0B] hover:text-[#F59E0B]"
                   >
                     <Ban className="w-4 h-4" />
-                    Suspend
+                    {t('admin.userDetail.suspend')}
                   </Button>
                 )}
                 <Button
@@ -199,7 +201,7 @@ export default function UserDetailClient({ userId }: UserDetailClientProps) {
                   className="flex items-center gap-2 text-[#EF4444] hover:text-[#EF4444]"
                 >
                   <Trash2 className="w-4 h-4" />
-                  Delete
+                  {t('admin.userDetail.delete')}
                 </Button>
               </div>
             </div>
@@ -211,8 +213,8 @@ export default function UserDetailClient({ userId }: UserDetailClientProps) {
                   <Mail className="w-5 h-5 text-white/50" />
                 </div>
                 <div>
-                  <p className="text-xs text-white/40">Email</p>
-                  <p className="text-sm text-white truncate">{user.email || "N/A"}</p>
+                  <p className="text-xs text-white/40">{t('admin.userDetail.field.email')}</p>
+                  <p className="text-sm text-white truncate">{user.email || t('admin.userDetail.field.naValue')}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -220,8 +222,8 @@ export default function UserDetailClient({ userId }: UserDetailClientProps) {
                   <Phone className="w-5 h-5 text-white/50" />
                 </div>
                 <div>
-                  <p className="text-xs text-white/40">Phone</p>
-                  <p className="text-sm text-white">{user.phone || "N/A"}</p>
+                  <p className="text-xs text-white/40">{t('admin.userDetail.field.phone')}</p>
+                  <p className="text-sm text-white">{user.phone || t('admin.userDetail.field.naValue')}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -229,7 +231,7 @@ export default function UserDetailClient({ userId }: UserDetailClientProps) {
                   <Calendar className="w-5 h-5 text-white/50" />
                 </div>
                 <div>
-                  <p className="text-xs text-white/40">Joined</p>
+                  <p className="text-xs text-white/40">{t('admin.users.col.joined')}</p>
                   <p className="text-sm text-white">
                     {formatDate(toDate(user.createdAt) || new Date())}
                   </p>
@@ -240,7 +242,7 @@ export default function UserDetailClient({ userId }: UserDetailClientProps) {
                   <Clock className="w-5 h-5 text-white/50" />
                 </div>
                 <div>
-                  <p className="text-xs text-white/40">Last Login</p>
+                  <p className="text-xs text-white/40">{t('admin.users.col.lastLogin')}</p>
                   <p className="text-sm text-white">
                     {user.lastLoginAt
                       ? formatDate(toDate(user.lastLoginAt) || new Date(), {
@@ -249,7 +251,7 @@ export default function UserDetailClient({ userId }: UserDetailClientProps) {
                           hour: "2-digit",
                           minute: "2-digit",
                         })
-                      : "Never"}
+                      : t('admin.userDetail.field.neverLogin')}
                   </p>
                 </div>
               </div>
@@ -262,9 +264,9 @@ export default function UserDetailClient({ userId }: UserDetailClientProps) {
       <div className="border-b border-white/10">
         <div className="flex gap-6">
           {[
-            { id: "overview", label: "Overview", icon: UserCog },
-            { id: "bookings", label: "Bookings", icon: CalendarDays },
-            { id: "activity", label: "Activity Log", icon: History },
+            { id: "overview", label: t('admin.userDetail.tab.overview'), icon: UserCog },
+            { id: "bookings", label: t('admin.userDetail.tab.bookings'), icon: CalendarDays },
+            { id: "activity", label: t('admin.userDetail.tab.activity'), icon: History },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -289,44 +291,44 @@ export default function UserDetailClient({ userId }: UserDetailClientProps) {
             {/* Account Info */}
             <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-white">Account Information</h3>
+                <h3 className="text-lg font-semibold text-white">{t('admin.userDetail.accountInfo')}</h3>
                 <Button variant="ghost" size="sm" className="text-[#00C9FF]">
                   <Edit className="w-4 h-4 mr-1" />
-                  Edit
+                  {t('admin.userDetail.edit')}
                 </Button>
               </div>
               <div className="space-y-4">
                 <div className="flex justify-between py-2 border-b border-white/5">
-                  <span className="text-white/50">Full Name</span>
+                  <span className="text-white/50">{t('admin.userDetail.field.fullName')}</span>
                   <span className="text-white">{user.fullName}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b border-white/5">
-                  <span className="text-white/50">Email</span>
-                  <span className="text-white">{user.email || "Not set"}</span>
+                  <span className="text-white/50">{t('admin.userDetail.field.email')}</span>
+                  <span className="text-white">{user.email || t('admin.userDetail.field.notSet')}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b border-white/5">
-                  <span className="text-white/50">Phone</span>
-                  <span className="text-white">{user.phone || "Not set"}</span>
+                  <span className="text-white/50">{t('admin.userDetail.field.phone')}</span>
+                  <span className="text-white">{user.phone || t('admin.userDetail.field.notSet')}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b border-white/5">
-                  <span className="text-white/50">Date of Birth</span>
+                  <span className="text-white/50">{t('admin.userDetail.field.dateOfBirth')}</span>
                   <span className="text-white">
                     {user.dateOfBirth
                       ? formatDate(toDate(user.dateOfBirth) || new Date())
-                      : "Not set"}
+                      : t('admin.userDetail.field.notSet')}
                   </span>
                 </div>
                 <div className="flex justify-between py-2 border-b border-white/5">
-                  <span className="text-white/50">Role</span>
+                  <span className="text-white/50">{t('admin.userDetail.field.role')}</span>
                   <select
                     value={user.role}
                     onChange={(e) => handleRoleChange(e.target.value as UserRole)}
                     className="bg-[#2A2D3A] border border-white/10 rounded-lg px-3 py-1 text-sm text-white"
                   >
-                    <option value="customer">Customer</option>
-                    <option value="provider">Provider</option>
-                    <option value="admin">Admin</option>
-                    <option value="superadmin">Superadmin</option>
+                    <option value="customer">{t('admin.userDetail.field.roleCustomer')}</option>
+                    <option value="provider">{t('admin.userDetail.field.roleProvider')}</option>
+                    <option value="admin">{t('admin.userDetail.field.roleAdmin')}</option>
+                    <option value="superadmin">{t('admin.userDetail.field.roleSuperadmin')}</option>
                   </select>
                 </div>
               </div>
@@ -334,19 +336,19 @@ export default function UserDetailClient({ userId }: UserDetailClientProps) {
 
             {/* Stats */}
             <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Statistics</h3>
+              <h3 className="text-lg font-semibold text-white mb-4">{t('admin.userDetail.stats')}</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 bg-black/20 rounded-xl">
                   <div className="flex items-center gap-3 mb-2">
                     <CalendarDays className="w-5 h-5 text-[#00C9FF]" />
-                    <span className="text-white/50">Total Bookings</span>
+                    <span className="text-white/50">{t('admin.userDetail.stat.totalBookings')}</span>
                   </div>
                   <p className="text-2xl font-bold text-white">0</p>
                 </div>
                 <div className="p-4 bg-black/20 rounded-xl">
                   <div className="flex items-center gap-3 mb-2">
                     <CreditCard className="w-5 h-5 text-[#10B981]" />
-                    <span className="text-white/50">Total Spent</span>
+                    <span className="text-white/50">{t('admin.userDetail.stat.totalSpent')}</span>
                   </div>
                   <p className="text-2xl font-bold text-white">{formatPrice(0)}</p>
                 </div>
@@ -355,16 +357,16 @@ export default function UserDetailClient({ userId }: UserDetailClientProps) {
                     <div className="w-5 h-5 rounded-full bg-gradient-to-r from-[#FFD700] to-[#FFA500] flex items-center justify-center text-[10px] font-bold text-black">
                       VIP
                     </div>
-                    <span className="text-white/50">VIP Status</span>
+                    <span className="text-white/50">{t('admin.userDetail.stat.vipStatus')}</span>
                   </div>
                   <p className="text-2xl font-bold text-white">
-                    {user.isVip ? "Active" : "Inactive"}
+                    {user.isVip ? t('admin.userDetail.stat.vipActive') : t('admin.userDetail.stat.vipInactive')}
                   </p>
                 </div>
                 <div className="p-4 bg-black/20 rounded-xl">
                   <div className="flex items-center gap-3 mb-2">
                     <Clock className="w-5 h-5 text-[#F59E0B]" />
-                    <span className="text-white/50">Points</span>
+                    <span className="text-white/50">{t('admin.userDetail.stat.points')}</span>
                   </div>
                   <p className="text-2xl font-bold text-white">{(user.pointsBalance || 0).toLocaleString()}</p>
                 </div>
@@ -373,18 +375,18 @@ export default function UserDetailClient({ userId }: UserDetailClientProps) {
 
             {/* Wallet & Points */}
             <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Wallet & Points</h3>
+              <h3 className="text-lg font-semibold text-white mb-4">{t('admin.userDetail.walletPoints')}</h3>
               <div className="space-y-4">
                 <div className="flex justify-between items-center p-3 bg-black/20 rounded-xl">
-                  <span className="text-white/50">Wallet Balance</span>
+                  <span className="text-white/50">{t('admin.userDetail.walletBalance')}</span>
                   <span className="text-xl font-semibold text-white">
                     {formatPrice(user.walletBalance || 0)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-black/20 rounded-xl">
-                  <span className="text-white/50">Points Balance</span>
+                  <span className="text-white/50">{t('admin.userDetail.pointsBalance')}</span>
                   <span className="text-xl font-semibold text-white">
-                    {(user.pointsBalance || 0).toLocaleString()} pts
+                    {(user.pointsBalance || 0).toLocaleString()} {t('admin.userDetail.pointsSuffix')}
                   </span>
                 </div>
               </div>
@@ -392,7 +394,7 @@ export default function UserDetailClient({ userId }: UserDetailClientProps) {
 
             {/* Notifications */}
             <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Notification Settings</h3>
+              <h3 className="text-lg font-semibold text-white mb-4">{t('admin.userDetail.notificationSettings')}</h3>
               <div className="space-y-3">
                 {(() => {
                   const ns = (user as any).notificationSettings
@@ -400,10 +402,10 @@ export default function UserDetailClient({ userId }: UserDetailClientProps) {
                       ? allFalseNotificationSettings
                       : defaultNotificationSettings);
                   return [
-                    { label: "Email Notifications", enabled: user.emailVerified },
-                    { label: "Push Notifications", enabled: Object.values(ns.push).some(Boolean) },
-                    { label: "SMS Notifications", enabled: user.phoneVerified },
-                    { label: "Marketing Emails", enabled: ns.email?.promotion ?? false },
+                    { label: t('admin.userDetail.notification.email'), enabled: user.emailVerified },
+                    { label: t('admin.userDetail.notification.push'), enabled: Object.values(ns.push).some(Boolean) },
+                    { label: t('admin.userDetail.notification.sms'), enabled: user.phoneVerified },
+                    { label: t('admin.userDetail.notification.marketing'), enabled: ns.email?.promotion ?? false },
                   ];
                 })().map((setting) => (
                   <div key={setting.label} className="flex justify-between items-center">
@@ -413,7 +415,7 @@ export default function UserDetailClient({ userId }: UserDetailClientProps) {
                         setting.enabled ? "text-[#10B981]" : "text-white/40"
                       }`}
                     >
-                      {setting.enabled ? "Enabled" : "Disabled"}
+                      {setting.enabled ? t('admin.userDetail.notification.enabled') : t('admin.userDetail.notification.disabled')}
                     </span>
                   </div>
                 ))}
@@ -425,14 +427,14 @@ export default function UserDetailClient({ userId }: UserDetailClientProps) {
         {activeTab === "bookings" && (
           <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-8 text-center">
             <CalendarDays className="w-12 h-12 text-white/20 mx-auto mb-4" />
-            <p className="text-white/50">Booking history will be displayed here</p>
+            <p className="text-white/50">{t('admin.userDetail.bookingHistoryPlaceholder')}</p>
           </div>
         )}
 
         {activeTab === "activity" && (
           <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-8 text-center">
             <History className="w-12 h-12 text-white/20 mx-auto mb-4" />
-            <p className="text-white/50">Activity log will be displayed here</p>
+            <p className="text-white/50">{t('admin.userDetail.activityLogPlaceholder')}</p>
           </div>
         )}
       </div>

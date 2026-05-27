@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { AdminUser, UserFilters } from "@/types/admin";
 import { Column } from "@/components/admin/DataTable";
 import { formatDate, toDate } from "@/lib/utils";
+import { useI18n } from "@/hooks/useI18n";
 import {
   User,
   Mail,
@@ -24,6 +25,7 @@ import {
 } from "lucide-react";
 
 export default function UsersPage() {
+  const { t } = useI18n();
   const router = useRouter();
   const {
     users,
@@ -97,9 +99,9 @@ export default function UsersPage() {
 
   const handleBulkAction = async (action: "activate" | "suspend" | "delete") => {
     if (selectedIds.length === 0) return;
-    
+
     const confirmed = confirm(
-      `Are you sure you want to ${action} ${selectedIds.length} user(s)?`
+      t('admin.users.bulkConfirm', { action, count: String(selectedIds.length) })
     );
     if (!confirmed) return;
 
@@ -114,7 +116,7 @@ export default function UsersPage() {
   const columns: Column<AdminUser>[] = [
     {
       key: "user",
-      header: "User",
+      header: t('admin.users.col.user'),
       cell: (user) => (
         <div className="flex items-center gap-3">
           {user.avatarUrl ? (
@@ -141,14 +143,14 @@ export default function UsersPage() {
     },
     {
       key: "role",
-      header: "Role",
+      header: t('admin.users.col.role'),
       cell: (user) => <UserRoleBadge role={user.role} size="sm" />,
       sortable: true,
       width: "w-24",
     },
     {
       key: "status",
-      header: "Status",
+      header: t('admin.users.col.status'),
       cell: (user) => (
         <StatusBadge status={user.isSuspended ? "suspended" : "active"} size="sm" />
       ),
@@ -157,7 +159,7 @@ export default function UsersPage() {
     },
     {
       key: "joined",
-      header: "Joined",
+      header: t('admin.users.col.joined'),
       cell: (user) => {
         const date = toDate(user.createdAt);
         return (
@@ -171,19 +173,19 @@ export default function UsersPage() {
     },
     {
       key: "lastLogin",
-      header: "Last Login",
+      header: t('admin.users.col.lastLogin'),
       cell: (user) => {
         const date = toDate(user.lastLoginAt);
         return (
           <span className="text-sm text-white/50">
             {date
-              ? formatDate(date, { 
-                  month: "short", 
+              ? formatDate(date, {
+                  month: "short",
                   day: "numeric",
                   hour: "2-digit",
                   minute: "2-digit",
                 })
-              : "Never"}
+              : t('admin.users.col.never')}
           </span>
         );
       },
@@ -199,9 +201,9 @@ export default function UsersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Users</h1>
+          <h1 className="text-2xl font-bold text-white">{t('admin.users.title')}</h1>
           <p className="text-white/50 mt-1">
-            Manage user accounts and permissions
+            {t('admin.users.subtitle')}
           </p>
         </div>
         <Button
@@ -210,7 +212,7 @@ export default function UsersPage() {
           onClick={() => {/* TODO: Add user modal */}}
         >
           <UserPlus className="w-4 h-4" />
-          Add User
+          {t('admin.users.addUser')}
         </Button>
       </div>
 
@@ -220,7 +222,7 @@ export default function UsersPage() {
           <div className="flex items-center gap-3">
             <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
             <div>
-              <p className="text-red-200 font-medium">Error loading users</p>
+              <p className="text-red-200 font-medium">{t('admin.users.error.loading')}</p>
               <p className="text-red-300/70 text-sm">{error}</p>
             </div>
           </div>
@@ -235,15 +237,15 @@ export default function UsersPage() {
 
       {/* Filters */}
       <FilterBar
-        searchPlaceholder="Search users by name, email, or phone..."
+        searchPlaceholder={t('admin.users.search')}
         searchValue={filters.search || ""}
         onSearchChange={handleSearchChange}
         filters={[
           {
             key: "role",
-            label: "Role",
+            label: t('admin.users.filter.role'),
             options: [
-              { value: "all", label: "All Roles" },
+              { value: "all", label: t('admin.users.filter.allRoles') },
               { value: "superadmin", label: "Superadmin" },
               { value: "admin", label: "Admin" },
               { value: "provider", label: "Provider" },
@@ -254,11 +256,11 @@ export default function UsersPage() {
           },
           {
             key: "status",
-            label: "Status",
+            label: t('admin.users.filter.status'),
             options: [
-              { value: "all", label: "All Status" },
-              { value: "active", label: "Active" },
-              { value: "suspended", label: "Suspended" },
+              { value: "all", label: t('admin.users.filter.allStatus') },
+              { value: "active", label: t('admin.users.filter.active') },
+              { value: "suspended", label: t('admin.users.filter.suspended') },
             ],
             value: filters.status || "all",
             onChange: handleStatusChange,
@@ -272,7 +274,7 @@ export default function UsersPage() {
       {selectedIds.length > 0 && (
         <div className="flex items-center gap-3 p-3 bg-[#00C9FF]/10 border border-[#00C9FF]/30 rounded-xl">
           <span className="text-sm text-white">
-            {selectedIds.length} user(s) selected
+            {t('admin.users.selected', { count: String(selectedIds.length) })}
           </span>
           <div className="flex-1" />
           <Button
@@ -282,7 +284,7 @@ export default function UsersPage() {
             className="text-[#10B981] hover:text-[#10B981] hover:bg-[#10B981]/10"
           >
             <CheckCircle className="w-4 h-4 mr-1" />
-            Activate
+            {t('admin.users.bulkActivate')}
           </Button>
           <Button
             variant="ghost"
@@ -291,7 +293,7 @@ export default function UsersPage() {
             className="text-[#F59E0B] hover:text-[#F59E0B] hover:bg-[#F59E0B]/10"
           >
             <Ban className="w-4 h-4 mr-1" />
-            Suspend
+            {t('admin.users.bulkSuspend')}
           </Button>
           <Button
             variant="ghost"
@@ -300,7 +302,7 @@ export default function UsersPage() {
             className="text-[#EF4444] hover:text-[#EF4444] hover:bg-[#EF4444]/10"
           >
             <Trash2 className="w-4 h-4 mr-1" />
-            Delete
+            {t('admin.users.bulkDelete')}
           </Button>
         </div>
       )}
@@ -322,7 +324,7 @@ export default function UsersPage() {
           pageSize: filters.limit || 20,
           onPageChange: handlePageChange,
         }}
-        emptyMessage="No users found"
+        emptyMessage={t('admin.users.empty')}
       />
     </div>
   );

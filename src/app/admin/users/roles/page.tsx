@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Column } from "@/components/admin/DataTable";
 import { formatDate, toDate } from "@/lib/utils";
 import { User, UserRole } from "@/types/firebase";
+import { useI18n } from "@/hooks/useI18n";
 import {
   Shield,
   Plus,
@@ -23,6 +24,7 @@ interface AdminUser extends User {
 }
 
 export default function UserRolesPage() {
+  const { t } = useI18n();
   const router = useRouter();
   const { user } = useAuthStore();
 
@@ -84,7 +86,7 @@ export default function UserRolesPage() {
   const columns: Column<AdminUser>[] = [
     {
       key: "user",
-      header: "User",
+      header: t('admin.roles.col.user'),
       cell: (user) => (
         <div className="flex items-center gap-3">
           {user.avatarUrl ? (
@@ -111,26 +113,26 @@ export default function UserRolesPage() {
     },
     {
       key: "role",
-      header: "Role",
+      header: t('admin.roles.col.role'),
       cell: (user) => <UserRoleBadge role={user.role} size="md" />,
       width: "w-32",
     },
     {
       key: "added",
-      header: "Added",
+      header: t('admin.roles.col.added'),
       cell: (user) => (
         <div>
           <p className="text-sm text-white/70">
-            {(user as any).addedAt ? formatDate((user as any).addedAt) : "N/A"}
+            {(user as any).addedAt ? formatDate((user as any).addedAt) : t('admin.userDetail.field.naValue')}
           </p>
-          <p className="text-xs text-white/40">by {(user as any).addedBy || "System"}</p>
+          <p className="text-xs text-white/40">{t('admin.roles.col.addedBy', { by: (user as any).addedBy || 'System' })}</p>
         </div>
       ),
       width: "w-40",
     },
     {
       key: "lastLogin",
-      header: "Last Login",
+      header: t('admin.roles.col.lastLogin'),
       cell: (user) => {
         const date = toDate(user.lastLoginAt);
         return (
@@ -142,7 +144,7 @@ export default function UserRolesPage() {
                   hour: "2-digit",
                   minute: "2-digit",
                 })
-              : "Never"}
+              : t('admin.roles.col.never')}
           </span>
         );
       },
@@ -154,16 +156,16 @@ export default function UserRolesPage() {
     return (
       <div className="flex flex-col items-center justify-center h-96">
         <AlertTriangle className="w-16 h-16 text-[#F59E0B] mb-4" />
-        <h2 className="text-xl font-semibold text-white mb-2">Access Denied</h2>
+        <h2 className="text-xl font-semibold text-white mb-2">{t('admin.roles.accessDenied.title')}</h2>
         <p className="text-white/50 text-center max-w-md">
-          Only superadmin users can manage admin roles and permissions.
+          {t('admin.roles.accessDenied.message')}
         </p>
         <Button
           variant="secondary"
           onClick={() => router.push("/admin/users")}
           className="mt-6"
         >
-          Back to Users
+          {t('admin.roles.accessDenied.backToUsers')}
         </Button>
       </div>
     );
@@ -174,9 +176,9 @@ export default function UserRolesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Admin Roles</h1>
+          <h1 className="text-2xl font-bold text-white">{t('admin.roles.title')}</h1>
           <p className="text-white/50 mt-1">
-            Manage admin users and their permissions
+            {t('admin.roles.subtitle')}
           </p>
         </div>
         <Button
@@ -185,7 +187,7 @@ export default function UserRolesPage() {
           onClick={() => {/* TODO: Add admin modal */}}
         >
           <UserPlus className="w-4 h-4" />
-          Add Admin
+          {t('admin.roles.addAdmin')}
         </Button>
       </div>
 
@@ -193,9 +195,9 @@ export default function UserRolesPage() {
       <div className="bg-[#FFD700]/10 border border-[#FFD700]/30 rounded-xl p-4 flex items-start gap-3">
         <Shield className="w-5 h-5 text-[#FFD700] flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-sm font-medium text-[#FFD700]">Superadmin Access Only</p>
+          <p className="text-sm font-medium text-[#FFD700]">{t('admin.roles.superadminNotice.label')}</p>
           <p className="text-sm text-white/70">
-            This page allows you to manage admin users. Superadmins have full access to all platform features, while admins have limited access (cannot manage other admins or system settings).
+            {t('admin.roles.superadminNotice.description')}
           </p>
         </div>
       </div>
@@ -208,26 +210,26 @@ export default function UserRolesPage() {
               <Shield className="w-5 h-5 text-[#FFD700]" />
             </div>
             <div>
-              <h3 className="font-semibold text-white">Superadmin</h3>
-              <p className="text-sm text-white/50">Full platform access</p>
+              <h3 className="font-semibold text-white">{t('admin.roles.superadminCard.title')}</h3>
+              <p className="text-sm text-white/50">{t('admin.roles.superadminCard.subtitle')}</p>
             </div>
           </div>
           <ul className="space-y-2 text-sm text-white/70">
             <li className="flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
-              Manage all users (including other admins)
+              {t('admin.roles.superadminCard.perm1')}
             </li>
             <li className="flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
-              Access system logs and settings
+              {t('admin.roles.superadminCard.perm2')}
             </li>
             <li className="flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
-              Configure platform settings
+              {t('admin.roles.superadminCard.perm3')}
             </li>
             <li className="flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
-              Manage financial reports
+              {t('admin.roles.superadminCard.perm4')}
             </li>
           </ul>
         </div>
@@ -238,30 +240,30 @@ export default function UserRolesPage() {
               <Shield className="w-5 h-5 text-[#7B61FF]" />
             </div>
             <div>
-              <h3 className="font-semibold text-white">Admin</h3>
-              <p className="text-sm text-white/50">Limited platform access</p>
+              <h3 className="font-semibold text-white">{t('admin.roles.adminCard.title')}</h3>
+              <p className="text-sm text-white/50">{t('admin.roles.adminCard.subtitle')}</p>
             </div>
           </div>
           <ul className="space-y-2 text-sm text-white/70">
             <li className="flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
-              Manage customers and providers
+              {t('admin.roles.adminCard.perm1')}
             </li>
             <li className="flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
-              View and manage bookings
+              {t('admin.roles.adminCard.perm2')}
             </li>
             <li className="flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
-              Manage user types and venues
+              {t('admin.roles.adminCard.perm3')}
             </li>
             <li className="flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444]" />
-              Cannot manage other admins
+              {t('admin.roles.adminCard.perm4')}
             </li>
             <li className="flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444]" />
-              Cannot access system logs
+              {t('admin.roles.adminCard.perm5')}
             </li>
           </ul>
         </div>
@@ -276,16 +278,16 @@ export default function UserRolesPage() {
           edit: (user) => console.log("Edit:", user.id),
           delete: (user) => {
             if (user.role === "superadmin") {
-              alert("Cannot remove superadmin role from the primary superadmin.");
+              alert(t('admin.roles.cannotRemoveSuperadmin'));
               return;
             }
-            const confirmed = confirm(`Remove admin access for ${user.fullName}?`);
+            const confirmed = confirm(t('admin.roles.confirmRemove', { name: user.fullName }));
             if (confirmed) {
               console.log("Remove admin:", user.id);
             }
           },
         }}
-        emptyMessage="No admin users found"
+        emptyMessage={t('admin.roles.empty')}
       />
     </div>
   );

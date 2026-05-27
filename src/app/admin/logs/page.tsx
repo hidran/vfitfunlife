@@ -8,6 +8,7 @@ import { DataTable, FilterBar } from "@/components/admin";
 import { Column } from "@/components/admin/DataTable";
 import { LogFilters, SystemLog } from "@/types/admin";
 import { formatDate, toDate } from "@/lib/utils";
+import { useI18n } from "@/hooks/useI18n";
 import {
   FileText,
   AlertCircle,
@@ -18,6 +19,7 @@ import {
 } from "lucide-react";
 
 export default function SystemLogsPage() {
+  const { t } = useI18n();
   const router = useRouter();
   const { user } = useAuthStore();
   const { systemLogs, logsTotal, isLoadingLogs, fetchSystemLogs } = useAdminStore();
@@ -79,7 +81,7 @@ export default function SystemLogsPage() {
   const columns: Column<SystemLog>[] = [
     {
       key: "timestamp",
-      header: "Timestamp",
+      header: t('admin.logs.col.timestamp'),
       cell: (log) => {
         const date = toDate(log.timestamp);
         return (
@@ -99,7 +101,7 @@ export default function SystemLogsPage() {
     },
     {
       key: "severity",
-      header: "Severity",
+      header: t('admin.logs.col.severity'),
       cell: (log) => (
         <span
           className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${getSeverityColor(
@@ -115,7 +117,7 @@ export default function SystemLogsPage() {
     },
     {
       key: "action",
-      header: "Action",
+      header: t('admin.logs.col.action'),
       cell: (log) => (
         <span className="font-medium text-white text-sm">{log.action}</span>
       ),
@@ -123,7 +125,7 @@ export default function SystemLogsPage() {
     },
     {
       key: "user",
-      header: "User",
+      header: t('admin.logs.col.user'),
       cell: (log) => (
         <div>
           {log.userName ? (
@@ -132,7 +134,7 @@ export default function SystemLogsPage() {
               <p className="text-xs text-white/50">{log.userRole}</p>
             </>
           ) : (
-            <span className="text-sm text-white/40">System</span>
+            <span className="text-sm text-white/40">{t('admin.logs.col.system')}</span>
           )}
         </div>
       ),
@@ -140,14 +142,14 @@ export default function SystemLogsPage() {
     },
     {
       key: "details",
-      header: "Details",
+      header: t('admin.logs.col.details'),
       cell: (log) => (
         <p className="text-sm text-white/70 truncate max-w-md">{log.details}</p>
       ),
     },
     {
       key: "ip",
-      header: "IP Address",
+      header: t('admin.logs.col.ipAddress'),
       cell: (log) => (
         <span className="text-sm text-white/40 font-mono">{log.ipAddress || "-"}</span>
       ),
@@ -162,33 +164,33 @@ export default function SystemLogsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">System Logs</h1>
+          <h1 className="text-2xl font-bold text-white">{t('admin.logs.title')}</h1>
           <p className="text-white/50 mt-1">
-            Audit trail of all admin actions and system events
+            {t('admin.logs.subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-2 px-3 py-2 bg-[#FFD700]/10 border border-[#FFD700]/30 rounded-xl">
             <Shield className="w-4 h-4 text-[#FFD700]" />
-            <span className="text-sm text-[#FFD700]">Superadmin Only</span>
+            <span className="text-sm text-[#FFD700]">{t('admin.logs.superadminOnly')}</span>
           </div>
         </div>
       </div>
 
       {/* Filters */}
       <FilterBar
-        searchPlaceholder="Search logs by action or details..."
+        searchPlaceholder={t('admin.logs.search')}
         searchValue={filters.search || ""}
         onSearchChange={(search) => setFilters((prev) => ({ ...prev, search, page: 1 }))}
         filters={[
           {
             key: "severity",
-            label: "Severity",
+            label: t('admin.logs.filter.severity'),
             options: [
-              { value: "all", label: "All Severities" },
-              { value: "info", label: "Info" },
-              { value: "warning", label: "Warning" },
-              { value: "error", label: "Error" },
+              { value: "all", label: t('admin.logs.filter.allSeverities') },
+              { value: "info", label: t('admin.logs.filter.info') },
+              { value: "warning", label: t('admin.logs.filter.warning') },
+              { value: "error", label: t('admin.logs.filter.error') },
             ],
             value: filters.severity || "all",
             onChange: handleSeverityChange,
@@ -206,7 +208,7 @@ export default function SystemLogsPage() {
               <FileText className="w-5 h-5 text-[#00C9FF]" />
             </div>
             <div>
-              <p className="text-xs text-white/40">Total Logs</p>
+              <p className="text-xs text-white/40">{t('admin.logs.stat.totalLogs')}</p>
               <p className="text-xl font-bold text-white">{logsTotal}</p>
             </div>
           </div>
@@ -217,7 +219,7 @@ export default function SystemLogsPage() {
               <AlertTriangle className="w-5 h-5 text-[#F59E0B]" />
             </div>
             <div>
-              <p className="text-xs text-white/40">Warnings</p>
+              <p className="text-xs text-white/40">{t('admin.logs.stat.warnings')}</p>
               <p className="text-xl font-bold text-white">
                 {systemLogs.filter((l) => l.severity === "warning").length}
               </p>
@@ -230,7 +232,7 @@ export default function SystemLogsPage() {
               <AlertCircle className="w-5 h-5 text-[#EF4444]" />
             </div>
             <div>
-              <p className="text-xs text-white/40">Errors</p>
+              <p className="text-xs text-white/40">{t('admin.logs.stat.errors')}</p>
               <p className="text-xl font-bold text-white">
                 {systemLogs.filter((l) => l.severity === "error").length}
               </p>
@@ -252,7 +254,7 @@ export default function SystemLogsPage() {
           pageSize: filters.limit || 50,
           onPageChange: handlePageChange,
         }}
-        emptyMessage="No logs found"
+        emptyMessage={t('admin.logs.empty')}
       />
     </div>
   );

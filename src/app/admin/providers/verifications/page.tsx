@@ -6,6 +6,7 @@ import { Timestamp } from "firebase/firestore";
 import { useAdminStore } from "@/stores/adminStore";
 import { VerificationQueue } from "@/components/admin";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/hooks/useI18n";
 import {
   ArrowLeft,
   CheckCircle,
@@ -13,6 +14,7 @@ import {
 } from "lucide-react";
 
 export default function ProviderVerificationsPage() {
+  const { t } = useI18n();
   const router = useRouter();
   const {
     pendingVerifications,
@@ -54,22 +56,22 @@ export default function ProviderVerificationsPage() {
           className="text-white/60"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
+          {t('admin.verificationsPage.back')}
         </Button>
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Provider Verifications</h1>
+          <h1 className="text-2xl font-bold text-white">{t('admin.verificationsPage.title')}</h1>
           <p className="text-white/50 mt-1">
-            Review and approve provider applications
+            {t('admin.verificationsPage.subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-4 py-2 bg-[#F59E0B]/10 border border-[#F59E0B]/30 rounded-xl">
             <AlertCircle className="w-4 h-4 text-[#F59E0B]" />
             <span className="text-sm text-[#F59E0B]">
-              {pendingVerifications.length} pending
+              {t('admin.verificationsPage.pendingBadge', { count: String(pendingVerifications.length) })}
             </span>
           </div>
         </div>
@@ -83,7 +85,7 @@ export default function ProviderVerificationsPage() {
               <AlertCircle className="w-5 h-5 text-[#F59E0B]" />
             </div>
             <div>
-              <p className="text-sm text-white/50">Pending</p>
+              <p className="text-sm text-white/50">{t('admin.verificationsPage.stat.pending')}</p>
               <p className="text-xl font-bold text-white">{pendingVerifications.length}</p>
             </div>
           </div>
@@ -94,7 +96,7 @@ export default function ProviderVerificationsPage() {
               <CheckCircle className="w-5 h-5 text-[#10B981]" />
             </div>
             <div>
-              <p className="text-sm text-white/50">Verified Today</p>
+              <p className="text-sm text-white/50">{t('admin.verificationsPage.stat.verifiedToday')}</p>
               <p className="text-xl font-bold text-white">0</p>
             </div>
           </div>
@@ -105,7 +107,7 @@ export default function ProviderVerificationsPage() {
               <CheckCircle className="w-5 h-5 text-[#00C9FF]" />
             </div>
             <div>
-              <p className="text-sm text-white/50">Avg. Response Time</p>
+              <p className="text-sm text-white/50">{t('admin.verificationsPage.stat.avgResponseTime')}</p>
               <p className="text-xl font-bold text-white">2.5h</p>
             </div>
           </div>
