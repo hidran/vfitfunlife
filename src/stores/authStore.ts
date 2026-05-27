@@ -19,6 +19,7 @@ import {
 } from '@/lib/firebase/auth';
 import { RecaptchaVerifier } from 'firebase/auth';
 import { isNativePlatform } from '@/lib/capacitor';
+import type { AppLocale } from '@/types/locale';
 
 interface AuthState {
   // Auth state
@@ -38,7 +39,7 @@ interface AuthState {
   loginWithGoogle: () => Promise<void>;
   loginWithApple: () => Promise<void>;
   loginWithEmail: (email: string, password: string) => Promise<void>;
-  registerWithEmail: (email: string, password: string, fullName: string) => Promise<void>;
+  registerWithEmail: (email: string, password: string, fullName: string, preferredLanguage?: AppLocale) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   initPhoneAuth: (buttonId: string) => void;
   sendPhoneOtp: (phoneNumber: string) => Promise<boolean>;
@@ -511,17 +512,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   // Email/Password Registration
-  registerWithEmail: async (email: string, password: string, fullName: string) => {
+  registerWithEmail: async (email: string, password: string, fullName: string, preferredLanguage?: AppLocale) => {
     set({ isLoading: true, error: null });
     try {
       const firebaseUser = await registerWithEmail(email, password);
-      
+
       // Create user profile in Firestore
       const { completeRegistration } = await import('@/lib/firebase/auth');
       await completeRegistration(firebaseUser.uid, {
         fullName,
         email,
         preferredSection: 'fit',
+        preferredLanguage,
       });
 
       set({ 

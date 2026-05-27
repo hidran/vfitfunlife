@@ -25,7 +25,7 @@ import { doc, getDoc, setDoc, updateDoc, serverTimestamp, arrayUnion, arrayRemov
 import { httpsCallable } from "firebase/functions";
 import { auth, db, functions } from "./config";
 import { ProviderProfile, Certification, Education, SocialLinks, NotificationSettings, PrivacySettings } from "@/types/firebase";
-import type { AppLocale } from "@/types/locale";
+import { DEFAULT_LOCALE, type AppLocale } from "@/types/locale";
 
 // Store confirmation result for OTP verification
 let confirmationResult: ConfirmationResult | null = null;
@@ -262,6 +262,7 @@ export async function completeRegistration(
     email?: string;
     dateOfBirth?: Date;
     preferredSection?: "fit" | "fun" | "life";
+    preferredLanguage?: AppLocale;
   }
 ): Promise<void> {
   const userRef = doc(db, "users", userId);
@@ -289,7 +290,7 @@ export async function completeRegistration(
       isVip: false,
       pointsBalance: 100, // Welcome points
       walletBalance: 0,
-      preferredLanguage: "it",
+      preferredLanguage: data.preferredLanguage ?? DEFAULT_LOCALE,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
       lastLoginAt: serverTimestamp(),

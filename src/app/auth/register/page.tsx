@@ -25,7 +25,7 @@ type RegistrationMethod = 'social' | 'email' | null;
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { firebaseUser, refreshUserProfile, registerWithEmail, clearError, error: storeError } = useAuthStore();
 
   const [registrationMethod, setRegistrationMethod] = useState<RegistrationMethod>(
@@ -78,6 +78,7 @@ export default function RegisterPage() {
         email: email.trim() || undefined,
         dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
         preferredSection,
+        preferredLanguage: locale,
       });
 
       if (wantsProvider) {
@@ -137,7 +138,7 @@ export default function RegisterPage() {
 
     try {
       // Register with email/password
-      await registerWithEmail(email.trim(), password, fullName.trim());
+      await registerWithEmail(email.trim(), password, fullName.trim(), locale);
 
       if (wantsProvider) {
         const uid = useAuthStore.getState().firebaseUser?.uid;
