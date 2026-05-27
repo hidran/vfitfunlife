@@ -1560,6 +1560,13 @@ export const itMessages = {
   'venue.notFound.title': 'Venue non trovato',
   'venue.notFound.message': 'Il venue richiesto non è disponibile o è stato rimosso.',
   'venue.notFound.browseGyms': 'Sfoglia palestre',
+
+  // ─── UI Primitives ─────────────────────────────────────────────────────
+  'ui.sectionSelector.fit.description': 'Fitness & Sport',
+  'ui.sectionSelector.fun.description': 'Eventi & Intrattenimento',
+  'ui.sectionSelector.life.description': 'Wellness & Beauty',
+  'ui.rating.ariaLabel': 'Valutazione: {{value}} su 5',
+  'ui.rating.ariaLabelWithCount': 'Valutazione: {{value}} su 5, {{count}} recensioni',
 } as const;
 
 export type MessageKey = keyof typeof itMessages;

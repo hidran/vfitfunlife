@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/hooks/useI18n';
 
 export interface RatingProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Rating value (0-5) */
@@ -36,17 +37,22 @@ const Rating = React.forwardRef<HTMLDivElement, RatingProps>(
     },
     ref
   ) => {
+    const { t } = useI18n();
     const config = sizeConfig[size];
     const clampedValue = Math.max(0, Math.min(5, value));
     const fullStars = Math.floor(clampedValue);
     const hasHalfStar = clampedValue % 1 >= 0.5;
     const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+    const ariaLabel =
+      typeof count === 'number'
+        ? t('ui.rating.ariaLabelWithCount', { value: value.toFixed(1), count })
+        : t('ui.rating.ariaLabel', { value: value.toFixed(1) });
 
     return (
       <div
         ref={ref}
         className={cn('inline-flex items-center', config.gap, className)}
-        aria-label={`Rating: ${value.toFixed(1)} out of 5${count ? `, ${count} reviews` : ''}`}
+        aria-label={ariaLabel}
         {...props}
       >
         {/* Stars */}

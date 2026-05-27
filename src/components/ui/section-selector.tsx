@@ -2,6 +2,7 @@
 
 import { cn } from '@/lib/utils';
 import { Dumbbell, PartyPopper, Heart } from 'lucide-react';
+import { useI18n } from '@/hooks/useI18n';
 
 type Section = 'fit' | 'fun' | 'life';
 
@@ -11,35 +12,37 @@ interface SectionSelectorProps {
   error?: string;
 }
 
-const sections: { id: Section; name: string; icon: typeof Dumbbell; description: string; gradient: string }[] = [
+const sectionMeta: { id: Section; name: string; icon: typeof Dumbbell; descriptionKey: 'ui.sectionSelector.fit.description' | 'ui.sectionSelector.fun.description' | 'ui.sectionSelector.life.description'; gradient: string }[] = [
   {
     id: 'fit',
     name: 'VFit',
     icon: Dumbbell,
-    description: 'Fitness & Sport',
+    descriptionKey: 'ui.sectionSelector.fit.description',
     gradient: 'from-[#00C9FF] to-[#0066FF]',
   },
   {
     id: 'fun',
     name: 'VFun',
     icon: PartyPopper,
-    description: 'Eventi & Intrattenimento',
+    descriptionKey: 'ui.sectionSelector.fun.description',
     gradient: 'from-[#B461FF] to-[#FF00E5]',
   },
   {
     id: 'life',
     name: 'VLife',
     icon: Heart,
-    description: 'Wellness & Beauty',
+    descriptionKey: 'ui.sectionSelector.life.description',
     gradient: 'from-[#00E676] to-[#76FF03]',
   },
 ];
 
 export function SectionSelector({ value, onChange, error }: SectionSelectorProps) {
+  const { t } = useI18n();
+  const sections = sectionMeta.map((s) => ({ ...s, description: t(s.descriptionKey) }));
   return (
     <div className="w-full">
       <label className="block text-sm font-medium text-text-tertiary mb-3">
-        Sezione preferita
+        {t('profile.edit.preferredSectionLabel')}
       </label>
       <div className="grid grid-cols-3 gap-3">
         {sections.map((section) => {

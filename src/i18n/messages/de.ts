@@ -1569,4 +1569,11 @@ export const deMessages: Messages = {
   'venue.notFound.title': 'Venue nicht gefunden',
   'venue.notFound.message': 'Das angeforderte Venue ist nicht verfügbar oder wurde entfernt.',
   'venue.notFound.browseGyms': 'Fitnessstudios durchsuchen',
+
+  // ─── UI Primitives ─────────────────────────────────────────────────────
+  'ui.sectionSelector.fit.description': 'Fitness & Sport',
+  'ui.sectionSelector.fun.description': 'Veranstaltungen & Unterhaltung',
+  'ui.sectionSelector.life.description': 'Wellness & Schoenheit',
+  'ui.rating.ariaLabel': 'Bewertung: {{value}} von 5',
+  'ui.rating.ariaLabelWithCount': 'Bewertung: {{value}} von 5, {{count}} Bewertungen',
 };

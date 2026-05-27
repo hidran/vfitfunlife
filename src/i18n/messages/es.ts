@@ -1562,4 +1562,11 @@ export const esMessages: Messages = {
   'venue.notFound.title': 'Lugar no encontrado',
   'venue.notFound.message': 'El lugar solicitado no está disponible o ha sido eliminado.',
   'venue.notFound.browseGyms': 'Explorar gimnasios',
+
+  // ─── UI Primitives ─────────────────────────────────────────────────────
+  'ui.sectionSelector.fit.description': 'Fitness y Deporte',
+  'ui.sectionSelector.fun.description': 'Eventos y Entretenimiento',
+  'ui.sectionSelector.life.description': 'Bienestar y Belleza',
+  'ui.rating.ariaLabel': 'Valoracion: {{value}} de 5',
+  'ui.rating.ariaLabelWithCount': 'Valoracion: {{value}} de 5, {{count}} resenas',
 };

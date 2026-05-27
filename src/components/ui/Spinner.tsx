@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/hooks/useI18n';
 
 export interface SpinnerProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Spinner size */
@@ -19,12 +20,13 @@ const sizeClasses = {
 
 const Spinner = React.forwardRef<HTMLDivElement, SpinnerProps>(
   ({ className, size = 'md', gradient = true, ...props }, ref) => {
+    const { t } = useI18n();
     if (gradient) {
       return (
         <div
           ref={ref}
           role="status"
-          aria-label="Loading"
+          aria-label={t('common.loading')}
           className={cn('relative', className)}
           {...props}
         >
@@ -77,7 +79,7 @@ const Spinner = React.forwardRef<HTMLDivElement, SpinnerProps>(
               strokeLinecap="round"
             />
           </svg>
-          <span className="sr-only">Loading...</span>
+          <span className="sr-only">{t('common.loading')}</span>
         </div>
       );
     }
@@ -86,7 +88,7 @@ const Spinner = React.forwardRef<HTMLDivElement, SpinnerProps>(
       <div
         ref={ref}
         role="status"
-        aria-label="Loading"
+        aria-label={t('common.loading')}
         className={cn(
           'animate-spin rounded-full',
           'border-[var(--section-primary,#00C9FF)]',

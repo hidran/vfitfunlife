@@ -1560,4 +1560,11 @@ export const enMessages: Messages = {
   'venue.notFound.title': 'Venue not found',
   'venue.notFound.message': 'The requested venue is not available or has been removed.',
   'venue.notFound.browseGyms': 'Browse gyms',
+
+  // ─── UI Primitives ─────────────────────────────────────────────────────
+  'ui.sectionSelector.fit.description': 'Fitness & Sport',
+  'ui.sectionSelector.fun.description': 'Events & Entertainment',
+  'ui.sectionSelector.life.description': 'Wellness & Beauty',
+  'ui.rating.ariaLabel': 'Rating: {{value}} out of 5',
+  'ui.rating.ariaLabelWithCount': 'Rating: {{value}} out of 5, {{count}} reviews',
 };

@@ -1571,4 +1571,11 @@ export const frMessages: Messages = {
   'venue.notFound.title': 'Lieu introuvable',
   'venue.notFound.message': "Le lieu demandé n'est pas disponible ou a été supprimé.",
   'venue.notFound.browseGyms': 'Parcourir les salles',
+
+  // ─── UI Primitives ─────────────────────────────────────────────────────
+  'ui.sectionSelector.fit.description': 'Fitness et Sport',
+  'ui.sectionSelector.fun.description': 'Evenements et Divertissement',
+  'ui.sectionSelector.life.description': 'Bien-etre et Beaute',
+  'ui.rating.ariaLabel': 'Note : {{value}} sur 5',
+  'ui.rating.ariaLabelWithCount': 'Note : {{value}} sur 5, {{count}} avis',
 };
