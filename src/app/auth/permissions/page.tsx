@@ -7,6 +7,7 @@ import { MapPin, Bell, CheckCircle2 } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
 import { useI18n } from '@/hooks/useI18n';
+import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import type { MessageKey } from '@/i18n/messages';
 
 interface Permission {
@@ -121,7 +122,8 @@ export default function PermissionsPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-background-dark via-background-dark to-primary-dark/20">
+    <div className="relative min-h-screen flex flex-col bg-gradient-to-br from-background-dark via-background-dark to-primary-dark/20">
+      <LanguageSwitcher variant="menu" className="absolute right-4 top-4 z-10" />
       {/* Header */}
       <div className="px-6 pt-12 pb-6">
         <div className="flex items-center justify-between mb-4">

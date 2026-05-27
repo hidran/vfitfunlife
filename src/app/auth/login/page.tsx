@@ -14,6 +14,7 @@ import { Apple, Mail, Phone, Lock, ChevronLeft, Eye, EyeOff } from 'lucide-react
 import { FcGoogle } from 'react-icons/fc';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
+import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 
 type LoginMethod = 'phone' | 'email' | null;
 
@@ -187,7 +188,8 @@ export default function LoginPage() {
   if (!loginMethod) {
     return (
       <AuthFrame>
-        <div className="min-h-screen flex flex-col">
+        <div className="relative min-h-screen flex flex-col">
+          <LanguageSwitcher variant="menu" className="absolute right-4 top-4 z-10" />
         {/* Logo Section */}
         <div className="flex-1 flex flex-col items-center justify-center px-6 pt-12 pb-8">
           <div className="w-24 h-24 mb-6 relative">
@@ -303,7 +305,8 @@ export default function LoginPage() {
   if (loginMethod === 'phone') {
     return (
       <AuthFrame>
-        <div className="min-h-screen flex flex-col">
+        <div className="relative min-h-screen flex flex-col">
+          <LanguageSwitcher variant="menu" className="absolute right-4 top-4 z-10" />
         {/* Header */}
         <div className="px-6 pt-6">
           <button
@@ -428,7 +431,8 @@ export default function LoginPage() {
   if (loginMethod === 'email') {
     return (
       <AuthFrame>
-        <div className="min-h-screen flex flex-col">
+        <div className="relative min-h-screen flex flex-col">
+          <LanguageSwitcher variant="menu" className="absolute right-4 top-4 z-10" />
           {/* Header */}
           <div className="px-6 pt-6">
             <button

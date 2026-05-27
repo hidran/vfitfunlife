@@ -6,7 +6,6 @@ import {
   Bell,
   CheckCircle2,
   CreditCard,
-  Globe,
   MapPin,
   Plus,
   Save,
@@ -22,6 +21,7 @@ import { Input } from '@/components/ui/input';
 import { updatePrivacySettings, updateUserProfile } from '@/lib/firebase/auth';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
+import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import type { MessageKey } from '@/i18n/messages';
 import type { NotificationSettings, PrivacySettings, Section } from '@/types/firebase';
 import type { AppLocale } from '@/types/locale';
@@ -97,7 +97,7 @@ const CARD_BRANDS: Array<{ value: string; labelKey: MessageKey }> = [
 
 export function ProfileSectionScreen({ section }: { section: ProfileRouteSection }) {
   const { user, refreshUserProfile } = useAuthStore();
-  const { t, setLocale, locales, localeLabels } = useI18n();
+  const { t, setLocale } = useI18n();
   const [addresses, setAddresses] = useState<LocalAddress[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<LocalPaymentMethod[]>([]);
   const [addressForm, setAddressForm] = useState({
@@ -581,27 +581,7 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
                 <p className="text-xs font-medium text-text-tertiary">
                   {t('profileSection.settings.language')}
                 </p>
-                <div className="mt-2 flex gap-2">
-                  {locales.map((language) => (
-                    <button
-                      key={language}
-                      type="button"
-                      onClick={() => {
-                        setPreferredLanguage(language);
-                        setLocale(language);
-                      }}
-                      className={cn(
-                        'rounded-xl border px-3 py-2 text-xs font-semibold uppercase transition-colors',
-                        preferredLanguage === language
-                          ? 'border-section-primary bg-section-primary text-background-dark'
-                          : 'border-white/15 bg-white/5 text-text-tertiary'
-                      )}
-                    >
-                      <Globe className="mr-1 inline-block h-3.5 w-3.5" />
-                      {localeLabels[language]}
-                    </button>
-                  ))}
-                </div>
+                <LanguageSwitcher variant="row" className="mt-2" />
               </div>
             </div>
           </article>

@@ -12,6 +12,7 @@ import { completeRegistration } from '@/lib/firebase/auth';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
+import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import { submitProviderApplication } from '@/lib/firebase/providerApplication';
 import { ProviderOptInField } from '@/components/auth/ProviderOptInField';
 
@@ -160,7 +161,8 @@ export default function RegisterPage() {
   // Method Selection Screen
   if (!registrationMethod && !firebaseUser) {
     return (
-      <div className="min-h-screen flex flex-col bg-gradient-to-br from-background-dark via-background-dark to-primary-dark/20">
+      <div className="relative min-h-screen flex flex-col bg-gradient-to-br from-background-dark via-background-dark to-primary-dark/20">
+        <LanguageSwitcher variant="menu" className="absolute right-4 top-4 z-10" />
         {/* Header */}
         <div className="px-6 pt-12 pb-6">
           <button
@@ -269,7 +271,8 @@ export default function RegisterPage() {
   // Email Registration Form
   if (registrationMethod === 'email' || !firebaseUser) {
     return (
-      <div className="min-h-screen flex flex-col bg-gradient-to-br from-background-dark via-background-dark to-primary-dark/20">
+      <div className="relative min-h-screen flex flex-col bg-gradient-to-br from-background-dark via-background-dark to-primary-dark/20">
+        <LanguageSwitcher variant="menu" className="absolute right-4 top-4 z-10" />
         {/* Header */}
         <div className="px-6 pt-8 pb-6">
           <button
@@ -516,7 +519,8 @@ export default function RegisterPage() {
 
   // Social Registration Form (existing firebaseUser)
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-background-dark via-background-dark to-primary-dark/20">
+    <div className="relative min-h-screen flex flex-col bg-gradient-to-br from-background-dark via-background-dark to-primary-dark/20">
+      <LanguageSwitcher variant="menu" className="absolute right-4 top-4 z-10" />
       {/* Header */}
       <div className="px-6 pt-12 pb-6">
         <h1 className="text-3xl font-bold text-white mb-2">{t('auth.register.socialForm.title')}</h1>
