@@ -652,6 +652,12 @@ export const frMessages: Messages = {
   'auth.register.socialForm.subtitle': 'Aidez-nous à personnaliser votre expérience',
   'auth.register.field.emailOptional': 'Email (optionnel)',
   'auth.register.completeRegistration': "Compléter l'inscription",
+  'auth.password.rule.minLength': 'Au moins 12 caractères',
+  'auth.password.rule.lowercase': 'Une lettre minuscule',
+  'auth.password.rule.uppercase': 'Une lettre majuscule',
+  'auth.password.rule.number': 'Un chiffre',
+  'auth.password.rule.symbol': 'Un symbole',
+  'auth.register.error.passwordWeak': 'Le mot de passe ne respecte pas les exigences de sécurité.',
   'auth.forgot.title': 'Mot de passe oublié ?',
   'auth.forgot.subtitle':
     'Entrez votre email et nous vous enverrons un lien pour réinitialiser le mot de passe',

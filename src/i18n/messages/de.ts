@@ -649,6 +649,12 @@ export const deMessages: Messages = {
   'auth.register.socialForm.subtitle': 'Hilf uns, dein Erlebnis zu personalisieren',
   'auth.register.field.emailOptional': 'E-Mail (optional)',
   'auth.register.completeRegistration': 'Registrierung abschließen',
+  'auth.password.rule.minLength': 'Mindestens 12 Zeichen',
+  'auth.password.rule.lowercase': 'Ein Kleinbuchstabe',
+  'auth.password.rule.uppercase': 'Ein Großbuchstabe',
+  'auth.password.rule.number': 'Eine Zahl',
+  'auth.password.rule.symbol': 'Ein Sonderzeichen',
+  'auth.register.error.passwordWeak': 'Das Passwort erfüllt die Sicherheitsanforderungen nicht.',
   'auth.forgot.title': 'Passwort vergessen?',
   'auth.forgot.subtitle':
     'Gib deine E-Mail ein und wir senden dir einen Link zum Zurücksetzen des Passworts',
