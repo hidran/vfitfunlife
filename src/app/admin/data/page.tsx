@@ -6,6 +6,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/hooks/useI18n";
+import { toLocaleTag } from "@/types/locale";
 import {
   Database,
   Trash2,
@@ -36,7 +37,7 @@ interface Operation {
 }
 
 export default function DataManagementPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const router = useRouter();
   const { user, firebaseUser } = useAuthStore();
   const [operations, setOperations] = useState<Operation[]>([]);
@@ -280,7 +281,7 @@ export default function DataManagementPage() {
                     )}
                     <div>
                       <p className="font-medium text-white">{getOperationLabel(op.type)}</p>
-                      <p className="text-xs text-white/50">{op.timestamp.toLocaleTimeString()}</p>
+                      <p className="text-xs text-white/50">{op.timestamp.toLocaleTimeString(toLocaleTag(locale))}</p>
                     </div>
                   </div>
                   {op.result?.summary && (
