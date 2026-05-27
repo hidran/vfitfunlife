@@ -11,7 +11,6 @@ import {
   Play,
   Radio,
   Sparkles,
-  Star,
   Ticket,
   Tv,
   Users,
@@ -21,32 +20,13 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { FUN_ROUTE_CONTENT, type FunRouteSlug } from '@/lib/featureRouteContent';
 import { useI18n } from '@/hooks/useI18n';
+import { useFunActivities } from '@/hooks/useFunActivities';
 import type { MessageKey } from '@/i18n/messages';
 import { toLocaleTag } from '@/types/locale';
 
 type EventTag = 'hot' | 'vip' | 'new';
 type EventFilter = 'all' | EventTag;
 type PartyEventType = 'private' | 'corporate' | 'birthday' | 'bachelor';
-
-interface FunEvent {
-  id: string;
-  titleKey: MessageKey;
-  date: string;
-  time: string;
-  locationKey: MessageKey;
-  priceFrom: number;
-  attendees: number;
-  tag: EventTag;
-}
-
-interface VrExperience {
-  id: string;
-  titleKey: MessageKey;
-  durationMinutes: number;
-  levelKey: MessageKey;
-  rating: number;
-  price: number;
-}
 
 interface TvShow {
   id: string;
@@ -56,97 +36,11 @@ interface TvShow {
   isLive: boolean;
 }
 
-interface PartyPackage {
-  id: string;
-  nameKey: MessageKey;
-  priceFrom: number;
-  capacityKey: MessageKey;
-  featureKeys: MessageKey[];
-}
-
 const eventTagKeys: Record<EventTag, MessageKey> = {
   hot: 'funRoute.events.tag.hot',
   vip: 'funRoute.events.tag.vip',
   new: 'funRoute.events.tag.new',
 };
-
-const upcomingEvents: FunEvent[] = [
-  {
-    id: 'sunset-sessions',
-    titleKey: 'funRoute.events.item.sunset.title',
-    date: '16 Feb',
-    time: '18:30',
-    locationKey: 'funRoute.events.item.sunset.location',
-    priceFrom: 39,
-    attendees: 420,
-    tag: 'hot',
-  },
-  {
-    id: 'fit-party',
-    titleKey: 'funRoute.events.item.fitParty.title',
-    date: '20 Feb',
-    time: '21:00',
-    locationKey: 'funRoute.events.item.fitParty.location',
-    priceFrom: 28,
-    attendees: 680,
-    tag: 'new',
-  },
-  {
-    id: 'vip-gala',
-    titleKey: 'funRoute.events.item.vipGala.title',
-    date: '27 Feb',
-    time: '20:30',
-    locationKey: 'funRoute.events.item.vipGala.location',
-    priceFrom: 90,
-    attendees: 180,
-    tag: 'vip',
-  },
-  {
-    id: 'neon-run',
-    titleKey: 'funRoute.events.item.neonRun.title',
-    date: '3 Mar',
-    time: '22:00',
-    locationKey: 'funRoute.events.item.neonRun.location',
-    priceFrom: 32,
-    attendees: 510,
-    tag: 'hot',
-  },
-];
-
-const vrExperiences: VrExperience[] = [
-  {
-    id: 'vr-boxing',
-    titleKey: 'funRoute.vr.item.boxing.title',
-    durationMinutes: 45,
-    levelKey: 'funRoute.vr.level.advanced',
-    rating: 4.8,
-    price: 22,
-  },
-  {
-    id: 'vr-dance',
-    titleKey: 'funRoute.vr.item.dance.title',
-    durationMinutes: 30,
-    levelKey: 'funRoute.vr.level.all',
-    rating: 4.7,
-    price: 16,
-  },
-  {
-    id: 'vr-racing',
-    titleKey: 'funRoute.vr.item.racing.title',
-    durationMinutes: 35,
-    levelKey: 'funRoute.vr.level.intermediate',
-    rating: 4.9,
-    price: 20,
-  },
-  {
-    id: 'vr-escape',
-    titleKey: 'funRoute.vr.item.escape.title',
-    durationMinutes: 60,
-    levelKey: 'funRoute.vr.level.team',
-    rating: 4.9,
-    price: 26,
-  },
-];
 
 const tvSchedule: TvShow[] = [
   {
@@ -186,42 +80,6 @@ const tvSchedule: TvShow[] = [
   },
 ];
 
-const partyPackages: PartyPackage[] = [
-  {
-    id: 'private',
-    nameKey: 'funRoute.party.package.private.name',
-    priceFrom: 790,
-    capacityKey: 'funRoute.party.package.private.capacity',
-    featureKeys: [
-      'funRoute.party.package.private.feature1',
-      'funRoute.party.package.private.feature2',
-      'funRoute.party.package.private.feature3',
-    ],
-  },
-  {
-    id: 'corporate',
-    nameKey: 'funRoute.party.package.corporate.name',
-    priceFrom: 1490,
-    capacityKey: 'funRoute.party.package.corporate.capacity',
-    featureKeys: [
-      'funRoute.party.package.corporate.feature1',
-      'funRoute.party.package.corporate.feature2',
-      'funRoute.party.package.corporate.feature3',
-    ],
-  },
-  {
-    id: 'vip',
-    nameKey: 'funRoute.party.package.vip.name',
-    priceFrom: 2600,
-    capacityKey: 'funRoute.party.package.vip.capacity',
-    featureKeys: [
-      'funRoute.party.package.vip.feature1',
-      'funRoute.party.package.vip.feature2',
-      'funRoute.party.package.vip.feature3',
-    ],
-  },
-];
-
 const eventFilters: Array<{ id: EventFilter; labelKey: MessageKey }> = [
   { id: 'all', labelKey: 'funRoute.events.filter.all' },
   { id: 'hot', labelKey: 'funRoute.events.filter.hot' },
@@ -252,6 +110,10 @@ export function FunRouteScreen({ slug }: { slug: FunRouteSlug }) {
     budget: '',
   });
 
+  const eventsQuery = useFunActivities('event');
+  const vrQuery = useFunActivities('vr');
+  const partyQuery = useFunActivities('party');
+
   const numberFormatter = useMemo(
     () => new Intl.NumberFormat(toLocaleTag(locale)),
     [locale]
@@ -259,15 +121,15 @@ export function FunRouteScreen({ slug }: { slug: FunRouteSlug }) {
 
   const filteredEvents = useMemo(() => {
     const normalizedQuery = eventQuery.trim().toLowerCase();
-    return upcomingEvents.filter((event) => {
+    return (eventsQuery.data ?? []).filter((event) => {
       const matchesFilter = eventFilter === 'all' || event.tag === eventFilter;
       const matchesQuery =
         !normalizedQuery ||
-        t(event.titleKey).toLowerCase().includes(normalizedQuery) ||
-        t(event.locationKey).toLowerCase().includes(normalizedQuery);
+        event.fullName.toLowerCase().includes(normalizedQuery) ||
+        (event.location ?? '').toLowerCase().includes(normalizedQuery);
       return matchesFilter && matchesQuery;
     });
-  }, [eventFilter, eventQuery, t]);
+  }, [eventsQuery.data, eventFilter, eventQuery]);
 
   const channels = useMemo(
     () => ['all' as const, ...Array.from(new Set(tvSchedule.map((show) => show.channelKey)))],
@@ -360,53 +222,62 @@ export function FunRouteScreen({ slug }: { slug: FunRouteSlug }) {
           </div>
 
           <div className="space-y-3">
+            {eventsQuery.isLoading && (
+              <p className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-text-tertiary">
+                {t('common.loading')}
+              </p>
+            )}
             {filteredEvents.map((event) => (
               <article key={event.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h2 className="text-sm font-semibold text-text-inverse">{t(event.titleKey)}</h2>
+                    <h2 className="text-sm font-semibold text-text-inverse">{event.fullName}</h2>
                     <p className="mt-1 flex items-center gap-2 text-xs text-text-tertiary">
                       <Calendar className="h-3.5 w-3.5" />
-                      {event.date}
+                      {event.eventDate}
                       <Clock className="ml-1 h-3.5 w-3.5" />
-                      {event.time}
+                      {event.eventTime}
                     </p>
                     <p className="mt-1 flex items-center gap-2 text-xs text-text-tertiary">
                       <MapPin className="h-3.5 w-3.5" />
-                      {t(event.locationKey)}
+                      {event.location}
                     </p>
                   </div>
-                  <span
-                    className={cn(
-                      'rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase',
-                      event.tag === 'vip' && 'bg-vip-gold/90 text-background-dark',
-                      event.tag === 'hot' && 'bg-orange-500/90 text-white',
-                      event.tag === 'new' && 'bg-section-primary/90 text-background-dark'
-                    )}
-                  >
-                    {t(eventTagKeys[event.tag])}
-                  </span>
+                  {event.tag && (
+                    <span
+                      className={cn(
+                        'rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase',
+                        event.tag === 'vip' && 'bg-vip-gold/90 text-background-dark',
+                        event.tag === 'hot' && 'bg-orange-500/90 text-white',
+                        event.tag === 'new' && 'bg-section-primary/90 text-background-dark'
+                      )}
+                    >
+                      {t(eventTagKeys[event.tag])}
+                    </span>
+                  )}
                 </div>
                 <div className="mt-3 flex items-center justify-between">
-                  <span className="flex items-center gap-1 text-xs text-text-tertiary">
-                    <Users className="h-3.5 w-3.5" />
-                    {t('funRoute.events.attendeesExpected', {
-                      count: numberFormatter.format(event.attendees),
-                    })}
-                  </span>
+                  {event.attendees !== undefined && (
+                    <span className="flex items-center gap-1 text-xs text-text-tertiary">
+                      <Users className="h-3.5 w-3.5" />
+                      {t('funRoute.events.attendeesExpected', {
+                        count: numberFormatter.format(event.attendees),
+                      })}
+                    </span>
+                  )}
                   <span className="text-sm font-bold text-section-primary">
-                    {t('funRoute.price.fromEur', { price: event.priceFrom })}
+                    {t('funRoute.price.fromEur', { price: event.lowestPrice ?? 0 })}
                   </span>
                 </div>
                 <Link
-                  href="/booking"
+                  href={`/book?providerId=${event.id}`}
                   className="mt-3 inline-flex w-full items-center justify-center rounded-xl bg-section-primary/20 px-4 py-2 text-sm font-semibold text-section-primary"
                 >
                   {t('funRoute.events.bookTicket')}
                 </Link>
               </article>
             ))}
-            {filteredEvents.length === 0 && (
+            {!eventsQuery.isLoading && filteredEvents.length === 0 && (
               <p className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-text-tertiary">
                 {t('funRoute.events.empty')}
               </p>
@@ -418,30 +289,35 @@ export function FunRouteScreen({ slug }: { slug: FunRouteSlug }) {
       {slug === 'vr' && (
         <section className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
-            {vrExperiences.map((experience) => (
+            {vrQuery.isLoading && (
+              <p className="col-span-2 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-text-tertiary">
+                {t('common.loading')}
+              </p>
+            )}
+            {!vrQuery.isLoading && (vrQuery.data ?? []).length === 0 && (
+              <p className="col-span-2 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-text-tertiary">
+                {t('funRoute.vr.empty')}
+              </p>
+            )}
+            {(vrQuery.data ?? []).map((experience) => (
               <article key={experience.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/20">
                     <Glasses className="h-5 w-5 text-indigo-300" />
                   </div>
-                  <div className="flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5">
-                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                    <span className="text-[11px] font-semibold text-text-inverse">
-                      {experience.rating}
-                    </span>
-                  </div>
                 </div>
-                <h2 className="mt-3 text-sm font-semibold text-text-inverse">{t(experience.titleKey)}</h2>
-                <p className="mt-1 text-xs text-text-tertiary">
-                  {t('funRoute.vr.durationMinutes', { count: experience.durationMinutes })} ·{' '}
-                  {t(experience.levelKey)}
-                </p>
+                <h2 className="mt-3 text-sm font-semibold text-text-inverse">{experience.fullName}</h2>
+                {experience.durationMinutes !== undefined && (
+                  <p className="mt-1 text-xs text-text-tertiary">
+                    {t('funRoute.vr.durationMinutes', { count: experience.durationMinutes })}
+                  </p>
+                )}
                 <div className="mt-3 flex items-center justify-between">
                   <span className="text-sm font-bold text-text-inverse">
-                    {t('funRoute.price.eur', { price: experience.price })}
+                    {t('funRoute.price.eur', { price: experience.lowestPrice ?? 0 })}
                   </span>
                   <Link
-                    href="/booking"
+                    href={`/book?providerId=${experience.id}`}
                     className="rounded-full bg-indigo-500/20 px-3 py-1.5 text-xs font-semibold text-indigo-300"
                   >
                     {t('funRoute.vr.book')}
@@ -459,23 +335,31 @@ export function FunRouteScreen({ slug }: { slug: FunRouteSlug }) {
       {isPartyRoute && (
         <section className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-3">
-            {partyPackages.map((partyPackage) => (
+            {partyQuery.isLoading && (
+              <p className="col-span-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-text-tertiary">
+                {t('common.loading')}
+              </p>
+            )}
+            {!partyQuery.isLoading && (partyQuery.data ?? []).length === 0 && (
+              <p className="col-span-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-text-tertiary">
+                {t('funRoute.party.empty')}
+              </p>
+            )}
+            {(partyQuery.data ?? []).map((partyPackage) => (
               <article key={partyPackage.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-semibold text-text-inverse">{t(partyPackage.nameKey)}</h2>
+                  <h2 className="text-sm font-semibold text-text-inverse">{partyPackage.fullName}</h2>
                   <PartyPopper className="h-4 w-4 text-section-primary" />
                 </div>
-                <p className="mt-2 text-xs text-text-tertiary">{t(partyPackage.capacityKey)}</p>
                 <p className="mt-2 text-sm font-bold text-section-primary">
-                  {t('funRoute.price.fromEur', { price: partyPackage.priceFrom })}
+                  {t('funRoute.price.fromEur', { price: partyPackage.lowestPrice ?? 0 })}
                 </p>
-                <ul className="mt-3 space-y-1">
-                  {partyPackage.featureKeys.map((featureKey) => (
-                    <li key={featureKey} className="text-xs text-text-tertiary">
-                      • {t(featureKey)}
-                    </li>
-                  ))}
-                </ul>
+                <Link
+                  href={`/book?providerId=${partyPackage.id}`}
+                  className="mt-3 inline-flex w-full items-center justify-center rounded-xl bg-section-primary/20 px-4 py-2 text-sm font-semibold text-section-primary"
+                >
+                  {t('funRoute.party.package.book')}
+                </Link>
               </article>
             ))}
           </div>
@@ -624,7 +508,7 @@ export function FunRouteScreen({ slug }: { slug: FunRouteSlug }) {
           </div>
 
           <Link
-            href="/booking"
+            href="/fun/events"
             className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-section-primary/20 px-4 py-3 text-sm font-semibold text-section-primary"
           >
             <Ticket className="h-4 w-4" />

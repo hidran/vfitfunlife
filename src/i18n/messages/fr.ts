@@ -1524,8 +1524,11 @@ export const frMessages: Messages = {
   'funRoute.vr.level.team': 'Team',
   'funRoute.vr.durationMinutes': '{{count}} min',
   'funRoute.vr.book': 'Réserver',
+  'funRoute.vr.empty': 'Aucune expérience VR disponible pour le moment.',
   'funRoute.vr.note':
     'Sessions en petits groupes, briefing initial inclus et équipement désinfecté à chaque tour.',
+  'funRoute.party.empty': 'Aucun forfait fête disponible pour le moment.',
+  'funRoute.party.package.book': 'Réserver le forfait',
   'funRoute.party.package.private.name': 'Private Party',
   'funRoute.party.package.private.capacity': "Jusqu'à 60 invités",
   'funRoute.party.package.private.feature1': 'DJ résident',
