@@ -1244,6 +1244,24 @@ export const frMessages: Messages = {
   'booking.disableLocation': 'Désactiver',
   'booking.map.yourPosition': 'Votre position',
 
+  // ─── Provider opt-in (BecomeProviderCard + ProviderOptInField) ───────
+  'provider.optIn.toggle': 'Je souhaite aussi proposer des services en tant que professionnel',
+  'provider.optIn.pickType': 'Quel type de service proposez-vous ?',
+  'provider.optIn.errorNoCategory': 'Veuillez sélectionner le type de service que vous proposez.',
+  'provider.card.cta.title': 'Devenez professionnel',
+  'provider.card.cta.subtitle': 'Proposez vos services sur la plateforme.',
+  'provider.card.cta.start': 'Commencer',
+  'provider.card.submit': 'Envoyer la demande',
+  'provider.card.submitting': 'Envoi…',
+  'provider.card.cancel': 'Annuler',
+  'provider.card.error': 'Une erreur s\'est produite. Veuillez réessayer.',
+  'provider.card.pending.title': 'Demande en cours d\'examen',
+  'provider.card.pending.subtitle': 'Vous serez visible après approbation par un administrateur.',
+  'provider.card.verified.title': 'Vous êtes un professionnel',
+  'provider.card.verified.subtitle': 'Accéder au tableau de bord fournisseur',
+  'provider.card.rejected.title': 'Demande non approuvée',
+  'provider.card.rejected.subtitle': 'Contactez le support pour plus d\'informations.',
+
   // ─── Provider dashboard ──────────────────────────────────────────────
   'provider.banner.pending': 'Profil en cours d\'examen — vous serez visible après approbation.',
 

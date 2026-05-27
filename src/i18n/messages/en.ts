@@ -1236,6 +1236,22 @@ export const enMessages: Messages = {
   'booking.map.yourPosition': 'Your location',
 
   // ─── Provider dashboard ──────────────────────────────────────────────
+  'provider.optIn.toggle': 'I also want to offer services as a professional',
+  'provider.optIn.pickType': 'What type of service do you offer?',
+  'provider.optIn.errorNoCategory': 'Please select the type of service you offer.',
+  'provider.card.cta.title': 'Become a professional',
+  'provider.card.cta.subtitle': 'Offer your services on the platform.',
+  'provider.card.cta.start': 'Get started',
+  'provider.card.submit': 'Submit request',
+  'provider.card.submitting': 'Submitting…',
+  'provider.card.cancel': 'Cancel',
+  'provider.card.error': 'Something went wrong. Please try again.',
+  'provider.card.pending.title': 'Request under review',
+  'provider.card.pending.subtitle': 'You will be visible after approval by an administrator.',
+  'provider.card.verified.title': 'You are a professional',
+  'provider.card.verified.subtitle': 'Go to the provider dashboard',
+  'provider.card.rejected.title': 'Request not approved',
+  'provider.card.rejected.subtitle': 'Contact support for more information.',
   'provider.banner.pending': 'Profile under review — you will be visible after approval.',
 
   'provider.dashboard.title': 'Welcome back! 👋',

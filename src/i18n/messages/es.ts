@@ -1235,6 +1235,24 @@ export const esMessages: Messages = {
   'booking.disableLocation': 'Desactivar',
   'booking.map.yourPosition': 'Tu ubicación',
 
+  // ─── Provider opt-in (BecomeProviderCard + ProviderOptInField) ───────
+  'provider.optIn.toggle': 'También quiero ofrecer servicios como profesional',
+  'provider.optIn.pickType': '¿Qué tipo de servicio ofreces?',
+  'provider.optIn.errorNoCategory': 'Selecciona el tipo de servicio que ofreces.',
+  'provider.card.cta.title': 'Conviértete en profesional',
+  'provider.card.cta.subtitle': 'Ofrece tus servicios en la plataforma.',
+  'provider.card.cta.start': 'Empezar',
+  'provider.card.submit': 'Enviar solicitud',
+  'provider.card.submitting': 'Enviando…',
+  'provider.card.cancel': 'Cancelar',
+  'provider.card.error': 'Algo salió mal. Por favor, inténtalo de nuevo.',
+  'provider.card.pending.title': 'Solicitud en revisión',
+  'provider.card.pending.subtitle': 'Serás visible tras la aprobación de un administrador.',
+  'provider.card.verified.title': 'Eres un profesional',
+  'provider.card.verified.subtitle': 'Ir al panel del proveedor',
+  'provider.card.rejected.title': 'Solicitud no aprobada',
+  'provider.card.rejected.subtitle': 'Contacta con soporte para más información.',
+
   // ─── Provider dashboard ──────────────────────────────────────────────
   'provider.banner.pending': 'Perfil en revisión — serás visible tras la aprobación.',
 

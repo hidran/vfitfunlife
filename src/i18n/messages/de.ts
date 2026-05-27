@@ -1242,6 +1242,24 @@ export const deMessages: Messages = {
   'booking.disableLocation': 'Deaktivieren',
   'booking.map.yourPosition': 'Mein Standort',
 
+  // ─── Provider opt-in (BecomeProviderCard + ProviderOptInField) ───────
+  'provider.optIn.toggle': 'Ich möchte auch Dienstleistungen als Fachkraft anbieten',
+  'provider.optIn.pickType': 'Welche Art von Dienstleistung bieten Sie an?',
+  'provider.optIn.errorNoCategory': 'Bitte wählen Sie die Art der Dienstleistung, die Sie anbieten.',
+  'provider.card.cta.title': 'Werden Sie Fachkraft',
+  'provider.card.cta.subtitle': 'Bieten Sie Ihre Dienste auf der Plattform an.',
+  'provider.card.cta.start': 'Loslegen',
+  'provider.card.submit': 'Anfrage senden',
+  'provider.card.submitting': 'Sende…',
+  'provider.card.cancel': 'Abbrechen',
+  'provider.card.error': 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.',
+  'provider.card.pending.title': 'Anfrage wird geprüft',
+  'provider.card.pending.subtitle': 'Sie werden nach der Genehmigung durch einen Administrator sichtbar sein.',
+  'provider.card.verified.title': 'Sie sind eine Fachkraft',
+  'provider.card.verified.subtitle': 'Zum Anbieter-Dashboard',
+  'provider.card.rejected.title': 'Anfrage nicht genehmigt',
+  'provider.card.rejected.subtitle': 'Kontaktieren Sie den Support für weitere Informationen.',
+
   // ─── Provider dashboard ──────────────────────────────────────────────
   'provider.banner.pending': 'Profil wird geprüft — Sie werden nach der Genehmigung sichtbar sein.',
 

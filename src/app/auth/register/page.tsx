@@ -67,7 +67,7 @@ export default function RegisterPage() {
     }
 
     if (wantsProvider && !providerCategory) {
-      setError('Seleziona il tipo di servizio che offri.');
+      setError(t('provider.optIn.errorNoCategory'));
       return;
     }
 
@@ -131,7 +131,7 @@ export default function RegisterPage() {
     }
 
     if (wantsProvider && !providerCategory) {
-      setError('Seleziona il tipo di servizio che offri.');
+      setError(t('provider.optIn.errorNoCategory'));
       return;
     }
 

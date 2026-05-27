@@ -8,8 +8,10 @@ import { providerCardState } from '@/lib/providerStatus';
 import { useProviderStatus, useSubmitProviderApplication } from '@/hooks/useProviderApplication';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/hooks/useI18n';
 
 export function BecomeProviderCard() {
+  const { t } = useI18n();
   const status = useProviderStatus();
   const variant = providerCardState(status);
   const submit = useSubmitProviderApplication();
@@ -24,8 +26,8 @@ export function BecomeProviderCard() {
       >
         <CheckCircle className="w-5 h-5 text-[#10B981]" />
         <div>
-          <p className="text-white font-medium">Sei un professionista</p>
-          <p className="text-sm text-white/50">Vai alla dashboard provider</p>
+          <p className="text-white font-medium">{t('provider.card.verified.title')}</p>
+          <p className="text-sm text-white/50">{t('provider.card.verified.subtitle')}</p>
         </div>
       </Link>
     );
@@ -36,8 +38,8 @@ export function BecomeProviderCard() {
       <div className="flex items-center gap-3 rounded-xl border border-[#F59E0B]/30 bg-[#F59E0B]/10 p-4">
         <Clock className="w-5 h-5 text-[#F59E0B]" />
         <div>
-          <p className="text-white font-medium">Richiesta in revisione</p>
-          <p className="text-sm text-white/60">Sarai visibile dopo l'approvazione di un amministratore.</p>
+          <p className="text-white font-medium">{t('provider.card.pending.title')}</p>
+          <p className="text-sm text-white/60">{t('provider.card.pending.subtitle')}</p>
         </div>
       </div>
     );
@@ -48,8 +50,8 @@ export function BecomeProviderCard() {
       <div className="flex items-center gap-3 rounded-xl border border-white/10 p-4">
         <XCircle className="w-5 h-5 text-[#EF4444]" />
         <div>
-          <p className="text-white font-medium">Richiesta non approvata</p>
-          <p className="text-sm text-white/60">Contatta il supporto per maggiori informazioni.</p>
+          <p className="text-white font-medium">{t('provider.card.rejected.title')}</p>
+          <p className="text-sm text-white/60">{t('provider.card.rejected.subtitle')}</p>
         </div>
       </div>
     );
@@ -61,15 +63,15 @@ export function BecomeProviderCard() {
       <div className="flex items-center gap-3">
         <Briefcase className="w-5 h-5 text-vfit-primary" />
         <div className="flex-1">
-          <p className="text-white font-medium">Diventa un professionista</p>
-          <p className="text-sm text-white/50">Offri i tuoi servizi sulla piattaforma.</p>
+          <p className="text-white font-medium">{t('provider.card.cta.title')}</p>
+          <p className="text-sm text-white/50">{t('provider.card.cta.subtitle')}</p>
         </div>
-        {!open && <Button size="sm" onClick={() => setOpen(true)}>Inizia</Button>}
+        {!open && <Button size="sm" onClick={() => setOpen(true)}>{t('provider.card.cta.start')}</Button>}
       </div>
 
       {open && (
         <div className="mt-4">
-          <p className="text-sm text-white/60 mb-2">Che tipo di servizio offri?</p>
+          <p className="text-sm text-white/60 mb-2">{t('provider.optIn.pickType')}</p>
           <div className="flex flex-wrap gap-2">
             {SERVICE_CATEGORIES.map((c) => (
               <button
@@ -88,13 +90,13 @@ export function BecomeProviderCard() {
             ))}
           </div>
           {submit.isError && (
-            <p className="text-sm text-[#EF4444] mt-2">Qualcosa è andato storto. Riprova.</p>
+            <p className="text-sm text-[#EF4444] mt-2">{t('provider.card.error')}</p>
           )}
           <div className="flex gap-2 mt-4">
             <Button size="sm" disabled={!category || submit.isPending} onClick={() => submit.mutate(category)}>
-              {submit.isPending ? 'Invio…' : 'Invia richiesta'}
+              {submit.isPending ? t('provider.card.submitting') : t('provider.card.submit')}
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => { submit.reset(); setOpen(false); }}>Annulla</Button>
+            <Button size="sm" variant="ghost" onClick={() => { submit.reset(); setOpen(false); }}>{t('provider.card.cancel')}</Button>
           </div>
         </div>
       )}

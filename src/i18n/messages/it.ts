@@ -1233,6 +1233,24 @@ export const itMessages = {
   'booking.disableLocation': 'Disattiva',
   'booking.map.yourPosition': 'La tua posizione',
 
+  // ─── Provider opt-in (BecomeProviderCard + ProviderOptInField) ───────
+  'provider.optIn.toggle': 'Voglio anche offrire servizi come professionista',
+  'provider.optIn.pickType': 'Che tipo di servizio offri?',
+  'provider.optIn.errorNoCategory': 'Seleziona il tipo di servizio che offri.',
+  'provider.card.cta.title': 'Diventa un professionista',
+  'provider.card.cta.subtitle': 'Offri i tuoi servizi sulla piattaforma.',
+  'provider.card.cta.start': 'Inizia',
+  'provider.card.submit': 'Invia richiesta',
+  'provider.card.submitting': 'Invio…',
+  'provider.card.cancel': 'Annulla',
+  'provider.card.error': 'Qualcosa è andato storto. Riprova.',
+  'provider.card.pending.title': 'Richiesta in revisione',
+  'provider.card.pending.subtitle': "Sarai visibile dopo l'approvazione di un amministratore.",
+  'provider.card.verified.title': 'Sei un professionista',
+  'provider.card.verified.subtitle': 'Vai alla dashboard provider',
+  'provider.card.rejected.title': 'Richiesta non approvata',
+  'provider.card.rejected.subtitle': 'Contatta il supporto per maggiori informazioni.',
+
   // ─── Provider dashboard ──────────────────────────────────────────────
   'provider.banner.pending': "Profilo in revisione — sarai visibile dopo l'approvazione.",
 
