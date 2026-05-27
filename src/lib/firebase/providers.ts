@@ -91,7 +91,14 @@ export async function fetchProviders(opts: ProviderListOptions = {}): Promise<Pr
 
 export async function fetchFunActivities(kind: ActivityKind): Promise<Provider[]> {
   try {
-    const q = query(collection(db, 'instructors'), where('activityKind', '==', kind));
+    // The isVerified constraint is required so the query satisfies the /instructors
+    // read rule (which only permits reading verified docs publicly); activities are
+    // all seeded verified. Two equality filters need no composite index.
+    const q = query(
+      collection(db, 'instructors'),
+      where('providerProfile.isVerified', '==', true),
+      where('activityKind', '==', kind)
+    );
     const snap = await getDocs(q);
     return snap.docs
       .map((d) => flattenProvider(d.id, d.data() as Record<string, unknown>))
