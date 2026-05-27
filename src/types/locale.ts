@@ -7,8 +7,8 @@ export const DEFAULT_LOCALE: AppLocale = 'it';
 export const LOCALE_LABELS: Record<AppLocale, string> = {
   it: 'Italiano',
   en: 'English',
-  es: 'Espanol',
-  fr: 'Francais',
+  es: 'Español',
+  fr: 'Français',
   de: 'Deutsch',
 };
 
