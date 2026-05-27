@@ -15,6 +15,7 @@ import type {
   Provider,
   InstructorService,
   ProviderListOptions,
+  ActivityKind,
 } from '@/types/instructor';
 import type { ProviderApplicationStatus } from '@/types/firebase';
 
@@ -44,6 +45,14 @@ function flattenProvider(id: string, data: Record<string, unknown>): Provider {
     lat: typeof data.lat === 'number' ? (data.lat as number) : undefined,
     lng: typeof data.lng === 'number' ? (data.lng as number) : undefined,
     photoUrls: (data.photoUrls as string[]) ?? undefined,
+    activityKind: (data.activityKind as ActivityKind) ?? undefined,
+    eventDate: (data.eventDate as string) ?? undefined,
+    eventTime: (data.eventTime as string) ?? undefined,
+    location: (data.location as string) ?? (data.city as string) ?? undefined,
+    attendees: typeof data.attendees === 'number' ? (data.attendees as number) : undefined,
+    tag: (data.tag as 'hot' | 'vip' | 'new') ?? undefined,
+    durationMinutes: typeof data.durationMinutes === 'number' ? (data.durationMinutes as number) : undefined,
+    partyType: (data.partyType as string) ?? undefined,
   };
 }
 
