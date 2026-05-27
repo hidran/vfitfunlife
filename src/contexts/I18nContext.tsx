@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from 'react';
 import { getMessage, type MessageKey } from '@/i18n/messages';
+import { detectBrowserLocale, detectDeviceLocale } from '@/lib/i18n/detectLocale';
 import {
   DEFAULT_LOCALE,
   LOCALE_LABELS,
@@ -42,31 +43,13 @@ function interpolate(message: string, values?: TranslateValues): string {
   }, message);
 }
 
-function getBrowserLocale(): AppLocale {
-  if (typeof window === 'undefined') return DEFAULT_LOCALE;
-
-  const candidates = [window.navigator.language, ...window.navigator.languages]
-    .filter(Boolean)
-    .map((value) => value.toLowerCase().split('-')[0]);
-
-  for (const candidate of candidates) {
-    if (isSupportedLocale(candidate)) {
-      return candidate;
-    }
-  }
-
-  return DEFAULT_LOCALE;
-}
-
 function resolveInitialLocale(): AppLocale {
   if (typeof window === 'undefined') return DEFAULT_LOCALE;
-
   const stored = window.localStorage.getItem(STORAGE_KEY);
   if (stored && isSupportedLocale(stored)) {
     return stored;
   }
-
-  return getBrowserLocale();
+  return detectBrowserLocale() ?? DEFAULT_LOCALE;
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
@@ -78,6 +61,19 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       document.documentElement.lang = locale;
     }
   }, [locale]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    if (stored && isSupportedLocale(stored)) return; // explicit/prior choice wins
+    let cancelled = false;
+    detectDeviceLocale().then((deviceLocale) => {
+      if (!cancelled && deviceLocale) setLocaleState(deviceLocale);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const setLocale = useCallback((nextLocale: AppLocale) => {
     setLocaleState(nextLocale);
