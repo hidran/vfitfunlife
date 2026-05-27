@@ -20,6 +20,7 @@ export interface Provider {
   tag?: 'hot' | 'vip' | 'new'; // events
   durationMinutes?: number; // vr session length
   partyType?: string;      // party packages, e.g. "private"
+  lowestPrice?: number;    // denormalized cheapest service price (for cards)
   applicationStatus?: ProviderApplicationStatus;
   isActive: boolean;
   specialties: string[];

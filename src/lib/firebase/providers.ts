@@ -53,6 +53,7 @@ function flattenProvider(id: string, data: Record<string, unknown>): Provider {
     tag: (data.tag as 'hot' | 'vip' | 'new') ?? undefined,
     durationMinutes: typeof data.durationMinutes === 'number' ? (data.durationMinutes as number) : undefined,
     partyType: (data.partyType as string) ?? undefined,
+    lowestPrice: typeof data.lowestPrice === 'number' ? (data.lowestPrice as number) : undefined,
   };
 }
 
