@@ -24,6 +24,7 @@ import { Capacitor } from "@capacitor/core";
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp, arrayUnion, arrayRemove } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { auth, db, functions } from "./config";
+import { nativeGoogleSignIn, nativeAppleSignIn } from "./nativeAuth";
 import { ProviderProfile, Certification, Education, SocialLinks, NotificationSettings, PrivacySettings } from "@/types/firebase";
 import { DEFAULT_LOCALE, type AppLocale } from "@/types/locale";
 
@@ -94,6 +95,13 @@ export async function signInWithGoogle(): Promise<User | null> {
   provider.addScope("email");
   provider.addScope("profile");
 
+  if (Capacitor.isNativePlatform()) {
+    console.log('[Auth] Using native Google sign-in');
+    const user = await nativeGoogleSignIn(auth);
+    await updateUserLastLogin(user.uid);
+    return user;
+  }
+
   // Use popup for all platforms (redirect has domain issues)
   console.log('[Auth] Using popup flow');
   console.log('[Auth] Current auth domain:', auth.app.options.authDomain);
@@ -149,6 +157,13 @@ export async function signInWithApple(): Promise<User | null> {
   const provider = new OAuthProvider("apple.com");
   provider.addScope("email");
   provider.addScope("name");
+
+  if (Capacitor.isNativePlatform()) {
+    console.log('[Auth] Using native Apple sign-in');
+    const user = await nativeAppleSignIn(auth);
+    await updateUserLastLogin(user.uid);
+    return user;
+  }
 
   // Use popup for all platforms
   console.log('[Auth] Using popup flow for Apple');
