@@ -13,69 +13,77 @@ import {
 } from 'lucide-react';
 import { OnboardingSlide } from '@/components/onboarding/OnboardingSlide';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/hooks/useI18n';
+import type { MessageKey } from '@/i18n/messages/it';
 
-const slides = [
+const slideKeys = [
   {
-    title: 'Benvenuto in VFit',
-    subtitle: 'Connect - Train - Transform',
-    description:
-      "Un solo hub per fitness, eventi e wellness. Tutto quello che ami, in un'unica app.",
+    titleKey: 'onboarding.slide.welcome.title' as MessageKey,
+    subtitleKey: 'onboarding.slide.welcome.subtitle' as MessageKey,
+    descriptionKey: 'onboarding.slide.welcome.description' as MessageKey,
     icon: Star,
     theme: 'default' as const,
-    features: [
-      { icon: Dumbbell, label: 'Palestre e corsi' },
-      { icon: PartyPopper, label: 'Eventi esclusivi' },
-      { icon: Sparkles, label: 'Wellness premium' },
-      { icon: Users, label: 'Community attiva' },
+    featureKeys: [
+      { icon: Dumbbell, labelKey: 'onboarding.slide.welcome.feature.gyms' as MessageKey },
+      { icon: PartyPopper, labelKey: 'onboarding.slide.welcome.feature.events' as MessageKey },
+      { icon: Sparkles, labelKey: 'onboarding.slide.welcome.feature.wellness' as MessageKey },
+      { icon: Users, labelKey: 'onboarding.slide.welcome.feature.community' as MessageKey },
     ],
   },
   {
-    title: 'VFit',
-    subtitle: 'Fitness on demand',
-    description:
-      'Prenota palestre, corsi e personal trainer. Sfide, progressi e mappe a portata di tap.',
+    titleKey: 'onboarding.slide.vfit.title' as MessageKey,
+    subtitleKey: 'onboarding.slide.vfit.subtitle' as MessageKey,
+    descriptionKey: 'onboarding.slide.vfit.description' as MessageKey,
     icon: Dumbbell,
     theme: 'vfit' as const,
-    features: [
-      { icon: Dumbbell, label: 'Check-in rapido' },
-      { icon: Users, label: 'Trainer top' },
-      { icon: Star, label: 'Classi premium' },
-      { icon: Wand2, label: 'Sfide smart' },
+    featureKeys: [
+      { icon: Dumbbell, labelKey: 'onboarding.slide.vfit.feature.checkin' as MessageKey },
+      { icon: Users, labelKey: 'onboarding.slide.vfit.feature.trainers' as MessageKey },
+      { icon: Star, labelKey: 'onboarding.slide.vfit.feature.classes' as MessageKey },
+      { icon: Wand2, labelKey: 'onboarding.slide.vfit.feature.challenges' as MessageKey },
     ],
   },
   {
-    title: 'VFun',
-    subtitle: 'Eventi e streaming',
-    description:
-      'Scopri party, VR experience e live streaming. Sempre qualcosa di nuovo da vivere.',
+    titleKey: 'onboarding.slide.vfun.title' as MessageKey,
+    subtitleKey: 'onboarding.slide.vfun.subtitle' as MessageKey,
+    descriptionKey: 'onboarding.slide.vfun.description' as MessageKey,
     icon: PartyPopper,
     theme: 'vfun' as const,
-    features: [
-      { icon: PartyPopper, label: 'Eventi live' },
-      { icon: Star, label: 'VIP access' },
-      { icon: Users, label: 'Social vibe' },
-      { icon: Wand2, label: 'VR moments' },
+    featureKeys: [
+      { icon: PartyPopper, labelKey: 'onboarding.slide.vfun.feature.live' as MessageKey },
+      { icon: Star, labelKey: 'onboarding.slide.vfun.feature.vip' as MessageKey },
+      { icon: Users, labelKey: 'onboarding.slide.vfun.feature.social' as MessageKey },
+      { icon: Wand2, labelKey: 'onboarding.slide.vfun.feature.vr' as MessageKey },
     ],
   },
   {
-    title: 'VLife',
-    subtitle: 'Benessere e beauty',
-    description:
-      'Wellness, estetica e servizi a domicilio. Il tuo momento, quando vuoi.',
+    titleKey: 'onboarding.slide.vlife.title' as MessageKey,
+    subtitleKey: 'onboarding.slide.vlife.subtitle' as MessageKey,
+    descriptionKey: 'onboarding.slide.vlife.description' as MessageKey,
     icon: Sparkles,
     theme: 'vlife' as const,
-    features: [
-      { icon: Sparkles, label: 'Spa & relax' },
-      { icon: Users, label: 'Pro certificati' },
-      { icon: Star, label: 'Recensioni' },
-      { icon: Wand2, label: 'Servizi home' },
+    featureKeys: [
+      { icon: Sparkles, labelKey: 'onboarding.slide.vlife.feature.spa' as MessageKey },
+      { icon: Users, labelKey: 'onboarding.slide.vlife.feature.pros' as MessageKey },
+      { icon: Star, labelKey: 'onboarding.slide.vlife.feature.reviews' as MessageKey },
+      { icon: Wand2, labelKey: 'onboarding.slide.vlife.feature.home' as MessageKey },
     ],
   },
 ];
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [activeIndex, setActiveIndex] = useState(0);
+
+  const slides = slideKeys.map((sk) => ({
+    title: t(sk.titleKey),
+    subtitle: t(sk.subtitleKey),
+    description: t(sk.descriptionKey),
+    icon: sk.icon,
+    theme: sk.theme,
+    features: sk.featureKeys.map((fk) => ({ icon: fk.icon, label: t(fk.labelKey) })),
+  }));
 
   const lastIndex = slides.length - 1;
   const isLast = activeIndex === lastIndex;
@@ -104,14 +112,14 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-background-dark text-text-inverse flex flex-col">
       <div className="container-mobile pt-6 flex items-center justify-between">
         <span className="text-xs uppercase tracking-[0.3em] text-text-tertiary">
-          Onboarding
+          {t('onboarding.label')}
         </span>
         <button
           type="button"
           onClick={handleComplete}
           className="text-sm font-semibold text-text-tertiary hover:text-text-inverse"
         >
-          Skip
+          {t('onboarding.skip')}
         </button>
       </div>
 
@@ -144,7 +152,7 @@ export default function OnboardingPage() {
                   ? 'w-8 bg-section-primary'
                   : 'w-2 bg-white/20'
               )}
-              aria-label={`Go to slide ${index + 1}`}
+              aria-label={t('onboarding.goToSlide', { index: index + 1 })}
             />
           ))}
         </div>
@@ -154,7 +162,7 @@ export default function OnboardingPage() {
           onClick={handleNext}
           className="w-full rounded-full bg-section-primary text-background-dark py-3 text-sm font-semibold flex items-center justify-center gap-2"
         >
-          {isLast ? 'Get Started' : 'Avanti'}
+          {isLast ? t('onboarding.getStarted') : t('onboarding.next')}
           <ArrowRight className="h-4 w-4" />
         </button>
       </div>

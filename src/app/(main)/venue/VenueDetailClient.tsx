@@ -10,11 +10,13 @@ import { amenityIcon } from '@/lib/icons/amenityIcons';
 import { VenueNotFound } from '@/components/venue/VenueNotFound';
 import { Spinner } from '@/components/ui/Spinner';
 import { PhotoGallery } from '@/components/gallery/PhotoGallery';
+import { useI18n } from '@/hooks/useI18n';
 
 type TabOption = 'services' | 'classes';
 
 export default function VenueDetailClient() {
   const searchParams = useSearchParams();
+  const { t } = useI18n();
   const id = searchParams?.get('id') ?? undefined;
 
   const venueQuery = useVenue(id);
@@ -27,7 +29,7 @@ export default function VenueDetailClient() {
   const [activeTab, setActiveTab] = useState<TabOption>('services');
 
   if (!id) {
-    return <VenueNotFound message="Venue non specificato" />;
+    return <VenueNotFound message={t('venueDetail.error.noId')} />;
   }
 
   if (venueQuery.isLoading) {
@@ -55,7 +57,7 @@ export default function VenueDetailClient() {
           <Link
             href="/fit/gyms"
             className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-background-dark/80 text-text-inverse"
-            aria-label="Back"
+            aria-label={t('venueDetail.back.aria')}
           >
             <ChevronLeft className="h-5 w-5" />
           </Link>
@@ -99,7 +101,7 @@ export default function VenueDetailClient() {
 
         <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 p-3">
           <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-            <Clock className="h-4 w-4" /> Orari
+            <Clock className="h-4 w-4" /> {t('venueDetail.hours.title')}
           </div>
           <ul className="mt-2 space-y-1 text-sm text-slate-600">
             {visibleHours.map((h) => (
@@ -115,7 +117,7 @@ export default function VenueDetailClient() {
               onClick={() => setShowAllHours((v) => !v)}
               className="mt-2 text-xs font-medium text-vfit-accent"
             >
-              {showAllHours ? 'Mostra meno' : `Tutti gli orari (${venue.hours.length})`}
+              {showAllHours ? t('venueDetail.hours.showLess') : t('venueDetail.hours.showAll', { count: venue.hours.length })}
             </button>
           )}
         </div>
@@ -143,7 +145,7 @@ export default function VenueDetailClient() {
             onClick={() => setShowDescription((v) => !v)}
             className="mt-1 text-xs font-medium text-vfit-accent"
           >
-            {showDescription ? 'Mostra meno' : 'Leggi tutto'}
+            {showDescription ? t('venueDetail.description.showLess') : t('venueDetail.description.readAll')}
           </button>
         )}
 
@@ -158,7 +160,7 @@ export default function VenueDetailClient() {
                 : 'border-transparent text-slate-500'
             )}
           >
-            Servizi
+            {t('venueDetail.tab.services')}
           </button>
           <button
             type="button"
@@ -170,7 +172,7 @@ export default function VenueDetailClient() {
                 : 'border-transparent text-slate-500'
             )}
           >
-            Corsi
+            {t('venueDetail.tab.classes')}
           </button>
         </div>
 
@@ -187,7 +189,7 @@ export default function VenueDetailClient() {
               </li>
             ))}
             {!servicesQuery.isLoading && services.length === 0 && (
-              <li className="text-sm text-slate-500">Nessun servizio disponibile.</li>
+              <li className="text-sm text-slate-500">{t('venueDetail.services.empty')}</li>
             )}
           </ul>
         )}
@@ -206,11 +208,11 @@ export default function VenueDetailClient() {
                     {c.time} · {c.coach}
                   </p>
                 </div>
-                <span className="text-xs font-medium text-slate-700">{c.spots} posti</span>
+                <span className="text-xs font-medium text-slate-700">{t('venueDetail.classes.spots', { count: c.spots })}</span>
               </li>
             ))}
             {!coursesQuery.isLoading && courses.length === 0 && (
-              <li className="text-sm text-slate-500">Nessun corso programmato.</li>
+              <li className="text-sm text-slate-500">{t('venueDetail.classes.empty')}</li>
             )}
           </ul>
         )}

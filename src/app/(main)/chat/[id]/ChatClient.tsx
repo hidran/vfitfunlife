@@ -7,6 +7,7 @@ import { ArrowLeft, Send, Sparkles } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/hooks/useI18n';
 
 interface ChatMessage {
   id: string;
@@ -15,16 +16,17 @@ interface ChatMessage {
   sentAt: string;
 }
 
-const QUICK_REPLIES = [
-  'Confermiamo l\'orario?',
-  'Posso portare un amico?',
-  'Ci sono materiali da portare?',
-];
-
 export default function ChatClient() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const { t } = useI18n();
   const providerId = params.id;
+
+  const QUICK_REPLIES = [
+    t('chat.quickReply.confirmTime'),
+    t('chat.quickReply.bringFriend'),
+    t('chat.quickReply.materials'),
+  ];
 
   const initialMessages = useMemo<ChatMessage[]>(
     () => [
@@ -85,14 +87,14 @@ export default function ChatClient() {
           </button>
           <Avatar name="Provider" size="md" />
           <div className="min-w-0 flex-1">
-            <p className="truncate font-semibold text-white">Chat prenotazione</p>
-            <p className="text-xs text-text-tertiary">ID provider: {providerId}</p>
+            <p className="truncate font-semibold text-white">{t('chat.header.title')}</p>
+            <p className="text-xs text-text-tertiary">{t('chat.header.providerId', { id: providerId })}</p>
           </div>
           <Link
             href="/bookings"
             className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors hover:text-white"
           >
-            Prenotazioni
+            {t('chat.header.bookings')}
           </Link>
         </div>
       </div>
@@ -101,7 +103,7 @@ export default function ChatClient() {
         <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
           <p className="flex items-center gap-2 text-xs text-text-secondary">
             <Sparkles className="h-4 w-4 text-[var(--section-primary)]" />
-            Usa la chat per conferme rapide su orari, accesso e preparazione.
+            {t('chat.hint')}
           </p>
         </div>
 
@@ -148,10 +150,10 @@ export default function ChatClient() {
             rows={1}
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
-            placeholder="Scrivi un messaggio..."
+            placeholder={t('chat.input.placeholder')}
             className="max-h-32 min-h-[44px] flex-1 resize-none rounded-xl border border-white/15 bg-black/20 px-3 py-2.5 text-sm text-white outline-none transition-colors focus:border-[var(--section-primary)]"
           />
-          <Button onClick={handleSend} disabled={!draft.trim()} className="h-11 px-4">
+          <Button onClick={handleSend} disabled={!draft.trim()} aria-label={t('chat.send.aria')} className="h-11 px-4">
             <Send className="h-4 w-4" />
           </Button>
         </div>
