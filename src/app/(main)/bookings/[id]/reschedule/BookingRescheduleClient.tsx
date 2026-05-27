@@ -7,17 +7,10 @@ import { cn } from '@/lib/utils';
 import { useBookingStore } from '@/stores/bookingStore';
 import { buildFallbackBooking, getBookingSectionMeta } from '@/lib/bookingUtils';
 import { useI18n } from '@/hooks/useI18n';
+import { toLocaleTag } from '@/types/locale';
 import { AvailabilityPicker } from '@/components/booking';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/Avatar';
-
-function formatTime(date: Date) {
-  return date.toLocaleTimeString('it-IT', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
-}
 
 function mergeDateAndTime(date: Date, time: string) {
   const [hours, minutes] = time.split(':').map(Number);
@@ -29,7 +22,15 @@ function mergeDateAndTime(date: Date, time: string) {
 export default function BookingRescheduleClient() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+
+  function formatTime(date: Date) {
+    return date.toLocaleTimeString(toLocaleTag(locale), {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+  }
   const bookingId = params.id;
 
   const {
@@ -149,7 +150,7 @@ export default function BookingRescheduleClient() {
               <div className="grid gap-2 text-sm text-text-secondary">
                 <p className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-[var(--section-primary)]" />
-                  {currentDate.toLocaleDateString('it-IT', {
+                  {currentDate.toLocaleDateString(toLocaleTag(locale), {
                     weekday: 'long',
                     day: 'numeric',
                     month: 'long',
@@ -176,7 +177,7 @@ export default function BookingRescheduleClient() {
               <h2 className="mb-2 font-semibold text-white">{t('bookings.reschedule.newSlot')}</h2>
               {selectedDate && selectedTime ? (
                 <p className="text-sm text-text-secondary">
-                  {selectedDate.toLocaleDateString('it-IT', {
+                  {selectedDate.toLocaleDateString(toLocaleTag(locale), {
                     weekday: 'long',
                     day: 'numeric',
                     month: 'long',

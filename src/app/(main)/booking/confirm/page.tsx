@@ -20,6 +20,7 @@ import { cn, formatPrice } from '@/lib/utils';
 import { useBookingStore } from '@/stores/bookingStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useI18n } from '@/hooks/useI18n';
+import { toLocaleTag } from '@/types/locale';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/Spinner';
@@ -29,7 +30,7 @@ import type { PaymentMethod } from '@/types/booking';
 
 export default function BookingConfirmPage() {
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { user } = useAuthStore();
   const {
     selectedProvider,
@@ -180,7 +181,7 @@ export default function BookingConfirmPage() {
             <div className="flex items-center gap-3 text-sm">
               <Calendar className="w-4 h-4 text-[var(--section-primary)]" />
               <span className="text-white">
-                {scheduledAt.toLocaleDateString('it-IT', {
+                {scheduledAt.toLocaleDateString(toLocaleTag(locale), {
                   weekday: 'long',
                   day: 'numeric',
                   month: 'long',

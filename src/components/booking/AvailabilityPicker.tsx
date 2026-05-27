@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Clock, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Spinner } from '@/components/ui/Spinner';
 import { useI18n } from '@/hooks/useI18n';
+import { toLocaleTag } from '@/types/locale';
 import type { TimeSlot } from '@/types/booking';
 
 interface AvailabilityPickerProps {
@@ -32,7 +33,7 @@ export function AvailabilityPicker({
   timezone = 'Europe/Rome',
   className,
 }: AvailabilityPickerProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const DAYS = [
@@ -260,7 +261,7 @@ export function AvailabilityPicker({
               </h3>
             </div>
             <span className="text-sm text-text-secondary">
-              {selectedDate.toLocaleDateString(undefined, {
+              {selectedDate.toLocaleDateString(toLocaleTag(locale), {
                 weekday: 'short',
                 day: 'numeric',
                 month: 'short',

@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
 import { useI18n } from '@/hooks/useI18n';
+import { toLocaleTag } from '@/types/locale';
 
 interface ProviderReview {
   id: string;
@@ -50,7 +51,7 @@ const REVIEWS: ProviderReview[] = [
 type RatingFilter = 'all' | 5 | 4 | 3;
 
 export default function ProviderReviewsClient() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const providerId = params.id;
@@ -124,7 +125,7 @@ export default function ProviderReviewsClient() {
                     <div>
                       <p className="font-medium text-white">{review.author}</p>
                       <p className="text-xs text-text-tertiary">
-                        {new Date(review.date).toLocaleDateString('it-IT', {
+                        {new Date(review.date).toLocaleDateString(toLocaleTag(locale), {
                           day: 'numeric',
                           month: 'long',
                           year: 'numeric',

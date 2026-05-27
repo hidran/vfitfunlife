@@ -16,6 +16,7 @@ import { getBookingSectionMeta } from '@/lib/bookingUtils';
 import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
 import { useI18n } from '@/hooks/useI18n';
+import { toLocaleTag } from '@/types/locale';
 // IconButton component is used below
 import type { Booking, BookingStatus } from '@/types/booking';
 
@@ -46,7 +47,7 @@ export function BookingCard({
   className,
 }: BookingCardProps) {
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   const statusLabels: Record<BookingStatus, string> = {
     pending: t('booking.status.pending'),
@@ -114,14 +115,14 @@ export function BookingCard({
             <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-text-tertiary">
               <span className="flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
-                {scheduledAt.toLocaleDateString(undefined, {
+                {scheduledAt.toLocaleDateString(toLocaleTag(locale), {
                   day: 'numeric',
                   month: 'short',
                 })}
               </span>
               <span className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
-                {scheduledAt.toLocaleTimeString(undefined, {
+                {scheduledAt.toLocaleTimeString(toLocaleTag(locale), {
                   hour: '2-digit',
                   minute: '2-digit',
                 })}
@@ -172,7 +173,7 @@ export function BookingCard({
         <div className="flex items-center gap-3 text-sm">
           <Calendar className="w-4 h-4 text-[var(--section-primary)]" />
           <span className="text-white">
-            {scheduledAt.toLocaleDateString(undefined, {
+            {scheduledAt.toLocaleDateString(toLocaleTag(locale), {
               weekday: 'long',
               day: 'numeric',
               month: 'long',
@@ -183,7 +184,7 @@ export function BookingCard({
         <div className="flex items-center gap-3 text-sm">
           <Clock className="w-4 h-4 text-[var(--section-primary)]" />
           <span className="text-white">
-            {scheduledAt.toLocaleTimeString(undefined, {
+            {scheduledAt.toLocaleTimeString(toLocaleTag(locale), {
               hour: '2-digit',
               minute: '2-digit',
             })}

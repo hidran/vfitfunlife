@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter, useParams } from 'next/navigation';
 import { useI18n } from '@/hooks/useI18n';
+import { toLocaleTag } from '@/types/locale';
 import {
   ChevronLeft,
   Star,
@@ -49,7 +50,7 @@ interface ProviderPublicProfile {
 }
 
 export default function ProviderProfileClient() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const router = useRouter();
   const params = useParams();
   const providerId = params.id as string;
@@ -133,7 +134,7 @@ export default function ProviderProfileClient() {
 
   const formatDate = (timestamp: Timestamp | null): string => {
     if (!timestamp) return 'N/A';
-    return timestamp.toDate().toLocaleDateString('it-IT', {
+    return timestamp.toDate().toLocaleDateString(toLocaleTag(locale), {
       year: 'numeric',
       month: 'short',
     });

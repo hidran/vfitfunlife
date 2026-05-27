@@ -8,6 +8,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
+import { toLocaleTag } from '@/types/locale';
 
 interface ChatMessage {
   id: string;
@@ -19,7 +20,7 @@ interface ChatMessage {
 export default function ChatClient() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const providerId = params.id;
 
   const QUICK_REPLIES = [
@@ -54,7 +55,7 @@ export default function ChatClient() {
     if (!text) return;
 
     const now = new Date();
-    const sentAt = now.toLocaleTimeString('it-IT', {
+    const sentAt = now.toLocaleTimeString(toLocaleTag(locale), {
       hour: '2-digit',
       minute: '2-digit',
     });

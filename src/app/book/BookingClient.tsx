@@ -27,9 +27,10 @@ import { useInstructorReviews } from '@/hooks/useCommunity';
 import { VenueNotFound } from '@/components/venue/VenueNotFound';
 import { PhotoGallery } from '@/components/gallery/PhotoGallery';
 import { useI18n } from '@/hooks/useI18n';
+import { toLocaleTag } from '@/types/locale';
 
 export default function ProviderBookingPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const searchParams = useSearchParams();
   const router = useRouter();
   const providerId = searchParams?.get('providerId') ?? undefined;
@@ -271,7 +272,7 @@ export default function ProviderBookingPage() {
             >
               {reviews.map((review) => {
                 const dateLabel = review.createdAt?.toDate
-                  ? review.createdAt.toDate().toLocaleDateString('it-IT')
+                  ? review.createdAt.toDate().toLocaleDateString(toLocaleTag(locale))
                   : t('booking.review.recent');
                 return (
                   <div
@@ -348,7 +349,7 @@ export default function ProviderBookingPage() {
                   {selectedService?.name}
                 </p>
                 <p className="text-lg font-bold text-white">
-                  {selectedDate?.toLocaleDateString('it-IT', {
+                  {selectedDate?.toLocaleDateString(toLocaleTag(locale), {
                     weekday: 'short',
                     day: 'numeric',
                     month: 'short',

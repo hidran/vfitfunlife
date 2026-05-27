@@ -23,6 +23,7 @@ import { cn, formatPrice } from '@/lib/utils';
 import { buildFallbackBooking } from '@/lib/bookingUtils';
 import { useBookingStore } from '@/stores/bookingStore';
 import { useI18n } from '@/hooks/useI18n';
+import { toLocaleTag } from '@/types/locale';
 import { Button } from '@/components/ui/button';
 import { Badge, type BadgeProps } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
@@ -45,7 +46,7 @@ export default function BookingDetailPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const bookingId = params.id as string;
   const justConfirmed = searchParams.get('confirmed') === 'true';
   const justRescheduled = searchParams.get('rescheduled') === 'true';
@@ -336,7 +337,7 @@ export default function BookingDetailPage() {
             <Calendar className="w-5 h-5 text-[var(--section-primary)]" />
             <div>
               <p className="text-white">
-                {scheduledAt.toLocaleDateString('it-IT', {
+                {scheduledAt.toLocaleDateString(toLocaleTag(locale), {
                   weekday: 'long',
                   day: 'numeric',
                   month: 'long',
@@ -350,7 +351,7 @@ export default function BookingDetailPage() {
             <Clock className="w-5 h-5 text-[var(--section-primary)]" />
             <div>
               <p className="text-white">
-                {scheduledAt.toLocaleTimeString('it-IT', {
+                {scheduledAt.toLocaleTimeString(toLocaleTag(locale), {
                   hour: '2-digit',
                   minute: '2-digit',
                 })}

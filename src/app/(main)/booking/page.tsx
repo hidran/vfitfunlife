@@ -29,9 +29,10 @@ import { RadiusFilter } from '@/components/map/RadiusFilter';
 import { annotateAndSortByDistance, filterByRadius } from '@/lib/geo';
 import { SERVICE_CATEGORIES } from '@/lib/serviceCategories';
 import { useI18n } from '@/hooks/useI18n';
+import { toLocaleTag } from '@/types/locale';
 
 export default function BookingPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const router = useRouter();
   const {
     searchResults,
@@ -438,7 +439,7 @@ export default function BookingPage() {
                           )}
                           <Clock className="w-4 h-4" />
                           {provider.nextAvailable ? (
-                            <span>{t('booking.provider.availableFrom', { date: provider.nextAvailable.toLocaleDateString('it-IT') })}</span>
+                            <span>{t('booking.provider.availableFrom', { date: provider.nextAvailable.toLocaleDateString(toLocaleTag(locale)) })}</span>
                           ) : (
                             <span>{t('booking.provider.checkAvailability')}</span>
                           )}
