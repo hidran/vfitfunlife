@@ -1,6 +1,6 @@
 import type { Messages } from './it';
 
-export const enMessages: Partial<Messages> = {
+export const enMessages: Messages = {
   'common.loading': 'Loading...',
   'common.redirecting': 'Redirecting...',
   'common.home': 'Home',

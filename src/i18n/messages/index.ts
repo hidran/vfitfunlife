@@ -5,20 +5,12 @@ import { esMessages } from './es';
 import { frMessages } from './fr';
 import { itMessages, type MessageKey, type Messages } from './it';
 
-const localeOverrides: Record<AppLocale, Partial<Messages>> = {
-  it: {},
+export const messagesByLocale: Record<AppLocale, Messages> = {
+  it: itMessages,
   en: enMessages,
   es: esMessages,
   fr: frMessages,
   de: deMessages,
-};
-
-export const messagesByLocale: Record<AppLocale, Messages> = {
-  it: itMessages,
-  en: { ...itMessages, ...localeOverrides.en },
-  es: { ...itMessages, ...localeOverrides.es },
-  fr: { ...itMessages, ...localeOverrides.fr },
-  de: { ...itMessages, ...localeOverrides.de },
 };
 
 export type { MessageKey };

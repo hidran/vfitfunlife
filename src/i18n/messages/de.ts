@@ -1,6 +1,6 @@
 import type { Messages } from './it';
 
-export const deMessages: Partial<Messages> = {
+export const deMessages: Messages = {
   'common.loading': 'Wird geladen...',
   'common.redirecting': 'Weiterleitung...',
   'common.home': 'Start',
