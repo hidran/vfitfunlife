@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fetchProvider, fetchProviders, fetchProviderServices, fetchProviderApplications } from './providers';
+import { fetchProvider, fetchProviders, fetchProviderServices, fetchProviderApplications, fetchFunActivities } from './providers';
 
 vi.mock('firebase/firestore', () => ({
   collection: vi.fn(),
@@ -112,6 +112,19 @@ describe('fetchProviders activity exclusion', () => {
     } as never);
     const all = await fetchProviders();
     expect(all.map((p) => p.id)).toEqual(['trainer-1']);
+  });
+});
+
+describe('fetchFunActivities', () => {
+  it('returns only active activities of the requested kind, mapping activity fields', async () => {
+    mockGetDocs.mockResolvedValueOnce({
+      docs: [
+        { id: 'event-1', data: () => ({ fullName: 'Sunset Sessions', isActive: true, activityKind: 'event', eventDate: '16 Feb', tag: 'hot', providerProfile: { isVerified: true } }) },
+      ],
+    } as never);
+    const events = await fetchFunActivities('event');
+    expect(events).toHaveLength(1);
+    expect(events[0]).toEqual(expect.objectContaining({ id: 'event-1', activityKind: 'event', eventDate: '16 Feb', tag: 'hot' }));
   });
 });
 

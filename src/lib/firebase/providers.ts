@@ -88,6 +88,19 @@ export async function fetchProviders(opts: ProviderListOptions = {}): Promise<Pr
   }
 }
 
+export async function fetchFunActivities(kind: ActivityKind): Promise<Provider[]> {
+  try {
+    const q = query(collection(db, 'instructors'), where('activityKind', '==', kind));
+    const snap = await getDocs(q);
+    return snap.docs
+      .map((d) => flattenProvider(d.id, d.data() as Record<string, unknown>))
+      .filter((p) => p.isActive);
+  } catch (error) {
+    console.error('[fetchFunActivities]', kind, error);
+    return [];
+  }
+}
+
 export async function fetchProviderServices(providerId: string): Promise<InstructorService[]> {
   try {
     const snap = await getDocs(collection(db, 'instructors', providerId, 'services'));
