@@ -2242,6 +2242,93 @@ export async function generateDemoProviderCoords(): Promise<SeedingResult[]> {
 }
 
 // ============================================================================
+// VFun activities seed — events / VR / parties as bookable instructor docs
+// ============================================================================
+
+const FUN_ACTIVITIES = [
+  { id: "fun-event-sunset",    kind: "event", name: "Sunset Sessions",  price: 39,   eventDate: "16 Feb", eventTime: "18:30", location: "Rooftop Milano",      attendees: 420, tag: "hot", serviceName: "Biglietto evento",     durationMinutes: 120 },
+  { id: "fun-event-fitparty",  kind: "event", name: "Fit Party Night",  price: 28,   eventDate: "20 Feb", eventTime: "21:00", location: "Arena Roma",          attendees: 680, tag: "new", serviceName: "Biglietto evento",     durationMinutes: 120 },
+  { id: "fun-event-vipgala",   kind: "event", name: "VIP Gala Night",   price: 90,   eventDate: "27 Feb", eventTime: "20:30", location: "Grand Hotel Firenze", attendees: 180, tag: "vip", serviceName: "Biglietto VIP",        durationMinutes: 180 },
+  { id: "fun-event-neonrun",   kind: "event", name: "Neon Run",         price: 32,   eventDate: "3 Mar",  eventTime: "22:00", location: "Parco Torino",        attendees: 510, tag: "hot", serviceName: "Pettorale + kit",      durationMinutes: 120 },
+  { id: "fun-vr-boxing",       kind: "vr",    name: "VR Boxing Pro",    price: 22,   durationMinutes: 45, serviceName: "Sessione VR" },
+  { id: "fun-vr-dance",        kind: "vr",    name: "VR Dance Battle",  price: 16,   durationMinutes: 30, serviceName: "Sessione VR" },
+  { id: "fun-vr-racing",       kind: "vr",    name: "VR Racing League", price: 20,   durationMinutes: 35, serviceName: "Sessione VR" },
+  { id: "fun-vr-escape",       kind: "vr",    name: "VR Escape Room",   price: 26,   durationMinutes: 60, serviceName: "Sessione VR" },
+  { id: "fun-party-private",   kind: "party", name: "Private Party",    price: 790,  partyType: "private",   serviceName: "Pacchetto Private",   durationMinutes: 240 },
+  { id: "fun-party-corporate", kind: "party", name: "Corporate Event",  price: 1490, partyType: "corporate", serviceName: "Pacchetto Corporate", durationMinutes: 240 },
+  { id: "fun-party-vip",       kind: "party", name: "VIP Party",        price: 2600, partyType: "vip",       serviceName: "Pacchetto VIP",       durationMinutes: 240 },
+] as const;
+
+/**
+ * Seeds 11 VFun activities (events, VR experiences, parties) as bookable
+ * /instructors docs, each with a /services/svc-1 subdoc.
+ * Idempotent — uses deterministic IDs + merge: true.
+ */
+export async function generateDemoFunActivities(): Promise<{ activities: number }> {
+  const batch = db.batch();
+  const now = Timestamp.now();
+
+  for (const a of FUN_ACTIVITIES) {
+    const ref = db.collection("instructors").doc(a.id);
+
+    // Base instructor doc — fields shared by all activity kinds
+    const doc: Record<string, unknown> = {
+      uid: a.id,
+      name: a.name,
+      fullName: a.name,
+      avatarUrl: null,
+      isActive: true,
+      activityKind: a.kind,
+      lowestPrice: a.price,
+      providerProfile: {
+        isVerified: true,
+        isActive: true,
+        specialties: [],
+        rating: 0,
+        reviewCount: 0,
+        bio: "",
+      },
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    // Kind-specific metadata — only write fields present on this entry
+    if (a.kind === "event") {
+      const e = a as typeof a & { eventDate: string; eventTime: string; location: string; attendees: number; tag: string };
+      doc["eventDate"] = e.eventDate;
+      doc["eventTime"] = e.eventTime;
+      doc["location"] = e.location;
+      doc["attendees"] = e.attendees;
+      doc["tag"] = e.tag;
+    } else if (a.kind === "vr") {
+      const v = a as typeof a & { durationMinutes: number };
+      doc["durationMinutes"] = v.durationMinutes;
+    } else if (a.kind === "party") {
+      const p = a as typeof a & { partyType: string };
+      doc["partyType"] = p.partyType;
+    }
+
+    batch.set(ref, doc, { merge: true });
+
+    // Service subdoc
+    const svcRef = ref.collection("services").doc("svc-1");
+    batch.set(
+      svcRef,
+      {
+        name: a.serviceName,
+        price: a.price,
+        durationMinutes: ("durationMinutes" in a ? a.durationMinutes : 120) ?? 120,
+        isActive: true,
+      },
+      { merge: true }
+    );
+  }
+
+  await batch.commit();
+  return { activities: FUN_ACTIVITIES.length };
+}
+
+// ============================================================================
 // HTTP Cloud Functions
 // ============================================================================
 
