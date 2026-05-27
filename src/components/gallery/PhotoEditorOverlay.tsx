@@ -1,6 +1,7 @@
 'use client';
 import { useEffect } from 'react';
 import { X } from 'lucide-react';
+import { useI18n } from '@/hooks/useI18n';
 
 interface PhotoEditorOverlayProps {
   title: string;
@@ -9,6 +10,7 @@ interface PhotoEditorOverlayProps {
 }
 
 export function PhotoEditorOverlay({ title, onClose, children }: PhotoEditorOverlayProps) {
+  const { t } = useI18n();
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -34,7 +36,7 @@ export function PhotoEditorOverlay({ title, onClose, children }: PhotoEditorOver
             type="button"
             onClick={onClose}
             className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white"
-            aria-label="Chiudi"
+            aria-label={t('common.close')}
           >
             <X className="h-4 w-4" />
           </button>

@@ -15,6 +15,7 @@ import { cn, formatPrice } from '@/lib/utils';
 import { getBookingSectionMeta } from '@/lib/bookingUtils';
 import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
+import { useI18n } from '@/hooks/useI18n';
 // IconButton component is used below
 import type { Booking, BookingStatus } from '@/types/booking';
 
@@ -27,13 +28,13 @@ interface BookingCardProps {
   className?: string;
 }
 
-const statusConfig: Record<BookingStatus, { label: string; variant: any }> = {
-  pending: { label: 'In attesa', variant: 'warning' },
-  confirmed: { label: 'Confermato', variant: 'success' },
-  in_progress: { label: 'In corso', variant: 'info' },
-  completed: { label: 'Completato', variant: 'default' },
-  cancelled: { label: 'Annullato', variant: 'error' },
-  no_show: { label: 'No show', variant: 'error' },
+const statusVariants: Record<BookingStatus, 'warning' | 'success' | 'info' | 'default' | 'error'> = {
+  pending: 'warning',
+  confirmed: 'success',
+  in_progress: 'info',
+  completed: 'default',
+  cancelled: 'error',
+  no_show: 'error',
 };
 
 export function BookingCard({
@@ -45,9 +46,21 @@ export function BookingCard({
   className,
 }: BookingCardProps) {
   const router = useRouter();
-  const status = statusConfig[booking.status];
+  const { t } = useI18n();
+
+  const statusLabels: Record<BookingStatus, string> = {
+    pending: t('booking.status.pending'),
+    confirmed: t('booking.status.confirmed'),
+    in_progress: t('booking.status.inProgress'),
+    completed: t('booking.status.completed'),
+    cancelled: t('booking.status.cancelled'),
+    no_show: t('booking.status.noShow'),
+  };
+
+  const statusVariant = statusVariants[booking.status];
+  const statusLabel = statusLabels[booking.status];
   const sectionMeta = getBookingSectionMeta(booking.serviceName);
-  
+
   const scheduledAt = booking.scheduledAt.toDate();
   const isPast = scheduledAt < new Date();
   const canCancel = booking.status === 'confirmed' || booking.status === 'pending';
@@ -76,7 +89,7 @@ export function BookingCard({
             size="md"
             className="shrink-0"
           />
-        
+
           <div className="min-w-0 flex-1">
             <div className="mb-1 flex items-center gap-2">
               <span
@@ -88,27 +101,27 @@ export function BookingCard({
               >
                 {sectionMeta.label}
               </span>
-              <Badge variant={status.variant} size="sm">
-                {status.label}
+              <Badge variant={statusVariant} size="sm">
+                {statusLabel}
               </Badge>
             </div>
-          
+
             <h3 className="truncate font-semibold text-white">
               {booking.serviceName}
             </h3>
             <p className="truncate text-sm text-text-secondary">{booking.providerName}</p>
-          
+
             <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-text-tertiary">
               <span className="flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
-                {scheduledAt.toLocaleDateString('it-IT', {
+                {scheduledAt.toLocaleDateString(undefined, {
                   day: 'numeric',
                   month: 'short',
                 })}
               </span>
               <span className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
-                {scheduledAt.toLocaleTimeString('it-IT', {
+                {scheduledAt.toLocaleTimeString(undefined, {
                   hour: '2-digit',
                   minute: '2-digit',
                 })}
@@ -149,8 +162,8 @@ export function BookingCard({
               <p className="text-sm text-text-secondary">{booking.serviceName}</p>
             </div>
           </div>
-          
-          <Badge variant={status.variant}>{status.label}</Badge>
+
+          <Badge variant={statusVariant}>{statusLabel}</Badge>
         </div>
       </div>
 
@@ -159,18 +172,18 @@ export function BookingCard({
         <div className="flex items-center gap-3 text-sm">
           <Calendar className="w-4 h-4 text-[var(--section-primary)]" />
           <span className="text-white">
-            {scheduledAt.toLocaleDateString('it-IT', {
+            {scheduledAt.toLocaleDateString(undefined, {
               weekday: 'long',
               day: 'numeric',
               month: 'long',
             })}
           </span>
         </div>
-        
+
         <div className="flex items-center gap-3 text-sm">
           <Clock className="w-4 h-4 text-[var(--section-primary)]" />
           <span className="text-white">
-            {scheduledAt.toLocaleTimeString('it-IT', {
+            {scheduledAt.toLocaleTimeString(undefined, {
               hour: '2-digit',
               minute: '2-digit',
             })}
@@ -178,7 +191,7 @@ export function BookingCard({
             {booking.duration} min
           </span>
         </div>
-        
+
         {booking.location?.address && (
           <div className="flex items-center gap-3 text-sm">
             <MapPin className="w-4 h-4 text-[var(--section-primary)]" />
@@ -189,7 +202,7 @@ export function BookingCard({
         )}
 
         <div className="flex items-center justify-between pt-3 border-t border-white/10">
-          <span className="text-text-secondary">Totale</span>
+          <span className="text-text-secondary">{t('booking.card.total')}</span>
           <span className="text-lg font-bold text-white">
             {formatPrice(booking.totalPrice)}
           </span>
@@ -204,35 +217,35 @@ export function BookingCard({
             className="flex-1 bg-[var(--section-primary)]/20 text-[var(--section-primary)] py-2.5 rounded-xl font-medium text-sm hover:bg-[var(--section-primary)]/30 transition-colors flex items-center justify-center gap-2"
           >
             <Star className="w-4 h-4" />
-            Lascia recensione
+            {t('booking.card.leaveReview')}
           </button>
         )}
-        
+
         {canReschedule && (
           <button
             onClick={() => onReschedule?.(booking.id)}
             className="flex-1 bg-white/10 text-white py-2.5 rounded-xl font-medium text-sm hover:bg-white/20 transition-colors flex items-center justify-center gap-2"
           >
             <RotateCcw className="w-4 h-4" />
-            Riprogramma
+            {t('booking.card.reschedule')}
           </button>
         )}
-        
+
         {canCancel && (
           <button
             onClick={() => onCancel?.(booking.id)}
             className="p-2 rounded-lg text-error hover:bg-error/10 transition-colors"
-            aria-label="Annulla"
+            aria-label={t('booking.card.cancelAriaLabel')}
           >
             <X className="w-4 h-4" />
           </button>
         )}
-        
+
         <button
           onClick={() => router.push(`/bookings/${booking.id}`)}
           className="flex-1 bg-white/10 text-white py-2.5 rounded-xl font-medium text-sm hover:bg-white/20 transition-colors flex items-center justify-center gap-2"
         >
-          Dettagli
+          {t('booking.card.details')}
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>

@@ -5,6 +5,7 @@ import { Clock, Check } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/button';
+import { useI18n } from '@/hooks/useI18n';
 import type { Service } from '@/types/booking';
 
 interface ServiceCardProps {
@@ -20,6 +21,7 @@ export function ServiceCard({
   onSelect,
   className,
 }: ServiceCardProps) {
+  const { t } = useI18n();
   const durationHours = Math.floor(service.durationMinutes / 60);
   const durationMins = service.durationMinutes % 60;
   const durationText =
@@ -66,10 +68,10 @@ export function ServiceCard({
           {isSelected ? (
             <>
               <Check className="w-4 h-4 mr-1" />
-              Selezionato
+              {t('common.selected')}
             </>
           ) : (
-            'Seleziona'
+            t('common.select')
           )}
         </Button>
       </div>

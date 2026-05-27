@@ -24,6 +24,12 @@ export const frMessages: Messages = {
   'common.live': 'En direct',
   'common.discoverNow': 'Découvrir maintenant',
   'common.bookNow': 'Réserver maintenant',
+  'common.cancel': 'Annuler',
+  'common.close': 'Fermer',
+  'common.retry': 'Réessayer',
+  'common.total': 'Total',
+  'common.select': 'Sélectionner',
+  'common.selected': 'Sélectionné',
   'app.initializing': 'Initialisation...',
   'app.checkingAuth': "Vérification de l'authentification...",
   'app.error.title': "Quelque chose s'est mal passé",
@@ -1504,4 +1510,65 @@ export const frMessages: Messages = {
   'provider.earningsChart.stat.avgPerBooking': 'Moy. par réservation',
   'provider.earningsChart.noData': 'Aucune donnée disponible',
   'provider.earningsChart.tooltip.bookings': '{{count}} réservations',
+
+  // ─── Booking widget ───────────────────────────────────────────────────
+  'booking.status.pending': 'En attente',
+  'booking.status.confirmed': 'Confirmé',
+  'booking.status.inProgress': 'En cours',
+  'booking.status.completed': 'Terminé',
+  'booking.status.cancelled': 'Annulé',
+  'booking.status.noShow': 'No show',
+  'booking.card.total': 'Total',
+  'booking.card.leaveReview': 'Laisser un avis',
+  'booking.card.reschedule': 'Reprogrammer',
+  'booking.card.details': 'Détails',
+  'booking.card.cancelAriaLabel': 'Annuler la réservation',
+
+  // ─── AvailabilityPicker ───────────────────────────────────────────────
+  'booking.availability.slotsTitle': 'Créneaux disponibles',
+  'booking.availability.noSlots': 'Aucun créneau disponible',
+  'booking.availability.tryAnotherDate': 'Essayez de sélectionner une autre date',
+  'booking.availability.morning': 'Matin',
+  'booking.availability.afternoon': 'Après-midi',
+  'booking.availability.evening': 'Soirée',
+  'booking.availability.timezone': 'Fuseau horaire : {{tz}}',
+
+  // ─── PaymentMethodSelector ────────────────────────────────────────────
+  'booking.payment.cardExpiry': 'Expire {{month}}/{{year}}',
+  'booking.payment.defaultBadge': 'Par défaut',
+  'booking.payment.walletTitle': 'Portefeuille VFit',
+  'booking.payment.insufficientBalance': 'Solde insuffisant',
+  'booking.payment.payAtVenue': 'Payer sur place',
+  'booking.payment.atVenueSubtitle': 'À {{venue}}',
+  'booking.payment.atVenueGeneric': 'Payer au moment du service',
+  'booking.payment.addCard': 'Ajouter une carte',
+  'booking.payment.addCardTitle': 'Ajouter une carte de crédit',
+  'booking.payment.addCardPlaceholder': "Fonctionnalité d'ajout de carte en cours d'implémentation.",
+
+  // ─── PriceBreakdown ───────────────────────────────────────────────────
+  'booking.price.summary': 'Récapitulatif des prix',
+  'booking.price.service': 'Service',
+  'booking.price.platformFee': 'Frais de plateforme',
+  'booking.price.subtotal': 'Sous-total',
+  'booking.price.discount': 'Réduction',
+  'booking.price.pointsUsed': 'Points utilisés ({{count}})',
+  'booking.price.savings': 'Vous avez économisé {{amount}} !',
+
+  // ─── Gallery ──────────────────────────────────────────────────────────
+  'gallery.openPhoto': 'Ouvrir la photo {{index}}',
+  'gallery.photoAlt': 'Photo {{index}}',
+  'gallery.prev': 'Précédent',
+  'gallery.next': 'Suivant',
+  'gallery.counter': '{{current}} / {{total}}',
+  'gallery.uploadError': 'Échec du chargement. Veuillez réessayer.',
+  'gallery.removePhoto': 'Supprimer la photo',
+  'gallery.cover': 'Couverture',
+  'gallery.uploading': 'Chargement',
+  'gallery.addPhoto': 'Ajouter',
+  'gallery.photoCount': '{{count}} / {{max}} photos. La première est utilisée comme couverture.',
+
+  // ─── Venue ────────────────────────────────────────────────────────────
+  'venue.notFound.title': 'Lieu introuvable',
+  'venue.notFound.message': "Le lieu demandé n'est pas disponible ou a été supprimé.",
+  'venue.notFound.browseGyms': 'Parcourir les salles',
 };

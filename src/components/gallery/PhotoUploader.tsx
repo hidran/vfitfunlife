@@ -5,6 +5,7 @@ import { Capacitor } from '@capacitor/core';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { uploadGalleryPhoto, deleteGalleryPhoto, type GalleryScope } from '@/lib/firebase/photos';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/hooks/useI18n';
 
 interface PhotoUploaderProps {
   scope: GalleryScope;
@@ -25,6 +26,7 @@ export function PhotoUploader({
   maxPhotos = MAX_PHOTOS_DEFAULT,
   disabled = false,
 }: PhotoUploaderProps) {
+  const { t } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +59,7 @@ export function PhotoUploader({
       onChange([...photos, url]);
     } catch (err) {
       console.error('[PhotoUploader] upload failed', err);
-      setError("Caricamento non riuscito. Riprova.");
+      setError(t('gallery.uploadError'));
     } finally {
       setBusy(false);
     }
@@ -92,18 +94,18 @@ export function PhotoUploader({
             key={url}
             className="relative h-28 w-28 flex-shrink-0 overflow-hidden rounded-xl bg-slate-200"
           >
-            <img src={url} alt={`Foto ${i + 1}`} className="h-full w-full object-cover" />
+            <img src={url} alt={t('gallery.photoAlt', { index: i + 1 })} className="h-full w-full object-cover" />
             <button
               type="button"
               onClick={() => handleDelete(url)}
               className="absolute right-1 top-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-black/70 text-white"
-              aria-label="Rimuovi foto"
+              aria-label={t('gallery.removePhoto')}
             >
               <X className="h-3 w-3" />
             </button>
             {i === 0 && (
               <span className="absolute bottom-1 left-1 rounded-md bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white">
-                Copertina
+                {t('gallery.cover')}
               </span>
             )}
           </div>
@@ -118,7 +120,7 @@ export function PhotoUploader({
             )}
           >
             {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <CameraIcon className="h-5 w-5" />}
-            <span className="text-[10px]">{busy ? 'Caricamento' : 'Aggiungi'}</span>
+            <span className="text-[10px]">{busy ? t('gallery.uploading') : t('gallery.addPhoto')}</span>
           </button>
         )}
       </div>
@@ -131,7 +133,7 @@ export function PhotoUploader({
       />
       {error && <p className="text-xs text-red-400">{error}</p>}
       <p className="text-xs text-text-tertiary">
-        {photos.length} / {maxPhotos} foto. La prima e usata come copertina.
+        {t('gallery.photoCount', { count: photos.length, max: maxPhotos })}
       </p>
     </div>
   );

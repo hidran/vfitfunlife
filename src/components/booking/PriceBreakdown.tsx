@@ -3,6 +3,7 @@
 import React from 'react';
 import { Tag, Ticket, Coins } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
+import { useI18n } from '@/hooks/useI18n';
 
 interface PriceBreakdownProps {
   servicePrice: number;
@@ -23,18 +24,19 @@ export function PriceBreakdown({
   totalPrice,
   className,
 }: PriceBreakdownProps) {
+  const { t } = useI18n();
   const subtotal = servicePrice + platformFee;
   const hasDiscount = discountAmount > 0;
   const hasPoints = pointsUsed > 0;
 
   return (
     <div className={cn('bg-[#2A2D3A]/50 rounded-2xl p-4', className)}>
-      <h3 className="font-semibold text-white mb-4">Riepilogo prezzi</h3>
-      
+      <h3 className="font-semibold text-white mb-4">{t('booking.price.summary')}</h3>
+
       <div className="space-y-3">
         {/* Service price */}
         <div className="flex items-center justify-between text-sm">
-          <span className="text-text-secondary">Servizio</span>
+          <span className="text-text-secondary">{t('booking.price.service')}</span>
           <span className="text-white">{formatPrice(servicePrice)}</span>
         </div>
 
@@ -43,7 +45,7 @@ export function PriceBreakdown({
           <div className="flex items-center justify-between text-sm">
             <span className="text-text-secondary flex items-center gap-1.5">
               <Tag className="w-3.5 h-3.5" />
-              Commissione piattaforma
+              {t('booking.price.platformFee')}
             </span>
             <span className="text-white">{formatPrice(platformFee)}</span>
           </div>
@@ -51,7 +53,7 @@ export function PriceBreakdown({
 
         {/* Subtotal */}
         <div className="flex items-center justify-between text-sm pt-2 border-t border-white/10">
-          <span className="text-text-secondary">Subtotale</span>
+          <span className="text-text-secondary">{t('booking.price.subtotal')}</span>
           <span className="text-white">{formatPrice(subtotal)}</span>
         </div>
 
@@ -60,7 +62,7 @@ export function PriceBreakdown({
           <div className="flex items-center justify-between text-sm">
             <span className="text-success flex items-center gap-1.5">
               <Ticket className="w-3.5 h-3.5" />
-              Sconto
+              {t('booking.price.discount')}
             </span>
             <span className="text-success">-{formatPrice(discountAmount)}</span>
           </div>
@@ -71,7 +73,7 @@ export function PriceBreakdown({
           <div className="flex items-center justify-between text-sm">
             <span className="text-[var(--section-accent)] flex items-center gap-1.5">
               <Coins className="w-3.5 h-3.5" />
-              Punti utilizzati ({pointsUsed.toLocaleString()})
+              {t('booking.price.pointsUsed', { count: pointsUsed.toLocaleString() })}
             </span>
             <span className="text-[var(--section-accent)]">-{formatPrice(pointsValue)}</span>
           </div>
@@ -79,7 +81,7 @@ export function PriceBreakdown({
 
         {/* Total */}
         <div className="flex items-center justify-between pt-3 border-t border-white/10">
-          <span className="font-semibold text-white">Totale</span>
+          <span className="font-semibold text-white">{t('common.total')}</span>
           <span className="text-xl font-bold text-[var(--section-primary)]">
             {formatPrice(totalPrice)}
           </span>
@@ -89,7 +91,7 @@ export function PriceBreakdown({
         {(hasDiscount || hasPoints) && (
           <div className="text-center pt-2">
             <span className="text-xs text-success bg-success/10 px-3 py-1 rounded-full">
-              Hai risparmiato {formatPrice(discountAmount + pointsValue)}!
+              {t('booking.price.savings', { amount: formatPrice(discountAmount + pointsValue) })}
             </span>
           </div>
         )}

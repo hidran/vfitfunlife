@@ -24,6 +24,12 @@ export const enMessages: Messages = {
   'common.live': 'Live',
   'common.discoverNow': 'Discover now',
   'common.bookNow': 'Book now',
+  'common.cancel': 'Cancel',
+  'common.close': 'Close',
+  'common.retry': 'Retry',
+  'common.total': 'Total',
+  'common.select': 'Select',
+  'common.selected': 'Selected',
   'app.initializing': 'Initializing...',
   'app.checkingAuth': 'Checking authentication...',
   'app.error.title': 'Something went wrong',
@@ -1493,4 +1499,65 @@ export const enMessages: Messages = {
   'provider.earningsChart.stat.avgPerBooking': 'Avg. per Booking',
   'provider.earningsChart.noData': 'No data available',
   'provider.earningsChart.tooltip.bookings': '{{count}} bookings',
+
+  // ─── Booking widget ───────────────────────────────────────────────────
+  'booking.status.pending': 'Pending',
+  'booking.status.confirmed': 'Confirmed',
+  'booking.status.inProgress': 'In progress',
+  'booking.status.completed': 'Completed',
+  'booking.status.cancelled': 'Cancelled',
+  'booking.status.noShow': 'No show',
+  'booking.card.total': 'Total',
+  'booking.card.leaveReview': 'Leave a review',
+  'booking.card.reschedule': 'Reschedule',
+  'booking.card.details': 'Details',
+  'booking.card.cancelAriaLabel': 'Cancel booking',
+
+  // ─── AvailabilityPicker ───────────────────────────────────────────────
+  'booking.availability.slotsTitle': 'Available times',
+  'booking.availability.noSlots': 'No available times',
+  'booking.availability.tryAnotherDate': 'Try selecting another date',
+  'booking.availability.morning': 'Morning',
+  'booking.availability.afternoon': 'Afternoon',
+  'booking.availability.evening': 'Evening',
+  'booking.availability.timezone': 'Time zone: {{tz}}',
+
+  // ─── PaymentMethodSelector ────────────────────────────────────────────
+  'booking.payment.cardExpiry': 'Expires {{month}}/{{year}}',
+  'booking.payment.defaultBadge': 'Default',
+  'booking.payment.walletTitle': 'VFit Wallet',
+  'booking.payment.insufficientBalance': 'Insufficient balance',
+  'booking.payment.payAtVenue': 'Pay at venue',
+  'booking.payment.atVenueSubtitle': 'At {{venue}}',
+  'booking.payment.atVenueGeneric': 'Pay at the time of service',
+  'booking.payment.addCard': 'Add card',
+  'booking.payment.addCardTitle': 'Add credit card',
+  'booking.payment.addCardPlaceholder': 'Add card functionality coming soon.',
+
+  // ─── PriceBreakdown ───────────────────────────────────────────────────
+  'booking.price.summary': 'Price summary',
+  'booking.price.service': 'Service',
+  'booking.price.platformFee': 'Platform fee',
+  'booking.price.subtotal': 'Subtotal',
+  'booking.price.discount': 'Discount',
+  'booking.price.pointsUsed': 'Points used ({{count}})',
+  'booking.price.savings': 'You saved {{amount}}!',
+
+  // ─── Gallery ──────────────────────────────────────────────────────────
+  'gallery.openPhoto': 'Open photo {{index}}',
+  'gallery.photoAlt': 'Photo {{index}}',
+  'gallery.prev': 'Previous',
+  'gallery.next': 'Next',
+  'gallery.counter': '{{current}} / {{total}}',
+  'gallery.uploadError': 'Upload failed. Please try again.',
+  'gallery.removePhoto': 'Remove photo',
+  'gallery.cover': 'Cover',
+  'gallery.uploading': 'Uploading',
+  'gallery.addPhoto': 'Add',
+  'gallery.photoCount': '{{count}} / {{max}} photos. The first is used as the cover.',
+
+  // ─── Venue ────────────────────────────────────────────────────────────
+  'venue.notFound.title': 'Venue not found',
+  'venue.notFound.message': 'The requested venue is not available or has been removed.',
+  'venue.notFound.browseGyms': 'Browse gyms',
 };

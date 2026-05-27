@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useI18n } from '@/hooks/useI18n';
 
 interface PhotoLightboxProps {
   photos: string[];
@@ -9,6 +10,7 @@ interface PhotoLightboxProps {
 }
 
 export function PhotoLightbox({ photos, initialIndex, onClose }: PhotoLightboxProps) {
+  const { t } = useI18n();
   const [index, setIndex] = useState(initialIndex);
 
   useEffect(() => {
@@ -48,13 +50,13 @@ export function PhotoLightbox({ photos, initialIndex, onClose }: PhotoLightboxPr
           onClose();
         }}
         className="absolute right-4 top-4 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white"
-        aria-label="Chiudi"
+        aria-label={t('common.close')}
       >
         <X className="h-5 w-5" />
       </button>
       <img
         src={photos[index]}
-        alt={`Foto ${index + 1} di ${photos.length}`}
+        alt={t('gallery.photoAlt', { index: index + 1 })}
         className="max-h-screen max-w-full object-contain"
         onClick={(e) => e.stopPropagation()}
       />
@@ -66,7 +68,7 @@ export function PhotoLightbox({ photos, initialIndex, onClose }: PhotoLightboxPr
             prev();
           }}
           className="absolute left-4 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white"
-          aria-label="Precedente"
+          aria-label={t('gallery.prev')}
         >
           <ChevronLeft className="h-6 w-6" />
         </button>
@@ -79,13 +81,13 @@ export function PhotoLightbox({ photos, initialIndex, onClose }: PhotoLightboxPr
             next();
           }}
           className="absolute right-4 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white"
-          aria-label="Successiva"
+          aria-label={t('gallery.next')}
         >
           <ChevronRight className="h-6 w-6" />
         </button>
       )}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-xs text-white">
-        {index + 1} / {photos.length}
+        {t('gallery.counter', { current: index + 1, total: photos.length })}
       </div>
     </div>
   );

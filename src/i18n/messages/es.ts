@@ -24,6 +24,12 @@ export const esMessages: Messages = {
   'common.live': 'En vivo',
   'common.discoverNow': 'Descubrir ahora',
   'common.bookNow': 'Reservar ahora',
+  'common.cancel': 'Cancelar',
+  'common.close': 'Cerrar',
+  'common.retry': 'Reintentar',
+  'common.total': 'Total',
+  'common.select': 'Seleccionar',
+  'common.selected': 'Seleccionado',
   'app.initializing': 'Inicializando...',
   'app.checkingAuth': 'Verificando autenticacion...',
   'app.error.title': 'Algo salio mal',
@@ -1495,4 +1501,65 @@ export const esMessages: Messages = {
   'provider.earningsChart.stat.avgPerBooking': 'Media por reserva',
   'provider.earningsChart.noData': 'No hay datos disponibles',
   'provider.earningsChart.tooltip.bookings': '{{count}} reservas',
+
+  // ─── Booking widget ───────────────────────────────────────────────────
+  'booking.status.pending': 'Pendiente',
+  'booking.status.confirmed': 'Confirmado',
+  'booking.status.inProgress': 'En curso',
+  'booking.status.completed': 'Completado',
+  'booking.status.cancelled': 'Cancelado',
+  'booking.status.noShow': 'No show',
+  'booking.card.total': 'Total',
+  'booking.card.leaveReview': 'Dejar reseña',
+  'booking.card.reschedule': 'Reprogramar',
+  'booking.card.details': 'Detalles',
+  'booking.card.cancelAriaLabel': 'Cancelar reserva',
+
+  // ─── AvailabilityPicker ───────────────────────────────────────────────
+  'booking.availability.slotsTitle': 'Horarios disponibles',
+  'booking.availability.noSlots': 'No hay horarios disponibles',
+  'booking.availability.tryAnotherDate': 'Prueba a seleccionar otra fecha',
+  'booking.availability.morning': 'Mañana',
+  'booking.availability.afternoon': 'Tarde',
+  'booking.availability.evening': 'Noche',
+  'booking.availability.timezone': 'Zona horaria: {{tz}}',
+
+  // ─── PaymentMethodSelector ────────────────────────────────────────────
+  'booking.payment.cardExpiry': 'Vence {{month}}/{{year}}',
+  'booking.payment.defaultBadge': 'Predeterminada',
+  'booking.payment.walletTitle': 'Cartera VFit',
+  'booking.payment.insufficientBalance': 'Saldo insuficiente',
+  'booking.payment.payAtVenue': 'Pagar en el lugar',
+  'booking.payment.atVenueSubtitle': 'En {{venue}}',
+  'booking.payment.atVenueGeneric': 'Pagar en el momento del servicio',
+  'booking.payment.addCard': 'Añadir tarjeta',
+  'booking.payment.addCardTitle': 'Añadir tarjeta de crédito',
+  'booking.payment.addCardPlaceholder': 'Funcionalidad de añadir tarjeta en fase de implementación.',
+
+  // ─── PriceBreakdown ───────────────────────────────────────────────────
+  'booking.price.summary': 'Resumen de precios',
+  'booking.price.service': 'Servicio',
+  'booking.price.platformFee': 'Comisión de plataforma',
+  'booking.price.subtotal': 'Subtotal',
+  'booking.price.discount': 'Descuento',
+  'booking.price.pointsUsed': 'Puntos usados ({{count}})',
+  'booking.price.savings': '¡Has ahorrado {{amount}}!',
+
+  // ─── Gallery ──────────────────────────────────────────────────────────
+  'gallery.openPhoto': 'Abrir foto {{index}}',
+  'gallery.photoAlt': 'Foto {{index}}',
+  'gallery.prev': 'Anterior',
+  'gallery.next': 'Siguiente',
+  'gallery.counter': '{{current}} / {{total}}',
+  'gallery.uploadError': 'Error al cargar. Inténtalo de nuevo.',
+  'gallery.removePhoto': 'Eliminar foto',
+  'gallery.cover': 'Portada',
+  'gallery.uploading': 'Cargando',
+  'gallery.addPhoto': 'Añadir',
+  'gallery.photoCount': '{{count}} / {{max}} fotos. La primera se usa como portada.',
+
+  // ─── Venue ────────────────────────────────────────────────────────────
+  'venue.notFound.title': 'Lugar no encontrado',
+  'venue.notFound.message': 'El lugar solicitado no está disponible o ha sido eliminado.',
+  'venue.notFound.browseGyms': 'Explorar gimnasios',
 };

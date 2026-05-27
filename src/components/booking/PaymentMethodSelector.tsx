@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
 import { Card } from '@/components/ui/Card';
+import { useI18n } from '@/hooks/useI18n';
 import type { PaymentMethod } from '@/types/booking';
 
 interface PaymentMethodInfo {
@@ -51,6 +52,7 @@ export function PaymentMethodSelector({
   totalAmount,
   className,
 }: PaymentMethodSelectorProps) {
+  const { t } = useI18n();
   const [showAddCard, setShowAddCard] = useState(false);
 
   const savedCards = methods.filter((m) => m.type === 'card');
@@ -58,7 +60,7 @@ export function PaymentMethodSelector({
 
   const renderCardIcon = (brand?: string) => {
     if (!brand) return <CreditCard className="w-5 h-5" />;
-    
+
     return (
       <div className="w-8 h-5 bg-white/20 rounded flex items-center justify-center">
         <span className="text-[8px] font-bold text-white">
@@ -78,11 +80,14 @@ export function PaymentMethodSelector({
           onClick={() => onSelect(card.id)}
           icon={renderCardIcon(card.brand)}
           title={`•••• ${card.last4}`}
-          subtitle={card.expiryMonth && card.expiryYear 
-            ? `Scadenza ${card.expiryMonth.toString().padStart(2, '0')}/${card.expiryYear}`
+          subtitle={card.expiryMonth && card.expiryYear
+            ? t('booking.payment.cardExpiry', {
+                month: card.expiryMonth.toString().padStart(2, '0'),
+                year: card.expiryYear,
+              })
             : undefined
           }
-          badge={card.isDefault ? 'Predefinita' : undefined}
+          badge={card.isDefault ? t('booking.payment.defaultBadge') : undefined}
         />
       ))}
 
@@ -92,10 +97,10 @@ export function PaymentMethodSelector({
           isSelected={selectedMethod === 'wallet'}
           onClick={() => onSelect('wallet')}
           icon={<Wallet className="w-5 h-5 text-[var(--section-primary)]" />}
-          title="Portafoglio VFit"
+          title={t('booking.payment.walletTitle')}
           subtitle={formatPrice(walletBalance)}
           disabled={walletBalance < totalAmount}
-          disabledReason={walletBalance < totalAmount ? 'Saldo insufficiente' : undefined}
+          disabledReason={walletBalance < totalAmount ? t('booking.payment.insufficientBalance') : undefined}
         />
       )}
 
@@ -105,8 +110,11 @@ export function PaymentMethodSelector({
           isSelected={selectedMethod === 'cash'}
           onClick={() => onSelect('cash')}
           icon={<MapPin className="w-5 h-5 text-warning" />}
-          title="Paga in loco"
-          subtitle={venueName ? `Presso ${venueName}` : 'Paga al momento del servizio'}
+          title={t('booking.payment.payAtVenue')}
+          subtitle={venueName
+            ? t('booking.payment.atVenueSubtitle', { venue: venueName })
+            : t('booking.payment.atVenueGeneric')
+          }
         />
       )}
 
@@ -120,7 +128,7 @@ export function PaymentMethodSelector({
         )}
       >
         <Plus className="w-5 h-5" />
-        <span className="font-medium">Aggiungi carta</span>
+        <span className="font-medium">{t('booking.payment.addCard')}</span>
       </button>
 
       {/* Add Card Modal - Simplified placeholder */}
@@ -128,16 +136,16 @@ export function PaymentMethodSelector({
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-[#2A2D3A] rounded-2xl p-6 w-full max-w-md">
             <h3 className="text-lg font-semibold text-white mb-4">
-              Aggiungi carta di credito
+              {t('booking.payment.addCardTitle')}
             </h3>
             <p className="text-text-secondary mb-6">
-              Funzionalità di aggiunta carta in fase di implementazione.
+              {t('booking.payment.addCardPlaceholder')}
             </p>
             <button
               onClick={() => setShowAddCard(false)}
               className="w-full bg-[var(--section-primary)] text-white py-3 rounded-xl font-medium"
             >
-              Chiudi
+              {t('common.close')}
             </button>
           </div>
         </div>
@@ -181,7 +189,7 @@ function PaymentMethodItem({
       )}
     >
       <div className="text-text-secondary">{icon}</div>
-      
+
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className={cn(

@@ -24,6 +24,12 @@ export const deMessages: Messages = {
   'common.live': 'Live',
   'common.discoverNow': 'Jetzt entdecken',
   'common.bookNow': 'Jetzt buchen',
+  'common.cancel': 'Abbrechen',
+  'common.close': 'Schließen',
+  'common.retry': 'Wiederholen',
+  'common.total': 'Gesamt',
+  'common.select': 'Auswählen',
+  'common.selected': 'Ausgewählt',
   'app.initializing': 'Initialisierung...',
   'app.checkingAuth': 'Authentifizierung wird geprüft...',
   'app.error.title': 'Etwas ist schiefgelaufen',
@@ -1502,4 +1508,65 @@ export const deMessages: Messages = {
   'provider.earningsChart.stat.avgPerBooking': 'Ø pro Buchung',
   'provider.earningsChart.noData': 'Keine Daten verfügbar',
   'provider.earningsChart.tooltip.bookings': '{{count}} Buchungen',
+
+  // ─── Booking widget ───────────────────────────────────────────────────
+  'booking.status.pending': 'Ausstehend',
+  'booking.status.confirmed': 'Bestätigt',
+  'booking.status.inProgress': 'In Bearbeitung',
+  'booking.status.completed': 'Abgeschlossen',
+  'booking.status.cancelled': 'Storniert',
+  'booking.status.noShow': 'Nicht erschienen',
+  'booking.card.total': 'Gesamt',
+  'booking.card.leaveReview': 'Bewertung abgeben',
+  'booking.card.reschedule': 'Umbuchen',
+  'booking.card.details': 'Details',
+  'booking.card.cancelAriaLabel': 'Buchung stornieren',
+
+  // ─── AvailabilityPicker ───────────────────────────────────────────────
+  'booking.availability.slotsTitle': 'Verfügbare Zeiten',
+  'booking.availability.noSlots': 'Keine verfügbaren Zeiten',
+  'booking.availability.tryAnotherDate': 'Versuche ein anderes Datum auszuwählen',
+  'booking.availability.morning': 'Morgen',
+  'booking.availability.afternoon': 'Nachmittag',
+  'booking.availability.evening': 'Abend',
+  'booking.availability.timezone': 'Zeitzone: {{tz}}',
+
+  // ─── PaymentMethodSelector ────────────────────────────────────────────
+  'booking.payment.cardExpiry': 'Läuft ab {{month}}/{{year}}',
+  'booking.payment.defaultBadge': 'Standard',
+  'booking.payment.walletTitle': 'VFit Wallet',
+  'booking.payment.insufficientBalance': 'Unzureichendes Guthaben',
+  'booking.payment.payAtVenue': 'Vor Ort bezahlen',
+  'booking.payment.atVenueSubtitle': 'Bei {{venue}}',
+  'booking.payment.atVenueGeneric': 'Beim Termin bezahlen',
+  'booking.payment.addCard': 'Karte hinzufügen',
+  'booking.payment.addCardTitle': 'Kreditkarte hinzufügen',
+  'booking.payment.addCardPlaceholder': 'Karte-hinzufügen-Funktion wird implementiert.',
+
+  // ─── PriceBreakdown ───────────────────────────────────────────────────
+  'booking.price.summary': 'Preisübersicht',
+  'booking.price.service': 'Dienstleistung',
+  'booking.price.platformFee': 'Plattformgebühr',
+  'booking.price.subtotal': 'Zwischensumme',
+  'booking.price.discount': 'Rabatt',
+  'booking.price.pointsUsed': 'Verwendete Punkte ({{count}})',
+  'booking.price.savings': 'Sie haben {{amount}} gespart!',
+
+  // ─── Gallery ──────────────────────────────────────────────────────────
+  'gallery.openPhoto': 'Foto {{index}} öffnen',
+  'gallery.photoAlt': 'Foto {{index}}',
+  'gallery.prev': 'Vorherige',
+  'gallery.next': 'Nächste',
+  'gallery.counter': '{{current}} / {{total}}',
+  'gallery.uploadError': 'Upload fehlgeschlagen. Bitte erneut versuchen.',
+  'gallery.removePhoto': 'Foto entfernen',
+  'gallery.cover': 'Titelbild',
+  'gallery.uploading': 'Hochladen',
+  'gallery.addPhoto': 'Hinzufügen',
+  'gallery.photoCount': '{{count}} / {{max}} Fotos. Das erste wird als Titelbild verwendet.',
+
+  // ─── Venue ────────────────────────────────────────────────────────────
+  'venue.notFound.title': 'Venue nicht gefunden',
+  'venue.notFound.message': 'Das angeforderte Venue ist nicht verfügbar oder wurde entfernt.',
+  'venue.notFound.browseGyms': 'Fitnessstudios durchsuchen',
 };

@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { PhotoLightbox } from './PhotoLightbox';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/hooks/useI18n';
 
 interface PhotoGalleryProps {
   photos: string[];
@@ -9,6 +10,7 @@ interface PhotoGalleryProps {
 }
 
 export function PhotoGallery({ photos, className }: PhotoGalleryProps) {
+  const { t } = useI18n();
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   if (photos.length === 0) return null;
@@ -27,11 +29,11 @@ export function PhotoGallery({ photos, className }: PhotoGalleryProps) {
             type="button"
             onClick={() => setLightboxIndex(i)}
             className="relative h-56 w-72 flex-shrink-0 snap-center overflow-hidden rounded-2xl bg-slate-200"
-            aria-label={`Apri foto ${i + 1}`}
+            aria-label={t('gallery.openPhoto', { index: i + 1 })}
           >
             <img
               src={url}
-              alt={`Foto ${i + 1}`}
+              alt={t('gallery.photoAlt', { index: i + 1 })}
               loading="lazy"
               className="absolute inset-0 h-full w-full object-cover"
             />
