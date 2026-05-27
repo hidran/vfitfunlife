@@ -28,15 +28,10 @@ import { useNearMe } from '@/hooks/useNearMe';
 import { RadiusFilter } from '@/components/map/RadiusFilter';
 import { annotateAndSortByDistance, filterByRadius } from '@/lib/geo';
 import { SERVICE_CATEGORIES } from '@/lib/serviceCategories';
-
-const SORT_OPTIONS = [
-  { value: 'availability', label: 'Disponibilità' },
-  { value: 'rating', label: 'Valutazione' },
-  { value: 'price', label: 'Prezzo' },
-  { value: 'distance', label: 'Distanza' },
-];
+import { useI18n } from '@/hooks/useI18n';
 
 export default function BookingPage() {
+  const { t } = useI18n();
   const router = useRouter();
   const {
     searchResults,
@@ -91,7 +86,7 @@ export default function BookingPage() {
           {/* Title and view toggle */}
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-display font-bold text-text-inverse">
-              Prenota un servizio
+              {t('booking.page.title')}
             </h1>
             <div className="flex items-center gap-2 bg-[#2A2D3A] rounded-lg p-1">
               <button
@@ -122,7 +117,7 @@ export default function BookingPage() {
           {/* Search bar */}
           <div className="flex gap-2">
             <Input
-              placeholder="Cerca trainer, servizi..."
+              placeholder={t('booking.search.placeholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               leftIcon={<Search className="w-5 h-5" />}
@@ -149,7 +144,7 @@ export default function BookingPage() {
                   : 'bg-[#2A2D3A] text-text-secondary hover:text-white'
               )}
             >
-              Tutti
+              {t('booking.category.all')}
             </button>
             {SERVICE_CATEGORIES.map((cat) => (
               <button
@@ -194,7 +189,7 @@ export default function BookingPage() {
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-white flex items-center gap-2">
                   <SlidersHorizontal className="w-4 h-4" />
-                  Filtri
+                  {t('booking.filters.title')}
                 </h3>
                 <button
                   onClick={() => setShowFilters(false)}
@@ -206,11 +201,11 @@ export default function BookingPage() {
 
               {/* Price range */}
               <div className="space-y-2">
-                <label className="text-sm text-text-secondary">Fascia di prezzo</label>
+                <label className="text-sm text-text-secondary">{t('booking.filters.priceRange')}</label>
                 <div className="flex gap-2">
                   <Input
                     type="number"
-                    placeholder="Min €"
+                    placeholder={t('booking.filters.minPrice')}
                     value={searchFilters.minPrice || ''}
                     onChange={(e) =>
                       setSearchFilters({ minPrice: Number(e.target.value) || undefined })
@@ -218,7 +213,7 @@ export default function BookingPage() {
                   />
                   <Input
                     type="number"
-                    placeholder="Max €"
+                    placeholder={t('booking.filters.maxPrice')}
                     value={searchFilters.maxPrice || ''}
                     onChange={(e) =>
                       setSearchFilters({ maxPrice: Number(e.target.value) || undefined })
@@ -229,7 +224,7 @@ export default function BookingPage() {
 
               {/* Rating */}
               <div className="space-y-2">
-                <label className="text-sm text-text-secondary">Valutazione minima</label>
+                <label className="text-sm text-text-secondary">{t('booking.filters.minRating')}</label>
                 <div className="flex gap-2">
                   {[4, 4.5].map((rating) => (
                     <button
@@ -251,12 +246,12 @@ export default function BookingPage() {
 
               {/* Availability */}
               <div className="space-y-2">
-                <label className="text-sm text-text-secondary">Disponibilità</label>
+                <label className="text-sm text-text-secondary">{t('booking.filters.availability')}</label>
                 <div className="flex gap-2 flex-wrap">
                   {[
-                    { value: 'today', label: 'Oggi' },
-                    { value: 'this_week', label: 'Questa settimana' },
-                    { value: 'this_month', label: 'Questo mese' },
+                    { value: 'today', label: t('booking.availability.today') },
+                    { value: 'this_week', label: t('booking.availability.thisWeek') },
+                    { value: 'this_month', label: t('booking.availability.thisMonth') },
                   ].map((opt) => (
                     <button
                       key={opt.value}
@@ -282,9 +277,14 @@ export default function BookingPage() {
 
               {/* Sort */}
               <div className="space-y-2">
-                <label className="text-sm text-text-secondary">Ordina per</label>
+                <label className="text-sm text-text-secondary">{t('booking.filters.sortBy')}</label>
                 <div className="flex gap-2 flex-wrap">
-                  {SORT_OPTIONS.map((opt) => (
+                  {[
+                    { value: 'availability', label: t('booking.sort.availability') },
+                    { value: 'rating', label: t('booking.sort.rating') },
+                    { value: 'price', label: t('booking.sort.price') },
+                    { value: 'distance', label: t('booking.sort.distance') },
+                  ].map((opt) => (
                     <button
                       key={opt.value}
                       onClick={() => handleSortChange(opt.value as SearchParams['sortBy'])}
@@ -310,7 +310,7 @@ export default function BookingPage() {
         {isSearching ? (
           <div className="flex flex-col items-center justify-center py-12">
             <Spinner size="lg" />
-            <p className="text-text-secondary mt-4">Ricerca in corso...</p>
+            <p className="text-text-secondary mt-4">{t('booking.searching')}</p>
           </div>
         ) : viewMode === 'map' ? (
           <div className="h-[calc(100vh-240px)] rounded-2xl overflow-hidden">
@@ -338,10 +338,10 @@ export default function BookingPage() {
               <div className="text-center py-12">
                 <Search className="w-12 h-12 text-text-tertiary mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-white mb-2">
-                  Nessun risultato trovato
+                  {t('booking.noResults.title')}
                 </h3>
                 <p className="text-text-secondary">
-                  Prova a modificare i filtri di ricerca
+                  {t('booking.noResults.subtitle')}
                 </p>
               </div>
             ) : (
@@ -385,12 +385,12 @@ export default function BookingPage() {
                               </span>
                             </div>
                             <span className="text-text-tertiary text-sm">
-                              ({provider.reviewCount} recensioni)
+                              {t('booking.provider.reviews', { count: provider.reviewCount })}
                             </span>
                           </div>
                         </div>
                         {provider.isVerified && (
-                          <Badge variant="partner" size="sm">Verificato</Badge>
+                          <Badge variant="partner" size="sm">{t('booking.provider.verified')}</Badge>
                         )}
                       </div>
 
@@ -413,7 +413,7 @@ export default function BookingPage() {
 
                       {/* Languages & Experience */}
                       <div className="flex items-center gap-3 mt-2 text-xs text-text-tertiary">
-                        <span>{provider.yearsOfExperience} anni exp.</span>
+                        <span>{t('booking.provider.yearsExp', { count: provider.yearsOfExperience })}</span>
                         {provider.languages.length > 0 && (
                           <span>{provider.languages.join(', ')}</span>
                         )}
@@ -424,10 +424,10 @@ export default function BookingPage() {
                         <div>
                           {provider.lowestPrice != null ? (
                             <span className="text-lg font-bold text-[var(--section-primary)]">
-                              Da {formatPrice(provider.lowestPrice)}
+                              {t('booking.price.from', { price: formatPrice(provider.lowestPrice) })}
                             </span>
                           ) : (
-                            <span className="text-sm text-text-secondary">Vedi disponibilità</span>
+                            <span className="text-sm text-text-secondary">{t('booking.provider.viewAvailability')}</span>
                           )}
                         </div>
                         <div className="flex items-center gap-2 text-sm text-text-secondary">
@@ -438,9 +438,9 @@ export default function BookingPage() {
                           )}
                           <Clock className="w-4 h-4" />
                           {provider.nextAvailable ? (
-                            <span>Disponibile dal {provider.nextAvailable.toLocaleDateString('it-IT')}</span>
+                            <span>{t('booking.provider.availableFrom', { date: provider.nextAvailable.toLocaleDateString('it-IT') })}</span>
                           ) : (
-                            <span>Controlla disponibilità</span>
+                            <span>{t('booking.provider.checkAvailability')}</span>
                           )}
                           <ChevronRight className="w-4 h-4" />
                         </div>

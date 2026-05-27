@@ -26,8 +26,10 @@ import { useProvider, useProviderServices } from '@/hooks/useProviders';
 import { useInstructorReviews } from '@/hooks/useCommunity';
 import { VenueNotFound } from '@/components/venue/VenueNotFound';
 import { PhotoGallery } from '@/components/gallery/PhotoGallery';
+import { useI18n } from '@/hooks/useI18n';
 
 export default function ProviderBookingPage() {
+  const { t } = useI18n();
   const searchParams = useSearchParams();
   const router = useRouter();
   const providerId = searchParams?.get('providerId') ?? undefined;
@@ -78,7 +80,7 @@ export default function ProviderBookingPage() {
   const canContinue = selectedService && selectedDate && selectedTime;
 
   if (!providerId) {
-    return <VenueNotFound message="Provider non specificato" />;
+    return <VenueNotFound message={t('booking.error.noProvider')} />;
   }
 
   if (providerLoading) {
@@ -89,7 +91,7 @@ export default function ProviderBookingPage() {
     );
   }
   if (!provider) {
-    return <VenueNotFound message="Provider non trovato" />;
+    return <VenueNotFound message={t('booking.error.providerNotFound')} />;
   }
 
   return (
@@ -125,7 +127,7 @@ export default function ProviderBookingPage() {
               {provider.isVerified && (
                 <Badge variant="partner" size="sm">
                   <Shield className="w-3 h-3 mr-1" />
-                  Verificato
+                  {t('booking.provider.verified')}
                 </Badge>
               )}
             </div>
@@ -136,14 +138,14 @@ export default function ProviderBookingPage() {
                 <span className="font-semibold text-white">{provider.rating.toFixed(1)}</span>
               </div>
               <span className="text-text-secondary">
-                ({provider.reviewCount} recensioni)
+                {t('booking.provider.reviews', { count: provider.reviewCount })}
               </span>
             </div>
 
             <div className="flex items-center gap-3 mt-2 text-sm text-text-secondary">
               <span className="flex items-center gap-1">
                 <Award className="w-4 h-4 text-[var(--section-primary)]" />
-                {provider.yearsOfExperience} anni exp.
+                {t('booking.provider.yearsExp', { count: provider.yearsOfExperience })}
               </span>
               {provider.languages.length > 0 && (
                 <span className="flex items-center gap-1">
@@ -179,11 +181,11 @@ export default function ProviderBookingPage() {
         <div className="flex gap-3 mt-4">
           <Button variant="outline" size="sm" className="flex-1">
             <MessageCircle className="w-4 h-4 mr-2" />
-            Messaggio
+            {t('booking.action.message')}
           </Button>
           <Button variant="secondary" size="sm" className="flex-1">
             <Calendar className="w-4 h-4 mr-2" />
-            Verifica disponibilità
+            {t('booking.action.checkAvailability')}
           </Button>
         </div>
       </div>
@@ -192,9 +194,9 @@ export default function ProviderBookingPage() {
       <div className="border-b border-white/10">
         <div className="flex">
           {[
-            { id: 'services', label: 'Servizi' },
-            { id: 'reviews', label: 'Recensioni' },
-            { id: 'about', label: 'Chi sono' },
+            { id: 'services', label: t('booking.tab.services') },
+            { id: 'reviews', label: t('booking.tab.reviews') },
+            { id: 'about', label: t('booking.tab.about') },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -229,7 +231,7 @@ export default function ProviderBookingPage() {
               exit={{ opacity: 0, y: -10 }}
               className="space-y-4"
             >
-              <h3 className="font-semibold text-white mb-4">Seleziona un servizio</h3>
+              <h3 className="font-semibold text-white mb-4">{t('booking.services.selectService')}</h3>
               {services.map((service) => (
                 <ServiceCard
                   key={service.id}
@@ -245,7 +247,7 @@ export default function ProviderBookingPage() {
                   animate={{ opacity: 1, height: 'auto' }}
                   className="mt-6"
                 >
-                  <h3 className="font-semibold text-white mb-4">Seleziona data e orario</h3>
+                  <h3 className="font-semibold text-white mb-4">{t('booking.services.selectDateTime')}</h3>
                   <AvailabilityPicker
                     availability={availability}
                     selectedDate={selectedDate}
@@ -270,7 +272,7 @@ export default function ProviderBookingPage() {
               {reviews.map((review) => {
                 const dateLabel = review.createdAt?.toDate
                   ? review.createdAt.toDate().toLocaleDateString('it-IT')
-                  : 'Recente';
+                  : t('booking.review.recent');
                 return (
                   <div
                     key={review.id}
@@ -300,7 +302,7 @@ export default function ProviderBookingPage() {
               className="space-y-4"
             >
               <div className="bg-[#2A2D3A]/50 rounded-xl p-4">
-                <h3 className="font-semibold text-white mb-2">Bio</h3>
+                <h3 className="font-semibold text-white mb-2">{t('booking.about.bio')}</h3>
                 <p className="text-text-secondary text-sm leading-relaxed">
               Personal trainer certificato CONI con 8 anni di esperienza. Specializzato in 
                   bodybuilding, nutrizione sportiva e riabilitazione post-infortunio. 
@@ -310,7 +312,7 @@ export default function ProviderBookingPage() {
               </div>
 
               <div className="bg-[#2A2D3A]/50 rounded-xl p-4">
-                <h3 className="font-semibold text-white mb-2">Formazione</h3>
+                <h3 className="font-semibold text-white mb-2">{t('booking.about.education')}</h3>
                 <ul className="space-y-2 text-sm text-text-secondary">
                   <li className="flex items-start gap-2">
                     <Award className="w-4 h-4 text-[var(--section-primary)] mt-0.5" />
@@ -358,7 +360,7 @@ export default function ProviderBookingPage() {
                 onClick={handleContinue}
                 className="flex-shrink-0"
               >
-                Continua
+                {t('booking.action.continue')}
                 <ChevronRight className="w-5 h-5 ml-1" />
               </Button>
             </div>

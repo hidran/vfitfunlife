@@ -221,7 +221,7 @@ export function GoogleMap({ gyms, userLocation, onGymSelect, className }: Google
       const userMarker = new google.maps.Marker({
         position: new google.maps.LatLng(userLocation.lat, userLocation.lng),
         map: googleMapRef.current,
-        title: 'La tua posizione',
+        title: t('booking.map.yourPosition'),
         icon: {
           path: google.maps.SymbolPath.CIRCLE,
           scale: 8,
