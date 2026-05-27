@@ -24,7 +24,6 @@ import { useI18n } from '@/hooks/useI18n';
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import type { MessageKey } from '@/i18n/messages';
 import type { NotificationSettings, PrivacySettings, Section } from '@/types/firebase';
-import type { AppLocale } from '@/types/locale';
 
 interface LocalAddress {
   id: string;
@@ -97,7 +96,7 @@ const CARD_BRANDS: Array<{ value: string; labelKey: MessageKey }> = [
 
 export function ProfileSectionScreen({ section }: { section: ProfileRouteSection }) {
   const { user, refreshUserProfile } = useAuthStore();
-  const { t, setLocale } = useI18n();
+  const { t, setLocale, locale } = useI18n();
   const [addresses, setAddresses] = useState<LocalAddress[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<LocalPaymentMethod[]>([]);
   const [addressForm, setAddressForm] = useState({
@@ -113,7 +112,6 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
     expYear: '',
   });
   const [preferredSection, setPreferredSection] = useState<Section>('fit');
-  const [preferredLanguage, setPreferredLanguage] = useState<AppLocale>('it');
   const [privacySettings, setPrivacySettings] = useState<PrivacySettings>(defaultPrivacySettings);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
@@ -126,7 +124,6 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
 
     setPreferredSection(user.preferredSection || 'fit');
     const selectedLocale = user.preferredLanguage || 'it';
-    setPreferredLanguage(selectedLocale);
     setLocale(selectedLocale);
     setPrivacySettings(user.privacySettings || defaultPrivacySettings);
 
@@ -284,7 +281,7 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
       await Promise.all([
         updateUserProfile(user.id, {
           preferredSection,
-          preferredLanguage,
+          preferredLanguage: locale,
         }),
         updatePrivacySettings(user.id, privacySettings),
       ]);

@@ -22,7 +22,7 @@ export function LanguageSwitcher({ variant = 'row', className }: LanguageSwitche
           aria-label="Language"
           value={locale}
           onChange={(e) => changeLocale(e.target.value as typeof locale)}
-          className="appearance-none rounded-lg border border-white/15 bg-white/5 py-2 pl-8 pr-3 text-xs font-semibold uppercase text-white"
+          className="appearance-none rounded-lg border border-white/15 bg-white/5 py-2 pl-8 pr-3 text-xs font-semibold uppercase text-white focus:ring-2 focus:ring-section-primary focus:outline-none cursor-pointer"
         >
           {locales.map((l) => (
             <option key={l} value={l} className="text-black">
