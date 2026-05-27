@@ -6,6 +6,7 @@ import { cn, formatDate, toDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { AdminProvider } from "@/types/admin";
 import { VerificationBadge } from "./UserRoleBadge";
+import { useI18n } from "@/hooks/useI18n";
 import {
   CheckCircle,
   XCircle,
@@ -32,6 +33,7 @@ export function VerificationQueue({
   isLoading = false,
   className,
 }: VerificationQueueProps) {
+  const { t } = useI18n();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectModal, setShowRejectModal] = useState<string | null>(null);
@@ -54,8 +56,8 @@ export function VerificationQueue({
     return (
       <div className={cn("bg-[#1E2230] rounded-2xl border border-white/10 p-8 text-center", className)}>
         <CheckCircle className="w-12 h-12 text-[#10B981] mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-white mb-2">All Caught Up!</h3>
-        <p className="text-white/50">No pending provider verifications.</p>
+        <h3 className="text-lg font-semibold text-white mb-2">{t('admin.verifications.allCaughtUp')}</h3>
+        <p className="text-white/50">{t('admin.verifications.noPending')}</p>
       </div>
     );
   }
@@ -125,25 +127,25 @@ export function VerificationQueue({
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm">
                         <Calendar className="w-4 h-4 text-white/40" />
-                        <span className="text-white/50">Joined:</span>
+                        <span className="text-white/50">{t('admin.verifications.joined')}</span>
                         <span className="text-white">
                           {formatDate(toDate(provider.createdAt) || new Date())}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
                         <User className="w-4 h-4 text-white/40" />
-                        <span className="text-white/50">Experience:</span>
+                        <span className="text-white/50">{t('admin.verifications.experience')}</span>
                         <span className="text-white">
-                          {provider.providerProfile?.yearsOfExperience || 0} years
+                          {provider.providerProfile?.yearsOfExperience || 0} {t('admin.verifications.years')}
                         </span>
                       </div>
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm">
                         <FileText className="w-4 h-4 text-white/40" />
-                        <span className="text-white/50">License:</span>
+                        <span className="text-white/50">{t('admin.verifications.license')}</span>
                         <span className="text-white">
-                          {provider.providerProfile?.licenseNumber || "N/A"}
+                          {provider.providerProfile?.licenseNumber || t('admin.verifications.na')}
                         </span>
                       </div>
                     </div>
@@ -153,7 +155,7 @@ export function VerificationQueue({
                   {provider.providerProfile?.professionalBio && (
                     <div>
                       <h5 className="text-sm font-medium text-white/70 mb-2">
-                        Professional Bio
+                        {t('admin.verifications.professionalBio')}
                       </h5>
                       <p className="text-sm text-white/50 bg-black/20 rounded-lg p-3">
                         {provider.providerProfile.professionalBio}
@@ -165,7 +167,7 @@ export function VerificationQueue({
                   {provider.providerProfile?.specialties && (
                     <div>
                       <h5 className="text-sm font-medium text-white/70 mb-2">
-                        Specialties
+                        {t('admin.verifications.specialties')}
                       </h5>
                       <div className="flex flex-wrap gap-2">
                         {provider.providerProfile.specialties.map((specialty) => (
@@ -184,7 +186,7 @@ export function VerificationQueue({
                   {provider.verificationDocuments && provider.verificationDocuments.length > 0 && (
                     <div>
                       <h5 className="text-sm font-medium text-white/70 mb-2">
-                        Verification Documents
+                        {t('admin.verifications.documents')}
                       </h5>
                       <div className="space-y-2">
                         {provider.verificationDocuments.map((doc) => (
@@ -215,7 +217,7 @@ export function VerificationQueue({
                   {provider.providerProfile?.certifications && provider.providerProfile.certifications.length > 0 && (
                     <div>
                       <h5 className="text-sm font-medium text-white/70 mb-2">
-                        Certifications
+                        {t('admin.verifications.certifications')}
                       </h5>
                       <div className="space-y-2">
                         {provider.providerProfile.certifications.map((cert) => (
@@ -242,12 +244,12 @@ export function VerificationQueue({
                   {isRejecting && (
                     <div className="bg-[#EF4444]/10 border border-[#EF4444]/30 rounded-xl p-4">
                       <label className="block text-sm font-medium text-white mb-2">
-                        Rejection Reason
+                        {t('admin.verifications.rejectionReason')}
                       </label>
                       <textarea
                         value={rejectReason}
                         onChange={(e) => setRejectReason(e.target.value)}
-                        placeholder="Enter reason for rejection..."
+                        placeholder={t('admin.verifications.rejectionPlaceholder')}
                         className="w-full px-3 py-2 bg-black/20 border border-white/10 rounded-lg text-white text-sm placeholder:text-white/40 focus:outline-none focus:border-[#EF4444]/50 resize-none"
                         rows={3}
                       />
@@ -261,7 +263,7 @@ export function VerificationQueue({
                           }}
                           className="flex-1"
                         >
-                          Cancel
+                          {t('admin.verifications.cancel')}
                         </Button>
                         <Button
                           variant="primary"
@@ -270,7 +272,7 @@ export function VerificationQueue({
                           disabled={!rejectReason.trim() || isLoading}
                           className="flex-1 bg-[#EF4444] hover:bg-[#DC2626]"
                         >
-                          Confirm Reject
+                          {t('admin.verifications.confirmReject')}
                         </Button>
                       </div>
                     </div>
@@ -286,7 +288,7 @@ export function VerificationQueue({
                         className="flex-1 bg-[#EF4444]/20 text-[#EF4444] hover:bg-[#EF4444]/30 border-[#EF4444]/30"
                       >
                         <XCircle className="w-4 h-4 mr-2" />
-                        Reject
+                        {t('admin.verifications.reject')}
                       </Button>
                       <Button
                         variant="primary"
@@ -295,7 +297,7 @@ export function VerificationQueue({
                         className="flex-1 bg-[#10B981] hover:bg-[#059669]"
                       >
                         <CheckCircle className="w-4 h-4 mr-2" />
-                        Approve
+                        {t('admin.verifications.approve')}
                       </Button>
                     </div>
                   )}

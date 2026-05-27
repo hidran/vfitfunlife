@@ -4,13 +4,14 @@ import { useState } from "react";
 import { useAuthStore } from "@/stores/authStore";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/Spinner";
+import { useI18n } from "@/hooks/useI18n";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { functions } from "@/lib/firebase/config";
-import { 
-  Database, 
-  Trash2, 
-  Zap, 
-  CheckCircle, 
+import {
+  Database,
+  Trash2,
+  Zap,
+  CheckCircle,
   AlertCircle,
   Loader2,
   RefreshCw
@@ -36,6 +37,7 @@ interface SeedingResult {
 }
 
 export function SeedDataPanel() {
+  const { t } = useI18n();
   const { firebaseUser } = useAuthStore();
   const [loading, setLoading] = useState<string | null>(null);
   const [result, setResult] = useState<SeedingResult | null>(null);
@@ -102,7 +104,7 @@ export function SeedDataPanel() {
   };
 
   const handleClearAll = async () => {
-    if (!confirm("⚠️ WARNING: This will delete ALL data from users, venues, classes, bookings, and reviews collections. This action cannot be undone. Are you sure?")) {
+    if (!confirm(t('admin.seed.clearAll.confirm'))) {
       return;
     }
     
@@ -124,9 +126,9 @@ export function SeedDataPanel() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-xl font-bold text-white">Demo Data Management</h2>
+        <h2 className="text-xl font-bold text-white">{t('admin.seed.title')}</h2>
         <p className="text-gray-400 mt-1">
-          Seed or clear demo data for testing and development purposes.
+          {t('admin.seed.subtitle')}
         </p>
       </div>
 
@@ -139,20 +141,20 @@ export function SeedDataPanel() {
               <Zap className="w-5 h-5 text-blue-400" />
             </div>
             <div>
-              <h3 className="font-semibold text-white">Quick Seed</h3>
-              <p className="text-xs text-gray-400">Minimal data for quick testing</p>
+              <h3 className="font-semibold text-white">{t('admin.seed.quickSeed.title')}</h3>
+              <p className="text-xs text-gray-400">{t('admin.seed.quickSeed.subtitle')}</p>
             </div>
           </div>
-          
+
           <ul className="text-sm text-gray-400 space-y-1 mb-4">
-            <li>• 3 Providers</li>
-            <li>• 2 Customers</li>
-            <li>• 3 Venues</li>
-            <li>• 5 Classes</li>
-            <li>• 5 Bookings</li>
-            <li>• 3 Reviews</li>
+            <li>• {t('admin.seed.quickSeed.providers')}</li>
+            <li>• {t('admin.seed.quickSeed.customers')}</li>
+            <li>• {t('admin.seed.quickSeed.venues')}</li>
+            <li>• {t('admin.seed.quickSeed.classes')}</li>
+            <li>• {t('admin.seed.quickSeed.bookings')}</li>
+            <li>• {t('admin.seed.quickSeed.reviews')}</li>
           </ul>
-          
+
           <Button
             onClick={handleSeedQuick}
             disabled={loading === "quick"}
@@ -162,12 +164,12 @@ export function SeedDataPanel() {
             {loading === "quick" ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Seeding...
+                {t('admin.seed.seeding')}
               </>
             ) : (
               <>
                 <RefreshCw className="w-4 h-4 mr-2" />
-                Seed Quick Data
+                {t('admin.seed.quickSeed.button')}
               </>
             )}
           </Button>
@@ -180,20 +182,20 @@ export function SeedDataPanel() {
               <Database className="w-5 h-5 text-green-400" />
             </div>
             <div>
-              <h3 className="font-semibold text-white">Full Seed</h3>
-              <p className="text-xs text-gray-400">Comprehensive demo dataset</p>
+              <h3 className="font-semibold text-white">{t('admin.seed.fullSeed.title')}</h3>
+              <p className="text-xs text-gray-400">{t('admin.seed.fullSeed.subtitle')}</p>
             </div>
           </div>
-          
+
           <ul className="text-sm text-gray-400 space-y-1 mb-4">
-            <li>• 10+ Providers</li>
-            <li>• 15+ Customers</li>
-            <li>• 8+ Venues</li>
-            <li>• 20+ Classes</li>
-            <li>• 30+ Bookings</li>
-            <li>• 20+ Reviews</li>
+            <li>• {t('admin.seed.fullSeed.providers')}</li>
+            <li>• {t('admin.seed.fullSeed.customers')}</li>
+            <li>• {t('admin.seed.fullSeed.venues')}</li>
+            <li>• {t('admin.seed.fullSeed.classes')}</li>
+            <li>• {t('admin.seed.fullSeed.bookings')}</li>
+            <li>• {t('admin.seed.fullSeed.reviews')}</li>
           </ul>
-          
+
           <Button
             onClick={handleSeedAll}
             disabled={loading === "all"}
@@ -203,12 +205,12 @@ export function SeedDataPanel() {
             {loading === "all" ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Seeding...
+                {t('admin.seed.seeding')}
               </>
             ) : (
               <>
                 <Database className="w-4 h-4 mr-2" />
-                Seed All Data
+                {t('admin.seed.fullSeed.button')}
               </>
             )}
           </Button>
@@ -221,19 +223,19 @@ export function SeedDataPanel() {
               <Trash2 className="w-5 h-5 text-red-400" />
             </div>
             <div>
-              <h3 className="font-semibold text-white">Clear All</h3>
-              <p className="text-xs text-gray-400">Remove all demo data</p>
+              <h3 className="font-semibold text-white">{t('admin.seed.clearAll.title')}</h3>
+              <p className="text-xs text-gray-400">{t('admin.seed.clearAll.subtitle')}</p>
             </div>
           </div>
-          
+
           <ul className="text-sm text-gray-400 space-y-1 mb-4">
-            <li className="text-red-400">• ⚠️ Deletes all users</li>
-            <li className="text-red-400">• ⚠️ Deletes all venues</li>
-            <li className="text-red-400">• ⚠️ Deletes all classes</li>
-            <li className="text-red-400">• ⚠️ Deletes all bookings</li>
-            <li className="text-red-400">• ⚠️ Deletes all reviews</li>
+            <li className="text-red-400">• ⚠️ {t('admin.seed.clearAll.users')}</li>
+            <li className="text-red-400">• ⚠️ {t('admin.seed.clearAll.venues')}</li>
+            <li className="text-red-400">• ⚠️ {t('admin.seed.clearAll.classes')}</li>
+            <li className="text-red-400">• ⚠️ {t('admin.seed.clearAll.bookings')}</li>
+            <li className="text-red-400">• ⚠️ {t('admin.seed.clearAll.reviews')}</li>
           </ul>
-          
+
           <Button
             onClick={handleClearAll}
             disabled={loading === "clear"}
@@ -243,12 +245,12 @@ export function SeedDataPanel() {
             {loading === "clear" ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Clearing...
+                {t('admin.seed.clearing')}
               </>
             ) : (
               <>
                 <Trash2 className="w-4 h-4 mr-2" />
-                Clear All Data
+                {t('admin.seed.clearAll.button')}
               </>
             )}
           </Button>
@@ -260,7 +262,7 @@ export function SeedDataPanel() {
         <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
           <div>
-            <h4 className="font-medium text-red-400">Error</h4>
+            <h4 className="font-medium text-red-400">{t('admin.seed.error.title')}</h4>
             <p className="text-sm text-red-300 mt-1">{error}</p>
           </div>
         </div>
@@ -271,7 +273,7 @@ export function SeedDataPanel() {
         <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
           <div className="flex items-center gap-3 mb-3">
             <CheckCircle className="w-5 h-5 text-green-400" />
-            <h4 className="font-medium text-green-400">Success</h4>
+            <h4 className="font-medium text-green-400">{t('admin.seed.success.title')}</h4>
           </div>
           
           {result.message && (
@@ -284,27 +286,27 @@ export function SeedDataPanel() {
                 <p className="text-2xl font-bold text-white">
                   {result.summary.totalCollections}
                 </p>
-                <p className="text-xs text-gray-400">Collections</p>
+                <p className="text-xs text-gray-400">{t('admin.seed.result.collections')}</p>
               </div>
               <div className="bg-black/20 rounded-lg p-3 text-center">
                 <p className="text-2xl font-bold text-green-400">
                   {result.summary.successful}
                 </p>
-                <p className="text-xs text-gray-400">Successful</p>
+                <p className="text-xs text-gray-400">{t('admin.seed.result.successful')}</p>
               </div>
               <div className="bg-black/20 rounded-lg p-3 text-center">
                 <p className="text-2xl font-bold text-white">
                   {result.summary.totalRecords ?? result.summary.totalDeleted ?? 0}
                 </p>
                 <p className="text-xs text-gray-400">
-                  {result.summary.totalRecords ? "Records" : "Deleted"}
+                  {result.summary.totalRecords ? t('admin.seed.result.records') : t('admin.seed.result.deleted')}
                 </p>
               </div>
               <div className="bg-black/20 rounded-lg p-3 text-center">
                 <p className="text-2xl font-bold text-red-400">
                   {result.summary.failed}
                 </p>
-                <p className="text-xs text-gray-400">Failed</p>
+                <p className="text-xs text-gray-400">{t('admin.seed.result.failed')}</p>
               </div>
             </div>
           )}
@@ -312,7 +314,7 @@ export function SeedDataPanel() {
           {/* Details */}
           {result.details && result.details.length > 0 && (
             <div className="mt-4">
-              <p className="text-sm font-medium text-white mb-2">Details:</p>
+              <p className="text-sm font-medium text-white mb-2">{t('admin.seed.result.details')}</p>
               <div className="space-y-1">
                 {result.details.map((detail) => (
                   <div

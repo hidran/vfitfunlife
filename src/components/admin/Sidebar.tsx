@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { UserRole } from "@/types/firebase";
+import { useI18n } from "@/hooks/useI18n";
 import {
   LayoutDashboard,
   Users,
@@ -49,67 +50,68 @@ export function Sidebar({
   notificationCount = 0,
   onLogout,
 }: SidebarProps) {
+  const { t } = useI18n();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const pathname = usePathname();
 
   const navItems: NavItem[] = [
     {
-      label: "Dashboard",
+      label: t('admin.sidebar.nav.dashboard'),
       href: "/admin",
       icon: <LayoutDashboard className="w-5 h-5" />,
       allowedRoles: ["superadmin", "admin"],
     },
     {
-      label: "Users",
+      label: t('admin.sidebar.nav.users'),
       href: "/admin/users",
       icon: <Users className="w-5 h-5" />,
       allowedRoles: ["superadmin", "admin"],
     },
     {
-      label: "Providers",
+      label: t('admin.sidebar.nav.providers'),
       href: "/admin/providers",
       icon: <Store className="w-5 h-5" />,
       allowedRoles: ["superadmin", "admin"],
     },
     {
-      label: "Bookings",
+      label: t('admin.sidebar.nav.bookings'),
       href: "/admin/bookings",
       icon: <Calendar className="w-5 h-5" />,
       allowedRoles: ["superadmin", "admin"],
     },
     {
-      label: "User Types",
+      label: t('admin.sidebar.nav.userTypes'),
       href: "/admin/user-types",
       icon: <Tag className="w-5 h-5" />,
       allowedRoles: ["superadmin", "admin"],
     },
     {
-      label: "Venues",
+      label: t('admin.sidebar.nav.venues'),
       href: "/admin/venues",
       icon: <MapPin className="w-5 h-5" />,
       allowedRoles: ["superadmin", "admin"],
     },
     {
-      label: "Payments",
+      label: t('admin.sidebar.nav.payments'),
       href: "/admin/payments",
       icon: <CreditCard className="w-5 h-5" />,
       allowedRoles: ["superadmin", "admin"],
     },
     {
-      label: "Data Management",
+      label: t('admin.sidebar.nav.dataManagement'),
       href: "/admin/data",
       icon: <Database className="w-5 h-5" />,
       allowedRoles: ["superadmin", "admin"],
     },
     {
-      label: "Settings",
+      label: t('admin.sidebar.nav.settings'),
       href: "/admin/settings",
       icon: <Settings className="w-5 h-5" />,
       allowedRoles: ["superadmin"],
     },
     {
-      label: "System Logs",
+      label: t('admin.sidebar.nav.systemLogs'),
       href: "/admin/logs",
       icon: <FileText className="w-5 h-5" />,
       allowedRoles: ["superadmin"],
@@ -160,7 +162,7 @@ export function Sidebar({
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#00C9FF] to-[#7B61FF] flex items-center justify-center">
                 <Shield className="w-4 h-4 text-white" />
               </div>
-              <span className="font-semibold text-white">Admin</span>
+              <span className="font-semibold text-white">{t('admin.sidebar.title')}</span>
             </Link>
           )}
           {isCollapsed && (
@@ -230,7 +232,7 @@ export function Sidebar({
           {!isCollapsed && (
             <button className="w-full flex items-center gap-3 px-3 py-2 mb-3 rounded-xl text-white/60 hover:text-white hover:bg-white/5 transition-all">
               <Bell className="w-5 h-5" />
-              <span className="text-sm">Notifications</span>
+              <span className="text-sm">{t('admin.sidebar.notifications')}</span>
               {notificationCount > 0 && (
                 <span className="ml-auto bg-[#EF4444] text-white text-xs font-semibold px-2 py-0.5 rounded-full">
                   {notificationCount}
@@ -266,7 +268,7 @@ export function Sidebar({
                   "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#1E2230]",
                   userRole === "superadmin" ? "bg-[#FFD700]" : "bg-[#10B981]"
                 )}
-                title={userRole === "superadmin" ? "Superadmin" : "Admin"}
+                title={userRole === "superadmin" ? t('admin.sidebar.roleTitle.superadmin') : t('admin.sidebar.roleTitle.admin')}
               />
             </div>
             {!isCollapsed && (
@@ -283,7 +285,7 @@ export function Sidebar({
                 "p-2 rounded-xl text-white/50 hover:text-white hover:bg-white/10 transition-colors",
                 isCollapsed && "mt-2"
               )}
-              title="Logout"
+              title={t('admin.sidebar.logout')}
             >
               <LogOut className="w-4 h-4" />
             </button>

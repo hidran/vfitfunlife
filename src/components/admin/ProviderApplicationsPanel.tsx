@@ -6,8 +6,10 @@ import { fetchProviderApplications } from '@/lib/firebase/providers';
 import { setProviderApplicationStatus } from '@/lib/firebase/providerApplication';
 import type { Provider } from '@/types/instructor';
 import { Button } from '@/components/ui/button';
+import { useI18n } from '@/hooks/useI18n';
 
 export function ProviderApplicationsPanel() {
+  const { t } = useI18n();
   const [apps, setApps] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -36,14 +38,14 @@ export function ProviderApplicationsPanel() {
     <div className="bg-[#1E2230] rounded-xl border border-white/10 p-4">
       <div className="flex items-center gap-2 mb-4">
         <Clock className="w-5 h-5 text-[#F59E0B]" />
-        <h2 className="text-lg font-semibold text-white">Pending applications</h2>
+        <h2 className="text-lg font-semibold text-white">{t('admin.applications.title')}</h2>
         <span className="text-sm text-white/50">({apps.length})</span>
       </div>
 
       {loading ? (
-        <p className="text-white/50 text-sm">Loading…</p>
+        <p className="text-white/50 text-sm">{t('admin.applications.loading')}</p>
       ) : apps.length === 0 ? (
-        <p className="text-white/50 text-sm">No pending applications.</p>
+        <p className="text-white/50 text-sm">{t('admin.applications.empty')}</p>
       ) : (
         <ul className="space-y-3">
           {apps.map((a) => (
@@ -54,10 +56,10 @@ export function ProviderApplicationsPanel() {
               </div>
               <div className="flex gap-2">
                 <Button size="sm" disabled={busyId === a.id} onClick={() => decide(a.id, 'verified')}>
-                  <CheckCircle className="w-4 h-4 mr-1" /> Verify
+                  <CheckCircle className="w-4 h-4 mr-1" /> {t('admin.applications.verify')}
                 </Button>
                 <Button size="sm" variant="ghost" disabled={busyId === a.id} onClick={() => decide(a.id, 'rejected')}>
-                  <XCircle className="w-4 h-4 mr-1" /> Reject
+                  <XCircle className="w-4 h-4 mr-1" /> {t('admin.applications.reject')}
                 </Button>
               </div>
             </li>

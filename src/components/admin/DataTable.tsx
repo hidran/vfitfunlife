@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/hooks/useI18n";
 import {
   ChevronLeft,
   ChevronRight,
@@ -65,10 +66,11 @@ export function DataTable<T>({
   selectedIds = [],
   onSelectionChange,
   pagination,
-  emptyMessage = "No data found",
+  emptyMessage,
   actions,
   className,
 }: DataTableProps<T>) {
+  const { t } = useI18n();
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
   const [actionMenuOpen, setActionMenuOpen] = useState<string | null>(null);
@@ -200,7 +202,7 @@ export function DataTable<T>({
                   colSpan={columns.length + (selectable ? 1 : 0) + (actions ? 1 : 0)}
                   className="px-4 py-12 text-center text-white/40"
                 >
-                  {emptyMessage}
+                  {emptyMessage ?? t('admin.table.empty')}
                 </td>
               </tr>
             ) : (
@@ -268,7 +270,7 @@ export function DataTable<T>({
                                     className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white/80 hover:bg-white/5 transition-colors"
                                   >
                                     <Eye className="w-4 h-4" />
-                                    View
+                                    {t('admin.table.actions.view')}
                                   </button>
                                 )}
                                 {actions.edit && (
@@ -280,7 +282,7 @@ export function DataTable<T>({
                                     className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white/80 hover:bg-white/5 transition-colors"
                                   >
                                     <Edit className="w-4 h-4" />
-                                    Edit
+                                    {t('admin.table.actions.edit')}
                                   </button>
                                 )}
                                 {actions.delete && (
@@ -292,7 +294,7 @@ export function DataTable<T>({
                                     className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#EF4444] hover:bg-white/5 transition-colors"
                                   >
                                     <Trash2 className="w-4 h-4" />
-                                    Delete
+                                    {t('admin.table.actions.delete')}
                                   </button>
                                 )}
                               </div>
@@ -313,18 +315,11 @@ export function DataTable<T>({
       {pagination && pagination.totalPages > 1 && (
         <div className="px-4 py-3 border-t border-white/10 flex items-center justify-between">
           <div className="text-sm text-white/50">
-            Showing{" "}
-            <span className="text-white">
-              {(pagination.currentPage - 1) * pagination.pageSize + 1}
-            </span>{" "}
-            -{" "}
-            <span className="text-white">
-              {Math.min(
-                pagination.currentPage * pagination.pageSize,
-                pagination.totalItems
-              )}
-            </span>{" "}
-            of <span className="text-white">{pagination.totalItems}</span>
+            {t('admin.table.showing', {
+              from: (pagination.currentPage - 1) * pagination.pageSize + 1,
+              to: Math.min(pagination.currentPage * pagination.pageSize, pagination.totalItems),
+              total: pagination.totalItems,
+            })}
           </div>
 
           <div className="flex items-center gap-1">

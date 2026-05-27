@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/hooks/useI18n";
 import {
   Search,
   Filter,
@@ -39,7 +40,7 @@ interface FilterBarProps {
 }
 
 export function FilterBar({
-  searchPlaceholder = "Search...",
+  searchPlaceholder,
   searchValue,
   onSearchChange,
   filters = [],
@@ -48,6 +49,7 @@ export function FilterBar({
   onClearFilters,
   className,
 }: FilterBarProps) {
+  const { t } = useI18n();
   const [showFilters, setShowFilters] = useState(false);
 
   const hasActiveFilters =
@@ -64,7 +66,7 @@ export function FilterBar({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
           <input
             type="text"
-            placeholder={searchPlaceholder}
+            placeholder={searchPlaceholder ?? 'Search...'}
             value={searchValue}
             onChange={(e) => onSearchChange(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-[#1E2230] border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-[#00C9FF]/50"
@@ -90,7 +92,7 @@ export function FilterBar({
               )}
             >
               <Filter className="w-4 h-4" />
-              Filters
+              {t('admin.filter.filters')}
               {filters.some((f) => f.value && f.value !== "all") && (
                 <span className="ml-1 w-5 h-5 rounded-full bg-[#00C9FF] text-white text-xs flex items-center justify-center">
                   {filters.filter((f) => f.value && f.value !== "all").length}
@@ -108,13 +110,13 @@ export function FilterBar({
           {onExport && (
             <Button variant="secondary" onClick={onExport} className="flex items-center gap-2">
               <Download className="w-4 h-4" />
-              Export
+              {t('admin.filter.export')}
             </Button>
           )}
 
           {hasActiveFilters && onClearFilters && (
             <Button variant="ghost" onClick={onClearFilters} className="text-white/60">
-              Clear
+              {t('admin.filter.clear')}
             </Button>
           )}
         </div>
@@ -146,7 +148,7 @@ export function FilterBar({
             {dateRange && (
               <div className="sm:col-span-2">
                 <label className="block text-sm text-white/50 mb-1.5">
-                  Date Range
+                  {t('admin.filter.dateRange')}
                 </label>
                 <div className="flex items-center gap-2">
                   <div className="relative flex-1">
@@ -163,7 +165,7 @@ export function FilterBar({
                       className="w-full pl-9 pr-3 py-2 bg-[#2A2D3A] border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-[#00C9FF]/50"
                     />
                   </div>
-                  <span className="text-white/40">to</span>
+                  <span className="text-white/40">{t('admin.filter.dateTo')}</span>
                   <div className="relative flex-1">
                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
                     <input
@@ -190,7 +192,7 @@ export function FilterBar({
         <div className="flex flex-wrap items-center gap-2">
           {searchValue && (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#00C9FF]/20 text-[#00C9FF] text-xs rounded-full">
-              Search: {searchValue}
+              {t('admin.filter.tagSearch', { value: searchValue })}
               <button
                 onClick={() => onSearchChange("")}
                 className="hover:text-white"
@@ -220,7 +222,7 @@ export function FilterBar({
           )}
           {dateRange?.from && (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white/10 text-white/70 text-xs rounded-full">
-              From: {dateRange.from.toLocaleDateString()}
+              {t('admin.filter.tagFrom', { date: dateRange.from.toLocaleDateString() })}
               <button
                 onClick={() => dateRange.onChange(null, dateRange.to)}
                 className="hover:text-white"
@@ -231,7 +233,7 @@ export function FilterBar({
           )}
           {dateRange?.to && (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white/10 text-white/70 text-xs rounded-full">
-              To: {dateRange.to.toLocaleDateString()}
+              {t('admin.filter.tagTo', { date: dateRange.to.toLocaleDateString() })}
               <button
                 onClick={() => dateRange.onChange(dateRange.from, null)}
                 className="hover:text-white"
