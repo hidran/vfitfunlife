@@ -14,12 +14,14 @@ import { useAuthStore } from '@/stores/authStore';
 import { Spinner } from '@/components/ui/Spinner';
 import { Button } from '@/components/ui/button';
 import { BookingCard } from '@/components/booking';
+import { useI18n } from '@/hooks/useI18n';
 import type { Booking } from '@/types/booking';
 
 type BookingTab = 'upcoming' | 'past' | 'cancelled';
 
 export default function BookingsPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const { user } = useAuthStore();
   const {
     userBookings,
@@ -34,13 +36,13 @@ export default function BookingsPage() {
 
   const loadBookings = useCallback(async () => {
     if (!user) return;
-    
-    const status = activeTab === 'upcoming' 
-      ? 'confirmed' 
-      : activeTab === 'past' 
-        ? 'completed' 
+
+    const status = activeTab === 'upcoming'
+      ? 'confirmed'
+      : activeTab === 'past'
+        ? 'completed'
         : 'cancelled';
-    
+
     await fetchUserBookings(user.uid, { status });
   }, [user, activeTab, fetchUserBookings]);
 
@@ -78,12 +80,12 @@ export default function BookingsPage() {
   });
 
   const handleCancel = async (id: string) => {
-    if (!confirm('Sei sicuro di voler annullare questa prenotazione?')) return;
-    
+    if (!confirm(t('bookings.list.confirmCancel'))) return;
+
     try {
-      await cancelBooking(id, 'Annullato dall\'utente');
+      await cancelBooking(id, "Annullato dall'utente");
     } catch (error) {
-      alert('Errore durante l\'annullamento');
+      alert(t('bookings.list.errorCancel'));
     }
   };
 
@@ -108,7 +110,7 @@ export default function BookingsPage() {
           >
             <div className="bg-[#2A2D3A] rounded-full px-4 py-2 flex items-center gap-2 shadow-lg">
               <Spinner size="sm" />
-              <span className="text-sm text-white">Aggiornamento...</span>
+              <span className="text-sm text-white">{t('bookings.list.refreshing')}</span>
             </div>
           </motion.div>
         )}
@@ -118,7 +120,7 @@ export default function BookingsPage() {
       <div className="p-4">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-display font-bold text-text-inverse">
-            Le mie prenotazioni
+            {t('bookings.list.title')}
           </h1>
           <div className="flex items-center gap-2">
             <button
@@ -137,7 +139,7 @@ export default function BookingsPage() {
               onClick={() => router.push('/booking')}
             >
               <Plus className="w-4 h-4 mr-1" />
-              Nuova
+              {t('bookings.list.newBooking')}
             </Button>
           </div>
         </div>
@@ -145,9 +147,9 @@ export default function BookingsPage() {
         {/* Tabs */}
         <div className="flex bg-[#2A2D3A]/50 rounded-xl p-1">
           {[
-            { id: 'upcoming', label: 'In arrivo' },
-            { id: 'past', label: 'Passate' },
-            { id: 'cancelled', label: 'Annullate' },
+            { id: 'upcoming', label: t('bookings.list.tab.upcoming') },
+            { id: 'past', label: t('bookings.list.tab.past') },
+            { id: 'cancelled', label: t('bookings.list.tab.cancelled') },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -170,24 +172,24 @@ export default function BookingsPage() {
         {isLoadingBookings && !isRefreshing ? (
           <div className="flex flex-col items-center justify-center py-12">
             <Spinner size="lg" />
-            <p className="text-text-secondary mt-4">Caricamento prenotazioni...</p>
+            <p className="text-text-secondary mt-4">{t('bookings.list.loading')}</p>
           </div>
         ) : sortedBookings.length === 0 ? (
           <div className="text-center py-12">
             <Calendar className="w-16 h-16 text-text-tertiary mx-auto mb-4" />
             <h3 className="text-lg font-medium text-white mb-2">
-              {activeTab === 'upcoming' && 'Nessuna prenotazione in arrivo'}
-              {activeTab === 'past' && 'Nessuna prenotazione passata'}
-              {activeTab === 'cancelled' && 'Nessuna prenotazione annullata'}
+              {activeTab === 'upcoming' && t('bookings.list.empty.upcoming')}
+              {activeTab === 'past' && t('bookings.list.empty.past')}
+              {activeTab === 'cancelled' && t('bookings.list.empty.cancelled')}
             </h3>
             <p className="text-text-secondary mb-6">
-              {activeTab === 'upcoming' && 'Prenota il tuo primo servizio con i nostri professionisti'}
-              {activeTab === 'past' && 'Le tue prenotazioni completate appariranno qui'}
-              {activeTab === 'cancelled' && 'Le prenotazioni annullate appariranno qui'}
+              {activeTab === 'upcoming' && t('bookings.list.empty.upcomingHint')}
+              {activeTab === 'past' && t('bookings.list.empty.pastHint')}
+              {activeTab === 'cancelled' && t('bookings.list.empty.cancelledHint')}
             </p>
             {activeTab === 'upcoming' && (
               <Button onClick={() => router.push('/booking')}>
-                Cerca servizi
+                {t('bookings.list.searchServices')}
               </Button>
             )}
           </div>

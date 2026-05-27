@@ -6,21 +6,14 @@ import { ArrowLeft, CheckCircle2, MessageSquare, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useBookingStore } from '@/stores/bookingStore';
 import { buildFallbackBooking, getBookingSectionMeta } from '@/lib/bookingUtils';
+import { useI18n } from '@/hooks/useI18n';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/Avatar';
-
-const QUICK_TAGS = [
-  'Puntuale',
-  'Professionale',
-  'Comunicazione chiara',
-  'Esperienza top',
-  'Location comoda',
-  'Da rifare',
-];
 
 export default function BookingReviewClient() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const { t } = useI18n();
   const bookingId = params.id;
   const {
     userBookings,
@@ -38,6 +31,15 @@ export default function BookingReviewClient() {
   }, [bookingId, currentBooking, userBookings]);
 
   const sectionMeta = getBookingSectionMeta(booking.serviceName);
+
+  const QUICK_TAGS = [
+    t('bookings.review.tag.punctual'),
+    t('bookings.review.tag.professional'),
+    t('bookings.review.tag.clearComm'),
+    t('bookings.review.tag.topExperience'),
+    t('bookings.review.tag.convenientLocation'),
+    t('bookings.review.tag.doItAgain'),
+  ];
 
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
@@ -87,7 +89,7 @@ export default function BookingReviewClient() {
           >
             <ArrowLeft className="h-5 w-5 text-white" />
           </button>
-          <h1 className="text-lg font-semibold text-white">Recensione prenotazione</h1>
+          <h1 className="text-lg font-semibold text-white">{t('bookings.review.title')}</h1>
         </div>
       </div>
 
@@ -113,27 +115,27 @@ export default function BookingReviewClient() {
         {alreadyReviewed || submitted ? (
           <div className="rounded-2xl border border-success/30 bg-success/15 p-5 text-center">
             <CheckCircle2 className="mx-auto mb-3 h-8 w-8 text-success" />
-            <p className="text-lg font-semibold text-success">Grazie per il tuo feedback</p>
+            <p className="text-lg font-semibold text-success">{t('bookings.review.successTitle')}</p>
             <p className="mt-1 text-sm text-success/80">
-              La recensione e stata registrata correttamente.
+              {t('bookings.review.successSubtitle')}
             </p>
             <Button
               className="mt-4"
               onClick={() => router.replace(`/bookings/${booking.id}`)}
             >
-              Torna ai dettagli
+              {t('bookings.reschedule.backToDetails')}
             </Button>
           </div>
         ) : (
           <>
             <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <p className="text-sm text-text-secondary">Valutazione</p>
+              <p className="text-sm text-text-secondary">{t('bookings.review.ratingLabel')}</p>
               <div className="mt-3 flex items-center justify-center gap-2">
                 {[1, 2, 3, 4, 5].map((value) => (
                   <button
                     key={value}
                     onClick={() => setRating(value)}
-                    aria-label={`Valuta ${value} stelle`}
+                    aria-label={t('bookings.review.ratingAria', { value })}
                     className="rounded-full p-1 transition-transform hover:scale-105"
                   >
                     <Star
@@ -148,7 +150,7 @@ export default function BookingReviewClient() {
             </section>
 
             <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <p className="mb-3 text-sm text-text-secondary">Cosa ti e piaciuto?</p>
+              <p className="mb-3 text-sm text-text-secondary">{t('bookings.review.tagsLabel')}</p>
               <div className="flex flex-wrap gap-2">
                 {QUICK_TAGS.map((tag) => (
                   <button
@@ -173,18 +175,18 @@ export default function BookingReviewClient() {
                 className="mb-2 inline-flex items-center gap-2 text-sm text-text-secondary"
               >
                 <MessageSquare className="h-4 w-4" />
-                Commento
+                {t('bookings.review.commentLabel')}
               </label>
               <textarea
                 id="review-comment"
                 rows={5}
                 value={comment}
                 onChange={(event) => setComment(event.target.value)}
-                placeholder="Racconta brevemente la tua esperienza..."
+                placeholder={t('bookings.review.commentPlaceholder')}
                 className="w-full resize-none rounded-xl border border-white/15 bg-black/20 p-3 text-sm text-white outline-none transition-colors focus:border-[var(--section-primary)]"
               />
               <p className="mt-2 text-xs text-text-tertiary">
-                Minimo 10 caratteri ({comment.trim().length}/10)
+                {t('bookings.review.minChars', { count: comment.trim().length })}
               </p>
             </section>
           </>
@@ -199,7 +201,7 @@ export default function BookingReviewClient() {
             disabled={!canSubmit || submitting}
             isLoading={submitting}
           >
-            Pubblica recensione
+            {t('bookings.review.submit')}
           </Button>
         </div>
       )}

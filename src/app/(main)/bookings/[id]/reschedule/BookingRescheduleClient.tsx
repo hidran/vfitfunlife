@@ -6,6 +6,7 @@ import { ArrowLeft, Calendar, CheckCircle2, Clock, RotateCcw } from 'lucide-reac
 import { cn } from '@/lib/utils';
 import { useBookingStore } from '@/stores/bookingStore';
 import { buildFallbackBooking, getBookingSectionMeta } from '@/lib/bookingUtils';
+import { useI18n } from '@/hooks/useI18n';
 import { AvailabilityPicker } from '@/components/booking';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/Avatar';
@@ -28,6 +29,7 @@ function mergeDateAndTime(date: Date, time: string) {
 export default function BookingRescheduleClient() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const { t } = useI18n();
   const bookingId = params.id;
 
   const {
@@ -83,7 +85,7 @@ export default function BookingRescheduleClient() {
         router.replace(`/bookings/${booking.id}?rescheduled=true`);
       }, 1000);
     } catch {
-      setError('Impossibile riprogrammare la prenotazione. Riprova tra poco.');
+      setError(t('bookings.reschedule.error'));
     } finally {
       setIsSubmitting(false);
     }
@@ -99,7 +101,7 @@ export default function BookingRescheduleClient() {
           >
             <ArrowLeft className="h-5 w-5 text-white" />
           </button>
-          <h1 className="text-lg font-semibold text-white">Riprogramma prenotazione</h1>
+          <h1 className="text-lg font-semibold text-white">{t('bookings.reschedule.title')}</h1>
         </div>
       </div>
 
@@ -124,26 +126,26 @@ export default function BookingRescheduleClient() {
 
         {!isReschedulable ? (
           <div className="rounded-2xl border border-warning/40 bg-warning/15 p-4">
-            <p className="font-semibold text-warning">Prenotazione non riprogrammabile</p>
+            <p className="font-semibold text-warning">{t('bookings.reschedule.notAllowed.title')}</p>
             <p className="mt-1 text-sm text-warning/90">
-              Lo stato corrente non consente modifiche di data o orario.
+              {t('bookings.reschedule.notAllowed.subtitle')}
             </p>
             <Button className="mt-4" onClick={() => router.replace(`/bookings/${booking.id}`)}>
-              Torna ai dettagli
+              {t('bookings.reschedule.backToDetails')}
             </Button>
           </div>
         ) : isComplete ? (
           <div className="rounded-2xl border border-success/30 bg-success/15 p-5 text-center">
             <CheckCircle2 className="mx-auto mb-3 h-8 w-8 text-success" />
-            <p className="text-lg font-semibold text-success">Nuovo orario confermato</p>
+            <p className="text-lg font-semibold text-success">{t('bookings.reschedule.successTitle')}</p>
             <p className="mt-1 text-sm text-success/80">
-              Stiamo aggiornando il riepilogo della prenotazione.
+              {t('bookings.reschedule.successSubtitle')}
             </p>
           </div>
         ) : (
           <>
             <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <h2 className="mb-3 font-semibold text-white">Orario attuale</h2>
+              <h2 className="mb-3 font-semibold text-white">{t('bookings.reschedule.currentTime')}</h2>
               <div className="grid gap-2 text-sm text-text-secondary">
                 <p className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-[var(--section-primary)]" />
@@ -171,7 +173,7 @@ export default function BookingRescheduleClient() {
             />
 
             <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <h2 className="mb-2 font-semibold text-white">Nuovo slot selezionato</h2>
+              <h2 className="mb-2 font-semibold text-white">{t('bookings.reschedule.newSlot')}</h2>
               {selectedDate && selectedTime ? (
                 <p className="text-sm text-text-secondary">
                   {selectedDate.toLocaleDateString('it-IT', {
@@ -183,7 +185,7 @@ export default function BookingRescheduleClient() {
                   {selectedTime}
                 </p>
               ) : (
-                <p className="text-sm text-text-tertiary">Seleziona data e orario disponibili.</p>
+                <p className="text-sm text-text-tertiary">{t('bookings.reschedule.selectHint')}</p>
               )}
             </section>
           </>
@@ -205,7 +207,7 @@ export default function BookingRescheduleClient() {
             isLoading={isSubmitting}
           >
             <RotateCcw className="mr-2 h-4 w-4" />
-            Conferma riprogrammazione
+            {t('bookings.reschedule.confirm')}
           </Button>
         </div>
       )}

@@ -22,6 +22,7 @@ import { motion } from 'framer-motion';
 import { cn, formatPrice } from '@/lib/utils';
 import { buildFallbackBooking } from '@/lib/bookingUtils';
 import { useBookingStore } from '@/stores/bookingStore';
+import { useI18n } from '@/hooks/useI18n';
 import { Button } from '@/components/ui/button';
 import { Badge, type BadgeProps } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
@@ -30,20 +31,21 @@ import type { Booking, BookingStatus } from '@/types/booking';
 
 const statusConfig: Record<
   BookingStatus,
-  { label: string; variant: BadgeProps['variant']; icon: LucideIcon }
+  { labelKey: string; variant: BadgeProps['variant']; icon: LucideIcon }
 > = {
-  pending: { label: 'In attesa', variant: 'warning', icon: AlertCircle },
-  confirmed: { label: 'Confermato', variant: 'success', icon: CheckCircle },
-  in_progress: { label: 'In corso', variant: 'info', icon: Clock },
-  completed: { label: 'Completato', variant: 'default', icon: CheckCircle },
-  cancelled: { label: 'Annullato', variant: 'error', icon: X },
-  no_show: { label: 'No show', variant: 'error', icon: AlertCircle },
+  pending: { labelKey: 'booking.status.pending', variant: 'warning', icon: AlertCircle },
+  confirmed: { labelKey: 'booking.status.confirmed', variant: 'success', icon: CheckCircle },
+  in_progress: { labelKey: 'booking.status.inProgress', variant: 'info', icon: Clock },
+  completed: { labelKey: 'booking.status.completed', variant: 'default', icon: CheckCircle },
+  cancelled: { labelKey: 'booking.status.cancelled', variant: 'error', icon: X },
+  no_show: { labelKey: 'booking.status.noShow', variant: 'error', icon: AlertCircle },
 };
 
 export default function BookingDetailPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useI18n();
   const bookingId = params.id as string;
   const justConfirmed = searchParams.get('confirmed') === 'true';
   const justRescheduled = searchParams.get('rescheduled') === 'true';
@@ -85,34 +87,34 @@ export default function BookingDetailPage() {
         setLocalBookingOverride({
           ...booking,
           status: 'cancelled',
-          cancellationReason: 'Annullato dall\'utente',
+          cancellationReason: "Annullato dall'utente",
         });
         setShowCancelModal(false);
         return;
       }
 
-      await cancelBooking(bookingId, 'Annullato dall\'utente');
+      await cancelBooking(bookingId, "Annullato dall'utente");
       const cancelledBooking = {
         ...booking,
         status: 'cancelled' as const,
-        cancellationReason: 'Annullato dall\'utente',
+        cancellationReason: "Annullato dall'utente",
       };
       updateBookingInList(cancelledBooking);
       updateCurrentBooking(cancelledBooking);
       setShowCancelModal(false);
     } catch {
-      alert('Errore durante l\'annullamento');
+      alert(t('bookings.detail.errorCancel'));
     }
   };
 
   const handleAddToCalendar = () => {
     if (!booking) return;
-    
+
     const start = booking.scheduledAt.toDate();
     const end = booking.scheduledEndAt?.toDate() || new Date(start.getTime() + (booking.duration || 60) * 60000);
-    
+
     const event = {
-      title: booking.serviceName || 'Prenotazione',
+      title: booking.serviceName || t('bookings.detail.defaultBookingTitle'),
       description: `Prenotazione con ${booking.providerName || 'Provider'}`,
       location: booking.location?.address || '',
       startTime: start.toISOString(),
@@ -148,7 +150,7 @@ export default function BookingDetailPage() {
     } else {
       // Fallback: copy to clipboard
       navigator.clipboard.writeText(window.location.href);
-      alert('Link copiato negli appunti!');
+      alert(t('bookings.detail.linkCopied'));
     }
   };
 
@@ -160,7 +162,8 @@ export default function BookingDetailPage() {
     router.push(`/bookings/${bookingId}/review`);
   };
 
-  const status = statusConfig[booking.status];
+  const statusEntry = statusConfig[booking.status];
+  const statusLabel = t(statusEntry.labelKey as Parameters<typeof t>[0]);
   const scheduledAt = booking.scheduledAt.toDate();
   const isPast = scheduledAt < new Date();
   const canCancel = (booking.status === 'confirmed' || booking.status === 'pending') && !isPast;
@@ -182,8 +185,8 @@ export default function BookingDetailPage() {
             <div className="mb-2 flex items-center gap-3 last:mb-0">
               <CheckCircle className="h-6 w-6 text-success" />
               <div>
-                <p className="font-semibold text-success">Prenotazione confermata!</p>
-                <p className="text-sm text-success/80">Riceverai una conferma via email.</p>
+                <p className="font-semibold text-success">{t('bookings.detail.confirmedTitle')}</p>
+                <p className="text-sm text-success/80">{t('bookings.detail.confirmedSubtitle')}</p>
               </div>
             </div>
           )}
@@ -191,8 +194,8 @@ export default function BookingDetailPage() {
             <div className="mb-2 flex items-center gap-3 last:mb-0">
               <RotateCcw className="h-6 w-6 text-success" />
               <div>
-                <p className="font-semibold text-success">Prenotazione riprogrammata</p>
-                <p className="text-sm text-success/80">Il nuovo slot e stato salvato con successo.</p>
+                <p className="font-semibold text-success">{t('bookings.detail.rescheduledTitle')}</p>
+                <p className="text-sm text-success/80">{t('bookings.detail.rescheduledSubtitle')}</p>
               </div>
             </div>
           )}
@@ -200,8 +203,8 @@ export default function BookingDetailPage() {
             <div className="mb-2 flex items-center gap-3 last:mb-0">
               <Star className="h-6 w-6 text-success" />
               <div>
-                <p className="font-semibold text-success">Recensione inviata</p>
-                <p className="text-sm text-success/80">Grazie, il tuo feedback e stato registrato.</p>
+                <p className="font-semibold text-success">{t('bookings.detail.reviewedTitle')}</p>
+                <p className="text-sm text-success/80">{t('bookings.detail.reviewedSubtitle')}</p>
               </div>
             </div>
           )}
@@ -209,9 +212,9 @@ export default function BookingDetailPage() {
             <div className="flex items-center gap-3">
               <AlertCircle className="h-6 w-6 text-warning" />
               <div>
-                <p className="font-semibold text-warning">Anteprima dati</p>
+                <p className="font-semibold text-warning">{t('bookings.detail.fallbackTitle')}</p>
                 <p className="text-sm text-warning/90">
-                  Questa prenotazione usa dati demo finche non viene caricata dal backend.
+                  {t('bookings.detail.fallbackSubtitle')}
                 </p>
               </div>
             </div>
@@ -229,7 +232,7 @@ export default function BookingDetailPage() {
             >
               <ChevronLeft className="w-6 h-6 text-white" />
             </button>
-            <h1 className="text-lg font-semibold text-white">Dettaglio prenotazione</h1>
+            <h1 className="text-lg font-semibold text-white">{t('bookings.detail.title')}</h1>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -254,7 +257,7 @@ export default function BookingDetailPage() {
                 booking.status === 'cancelled' && 'bg-error/20',
                 booking.status === 'completed' && 'bg-[var(--section-primary)]/20',
               )}>
-                <status.icon className={cn(
+                <statusEntry.icon className={cn(
                   'w-6 h-6',
                   booking.status === 'confirmed' && 'text-success',
                   booking.status === 'pending' && 'text-warning',
@@ -263,11 +266,11 @@ export default function BookingDetailPage() {
                 )} />
               </div>
               <div>
-                <p className="text-sm text-text-secondary">Stato</p>
-                <p className="font-semibold text-white">{status.label}</p>
+                <p className="text-sm text-text-secondary">{t('bookings.detail.statusLabel')}</p>
+                <p className="font-semibold text-white">{statusLabel}</p>
               </div>
             </div>
-            <Badge variant={status.variant}>{status.label}</Badge>
+            <Badge variant={statusEntry.variant}>{statusLabel}</Badge>
           </div>
         </div>
 
@@ -300,7 +303,7 @@ export default function BookingDetailPage() {
             <div className="mb-3 flex items-center justify-between">
               <div>
                 <p className="text-xs uppercase tracking-wide text-text-tertiary">Check-in</p>
-                <p className="font-semibold text-white">Mostra questo codice in reception</p>
+                <p className="font-semibold text-white">{t('bookings.detail.checkinLabel')}</p>
               </div>
               <Badge variant="partner" size="sm">QR Ticket</Badge>
             </div>
@@ -327,8 +330,8 @@ export default function BookingDetailPage() {
 
         {/* Date & Time */}
         <div className="bg-[#2A2D3A]/50 rounded-2xl p-4 space-y-3">
-          <h3 className="font-semibold text-white">Data e ora</h3>
-          
+          <h3 className="font-semibold text-white">{t('bookings.detail.dateAndTime')}</h3>
+
           <div className="flex items-center gap-3">
             <Calendar className="w-5 h-5 text-[var(--section-primary)]" />
             <div>
@@ -351,7 +354,7 @@ export default function BookingDetailPage() {
                   hour: '2-digit',
                   minute: '2-digit',
                 })}
-                {' '}({booking.duration} minuti)
+                {' '}{t('bookings.detail.durationLabel', { count: booking.duration })}
               </p>
             </div>
           </div>
@@ -362,7 +365,7 @@ export default function BookingDetailPage() {
               className="w-full mt-2 py-2.5 bg-white/10 rounded-xl text-sm font-medium text-white hover:bg-white/20 transition-colors flex items-center justify-center gap-2"
             >
               <Calendar className="w-4 h-4" />
-              Aggiungi al calendario
+              {t('bookings.detail.addToCalendar')}
             </button>
           )}
         </div>
@@ -370,8 +373,8 @@ export default function BookingDetailPage() {
         {/* Location */}
         {booking.location && (
           <div className="bg-[#2A2D3A]/50 rounded-2xl p-4 space-y-3">
-            <h3 className="font-semibold text-white">Location</h3>
-            
+            <h3 className="font-semibold text-white">{t('bookings.detail.location')}</h3>
+
             <div className="flex items-start gap-3">
               <MapPin className="w-5 h-5 text-[var(--section-primary)] mt-0.5" />
               <div>
@@ -382,7 +385,7 @@ export default function BookingDetailPage() {
                   rel="noopener noreferrer"
                   className="text-sm text-[var(--section-primary)] hover:underline mt-1 inline-block"
                 >
-                  Ottieni indicazioni
+                  {t('bookings.detail.getDirections')}
                 </a>
               </div>
             </div>
@@ -408,40 +411,42 @@ export default function BookingDetailPage() {
 
         {/* Payment Info */}
         <div className="bg-[#2A2D3A]/50 rounded-2xl p-4 space-y-3">
-          <h3 className="font-semibold text-white">Pagamento</h3>
-          
+          <h3 className="font-semibold text-white">{t('bookings.detail.payment')}</h3>
+
           <div className="flex items-center justify-between">
-            <span className="text-text-secondary">Stato</span>
+            <span className="text-text-secondary">{t('bookings.detail.statusLabel')}</span>
             <Badge variant={booking.paymentStatus === 'paid' ? 'success' : 'warning'}>
-              {booking.paymentStatus === 'paid' ? 'Pagato' : 'In attesa'}
+              {booking.paymentStatus === 'paid'
+                ? t('bookings.detail.paymentPaid')
+                : t('bookings.detail.paymentPending')}
             </Badge>
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="text-text-secondary">Totale</span>
+            <span className="text-text-secondary">{t('common.total')}</span>
             <span className="font-semibold text-white">{formatPrice(booking.totalPrice)}</span>
           </div>
 
           {booking.promotionCode && (
             <div className="flex items-center justify-between text-sm">
-              <span className="text-text-secondary">Codice promozionale</span>
+              <span className="text-text-secondary">{t('bookings.detail.promoCode')}</span>
               <span className="text-success">{booking.promotionCode}</span>
             </div>
           )}
 
           <button className="w-full mt-2 py-2.5 bg-white/10 rounded-xl text-sm font-medium text-white hover:bg-white/20 transition-colors flex items-center justify-center gap-2">
             <Download className="w-4 h-4" />
-            Scarica ricevuta
+            {t('bookings.detail.downloadReceipt')}
           </button>
         </div>
 
         {/* Booking ID */}
         <div className="flex items-center justify-between text-sm text-text-tertiary">
-          <span>ID Prenotazione</span>
+          <span>{t('bookings.detail.bookingId')}</span>
           <button
             onClick={() => {
               navigator.clipboard.writeText(booking.id);
-              alert('ID copiato!');
+              alert(t('bookings.detail.idCopied'));
             }}
             className="flex items-center gap-1 hover:text-white transition-colors"
           >
@@ -458,7 +463,7 @@ export default function BookingDetailPage() {
               className="w-full"
             >
               <Star className="w-5 h-5 mr-2" />
-              Lascia una recensione
+              {t('booking.card.leaveReview')}
             </Button>
           )}
 
@@ -469,7 +474,7 @@ export default function BookingDetailPage() {
               className="w-full"
             >
               <RotateCcw className="w-5 h-5 mr-2" />
-              Riprogramma
+              {t('booking.card.reschedule')}
             </Button>
           )}
 
@@ -479,7 +484,7 @@ export default function BookingDetailPage() {
               className="w-full py-3 border border-error/30 text-error rounded-xl font-medium hover:bg-error/10 transition-colors"
             >
               <X className="w-5 h-5 inline mr-2" />
-              Annulla prenotazione
+              {t('booking.card.cancelAriaLabel')}
             </button>
           )}
         </div>
@@ -494,11 +499,10 @@ export default function BookingDetailPage() {
             className="bg-[#2A2D3A] rounded-2xl p-6 w-full max-w-sm"
           >
             <h3 className="text-lg font-semibold text-white mb-2">
-              Annulla prenotazione
+              {t('bookings.detail.cancelModal.title')}
             </h3>
             <p className="text-text-secondary text-sm mb-4">
-              Sei sicuro di voler annullare questa prenotazione? 
-              La cancellazione gratuita è disponibile fino a 24 ore prima.
+              {t('bookings.detail.cancelModal.body')}
             </p>
             <div className="flex gap-3">
               <Button
@@ -506,13 +510,13 @@ export default function BookingDetailPage() {
                 onClick={() => setShowCancelModal(false)}
                 className="flex-1"
               >
-                Mantieni
+                {t('bookings.detail.cancelModal.keep')}
               </Button>
               <button
                 onClick={handleCancel}
                 className="flex-1 py-3 bg-error text-white rounded-xl font-medium hover:bg-error/90 transition-colors"
               >
-                Annulla
+                {t('common.cancel')}
               </button>
             </div>
           </motion.div>

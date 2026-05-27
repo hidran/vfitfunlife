@@ -19,6 +19,7 @@ import { motion } from 'framer-motion';
 import { cn, formatPrice } from '@/lib/utils';
 import { useBookingStore } from '@/stores/bookingStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useI18n } from '@/hooks/useI18n';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/Spinner';
@@ -28,6 +29,7 @@ import type { PaymentMethod } from '@/types/booking';
 
 export default function BookingConfirmPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const { user } = useAuthStore();
   const {
     selectedProvider,
@@ -55,12 +57,12 @@ export default function BookingConfirmPage() {
         <div className="text-center">
           <AlertCircle className="w-12 h-12 text-warning mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-white mb-2">
-            Nessuna prenotazione in corso
+            {t('bookings.confirm.noBookingTitle')}
           </h2>
           <p className="text-text-secondary mb-4">
-            Seleziona un servizio e un orario per continuare
+            {t('bookings.confirm.noBookingSubtitle')}
           </p>
-          <Button onClick={() => router.push('/booking')}>Torna alla ricerca</Button>
+          <Button onClick={() => router.push('/booking')}>{t('bookings.confirm.backToSearch')}</Button>
         </div>
       </div>
     );
@@ -78,13 +80,13 @@ export default function BookingConfirmPage() {
     try {
       await applyPromoCode(promoCode);
     } catch (err: any) {
-      setError(err.message || 'Codice non valido');
+      setError(err.message || t('bookings.confirm.promoInvalid'));
     }
   };
 
   const handleCreateBooking = async () => {
     if (!termsAccepted) {
-      setError('Accetta i termini e le condizioni per continuare');
+      setError(t('bookings.confirm.acceptTermsError'));
       return;
     }
 
@@ -111,7 +113,7 @@ export default function BookingConfirmPage() {
       const booking = await createBooking(bookingData);
       router.push(`/bookings/${booking.id}?confirmed=true`);
     } catch (err: any) {
-      setError(err.message || 'Errore durante la prenotazione');
+      setError(err.message || t('bookings.confirm.bookingError'));
       setIsCreating(false);
     }
   };
@@ -153,7 +155,7 @@ export default function BookingConfirmPage() {
           >
             <ChevronLeft className="w-6 h-6 text-white" />
           </button>
-          <h1 className="text-lg font-semibold text-white">Conferma prenotazione</h1>
+          <h1 className="text-lg font-semibold text-white">{t('bookings.confirm.title')}</h1>
         </div>
       </div>
 
@@ -194,7 +196,7 @@ export default function BookingConfirmPage() {
             <div className="flex items-center gap-3 text-sm">
               <MapPin className="w-4 h-4 text-[var(--section-primary)]" />
               <span className="text-text-secondary">
-                {selectedProvider.location?.address || 'Indirizzo da confermare'}
+                {selectedProvider.location?.address || t('bookings.confirm.addressToConfirm')}
               </span>
             </div>
           </div>
@@ -204,29 +206,29 @@ export default function BookingConfirmPage() {
         <div className="bg-[#2A2D3A]/50 rounded-2xl p-4">
           <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
             <Ticket className="w-4 h-4 text-[var(--section-primary)]" />
-            Codice promozionale
+            {t('bookings.confirm.promoTitle')}
           </h3>
-          
+
           {appliedPromo ? (
             <div className="flex items-center justify-between bg-success/10 border border-success/20 rounded-xl p-3">
               <div className="flex items-center gap-2">
                 <Check className="w-5 h-5 text-success" />
                 <div>
                   <p className="font-medium text-white">{appliedPromo.code}</p>
-                  <p className="text-sm text-success">Sconto applicato</p>
+                  <p className="text-sm text-success">{t('bookings.confirm.discountApplied')}</p>
                 </div>
               </div>
               <button
                 onClick={clearPromoCode}
                 className="text-text-tertiary hover:text-error transition-colors"
               >
-                Rimuovi
+                {t('common.remove')}
               </button>
             </div>
           ) : (
             <div className="flex gap-2">
               <Input
-                placeholder="Inserisci codice"
+                placeholder={t('bookings.confirm.promoPlaceholder')}
                 value={promoCode}
                 onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
                 className="flex-1"
@@ -236,7 +238,7 @@ export default function BookingConfirmPage() {
                 onClick={handleApplyPromo}
                 disabled={!promoCode.trim() || isApplyingPromo}
               >
-                {isApplyingPromo ? <Spinner size="sm" /> : 'Applica'}
+                {isApplyingPromo ? <Spinner size="sm" /> : t('bookings.confirm.promoApply')}
               </Button>
             </div>
           )}
@@ -247,15 +249,15 @@ export default function BookingConfirmPage() {
           <div className="bg-[#2A2D3A]/50 rounded-2xl p-4">
             <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
               <Coins className="w-4 h-4 text-[var(--section-accent)]" />
-              Utilizza punti
+              {t('bookings.confirm.pointsTitle')}
             </h3>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-text-secondary text-sm">
-                  Hai <span className="text-[var(--section-accent)] font-semibold">{user.pointsBalance.toLocaleString()}</span> punti
+                  {t('bookings.confirm.pointsBalance', { count: user.pointsBalance.toLocaleString() })}
                 </p>
                 <p className="text-xs text-text-tertiary">
-                  Valore: {formatPrice(user.pointsBalance * 0.01)}
+                  {t('bookings.confirm.pointsValue', { price: formatPrice(user.pointsBalance * 0.01) })}
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -290,7 +292,7 @@ export default function BookingConfirmPage() {
         <div className="bg-[#2A2D3A]/50 rounded-2xl p-4">
           <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
             <CreditCard className="w-4 h-4 text-[var(--section-primary)]" />
-            Metodo di pagamento
+            {t('bookings.confirm.paymentTitle')}
           </h3>
           <PaymentMethodSelector
             methods={paymentMethods}
@@ -317,15 +319,15 @@ export default function BookingConfirmPage() {
             {termsAccepted && <Check className="w-3 h-3 text-white" />}
           </button>
           <p className="text-sm text-text-secondary leading-relaxed">
-            Accetto i{' '}
+            {t('bookings.confirm.termsPrefix')}{' '}
             <button className="text-[var(--section-primary)] underline">
-              Termini di servizio
+              {t('bookings.confirm.termsOfService')}
             </button>{' '}
-            e la{' '}
+            {t('bookings.confirm.termsAnd')}{' '}
             <button className="text-[var(--section-primary)] underline">
-              Politica di cancellazione
+              {t('bookings.confirm.cancellationPolicy')}
             </button>
-            . Cancellazione gratuita entro 24 ore.
+            {'. '}{t('bookings.confirm.termsSuffix')}
           </p>
         </div>
 
@@ -346,7 +348,7 @@ export default function BookingConfirmPage() {
       <div className="fixed bottom-0 left-0 right-0 bg-[#2A2D3A] border-t border-white/10 p-4 safe-area-pb">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-text-secondary text-sm">Totale</p>
+            <p className="text-text-secondary text-sm">{t('common.total')}</p>
             <p className="text-2xl font-bold text-white">{formatPrice(totalPrice)}</p>
           </div>
           <Button
@@ -357,12 +359,12 @@ export default function BookingConfirmPage() {
             {isCreating ? (
               <>
                 <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Attendi...
+                {t('bookings.confirm.waiting')}
               </>
             ) : (
               <>
                 <Shield className="w-5 h-5 mr-2" />
-                Conferma
+                {t('bookings.confirm.confirmBtn')}
               </>
             )}
           </Button>
