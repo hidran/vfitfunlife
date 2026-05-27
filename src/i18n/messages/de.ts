@@ -1486,4 +1486,20 @@ export const deMessages: Messages = {
   'provider.calendar.view.day': 'Tag',
   'provider.calendar.view.agenda': 'Agenda',
   'provider.calendar.more': '+{{count}} weitere',
+
+  // SplashScreen
+  'splash.tapToContinue': 'Tippen zum Fortfahren',
+
+  // EarningsChart
+  'provider.earningsChart.title': 'Einnahmenübersicht',
+  'provider.earningsChart.subtitle': 'Verfolgen Sie Einnahmen und Buchungen über die Zeit',
+  'provider.earningsChart.range.7d': '7 Tage',
+  'provider.earningsChart.range.30d': '30 Tage',
+  'provider.earningsChart.range.90d': '3 Monate',
+  'provider.earningsChart.range.1y': '1 Jahr',
+  'provider.earningsChart.stat.totalEarnings': 'Gesamteinnahmen',
+  'provider.earningsChart.stat.totalBookings': 'Gesamtbuchungen',
+  'provider.earningsChart.stat.avgPerBooking': 'Ø pro Buchung',
+  'provider.earningsChart.noData': 'Keine Daten verfügbar',
+  'provider.earningsChart.tooltip.bookings': '{{count}} Buchungen',
 };

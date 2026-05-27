@@ -2,6 +2,7 @@
 
 import { useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useI18n } from '@/hooks/useI18n';
 
 interface SplashScreenProps {
   onComplete: () => void;
@@ -18,6 +19,8 @@ const gradients = {
 const taglineSegments = ['FIT', 'FUN', 'LIFE'];
 
 export function SplashScreen({ onComplete }: SplashScreenProps) {
+  const { t } = useI18n();
+
   // Auto-advance after 2 seconds
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -111,7 +114,7 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
           animate={{ opacity: 0.5 }}
           transition={{ delay: 1.2, duration: 0.3 }}
         >
-          Tap to continue
+          {t('splash.tapToContinue')}
         </motion.p>
       </motion.div>
     </AnimatePresence>

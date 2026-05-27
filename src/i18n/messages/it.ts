@@ -1477,6 +1477,22 @@ export const itMessages = {
   'provider.calendar.view.day': 'Giorno',
   'provider.calendar.view.agenda': 'Agenda',
   'provider.calendar.more': '+{{count}} altri',
+
+  // SplashScreen
+  'splash.tapToContinue': 'Tocca per continuare',
+
+  // EarningsChart
+  'provider.earningsChart.title': 'Panoramica guadagni',
+  'provider.earningsChart.subtitle': 'Monitora ricavi e prenotazioni nel tempo',
+  'provider.earningsChart.range.7d': '7 giorni',
+  'provider.earningsChart.range.30d': '30 giorni',
+  'provider.earningsChart.range.90d': '3 mesi',
+  'provider.earningsChart.range.1y': '1 anno',
+  'provider.earningsChart.stat.totalEarnings': 'Totale guadagni',
+  'provider.earningsChart.stat.totalBookings': 'Totale prenotazioni',
+  'provider.earningsChart.stat.avgPerBooking': 'Media per prenotazione',
+  'provider.earningsChart.noData': 'Nessun dato disponibile',
+  'provider.earningsChart.tooltip.bookings': '{{count}} prenotazioni',
 } as const;
 
 export type MessageKey = keyof typeof itMessages;

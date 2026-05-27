@@ -1477,4 +1477,20 @@ export const enMessages: Messages = {
   'provider.calendar.view.day': 'Day',
   'provider.calendar.view.agenda': 'Agenda',
   'provider.calendar.more': '+{{count}} more',
+
+  // SplashScreen
+  'splash.tapToContinue': 'Tap to continue',
+
+  // EarningsChart
+  'provider.earningsChart.title': 'Earnings Overview',
+  'provider.earningsChart.subtitle': 'Track your revenue and bookings over time',
+  'provider.earningsChart.range.7d': '7 Days',
+  'provider.earningsChart.range.30d': '30 Days',
+  'provider.earningsChart.range.90d': '3 Months',
+  'provider.earningsChart.range.1y': '1 Year',
+  'provider.earningsChart.stat.totalEarnings': 'Total Earnings',
+  'provider.earningsChart.stat.totalBookings': 'Total Bookings',
+  'provider.earningsChart.stat.avgPerBooking': 'Avg. per Booking',
+  'provider.earningsChart.noData': 'No data available',
+  'provider.earningsChart.tooltip.bookings': '{{count}} bookings',
 };

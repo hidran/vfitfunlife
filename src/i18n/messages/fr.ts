@@ -1488,4 +1488,20 @@ export const frMessages: Messages = {
   'provider.calendar.view.day': 'Jour',
   'provider.calendar.view.agenda': 'Agenda',
   'provider.calendar.more': '+{{count}} de plus',
+
+  // SplashScreen
+  'splash.tapToContinue': 'Appuyer pour continuer',
+
+  // EarningsChart
+  'provider.earningsChart.title': 'Aperçu des gains',
+  'provider.earningsChart.subtitle': 'Suivez vos revenus et réservations dans le temps',
+  'provider.earningsChart.range.7d': '7 jours',
+  'provider.earningsChart.range.30d': '30 jours',
+  'provider.earningsChart.range.90d': '3 mois',
+  'provider.earningsChart.range.1y': '1 an',
+  'provider.earningsChart.stat.totalEarnings': 'Total des gains',
+  'provider.earningsChart.stat.totalBookings': 'Total des réservations',
+  'provider.earningsChart.stat.avgPerBooking': 'Moy. par réservation',
+  'provider.earningsChart.noData': 'Aucune donnée disponible',
+  'provider.earningsChart.tooltip.bookings': '{{count}} réservations',
 };

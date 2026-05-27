@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, BarChart3, LineChart as LineChartIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/hooks/useI18n';
 
 interface ChartData {
   date: string;
@@ -20,6 +21,7 @@ type ChartType = 'line' | 'bar';
 type TimeRange = '7d' | '30d' | '90d' | '1y';
 
 export function EarningsChart({ data, className }: EarningsChartProps) {
+  const { t } = useI18n();
   const [chartType, setChartType] = useState<ChartType>('line');
   const [timeRange, setTimeRange] = useState<TimeRange>('30d');
 
@@ -66,9 +68,9 @@ export function EarningsChart({ data, className }: EarningsChartProps) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h3 className="text-lg font-semibold text-white">Earnings Overview</h3>
+          <h3 className="text-lg font-semibold text-white">{t('provider.earningsChart.title')}</h3>
           <p className="text-sm text-gray-400 mt-1">
-            Track your revenue and bookings over time
+            {t('provider.earningsChart.subtitle')}
           </p>
         </div>
         
@@ -85,10 +87,10 @@ export function EarningsChart({ data, className }: EarningsChartProps) {
                     : 'text-gray-400 hover:text-white'
                 )}
               >
-                {range === '7d' && '7 Days'}
-                {range === '30d' && '30 Days'}
-                {range === '90d' && '3 Months'}
-                {range === '1y' && '1 Year'}
+                {range === '7d' && t('provider.earningsChart.range.7d')}
+                {range === '30d' && t('provider.earningsChart.range.30d')}
+                {range === '90d' && t('provider.earningsChart.range.90d')}
+                {range === '1y' && t('provider.earningsChart.range.1y')}
               </button>
             ))}
           </div>
@@ -121,7 +123,7 @@ export function EarningsChart({ data, className }: EarningsChartProps) {
         <div className="bg-[#1A1D29] rounded-lg p-4">
           <div className="flex items-center gap-2 text-gray-400 text-sm mb-1">
             <DollarSign className="w-4 h-4" />
-            Total Earnings
+            {t('provider.earningsChart.stat.totalEarnings')}
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-bold text-white">
@@ -144,7 +146,7 @@ export function EarningsChart({ data, className }: EarningsChartProps) {
         <div className="bg-[#1A1D29] rounded-lg p-4">
           <div className="flex items-center gap-2 text-gray-400 text-sm mb-1">
             <BarChart3 className="w-4 h-4" />
-            Total Bookings
+            {t('provider.earningsChart.stat.totalBookings')}
           </div>
           <p className="text-2xl font-bold text-white">{stats.totalBookings}</p>
         </div>
@@ -152,7 +154,7 @@ export function EarningsChart({ data, className }: EarningsChartProps) {
         <div className="bg-[#1A1D29] rounded-lg p-4">
           <div className="flex items-center gap-2 text-gray-400 text-sm mb-1">
             <DollarSign className="w-4 h-4" />
-            Avg. per Booking
+            {t('provider.earningsChart.stat.avgPerBooking')}
           </div>
           <p className="text-2xl font-bold text-white">
             €{stats.avgEarnings.toFixed(2)}
@@ -164,7 +166,7 @@ export function EarningsChart({ data, className }: EarningsChartProps) {
       <div className="relative h-64">
         {filteredData.length === 0 ? (
           <div className="absolute inset-0 flex items-center justify-center">
-            <p className="text-gray-400">No data available</p>
+            <p className="text-gray-400">{t('provider.earningsChart.noData')}</p>
           </div>
         ) : (
           <div className="absolute inset-0 flex items-end gap-1">
@@ -185,7 +187,7 @@ export function EarningsChart({ data, className }: EarningsChartProps) {
                         €{item.earnings.toFixed(2)}
                       </p>
                       <p className="text-blue-400 font-medium">
-                        {item.bookings} bookings
+                        {t('provider.earningsChart.tooltip.bookings', { count: item.bookings })}
                       </p>
                     </div>
                   </div>
