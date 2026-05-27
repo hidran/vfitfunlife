@@ -2355,6 +2355,40 @@ export const itMessages = {
   'providerReviews.filter.all': 'Tutte',
   'providerReviews.filter.stars': '{{count}} stelle',
   'providerReviews.noReviews': 'Nessuna recensione per il filtro selezionato.',
+
+  // ─── Privacy Policy ───────────────────────────────────────────────────
+  'privacy.title': 'Privacy Policy',
+  'privacy.effectiveDateLabel': 'Data di efficacia:',
+  'privacy.intro': "VFit tratta i dati personali nel rispetto delle normative applicabili, inclusi i principi del GDPR. Questa informativa spiega quali dati raccogliamo, come li usiamo e quali diritti puoi esercitare.",
+  'privacy.s1.title': '1. Dati raccolti',
+  'privacy.s1.body': 'Raccogliamo dati di account (nome, email, telefono), dati operativi di prenotazione, informazioni di pagamento tokenizzate tramite provider terzi e dati tecnici necessari per sicurezza e miglioramento del servizio.',
+  'privacy.s2.title': '2. Finalità del trattamento',
+  'privacy.s2.body': 'Utilizziamo i dati per erogare la piattaforma, confermare booking, prevenire frodi, fornire assistenza, inviare comunicazioni di servizio e gestire eventuali obblighi fiscali o legali.',
+  'privacy.s3.title': '3. Conservazione',
+  'privacy.s3.body': 'Conserviamo i dati per il tempo strettamente necessario alle finalità indicate e in conformità ai tempi di legge. I dati non più necessari vengono cancellati o anonimizzati.',
+  'privacy.s4.title': "4. Diritti dell'utente",
+  'privacy.s4.body': 'Puoi richiedere accesso, rettifica, cancellazione, limitazione, portabilità e opposizione al trattamento. Per esercitare i diritti puoi contattarci via email.',
+  'privacy.s5.title': '5. Contatti privacy',
+  'privacy.s5.body': 'Per richieste privacy:',
+  'privacy.linkToTerms': 'Leggi i Termini di Servizio',
+  'privacy.backToLogin': 'Torna al Login',
+
+  // ─── Terms of Service ─────────────────────────────────────────────────
+  'terms.title': 'Termini di Servizio',
+  'terms.effectiveDateLabel': 'Data di efficacia:',
+  'terms.intro': "Utilizzando VFit accetti i presenti Termini di Servizio. Se non accetti i termini, interrompi l'uso della piattaforma.",
+  'terms.s1.title': '1. Oggetto del servizio',
+  'terms.s1.body': 'VFit fornisce strumenti digitali per ricerca, prenotazione e gestione di servizi fitness, wellness e intrattenimento, inclusa interazione con provider terzi.',
+  'terms.s2.title': '2. Account e responsabilità',
+  'terms.s2.body': "L'utente è responsabile della correttezza dei dati forniti e della sicurezza delle credenziali. Qualsiasi uso improprio dell'account deve essere segnalato tempestivamente.",
+  'terms.s3.title': '3. Prenotazioni, cancellazioni e rimborsi',
+  'terms.s3.body': 'Le condizioni di cancellazione e rimborso possono variare in base al provider e al tipo di servizio prenotato. Le policy applicabili sono mostrate durante il checkout.',
+  'terms.s4.title': '4. Condotte vietate',
+  'terms.s4.body': "Non è consentito utilizzare la piattaforma per attività fraudolente, abusive o in violazione di legge. VFit può sospendere o limitare account in caso di violazioni.",
+  'terms.s5.title': '5. Contatti',
+  'terms.s5.body': 'Per richieste legali o contrattuali:',
+  'terms.linkToPrivacy': 'Leggi la Privacy Policy',
+  'terms.backToLogin': 'Torna al Login',
 } as const;
 
 export type MessageKey = keyof typeof itMessages;
