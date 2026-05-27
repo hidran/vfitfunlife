@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter, useParams } from 'next/navigation';
+import { useI18n } from '@/hooks/useI18n';
 import {
   ChevronLeft,
   Star,
@@ -48,6 +49,7 @@ interface ProviderPublicProfile {
 }
 
 export default function ProviderProfileClient() {
+  const { t } = useI18n();
   const router = useRouter();
   const params = useParams();
   const providerId = params.id as string;
@@ -70,14 +72,14 @@ export default function ProviderProfileClient() {
         // Check if user is a provider
         const isProv = await isProvider(providerId);
         if (!isProv) {
-          setError('Provider not found');
+          setError(t('providerProfile.error.notFound'));
           return;
         }
 
         // Get user data
         const userData = await getUserData(providerId);
         if (!userData) {
-          setError('Provider not found');
+          setError(t('providerProfile.error.notFound'));
           return;
         }
 
@@ -99,7 +101,7 @@ export default function ProviderProfileClient() {
         setPortfolioImages(images);
       } catch (err) {
         console.error('Error loading provider profile:', err);
-        setError('Failed to load provider profile');
+        setError(t('providerProfile.error.loadFailed'));
       } finally {
         setIsLoading(false);
       }
@@ -148,9 +150,9 @@ export default function ProviderProfileClient() {
   if (error || !profile) {
     return (
       <div className="min-h-screen bg-background-dark flex flex-col items-center justify-center p-4">
-        <p className="text-error text-lg">{error || 'Provider not found'}</p>
+        <p className="text-error text-lg">{error || t('providerProfile.error.notFound')}</p>
         <Button variant="primary" className="mt-4" onClick={() => router.back()}>
-          Go Back
+          {t('providerProfile.goBack')}
         </Button>
       </div>
     );
@@ -224,7 +226,7 @@ export default function ProviderProfileClient() {
               <div className="flex items-center gap-1 mt-1">
                 <Badge variant="success" size="sm">
                   <Check size={10} className="mr-1" />
-                  Verified
+                  {t('providerProfile.verified')}
                 </Badge>
               </div>
             )}
@@ -234,7 +236,7 @@ export default function ProviderProfileClient() {
               <div className="flex items-center gap-2 mt-2">
                 <Rating value={providerData.rating} size="sm" />
                 <span className="text-sm text-text-secondary">
-                  {providerData.rating.toFixed(1)} ({providerData.reviewCount} reviews)
+                  {providerData.rating.toFixed(1)} {t('providerProfile.reviews', { count: providerData.reviewCount })}
                 </span>
               </div>
             )}
@@ -242,7 +244,7 @@ export default function ProviderProfileClient() {
             {/* Years of Experience */}
             {providerData && providerData.yearsOfExperience > 0 && (
               <p className="text-sm text-text-tertiary mt-1">
-                {providerData?.yearsOfExperience} {(providerData?.yearsOfExperience || 0) === 1 ? 'year' : 'years'} experience
+                {providerData?.yearsOfExperience} {(providerData?.yearsOfExperience || 0) === 1 ? t('providerProfile.experience.year') : t('providerProfile.experience.years')} {t('providerProfile.experience.suffix')}
               </p>
             )}
           </div>
@@ -259,11 +261,11 @@ export default function ProviderProfileClient() {
         <div className="flex gap-3 mt-6">
           <Button variant="primary" size="lg" fullWidth onClick={handleBookNow}>
             <Calendar size={20} className="mr-2" />
-            Book Now
+            {t('providerProfile.bookNow')}
           </Button>
           <Button variant="secondary" size="lg" className="flex-1" onClick={handleContact}>
             <MessageSquare size={20} className="mr-2" />
-            Contact
+            {t('providerProfile.contact')}
           </Button>
         </div>
       </div>
@@ -273,7 +275,7 @@ export default function ProviderProfileClient() {
         <div className="px-4 py-4 border-t border-white/5">
           <div className="flex items-center gap-2 mb-3">
             <Briefcase size={18} className="text-section-primary" />
-            <h2 className="font-semibold text-text-inverse">Specialties</h2>
+            <h2 className="font-semibold text-text-inverse">{t('providerProfile.specialties')}</h2>
           </div>
           <div className="flex flex-wrap gap-2">
             {providerData.specialties.map((specialty) => (
@@ -293,7 +295,7 @@ export default function ProviderProfileClient() {
         <div className="px-4 py-4 border-t border-white/5">
           <div className="flex items-center gap-2 mb-3">
             <Clock size={18} className="text-section-primary" />
-            <h2 className="font-semibold text-text-inverse">Services</h2>
+            <h2 className="font-semibold text-text-inverse">{t('providerProfile.services')}</h2>
           </div>
           <div className="space-y-3">
             {providerData.servicePricing
@@ -312,7 +314,7 @@ export default function ProviderProfileClient() {
                       <div className="flex items-center gap-3 mt-2">
                         <span className="flex items-center gap-1 text-sm text-text-tertiary">
                           <Clock size={14} />
-                          {service.durationMinutes} min
+                          {t('providerProfile.durationMin', { count: service.durationMinutes })}
                         </span>
                       </div>
                     </div>
@@ -333,7 +335,7 @@ export default function ProviderProfileClient() {
         <div className="px-4 py-4 border-t border-white/5">
           <div className="flex items-center gap-2 mb-3">
             <Globe size={18} className="text-section-primary" />
-            <h2 className="font-semibold text-text-inverse">Portfolio</h2>
+            <h2 className="font-semibold text-text-inverse">{t('providerProfile.portfolio')}</h2>
           </div>
           <div className="grid grid-cols-3 gap-2">
             {portfolioImages.map((image, index) => (
@@ -344,7 +346,7 @@ export default function ProviderProfileClient() {
               >
                 <Image
                   src={image}
-                  alt={`Portfolio ${index + 1}`}
+                  alt={t('providerProfile.portfolioAlt', { index: index + 1 })}
                   fill
                   sizes="(max-width: 768px) 33vw, 160px"
                   unoptimized
@@ -361,7 +363,7 @@ export default function ProviderProfileClient() {
         <div className="px-4 py-4 border-t border-white/5">
           <div className="flex items-center gap-2 mb-3">
             <Award size={18} className="text-section-primary" />
-            <h2 className="font-semibold text-text-inverse">Certifications</h2>
+            <h2 className="font-semibold text-text-inverse">{t('providerProfile.certifications')}</h2>
           </div>
           <div className="space-y-3">
             {providerData.certifications.map((cert) => (
@@ -377,12 +379,12 @@ export default function ProviderProfileClient() {
                   <p className="text-xs text-text-secondary">{cert.issuingOrganization}</p>
                   <div className="flex items-center gap-3 mt-1">
                     <span className="text-xs text-text-tertiary">
-                      Issued: {formatDate(cert.issueDate)}
+                      {t('providerProfile.certIssuedPrefix', { date: formatDate(cert.issueDate) })}
                     </span>
                     {cert.isVerified && (
                       <span className="flex items-center gap-0.5 text-xs text-success-DEFAULT">
                         <Check size={10} />
-                        Verified
+                        {t('providerProfile.certVerified')}
                       </span>
                     )}
                   </div>
@@ -398,7 +400,7 @@ export default function ProviderProfileClient() {
         <div className="px-4 py-4 border-t border-white/5">
           <div className="flex items-center gap-2 mb-3">
             <GraduationCap size={18} className="text-section-primary" />
-            <h2 className="font-semibold text-text-inverse">Education</h2>
+            <h2 className="font-semibold text-text-inverse">{t('providerProfile.education')}</h2>
           </div>
           <div className="space-y-3">
             {providerData.education.map((edu) => (
@@ -412,10 +414,10 @@ export default function ProviderProfileClient() {
                 <div className="flex-1 min-w-0">
                   <h3 className="font-medium text-text-inverse text-sm">{edu.institution}</h3>
                   <p className="text-xs text-text-secondary">
-                    {edu.degree} in {edu.fieldOfStudy}
+                    {t('providerProfile.educationDegreeIn', { degree: edu.degree, fieldOfStudy: edu.fieldOfStudy })}
                   </p>
                   <p className="text-xs text-text-tertiary mt-1">
-                    {formatDate(edu.startDate)} - {edu.isOngoing ? 'Present' : formatDate(edu.endDate)}
+                    {formatDate(edu.startDate)} - {edu.isOngoing ? t('providerProfile.educationPresent') : formatDate(edu.endDate)}
                   </p>
                 </div>
               </div>
@@ -429,7 +431,7 @@ export default function ProviderProfileClient() {
         <div className="px-4 py-4 border-t border-white/5">
           <div className="flex items-center gap-2 mb-3">
             <Languages size={18} className="text-section-primary" />
-            <h2 className="font-semibold text-text-inverse">Languages</h2>
+            <h2 className="font-semibold text-text-inverse">{t('providerProfile.languages')}</h2>
           </div>
           <div className="flex flex-wrap gap-2">
             {providerData.languages.map((language) => (
@@ -449,15 +451,15 @@ export default function ProviderProfileClient() {
         <div className="px-4 py-4 border-t border-white/5">
           <div className="flex items-center gap-2 mb-3">
             <Shield size={18} className="text-section-primary" />
-            <h2 className="font-semibold text-text-inverse">Professional License</h2>
+            <h2 className="font-semibold text-text-inverse">{t('providerProfile.license')}</h2>
           </div>
           <div className="p-4 rounded-xl bg-background-secondary/5 border border-white/5">
-            <p className="text-sm text-text-secondary">License Number</p>
+            <p className="text-sm text-text-secondary">{t('providerProfile.licenseNumber')}</p>
             <p className="font-mono text-text-inverse mt-1">{providerData.licenseNumber}</p>
             {providerData.isVerified && (
               <div className="flex items-center gap-1 mt-2 text-success-DEFAULT text-sm">
                 <Check size={14} />
-                <span>Verified by VFit</span>
+                <span>{t('providerProfile.verifiedByVFit')}</span>
               </div>
             )}
           </div>
@@ -467,7 +469,7 @@ export default function ProviderProfileClient() {
       {/* Cancellation Policy */}
       {providerData?.cancellationPolicy && (
         <div className="px-4 py-4 border-t border-white/5">
-          <h2 className="font-semibold text-text-inverse mb-2">Cancellation Policy</h2>
+          <h2 className="font-semibold text-text-inverse mb-2">{t('providerProfile.cancellationPolicy')}</h2>
           <p className="text-sm text-text-secondary">{providerData.cancellationPolicy}</p>
         </div>
       )}
@@ -475,7 +477,7 @@ export default function ProviderProfileClient() {
       {/* Social Links */}
       {profile.socialLinks && Object.values(profile.socialLinks).some((v) => v) && (
         <div className="px-4 py-4 border-t border-white/5">
-          <h2 className="font-semibold text-text-inverse mb-3">Connect</h2>
+          <h2 className="font-semibold text-text-inverse mb-3">{t('providerProfile.connect')}</h2>
           <div className="flex flex-wrap gap-3">
             {profile.socialLinks.website && (
               <a
@@ -485,7 +487,7 @@ export default function ProviderProfileClient() {
                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-background-secondary/10 text-text-secondary hover:bg-background-secondary/20 transition-colors"
               >
                 <Globe size={16} />
-                <span className="text-sm">Website</span>
+                <span className="text-sm">{t('providerProfile.website')}</span>
               </a>
             )}
             {profile.socialLinks.instagram && (

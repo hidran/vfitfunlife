@@ -26,23 +26,34 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/Badge';
 import { useProviderStore } from '@/stores/providerStore';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/hooks/useI18n';
 
-const STATUS_BADGES = {
-  pending: { variant: 'warning' as const, label: 'Pending' },
-  confirmed: { variant: 'success' as const, label: 'Confirmed' },
-  in_progress: { variant: 'info' as const, label: 'In Progress' },
-  completed: { variant: 'default' as const, label: 'Completed' },
-  cancelled: { variant: 'error' as const, label: 'Cancelled' },
-  no_show: { variant: 'error' as const, label: 'No Show' },
+const STATUS_BADGE_VARIANTS = {
+  pending: 'warning' as const,
+  confirmed: 'success' as const,
+  in_progress: 'info' as const,
+  completed: 'default' as const,
+  cancelled: 'error' as const,
+  no_show: 'error' as const,
 };
 
 export default function BookingDetailClient() {
+  const { t } = useI18n();
   const { id } = useParams<{ id: string }>();
   const { bookings, confirmBooking, completeBooking, cancelBooking } = useProviderStore();
   const booking = bookings.find((entry) => entry.id === id);
   const [showNotes, setShowNotes] = useState(false);
   const [privateNotes, setPrivateNotes] = useState('');
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+
+  const STATUS_BADGE_LABELS: Record<string, string> = {
+    pending: t('provider.bookingTable.status.pending'),
+    confirmed: t('provider.bookingTable.status.confirmed'),
+    in_progress: t('provider.bookingTable.status.inProgress'),
+    completed: t('provider.bookingTable.status.completed'),
+    cancelled: t('provider.bookingTable.status.cancelled'),
+    no_show: t('provider.bookingTable.status.noShow'),
+  };
 
   if (!booking) {
     return (
@@ -51,10 +62,10 @@ export default function BookingDetailClient() {
           <div className="w-16 h-16 bg-[#2A2D3A] rounded-full flex items-center justify-center mx-auto mb-4">
             <Calendar className="w-8 h-8 text-gray-500" />
           </div>
-          <h2 className="text-xl font-semibold text-white mb-2">Booking not found</h2>
+          <h2 className="text-xl font-semibold text-white mb-2">{t('provider.bookingDetail.notFound')}</h2>
           <Link href="/provider/bookings">
             <Button variant="secondary" className="mt-4">
-              Back to Bookings
+              {t('provider.bookingDetail.backToBookings')}
             </Button>
           </Link>
         </div>
@@ -71,7 +82,7 @@ export default function BookingDetailClient() {
   };
 
   const handleCancel = async () => {
-    if (confirm('Are you sure you want to cancel this booking?')) {
+    if (confirm(t('provider.bookingDetail.cancelConfirm'))) {
       await cancelBooking(booking.id);
     }
   };
@@ -102,7 +113,8 @@ export default function BookingDetailClient() {
     return new Date(d).toLocaleString('en-US');
   };
 
-  const statusBadge = STATUS_BADGES[booking.status];
+  const statusBadgeVariant = STATUS_BADGE_VARIANTS[booking.status as keyof typeof STATUS_BADGE_VARIANTS] ?? 'default';
+  const statusBadgeLabel = STATUS_BADGE_LABELS[booking.status] ?? booking.status;
 
   return (
     <div className="space-y-6">
@@ -112,20 +124,20 @@ export default function BookingDetailClient() {
         className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
-        Back to Bookings
+        {t('provider.bookingDetail.backToBookings')}
       </Link>
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-2xl font-bold text-white">Booking Details</h1>
-            <Badge variant={statusBadge.variant} size="md">
-              {statusBadge.label}
+            <h1 className="text-2xl font-bold text-white">{t('provider.bookingDetail.title')}</h1>
+            <Badge variant={statusBadgeVariant} size="md">
+              {statusBadgeLabel}
             </Badge>
           </div>
           <p className="text-gray-400">
-            Booking ID: {booking.id}
+            {t('provider.bookingDetail.bookingId', { id: booking.id })}
           </p>
         </div>
 
@@ -134,11 +146,11 @@ export default function BookingDetailClient() {
             <>
               <Button onClick={handleConfirm}>
                 <CheckCircle className="w-4 h-4 mr-2" />
-                Confirm
+                {t('provider.bookingDetail.confirm')}
               </Button>
               <Button variant="outline" onClick={handleCancel} className="border-red-500/50 text-red-400 hover:bg-red-500/10">
                 <XCircle className="w-4 h-4 mr-2" />
-                Decline
+                {t('provider.bookingDetail.decline')}
               </Button>
             </>
           )}
@@ -146,21 +158,21 @@ export default function BookingDetailClient() {
             <>
               <Button onClick={handleComplete}>
                 <CheckCircle className="w-4 h-4 mr-2" />
-                Mark Complete
+                {t('provider.bookingDetail.markComplete')}
               </Button>
               <Button
                 variant="secondary"
                 onClick={() => setShowRescheduleModal(true)}
               >
                 <RefreshCw className="w-4 h-4 mr-2" />
-                Reschedule
+                {t('provider.bookingDetail.reschedule')}
               </Button>
             </>
           )}
           {(booking.status === 'confirmed' || booking.status === 'pending') && (
             <Button variant="outline" onClick={handleCancel} className="border-red-500/50 text-red-400 hover:bg-red-500/10">
               <XCircle className="w-4 h-4 mr-2" />
-              Cancel
+              {t('provider.bookingDetail.cancel')}
             </Button>
           )}
         </div>
@@ -171,7 +183,7 @@ export default function BookingDetailClient() {
         <div className="lg:col-span-2 space-y-6">
           {/* Client Card */}
           <div className="bg-[#2A2D3A] rounded-xl border border-white/5 p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">Client Information</h3>
+            <h3 className="text-lg font-semibold text-white mb-4">{t('provider.bookingDetail.clientInfo')}</h3>
             <div className="flex items-start gap-4">
               {booking.clientPhotoUrl ? (
                 <Image
@@ -205,12 +217,12 @@ export default function BookingDetailClient() {
                   <Link href={`/provider/clients/${booking.userId}`}>
                     <Button variant="secondary" size="sm">
                       <User className="w-4 h-4 mr-2" />
-                      View Profile
+                      {t('provider.bookingDetail.viewProfile')}
                     </Button>
                   </Link>
                   <Button variant="secondary" size="sm">
                     <MessageSquare className="w-4 h-4 mr-2" />
-                    Message
+                    {t('provider.bookingDetail.message')}
                   </Button>
                 </div>
               </div>
@@ -219,18 +231,18 @@ export default function BookingDetailClient() {
 
           {/* Service Details */}
           <div className="bg-[#2A2D3A] rounded-xl border border-white/5 p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">Service Details</h3>
+            <h3 className="text-lg font-semibold text-white mb-4">{t('provider.bookingDetail.serviceDetails')}</h3>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-gray-400">Service</span>
+                <span className="text-gray-400">{t('provider.bookingDetail.service')}</span>
                 <span className="text-white font-medium">{booking.serviceName}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-gray-400">Duration</span>
-                <span className="text-white">{booking.durationMinutes} minutes</span>
+                <span className="text-gray-400">{t('provider.bookingDetail.duration')}</span>
+                <span className="text-white">{t('provider.bookingDetail.durationMinutes', { count: booking.durationMinutes })}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-gray-400">Type</span>
+                <span className="text-gray-400">{t('provider.bookingDetail.type')}</span>
                 <span className={cn(
                   'text-sm capitalize',
                   booking.bookingType === 'virtual' && 'text-blue-400',
@@ -242,7 +254,7 @@ export default function BookingDetailClient() {
               </div>
               {booking.venueName && (
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-400">Location</span>
+                  <span className="text-gray-400">{t('provider.bookingDetail.location')}</span>
                   <span className="text-white">{booking.venueName}</span>
                 </div>
               )}
@@ -251,7 +263,7 @@ export default function BookingDetailClient() {
 
           {/* Schedule */}
           <div className="bg-[#2A2D3A] rounded-xl border border-white/5 p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">Schedule</h3>
+            <h3 className="text-lg font-semibold text-white mb-4">{t('provider.bookingDetail.schedule')}</h3>
             <div className="space-y-4">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-lg bg-[#1A1D29] flex items-center justify-center">
@@ -259,7 +271,7 @@ export default function BookingDetailClient() {
                 </div>
                 <div>
                   <p className="text-white font-medium">{formatDate(booking.scheduledAt)}</p>
-                  <p className="text-sm text-gray-400">Date</p>
+                  <p className="text-sm text-gray-400">{t('provider.bookingDetail.date')}</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
@@ -270,7 +282,7 @@ export default function BookingDetailClient() {
                   <p className="text-white font-medium">
                     {formatTime(booking.scheduledAt)} - {formatTime(booking.scheduledEndAt)}
                   </p>
-                  <p className="text-sm text-gray-400">Time</p>
+                  <p className="text-sm text-gray-400">{t('provider.bookingDetail.time')}</p>
                 </div>
               </div>
             </div>
@@ -279,7 +291,7 @@ export default function BookingDetailClient() {
           {/* Client Notes */}
           {booking.userNotes && (
             <div className="bg-[#2A2D3A] rounded-xl border border-white/5 p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Client Notes</h3>
+              <h3 className="text-lg font-semibold text-white mb-4">{t('provider.bookingDetail.clientNotes')}</h3>
               <div className="bg-[#1A1D29] rounded-lg p-4">
                 <p className="text-gray-300">{booking.userNotes}</p>
               </div>
@@ -289,10 +301,10 @@ export default function BookingDetailClient() {
           {/* Private Notes */}
           <div className="bg-[#2A2D3A] rounded-xl border border-white/5 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">Private Notes</h3>
+              <h3 className="text-lg font-semibold text-white">{t('provider.bookingDetail.privateNotes')}</h3>
               <Button variant="secondary" size="sm" onClick={() => setShowNotes(!showNotes)}>
                 <Edit className="w-4 h-4 mr-2" />
-                {showNotes ? 'Cancel' : 'Add Note'}
+                {showNotes ? t('provider.bookingDetail.cancelNote') : t('provider.bookingDetail.addNote')}
               </Button>
             </div>
             {showNotes ? (
@@ -300,18 +312,18 @@ export default function BookingDetailClient() {
                 <textarea
                   value={privateNotes}
                   onChange={(e) => setPrivateNotes(e.target.value)}
-                  placeholder="Add private notes about this client or booking..."
+                  placeholder={t('provider.bookingDetail.privateNotesPlaceholder')}
                   className="w-full bg-[#1A1D29] border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 outline-none focus:border-section-primary min-h-[100px]"
                 />
                 <div className="flex gap-2">
-                  <Button size="sm">Save Note</Button>
+                  <Button size="sm">{t('provider.bookingDetail.saveNote')}</Button>
                   <Button variant="secondary" size="sm" onClick={() => setShowNotes(false)}>
-                    Cancel
+                    {t('provider.bookingDetail.cancelNote')}
                   </Button>
                 </div>
               </div>
             ) : (
-              <p className="text-gray-500 text-sm">No private notes added yet.</p>
+              <p className="text-gray-500 text-sm">{t('provider.bookingDetail.privateNotesEmpty')}</p>
             )}
           </div>
         </div>
@@ -320,33 +332,33 @@ export default function BookingDetailClient() {
         <div className="space-y-6">
           {/* Payment Summary */}
           <div className="bg-[#2A2D3A] rounded-xl border border-white/5 p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">Payment Summary</h3>
+            <h3 className="text-lg font-semibold text-white mb-4">{t('provider.bookingDetail.paymentSummary')}</h3>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-gray-400">Original Price</span>
+                <span className="text-gray-400">{t('provider.bookingDetail.originalPrice')}</span>
                 <span className="text-white">€{booking.originalPrice.toFixed(2)}</span>
               </div>
               {booking.discountAmount > 0 && (
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-400">Discount</span>
+                  <span className="text-gray-400">{t('provider.bookingDetail.discount')}</span>
                   <span className="text-green-400">-€{booking.discountAmount.toFixed(2)}</span>
                 </div>
               )}
               {booking.homeServiceFee > 0 && (
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-400">Home Service Fee</span>
+                  <span className="text-gray-400">{t('provider.bookingDetail.homeServiceFee')}</span>
                   <span className="text-white">+€{booking.homeServiceFee.toFixed(2)}</span>
                 </div>
               )}
               <div className="border-t border-white/5 pt-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-white font-medium">Total</span>
+                  <span className="text-white font-medium">{t('provider.bookingDetail.total')}</span>
                   <span className="text-xl font-bold text-white">€{booking.finalPrice.toFixed(2)}</span>
                 </div>
               </div>
               <div className="pt-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-400">Payment Status</span>
+                  <span className="text-gray-400">{t('provider.bookingDetail.paymentStatus')}</span>
                   <span className={cn(
                     'text-sm font-medium',
                     booking.paymentStatus === 'paid' ? 'text-green-400' :
@@ -359,8 +371,8 @@ export default function BookingDetailClient() {
               </div>
               {booking.depositPaid && (
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-400">Deposit</span>
-                  <span className="text-green-400">Paid</span>
+                  <span className="text-gray-400">{t('provider.bookingDetail.deposit')}</span>
+                  <span className="text-green-400">{t('provider.bookingDetail.depositPaid')}</span>
                 </div>
               )}
             </div>
@@ -368,12 +380,12 @@ export default function BookingDetailClient() {
 
           {/* History */}
           <div className="bg-[#2A2D3A] rounded-xl border border-white/5 p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">History</h3>
+            <h3 className="text-lg font-semibold text-white mb-4">{t('provider.bookingDetail.history')}</h3>
             <div className="space-y-4">
               <div className="flex items-start gap-3">
                 <div className="w-2 h-2 rounded-full bg-section-primary mt-2" />
                 <div>
-                  <p className="text-sm text-white">Booking created</p>
+                  <p className="text-sm text-white">{t('provider.bookingDetail.historyCreated')}</p>
                   <p className="text-xs text-gray-400">
                     {formatDateTime(booking.createdAt)}
                   </p>
@@ -383,7 +395,7 @@ export default function BookingDetailClient() {
                 <div className="flex items-start gap-3">
                   <div className="w-2 h-2 rounded-full bg-green-400 mt-2" />
                   <div>
-                    <p className="text-sm text-white">Booking confirmed</p>
+                    <p className="text-sm text-white">{t('provider.bookingDetail.historyConfirmed')}</p>
                     <p className="text-xs text-gray-400">
                       {formatDateTime(booking.confirmedAt)}
                     </p>
@@ -394,7 +406,7 @@ export default function BookingDetailClient() {
                 <div className="flex items-start gap-3">
                   <div className="w-2 h-2 rounded-full bg-blue-400 mt-2" />
                   <div>
-                    <p className="text-sm text-white">Booking completed</p>
+                    <p className="text-sm text-white">{t('provider.bookingDetail.historyCompleted')}</p>
                     <p className="text-xs text-gray-400">
                       {formatDateTime(booking.completedAt)}
                     </p>
@@ -408,11 +420,11 @@ export default function BookingDetailClient() {
           <div className="space-y-3">
             <Button variant="secondary" fullWidth>
               <MessageSquare className="w-4 h-4 mr-2" />
-              Message Client
+              {t('provider.bookingDetail.messageClient')}
             </Button>
             <Button variant="outline" fullWidth>
               <FileText className="w-4 h-4 mr-2" />
-              Download Invoice
+              {t('provider.bookingDetail.downloadInvoice')}
             </Button>
           </div>
         </div>

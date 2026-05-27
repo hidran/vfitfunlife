@@ -20,8 +20,10 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/Spinner';
 import { cn } from '@/lib/utils';
 import { useProviderStore } from '@/stores/providerStore';
+import { useI18n } from '@/hooks/useI18n';
 
 export default function ClientDetailClient() {
+  const { t } = useI18n();
   const searchParams = useSearchParams();
   const clientId = searchParams?.get('id') ?? undefined;
 
@@ -51,7 +53,7 @@ export default function ClientDetailClient() {
   if (!clientId) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-text-secondary">Client non specificato</p>
+        <p className="text-sm text-text-secondary">{t('provider.clientDetail.notSpecified')}</p>
       </div>
     );
   }
@@ -69,7 +71,7 @@ export default function ClientDetailClient() {
   };
 
   const formatDate = (date: Date | { toDate(): Date } | undefined) => {
-    if (!date) return 'Never';
+    if (!date) return t('provider.clientDetail.dateNever');
     const d = typeof date === 'object' && 'toDate' in date ? date.toDate() : date;
     return new Date(d).toLocaleDateString('en-US', {
       month: 'long',
@@ -93,7 +95,7 @@ export default function ClientDetailClient() {
         className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
-        Back to Clients
+        {t('provider.clientDetail.backToClients')}
       </Link>
 
       {/* Profile Header */}
@@ -148,11 +150,11 @@ export default function ClientDetailClient() {
           <div className="flex gap-2">
             <Button variant="secondary">
               <MessageSquare className="w-4 h-4 mr-2" />
-              Message
+              {t('provider.clientDetail.message')}
             </Button>
             <Button>
               <Calendar className="w-4 h-4 mr-2" />
-              Book Session
+              {t('provider.clientDetail.bookSession')}
             </Button>
           </div>
         </div>
@@ -161,19 +163,19 @@ export default function ClientDetailClient() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-white/5">
           <div>
             <p className="text-2xl font-bold text-white">{client.totalBookings}</p>
-            <p className="text-sm text-gray-400">Total Bookings</p>
+            <p className="text-sm text-gray-400">{t('provider.clientDetail.totalBookings')}</p>
           </div>
           <div>
             <p className="text-2xl font-bold text-white">€{client.totalSpent}</p>
-            <p className="text-sm text-gray-400">Total Spent</p>
+            <p className="text-sm text-gray-400">{t('provider.clientDetail.totalSpent')}</p>
           </div>
           <div>
             <p className="text-2xl font-bold text-white">{formatDate(client.firstVisit)}</p>
-            <p className="text-sm text-gray-400">First Visit</p>
+            <p className="text-sm text-gray-400">{t('provider.clientDetail.firstVisit')}</p>
           </div>
           <div>
             <p className="text-2xl font-bold text-white">{formatDate(client.lastVisit)}</p>
-            <p className="text-sm text-gray-400">Last Visit</p>
+            <p className="text-sm text-gray-400">{t('provider.clientDetail.lastVisit')}</p>
           </div>
         </div>
       </div>
@@ -185,13 +187,13 @@ export default function ClientDetailClient() {
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={cn(
-              'px-4 py-3 text-sm font-medium capitalize transition-colors border-b-2',
+              'px-4 py-3 text-sm font-medium transition-colors border-b-2',
               activeTab === tab
                 ? 'text-white border-section-primary'
                 : 'text-gray-400 border-transparent hover:text-white'
             )}
           >
-            {tab}
+            {t(`provider.clientDetail.tab.${tab}`)}
           </button>
         ))}
       </div>
@@ -203,16 +205,16 @@ export default function ClientDetailClient() {
             {/* Notes */}
             <div className="bg-[#2A2D3A] rounded-xl border border-white/5 p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-white">Notes</h3>
+                <h3 className="text-lg font-semibold text-white">{t('provider.clientDetail.notes.title')}</h3>
                 <Button
                   variant="secondary"
                   size="sm"
                   onClick={() => setIsEditingNotes(!isEditingNotes)}
                 >
                   {isEditingNotes ? (
-                    <><X className="w-4 h-4 mr-2" /> Cancel</>
+                    <><X className="w-4 h-4 mr-2" /> {t('provider.clientDetail.notes.cancel')}</>
                   ) : (
-                    <><Edit className="w-4 h-4 mr-2" /> Edit</>
+                    <><Edit className="w-4 h-4 mr-2" /> {t('provider.clientDetail.notes.edit')}</>
                   )}
                 </Button>
               </div>
@@ -226,19 +228,19 @@ export default function ClientDetailClient() {
                   />
                   <Button onClick={handleSaveNotes} size="sm">
                     <Save className="w-4 h-4 mr-2" />
-                    Save Notes
+                    {t('provider.clientDetail.notes.save')}
                   </Button>
                 </div>
               ) : (
                 <p className="text-gray-300 leading-relaxed">
-                  {client.notes || 'No notes added yet.'}
+                  {client.notes || t('provider.clientDetail.notes.empty')}
                 </p>
               )}
             </div>
 
             {/* Recent Activity */}
             <div className="bg-[#2A2D3A] rounded-xl border border-white/5 p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Recent Activity</h3>
+              <h3 className="text-lg font-semibold text-white mb-4">{t('provider.clientDetail.recentActivity')}</h3>
               <div className="space-y-4">
                 {bookingHistory.slice(0, 3).map((entry) => (
                   <div
@@ -265,7 +267,7 @@ export default function ClientDetailClient() {
         {activeTab === 'history' && (
           <div className="bg-[#2A2D3A] rounded-xl border border-white/5 overflow-hidden">
             <div className="p-6 border-b border-white/5">
-              <h3 className="text-lg font-semibold text-white">Booking History</h3>
+              <h3 className="text-lg font-semibold text-white">{t('provider.clientDetail.bookingHistory')}</h3>
             </div>
             <div className="divide-y divide-white/5">
               {bookingHistory.map((entry) => (
@@ -297,10 +299,10 @@ export default function ClientDetailClient() {
         {activeTab === 'notes' && (
           <div className="bg-[#2A2D3A] rounded-xl border border-white/5 p-6">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-white">All Notes</h3>
+              <h3 className="text-lg font-semibold text-white">{t('provider.clientDetail.allNotes')}</h3>
               <Button variant="secondary" size="sm">
                 <Plus className="w-4 h-4 mr-2" />
-                Add Note
+                {t('provider.clientDetail.addNote')}
               </Button>
             </div>
 

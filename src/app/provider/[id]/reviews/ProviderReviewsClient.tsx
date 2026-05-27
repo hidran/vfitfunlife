@@ -6,6 +6,7 @@ import { ArrowLeft, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
+import { useI18n } from '@/hooks/useI18n';
 
 interface ProviderReview {
   id: string;
@@ -49,6 +50,7 @@ const REVIEWS: ProviderReview[] = [
 type RatingFilter = 'all' | 5 | 4 | 3;
 
 export default function ProviderReviewsClient() {
+  const { t } = useI18n();
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const providerId = params.id;
@@ -74,20 +76,20 @@ export default function ProviderReviewsClient() {
           >
             <ArrowLeft className="h-5 w-5 text-white" />
           </button>
-          <h1 className="text-lg font-semibold text-white">Recensioni Provider</h1>
+          <h1 className="text-lg font-semibold text-white">{t('providerReviews.title')}</h1>
         </div>
       </div>
 
       <div className="space-y-4 p-4 pb-10">
         <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
-          <p className="text-xs uppercase tracking-wide text-text-tertiary">Provider ID</p>
+          <p className="text-xs uppercase tracking-wide text-text-tertiary">{t('providerReviews.providerId')}</p>
           <p className="font-medium text-white">{providerId}</p>
           <div className="mt-3 flex items-center gap-3">
             <div className="inline-flex items-center gap-1 rounded-full bg-warning/20 px-3 py-1 text-warning">
               <Star className="h-4 w-4 fill-warning" />
               <span className="text-sm font-semibold">{averageRating.toFixed(1)}</span>
             </div>
-            <span className="text-sm text-text-secondary">{REVIEWS.length} recensioni totali</span>
+            <span className="text-sm text-text-secondary">{t('providerReviews.totalReviews', { count: REVIEWS.length })}</span>
           </div>
         </section>
 
@@ -103,7 +105,7 @@ export default function ProviderReviewsClient() {
                   : 'border-white/20 text-text-secondary hover:text-white'
               )}
             >
-              {value === 'all' ? 'Tutte' : `${value} stelle`}
+              {value === 'all' ? t('providerReviews.filter.all') : t('providerReviews.filter.stars', { count: value })}
             </button>
           ))}
         </section>
@@ -111,7 +113,7 @@ export default function ProviderReviewsClient() {
         <section className="space-y-3">
           {filteredReviews.length === 0 ? (
             <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-center text-text-secondary">
-              Nessuna recensione per il filtro selezionato.
+              {t('providerReviews.noReviews')}
             </div>
           ) : (
             filteredReviews.map((review) => (
