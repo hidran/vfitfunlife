@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   User,
   MapPin,
@@ -193,6 +193,25 @@ export default function ProfilePage() {
   const router = useRouter();
   const { t } = useI18n();
   const { user, firebaseUser, logout, isLoading, refreshUserProfile } = useAuthStore();
+
+  const visibleSections = useMemo<ProfileMenuSection[]>(() => {
+    const isStaff = user?.role === 'admin' || user?.role === 'superadmin';
+    if (!isStaff) return menuItems;
+    const adminSection: ProfileMenuSection = {
+      sectionKey: 'profile.menu.admin',
+      items: [
+        {
+          icon: Shield,
+          labelKey: 'profile.menu.adminDashboard',
+          subtitleKey: 'profile.menu.subtitle.adminDashboard',
+          accentClass: 'text-vip-gold',
+          href: '/admin',
+        },
+      ],
+    };
+    return [adminSection, ...menuItems];
+  }, [user?.role]);
+
   const [isProviderUser, setIsProviderUser] = useState(false);
   const [isCheckingProvider, setIsCheckingProvider] = useState(true);
   const [stats] = useState({
@@ -763,7 +782,7 @@ export default function ProfilePage() {
         )}
 
         {/* Menu Sections */}
-        {menuItems.map((section) => (
+        {visibleSections.map((section) => (
           <div key={section.sectionKey}>
             <h3 className="mb-2 px-1 text-sm font-semibold uppercase tracking-[0.12em] text-text-tertiary">
               {t(section.sectionKey)}

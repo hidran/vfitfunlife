@@ -92,7 +92,8 @@ export default function LoginPage() {
     if (!isInitialized) return;
 
     if (user) {
-      router.replace('/home');
+      const isStaff = user.role === 'admin' || user.role === 'superadmin';
+      router.replace(isStaff ? '/admin' : '/home');
     } else if (firebaseUser && !user) {
       router.replace('/auth/register');
     }
