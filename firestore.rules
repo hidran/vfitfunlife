@@ -241,8 +241,14 @@ service cloud.firestore {
       // Public read
       allow read: if true;
 
-      // Write: Admin or venue staff
-      allow write: if isAdmin() || isVenueStaff(venueId);
+      // Create: Admin or venue staff
+      allow create: if isAdmin() || isVenueStaff(venueId);
+
+      // Update: staff (admin or superadmin)
+      allow update: if isAdmin();
+
+      // Delete: superadmin only
+      allow delete: if isSuperAdmin();
 
       match /services/{serviceId} {
         allow read: if true;
@@ -364,8 +370,8 @@ service cloud.firestore {
         ])
       );
 
-      // Delete: Admin only
-      allow delete: if isAdmin();
+      // Delete: Superadmin only
+      allow delete: if isSuperAdmin();
     }
 
     // ============================================
@@ -504,8 +510,8 @@ service cloud.firestore {
         isAdmin()
       );
       allow create: if false; // Only Cloud Functions
-      allow update: if isAdmin();
-      allow delete: if isSuperAdmin();
+      allow update: if isSuperAdmin();
+      allow delete: if false; // Ledger-immutable
     }
 
     // ============================================
@@ -622,6 +628,40 @@ service cloud.firestore {
         allow read, write: if isAdmin() ||
           (isAuthenticated() && get(/databases/$(database)/documents/clients/$(clientId)).data.providerId == request.auth.uid);
       }
+    }
+
+    // ============================================
+    // PROVIDERS COLLECTION (admin-side roster)
+    // ============================================
+
+    match /providers/{providerId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() ||
+                       (isAuthenticated() && request.resource.data.userId == request.auth.uid);
+      allow update: if isAdmin() || isOwner(resource.data.userId);
+      allow delete: if isSuperAdmin();
+    }
+
+    // ============================================
+    // USER TYPES (snake_case alias — admin CRUD)
+    // ============================================
+
+    match /user_types/{userTypeId} {
+      allow read:   if true;
+      allow create: if isSuperAdmin();
+      allow update: if isSuperAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // ============================================
+    // AUDIT LOGS (snake_case — admin/superadmin write-once)
+    // ============================================
+
+    match /audit_logs/{logId} {
+      allow read:   if isAdmin();
+      allow create: if isAdmin();
+      allow update: if false;
+      allow delete: if false;
     }
   }
 }
