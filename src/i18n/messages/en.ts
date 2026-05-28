@@ -494,6 +494,16 @@ export const enMessages: Messages = {
   'admin.venues.filter.suspended': 'Suspended',
   'admin.venues.search': 'Search venues by name or city...',
   'admin.venues.empty': 'No venues found',
+  'admin.venues.entityLabel': 'venue',
+  'admin.venues.notFound': 'Venue not found',
+  'admin.venues.field.name': 'Name',
+  'admin.venues.field.type': 'Type',
+  'admin.venues.field.street': 'Street',
+  'admin.venues.field.city': 'City',
+  'admin.venues.field.zipCode': 'ZIP',
+  'admin.venues.field.country': 'Country',
+  'admin.venues.field.isActive': 'Active',
+  'admin.venues.field.isPartner': 'Partner',
 
   // ─── Admin: Data Management page ─────────────────────────────────────
   'admin.data.title': 'Data Management',

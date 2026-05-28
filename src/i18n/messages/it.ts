@@ -492,6 +492,16 @@ export const itMessages = {
   'admin.venues.filter.suspended': 'Sospese',
   'admin.venues.search': 'Cerca sedi per nome o città...',
   'admin.venues.empty': 'Nessuna sede trovata',
+  'admin.venues.entityLabel': 'sede',
+  'admin.venues.notFound': 'Sede non trovata',
+  'admin.venues.field.name': 'Nome',
+  'admin.venues.field.type': 'Tipo',
+  'admin.venues.field.street': 'Via',
+  'admin.venues.field.city': 'Città',
+  'admin.venues.field.zipCode': 'CAP',
+  'admin.venues.field.country': 'Paese',
+  'admin.venues.field.isActive': 'Attivo',
+  'admin.venues.field.isPartner': 'Partner',
 
   // ─── Admin: Data Management page ─────────────────────────────────────
   'admin.data.title': 'Gestione dati',
