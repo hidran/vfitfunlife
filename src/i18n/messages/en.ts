@@ -496,6 +496,15 @@ export const enMessages: Messages = {
   'admin.userTypes.filter.inactive': 'Inactive',
   'admin.userTypes.search': 'Search user types...',
   'admin.userTypes.empty': 'No user types found',
+  'admin.userTypes.entityLabel': 'user type',
+  'admin.userTypes.notFound': 'User type not found',
+  'admin.userTypes.superadminOnly': 'Only superadmins can manage user types.',
+  'admin.userTypes.field.name': 'Name',
+  'admin.userTypes.field.category': 'Category',
+  'admin.userTypes.field.description': 'Description',
+  'admin.userTypes.field.icon': 'Icon',
+  'admin.userTypes.field.permissions': 'Permissions (comma-separated)',
+  'admin.userTypes.field.isActive': 'Active',
 
   // ─── Admin: Venues page ──────────────────────────────────────────────
   'admin.venues.title': 'Venues',

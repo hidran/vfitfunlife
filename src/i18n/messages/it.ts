@@ -494,6 +494,15 @@ export const itMessages = {
   'admin.userTypes.filter.inactive': 'Non attivi',
   'admin.userTypes.search': 'Cerca tipi utente...',
   'admin.userTypes.empty': 'Nessun tipo utente trovato',
+  'admin.userTypes.entityLabel': 'tipo di utente',
+  'admin.userTypes.notFound': 'Tipo di utente non trovato',
+  'admin.userTypes.superadminOnly': 'Solo i superadmin possono gestire i tipi di utente.',
+  'admin.userTypes.field.name': 'Nome',
+  'admin.userTypes.field.category': 'Categoria',
+  'admin.userTypes.field.description': 'Descrizione',
+  'admin.userTypes.field.icon': 'Icona',
+  'admin.userTypes.field.permissions': 'Permessi (separati da virgola)',
+  'admin.userTypes.field.isActive': 'Attivo',
 
   // ─── Admin: Venues page ──────────────────────────────────────────────
   'admin.venues.title': 'Sedi',
