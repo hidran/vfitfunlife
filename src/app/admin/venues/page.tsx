@@ -1,12 +1,5 @@
 "use client";
 
-// KNOWN ISSUE (2026-05-28): hydrating this page throws
-// `useI18nContext must be used within I18nProvider` from inside Button (used by
-// DataTable). Other admin pages with the same Button/DataTable usage work fine.
-// Bisection narrowed it to the `columns` prop with realistic cell closures, but
-// the underlying cause (likely a bundler-level Context-identity issue) hasn't
-// been pinned down. Disable in nav or open at your own risk until fixed.
-
 import { useState } from "react";
 import { DataTable, FilterBar, StatusBadge } from "@/components/admin";
 import { Button } from "@/components/ui/button";
@@ -52,20 +45,35 @@ export default function VenuesPage() {
 
   const { data: firestoreVenues = [], isLoading } = useVenues({});
 
-  const venues: Venue[] = firestoreVenues.map((v) => ({
-    id: v.id,
-    name: v.name,
-    type: v.type,
-    address: v.address,
-    city: v.city,
-    phone: '',
-    rating: v.rating,
-    reviewCount: v.reviewCount,
-    isActive: v.isActive,
-    isPartner: v.isPartner,
-    createdAt: v.createdAt?.toDate?.() ?? new Date(),
-    photoUrls: v.photoUrls ?? [],
-  }));
+  // Firestore stored address as either a flat string OR a nested object
+  // `{ street, city, zipCode, country, latitude, longitude, neighborhood }`.
+  // Render-time `<p>{venue.address}</p>` crashes with React error #31 when it
+  // gets the object form, so coerce both shapes into displayable strings here.
+  const venues: Venue[] = firestoreVenues.map((v) => {
+    const rawAddress = v.address as unknown;
+    const addr =
+      rawAddress && typeof rawAddress === 'object'
+        ? (rawAddress as { street?: string }).street ?? ''
+        : (rawAddress as string | undefined) ?? '';
+    const cityFromAddress =
+      rawAddress && typeof rawAddress === 'object'
+        ? (rawAddress as { city?: string }).city
+        : undefined;
+    return {
+      id: v.id,
+      name: v.name,
+      type: v.type,
+      address: addr,
+      city: cityFromAddress ?? v.city ?? '',
+      phone: '',
+      rating: v.rating,
+      reviewCount: v.reviewCount,
+      isActive: v.isActive,
+      isPartner: v.isPartner,
+      createdAt: v.createdAt?.toDate?.() ?? new Date(),
+      photoUrls: v.photoUrls ?? [],
+    };
+  });
 
   const columns: Column<Venue>[] = [
     {

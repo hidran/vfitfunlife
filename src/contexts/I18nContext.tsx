@@ -43,17 +43,27 @@ function interpolate(message: string, values?: TranslateValues): string {
   }, message);
 }
 
-function resolveInitialLocale(): AppLocale {
-  if (typeof window === 'undefined') return DEFAULT_LOCALE;
-  const stored = window.localStorage.getItem(STORAGE_KEY);
-  if (stored && isSupportedLocale(stored)) {
-    return stored;
-  }
-  return detectBrowserLocale() ?? DEFAULT_LOCALE;
-}
-
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<AppLocale>(() => resolveInitialLocale());
+  // First render MUST match the static prerender, which always uses
+  // DEFAULT_LOCALE (window is undefined at build time). Reading localStorage or
+  // navigator.language during the initial render would mismatch the server HTML
+  // and trigger React error #418 (hydration text mismatch) — see
+  // /admin/venues regression where the cascade tore down the I18nProvider
+  // subtree.
+  const [locale, setLocaleState] = useState<AppLocale>(DEFAULT_LOCALE);
+
+  // After mount, resolve the real locale (stored choice > browser > default)
+  // and switch. This causes one extra render but keeps hydration safe.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    if (stored && isSupportedLocale(stored)) {
+      if (stored !== DEFAULT_LOCALE) setLocaleState(stored);
+      return;
+    }
+    const browser = detectBrowserLocale();
+    if (browser && browser !== DEFAULT_LOCALE) setLocaleState(browser);
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
