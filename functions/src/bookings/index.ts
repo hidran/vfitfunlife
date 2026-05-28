@@ -3,6 +3,7 @@ import * as admin from "firebase-admin";
 import { addMinutes } from "date-fns";
 import { UserData, VenueData, ServiceData, InstructorData, PromotionData } from "../types";
 import { getUserRoleInfo, requirePermission, checkIsAdmin } from "../utils/roles";
+import { writeAuditLog } from "../lib/audit";
 
 const db = admin.firestore();
 const region = process.env.FIREBASE_REGION || "europe-west1";
@@ -544,6 +545,24 @@ export const cancelBooking = onCall<CancelBookingData>(
 
     await batch.commit();
 
+    // Write to audit_logs collection (only when actor is admin/superadmin)
+    if (isAdminUser) {
+      const callerSnap = await db.collection("users").doc(callerId).get();
+      const caller = callerSnap.data();
+      const callerRole = (caller?.role === "superadmin" ? "superadmin" : "admin") as "admin" | "superadmin";
+      await writeAuditLog({
+        actorUid: callerId,
+        actorEmail: caller?.email ?? "",
+        actorRole: callerRole,
+        action: "update",
+        entityType: "booking",
+        entityId: bookingId,
+        before: { status: booking.status },
+        after: { status: "cancelled" },
+        ...(reason ? { reason } : {}),
+      });
+    }
+
     return { success: true, refundAmount };
   }
 );
@@ -598,6 +617,23 @@ export const confirmBooking = onCall<ConfirmBookingData>(
       isRead: false,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
+
+    // Write to audit_logs collection (only when actor is admin/superadmin)
+    const callerSnap = await db.collection("users").doc(callerId).get();
+    const caller = callerSnap.data();
+    if (caller?.role === "admin" || caller?.role === "superadmin") {
+      const callerRole = (caller?.role === "superadmin" ? "superadmin" : "admin") as "admin" | "superadmin";
+      await writeAuditLog({
+        actorUid: callerId,
+        actorEmail: caller?.email ?? "",
+        actorRole: callerRole,
+        action: "update",
+        entityType: "booking",
+        entityId: bookingId,
+        before: { status: booking.status },
+        after: { status: "confirmed" },
+      });
+    }
 
     return { success: true };
   }
@@ -677,6 +713,22 @@ export const updateBookingStatus = onCall<UpdateBookingStatusData>(
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
     }
+
+    // Write to audit_logs collection
+    const callerSnap = await db.collection("users").doc(callerId).get();
+    const caller = callerSnap.data();
+    const callerRole = (callerInfo.role === "superadmin" ? "superadmin" : "admin") as "admin" | "superadmin";
+    await writeAuditLog({
+      actorUid: callerId,
+      actorEmail: caller?.email ?? "",
+      actorRole: callerRole,
+      action: "update",
+      entityType: "booking",
+      entityId: bookingId,
+      before: { status: booking.status },
+      after: { status },
+      ...(notes ? { reason: notes } : {}),
+    });
 
     return { success: true, bookingId, status };
   }

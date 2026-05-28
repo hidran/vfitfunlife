@@ -95,6 +95,10 @@ export const setUserRole = onCall<SetUserRoleData>(
       throw new HttpsError("permission-denied", "Only superadmin can manage user roles");
     }
 
+    // Fetch caller info for audit log
+    const callerSnap = await db.collection("users").doc(callerId).get();
+    const caller = callerSnap.data();
+
     // Validate role
     if (!isValidRole(role)) {
       throw new HttpsError("invalid-argument", `Invalid role: ${role}`);
@@ -140,6 +144,19 @@ export const setUserRole = onCall<SetUserRoleData>(
       changedBy: callerId,
       reason: reason || null,
       timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // Write to audit_logs collection
+    await writeAuditLog({
+      actorUid: callerId,
+      actorEmail: caller?.email ?? "",
+      actorRole: "superadmin",
+      action: "role_change",
+      entityType: "user",
+      entityId: userId,
+      before: { role: targetUserDoc.data()?.role || "customer" },
+      after: { role },
+      ...(reason ? { reason } : {}),
     });
 
     return {
@@ -434,6 +451,11 @@ export const verifyProvider = onCall<VerifyProviderData>(
       throw new HttpsError("permission-denied", "Admin access required");
     }
 
+    // Fetch caller info for audit log
+    const callerSnap = await db.collection("users").doc(callerId).get();
+    const caller = callerSnap.data();
+    const callerRole = (caller?.role === "superadmin" ? "superadmin" : "admin") as "admin" | "superadmin";
+
     const { providerId, verified, notes } = request.data;
 
     const providerDoc = await db.collection("users").doc(providerId).get();
@@ -445,6 +467,8 @@ export const verifyProvider = onCall<VerifyProviderData>(
     if (providerData?.role !== "provider") {
       throw new HttpsError("invalid-argument", "User is not a provider");
     }
+
+    const previousVerified = providerData?.providerProfile?.isVerified ?? providerData?.isVerified ?? false;
 
     // Update verification status
     await db.collection("users").doc(providerId).update({
@@ -463,6 +487,19 @@ export const verifyProvider = onCall<VerifyProviderData>(
       verifiedBy: callerId,
       notes: notes || null,
       timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // Write to audit_logs collection
+    await writeAuditLog({
+      actorUid: callerId,
+      actorEmail: caller?.email ?? "",
+      actorRole: callerRole,
+      action: "verify",
+      entityType: "provider",
+      entityId: providerId,
+      before: { verified: previousVerified },
+      after: { verified },
+      ...(notes ? { reason: notes } : {}),
     });
 
     return {
@@ -677,6 +714,8 @@ export const setUserActiveStatus = onCall(
       throw new HttpsError("failed-precondition", "Cannot deactivate your own account");
     }
 
+    const previousIsActive = targetUserData?.isActive ?? true;
+
     await db.collection("users").doc(userId).update({
       isActive,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -692,6 +731,23 @@ export const setUserActiveStatus = onCall(
       changedBy: callerId,
       reason: reason || null,
       timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // Write to audit_logs collection
+    // isActive=false means user is being suspended; isActive=true means user is being activated
+    const callerRole = (callerInfo.role === "superadmin" ? "superadmin" : "admin") as "admin" | "superadmin";
+    const callerSnap = await db.collection("users").doc(callerId).get();
+    const caller = callerSnap.data();
+    await writeAuditLog({
+      actorUid: callerId,
+      actorEmail: caller?.email ?? "",
+      actorRole: callerRole,
+      action: isActive ? "activate" : "suspend",
+      entityType: "user",
+      entityId: userId,
+      before: { isSuspended: !previousIsActive },
+      after: { isSuspended: !isActive },
+      ...(reason ? { reason } : {}),
     });
 
     return {
