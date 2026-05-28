@@ -223,6 +223,11 @@ export const enMessages: Messages = {
   'admin.users.error.loading': 'Error loading users',
   'admin.users.empty': 'No users found',
   'admin.users.bulkConfirm': 'Are you sure you want to {{action}} {{count}} user(s)?',
+  'admin.users.entityLabel': 'user',
+  'admin.users.field.fullName': 'Full name',
+  'admin.users.field.email': 'Email',
+  'admin.users.field.phone': 'Phone',
+  'admin.users.field.bio': 'Bio',
 
   // ─── Admin: User Detail ──────────────────────────────────────────────
   'admin.userDetail.notFound': 'User not found',

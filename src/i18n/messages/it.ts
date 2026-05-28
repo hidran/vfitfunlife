@@ -221,6 +221,11 @@ export const itMessages = {
   'admin.users.error.loading': 'Errore nel caricamento utenti',
   'admin.users.empty': 'Nessun utente trovato',
   'admin.users.bulkConfirm': 'Sei sicuro di voler {{action}} {{count}} utente/i?',
+  'admin.users.entityLabel': 'utente',
+  'admin.users.field.fullName': 'Nome completo',
+  'admin.users.field.email': 'Email',
+  'admin.users.field.phone': 'Telefono',
+  'admin.users.field.bio': 'Bio',
 
   // ─── Admin: User Detail ──────────────────────────────────────────────
   'admin.userDetail.notFound': 'Utente non trovato',

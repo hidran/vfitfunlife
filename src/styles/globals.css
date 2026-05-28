@@ -273,6 +273,11 @@
     @apply outline-none ring-2 ring-offset-2 ring-offset-background-dark;
     ring-color: var(--section-primary);
   }
+
+  /* Admin entity form input */
+  .admin-input {
+    @apply w-full rounded-lg bg-black/30 border border-white/10 px-3 py-2 text-white disabled:opacity-60;
+  }
 }
 
 @layer utilities {
