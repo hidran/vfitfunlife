@@ -568,6 +568,17 @@ export const esMessages: Messages = {
   'admin.logs.filter.error': 'Error',
   'admin.logs.empty': 'No se encontraron registros',
 
+  // ─── Admin: Shared CRUD building blocks ──────────────────────────────
+  'admin.detail.back': 'Atrás',
+  'admin.detail.edit': 'Editar',
+  'admin.detail.save': 'Guardar',
+  'admin.detail.delete': 'Eliminar',
+  'admin.delete.title': 'Eliminar {{entity}}',
+  'admin.delete.warning': 'Eliminar permanentemente {{name}}. Esta acción no se puede deshacer.',
+  'admin.delete.typeNameLabel': 'Escribe "{{name}}" para confirmar',
+  'admin.delete.reasonLabel': 'Motivo',
+  'admin.delete.confirm': 'Eliminar permanentemente',
+
   'provider.layout.title': 'Portal de proveedores',
   'provider.layout.subtitle': 'Gestiona tu negocio',
   'provider.layout.nav.dashboard': 'Panel',

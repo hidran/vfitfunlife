@@ -592,6 +592,17 @@ export const itMessages = {
   'admin.logs.filter.error': 'Errore',
   'admin.logs.empty': 'Nessun log trovato',
 
+  // ─── Admin: Shared CRUD building blocks ──────────────────────────────
+  'admin.detail.back': 'Indietro',
+  'admin.detail.edit': 'Modifica',
+  'admin.detail.save': 'Salva',
+  'admin.detail.delete': 'Elimina',
+  'admin.delete.title': 'Elimina {{entity}}',
+  'admin.delete.warning': 'Elimina definitivamente {{name}}. Questa operazione è irreversibile.',
+  'admin.delete.typeNameLabel': 'Digita "{{name}}" per confermare',
+  'admin.delete.reasonLabel': 'Motivo',
+  'admin.delete.confirm': 'Elimina definitivamente',
+
   'provider.layout.title': 'Portale provider',
   'provider.layout.subtitle': 'Gestisci la tua attività',
   'provider.layout.nav.dashboard': 'Dashboard',

@@ -569,6 +569,17 @@ export const deMessages: Messages = {
   'admin.logs.filter.error': 'Fehler',
   'admin.logs.empty': 'Keine Protokolle gefunden',
 
+  // ─── Admin: Shared CRUD building blocks ──────────────────────────────
+  'admin.detail.back': 'Zurück',
+  'admin.detail.edit': 'Bearbeiten',
+  'admin.detail.save': 'Speichern',
+  'admin.detail.delete': 'Löschen',
+  'admin.delete.title': '{{entity}} löschen',
+  'admin.delete.warning': '{{name}} dauerhaft löschen. Diese Aktion kann nicht rückgängig gemacht werden.',
+  'admin.delete.typeNameLabel': 'Tippen Sie "{{name}}" zur Bestätigung',
+  'admin.delete.reasonLabel': 'Grund',
+  'admin.delete.confirm': 'Dauerhaft löschen',
+
   'provider.layout.title': 'Anbieter-Portal',
   'provider.layout.subtitle': 'Verwalte dein Geschäft',
   'provider.layout.nav.dashboard': 'Dashboard',

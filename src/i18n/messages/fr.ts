@@ -571,6 +571,17 @@ export const frMessages: Messages = {
   'admin.logs.filter.error': 'Erreur',
   'admin.logs.empty': 'Aucun journal trouvé',
 
+  // ─── Admin: Shared CRUD building blocks ──────────────────────────────
+  'admin.detail.back': 'Retour',
+  'admin.detail.edit': 'Modifier',
+  'admin.detail.save': 'Enregistrer',
+  'admin.detail.delete': 'Supprimer',
+  'admin.delete.title': 'Supprimer {{entity}}',
+  'admin.delete.warning': 'Supprimer définitivement {{name}}. Action irréversible.',
+  'admin.delete.typeNameLabel': 'Saisissez "{{name}}" pour confirmer',
+  'admin.delete.reasonLabel': 'Raison',
+  'admin.delete.confirm': 'Supprimer définitivement',
+
   'provider.layout.title': 'Portail prestataire',
   'provider.layout.subtitle': 'Gérez votre activité',
   'provider.layout.nav.dashboard': 'Tableau de bord',

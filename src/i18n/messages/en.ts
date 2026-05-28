@@ -594,6 +594,17 @@ export const enMessages: Messages = {
   'admin.logs.filter.error': 'Error',
   'admin.logs.empty': 'No logs found',
 
+  // ─── Admin: Shared CRUD building blocks ──────────────────────────────
+  'admin.detail.back': 'Back',
+  'admin.detail.edit': 'Edit',
+  'admin.detail.save': 'Save',
+  'admin.detail.delete': 'Delete',
+  'admin.delete.title': 'Delete {{entity}}',
+  'admin.delete.warning': 'Permanently delete {{name}}. This cannot be undone.',
+  'admin.delete.typeNameLabel': 'Type "{{name}}" to confirm',
+  'admin.delete.reasonLabel': 'Reason',
+  'admin.delete.confirm': 'Delete permanently',
+
   'provider.layout.title': 'Provider portal',
   'provider.layout.subtitle': 'Manage your business',
   'provider.layout.nav.dashboard': 'Dashboard',
