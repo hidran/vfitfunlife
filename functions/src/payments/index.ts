@@ -2,6 +2,9 @@ import { onCall, onRequest, HttpsError, CallableRequest } from "firebase-functio
 import * as admin from "firebase-admin";
 import Stripe from "stripe";
 
+// Re-export admin-only payment mutations (superadmin-gated refunds)
+export * from "./admin";
+
 const db = admin.firestore();
 const region = process.env.FIREBASE_REGION || "europe-west1";
 

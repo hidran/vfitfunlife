@@ -14,6 +14,9 @@ export * from "./userTypes";
 // Export profile functions
 export * from "./profile";
 
+// Export admin-only mutation functions (superadmin-gated)
+export * from "./adminMutations";
+
 interface UserUpdateData {
   fullName?: string;
   dateOfBirth?: string;

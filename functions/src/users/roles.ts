@@ -15,6 +15,7 @@ import {
   getDefaultPermissionsForRole,
   getProviderTypeList,
 } from "../utils/roles";
+import { writeAuditLog } from "../lib/audit";
 
 const db = admin.firestore();
 const region = process.env.FIREBASE_REGION || "europe-west1";
@@ -699,5 +700,63 @@ export const setUserActiveStatus = onCall(
       isActive,
       message: `User ${isActive ? "activated" : "deactivated"} successfully`,
     };
+  }
+);
+
+/**
+ * Superadmin-only: "delete" a provider by demoting them back to customer and
+ * clearing provider-specific fields. We preserve the user doc so booking/review
+ * history remains queryable. Writes an audit_logs entry capturing the previous state.
+ */
+export const adminDeleteProvider = onCall<{ providerId: string; reason: string }>(
+  { region },
+  async (req: CallableRequest<{ providerId: string; reason: string }>) => {
+    const callerUid = req.auth?.uid;
+    if (!callerUid) {
+      throw new HttpsError("unauthenticated", "Sign in required");
+    }
+
+    const callerSnap = await db.collection("users").doc(callerUid).get();
+    const caller = callerSnap.data();
+    if (caller?.role !== "superadmin") {
+      throw new HttpsError("permission-denied", "Superadmin required");
+    }
+
+    const { providerId, reason } = req.data;
+    if (!providerId || !reason) {
+      throw new HttpsError("invalid-argument", "providerId and reason required");
+    }
+
+    // Providers live in the `users` collection with role='provider'.
+    // Demote rather than delete so audit history is preserved.
+    const provSnap = await db.collection("users").doc(providerId).get();
+    if (!provSnap.exists) {
+      throw new HttpsError("not-found", "Provider not found");
+    }
+    const before = provSnap.data();
+    if (before?.role !== "provider") {
+      throw new HttpsError("failed-precondition", "Target is not a provider");
+    }
+
+    await db.collection("users").doc(providerId).update({
+      role: "customer",
+      providerProfile: admin.firestore.FieldValue.delete(),
+      providerStatus: "removed",
+      userType: admin.firestore.FieldValue.delete(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    await writeAuditLog({
+      actorUid: callerUid,
+      actorEmail: caller?.email ?? "",
+      actorRole: "superadmin",
+      action: "delete",
+      entityType: "provider",
+      entityId: providerId,
+      before,
+      reason,
+    });
+
+    return { ok: true };
   }
 );
