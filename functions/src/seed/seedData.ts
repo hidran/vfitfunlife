@@ -2245,6 +2245,7 @@ export async function generateDemoProviderCoords(): Promise<SeedingResult[]> {
 // VFun activities seed — events / VR / parties as bookable instructor docs
 // ============================================================================
 
+/* eslint-disable max-len, no-multi-spaces */
 const FUN_ACTIVITIES = [
   { id: "fun-event-sunset",    kind: "event", name: "Sunset Sessions",  price: 39,   eventDate: "16 Feb", eventTime: "18:30", location: "Rooftop Milano",      attendees: 420, tag: "hot", serviceName: "Biglietto evento",     durationMinutes: 120 },
   { id: "fun-event-fitparty",  kind: "event", name: "Fit Party Night",  price: 28,   eventDate: "20 Feb", eventTime: "21:00", location: "Arena Roma",          attendees: 680, tag: "new", serviceName: "Biglietto evento",     durationMinutes: 120 },
@@ -2258,6 +2259,7 @@ const FUN_ACTIVITIES = [
   { id: "fun-party-corporate", kind: "party", name: "Corporate Event",  price: 1490, partyType: "corporate", serviceName: "Pacchetto Corporate", durationMinutes: 240 },
   { id: "fun-party-vip",       kind: "party", name: "VIP Party",        price: 2600, partyType: "vip",       serviceName: "Pacchetto VIP",       durationMinutes: 240 },
 ] as const;
+/* eslint-enable max-len, no-multi-spaces */
 
 /**
  * Seeds 11 VFun activities (events, VR experiences, parties) as bookable
@@ -2294,7 +2296,9 @@ export async function generateDemoFunActivities(): Promise<{ activities: number 
 
     // Kind-specific metadata — only write fields present on this entry
     if (a.kind === "event") {
-      const e = a as typeof a & { eventDate: string; eventTime: string; location: string; attendees: number; tag: string };
+      const e = a as typeof a & {
+        eventDate: string; eventTime: string; location: string; attendees: number; tag: string;
+      };
       doc["eventDate"] = e.eventDate;
       doc["eventTime"] = e.eventTime;
       doc["location"] = e.location;
