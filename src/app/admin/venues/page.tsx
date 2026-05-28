@@ -1,5 +1,12 @@
 "use client";
 
+// KNOWN ISSUE (2026-05-28): hydrating this page throws
+// `useI18nContext must be used within I18nProvider` from inside Button (used by
+// DataTable). Other admin pages with the same Button/DataTable usage work fine.
+// Bisection narrowed it to the `columns` prop with realistic cell closures, but
+// the underlying cause (likely a bundler-level Context-identity issue) hasn't
+// been pinned down. Disable in nav or open at your own risk until fixed.
+
 import { useState } from "react";
 import { DataTable, FilterBar, StatusBadge } from "@/components/admin";
 import { Button } from "@/components/ui/button";

@@ -2,7 +2,6 @@
 import { useRef, useState } from 'react';
 import { Camera as CameraIcon, X, Loader2 } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
-import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { uploadGalleryPhoto, deleteGalleryPhoto, type GalleryScope } from '@/lib/firebase/photos';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
@@ -35,6 +34,7 @@ export function PhotoUploader({
 
   async function captureNative(): Promise<File | null> {
     try {
+      const { Camera, CameraResultType, CameraSource } = await import('@capacitor/camera');
       const photo = await Camera.getPhoto({
         quality: 80,
         allowEditing: false,
