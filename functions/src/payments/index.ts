@@ -30,7 +30,7 @@ interface WalletFundsData {
  * Create a Stripe customer for a user
  */
 export const createStripeCustomer = onCall(
-  { region },
+  { region, secrets: ["STRIPE_SECRET_KEY"] },
   async (request: CallableRequest) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Must be authenticated");
@@ -71,7 +71,7 @@ export const createStripeCustomer = onCall(
  * Create a payment intent for a booking
  */
 export const createPaymentIntent = onCall<PaymentIntentData>(
-  { region },
+  { region, secrets: ["STRIPE_SECRET_KEY"] },
   async (request: CallableRequest<PaymentIntentData>) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Must be authenticated");
@@ -132,7 +132,7 @@ export const createPaymentIntent = onCall<PaymentIntentData>(
  * Create a VIP subscription
  */
 export const createVipSubscription = onCall<VipSubscriptionData>(
-  { region },
+  { region, secrets: ["STRIPE_SECRET_KEY"] },
   async (request: CallableRequest<VipSubscriptionData>) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Must be authenticated");
@@ -206,7 +206,7 @@ export const createVipSubscription = onCall<VipSubscriptionData>(
  * Stripe webhook handler
  */
 export const stripeWebhook = onRequest(
-  { region },
+  { region, secrets: ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"] },
   async (req, res) => {
     const sig = req.headers["stripe-signature"] as string;
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -392,7 +392,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
  * Add funds to user wallet
  */
 export const addWalletFunds = onCall<WalletFundsData>(
-  { region },
+  { region, secrets: ["STRIPE_SECRET_KEY"] },
   async (request: CallableRequest<WalletFundsData>) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Must be authenticated");
