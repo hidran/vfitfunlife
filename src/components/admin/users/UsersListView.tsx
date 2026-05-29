@@ -4,7 +4,17 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAdminStore } from "@/stores/adminStore";
-import { DataTable, FilterBar, UserRoleBadge, StatusBadge } from "@/components/admin";
+import { useAuthStore } from "@/stores/authStore";
+import {
+  DataTable,
+  FilterBar,
+  UserRoleBadge,
+  StatusBadge,
+  SuperadminOnly,
+  recordAudit,
+} from "@/components/admin";
+import { UserRoleSelect } from "./UserRoleSelect";
+import { UserRowQuickActions } from "./UserRowQuickActions";
 import { Button } from "@/components/ui/button";
 import { AdminUser, UserFilters } from "@/types/admin";
 import { Column } from "@/components/admin/DataTable";
@@ -30,9 +40,11 @@ export function UsersListView() {
     error,
     fetchUsers,
     bulkUpdateUsersAction,
+    bulkUpdateUserRoleAction,
     exportDataAction,
     clearError,
   } = useAdminStore();
+  const authUser = useAuthStore((s) => s.user);
 
   const [filters, setFilters] = useState<UserFilters>({
     role: "all",
@@ -186,6 +198,17 @@ export function UsersListView() {
       sortable: true,
       width: "w-32",
     },
+    {
+      key: "actions",
+      header: " ",
+      cell: (user) => (
+        <UserRowQuickActions
+          user={user}
+          onDone={() => fetchUsers(filters)}
+        />
+      ),
+      width: "w-12",
+    },
   ];
 
   const totalPages = Math.ceil(usersTotal / (filters.limit || 20));
@@ -289,15 +312,47 @@ export function UsersListView() {
             <Ban className="w-4 h-4 mr-1" />
             {t('admin.users.bulkSuspend')}
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleBulkAction("delete")}
-            className="text-[#EF4444] hover:text-[#EF4444] hover:bg-[#EF4444]/10"
-          >
-            <Trash2 className="w-4 h-4 mr-1" />
-            {t('admin.users.bulkDelete')}
-          </Button>
+          <SuperadminOnly>
+            <UserRoleSelect
+              onChange={async (role) => {
+                const ok = window.confirm(
+                  t('admin.users.bulkRoleConfirm', {
+                    role,
+                    count: String(selectedIds.length),
+                  })
+                );
+                if (!ok) return;
+                const ids = [...selectedIds];
+                try {
+                  await bulkUpdateUserRoleAction(ids, role);
+                  // Write one audit log per affected user
+                  ids.forEach((id) => {
+                    void recordAudit(authUser, {
+                      action: 'role_change',
+                      entityType: 'user',
+                      entityId: id,
+                      after: { role },
+                    });
+                  });
+                  setSelectedIds([]);
+                } catch (err) {
+                  console.error('Bulk role change failed:', err);
+                }
+              }}
+              className="rounded-lg border border-white/20 bg-white/5 px-3 py-1.5 text-sm text-white"
+            />
+          </SuperadminOnly>
+          <SuperadminOnly>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleBulkAction("delete")}
+              className="text-[#EF4444] hover:text-[#EF4444] hover:bg-[#EF4444]/10"
+            >
+              <Trash2 className="w-4 h-4 mr-1" />
+              {t('admin.users.bulkDelete')}
+            </Button>
+          </SuperadminOnly>
         </div>
       )}
 

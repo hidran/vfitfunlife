@@ -684,6 +684,49 @@ export async function bulkUpdateUsers(
   }
 }
 
+// Bulk update users role
+export async function bulkUpdateUserRole(
+  userIds: string[],
+  role: UserRole
+): Promise<BulkActionResult> {
+  const result: BulkActionResult = {
+    success: true,
+    processed: 0,
+    failed: 0,
+    errors: [],
+  };
+
+  try {
+    const batch = writeBatch(db);
+
+    for (const userId of userIds) {
+      try {
+        const userRef = doc(db, USERS_COLLECTION, userId);
+        batch.update(userRef, {
+          role,
+          updatedAt: serverTimestamp(),
+        });
+        result.processed++;
+      } catch (error: any) {
+        result.failed++;
+        result.errors.push({ id: userId, error: error.message });
+      }
+    }
+
+    await batch.commit();
+
+    await logAdminAction(
+      "BULK_UPDATE_USER_ROLE",
+      `Set role=${role} on ${result.processed} users. Failed: ${result.failed}`
+    );
+
+    return result;
+  } catch (error) {
+    console.error("Error in bulk role update:", error);
+    throw error;
+  }
+}
+
 // Export data
 export async function exportData(
   collection: string,

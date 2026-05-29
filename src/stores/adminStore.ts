@@ -38,6 +38,7 @@ import {
   deleteUserType,
   createAnnouncement,
   bulkUpdateUsers,
+  bulkUpdateUserRole,
   exportData,
   getPendingVerifications,
   getPayoutRequests,
@@ -100,6 +101,7 @@ interface AdminState {
   deleteUserTypeAction: (id: string) => Promise<void>;
   createAnnouncementAction: (data: AnnouncementData) => Promise<void>;
   bulkUpdateUsersAction: (userIds: string[], action: "activate" | "suspend" | "delete") => Promise<BulkActionResult>;
+  bulkUpdateUserRoleAction: (userIds: string[], role: UserRole) => Promise<BulkActionResult>;
   exportDataAction: (collection: string, options: { format: "csv" | "excel"; filters?: Record<string, any> }) => Promise<string>;
   fetchTransactions: (filters?: { dateFrom?: Date; dateTo?: Date; status?: string }) => Promise<void>;
   fetchPayoutRequests: (status?: string) => Promise<void>;
@@ -416,6 +418,22 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       return result;
     } catch (error: any) {
       set({ error: error.message || "Failed to bulk update users" });
+      throw error;
+    }
+  },
+
+  // Bulk update user role
+  bulkUpdateUserRoleAction: async (
+    userIds: string[],
+    role: UserRole
+  ): Promise<BulkActionResult> => {
+    set({ error: null });
+    try {
+      const result = await bulkUpdateUserRole(userIds, role);
+      await get().fetchUsers();
+      return result;
+    } catch (error: any) {
+      set({ error: error.message || "Failed to bulk update user roles" });
       throw error;
     }
   },
