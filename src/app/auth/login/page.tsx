@@ -94,10 +94,13 @@ export default function LoginPage() {
     if (user) {
       const isStaff = user.role === 'admin' || user.role === 'superadmin';
       router.replace(isStaff ? '/admin' : '/home');
-    } else if (firebaseUser && !user) {
+    } else if (firebaseUser && !user && !isLoading) {
+      // Only treat as "needs registration" once the profile load has finished.
+      // While isLoading is true the profile may still be fetching (post sign-in),
+      // so redirecting here would prematurely send already-registered users to /register.
       router.replace('/auth/register');
     }
-  }, [user, firebaseUser, isInitialized, router]);
+  }, [user, firebaseUser, isInitialized, isLoading, router]);
 
   // Countdown timer for OTP resend
   useEffect(() => {
