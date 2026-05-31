@@ -40,6 +40,8 @@ export const deMessages: Messages = {
   // ─── Admin: VerificationQueue ────────────────────────────────────────
   'admin.verifications.allCaughtUp': 'Alles erledigt!',
   'admin.verifications.noPending': 'Keine ausstehenden Anbieterverifizierungen.',
+  'admin.verifications.services': 'Leistungen',
+  'admin.verifications.noServices': 'Noch keine Leistungen',
   'admin.verifications.joined': 'Beigetreten:',
   'admin.verifications.experience': 'Erfahrung:',
   'admin.verifications.years': 'Jahre',
@@ -292,6 +294,7 @@ export const deMessages: Messages = {
   'admin.providers.col.earnings': 'Einnahmen',
   'admin.providers.col.status': 'Status',
   'admin.providers.col.general': 'Allgemein',
+  'admin.providers.type.unspecified': 'Nicht angegeben',
   'admin.providers.alert.awaitingVerification': '{{count}} Anbieter warten auf Verifizierung',
   'admin.providers.alert.reviewMessage': 'Anbieteranträge prüfen und genehmigen',
   'admin.providers.alert.reviewNow': 'Jetzt prüfen',

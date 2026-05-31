@@ -132,3 +132,42 @@ export function VerificationBadge({ isVerified, size = "md", className }: Verifi
     </span>
   );
 }
+
+/**
+ * Turn a provider userType slug into a human-readable label
+ * ("personal_trainer" -> "Personal Trainer"). Returns null when absent so the
+ * caller can show a localized "Not specified" fallback.
+ */
+export function formatProviderType(userType?: string | null): string | null {
+  if (!userType || typeof userType !== "string") return null;
+  const cleaned = userType.trim();
+  if (!cleaned) return null;
+  return cleaned
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
+interface ProviderTypeBadgeProps {
+  userType?: string | null;
+  size?: "sm" | "md";
+  className?: string;
+}
+
+export function ProviderTypeBadge({ userType, size = "md", className }: ProviderTypeBadgeProps) {
+  const { t } = useI18n();
+  const label = formatProviderType(userType);
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center font-medium rounded-full border bg-[#7B61FF]/20 text-[#7B61FF] border-[#7B61FF]/30",
+        size === "sm" && "px-2 py-0.5 text-[10px]",
+        size === "md" && "px-2.5 py-1 text-xs",
+        className
+      )}
+    >
+      {label ?? t('admin.providers.type.unspecified')}
+    </span>
+  );
+}

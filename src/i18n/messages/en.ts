@@ -40,6 +40,8 @@ export const enMessages: Messages = {
   // ─── Admin: VerificationQueue ────────────────────────────────────────
   'admin.verifications.allCaughtUp': 'All Caught Up!',
   'admin.verifications.noPending': 'No pending provider verifications.',
+  'admin.verifications.services': 'Services',
+  'admin.verifications.noServices': 'No services listed yet',
   'admin.verifications.joined': 'Joined:',
   'admin.verifications.experience': 'Experience:',
   'admin.verifications.years': 'years',
@@ -295,6 +297,7 @@ export const enMessages: Messages = {
   'admin.providers.col.earnings': 'Earnings',
   'admin.providers.col.status': 'Status',
   'admin.providers.col.general': 'General',
+  'admin.providers.type.unspecified': 'Not specified',
   'admin.providers.alert.awaitingVerification': '{{count}} provider(s) awaiting verification',
   'admin.providers.alert.reviewMessage': 'Review and approve provider applications',
   'admin.providers.alert.reviewNow': 'Review Now',

@@ -38,6 +38,8 @@ export const itMessages = {
   // ─── Admin: VerificationQueue ────────────────────────────────────────
   'admin.verifications.allCaughtUp': 'Tutto in ordine!',
   'admin.verifications.noPending': 'Nessuna verifica provider in attesa.',
+  'admin.verifications.services': 'Servizi',
+  'admin.verifications.noServices': 'Nessun servizio inserito',
   'admin.verifications.joined': 'Iscritto:',
   'admin.verifications.experience': 'Esperienza:',
   'admin.verifications.years': 'anni',
@@ -293,6 +295,7 @@ export const itMessages = {
   'admin.providers.col.earnings': 'Guadagni',
   'admin.providers.col.status': 'Stato',
   'admin.providers.col.general': 'Generale',
+  'admin.providers.type.unspecified': 'Non specificato',
   'admin.providers.alert.awaitingVerification': '{{count}} provider in attesa di verifica',
   'admin.providers.alert.reviewMessage': 'Revisiona e approva le richieste dei provider',
   'admin.providers.alert.reviewNow': 'Verifica ora',

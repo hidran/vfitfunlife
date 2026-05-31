@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { cn, formatDate, toDate } from "@/lib/utils";
+import { cn, formatDate, toDate, formatPrice } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { AdminProvider } from "@/types/admin";
-import { VerificationBadge } from "./UserRoleBadge";
+import { VerificationBadge, ProviderTypeBadge } from "./UserRoleBadge";
 import { useI18n } from "@/hooks/useI18n";
 import {
   CheckCircle,
@@ -109,6 +109,7 @@ export function VerificationQueue({
               <VerificationBadge
                 isVerified={provider.providerProfile?.isVerified ?? false}
               />
+              <ProviderTypeBadge userType={provider.userType} size="sm" />
 
               {/* Expand Icon */}
               {isExpanded ? (
@@ -181,6 +182,38 @@ export function VerificationQueue({
                       </div>
                     </div>
                   )}
+
+                  {/* Services */}
+                  <div>
+                    <h5 className="text-sm font-medium text-white/70 mb-2">
+                      {t('admin.verifications.services')}
+                    </h5>
+                    {Array.isArray(provider.providerProfile?.servicePricing) &&
+                    provider.providerProfile.servicePricing.length > 0 ? (
+                      <div className="space-y-2">
+                        {provider.providerProfile.servicePricing.map((service) => (
+                          <div
+                            key={service.id}
+                            className="flex items-center justify-between p-3 bg-black/20 rounded-lg"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-white truncate">
+                                {service.serviceName}
+                              </p>
+                              <p className="text-xs text-white/40">
+                                {t('admin.providerDetail.serviceDurationMinutes', { count: String(service.durationMinutes) })}
+                              </p>
+                            </div>
+                            <span className="text-sm text-white whitespace-nowrap ml-3">
+                              {formatPrice(service.price)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-white/50 text-sm">{t('admin.verifications.noServices')}</p>
+                    )}
+                  </div>
 
                   {/* Documents */}
                   {provider.verificationDocuments && provider.verificationDocuments.length > 0 && (

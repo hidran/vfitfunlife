@@ -10,6 +10,7 @@ import {
   VerificationBadge,
   StatusBadge,
   ProviderApplicationsPanel,
+  ProviderTypeBadge,
 } from "@/components/admin";
 import { Button } from "@/components/ui/button";
 import { AdminProvider, ProviderFilters } from "@/types/admin";
@@ -115,12 +116,9 @@ export function ProvidersListView() {
       key: "type",
       header: t("admin.providers.col.type"),
       cell: (provider) => (
-        <span className="text-sm text-white/70 capitalize">
-          {provider.providerProfile?.specialties?.[0] ||
-            t("admin.providers.col.general")}
-        </span>
+        <ProviderTypeBadge userType={provider.userType} size="sm" />
       ),
-      width: "w-24",
+      width: "w-36",
     },
     {
       key: "verification",

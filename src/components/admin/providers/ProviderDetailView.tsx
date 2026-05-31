@@ -13,6 +13,7 @@ import {
   useEntityMutation,
   VerificationBadge,
   StatusBadge,
+  ProviderTypeBadge,
 } from '@/components/admin';
 import { Button } from '@/components/ui/button';
 import { useAdminStore } from '@/stores/adminStore';
@@ -224,6 +225,7 @@ export function ProviderDetailView({ providerId }: Props) {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
+                    <ProviderTypeBadge userType={provider.userType} />
                     <VerificationBadge isVerified={profile?.isVerified ?? false} />
                     <StatusBadge status={isSuspended ? 'suspended' : 'active'} />
                     {profile?.specialties?.map((specialty) => (

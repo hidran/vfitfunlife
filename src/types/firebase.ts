@@ -127,6 +127,8 @@ export interface User {
   role: UserRole;
   // Provider application status (absent ⇒ "none")
   providerStatus?: ProviderStatus;
+  // Kind of provider, e.g. "personal_trainer", "psychologist" (providers only)
+  userType?: string | null;
 
   // VIP Status
   isVip: boolean;

@@ -40,6 +40,8 @@ export const frMessages: Messages = {
   // ─── Admin: VerificationQueue ────────────────────────────────────────
   'admin.verifications.allCaughtUp': 'Tout est à jour !',
   'admin.verifications.noPending': 'Aucune vérification de fournisseur en attente.',
+  'admin.verifications.services': 'Services',
+  'admin.verifications.noServices': 'Aucun service pour le moment',
   'admin.verifications.joined': 'Inscrit :',
   'admin.verifications.experience': 'Expérience :',
   'admin.verifications.years': 'ans',
@@ -294,6 +296,7 @@ export const frMessages: Messages = {
   'admin.providers.col.earnings': 'Gains',
   'admin.providers.col.status': 'Statut',
   'admin.providers.col.general': 'Général',
+  'admin.providers.type.unspecified': 'Non spécifié',
   'admin.providers.alert.awaitingVerification': '{{count}} prestataire(s) en attente de vérification',
   'admin.providers.alert.reviewMessage': 'Examinez et approuvez les candidatures des prestataires',
   'admin.providers.alert.reviewNow': 'Examiner maintenant',
