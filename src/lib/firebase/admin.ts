@@ -51,16 +51,20 @@ const PAYOUTS_COLLECTION = "payoutRequests";
 // Helper to convert Firestore timestamp to Date
 const convertTimestamps = (data: any): any => {
   if (!data) return data;
-  
-  const result = { ...data };
-  for (const key in result) {
-    if (result[key] instanceof Timestamp) {
-      result[key] = result[key].toDate();
-    } else if (typeof result[key] === "object" && result[key] !== null) {
-      result[key] = convertTimestamps(result[key]);
+  if (data instanceof Timestamp) return data.toDate();
+  if (data instanceof Date) return data;
+  // Preserve arrays: spreading an array into an object ({ ...array }) would turn
+  // it into a plain object with numeric keys, breaking downstream .map()/.length
+  // (e.g. providerProfile.specialties). Map each element through instead.
+  if (Array.isArray(data)) return data.map((item) => convertTimestamps(item));
+  if (typeof data === "object") {
+    const result: Record<string, any> = {};
+    for (const key in data) {
+      result[key] = convertTimestamps(data[key]);
     }
+    return result;
   }
-  return result;
+  return data;
 };
 
 // Get admin dashboard stats
