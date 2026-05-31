@@ -18,7 +18,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
-import { db, functions } from "./config";
+import { auth, db, functions } from "./config";
 import {
   AdminDashboardStats,
   UserFilters,
@@ -365,11 +365,13 @@ export async function verifyProvider(
   data: VerificationData
 ): Promise<void> {
   try {
+    // Fall back to the acting admin's uid; never write undefined (Firestore rejects it).
+    const verifiedBy = data.verifiedBy ?? auth.currentUser?.uid ?? null;
     const providerRef = doc(db, USERS_COLLECTION, providerId);
     await updateDoc(providerRef, {
       "providerProfile.isVerified": true,
       "providerProfile.verifiedAt": serverTimestamp(),
-      "providerProfile.verifiedBy": data.verifiedBy,
+      "providerProfile.verifiedBy": verifiedBy,
       updatedAt: serverTimestamp(),
     });
 
