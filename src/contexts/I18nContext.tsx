@@ -111,10 +111,30 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
 
+// Safe fallback used when a consumer renders for a frame without an I18nProvider
+// ancestor — e.g. during a hydration mismatch recovery, an ErrorBoundary reset,
+// or a Fast Refresh remount, where the provider subtree is briefly torn down and
+// re-created. Throwing here turns that transient gap into a fatal app crash
+// ("useI18nContext must be used within I18nProvider"); degrading to the default
+// locale instead lets the component render and recover on the next pass.
+const FALLBACK_I18N: I18nContextValue = {
+  locale: DEFAULT_LOCALE,
+  setLocale: () => {},
+  locales: SUPPORTED_LOCALES,
+  localeLabels: LOCALE_LABELS,
+  t: (key, values) => interpolate(getMessage(DEFAULT_LOCALE, key), values),
+};
+
 export function useI18nContext() {
   const context = useContext(I18nContext);
   if (!context) {
-    throw new Error('useI18nContext must be used within I18nProvider');
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn(
+        '[i18n] useI18nContext used without an I18nProvider ancestor; ' +
+          'falling back to the default locale for this render.'
+      );
+    }
+    return FALLBACK_I18N;
   }
   return context;
 }
