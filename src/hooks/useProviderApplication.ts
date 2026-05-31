@@ -11,10 +11,10 @@ export function useProviderStatus(): ProviderStatus {
 /** Submit a provider opt-in for the current user, then refresh the auth user. */
 export function useSubmitProviderApplication() {
   return useMutation({
-    mutationFn: async (categoryName: string) => {
+    mutationFn: async (categories: string[]) => {
       const user = useAuthStore.getState().user;
       if (!user) throw new Error('Not authenticated');
-      await submitProviderApplication(user.uid, { fullName: user.fullName, categoryName });
+      await submitProviderApplication(user.uid, { fullName: user.fullName, categories });
       return user.uid;
     },
     onSuccess: async (uid) => {

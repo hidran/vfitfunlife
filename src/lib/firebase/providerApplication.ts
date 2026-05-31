@@ -12,7 +12,7 @@ import type { ProviderApplicationStatus } from '@/types/firebase';
  */
 export async function submitProviderApplication(
   uid: string,
-  opts: { fullName: string; categoryName: string }
+  opts: { fullName: string; categories: string[] }
 ): Promise<void> {
   const batch = writeBatch(db);
   const instructorRef = doc(db, 'instructors', uid);
@@ -27,7 +27,7 @@ export async function submitProviderApplication(
       isActive: true,
       providerProfile: {
         isVerified: false,
-        specialties: [opts.categoryName],
+        specialties: opts.categories,
         bio: '',
         rating: 0,
         reviewCount: 0,

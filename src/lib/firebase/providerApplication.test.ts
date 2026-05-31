@@ -21,14 +21,14 @@ describe('submitProviderApplication', () => {
     const batch = makeBatch();
     vi.mocked(writeBatch).mockReturnValue(batch as never);
 
-    await submitProviderApplication('u1', { fullName: 'Mia Rossi', categoryName: 'Yoga' });
+    await submitProviderApplication('u1', { fullName: 'Mia Rossi', categories: ['Yoga', 'Pilates'] });
 
     expect(batch.set).toHaveBeenCalledWith(
       { col: 'instructors', id: 'u1' },
       expect.objectContaining({
         uid: 'u1',
         applicationStatus: 'pending',
-        providerProfile: expect.objectContaining({ isVerified: false, specialties: ['Yoga'] }),
+        providerProfile: expect.objectContaining({ isVerified: false, specialties: ['Yoga', 'Pilates'] }),
       }),
       { merge: true }
     );

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Briefcase, Clock, CheckCircle, XCircle } from 'lucide-react';
-import { SERVICE_CATEGORIES } from '@/lib/serviceCategories';
+import { useServiceCategories } from '@/hooks/useServiceCategories';
 import { providerCardState } from '@/lib/providerStatus';
 import { useProviderStatus, useSubmitProviderApplication } from '@/hooks/useProviderApplication';
 import { useAuthStore } from '@/stores/authStore';
@@ -17,8 +17,14 @@ export function BecomeProviderCard() {
   const status = useProviderStatus();
   const variant = providerCardState(status);
   const submit = useSubmitProviderApplication();
+  const categories = useServiceCategories();
   const [open, setOpen] = useState(false);
-  const [category, setCategory] = useState('');
+  const [selected, setSelected] = useState<string[]>([]);
+
+  const toggle = (name: string) =>
+    setSelected((prev) =>
+      prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]
+    );
 
   // Only customers can apply to become a provider. Admins, superadmins, and
   // existing providers don't see the CTA. (Applicants keep role 'customer' —
@@ -79,16 +85,16 @@ export function BecomeProviderCard() {
 
       {open && (
         <div className="mt-4">
-          <p className="text-sm text-white/60 mb-2">{t('provider.optIn.pickType')}</p>
+          <p className="text-sm text-white/60 mb-2">{t('provider.optIn.pickServices')}</p>
           <div className="flex flex-wrap gap-2">
-            {SERVICE_CATEGORIES.map((c) => (
+            {categories.map((c) => (
               <button
                 key={c.id}
                 type="button"
-                onClick={() => setCategory(c.name)}
+                onClick={() => toggle(c.name)}
                 className={cn(
                   'px-3 py-2 rounded-lg text-sm border transition-colors',
-                  category === c.name
+                  selected.includes(c.name)
                     ? 'border-vfit-primary bg-vfit-primary/10 text-white'
                     : 'border-white/10 text-white/70 hover:bg-white/5'
                 )}
@@ -101,7 +107,7 @@ export function BecomeProviderCard() {
             <p className="text-sm text-[#EF4444] mt-2">{t('provider.card.error')}</p>
           )}
           <div className="flex gap-2 mt-4">
-            <Button size="sm" disabled={!category || submit.isPending} onClick={() => submit.mutate(category)}>
+            <Button size="sm" disabled={selected.length === 0 || submit.isPending} onClick={() => submit.mutate(selected)}>
               {submit.isPending ? t('provider.card.submitting') : t('provider.card.submit')}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => { submit.reset(); setOpen(false); }}>{t('provider.card.cancel')}</Button>

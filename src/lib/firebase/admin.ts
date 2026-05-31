@@ -28,6 +28,7 @@ import {
   PlatformSettings,
   SystemLog,
   UserTypeData,
+  ServiceCategoryData,
   VerificationData,
   AnnouncementData,
   AdminUser,
@@ -45,6 +46,7 @@ const BOOKINGS_COLLECTION = "bookings";
 const LOGS_COLLECTION = "systemLogs";
 const SETTINGS_DOC = "platform/settings";
 const USER_TYPES_COLLECTION = "userTypes";
+const SERVICE_CATEGORIES_COLLECTION = "serviceCategories";
 const TRANSACTIONS_COLLECTION = "transactions";
 const PAYOUTS_COLLECTION = "payoutRequests";
 
@@ -632,6 +634,59 @@ export async function deleteUserType(id: string): Promise<void> {
     await logAdminAction("DELETE_USER_TYPE", `Deleted user type: ${id}`);
   } catch (error) {
     console.error("Error deleting user type:", error);
+    throw error;
+  }
+}
+
+// Create service category
+export async function createServiceCategory(data: ServiceCategoryData): Promise<string> {
+  try {
+    const docRef = await addDoc(collection(db, SERVICE_CATEGORIES_COLLECTION), {
+      ...data,
+      slug: data.name.toLowerCase().trim().replace(/\s+/g, "-"),
+      order: data.order ?? 0,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+
+    await logAdminAction("CREATE_SERVICE_CATEGORY", `Created service category: ${data.name}`);
+    return docRef.id;
+  } catch (error) {
+    console.error("Error creating service category:", error);
+    throw error;
+  }
+}
+
+// Update service category
+export async function updateServiceCategory(id: string, data: ServiceCategoryData): Promise<void> {
+  try {
+    const ref = doc(db, SERVICE_CATEGORIES_COLLECTION, id);
+    await updateDoc(ref, {
+      ...data,
+      slug: data.name.toLowerCase().trim().replace(/\s+/g, "-"),
+      order: data.order ?? 0,
+      updatedAt: serverTimestamp(),
+    });
+
+    await logAdminAction("UPDATE_SERVICE_CATEGORY", `Updated service category: ${data.name}`);
+  } catch (error) {
+    console.error("Error updating service category:", error);
+    throw error;
+  }
+}
+
+// Delete service category (soft delete: mark inactive)
+export async function deleteServiceCategory(id: string): Promise<void> {
+  try {
+    const ref = doc(db, SERVICE_CATEGORIES_COLLECTION, id);
+    await updateDoc(ref, {
+      isActive: false,
+      updatedAt: serverTimestamp(),
+    });
+
+    await logAdminAction("DELETE_SERVICE_CATEGORY", `Deleted service category: ${id}`);
+  } catch (error) {
+    console.error("Error deleting service category:", error);
     throw error;
   }
 }

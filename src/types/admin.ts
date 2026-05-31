@@ -156,6 +156,26 @@ export interface UserTypeData {
   requirements?: string[];
 }
 
+// Service Category (admin-configurable catalog of services a provider can offer)
+export interface ServiceCategoryDoc {
+  id: string;
+  name: string;
+  slug: string;
+  icon: string;
+  isActive: boolean;
+  order: number;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+// Service Category Data for create/update
+export interface ServiceCategoryData {
+  name: string;
+  icon: string;
+  isActive: boolean;
+  order?: number;
+}
+
 // Verification Data
 export interface VerificationData {
   status: "verified" | "rejected";

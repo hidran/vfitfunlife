@@ -47,7 +47,7 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [wantsProvider, setWantsProvider] = useState(false);
-  const [providerCategory, setProviderCategory] = useState('');
+  const [providerCategories, setProviderCategories] = useState<string[]>([]);
 
   const handleSocialSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,7 +68,7 @@ export default function RegisterPage() {
       return;
     }
 
-    if (wantsProvider && !providerCategory) {
+    if (wantsProvider && providerCategories.length === 0) {
       setError(t('provider.optIn.errorNoCategory'));
       return;
     }
@@ -85,7 +85,7 @@ export default function RegisterPage() {
       });
 
       if (wantsProvider) {
-        await submitProviderApplication(firebaseUser.uid, { fullName: fullName.trim(), categoryName: providerCategory });
+        await submitProviderApplication(firebaseUser.uid, { fullName: fullName.trim(), categories: providerCategories });
       }
 
       // Refresh user profile in store
@@ -132,7 +132,7 @@ export default function RegisterPage() {
       return;
     }
 
-    if (wantsProvider && !providerCategory) {
+    if (wantsProvider && providerCategories.length === 0) {
       setError(t('provider.optIn.errorNoCategory'));
       return;
     }
@@ -146,7 +146,7 @@ export default function RegisterPage() {
       if (wantsProvider) {
         const uid = useAuthStore.getState().firebaseUser?.uid;
         if (uid) {
-          await submitProviderApplication(uid, { fullName: fullName.trim(), categoryName: providerCategory });
+          await submitProviderApplication(uid, { fullName: fullName.trim(), categories: providerCategories });
         }
       }
 
@@ -472,8 +472,8 @@ export default function RegisterPage() {
             <ProviderOptInField
               enabled={wantsProvider}
               onToggle={setWantsProvider}
-              category={providerCategory}
-              onSelectCategory={setProviderCategory}
+              categories={providerCategories}
+              onChangeCategories={setProviderCategories}
             />
 
             {/* Terms & Privacy */}
@@ -632,8 +632,8 @@ export default function RegisterPage() {
           <ProviderOptInField
             enabled={wantsProvider}
             onToggle={setWantsProvider}
-            category={providerCategory}
-            onSelectCategory={setProviderCategory}
+            categories={providerCategories}
+            onChangeCategories={setProviderCategories}
           />
 
           {/* Terms & Privacy */}

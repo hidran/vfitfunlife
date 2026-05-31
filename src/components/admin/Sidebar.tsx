@@ -25,6 +25,7 @@ import {
   LogOut,
   Bell,
   Database,
+  Dumbbell,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -84,6 +85,12 @@ export function Sidebar({
       label: t('admin.sidebar.nav.userTypes'),
       href: "/admin/user-types",
       icon: <Tag className="w-5 h-5" />,
+      allowedRoles: ["superadmin", "admin"],
+    },
+    {
+      label: t('admin.sidebar.nav.services'),
+      href: "/admin/services",
+      icon: <Dumbbell className="w-5 h-5" />,
       allowedRoles: ["superadmin", "admin"],
     },
     {

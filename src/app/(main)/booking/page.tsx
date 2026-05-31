@@ -27,12 +27,13 @@ import type { ProviderSearchResult, SearchParams } from '@/types/booking';
 import { useNearMe } from '@/hooks/useNearMe';
 import { RadiusFilter } from '@/components/map/RadiusFilter';
 import { annotateAndSortByDistance, filterByRadius } from '@/lib/geo';
-import { SERVICE_CATEGORIES } from '@/lib/serviceCategories';
+import { useServiceCategories } from '@/hooks/useServiceCategories';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
 
 export default function BookingPage() {
   const { t, locale } = useI18n();
+  const serviceCategories = useServiceCategories();
   const router = useRouter();
   const {
     searchResults,
@@ -147,7 +148,7 @@ export default function BookingPage() {
             >
               {t('booking.category.all')}
             </button>
-            {SERVICE_CATEGORIES.map((cat) => (
+            {serviceCategories.map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => setSearchFilters({ category: cat.name })}

@@ -7,7 +7,7 @@ export type AuditAction =
   | 'refund' | 'verify' | 'suspend' | 'activate' | 'role_change';
 
 export type AuditEntityType =
-  | 'user' | 'provider' | 'venue' | 'booking' | 'payment' | 'user_type';
+  | 'user' | 'provider' | 'venue' | 'booking' | 'payment' | 'user_type' | 'service_category';
 
 export interface AuditPayload {
   action: AuditAction;
