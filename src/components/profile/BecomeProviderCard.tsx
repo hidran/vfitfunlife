@@ -6,17 +6,25 @@ import { Briefcase, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { SERVICE_CATEGORIES } from '@/lib/serviceCategories';
 import { providerCardState } from '@/lib/providerStatus';
 import { useProviderStatus, useSubmitProviderApplication } from '@/hooks/useProviderApplication';
+import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
 
 export function BecomeProviderCard() {
   const { t } = useI18n();
+  const role = useAuthStore((s) => s.user?.role);
   const status = useProviderStatus();
   const variant = providerCardState(status);
   const submit = useSubmitProviderApplication();
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState('');
+
+  // Only customers can apply to become a provider. Admins, superadmins, and
+  // existing providers don't see the CTA. (Applicants keep role 'customer' —
+  // only providerStatus changes — so their pending/verified/rejected states
+  // still render correctly.)
+  if (role !== 'customer') return null;
 
   if (variant === 'verified') {
     return (

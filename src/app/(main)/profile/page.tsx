@@ -54,7 +54,10 @@ interface ProfileMenuItem {
   labelKey: MessageKey;
   subtitleKey?: MessageKey;
   accentClass?: string;
-  href: string;
+  href?: string;
+  // When set, clicking scrolls to the element with this id on the current page
+  // instead of navigating (used for the in-page "Become a provider" card).
+  scrollTargetId?: string;
 }
 
 interface ProfileMenuSection {
@@ -195,21 +198,38 @@ export default function ProfilePage() {
   const { user, firebaseUser, logout, isLoading, refreshUserProfile } = useAuthStore();
 
   const visibleSections = useMemo<ProfileMenuSection[]>(() => {
-    const isStaff = user?.role === 'admin' || user?.role === 'superadmin';
-    if (!isStaff) return menuItems;
-    const adminSection: ProfileMenuSection = {
-      sectionKey: 'profile.menu.admin',
-      items: [
-        {
-          icon: Shield,
-          labelKey: 'profile.menu.adminDashboard',
-          subtitleKey: 'profile.menu.subtitle.adminDashboard',
-          accentClass: 'text-vip-gold',
-          href: '/admin',
-        },
-      ],
-    };
-    return [adminSection, ...menuItems];
+    const role = user?.role;
+    if (role === 'admin' || role === 'superadmin') {
+      const adminSection: ProfileMenuSection = {
+        sectionKey: 'profile.menu.admin',
+        items: [
+          {
+            icon: Shield,
+            labelKey: 'profile.menu.adminDashboard',
+            subtitleKey: 'profile.menu.subtitle.adminDashboard',
+            accentClass: 'text-vip-gold',
+            href: '/admin',
+          },
+        ],
+      };
+      return [adminSection, ...menuItems];
+    }
+    if (role === 'customer') {
+      const becomeProviderSection: ProfileMenuSection = {
+        sectionKey: 'profile.menu.becomeProvider',
+        items: [
+          {
+            icon: Briefcase,
+            labelKey: 'profile.menu.startAsProvider',
+            subtitleKey: 'profile.menu.subtitle.startAsProvider',
+            accentClass: 'text-vfit-primary',
+            scrollTargetId: 'become-provider',
+          },
+        ],
+      };
+      return [becomeProviderSection, ...menuItems];
+    }
+    return menuItems;
   }, [user?.role]);
 
   const [isProviderUser, setIsProviderUser] = useState(false);
@@ -530,7 +550,7 @@ export default function ProfilePage() {
         </button>
 
         {/* Become a Provider CTA */}
-        <div className="mt-4">
+        <div id="become-provider" className="mt-4 scroll-mt-24">
           <BecomeProviderCard />
         </div>
       </div>
@@ -791,7 +811,15 @@ export default function ProfilePage() {
               {section.items.map((item, index) => (
                 <button
                   key={`${item.labelKey}-${index}`}
-                  onClick={() => router.push(item.href)}
+                  onClick={() => {
+                    if (item.scrollTargetId) {
+                      document
+                        .getElementById(item.scrollTargetId)
+                        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    } else if (item.href) {
+                      router.push(item.href);
+                    }
+                  }}
                   className={cn(
                     'w-full flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-left transition-all hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/10'
                   )}
