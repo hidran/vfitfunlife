@@ -67,6 +67,25 @@ const convertTimestamps = (data: any): any => {
   return data;
 };
 
+// Seeded demo provider accounts use the @demo.vfit email domain and/or a
+// `provider_<timestamp>_<n>` document id rather than a real Firebase Auth uid.
+const DEMO_EMAIL_DOMAIN = "@demo.vfit";
+
+/**
+ * True when a user/provider document is a soft-deleted account (isDeleted /
+ * deletedAt) or a seeded demo account, and should be hidden from admin lists.
+ * Applied client-side because a Firestore `!=` filter on isDeleted would also
+ * exclude the (vast majority of) real docs that simply lack the field.
+ */
+const isHiddenAccount = (id: string, data: any): boolean => {
+  if (!data) return false;
+  if (data.isDeleted === true || data.deletedAt) return true;
+  const email = typeof data.email === "string" ? data.email.toLowerCase() : "";
+  if (email.endsWith(DEMO_EMAIL_DOMAIN)) return true;
+  if (typeof id === "string" && id.startsWith("provider_")) return true;
+  return false;
+};
+
 // Get admin dashboard stats
 export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
   try {
@@ -114,7 +133,9 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
       where("providerProfile.isVerified", "==", false)
     );
     const pendingVerificationsSnapshot = await getDocs(pendingVerificationsQuery);
-    const pendingVerifications = pendingVerificationsSnapshot.size;
+    const pendingVerifications = pendingVerificationsSnapshot.docs.filter(
+      (d) => !isHiddenAccount(d.id, d.data())
+    ).length;
 
     // Get recent activity
     const activityQuery = query(
@@ -285,11 +306,11 @@ export async function getProviders(
     const q = query(collection(db, USERS_COLLECTION), ...constraints);
     const snapshot = await getDocs(q);
 
-    let providers = snapshot.docs.map((doc) => ({
+    let providers = (snapshot.docs.map((doc) => ({
       id: doc.id,
       uid: doc.id,
       ...convertTimestamps(doc.data()),
-    })) as AdminProvider[];
+    })) as AdminProvider[]).filter((p) => !isHiddenAccount(p.id, p));
 
     // Client-side filtering for search
     if (filters.search) {
@@ -327,11 +348,11 @@ export async function getPendingVerifications(): Promise<AdminProvider[]> {
     );
     const snapshot = await getDocs(q);
 
-    return snapshot.docs.map((doc) => ({
+    return (snapshot.docs.map((doc) => ({
       id: doc.id,
       uid: doc.id,
       ...convertTimestamps(doc.data()),
-    })) as AdminProvider[];
+    })) as AdminProvider[]).filter((p) => !isHiddenAccount(p.id, p));
   } catch (error) {
     console.error("Error fetching pending verifications:", error);
     throw error;
