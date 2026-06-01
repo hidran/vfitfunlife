@@ -8,6 +8,9 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase/config';
+import { useAuthStore } from '@/stores/authStore';
 
 export type Theme = 'dark' | 'light';
 
@@ -42,6 +45,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // to avoid a flash.
   const [theme, setThemeState] = useState<Theme>('dark');
 
+  // Theme saved on the user's Firestore profile (follows them across devices).
+  const remoteTheme = useAuthStore((s) => s.user?.theme);
+
   useEffect(() => {
     let stored: string | null = null;
     try {
@@ -53,6 +59,22 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       setThemeState(stored);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // When a logged-in user's saved theme loads, adopt it (profile wins over the
+  // device default). Uses setThemeState directly so it isn't re-persisted.
+  useEffect(() => {
+    if (remoteTheme === 'light' || remoteTheme === 'dark') {
+      setThemeState((cur) => (cur === remoteTheme ? cur : remoteTheme));
+    }
+  }, [remoteTheme]);
+
+  // Persist an explicit user choice to their profile (best-effort; localStorage
+  // already covers the device + logged-out case).
+  const persistRemote = useCallback((next: Theme) => {
+    const uid = useAuthStore.getState().user?.id;
+    if (!uid) return;
+    void updateDoc(doc(db, 'users', uid), { theme: next }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -67,10 +89,21 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     applyNativeStatusBar(theme);
   }, [theme]);
 
-  const setTheme = useCallback((next: Theme) => setThemeState(next), []);
+  const setTheme = useCallback(
+    (next: Theme) => {
+      setThemeState(next);
+      persistRemote(next);
+    },
+    [persistRemote],
+  );
   const toggle = useCallback(
-    () => setThemeState((prev) => (prev === 'dark' ? 'light' : 'dark')),
-    [],
+    () =>
+      setThemeState((prev) => {
+        const next: Theme = prev === 'dark' ? 'light' : 'dark';
+        persistRemote(next);
+        return next;
+      }),
+    [persistRemote],
   );
 
   return (

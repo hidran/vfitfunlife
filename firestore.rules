@@ -119,7 +119,8 @@ service cloud.firestore {
         'fullName', 'email', 'phone', 'bio', 'dateOfBirth', 'preferredLanguage',
         'preferredSection', 'avatarUrl', 'notificationsEnabled', 'fcmTokens',
         'updatedAt', 'lastLoginAt', 'phoneVerified', 'emailVerified',
-        'socialLinks', 'notificationSettings', 'privacySettings', 'providerProfile', 'providerStatus'
+        'socialLinks', 'notificationSettings', 'privacySettings', 'providerProfile', 'providerStatus',
+        'theme'
       ]);
     }
 

@@ -145,6 +145,8 @@ export interface User {
   preferredLanguage: AppLocale;
   preferredSection: Section;
   notificationsEnabled: boolean;
+  // UI theme preference (synced across devices); absent ⇒ device default (dark)
+  theme?: 'dark' | 'light';
 
   // Push tokens
   fcmTokens: FcmToken[];
