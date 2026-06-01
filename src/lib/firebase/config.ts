@@ -1,6 +1,12 @@
 import { initializeApp, getApps, FirebaseApp } from "firebase/app";
 import { getAuth, Auth } from "firebase/auth";
-import { getFirestore, Firestore, enableIndexedDbPersistence } from "firebase/firestore";
+import {
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  Firestore,
+} from "firebase/firestore";
 import { getStorage, FirebaseStorage } from "firebase/storage";
 import { getFunctions, Functions, connectFunctionsEmulator } from "firebase/functions";
 import { getAnalytics, Analytics, isSupported } from "firebase/analytics";
@@ -33,7 +39,21 @@ function initializeFirebase() {
   }
 
   auth = getAuth(app);
-  db = getFirestore(app);
+  // Firestore with persistent (IndexedDB) cache — replaces the deprecated
+  // enableIndexedDbPersistence; multi-tab safe and more reliable in mobile
+  // webviews. Falls back to plain getFirestore on the server (static export)
+  // or if Firestore was already initialized (e.g. HMR re-run).
+  if (typeof window !== "undefined") {
+    try {
+      db = initializeFirestore(app, {
+        localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+      });
+    } catch {
+      db = getFirestore(app);
+    }
+  } else {
+    db = getFirestore(app);
+  }
   storage = getStorage(app);
   
   const region = process.env.NEXT_PUBLIC_FIREBASE_REGION || "europe-west1";
@@ -42,22 +62,6 @@ function initializeFirebase() {
   // Connect to emulators in development
   if (process.env.NODE_ENV === "development" && process.env.NEXT_PUBLIC_USE_EMULATORS === "true") {
     connectFunctionsEmulator(functions, "localhost", 5001);
-  }
-
-  // Enable offline persistence for Firestore
-  // This allows the app to work offline and queue writes until connection is restored
-  if (typeof window !== "undefined") {
-    enableIndexedDbPersistence(db).catch((err) => {
-      if (err.code === "failed-precondition") {
-        // Multiple tabs open, persistence can only be enabled in one tab at a time
-        console.warn("Firestore persistence disabled: Multiple tabs open");
-      } else if (err.code === "unimplemented") {
-        // Browser doesn't support IndexedDB
-        console.warn("Firestore persistence disabled: Browser doesn't support IndexedDB");
-      } else {
-        console.warn("Firestore persistence failed:", err);
-      }
-    });
   }
 
   return { app, auth, db, storage, functions };
