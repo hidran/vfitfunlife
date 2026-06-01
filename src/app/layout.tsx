@@ -41,8 +41,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="it" className={`${inter.variable} ${poppins.variable}`}>
+    <html lang="it" className={`${inter.variable} ${poppins.variable}`} suppressHydrationWarning>
       <body className="font-sans antialiased bg-background-dark text-text-inverse min-h-screen">
+        {/* Set theme before hydration to avoid a flash of the wrong theme */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{var t=localStorage.getItem('vfit.theme');document.documentElement.dataset.theme=(t==='light'||t==='dark')?t:'dark';}catch(e){document.documentElement.dataset.theme='dark';}})();",
+          }}
+        />
         <Providers>{children}</Providers>
       </body>
     </html>

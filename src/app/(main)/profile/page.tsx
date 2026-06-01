@@ -43,6 +43,7 @@ import {
   CancellationPolicyEditor,
   BecomeProviderCard,
 } from '@/components/profile';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { isProvider, updateProviderProfile } from '@/lib/firebase/auth';
 import { ServicePricing, AvailabilitySchedule, ProviderProfile } from '@/types/firebase';
 import { formatPrice } from '@/lib/utils';
@@ -552,6 +553,12 @@ export default function ProfilePage() {
         {/* Become a Provider CTA */}
         <div id="become-provider" className="mt-4 scroll-mt-24">
           <BecomeProviderCard />
+        </div>
+
+        {/* Appearance / theme quick toggle */}
+        <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 p-4">
+          <p className="font-semibold text-text-inverse">{t('settings.appearance')}</p>
+          <ThemeToggle />
         </div>
       </div>
 

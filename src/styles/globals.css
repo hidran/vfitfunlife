@@ -18,6 +18,17 @@
   --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
   --safe-area-inset-left: env(safe-area-inset-left, 0px);
   --safe-area-inset-right: env(safe-area-inset-right, 0px);
+
+  color-scheme: dark;
+}
+
+/* Light theme — flips the neutral/text tokens so token-based UI adapts.
+   Section accent colors (vfit/vfun/vlife) are unchanged. Components still using
+   literal hex (e.g. #1E2230) or text-white stay dark until migrated to tokens. */
+[data-theme='light'] {
+  --color-background-dark: #F4F6FA;
+  --color-text-inverse: #14171F;
+  color-scheme: light;
 }
 
 /* VFit Theme */
