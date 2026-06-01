@@ -28,8 +28,10 @@ import { nativeGoogleSignIn, nativeAppleSignIn } from "./nativeAuth";
 import { ProviderProfile, Certification, Education, SocialLinks, NotificationSettings, PrivacySettings } from "@/types/firebase";
 import { DEFAULT_LOCALE, type AppLocale } from "@/types/locale";
 
-// Store confirmation result for OTP verification
+// Store confirmation result for OTP verification (web reCAPTCHA flow)
 let confirmationResult: ConfirmationResult | null = null;
+// Verification id for the native phone-auth flow (no reCAPTCHA on device)
+let nativeVerificationId: string | null = null;
 
 /**
  * Initialize reCAPTCHA verifier for phone auth
@@ -58,13 +60,24 @@ export function initRecaptcha(containerId: string): RecaptchaVerifier {
  */
 export async function sendOtp(
   phoneNumber: string,
-  recaptchaVerifier: RecaptchaVerifier
+  recaptchaVerifier?: RecaptchaVerifier
 ): Promise<void> {
   // Format phone number with Italian country code if not present
   const formattedPhone = phoneNumber.startsWith("+")
     ? phoneNumber
     : `+39${phoneNumber.replace(/^0/, "")}`;
 
+  // On native, use the plugin's native verification (APNs/Play Integrity) — no
+  // web reCAPTCHA, which is unreliable in the mobile webview.
+  if (Capacitor.isNativePlatform()) {
+    const { nativeSendPhoneOtp } = await import("./nativeAuth");
+    nativeVerificationId = await nativeSendPhoneOtp(formattedPhone);
+    return;
+  }
+
+  if (!recaptchaVerifier) {
+    throw new Error("reCAPTCHA verifier is required for web phone sign-in");
+  }
   confirmationResult = await signInWithPhoneNumber(auth, formattedPhone, recaptchaVerifier);
 }
 
@@ -72,6 +85,18 @@ export async function sendOtp(
  * Verify OTP code
  */
 export async function verifyOtp(code: string): Promise<User> {
+  // Native flow: bridge the verificationId + code into the JS SDK.
+  if (Capacitor.isNativePlatform()) {
+    if (!nativeVerificationId) {
+      throw new Error("No verification in progress. Please request a code first.");
+    }
+    const { nativeVerifyPhoneOtp } = await import("./nativeAuth");
+    const user = await nativeVerifyPhoneOtp(auth, nativeVerificationId, code);
+    nativeVerificationId = null;
+    void updateUserLastLogin(user.uid);
+    return user;
+  }
+
   if (!confirmationResult) {
     throw new Error("No confirmation result. Please request OTP first.");
   }

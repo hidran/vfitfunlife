@@ -13,6 +13,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { Apple, Mail, Phone, Lock, ChevronLeft, Eye, EyeOff } from 'lucide-react';
 import { FcGoogle } from 'react-icons/fc';
 import { cn } from '@/lib/utils';
+import { isNativePlatform } from '@/lib/capacitor';
 import { useI18n } from '@/hooks/useI18n';
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 
@@ -61,13 +62,15 @@ export default function LoginPage() {
   const [recaptchaInitialized, setRecaptchaInitialized] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Initialize reCAPTCHA only when phone method is selected
+  // Initialize reCAPTCHA only when phone method is selected (web only — native
+  // phone auth uses the Capacitor plugin's native verification, no reCAPTCHA).
   useEffect(() => {
     if (
-      typeof window !== 'undefined' && 
-      loginMethod === 'phone' && 
+      typeof window !== 'undefined' &&
+      !isNativePlatform() &&
+      loginMethod === 'phone' &&
       !isOtpSent &&
-      !recaptchaInitialized && 
+      !recaptchaInitialized &&
       isInitialized
     ) {
       // Small delay to ensure DOM element exists

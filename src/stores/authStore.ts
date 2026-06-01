@@ -385,7 +385,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   sendPhoneOtp: async (phoneNumber: string) => {
     const { recaptchaVerifier } = get();
 
-    if (!recaptchaVerifier) {
+    // Native uses the plugin's native verification — no reCAPTCHA needed.
+    if (!isNativePlatform() && !recaptchaVerifier) {
       set({ error: 'Phone authentication not initialized' });
       return false;
     }
@@ -393,7 +394,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true, error: null, phoneNumber });
 
     try {
-      await sendOtp(phoneNumber, recaptchaVerifier);
+      await sendOtp(phoneNumber, recaptchaVerifier ?? undefined);
       set({ isOtpSent: true, isLoading: false });
       return true;
     } catch (error: any) {
