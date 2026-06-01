@@ -14,14 +14,14 @@ export default function FeedbackPage() {
 
   return (
     <div className="container-mobile py-6 pb-24 space-y-5">
-      <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
+      <section className="rounded-3xl border border-hairline bg-surface-2 p-5">
         <h1 className="text-2xl font-display font-bold text-text-inverse">{t('feedback.title')}</h1>
         <p className="mt-1 text-sm text-text-secondary">
           {t('feedback.subtitle')}
         </p>
       </section>
 
-      <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
+      <section className="rounded-2xl border border-hairline bg-surface-2 p-4">
         <p className="text-sm font-medium text-text-inverse">{t('feedback.satisfaction')}</p>
         <div className="mt-3 flex items-center gap-2">
           {Array.from({ length: 5 }).map((_, index) => {
@@ -37,7 +37,7 @@ export default function FeedbackPage() {
                   'rounded-full border p-2 transition-colors',
                   active
                     ? 'border-yellow-400/60 bg-yellow-400/20'
-                    : 'border-white/15 bg-white/5'
+                    : 'border-white/15 bg-surface-2'
                 )}
               >
                 <Star
@@ -49,7 +49,7 @@ export default function FeedbackPage() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
+      <section className="rounded-2xl border border-hairline bg-surface-2 p-4">
         <label htmlFor="feedback-comment" className="text-sm font-medium text-text-inverse">
           {t('feedback.commentLabel')}
         </label>
@@ -60,8 +60,8 @@ export default function FeedbackPage() {
           rows={5}
           placeholder={t('feedback.commentPlaceholder')}
           className={cn(
-            'mt-3 w-full resize-none rounded-xl border border-white/10 bg-black/20 px-3 py-2.5',
-            'text-sm text-white placeholder:text-text-tertiary outline-none focus:border-section-primary'
+            'mt-3 w-full resize-none rounded-xl border border-hairline bg-surface-sunken px-3 py-2.5',
+            'text-sm text-content placeholder:text-text-tertiary outline-none focus:border-section-primary'
           )}
         />
       </section>

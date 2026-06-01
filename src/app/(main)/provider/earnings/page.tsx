@@ -126,7 +126,7 @@ export default function ProviderEarningsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">{t('provider.earnings.title')}</h1>
+          <h1 className="text-2xl font-bold text-content">{t('provider.earnings.title')}</h1>
           <p className="text-gray-400 mt-1">
             {t('provider.earnings.subtitle')}
           </p>
@@ -148,7 +148,7 @@ export default function ProviderEarningsPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-[#2A2D3A] rounded-xl p-6 border border-white/5">
+        <div className="bg-[#2A2D3A] rounded-xl p-6 border border-hairline">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-green-500/20 rounded-lg">
               <Wallet className="w-6 h-6 text-green-400" />
@@ -158,13 +158,13 @@ export default function ProviderEarningsPage() {
               {t('provider.earnings.stat.available')}
             </span>
           </div>
-          <p className="text-3xl font-bold text-white">
+          <p className="text-3xl font-bold text-content">
             €{earningsData.availableBalance.toFixed(2)}
           </p>
           <p className="text-sm text-gray-400 mt-1">{t('provider.earnings.stat.availableLabel')}</p>
         </div>
 
-        <div className="bg-[#2A2D3A] rounded-xl p-6 border border-white/5">
+        <div className="bg-[#2A2D3A] rounded-xl p-6 border border-hairline">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-yellow-500/20 rounded-lg">
               <Clock className="w-6 h-6 text-yellow-400" />
@@ -173,13 +173,13 @@ export default function ProviderEarningsPage() {
               {t('provider.earnings.stat.pending')}
             </span>
           </div>
-          <p className="text-3xl font-bold text-white">
+          <p className="text-3xl font-bold text-content">
             €{earningsData.pendingAmount.toFixed(2)}
           </p>
           <p className="text-sm text-gray-400 mt-1">{t('provider.earnings.stat.pendingLabel')}</p>
         </div>
 
-        <div className="bg-[#2A2D3A] rounded-xl p-6 border border-white/5">
+        <div className="bg-[#2A2D3A] rounded-xl p-6 border border-hairline">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-blue-500/20 rounded-lg">
               <DollarSign className="w-6 h-6 text-blue-400" />
@@ -189,13 +189,13 @@ export default function ProviderEarningsPage() {
               +12%
             </span>
           </div>
-          <p className="text-3xl font-bold text-white">
+          <p className="text-3xl font-bold text-content">
             €{earningsData.monthTotal.toFixed(2)}
           </p>
           <p className="text-sm text-gray-400 mt-1">{t('provider.earnings.stat.thisMonth')}</p>
         </div>
 
-        <div className="bg-[#2A2D3A] rounded-xl p-6 border border-white/5">
+        <div className="bg-[#2A2D3A] rounded-xl p-6 border border-hairline">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-purple-500/20 rounded-lg">
               <CheckCircle className="w-6 h-6 text-purple-400" />
@@ -205,7 +205,7 @@ export default function ProviderEarningsPage() {
               +8%
             </span>
           </div>
-          <p className="text-3xl font-bold text-white">
+          <p className="text-3xl font-bold text-content">
             €{earningsData.yearTotal.toFixed(2)}
           </p>
           <p className="text-sm text-gray-400 mt-1">{t('provider.earnings.stat.thisYear')}</p>
@@ -216,11 +216,11 @@ export default function ProviderEarningsPage() {
       <EarningsChart data={chartData} />
 
       {/* Transactions */}
-      <div className="bg-[#2A2D3A] rounded-xl border border-white/5 overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b border-white/5">
-          <h2 className="text-lg font-semibold text-white">{t('provider.earnings.transactions.title')}</h2>
+      <div className="bg-[#2A2D3A] rounded-xl border border-hairline overflow-hidden">
+        <div className="flex items-center justify-between p-6 border-b border-hairline">
+          <h2 className="text-lg font-semibold text-content">{t('provider.earnings.transactions.title')}</h2>
           <div className="flex items-center gap-2">
-            <select className="bg-[#1A1D29] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none">
+            <select className="bg-[#1A1D29] border border-hairline rounded-lg px-3 py-2 text-sm text-content outline-none">
               <option value="all">{t('provider.earnings.transactions.filter.all')}</option>
               <option value="booking_payment">{t('provider.earnings.transactions.filter.booking')}</option>
               <option value="withdrawal">{t('provider.earnings.transactions.filter.withdrawal')}</option>
@@ -232,14 +232,14 @@ export default function ProviderEarningsPage() {
         {earningsData.transactions.length === 0 ? (
           <div className="p-12 text-center">
             <Wallet className="w-12 h-12 text-gray-500 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-white mb-2">{t('provider.earnings.transactions.empty.title')}</h3>
+            <h3 className="text-lg font-medium text-content mb-2">{t('provider.earnings.transactions.empty.title')}</h3>
             <p className="text-gray-400">{t('provider.earnings.transactions.empty.subtitle')}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-white/5 bg-[#1A1D29]/50">
+                <tr className="border-b border-hairline bg-[#1A1D29]/50">
                   <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">{t('provider.earnings.table.date')}</th>
                   <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">{t('provider.earnings.table.type')}</th>
                   <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">{t('provider.earnings.table.description')}</th>
@@ -263,7 +263,7 @@ export default function ProviderEarningsPage() {
                         {transaction.type.replace('_', ' ')}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-white">
+                    <td className="px-6 py-4 text-sm text-content">
                       {transaction.description}
                     </td>
                     <td className={cn(
@@ -294,11 +294,11 @@ export default function ProviderEarningsPage() {
       {showWithdrawModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-[#2A2D3A] rounded-xl p-6 max-w-md w-full">
-            <h3 className="text-xl font-semibold text-white mb-4">{t('provider.earnings.withdraw.title')}</h3>
+            <h3 className="text-xl font-semibold text-content mb-4">{t('provider.earnings.withdraw.title')}</h3>
 
             <div className="mb-6">
               <p className="text-sm text-gray-400 mb-2">{t('provider.earnings.withdraw.availableBalance')}</p>
-              <p className="text-2xl font-bold text-white">
+              <p className="text-2xl font-bold text-content">
                 €{earningsData.availableBalance.toFixed(2)}
               </p>
             </div>
@@ -313,7 +313,7 @@ export default function ProviderEarningsPage() {
                   onChange={(e) => setWithdrawAmount(e.target.value)}
                   placeholder="0.00"
                   max={earningsData.availableBalance}
-                  className="w-full bg-[#1A1D29] border border-white/10 rounded-lg pl-8 pr-4 py-3 text-white placeholder-gray-500 outline-none focus:border-section-primary"
+                  className="w-full bg-[#1A1D29] border border-hairline rounded-lg pl-8 pr-4 py-3 text-content placeholder-gray-500 outline-none focus:border-section-primary"
                 />
               </div>
               <button

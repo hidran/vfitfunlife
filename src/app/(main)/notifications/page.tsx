@@ -36,7 +36,7 @@ const TYPE_META: Record<
     icon: Bell,
     labelKey: 'notifications.type.system',
     colorClass: 'text-text-tertiary',
-    bgClass: 'bg-white/10',
+    bgClass: 'bg-surface-2',
   },
 };
 
@@ -86,7 +86,7 @@ export default function NotificationsPage() {
             'rounded-full border px-3 py-2 text-xs font-semibold transition-colors',
             showUnreadOnly
               ? 'border-section-primary bg-section-primary/15 text-section-primary'
-              : 'border-white/15 bg-white/5 text-text-secondary'
+              : 'border-white/15 bg-surface-2 text-text-secondary'
           )}
         >
           {t('notifications.unreadOnly')}
@@ -95,7 +95,7 @@ export default function NotificationsPage() {
 
       <section className="space-y-3 pb-20">
         {visibleNotifications.length === 0 ? (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-center text-sm text-text-secondary">
+          <div className="rounded-2xl border border-hairline bg-surface-2 p-5 text-center text-sm text-text-secondary">
             {t('notifications.emptyFiltered')}
           </div>
         ) : (
@@ -109,7 +109,7 @@ export default function NotificationsPage() {
                 className={cn(
                   'rounded-2xl border p-4 transition-colors',
                   notification.read
-                    ? 'border-white/10 bg-white/5'
+                    ? 'border-hairline bg-surface-2'
                     : 'border-section-primary/30 bg-section-primary/10'
                 )}
               >

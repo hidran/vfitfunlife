@@ -195,7 +195,7 @@ export function AvailabilityCalendar({
                   'text-center p-2 rounded-lg transition-colors',
                   isAvailable
                     ? 'bg-success-DEFAULT/10 border border-success-DEFAULT/30'
-                    : 'bg-background-secondary/5 border border-white/5'
+                    : 'bg-background-secondary/5 border border-hairline'
                 )}
               >
                 <p
@@ -275,7 +275,7 @@ export function AvailabilityCalendar({
                   ? 'bg-section-gradient text-white ring-2 ring-section-primary ring-offset-2 ring-offset-background-dark'
                   : isAvailable
                     ? 'bg-success-DEFAULT/10 border border-success-DEFAULT/30 text-success-DEFAULT'
-                    : 'bg-background-secondary/5 border border-white/5 text-text-tertiary'
+                    : 'bg-background-secondary/5 border border-hairline text-text-tertiary'
               )}
             >
               <p className="text-xs font-medium uppercase">{t(day.shortKey)}</p>
@@ -285,7 +285,7 @@ export function AvailabilityCalendar({
       </div>
 
       {selectedDay && (
-        <div className="p-4 rounded-xl bg-background-secondary/5 border border-white/10 space-y-4">
+        <div className="p-4 rounded-xl bg-background-secondary/5 border border-hairline space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="font-medium text-text-inverse">
               {t(selectedDayConfig?.labelKey ?? 'profile.availability.day.monday.label')}
@@ -336,21 +336,21 @@ export function AvailabilityCalendar({
                 )}
               </div>
 
-              <div className="p-3 rounded-lg bg-background-secondary/10 border border-white/5">
+              <div className="p-3 rounded-lg bg-background-secondary/10 border border-hairline">
                 <p className="text-xs text-text-tertiary mb-2">{t('profile.availability.addSlot')}</p>
                 <div className="flex items-center gap-2">
                   <input
                     type="time"
                     value={newSlot.start}
                     onChange={(event) => setNewSlot({ ...newSlot, start: event.target.value })}
-                    className="flex-1 bg-background-secondary/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-text-inverse focus:outline-none focus:border-section-primary"
+                    className="flex-1 bg-background-secondary/20 border border-hairline rounded-lg px-3 py-2 text-sm text-text-inverse focus:outline-none focus:border-section-primary"
                   />
                   <span className="text-text-tertiary">{t('profile.availability.to')}</span>
                   <input
                     type="time"
                     value={newSlot.end}
                     onChange={(event) => setNewSlot({ ...newSlot, end: event.target.value })}
-                    className="flex-1 bg-background-secondary/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-text-inverse focus:outline-none focus:border-section-primary"
+                    className="flex-1 bg-background-secondary/20 border border-hairline rounded-lg px-3 py-2 text-sm text-text-inverse focus:outline-none focus:border-section-primary"
                   />
                   <button
                     onClick={() => handleAddSlot(selectedDay)}

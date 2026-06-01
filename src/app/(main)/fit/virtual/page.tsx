@@ -12,7 +12,7 @@ export default function FitVirtualPage() {
 
   return (
     <div className="container-mobile py-6 pb-24 space-y-5">
-      <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
+      <section className="rounded-3xl border border-hairline bg-surface-2 p-5">
         <h1 className="text-2xl font-display font-bold text-text-inverse">{t('fit.virtual.title')}</h1>
         <p className="mt-1 text-sm text-text-secondary">
           {t('fit.virtual.subtitle')}
@@ -26,7 +26,7 @@ export default function FitVirtualPage() {
           </Link>
           <Link
             href="/bookings"
-            className="rounded-full border border-white/20 bg-white/5 px-4 py-2 text-xs font-semibold text-text-inverse"
+            className="rounded-full border border-white/20 bg-surface-2 px-4 py-2 text-xs font-semibold text-text-inverse"
           >
             {t('fit.virtual.viewCalendar')}
           </Link>
@@ -45,7 +45,7 @@ export default function FitVirtualPage() {
           <Spinner size="md" />
         ) : (
           programs.map((program) => (
-            <article key={program.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <article key={program.id} className="rounded-2xl border border-hairline bg-surface-2 p-4">
               <div className="flex items-start justify-between gap-2">
                 <h2 className="text-sm font-semibold text-text-inverse">{program.title}</h2>
                 {program.live && (

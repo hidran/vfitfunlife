@@ -48,15 +48,15 @@ export function StatCard({
     <div
       onClick={onClick}
       className={cn(
-        "bg-[#1E2230] rounded-2xl p-6 border border-white/10",
+        "bg-surface rounded-2xl p-6 border border-hairline",
         onClick && "cursor-pointer hover:border-white/20 transition-colors",
         className
       )}
     >
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm text-white/50 mb-1">{title}</p>
-          <h3 className="text-2xl font-bold text-white">{value}</h3>
+          <p className="text-sm text-content-muted mb-1">{title}</p>
+          <h3 className="text-2xl font-bold text-content">{value}</h3>
           
           {trend !== undefined && (
             <div className="flex items-center gap-1 mt-2">
@@ -71,14 +71,14 @@ export function StatCard({
                   "text-sm font-medium",
                   isPositive && "text-[#10B981]",
                   isNegative && "text-[#EF4444]",
-                  !isPositive && !isNegative && "text-white/50"
+                  !isPositive && !isNegative && "text-content-muted"
                 )}
               >
                 {isPositive ? "+" : ""}
                 {trend}%
               </span>
               {trendLabel && (
-                <span className="text-sm text-white/40 ml-1">{trendLabel}</span>
+                <span className="text-sm text-content-faint ml-1">{trendLabel}</span>
               )}
             </div>
           )}

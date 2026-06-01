@@ -98,10 +98,10 @@ export function ServiceCategoryDetailView({
     onSuccess: () => router.push('/admin/services/'),
   });
 
-  if (loading) return <div className="p-8 text-white/50">{t('common.loading')}</div>;
+  if (loading) return <div className="p-8 text-content-muted">{t('common.loading')}</div>;
   if (!sc)
     return (
-      <div className="p-8 text-white/50">{t('admin.serviceCategories.notFound')}</div>
+      <div className="p-8 text-content-muted">{t('admin.serviceCategories.notFound')}</div>
     );
 
   return (

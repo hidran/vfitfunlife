@@ -62,7 +62,7 @@ export function UserFormView({ mode, initial, onSubmit }: Props) {
 function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
     <label className="block space-y-1">
-      <span className="text-xs text-white/60">{label}</span>
+      <span className="text-xs text-content-muted">{label}</span>
       {children}
       {error && <span className="text-xs text-red-400">{error}</span>}
     </label>

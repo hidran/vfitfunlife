@@ -126,7 +126,7 @@ export function LanguagesSelector({
                 'px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-2',
                 isSelected
                   ? 'bg-section-gradient text-white shadow-lg'
-                  : 'bg-background-secondary/20 text-text-secondary hover:bg-background-secondary/30 border border-white/10'
+                  : 'bg-background-secondary/20 text-text-secondary hover:bg-background-secondary/30 border border-hairline'
               )}
             >
               <span>{language.flag}</span>
@@ -139,7 +139,7 @@ export function LanguagesSelector({
 
       {/* Selected Languages Display */}
       {selected.length > 0 && (
-        <div className="pt-2 border-t border-white/10">
+        <div className="pt-2 border-t border-hairline">
           <p className="text-xs text-text-tertiary mb-2">{t('profile.languages.selectedLabel')}</p>
           <div className="flex flex-wrap gap-1">
             {selected.map((code) => (

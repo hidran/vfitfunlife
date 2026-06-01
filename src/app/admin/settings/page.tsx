@@ -83,8 +83,8 @@ export default function SettingsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">{t('admin.settings.title')}</h1>
-          <p className="text-white/50 mt-1">
+          <h1 className="text-2xl font-bold text-content">{t('admin.settings.title')}</h1>
+          <p className="text-content-muted mt-1">
             {t('admin.settings.subtitle')}
           </p>
         </div>
@@ -104,7 +104,7 @@ export default function SettingsPage() {
         <Shield className="w-5 h-5 text-[#FFD700] flex-shrink-0 mt-0.5" />
         <div>
           <p className="text-sm font-medium text-[#FFD700]">{t('admin.settings.superadminOnly.label')}</p>
-          <p className="text-sm text-white/70">
+          <p className="text-sm text-content-muted">
             {t('admin.settings.superadminOnly.description')}
           </p>
         </div>
@@ -112,20 +112,20 @@ export default function SettingsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* General Settings */}
-        <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
+        <div className="bg-surface rounded-2xl border border-hairline p-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl bg-[#00C9FF]/20 flex items-center justify-center">
               <Shield className="w-5 h-5 text-[#00C9FF]" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-white">{t('admin.settings.general.title')}</h3>
-              <p className="text-sm text-white/50">{t('admin.settings.general.subtitle')}</p>
+              <h3 className="text-lg font-semibold text-content">{t('admin.settings.general.title')}</h3>
+              <p className="text-sm text-content-muted">{t('admin.settings.general.subtitle')}</p>
             </div>
           </div>
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">
+              <label className="block text-sm font-medium text-content-muted mb-2">
                 {t('admin.settings.general.platformName')}
               </label>
               <input
@@ -134,12 +134,12 @@ export default function SettingsPage() {
                 onChange={(e) =>
                   setSettings((prev) => ({ ...prev, platformName: e.target.value }))
                 }
-                className="w-full px-4 py-2.5 bg-[#2A2D3A] border border-white/10 rounded-xl text-white focus:outline-none focus:border-[#00C9FF]/50"
+                className="w-full px-4 py-2.5 bg-[#2A2D3A] border border-hairline rounded-xl text-content focus:outline-none focus:border-[#00C9FF]/50"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">
+              <label className="block text-sm font-medium text-content-muted mb-2">
                 {t('admin.settings.general.supportEmail')}
               </label>
               <input
@@ -148,12 +148,12 @@ export default function SettingsPage() {
                 onChange={(e) =>
                   setSettings((prev) => ({ ...prev, supportEmail: e.target.value }))
                 }
-                className="w-full px-4 py-2.5 bg-[#2A2D3A] border border-white/10 rounded-xl text-white focus:outline-none focus:border-[#00C9FF]/50"
+                className="w-full px-4 py-2.5 bg-[#2A2D3A] border border-hairline rounded-xl text-content focus:outline-none focus:border-[#00C9FF]/50"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">
+              <label className="block text-sm font-medium text-content-muted mb-2">
                 {t('admin.settings.general.supportPhone')}
               </label>
               <input
@@ -162,12 +162,12 @@ export default function SettingsPage() {
                 onChange={(e) =>
                   setSettings((prev) => ({ ...prev, supportPhone: e.target.value }))
                 }
-                className="w-full px-4 py-2.5 bg-[#2A2D3A] border border-white/10 rounded-xl text-white focus:outline-none focus:border-[#00C9FF]/50"
+                className="w-full px-4 py-2.5 bg-[#2A2D3A] border border-hairline rounded-xl text-content focus:outline-none focus:border-[#00C9FF]/50"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">
+              <label className="block text-sm font-medium text-content-muted mb-2">
                 {t('admin.settings.general.currency')}
               </label>
               <select
@@ -175,7 +175,7 @@ export default function SettingsPage() {
                 onChange={(e) =>
                   setSettings((prev) => ({ ...prev, currency: e.target.value }))
                 }
-                className="w-full px-4 py-2.5 bg-[#2A2D3A] border border-white/10 rounded-xl text-white focus:outline-none focus:border-[#00C9FF]/50"
+                className="w-full px-4 py-2.5 bg-[#2A2D3A] border border-hairline rounded-xl text-content focus:outline-none focus:border-[#00C9FF]/50"
               >
                 <option value="EUR">EUR (€)</option>
                 <option value="USD">USD ($)</option>
@@ -186,20 +186,20 @@ export default function SettingsPage() {
         </div>
 
         {/* Payment Settings */}
-        <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
+        <div className="bg-surface rounded-2xl border border-hairline p-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl bg-[#10B981]/20 flex items-center justify-center">
               <CreditCard className="w-5 h-5 text-[#10B981]" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-white">{t('admin.settings.payment.title')}</h3>
-              <p className="text-sm text-white/50">{t('admin.settings.payment.subtitle')}</p>
+              <h3 className="text-lg font-semibold text-content">{t('admin.settings.payment.title')}</h3>
+              <p className="text-sm text-content-muted">{t('admin.settings.payment.subtitle')}</p>
             </div>
           </div>
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">
+              <label className="block text-sm font-medium text-content-muted mb-2">
                 {t('admin.settings.payment.commissionLabel')}
               </label>
               <input
@@ -213,15 +213,15 @@ export default function SettingsPage() {
                     commissionPercentage: parseInt(e.target.value) || 0,
                   }))
                 }
-                className="w-full px-4 py-2.5 bg-[#2A2D3A] border border-white/10 rounded-xl text-white focus:outline-none focus:border-[#00C9FF]/50"
+                className="w-full px-4 py-2.5 bg-[#2A2D3A] border border-hairline rounded-xl text-content focus:outline-none focus:border-[#00C9FF]/50"
               />
-              <p className="text-xs text-white/40 mt-1">
+              <p className="text-xs text-content-faint mt-1">
                 {t('admin.settings.payment.commissionHint')}
               </p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">
+              <label className="block text-sm font-medium text-content-muted mb-2">
                 {t('admin.settings.payment.cancellationPolicy')}
               </label>
               <select
@@ -232,7 +232,7 @@ export default function SettingsPage() {
                     cancellationPolicy: e.target.value,
                   }))
                 }
-                className="w-full px-4 py-2.5 bg-[#2A2D3A] border border-white/10 rounded-xl text-white focus:outline-none focus:border-[#00C9FF]/50"
+                className="w-full px-4 py-2.5 bg-[#2A2D3A] border border-hairline rounded-xl text-content focus:outline-none focus:border-[#00C9FF]/50"
               >
                 <option value="12 hours">{t('admin.settings.payment.policy12h')}</option>
                 <option value="24 hours">{t('admin.settings.payment.policy24h')}</option>
@@ -244,14 +244,14 @@ export default function SettingsPage() {
         </div>
 
         {/* Feature Flags */}
-        <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6 lg:col-span-2">
+        <div className="bg-surface rounded-2xl border border-hairline p-6 lg:col-span-2">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl bg-[#7B61FF]/20 flex items-center justify-center">
               <ToggleLeft className="w-5 h-5 text-[#7B61FF]" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-white">{t('admin.settings.featureFlags.title')}</h3>
-              <p className="text-sm text-white/50">{t('admin.settings.featureFlags.subtitle')}</p>
+              <h3 className="text-lg font-semibold text-content">{t('admin.settings.featureFlags.title')}</h3>
+              <p className="text-sm text-content-muted">{t('admin.settings.featureFlags.subtitle')}</p>
             </div>
           </div>
 
@@ -262,10 +262,10 @@ export default function SettingsPage() {
                 className="flex items-center justify-between p-4 bg-[#2A2D3A] rounded-xl"
               >
                 <div>
-                  <p className="font-medium text-white">
+                  <p className="font-medium text-content">
                     {key.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase())}
                   </p>
-                  <p className="text-xs text-white/50">
+                  <p className="text-xs text-content-muted">
                     {enabled ? t('admin.settings.featureFlags.enabled') : t('admin.settings.featureFlags.disabled')}
                   </p>
                 </div>
@@ -293,12 +293,12 @@ export default function SettingsPage() {
               <AlertTriangle className="w-5 h-5 text-[#EF4444]" />
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-white">{t('admin.settings.maintenance.title')}</h3>
-              <p className="text-sm text-white/70 mt-1">
+              <h3 className="text-lg font-semibold text-content">{t('admin.settings.maintenance.title')}</h3>
+              <p className="text-sm text-content-muted mt-1">
                 {t('admin.settings.maintenance.description')}
               </p>
-              <div className="flex items-center justify-between mt-4 p-4 bg-black/20 rounded-xl">
-                <span className="text-white font-medium">{t('admin.settings.maintenance.enableLabel')}</span>
+              <div className="flex items-center justify-between mt-4 p-4 bg-surface-sunken rounded-xl">
+                <span className="text-content font-medium">{t('admin.settings.maintenance.enableLabel')}</span>
                 <button
                   onClick={() =>
                     setSettings((prev) => ({
@@ -322,14 +322,14 @@ export default function SettingsPage() {
         </div>
 
         {/* Demo Data Management */}
-        <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6 lg:col-span-2">
+        <div className="bg-surface rounded-2xl border border-hairline p-6 lg:col-span-2">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
               <Database className="w-5 h-5 text-purple-400" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-white">{t('admin.settings.demoData.title')}</h3>
-              <p className="text-sm text-white/50">{t('admin.settings.demoData.subtitle')}</p>
+              <h3 className="text-lg font-semibold text-content">{t('admin.settings.demoData.title')}</h3>
+              <p className="text-sm text-content-muted">{t('admin.settings.demoData.subtitle')}</p>
             </div>
           </div>
           

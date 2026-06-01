@@ -94,8 +94,8 @@ export function VenueDetailView({ venueId }: { venueId: string }) {
     onSuccess: () => router.push('/admin/venues/'),
   });
 
-  if (loading) return <div className="p-8 text-white/50">{t('common.loading')}</div>;
-  if (!venue) return <div className="p-8 text-white/50">{t('admin.venues.notFound')}</div>;
+  if (loading) return <div className="p-8 text-content-muted">{t('common.loading')}</div>;
+  if (!venue) return <div className="p-8 text-content-muted">{t('admin.venues.notFound')}</div>;
 
   return (
     <>

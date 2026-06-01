@@ -108,7 +108,7 @@ export function SpecialtiesSelector({
                 'px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200',
                 isSelected
                   ? 'bg-section-gradient text-white shadow-lg'
-                  : 'bg-background-secondary/20 text-text-secondary hover:bg-background-secondary/30 border border-white/10'
+                  : 'bg-background-secondary/20 text-text-secondary hover:bg-background-secondary/30 border border-hairline'
               )}
             >
               <span className="flex items-center gap-1.5">

@@ -218,7 +218,7 @@ export function PortfolioGallery({
           </button>
         </div>
       ) : (
-        <div className="text-center py-8 bg-background-secondary/5 rounded-xl border-2 border-dashed border-white/10">
+        <div className="text-center py-8 bg-background-secondary/5 rounded-xl border-2 border-dashed border-hairline">
           <ImageIcon size={40} className="text-text-tertiary/50 mx-auto mb-3" />
           <p className="text-text-tertiary text-sm">{t('profile.portfolio.empty')}</p>
           <p className="text-text-tertiary/70 text-xs mt-1">
@@ -255,7 +255,7 @@ export function PortfolioGallery({
           {/* Close Button */}
           <button
             onClick={closeLightbox}
-            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors z-10"
+            className="absolute top-4 right-4 p-2 rounded-full bg-surface-2 text-white hover:bg-white/20 transition-colors z-10"
           >
             <X size={24} />
           </button>
@@ -268,7 +268,7 @@ export function PortfolioGallery({
                   e.stopPropagation();
                   prevImage();
                 }}
-                className="absolute left-4 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+                className="absolute left-4 p-2 rounded-full bg-surface-2 text-white hover:bg-white/20 transition-colors"
               >
                 <ChevronLeft size={24} />
               </button>
@@ -277,7 +277,7 @@ export function PortfolioGallery({
                   e.stopPropagation();
                   nextImage();
                 }}
-                className="absolute right-4 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+                className="absolute right-4 p-2 rounded-full bg-surface-2 text-white hover:bg-white/20 transition-colors"
               >
                 <ChevronRight size={24} />
               </button>
@@ -285,7 +285,7 @@ export function PortfolioGallery({
           )}
 
           {/* Image Counter */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-white/10 text-white text-sm">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-surface-2 text-white text-sm">
             {currentImageIndex + 1} / {images.length}
           </div>
 

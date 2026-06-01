@@ -83,7 +83,7 @@ export default function BookingPage() {
   return (
     <div className="min-h-screen bg-background-dark">
       {/* Search/filter sub-header — non-sticky so it sits below the app header (MainLayout) */}
-      <div className="border-b border-white/10 bg-background-dark/95 backdrop-blur-md">
+      <div className="border-b border-hairline bg-background-dark/95 backdrop-blur-md">
         <div className="p-4 space-y-4">
           {/* Title and view toggle */}
           <div className="flex items-center justify-between">
@@ -97,7 +97,7 @@ export default function BookingPage() {
                   'p-2 rounded-md transition-colors',
                   viewMode === 'list'
                     ? 'bg-[var(--section-primary)] text-white'
-                    : 'text-text-secondary hover:text-white'
+                    : 'text-text-secondary hover:text-content'
                 )}
               >
                 <List className="w-4 h-4" />
@@ -108,7 +108,7 @@ export default function BookingPage() {
                   'p-2 rounded-md transition-colors',
                   viewMode === 'map'
                     ? 'bg-[var(--section-primary)] text-white'
-                    : 'text-text-secondary hover:text-white'
+                    : 'text-text-secondary hover:text-content'
                 )}
               >
                 <MapIcon className="w-4 h-4" />
@@ -143,7 +143,7 @@ export default function BookingPage() {
                 'flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors',
                 !searchFilters.category
                   ? 'bg-[var(--section-primary)] text-white'
-                  : 'bg-[#2A2D3A] text-text-secondary hover:text-white'
+                  : 'bg-[#2A2D3A] text-text-secondary hover:text-content'
               )}
             >
               {t('booking.category.all')}
@@ -156,7 +156,7 @@ export default function BookingPage() {
                   'flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5',
                   searchFilters.category === cat.name
                     ? 'bg-[var(--section-primary)] text-white'
-                    : 'bg-[#2A2D3A] text-text-secondary hover:text-white'
+                    : 'bg-[#2A2D3A] text-text-secondary hover:text-content'
                 )}
               >
                 <span>{cat.icon}</span>
@@ -185,17 +185,17 @@ export default function BookingPage() {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden border-b border-white/10"
+            className="overflow-hidden border-b border-hairline"
           >
             <div className="p-4 bg-[#2A2D3A]/50 space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-white flex items-center gap-2">
+                <h3 className="font-semibold text-content flex items-center gap-2">
                   <SlidersHorizontal className="w-4 h-4" />
                   {t('booking.filters.title')}
                 </h3>
                 <button
                   onClick={() => setShowFilters(false)}
-                  className="p-1 hover:bg-white/10 rounded-full"
+                  className="p-1 hover:bg-surface-2 rounded-full"
                 >
                   <X className="w-4 h-4 text-text-secondary" />
                 </button>
@@ -236,7 +236,7 @@ export default function BookingPage() {
                         'flex items-center gap-1 px-3 py-2 rounded-lg text-sm transition-colors',
                         searchFilters.rating === rating
                           ? 'bg-[var(--section-primary)] text-white'
-                          : 'bg-[#2A2D3A] text-text-secondary hover:text-white'
+                          : 'bg-[#2A2D3A] text-text-secondary hover:text-content'
                       )}
                     >
                       <Star className="w-4 h-4 fill-current" />
@@ -268,7 +268,7 @@ export default function BookingPage() {
                         'px-3 py-2 rounded-lg text-sm transition-colors',
                         searchFilters.availability === opt.value
                           ? 'bg-[var(--section-primary)] text-white'
-                          : 'bg-[#2A2D3A] text-text-secondary hover:text-white'
+                          : 'bg-[#2A2D3A] text-text-secondary hover:text-content'
                       )}
                     >
                       {opt.label}
@@ -294,7 +294,7 @@ export default function BookingPage() {
                         'px-3 py-2 rounded-lg text-sm transition-colors',
                         searchFilters.sortBy === opt.value
                           ? 'bg-[var(--section-primary)] text-white'
-                          : 'bg-[#2A2D3A] text-text-secondary hover:text-white'
+                          : 'bg-[#2A2D3A] text-text-secondary hover:text-content'
                       )}
                     >
                       {opt.label}
@@ -339,7 +339,7 @@ export default function BookingPage() {
             {displayedProviders.length === 0 ? (
               <div className="text-center py-12">
                 <Search className="w-12 h-12 text-text-tertiary mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-white mb-2">
+                <h3 className="text-lg font-medium text-content mb-2">
                   {t('booking.noResults.title')}
                 </h3>
                 <p className="text-text-secondary">
@@ -376,13 +376,13 @@ export default function BookingPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <h3 className="font-semibold text-white truncate">
+                          <h3 className="font-semibold text-content truncate">
                             {provider.fullName}
                           </h3>
                           <div className="flex items-center gap-2 mt-0.5">
                             <div className="flex items-center gap-1">
                               <Star className="w-3.5 h-3.5 text-warning fill-warning" />
-                              <span className="text-sm text-white">
+                              <span className="text-sm text-content">
                                 {provider.rating.toFixed(1)}
                               </span>
                             </div>
@@ -401,7 +401,7 @@ export default function BookingPage() {
                         {provider.specialties.slice(0, 3).map((specialty) => (
                           <span
                             key={specialty}
-                            className="text-xs bg-white/10 text-text-secondary px-2 py-0.5 rounded-full"
+                            className="text-xs bg-surface-2 text-text-secondary px-2 py-0.5 rounded-full"
                           >
                             {specialty}
                           </span>
@@ -422,7 +422,7 @@ export default function BookingPage() {
                       </div>
 
                       {/* Price & Availability */}
-                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/10">
+                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-hairline">
                         <div>
                           {provider.lowestPrice != null ? (
                             <span className="text-lg font-bold text-[var(--section-primary)]">

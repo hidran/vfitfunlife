@@ -30,7 +30,7 @@ export function ProviderTabBar({ active, onChange }: TabBarProps) {
     { id: 'reviews', label: t('admin.providerDetail.tab.reviews'), icon: Star },
   ];
   return (
-    <div className="border-b border-white/10">
+    <div className="border-b border-hairline">
       <div className="flex gap-6">
         {tabs.map((tab) => (
           <button
@@ -39,7 +39,7 @@ export function ProviderTabBar({ active, onChange }: TabBarProps) {
             className={`flex items-center gap-2 px-1 py-3 text-sm font-medium border-b-2 transition-colors ${
               active === tab.id
                 ? 'text-[#00C9FF] border-[#00C9FF]'
-                : 'text-white/50 border-transparent hover:text-white'
+                : 'text-content-muted border-transparent hover:text-content'
             }`}
           >
             <tab.icon className="w-4 h-4" />
@@ -70,8 +70,8 @@ export function ProviderTabContent({
   if (activeTab === 'documents') {
     const docs: VerificationDocument[] = provider.verificationDocuments ?? [];
     return (
-      <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">
+      <div className="bg-surface rounded-2xl border border-hairline p-6">
+        <h3 className="text-lg font-semibold text-content mb-4">
           {t('admin.providerDetail.verificationDocuments')}
         </h3>
         {docs.length > 0 ? (
@@ -82,27 +82,27 @@ export function ProviderTabContent({
                 href={doc.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-4 p-4 bg-black/20 rounded-xl hover:bg-black/30 transition-colors group"
+                className="flex items-center gap-4 p-4 bg-surface-sunken rounded-xl hover:bg-surface-sunken transition-colors group"
               >
                 <div className="w-12 h-12 rounded-xl bg-[#00C9FF]/20 flex items-center justify-center">
                   <FileText className="w-6 h-6 text-[#00C9FF]" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-white truncate">{doc.name}</p>
-                  <p className="text-sm text-white/50 capitalize">{doc.type}</p>
-                  <p className="text-xs text-white/40">
+                  <p className="font-medium text-content truncate">{doc.name}</p>
+                  <p className="text-sm text-content-muted capitalize">{doc.type}</p>
+                  <p className="text-xs text-content-faint">
                     {t('admin.providerDetail.documentUploadedPrefix')}{' '}
                     {formatDate(toDate(doc.uploadedAt) || new Date())}
                   </p>
                 </div>
-                <ExternalLink className="w-5 h-5 text-white/40 group-hover:text-white" />
+                <ExternalLink className="w-5 h-5 text-content-faint group-hover:text-content" />
               </a>
             ))}
           </div>
         ) : (
           <div className="text-center py-12">
-            <FileText className="w-12 h-12 text-white/20 mx-auto mb-4" />
-            <p className="text-white/50">{t('admin.providerDetail.noDocuments')}</p>
+            <FileText className="w-12 h-12 text-content-faint mx-auto mb-4" />
+            <p className="text-content-muted">{t('admin.providerDetail.noDocuments')}</p>
           </div>
         )}
       </div>
@@ -111,18 +111,18 @@ export function ProviderTabContent({
 
   if (activeTab === 'bookings') {
     return (
-      <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-8 text-center">
-        <Calendar className="w-12 h-12 text-white/20 mx-auto mb-4" />
-        <p className="text-white/50">{t('admin.providerDetail.bookingsPlaceholder')}</p>
+      <div className="bg-surface rounded-2xl border border-hairline p-8 text-center">
+        <Calendar className="w-12 h-12 text-content-faint mx-auto mb-4" />
+        <p className="text-content-muted">{t('admin.providerDetail.bookingsPlaceholder')}</p>
       </div>
     );
   }
 
   if (activeTab === 'reviews') {
     return (
-      <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-8 text-center">
-        <Star className="w-12 h-12 text-white/20 mx-auto mb-4" />
-        <p className="text-white/50">{t('admin.providerDetail.reviewsPlaceholder')}</p>
+      <div className="bg-surface rounded-2xl border border-hairline p-8 text-center">
+        <Star className="w-12 h-12 text-content-faint mx-auto mb-4" />
+        <p className="text-content-muted">{t('admin.providerDetail.reviewsPlaceholder')}</p>
       </div>
     );
   }
@@ -131,8 +131,8 @@ export function ProviderTabContent({
   return (
     <>
       {/* Account Information (form: view OR edit) */}
-      <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">
+      <div className="bg-surface rounded-2xl border border-hairline p-6">
+        <h3 className="text-lg font-semibold text-content mb-4">
           {t('admin.providerDetail.accountInfo')}
         </h3>
         <ProviderFormView
@@ -145,18 +145,18 @@ export function ProviderTabContent({
       {/* Bio + Certifications + Services + Languages */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Professional Bio */}
-        <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">
+        <div className="bg-surface rounded-2xl border border-hairline p-6">
+          <h3 className="text-lg font-semibold text-content mb-4">
             {t('admin.providerDetail.professionalBio')}
           </h3>
-          <p className="text-white/70 whitespace-pre-wrap">
+          <p className="text-content-muted whitespace-pre-wrap">
             {profile?.professionalBio || t('admin.providerDetail.noBio')}
           </p>
         </div>
 
         {/* Certifications */}
-        <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">
+        <div className="bg-surface rounded-2xl border border-hairline p-6">
+          <h3 className="text-lg font-semibold text-content mb-4">
             {t('admin.providerDetail.certifications')}
           </h3>
           {profile?.certifications && profile.certifications.length > 0 ? (
@@ -164,13 +164,13 @@ export function ProviderTabContent({
               {profile.certifications.map((cert) => (
                 <div
                   key={cert.id}
-                  className="flex items-start gap-3 p-3 bg-black/20 rounded-xl"
+                  className="flex items-start gap-3 p-3 bg-surface-sunken rounded-xl"
                 >
                   <Award className="w-5 h-5 text-[#00C9FF] flex-shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-white">{cert.name}</p>
-                    <p className="text-sm text-white/50">{cert.issuingOrganization}</p>
-                    <p className="text-xs text-white/40 mt-1">
+                    <p className="font-medium text-content">{cert.name}</p>
+                    <p className="text-sm text-content-muted">{cert.issuingOrganization}</p>
+                    <p className="text-xs text-content-faint mt-1">
                       {t('admin.providerDetail.certIssuedPrefix')}{' '}
                       {formatDate(toDate(cert.issueDate) || new Date())}
                       {cert.expiryDate &&
@@ -183,13 +183,13 @@ export function ProviderTabContent({
               ))}
             </div>
           ) : (
-            <p className="text-white/50">{t('admin.providerDetail.noCertifications')}</p>
+            <p className="text-content-muted">{t('admin.providerDetail.noCertifications')}</p>
           )}
         </div>
 
         {/* Services */}
-        <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">
+        <div className="bg-surface rounded-2xl border border-hairline p-6">
+          <h3 className="text-lg font-semibold text-content mb-4">
             {t('admin.providerDetail.services')}
           </h3>
           {profile?.servicePricing && profile.servicePricing.length > 0 ? (
@@ -197,30 +197,30 @@ export function ProviderTabContent({
               {profile.servicePricing.map((service) => (
                 <div
                   key={service.id}
-                  className="flex items-center justify-between p-3 bg-black/20 rounded-xl"
+                  className="flex items-center justify-between p-3 bg-surface-sunken rounded-xl"
                 >
                   <div>
-                    <p className="font-medium text-white">{service.serviceName}</p>
-                    <p className="text-sm text-white/50">
+                    <p className="font-medium text-content">{service.serviceName}</p>
+                    <p className="text-sm text-content-muted">
                       {t('admin.providerDetail.serviceDurationMinutes', {
                         count: String(service.durationMinutes),
                       })}
                     </p>
                   </div>
-                  <span className="font-semibold text-white">
+                  <span className="font-semibold text-content">
                     {formatPrice(service.price)}
                   </span>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-white/50">{t('admin.providerDetail.noServices')}</p>
+            <p className="text-content-muted">{t('admin.providerDetail.noServices')}</p>
           )}
         </div>
 
         {/* Languages */}
-        <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">
+        <div className="bg-surface rounded-2xl border border-hairline p-6">
+          <h3 className="text-lg font-semibold text-content mb-4">
             {t('admin.providerDetail.languages')}
           </h3>
           {profile?.languages && profile.languages.length > 0 ? (
@@ -228,14 +228,14 @@ export function ProviderTabContent({
               {profile.languages.map((lang) => (
                 <span
                   key={lang}
-                  className="px-3 py-1.5 bg-white/10 text-white rounded-full text-sm"
+                  className="px-3 py-1.5 bg-surface-2 text-content rounded-full text-sm"
                 >
                   {lang}
                 </span>
               ))}
             </div>
           ) : (
-            <p className="text-white/50">{t('admin.providerDetail.noLanguages')}</p>
+            <p className="text-content-muted">{t('admin.providerDetail.noLanguages')}</p>
           )}
         </div>
       </div>

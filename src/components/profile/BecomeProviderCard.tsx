@@ -36,12 +36,12 @@ export function BecomeProviderCard() {
     return (
       <Link
         href="/provider/dashboard"
-        className="flex items-center gap-3 rounded-xl border border-white/10 p-4 hover:bg-white/5"
+        className="flex items-center gap-3 rounded-xl border border-hairline p-4 hover:bg-surface-2"
       >
         <CheckCircle className="w-5 h-5 text-[#10B981]" />
         <div>
-          <p className="text-white font-medium">{t('provider.card.verified.title')}</p>
-          <p className="text-sm text-white/50">{t('provider.card.verified.subtitle')}</p>
+          <p className="text-content font-medium">{t('provider.card.verified.title')}</p>
+          <p className="text-sm text-content-muted">{t('provider.card.verified.subtitle')}</p>
         </div>
       </Link>
     );
@@ -52,8 +52,8 @@ export function BecomeProviderCard() {
       <div className="flex items-center gap-3 rounded-xl border border-[#F59E0B]/30 bg-[#F59E0B]/10 p-4">
         <Clock className="w-5 h-5 text-[#F59E0B]" />
         <div>
-          <p className="text-white font-medium">{t('provider.card.pending.title')}</p>
-          <p className="text-sm text-white/60">{t('provider.card.pending.subtitle')}</p>
+          <p className="text-content font-medium">{t('provider.card.pending.title')}</p>
+          <p className="text-sm text-content-muted">{t('provider.card.pending.subtitle')}</p>
         </div>
       </div>
     );
@@ -61,11 +61,11 @@ export function BecomeProviderCard() {
 
   if (variant === 'rejected') {
     return (
-      <div className="flex items-center gap-3 rounded-xl border border-white/10 p-4">
+      <div className="flex items-center gap-3 rounded-xl border border-hairline p-4">
         <XCircle className="w-5 h-5 text-[#EF4444]" />
         <div>
-          <p className="text-white font-medium">{t('provider.card.rejected.title')}</p>
-          <p className="text-sm text-white/60">{t('provider.card.rejected.subtitle')}</p>
+          <p className="text-content font-medium">{t('provider.card.rejected.title')}</p>
+          <p className="text-sm text-content-muted">{t('provider.card.rejected.subtitle')}</p>
         </div>
       </div>
     );
@@ -73,19 +73,19 @@ export function BecomeProviderCard() {
 
   // variant === 'cta'
   return (
-    <div className="rounded-xl border border-white/10 p-4">
+    <div className="rounded-xl border border-hairline p-4">
       <div className="flex items-center gap-3">
         <Briefcase className="w-5 h-5 text-vfit-primary" />
         <div className="flex-1">
-          <p className="text-white font-medium">{t('provider.card.cta.title')}</p>
-          <p className="text-sm text-white/50">{t('provider.card.cta.subtitle')}</p>
+          <p className="text-content font-medium">{t('provider.card.cta.title')}</p>
+          <p className="text-sm text-content-muted">{t('provider.card.cta.subtitle')}</p>
         </div>
         {!open && <Button size="sm" onClick={() => setOpen(true)}>{t('provider.card.cta.start')}</Button>}
       </div>
 
       {open && (
         <div className="mt-4">
-          <p className="text-sm text-white/60 mb-2">{t('provider.optIn.pickServices')}</p>
+          <p className="text-sm text-content-muted mb-2">{t('provider.optIn.pickServices')}</p>
           <div className="flex flex-wrap gap-2">
             {categories.map((c) => (
               <button
@@ -96,7 +96,7 @@ export function BecomeProviderCard() {
                   'px-3 py-2 rounded-lg text-sm border transition-colors',
                   selected.includes(c.name)
                     ? 'border-vfit-primary bg-vfit-primary/10 text-white'
-                    : 'border-white/10 text-white/70 hover:bg-white/5'
+                    : 'border-hairline text-content-muted hover:bg-surface-2'
                 )}
               >
                 <span className="mr-1">{c.icon}</span>{c.name}

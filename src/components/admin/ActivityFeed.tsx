@@ -36,7 +36,7 @@ const activityColors: Record<string, string> = {
   provider: "bg-[#7B61FF]/20 text-[#7B61FF]",
   booking: "bg-[#F59E0B]/20 text-[#F59E0B]",
   payment: "bg-[#10B981]/20 text-[#10B981]",
-  system: "bg-white/10 text-white/60",
+  system: "bg-surface-2 text-content-muted",
   verification: "bg-[#10B981]/20 text-[#10B981]",
 };
 
@@ -45,19 +45,19 @@ export function ActivityFeed({ activities, className }: ActivityFeedProps) {
 
   if (activities.length === 0) {
     return (
-      <div className={cn("bg-[#1E2230] rounded-2xl border border-white/10 p-6", className)}>
-        <h3 className="text-lg font-semibold text-white mb-4">{t('admin.activity.title')}</h3>
+      <div className={cn("bg-surface rounded-2xl border border-hairline p-6", className)}>
+        <h3 className="text-lg font-semibold text-content mb-4">{t('admin.activity.title')}</h3>
         <div className="text-center py-8">
-          <FileText className="w-10 h-10 text-white/20 mx-auto mb-3" />
-          <p className="text-white/40">{t('admin.activity.empty')}</p>
+          <FileText className="w-10 h-10 text-content-faint mx-auto mb-3" />
+          <p className="text-content-faint">{t('admin.activity.empty')}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={cn("bg-[#1E2230] rounded-2xl border border-white/10 p-6", className)}>
-      <h3 className="text-lg font-semibold text-white mb-4">{t('admin.activity.title')}</h3>
+    <div className={cn("bg-surface rounded-2xl border border-hairline p-6", className)}>
+      <h3 className="text-lg font-semibold text-content mb-4">{t('admin.activity.title')}</h3>
       
       <div className="space-y-4">
         {activities.map((activity) => (
@@ -76,19 +76,19 @@ export function ActivityFeed({ activities, className }: ActivityFeedProps) {
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="text-sm font-medium text-white">
+                  <p className="text-sm font-medium text-content">
                     {activity.action}
                   </p>
-                  <p className="text-sm text-white/50 mt-0.5">
+                  <p className="text-sm text-content-muted mt-0.5">
                     {activity.description}
                   </p>
                   {activity.userName && (
-                    <p className="text-xs text-white/40 mt-1">
+                    <p className="text-xs text-content-faint mt-1">
                       {t('admin.activity.byUser', { user: activity.userName })}
                     </p>
                   )}
                 </div>
-                <span className="text-xs text-white/40 whitespace-nowrap">
+                <span className="text-xs text-content-faint whitespace-nowrap">
                   {formatTimestamp(activity.timestamp, t, locale)}
                 </span>
               </div>

@@ -86,8 +86,8 @@ export function VenuesListView() {
             <Store className="w-5 h-5 text-[#00C9FF]" />
           </div>
           <div>
-            <p className="font-medium text-white">{venue.name}</p>
-            <p className="text-xs text-white/50 capitalize">{venue.type.replace("_", " ")}</p>
+            <p className="font-medium text-content">{venue.name}</p>
+            <p className="text-xs text-content-muted capitalize">{venue.type.replace("_", " ")}</p>
           </div>
         </div>
       ),
@@ -98,10 +98,10 @@ export function VenuesListView() {
       header: t('admin.venues.col.location'),
       cell: (venue) => (
         <div className="flex items-start gap-2">
-          <MapPin className="w-4 h-4 text-white/40 mt-0.5 flex-shrink-0" />
+          <MapPin className="w-4 h-4 text-content-faint mt-0.5 flex-shrink-0" />
           <div>
-            <p className="text-sm text-white">{venue.address}</p>
-            <p className="text-xs text-white/50">{venue.city}</p>
+            <p className="text-sm text-content">{venue.address}</p>
+            <p className="text-xs text-content-muted">{venue.city}</p>
           </div>
         </div>
       ),
@@ -112,8 +112,8 @@ export function VenuesListView() {
       header: t('admin.venues.col.contact'),
       cell: (venue) => (
         <div className="flex items-center gap-2">
-          <Phone className="w-4 h-4 text-white/40" />
-          <span className="text-sm text-white/70">{venue.phone}</span>
+          <Phone className="w-4 h-4 text-content-faint" />
+          <span className="text-sm text-content-muted">{venue.phone}</span>
         </div>
       ),
       width: "w-32",
@@ -124,8 +124,8 @@ export function VenuesListView() {
       cell: (venue) => (
         <div className="flex items-center gap-1">
           <Star className="w-4 h-4 text-[#F59E0B] fill-[#F59E0B]" />
-          <span className="text-sm text-white">{venue.rating}</span>
-          <span className="text-xs text-white/40">({venue.reviewCount})</span>
+          <span className="text-sm text-content">{venue.rating}</span>
+          <span className="text-xs text-content-faint">({venue.reviewCount})</span>
         </div>
       ),
       sortable: true,
@@ -139,7 +139,7 @@ export function VenuesListView() {
           className={`px-2.5 py-1 rounded-full text-xs font-medium ${
             venue.isPartner
               ? "bg-[#7B61FF]/20 text-[#7B61FF]"
-              : "bg-white/10 text-white/50"
+              : "bg-surface-2 text-content-muted"
           }`}
         >
           {venue.isPartner ? t('admin.venues.partner.partner') : t('admin.venues.partner.standard')}
@@ -171,7 +171,7 @@ export function VenuesListView() {
               photoUrls: venue.photoUrls ?? [],
             });
           }}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-surface-2 text-content hover:bg-white/20"
           aria-label={t('admin.venues.col.editPhotosAria')}
         >
           <Camera className="h-4 w-4" />
@@ -199,8 +199,8 @@ export function VenuesListView() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">{t('admin.venues.title')}</h1>
-          <p className="text-white/50 mt-1">{t('admin.venues.subtitle')}</p>
+          <h1 className="text-2xl font-bold text-content">{t('admin.venues.title')}</h1>
+          <p className="text-content-muted mt-1">{t('admin.venues.subtitle')}</p>
         </div>
         <Button
           variant="primary"

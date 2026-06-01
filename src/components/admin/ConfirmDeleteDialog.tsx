@@ -35,32 +35,32 @@ export function ConfirmDeleteDialog({ open, entityLabel, entityName, onClose, on
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" role="dialog" aria-modal="true">
-      <div className="w-full max-w-md rounded-2xl bg-[#1E2230] border border-white/10 p-6 space-y-4">
+      <div className="w-full max-w-md rounded-2xl bg-surface border border-hairline p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-content">
             <AlertTriangle className="h-5 w-5 text-red-400" />
             {t('admin.delete.title', { entity: entityLabel })}
           </h2>
-          <button onClick={onClose} aria-label={t('common.close')} className="text-white/60 hover:text-white">
+          <button onClick={onClose} aria-label={t('common.close')} className="text-content-muted hover:text-content">
             <X className="h-5 w-5" />
           </button>
         </div>
-        <p className="text-sm text-white/70">{t('admin.delete.warning', { name: entityName })}</p>
+        <p className="text-sm text-content-muted">{t('admin.delete.warning', { name: entityName })}</p>
         <label className="block space-y-1">
-          <span className="text-xs text-white/60">{t('admin.delete.typeNameLabel', { name: entityName })}</span>
+          <span className="text-xs text-content-muted">{t('admin.delete.typeNameLabel', { name: entityName })}</span>
           <input
             value={typed}
             onChange={(e) => setTyped(e.target.value)}
-            className="w-full rounded-lg bg-black/30 border border-white/10 px-3 py-2 text-white"
+            className="w-full rounded-lg bg-surface-sunken border border-hairline px-3 py-2 text-content"
           />
         </label>
         <label className="block space-y-1">
-          <span className="text-xs text-white/60">{t('admin.delete.reasonLabel')}</span>
+          <span className="text-xs text-content-muted">{t('admin.delete.reasonLabel')}</span>
           <textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             rows={2}
-            className="w-full rounded-lg bg-black/30 border border-white/10 px-3 py-2 text-white"
+            className="w-full rounded-lg bg-surface-sunken border border-hairline px-3 py-2 text-content"
           />
         </label>
         <div className="flex justify-end gap-2">

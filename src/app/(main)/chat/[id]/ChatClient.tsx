@@ -78,22 +78,22 @@ export default function ChatClient() {
 
   return (
     <div className="min-h-screen bg-background-dark">
-      <div className="sticky top-0 z-20 border-b border-white/10 bg-background-dark/95 backdrop-blur-md">
+      <div className="sticky top-0 z-20 border-b border-hairline bg-background-dark/95 backdrop-blur-md">
         <div className="flex items-center gap-3 p-4">
           <button
             onClick={() => router.back()}
-            className="rounded-full p-2 transition-colors hover:bg-white/10"
+            className="rounded-full p-2 transition-colors hover:bg-surface-2"
           >
-            <ArrowLeft className="h-5 w-5 text-white" />
+            <ArrowLeft className="h-5 w-5 text-content" />
           </button>
           <Avatar name="Provider" size="md" />
           <div className="min-w-0 flex-1">
-            <p className="truncate font-semibold text-white">{t('chat.header.title')}</p>
+            <p className="truncate font-semibold text-content">{t('chat.header.title')}</p>
             <p className="text-xs text-text-tertiary">{t('chat.header.providerId', { id: providerId })}</p>
           </div>
           <Link
             href="/bookings"
-            className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors hover:text-white"
+            className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors hover:text-content"
           >
             {t('chat.header.bookings')}
           </Link>
@@ -101,7 +101,7 @@ export default function ChatClient() {
       </div>
 
       <div className="space-y-4 p-4 pb-40">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+        <div className="rounded-2xl border border-hairline bg-surface-2 p-3">
           <p className="flex items-center gap-2 text-xs text-text-secondary">
             <Sparkles className="h-4 w-4 text-[var(--section-primary)]" />
             {t('chat.hint')}
@@ -116,7 +116,7 @@ export default function ChatClient() {
                 'max-w-[85%] rounded-2xl px-4 py-3 text-sm',
                 message.sender === 'user'
                   ? 'ml-auto rounded-br-md bg-[var(--section-primary)] text-white'
-                  : 'rounded-bl-md border border-white/10 bg-white/5 text-text-secondary'
+                  : 'rounded-bl-md border border-hairline bg-surface-2 text-text-secondary'
               )}
             >
               <p>{message.text}</p>
@@ -137,7 +137,7 @@ export default function ChatClient() {
             <button
               key={reply}
               onClick={() => sendQuickReply(reply)}
-              className="rounded-full border border-white/20 px-3 py-1.5 text-xs text-text-secondary transition-colors hover:text-white"
+              className="rounded-full border border-white/20 px-3 py-1.5 text-xs text-text-secondary transition-colors hover:text-content"
             >
               {reply}
             </button>
@@ -145,14 +145,14 @@ export default function ChatClient() {
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 border-t border-white/10 bg-background-dark/95 p-4 backdrop-blur-xl">
+      <div className="fixed bottom-0 left-0 right-0 border-t border-hairline bg-background-dark/95 p-4 backdrop-blur-xl">
         <div className="mx-auto flex max-w-3xl items-end gap-2">
           <textarea
             rows={1}
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             placeholder={t('chat.input.placeholder')}
-            className="max-h-32 min-h-[44px] flex-1 resize-none rounded-xl border border-white/15 bg-black/20 px-3 py-2.5 text-sm text-white outline-none transition-colors focus:border-[var(--section-primary)]"
+            className="max-h-32 min-h-[44px] flex-1 resize-none rounded-xl border border-white/15 bg-surface-sunken px-3 py-2.5 text-sm text-content outline-none transition-colors focus:border-[var(--section-primary)]"
           />
           <Button onClick={handleSend} disabled={!draft.trim()} aria-label={t('chat.send.aria')} className="h-11 px-4">
             <Send className="h-4 w-4" />

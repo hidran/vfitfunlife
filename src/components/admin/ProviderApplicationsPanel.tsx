@@ -35,24 +35,24 @@ export function ProviderApplicationsPanel() {
   };
 
   return (
-    <div className="bg-[#1E2230] rounded-xl border border-white/10 p-4">
+    <div className="bg-surface rounded-xl border border-hairline p-4">
       <div className="flex items-center gap-2 mb-4">
         <Clock className="w-5 h-5 text-[#F59E0B]" />
-        <h2 className="text-lg font-semibold text-white">{t('admin.applications.title')}</h2>
-        <span className="text-sm text-white/50">({apps.length})</span>
+        <h2 className="text-lg font-semibold text-content">{t('admin.applications.title')}</h2>
+        <span className="text-sm text-content-muted">({apps.length})</span>
       </div>
 
       {loading ? (
-        <p className="text-white/50 text-sm">{t('admin.applications.loading')}</p>
+        <p className="text-content-muted text-sm">{t('admin.applications.loading')}</p>
       ) : apps.length === 0 ? (
-        <p className="text-white/50 text-sm">{t('admin.applications.empty')}</p>
+        <p className="text-content-muted text-sm">{t('admin.applications.empty')}</p>
       ) : (
         <ul className="space-y-3">
           {apps.map((a) => (
-            <li key={a.id} className="flex items-center justify-between gap-4 rounded-lg border border-white/10 p-3">
+            <li key={a.id} className="flex items-center justify-between gap-4 rounded-lg border border-hairline p-3">
               <div>
-                <p className="text-white font-medium">{a.fullName}</p>
-                <p className="text-sm text-white/50">{a.specialties.join(', ') || '—'}</p>
+                <p className="text-content font-medium">{a.fullName}</p>
+                <p className="text-sm text-content-muted">{a.specialties.join(', ') || '—'}</p>
               </div>
               <div className="flex gap-2">
                 <Button size="sm" disabled={busyId === a.id} onClick={() => decide(a.id, 'verified')}>

@@ -52,7 +52,7 @@ export function UserTypeFormView({ mode, initial, onSubmit }: Props) {
   return (
     <SuperadminOnly
       fallback={
-        <div className="text-xs text-white/40 italic">
+        <div className="text-xs text-content-faint italic">
           {t('admin.userTypes.superadminOnly')}
         </div>
       }
@@ -72,7 +72,7 @@ export function UserTypeFormView({ mode, initial, onSubmit }: Props) {
           <input {...register('icon')} disabled={readonly} className="admin-input" />
         </Field>
         <Field label={t('admin.userTypes.field.isActive')}>
-          <label className="flex items-center gap-2 text-white">
+          <label className="flex items-center gap-2 text-content">
             <input type="checkbox" {...register('isActive')} disabled={readonly} />
             <span>{t('admin.userTypes.field.isActive')}</span>
           </label>
@@ -119,7 +119,7 @@ function Field({
 }) {
   return (
     <label className="block space-y-1">
-      <span className="text-xs text-white/60">{label}</span>
+      <span className="text-xs text-content-muted">{label}</span>
       {children}
       {error && <span className="text-xs text-red-400">{error}</span>}
     </label>

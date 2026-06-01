@@ -93,14 +93,14 @@ export default function ClientDetailClient() {
       {/* Back Link */}
       <Link
         href="/provider/clients"
-        className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+        className="inline-flex items-center gap-2 text-gray-400 hover:text-content transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         {t('provider.clientDetail.backToClients')}
       </Link>
 
       {/* Profile Header */}
-      <div className="bg-[#2A2D3A] rounded-xl border border-white/5 p-6">
+      <div className="bg-[#2A2D3A] rounded-xl border border-hairline p-6">
         <div className="flex flex-col sm:flex-row items-start gap-6">
           {client.photoUrl ? (
             <Image
@@ -120,14 +120,14 @@ export default function ClientDetailClient() {
           )}
 
           <div className="flex-1">
-            <h1 className="text-2xl font-bold text-white">{client.name}</h1>
+            <h1 className="text-2xl font-bold text-content">{client.name}</h1>
             <div className="flex flex-col sm:flex-row gap-4 mt-3">
-              <a href={`mailto:${client.email}`} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm">
+              <a href={`mailto:${client.email}`} className="flex items-center gap-2 text-gray-400 hover:text-content text-sm">
                 <Mail className="w-4 h-4" />
                 {client.email}
               </a>
               {client.phone && (
-                <a href={`tel:${client.phone}`} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm">
+                <a href={`tel:${client.phone}`} className="flex items-center gap-2 text-gray-400 hover:text-content text-sm">
                   <Phone className="w-4 h-4" />
                   {client.phone}
                 </a>
@@ -161,28 +161,28 @@ export default function ClientDetailClient() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-white/5">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-hairline">
           <div>
-            <p className="text-2xl font-bold text-white">{client.totalBookings}</p>
+            <p className="text-2xl font-bold text-content">{client.totalBookings}</p>
             <p className="text-sm text-gray-400">{t('provider.clientDetail.totalBookings')}</p>
           </div>
           <div>
-            <p className="text-2xl font-bold text-white">€{client.totalSpent}</p>
+            <p className="text-2xl font-bold text-content">€{client.totalSpent}</p>
             <p className="text-sm text-gray-400">{t('provider.clientDetail.totalSpent')}</p>
           </div>
           <div>
-            <p className="text-2xl font-bold text-white">{formatDate(client.firstVisit)}</p>
+            <p className="text-2xl font-bold text-content">{formatDate(client.firstVisit)}</p>
             <p className="text-sm text-gray-400">{t('provider.clientDetail.firstVisit')}</p>
           </div>
           <div>
-            <p className="text-2xl font-bold text-white">{formatDate(client.lastVisit)}</p>
+            <p className="text-2xl font-bold text-content">{formatDate(client.lastVisit)}</p>
             <p className="text-sm text-gray-400">{t('provider.clientDetail.lastVisit')}</p>
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-white/5">
+      <div className="flex items-center gap-2 border-b border-hairline">
         {(['overview', 'history', 'notes'] as const).map((tab) => (
           <button
             key={tab}
@@ -190,8 +190,8 @@ export default function ClientDetailClient() {
             className={cn(
               'px-4 py-3 text-sm font-medium transition-colors border-b-2',
               activeTab === tab
-                ? 'text-white border-section-primary'
-                : 'text-gray-400 border-transparent hover:text-white'
+                ? 'text-content border-section-primary'
+                : 'text-gray-400 border-transparent hover:text-content'
             )}
           >
             {t(`provider.clientDetail.tab.${tab}`)}
@@ -204,9 +204,9 @@ export default function ClientDetailClient() {
         {activeTab === 'overview' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Notes */}
-            <div className="bg-[#2A2D3A] rounded-xl border border-white/5 p-6">
+            <div className="bg-[#2A2D3A] rounded-xl border border-hairline p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-white">{t('provider.clientDetail.notes.title')}</h3>
+                <h3 className="text-lg font-semibold text-content">{t('provider.clientDetail.notes.title')}</h3>
                 <Button
                   variant="secondary"
                   size="sm"
@@ -225,7 +225,7 @@ export default function ClientDetailClient() {
                   <textarea
                     value={editedNotes}
                     onChange={(e) => setEditedNotes(e.target.value)}
-                    className="w-full bg-[#1A1D29] border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 outline-none focus:border-section-primary min-h-[150px]"
+                    className="w-full bg-[#1A1D29] border border-hairline rounded-lg px-4 py-3 text-content placeholder-gray-500 outline-none focus:border-section-primary min-h-[150px]"
                   />
                   <Button onClick={handleSaveNotes} size="sm">
                     <Save className="w-4 h-4 mr-2" />
@@ -240,8 +240,8 @@ export default function ClientDetailClient() {
             </div>
 
             {/* Recent Activity */}
-            <div className="bg-[#2A2D3A] rounded-xl border border-white/5 p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">{t('provider.clientDetail.recentActivity')}</h3>
+            <div className="bg-[#2A2D3A] rounded-xl border border-hairline p-6">
+              <h3 className="text-lg font-semibold text-content mb-4">{t('provider.clientDetail.recentActivity')}</h3>
               <div className="space-y-4">
                 {bookingHistory.slice(0, 3).map((entry) => (
                   <div
@@ -249,11 +249,11 @@ export default function ClientDetailClient() {
                     className="flex items-center justify-between p-3 bg-[#1A1D29] rounded-lg"
                   >
                     <div>
-                      <p className="font-medium text-white">{entry.serviceName}</p>
+                      <p className="font-medium text-content">{entry.serviceName}</p>
                       <p className="text-sm text-gray-400">{formatDate(entry.date)}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium text-white">€{entry.amount}</p>
+                      <p className="font-medium text-content">€{entry.amount}</p>
                       <span className={cn('text-xs px-2 py-0.5 rounded', STATUS_COLORS[entry.status as keyof typeof STATUS_COLORS])}>
                         {entry.status}
                       </span>
@@ -266,9 +266,9 @@ export default function ClientDetailClient() {
         )}
 
         {activeTab === 'history' && (
-          <div className="bg-[#2A2D3A] rounded-xl border border-white/5 overflow-hidden">
-            <div className="p-6 border-b border-white/5">
-              <h3 className="text-lg font-semibold text-white">{t('provider.clientDetail.bookingHistory')}</h3>
+          <div className="bg-[#2A2D3A] rounded-xl border border-hairline overflow-hidden">
+            <div className="p-6 border-b border-hairline">
+              <h3 className="text-lg font-semibold text-content">{t('provider.clientDetail.bookingHistory')}</h3>
             </div>
             <div className="divide-y divide-white/5">
               {bookingHistory.map((entry) => (
@@ -281,7 +281,7 @@ export default function ClientDetailClient() {
                       <Calendar className="w-6 h-6 text-section-primary" />
                     </div>
                     <div>
-                      <p className="font-medium text-white">{entry.serviceName}</p>
+                      <p className="font-medium text-content">{entry.serviceName}</p>
                       <p className="text-sm text-gray-400">{formatDate(entry.date)}</p>
                     </div>
                   </div>
@@ -289,7 +289,7 @@ export default function ClientDetailClient() {
                     <span className={cn('text-xs px-3 py-1 rounded-full', STATUS_COLORS[entry.status as keyof typeof STATUS_COLORS])}>
                       {entry.status}
                     </span>
-                    <p className="font-medium text-white">€{entry.amount}</p>
+                    <p className="font-medium text-content">€{entry.amount}</p>
                   </div>
                 </div>
               ))}
@@ -298,9 +298,9 @@ export default function ClientDetailClient() {
         )}
 
         {activeTab === 'notes' && (
-          <div className="bg-[#2A2D3A] rounded-xl border border-white/5 p-6">
+          <div className="bg-[#2A2D3A] rounded-xl border border-hairline p-6">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-white">{t('provider.clientDetail.allNotes')}</h3>
+              <h3 className="text-lg font-semibold text-content">{t('provider.clientDetail.allNotes')}</h3>
               <Button variant="secondary" size="sm">
                 <Plus className="w-4 h-4 mr-2" />
                 {t('provider.clientDetail.addNote')}
@@ -312,7 +312,7 @@ export default function ClientDetailClient() {
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-gray-400">January 15, 2024</span>
                   <div className="flex gap-2">
-                    <button className="p-1.5 text-gray-400 hover:text-white rounded">
+                    <button className="p-1.5 text-gray-400 hover:text-content rounded">
                       <Edit className="w-4 h-4" />
                     </button>
                     <button className="p-1.5 text-red-400 hover:text-red-300 rounded">
@@ -329,7 +329,7 @@ export default function ClientDetailClient() {
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-gray-400">January 10, 2024</span>
                   <div className="flex gap-2">
-                    <button className="p-1.5 text-gray-400 hover:text-white rounded">
+                    <button className="p-1.5 text-gray-400 hover:text-content rounded">
                       <Edit className="w-4 h-4" />
                     </button>
                     <button className="p-1.5 text-red-400 hover:text-red-300 rounded">

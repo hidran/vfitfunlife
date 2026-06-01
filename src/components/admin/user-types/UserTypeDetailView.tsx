@@ -105,9 +105,9 @@ export function UserTypeDetailView({ userTypeId }: { userTypeId: string }) {
     onSuccess: () => router.push('/admin/user-types/'),
   });
 
-  if (loading) return <div className="p-8 text-white/50">{t('common.loading')}</div>;
+  if (loading) return <div className="p-8 text-content-muted">{t('common.loading')}</div>;
   if (!ut)
-    return <div className="p-8 text-white/50">{t('admin.userTypes.notFound')}</div>;
+    return <div className="p-8 text-content-muted">{t('admin.userTypes.notFound')}</div>;
 
   return (
     <>

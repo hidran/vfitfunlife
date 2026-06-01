@@ -64,18 +64,18 @@ export function FilterBar({
       {/* Main Search Bar */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-content-faint" />
           <input
             type="text"
             placeholder={searchPlaceholder ?? 'Search...'}
             value={searchValue}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-[#1E2230] border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-[#00C9FF]/50"
+            className="w-full pl-10 pr-4 py-2.5 bg-surface border border-hairline rounded-xl text-content placeholder:text-content-faint focus:outline-none focus:border-[#00C9FF]/50"
           />
           {searchValue && (
             <button
               onClick={() => onSearchChange("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-content-faint hover:text-content"
             >
               <X className="w-4 h-4" />
             </button>
@@ -116,7 +116,7 @@ export function FilterBar({
           )}
 
           {hasActiveFilters && onClearFilters && (
-            <Button variant="ghost" onClick={onClearFilters} className="text-white/60">
+            <Button variant="ghost" onClick={onClearFilters} className="text-content-muted">
               {t('admin.filter.clear')}
             </Button>
           )}
@@ -125,17 +125,17 @@ export function FilterBar({
 
       {/* Expandable Filters */}
       {showFilters && filters.length > 0 && (
-        <div className="p-4 bg-[#1E2230] rounded-xl border border-white/10 space-y-4">
+        <div className="p-4 bg-surface rounded-xl border border-hairline space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {filters.map((filter) => (
               <div key={filter.key}>
-                <label className="block text-sm text-white/50 mb-1.5">
+                <label className="block text-sm text-content-muted mb-1.5">
                   {filter.label}
                 </label>
                 <select
                   value={filter.value}
                   onChange={(e) => filter.onChange(e.target.value)}
-                  className="w-full px-3 py-2 bg-[#2A2D3A] border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-[#00C9FF]/50"
+                  className="w-full px-3 py-2 bg-[#2A2D3A] border border-hairline rounded-lg text-content text-sm focus:outline-none focus:border-[#00C9FF]/50"
                 >
                   {filter.options.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -148,12 +148,12 @@ export function FilterBar({
 
             {dateRange && (
               <div className="sm:col-span-2">
-                <label className="block text-sm text-white/50 mb-1.5">
+                <label className="block text-sm text-content-muted mb-1.5">
                   {t('admin.filter.dateRange')}
                 </label>
                 <div className="flex items-center gap-2">
                   <div className="relative flex-1">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-faint" />
                     <input
                       type="date"
                       value={dateRange.from ? dateRange.from.toISOString().split("T")[0] : ""}
@@ -163,12 +163,12 @@ export function FilterBar({
                           dateRange.to
                         )
                       }
-                      className="w-full pl-9 pr-3 py-2 bg-[#2A2D3A] border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-[#00C9FF]/50"
+                      className="w-full pl-9 pr-3 py-2 bg-[#2A2D3A] border border-hairline rounded-lg text-content text-sm focus:outline-none focus:border-[#00C9FF]/50"
                     />
                   </div>
-                  <span className="text-white/40">{t('admin.filter.dateTo')}</span>
+                  <span className="text-content-faint">{t('admin.filter.dateTo')}</span>
                   <div className="relative flex-1">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-faint" />
                     <input
                       type="date"
                       value={dateRange.to ? dateRange.to.toISOString().split("T")[0] : ""}
@@ -178,7 +178,7 @@ export function FilterBar({
                           e.target.value ? new Date(e.target.value) : null
                         )
                       }
-                      className="w-full pl-9 pr-3 py-2 bg-[#2A2D3A] border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-[#00C9FF]/50"
+                      className="w-full pl-9 pr-3 py-2 bg-[#2A2D3A] border border-hairline rounded-lg text-content text-sm focus:outline-none focus:border-[#00C9FF]/50"
                     />
                   </div>
                 </div>
@@ -196,7 +196,7 @@ export function FilterBar({
               {t('admin.filter.tagSearch', { value: searchValue })}
               <button
                 onClick={() => onSearchChange("")}
-                className="hover:text-white"
+                className="hover:text-content"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -208,13 +208,13 @@ export function FilterBar({
               filter.value !== "all" && (
                 <span
                   key={filter.key}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-white/10 text-white/70 text-xs rounded-full"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-surface-2 text-content-muted text-xs rounded-full"
                 >
                   {filter.label}:{" "}
                   {filter.options.find((o) => o.value === filter.value)?.label}
                   <button
                     onClick={() => filter.onChange("all")}
-                    className="hover:text-white"
+                    className="hover:text-content"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -222,22 +222,22 @@ export function FilterBar({
               )
           )}
           {dateRange?.from && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white/10 text-white/70 text-xs rounded-full">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-surface-2 text-content-muted text-xs rounded-full">
               {t('admin.filter.tagFrom', { date: dateRange.from.toLocaleDateString(toLocaleTag(locale)) })}
               <button
                 onClick={() => dateRange.onChange(null, dateRange.to)}
-                className="hover:text-white"
+                className="hover:text-content"
               >
                 <X className="w-3 h-3" />
               </button>
             </span>
           )}
           {dateRange?.to && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white/10 text-white/70 text-xs rounded-full">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-surface-2 text-content-muted text-xs rounded-full">
               {t('admin.filter.tagTo', { date: dateRange.to.toLocaleDateString(toLocaleTag(locale)) })}
               <button
                 onClick={() => dateRange.onChange(dateRange.from, null)}
-                className="hover:text-white"
+                className="hover:text-content"
               >
                 <X className="w-3 h-3" />
               </button>

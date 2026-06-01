@@ -97,7 +97,7 @@ export function ProvidersListView() {
               width={40}
               height={40}
               unoptimized
-              className="w-10 h-10 rounded-xl object-cover border border-white/10"
+              className="w-10 h-10 rounded-xl object-cover border border-hairline"
             />
           ) : (
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00C9FF] to-[#7B61FF] flex items-center justify-center text-white font-semibold">
@@ -105,8 +105,8 @@ export function ProvidersListView() {
             </div>
           )}
           <div>
-            <p className="font-medium text-white">{provider.fullName}</p>
-            <p className="text-sm text-white/50">{provider.email}</p>
+            <p className="font-medium text-content">{provider.fullName}</p>
+            <p className="text-sm text-content-muted">{provider.email}</p>
           </div>
         </div>
       ),
@@ -138,10 +138,10 @@ export function ProvidersListView() {
       cell: (provider) => (
         <div className="flex items-center gap-1">
           <Star className="w-4 h-4 text-[#F59E0B] fill-[#F59E0B]" />
-          <span className="text-sm text-white">
+          <span className="text-sm text-content">
             {provider.providerProfile?.rating?.toFixed(1) || "0.0"}
           </span>
-          <span className="text-sm text-white/40">
+          <span className="text-sm text-content-faint">
             ({provider.providerProfile?.reviewCount || 0})
           </span>
         </div>
@@ -155,7 +155,7 @@ export function ProvidersListView() {
       cell: (provider) => {
         const metrics = (provider as AdminProvider).performanceMetrics;
         return (
-          <span className="text-sm text-white/70">
+          <span className="text-sm text-content-muted">
             {metrics?.totalBookings || 0}
           </span>
         );
@@ -169,7 +169,7 @@ export function ProvidersListView() {
       cell: (provider) => {
         const metrics = (provider as AdminProvider).performanceMetrics;
         return (
-          <span className="text-sm text-white font-medium">
+          <span className="text-sm text-content font-medium">
             {formatPrice(metrics?.totalRevenue || 0)}
           </span>
         );
@@ -200,10 +200,10 @@ export function ProvidersListView() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">
+          <h1 className="text-2xl font-bold text-content">
             {t("admin.providers.title")}
           </h1>
-          <p className="text-white/50 mt-1">{t("admin.providers.subtitle")}</p>
+          <p className="text-content-muted mt-1">{t("admin.providers.subtitle")}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button
@@ -238,12 +238,12 @@ export function ProvidersListView() {
               <AlertCircle className="w-5 h-5 text-[#F59E0B]" />
             </div>
             <div>
-              <h3 className="font-medium text-white">
+              <h3 className="font-medium text-content">
                 {t("admin.providers.alert.awaitingVerification", {
                   count: String(pendingVerifications.length),
                 })}
               </h3>
-              <p className="text-sm text-white/50">
+              <p className="text-sm text-content-muted">
                 {t("admin.providers.alert.reviewMessage")}
               </p>
             </div>

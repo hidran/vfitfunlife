@@ -59,9 +59,9 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
   return (
     <div className="flex min-h-[calc(100vh-64px)]">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:block w-64 bg-[#1A1D29] border-r border-white/5">
+      <aside className="hidden lg:block w-64 bg-[#1A1D29] border-r border-hairline">
         <div className="p-6">
-          <h2 className="text-lg font-semibold text-white">{t('provider.layout.title')}</h2>
+          <h2 className="text-lg font-semibold text-content">{t('provider.layout.title')}</h2>
           <p className="text-sm text-gray-400">{t('provider.layout.subtitle')}</p>
         </div>
 
@@ -78,7 +78,7 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
                   'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors mb-1',
                   isActive
                     ? 'bg-section-gradient text-white'
-                    : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                    : 'text-gray-400 hover:bg-surface-2 hover:text-content'
                 )}
                 >
                   <Icon className="w-5 h-5" />
@@ -90,24 +90,24 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
       </aside>
 
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-16 left-0 right-0 z-30 bg-[#1A1D29] border-b border-white/5">
+      <div className="lg:hidden fixed top-16 left-0 right-0 z-30 bg-[#1A1D29] border-b border-hairline">
         <div className="flex items-center justify-between p-4">
-          <h2 className="text-lg font-semibold text-white">{t('provider.layout.title')}</h2>
+          <h2 className="text-lg font-semibold text-content">{t('provider.layout.title')}</h2>
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 rounded-lg hover:bg-white/10"
+            className="p-2 rounded-lg hover:bg-surface-2"
           >
             {mobileMenuOpen ? (
-              <X className="w-6 h-6 text-white" />
+              <X className="w-6 h-6 text-content" />
             ) : (
-              <Menu className="w-6 h-6 text-white" />
+              <Menu className="w-6 h-6 text-content" />
             )}
           </button>
         </div>
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <nav className="px-3 pb-4 border-t border-white/5">
+          <nav className="px-3 pb-4 border-t border-hairline">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -121,7 +121,7 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
                     'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors mb-1',
                     isActive
                       ? 'bg-section-gradient text-white'
-                      : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                      : 'text-gray-400 hover:bg-surface-2 hover:text-content'
                   )}
                 >
                   <Icon className="w-5 h-5" />

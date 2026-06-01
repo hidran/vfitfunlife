@@ -96,13 +96,13 @@ export function CancellationPolicyEditor({
         </div>
 
         {policy ? (
-          <div className="p-4 rounded-xl bg-background-secondary/5 border border-white/5">
+          <div className="p-4 rounded-xl bg-background-secondary/5 border border-hairline">
             <p className="text-sm text-text-secondary whitespace-pre-wrap">
               {policy}
             </p>
           </div>
         ) : (
-          <div className="p-4 rounded-xl bg-background-secondary/5 border border-dashed border-white/10 text-center">
+          <div className="p-4 rounded-xl bg-background-secondary/5 border border-dashed border-hairline text-center">
             <AlertCircle size={24} className="text-text-tertiary/50 mx-auto mb-2" />
             <p className="text-sm text-text-tertiary">
               {t('profile.cancellation.empty')}
@@ -160,7 +160,7 @@ export function CancellationPolicyEditor({
           rows={4}
           maxLength={maxChars}
           className={cn(
-            'w-full bg-[#2A2D3A] border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-text-tertiary',
+            'w-full bg-[#2A2D3A] border border-hairline rounded-xl px-4 py-3 text-content placeholder:text-text-tertiary',
             'focus:outline-none focus:ring-2 focus:ring-section-primary focus:border-transparent',
             'transition-all duration-200 resize-none',
             error && 'border-error ring-1 ring-error'

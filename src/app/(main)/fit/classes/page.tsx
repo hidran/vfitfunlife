@@ -34,7 +34,7 @@ export default function FitClassesPage() {
 
   return (
     <div className="container-mobile py-6 pb-24 space-y-5">
-      <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
+      <section className="rounded-3xl border border-hairline bg-surface-2 p-5">
         <h1 className="text-2xl font-display font-bold text-text-inverse">{t('fit.classes.title')}</h1>
         <p className="mt-1 text-sm text-text-secondary">
           {t('fit.classes.subtitle')}
@@ -48,7 +48,7 @@ export default function FitClassesPage() {
           </Link>
           <Link
             href="/fit/gyms"
-            className="rounded-full border border-white/20 bg-white/5 px-4 py-2 text-xs font-semibold text-text-inverse"
+            className="rounded-full border border-white/20 bg-surface-2 px-4 py-2 text-xs font-semibold text-text-inverse"
           >
             {t('fit.classes.viewGyms')}
           </Link>
@@ -67,7 +67,7 @@ export default function FitClassesPage() {
                 'rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
                 category === key
                   ? 'border-section-primary bg-section-primary text-background-dark'
-                  : 'border-white/15 bg-white/5 text-text-tertiary'
+                  : 'border-white/15 bg-surface-2 text-text-tertiary'
               )}
             >
               {categoryLabels[key]}
@@ -81,13 +81,13 @@ export default function FitClassesPage() {
           <Spinner size="md" />
         ) : (
           classes.map((item) => (
-            <article key={item.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <article key={item.id} className="rounded-2xl border border-hairline bg-surface-2 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h2 className="text-sm font-semibold text-text-inverse">{item.title}</h2>
                   <p className="mt-1 text-xs text-text-tertiary">{item.trainer}</p>
                 </div>
-                <span className="rounded-full bg-white/10 px-2 py-1 text-[10px] uppercase text-text-tertiary">
+                <span className="rounded-full bg-surface-2 px-2 py-1 text-[10px] uppercase text-text-tertiary">
                   {categoryLabels[item.category]}
                 </span>
               </div>
@@ -117,7 +117,7 @@ export default function FitClassesPage() {
         )}
       </section>
 
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-text-tertiary">
+      <div className="rounded-2xl border border-hairline bg-surface-2 p-4 text-xs text-text-tertiary">
         <p className="inline-flex items-center gap-2">
           <Filter className="h-4 w-4" />
           {t('fit.classes.realtimeNote')}

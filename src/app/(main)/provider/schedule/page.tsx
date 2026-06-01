@@ -44,7 +44,7 @@ export default function ProviderSchedulePage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">{t('provider.schedule.title')}</h1>
+          <h1 className="text-2xl font-bold text-content">{t('provider.schedule.title')}</h1>
           <p className="text-gray-400 mt-1">
             {t('provider.schedule.subtitle')}
           </p>
@@ -74,12 +74,12 @@ export default function ProviderSchedulePage() {
         <Modal onClose={() => setSelectedEvent(null)}>
           <div className="bg-[#2A2D3A] rounded-xl p-6 max-w-md w-full mx-4">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold text-white">
+              <h3 className="text-xl font-semibold text-content">
                 {selectedEvent.type === 'blocked' ? t('provider.schedule.modal.blockedTime') : t('provider.schedule.modal.appointment')}
               </h3>
               <button
                 onClick={() => setSelectedEvent(null)}
-                className="p-2 rounded-lg hover:bg-white/10"
+                className="p-2 rounded-lg hover:bg-surface-2"
               >
                 <X className="w-5 h-5 text-gray-400" />
               </button>
@@ -92,7 +92,7 @@ export default function ProviderSchedulePage() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-400">{t('provider.schedule.modal.time')}</p>
-                  <p className="text-white font-medium">
+                  <p className="text-content font-medium">
                     {formatTime(selectedEvent.start)} - {formatTime(selectedEvent.end)}
                   </p>
                 </div>
@@ -106,7 +106,7 @@ export default function ProviderSchedulePage() {
                     </div>
                     <div>
                       <p className="text-sm text-gray-400">{t('provider.schedule.modal.client')}</p>
-                      <p className="text-white font-medium">{selectedEvent.clientName}</p>
+                      <p className="text-content font-medium">{selectedEvent.clientName}</p>
                     </div>
                   </div>
 
@@ -116,7 +116,7 @@ export default function ProviderSchedulePage() {
                     </div>
                     <div>
                       <p className="text-sm text-gray-400">{t('provider.schedule.modal.service')}</p>
-                      <p className="text-white font-medium">{selectedEvent.serviceName}</p>
+                      <p className="text-content font-medium">{selectedEvent.serviceName}</p>
                     </div>
                   </div>
 
@@ -127,13 +127,13 @@ export default function ProviderSchedulePage() {
                       </div>
                       <div>
                         <p className="text-sm text-gray-400">{t('provider.schedule.modal.location')}</p>
-                        <p className="text-white font-medium">{selectedEvent.location}</p>
+                        <p className="text-content font-medium">{selectedEvent.location}</p>
                       </div>
                     </div>
                   )}
 
                   {selectedEvent.status && (
-                    <div className="pt-4 border-t border-white/5">
+                    <div className="pt-4 border-t border-hairline">
                       <span className={`
                         px-3 py-1 rounded-full text-sm font-medium
                         ${selectedEvent.status === 'confirmed' ? 'bg-green-500/20 text-green-400' : ''}
@@ -149,9 +149,9 @@ export default function ProviderSchedulePage() {
               )}
 
               {selectedEvent.notes && (
-                <div className="pt-4 border-t border-white/5">
+                <div className="pt-4 border-t border-hairline">
                   <p className="text-sm text-gray-400 mb-1">{t('provider.schedule.modal.notes')}</p>
-                  <p className="text-white">{selectedEvent.notes}</p>
+                  <p className="text-content">{selectedEvent.notes}</p>
                 </div>
               )}
             </div>
@@ -182,7 +182,7 @@ export default function ProviderSchedulePage() {
         <Modal onClose={() => setSelectedDate(null)}>
           <div className="bg-[#2A2D3A] rounded-xl p-6 max-w-md w-full mx-4">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold text-white">
+              <h3 className="text-xl font-semibold text-content">
                 {selectedDate.toLocaleDateString(toLocaleTag(locale), {
                   weekday: 'long',
                   month: 'long',
@@ -191,7 +191,7 @@ export default function ProviderSchedulePage() {
               </h3>
               <button
                 onClick={() => setSelectedDate(null)}
-                className="p-2 rounded-lg hover:bg-white/10"
+                className="p-2 rounded-lg hover:bg-surface-2"
               >
                 <X className="w-5 h-5 text-gray-400" />
               </button>

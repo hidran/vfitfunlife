@@ -63,7 +63,7 @@ export default function HelpPage() {
         </p>
       </header>
 
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+      <div className="rounded-2xl border border-hairline bg-surface-2 p-3">
         <label htmlFor="help-search" className="sr-only">
           {t('help.searchLabel')}
         </label>
@@ -72,20 +72,20 @@ export default function HelpPage() {
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder={t('help.searchPlaceholder')}
-          className="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white placeholder:text-text-tertiary outline-none focus:border-section-primary"
+          className="w-full rounded-xl border border-hairline bg-surface-sunken px-3 py-2.5 text-sm text-content placeholder:text-text-tertiary outline-none focus:border-section-primary"
         />
       </div>
 
       <section className="space-y-3">
         {filteredFaqs.length === 0 ? (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-text-secondary">
+          <div className="rounded-2xl border border-hairline bg-surface-2 p-4 text-sm text-text-secondary">
             {t('help.noResults')}
           </div>
         ) : (
           filteredFaqs.map((faq) => {
             const isOpen = openItemId === faq.id;
             return (
-              <article key={faq.id} className="overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+              <article key={faq.id} className="overflow-hidden rounded-2xl border border-hairline bg-surface-2">
                 <button
                   type="button"
                   onClick={() => setOpenItemId(isOpen ? null : faq.id)}
@@ -103,7 +103,7 @@ export default function HelpPage() {
                   />
                 </button>
                 {isOpen && (
-                  <p className="border-t border-white/10 px-4 py-3 text-sm text-text-secondary">
+                  <p className="border-t border-hairline px-4 py-3 text-sm text-text-secondary">
                     {t(faq.answerKey)}
                   </p>
                 )}
@@ -116,14 +116,14 @@ export default function HelpPage() {
       <section className="grid gap-3 sm:grid-cols-2">
         <Link
           href="/bookings"
-          className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-text-secondary transition-colors hover:text-text-inverse"
+          className="flex items-center gap-2 rounded-2xl border border-hairline bg-surface-2 p-4 text-sm text-text-secondary transition-colors hover:text-text-inverse"
         >
           <MessageCircle className="h-4 w-4 text-section-primary" />
           {t('help.contactBooking')}
         </Link>
         <a
           href="mailto:support@vfit.app"
-          className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-text-secondary transition-colors hover:text-text-inverse"
+          className="flex items-center gap-2 rounded-2xl border border-hairline bg-surface-2 p-4 text-sm text-text-secondary transition-colors hover:text-text-inverse"
         >
           <Mail className="h-4 w-4 text-section-primary" />
           {t('help.contactEmail')}

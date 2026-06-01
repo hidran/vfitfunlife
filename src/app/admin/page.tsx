@@ -72,8 +72,8 @@ export default function AdminDashboardPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">{t('admin.dashboard.title')}</h1>
-          <p className="text-white/50 mt-1">
+          <h1 className="text-2xl font-bold text-content">{t('admin.dashboard.title')}</h1>
+          <p className="text-content-muted mt-1">
             {t('admin.dashboard.welcomeBack', { name: user?.fullName?.split(" ")[0] || '' })}
           </p>
         </div>
@@ -141,8 +141,8 @@ export default function AdminDashboardPage() {
                 <AlertCircle className="w-5 h-5 text-[#F59E0B]" />
               </div>
               <div>
-                <h3 className="font-semibold text-white">{t('admin.dashboard.pendingVerifications.title')}</h3>
-                <p className="text-sm text-white/50">
+                <h3 className="font-semibold text-content">{t('admin.dashboard.pendingVerifications.title')}</h3>
+                <p className="text-sm text-content-muted">
                   {t('admin.dashboard.pendingVerifications.subtitle', {
                     count: dashboardStats?.pendingVerifications || 0,
                   })}
@@ -169,8 +169,8 @@ export default function AdminDashboardPage() {
                 <Ticket className="w-5 h-5 text-[#EF4444]" />
               </div>
               <div>
-                <h3 className="font-semibold text-white">{t('admin.dashboard.supportTickets.title')}</h3>
-                <p className="text-sm text-white/50">
+                <h3 className="font-semibold text-content">{t('admin.dashboard.supportTickets.title')}</h3>
+                <p className="text-sm text-content-muted">
                   {t('admin.dashboard.supportTickets.subtitle', {
                     count: dashboardStats?.openTickets || 0,
                   })}
@@ -194,40 +194,40 @@ export default function AdminDashboardPage() {
         {/* Main Charts Area */}
         <div className="lg:col-span-2 space-y-6">
           {/* Revenue Chart Placeholder */}
-          <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
+          <div className="bg-surface rounded-2xl border border-hairline p-6">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-white">{t('admin.dashboard.revenueOverview.title')}</h3>
+              <h3 className="text-lg font-semibold text-content">{t('admin.dashboard.revenueOverview.title')}</h3>
               <div className="flex gap-2">
-                <Button variant="ghost" size="sm" className="text-white/60">
+                <Button variant="ghost" size="sm" className="text-content-muted">
                   {t('admin.dashboard.period.week')}
                 </Button>
                 <Button variant="secondary" size="sm">
                   {t('admin.dashboard.period.month')}
                 </Button>
-                <Button variant="ghost" size="sm" className="text-white/60">
+                <Button variant="ghost" size="sm" className="text-content-muted">
                   {t('admin.dashboard.period.year')}
                 </Button>
               </div>
             </div>
-            <div className="h-64 flex items-center justify-center bg-black/20 rounded-xl">
+            <div className="h-64 flex items-center justify-center bg-surface-sunken rounded-xl">
               <div className="text-center">
-                <TrendingUp className="w-12 h-12 text-white/20 mx-auto mb-3" />
-                <p className="text-white/40">{t('admin.dashboard.revenueOverview.placeholder')}</p>
-                <p className="text-white/30 text-sm">{t('admin.dashboard.connectAnalytics')}</p>
+                <TrendingUp className="w-12 h-12 text-content-faint mx-auto mb-3" />
+                <p className="text-content-faint">{t('admin.dashboard.revenueOverview.placeholder')}</p>
+                <p className="text-content-faint text-sm">{t('admin.dashboard.connectAnalytics')}</p>
               </div>
             </div>
           </div>
 
           {/* User Growth Chart Placeholder */}
-          <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
+          <div className="bg-surface rounded-2xl border border-hairline p-6">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-white">{t('admin.dashboard.userTrend.title')}</h3>
-              <span className="text-sm text-white/50">{t('admin.dashboard.userTrend.last30Days')}</span>
+              <h3 className="text-lg font-semibold text-content">{t('admin.dashboard.userTrend.title')}</h3>
+              <span className="text-sm text-content-muted">{t('admin.dashboard.userTrend.last30Days')}</span>
             </div>
-            <div className="h-48 flex items-center justify-center bg-black/20 rounded-xl">
+            <div className="h-48 flex items-center justify-center bg-surface-sunken rounded-xl">
               <div className="text-center">
-                <Users className="w-10 h-10 text-white/20 mx-auto mb-3" />
-                <p className="text-white/40">{t('admin.dashboard.userTrend.placeholder')}</p>
+                <Users className="w-10 h-10 text-content-faint mx-auto mb-3" />
+                <p className="text-content-faint">{t('admin.dashboard.userTrend.placeholder')}</p>
               </div>
             </div>
           </div>
@@ -245,8 +245,8 @@ export default function AdminDashboardPage() {
       {/* Bottom Section - Bookings by Status & Top Providers */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Bookings by Status */}
-        <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
-          <h3 className="text-lg font-semibold text-white mb-6">{t('admin.dashboard.bookingsByStatus.title')}</h3>
+        <div className="bg-surface rounded-2xl border border-hairline p-6">
+          <h3 className="text-lg font-semibold text-content mb-6">{t('admin.dashboard.bookingsByStatus.title')}</h3>
           <div className="space-y-4">
             {isLoadingStats ? (
               <div className="flex items-center justify-center py-8">
@@ -277,10 +277,10 @@ export default function AdminDashboardPage() {
               ].map((item) => (
                 <div key={item.label}>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-white/70">{item.label}</span>
-                    <span className="text-sm text-white">{item.value}%</span>
+                    <span className="text-sm text-content-muted">{item.label}</span>
+                    <span className="text-sm text-content">{item.value}%</span>
                   </div>
-                  <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                  <div className="h-2 bg-surface-2 rounded-full overflow-hidden">
                     <div
                       className={cn("h-full rounded-full transition-all", item.color)}
                       style={{ width: `${item.value}%` }}
@@ -293,9 +293,9 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Top Providers */}
-        <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
+        <div className="bg-surface rounded-2xl border border-hairline p-6">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-white">{t('admin.dashboard.topProviders.title')}</h3>
+            <h3 className="text-lg font-semibold text-content">{t('admin.dashboard.topProviders.title')}</h3>
             <Button
               variant="ghost"
               size="sm"
@@ -313,26 +313,26 @@ export default function AdminDashboardPage() {
               </div>
             ) : providers.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-white/50">{t('admin.dashboard.topProviders.empty')}</p>
+                <p className="text-content-muted">{t('admin.dashboard.topProviders.empty')}</p>
               </div>
             ) : (
               providers.slice(0, 5).map((provider, index) => (
                 <div
                   key={provider.id}
-                  className="flex items-center gap-4 p-3 bg-black/20 rounded-xl"
+                  className="flex items-center gap-4 p-3 bg-surface-sunken rounded-xl"
                 >
-                  <span className="w-6 h-6 flex items-center justify-center text-sm font-semibold text-white/50">
+                  <span className="w-6 h-6 flex items-center justify-center text-sm font-semibold text-content-muted">
                     {index + 1}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-white truncate">{provider.fullName}</p>
-                    <p className="text-sm text-white/50">
+                    <p className="font-medium text-content truncate">{provider.fullName}</p>
+                    <p className="text-sm text-content-muted">
                       {t('admin.dashboard.topProviders.bookings', {
                         count: (provider as any).performanceMetrics?.totalBookings || 0,
                       })}
                     </p>
                   </div>
-                  <span className="font-semibold text-white">
+                  <span className="font-semibold text-content">
                     {formatPrice((provider as any).performanceMetrics?.totalRevenue || 0)}
                   </span>
                 </div>

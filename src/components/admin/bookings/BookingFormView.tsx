@@ -74,7 +74,7 @@ export function BookingFormView({ mode, initial, onSubmit }: Props) {
       className="space-y-6"
     >
       {/* Display-only customer / venue / service info */}
-      <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="bg-surface rounded-2xl border border-hairline p-6 grid grid-cols-1 gap-4 md:grid-cols-2">
         <ReadOnlyField
           label={t('admin.bookings.field.customer')}
           value={initial?.userName ?? '—'}
@@ -178,7 +178,7 @@ function Field({
 }) {
   return (
     <label className={`block space-y-1 ${className ?? ''}`}>
-      <span className="text-xs text-white/60">{label}</span>
+      <span className="text-xs text-content-muted">{label}</span>
       {children}
       {error && <span className="text-xs text-red-400">{error}</span>}
     </label>
@@ -196,9 +196,9 @@ function ReadOnlyField({
 }) {
   return (
     <div>
-      <p className="text-xs text-white/40">{label}</p>
-      <p className="text-sm text-white">{value}</p>
-      {sub && <p className="text-xs text-white/50">{sub}</p>}
+      <p className="text-xs text-content-faint">{label}</p>
+      <p className="text-sm text-content">{value}</p>
+      {sub && <p className="text-xs text-content-muted">{sub}</p>}
     </div>
   );
 }

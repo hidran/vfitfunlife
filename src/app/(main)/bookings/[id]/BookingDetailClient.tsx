@@ -224,21 +224,21 @@ export default function BookingDetailPage() {
       )}
 
       {/* Header */}
-      <div className="sticky top-0 z-20 bg-background-dark/95 backdrop-blur-md border-b border-white/10">
+      <div className="sticky top-0 z-20 bg-background-dark/95 backdrop-blur-md border-b border-hairline">
         <div className="p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.back()}
-              className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors"
+              className="p-2 -ml-2 rounded-full hover:bg-surface-2 transition-colors"
             >
-              <ChevronLeft className="w-6 h-6 text-white" />
+              <ChevronLeft className="w-6 h-6 text-content" />
             </button>
-            <h1 className="text-lg font-semibold text-white">{t('bookings.detail.title')}</h1>
+            <h1 className="text-lg font-semibold text-content">{t('bookings.detail.title')}</h1>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={handleShare}
-              className="p-2 rounded-full hover:bg-white/10 transition-colors"
+              className="p-2 rounded-full hover:bg-surface-2 transition-colors"
             >
               <Share2 className="w-5 h-5 text-text-secondary" />
             </button>
@@ -268,7 +268,7 @@ export default function BookingDetailPage() {
               </div>
               <div>
                 <p className="text-sm text-text-secondary">{t('bookings.detail.statusLabel')}</p>
-                <p className="font-semibold text-white">{statusLabel}</p>
+                <p className="font-semibold text-content">{statusLabel}</p>
               </div>
             </div>
             <Badge variant={statusEntry.variant}>{statusLabel}</Badge>
@@ -284,7 +284,7 @@ export default function BookingDetailPage() {
               size="xl"
             />
             <div className="flex-1">
-              <h2 className="font-semibold text-white">{booking.providerName}</h2>
+              <h2 className="font-semibold text-content">{booking.providerName}</h2>
               <p className="text-text-secondary">{booking.serviceName}</p>
             </div>
             <div className="flex gap-2">
@@ -300,11 +300,11 @@ export default function BookingDetailPage() {
 
         {/* Check-in ticket */}
         {booking.status !== 'cancelled' && (
-          <div className="bg-[#2A2D3A]/60 rounded-2xl border border-white/10 p-4">
+          <div className="bg-[#2A2D3A]/60 rounded-2xl border border-hairline p-4">
             <div className="mb-3 flex items-center justify-between">
               <div>
                 <p className="text-xs uppercase tracking-wide text-text-tertiary">Check-in</p>
-                <p className="font-semibold text-white">{t('bookings.detail.checkinLabel')}</p>
+                <p className="font-semibold text-content">{t('bookings.detail.checkinLabel')}</p>
               </div>
               <Badge variant="partner" size="sm">QR Ticket</Badge>
             </div>
@@ -331,12 +331,12 @@ export default function BookingDetailPage() {
 
         {/* Date & Time */}
         <div className="bg-[#2A2D3A]/50 rounded-2xl p-4 space-y-3">
-          <h3 className="font-semibold text-white">{t('bookings.detail.dateAndTime')}</h3>
+          <h3 className="font-semibold text-content">{t('bookings.detail.dateAndTime')}</h3>
 
           <div className="flex items-center gap-3">
             <Calendar className="w-5 h-5 text-[var(--section-primary)]" />
             <div>
-              <p className="text-white">
+              <p className="text-content">
                 {scheduledAt.toLocaleDateString(toLocaleTag(locale), {
                   weekday: 'long',
                   day: 'numeric',
@@ -350,7 +350,7 @@ export default function BookingDetailPage() {
           <div className="flex items-center gap-3">
             <Clock className="w-5 h-5 text-[var(--section-primary)]" />
             <div>
-              <p className="text-white">
+              <p className="text-content">
                 {scheduledAt.toLocaleTimeString(toLocaleTag(locale), {
                   hour: '2-digit',
                   minute: '2-digit',
@@ -363,7 +363,7 @@ export default function BookingDetailPage() {
           {!isPast && booking.status !== 'cancelled' && (
             <button
               onClick={handleAddToCalendar}
-              className="w-full mt-2 py-2.5 bg-white/10 rounded-xl text-sm font-medium text-white hover:bg-white/20 transition-colors flex items-center justify-center gap-2"
+              className="w-full mt-2 py-2.5 bg-surface-2 rounded-xl text-sm font-medium text-content hover:bg-white/20 transition-colors flex items-center justify-center gap-2"
             >
               <Calendar className="w-4 h-4" />
               {t('bookings.detail.addToCalendar')}
@@ -374,12 +374,12 @@ export default function BookingDetailPage() {
         {/* Location */}
         {booking.location && (
           <div className="bg-[#2A2D3A]/50 rounded-2xl p-4 space-y-3">
-            <h3 className="font-semibold text-white">{t('bookings.detail.location')}</h3>
+            <h3 className="font-semibold text-content">{t('bookings.detail.location')}</h3>
 
             <div className="flex items-start gap-3">
               <MapPin className="w-5 h-5 text-[var(--section-primary)] mt-0.5" />
               <div>
-                <p className="text-white">{booking.location.address}</p>
+                <p className="text-content">{booking.location.address}</p>
                 <a
                   href={`https://maps.google.com/?q=${booking.location.lat},${booking.location.lng}`}
                   target="_blank"
@@ -412,7 +412,7 @@ export default function BookingDetailPage() {
 
         {/* Payment Info */}
         <div className="bg-[#2A2D3A]/50 rounded-2xl p-4 space-y-3">
-          <h3 className="font-semibold text-white">{t('bookings.detail.payment')}</h3>
+          <h3 className="font-semibold text-content">{t('bookings.detail.payment')}</h3>
 
           <div className="flex items-center justify-between">
             <span className="text-text-secondary">{t('bookings.detail.statusLabel')}</span>
@@ -425,7 +425,7 @@ export default function BookingDetailPage() {
 
           <div className="flex items-center justify-between">
             <span className="text-text-secondary">{t('common.total')}</span>
-            <span className="font-semibold text-white">{formatPrice(booking.totalPrice)}</span>
+            <span className="font-semibold text-content">{formatPrice(booking.totalPrice)}</span>
           </div>
 
           {booking.promotionCode && (
@@ -435,7 +435,7 @@ export default function BookingDetailPage() {
             </div>
           )}
 
-          <button className="w-full mt-2 py-2.5 bg-white/10 rounded-xl text-sm font-medium text-white hover:bg-white/20 transition-colors flex items-center justify-center gap-2">
+          <button className="w-full mt-2 py-2.5 bg-surface-2 rounded-xl text-sm font-medium text-content hover:bg-white/20 transition-colors flex items-center justify-center gap-2">
             <Download className="w-4 h-4" />
             {t('bookings.detail.downloadReceipt')}
           </button>
@@ -449,7 +449,7 @@ export default function BookingDetailPage() {
               navigator.clipboard.writeText(booking.id);
               alert(t('bookings.detail.idCopied'));
             }}
-            className="flex items-center gap-1 hover:text-white transition-colors"
+            className="flex items-center gap-1 hover:text-content transition-colors"
           >
             {booking.id}
             <Copy className="w-3 h-3" />
@@ -499,7 +499,7 @@ export default function BookingDetailPage() {
             animate={{ scale: 1, opacity: 1 }}
             className="bg-[#2A2D3A] rounded-2xl p-6 w-full max-w-sm"
           >
-            <h3 className="text-lg font-semibold text-white mb-2">
+            <h3 className="text-lg font-semibold text-content mb-2">
               {t('bookings.detail.cancelModal.title')}
             </h3>
             <p className="text-text-secondary text-sm mb-4">

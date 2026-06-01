@@ -74,7 +74,7 @@ export default function GymsPage() {
               onChange={(event) => setQuery(event.target.value)}
               placeholder={t('fit.gyms.searchPlaceholder')}
               className={cn(
-                'w-full rounded-xl border border-white/10 bg-white/5 py-3 pl-11 pr-12',
+                'w-full rounded-xl border border-hairline bg-surface-2 py-3 pl-11 pr-12',
                 'text-sm text-text-inverse placeholder:text-text-tertiary',
                 'focus:outline-none focus:ring-2 focus:ring-[var(--section-primary)]'
               )}
@@ -95,7 +95,7 @@ export default function GymsPage() {
               <button
                 key={filterKey}
                 type="button"
-                className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-text-tertiary hover:bg-white/10 transition-colors"
+                className="flex items-center gap-2 rounded-full border border-hairline bg-surface-2 px-4 py-2 text-xs font-semibold text-text-tertiary hover:bg-surface-2 transition-colors"
               >
                 <SlidersHorizontal className="h-3.5 w-3.5" />
                 {t(filterKey)}
@@ -104,7 +104,7 @@ export default function GymsPage() {
           </div>
 
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 p-1">
+            <div className="flex items-center gap-2 rounded-full border border-hairline bg-surface-2 p-1">
               <button
                 type="button"
                 onClick={() => setView('list')}
@@ -153,7 +153,7 @@ export default function GymsPage() {
               <Link
                 key={gym.id}
                 href={`/venue?id=${gym.id}`}
-                className="block overflow-hidden rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors"
+                className="block overflow-hidden rounded-2xl border border-hairline bg-surface-2 hover:bg-surface-2 transition-colors"
               >
                 <div className="relative">
                   <PhotoCover
@@ -169,7 +169,7 @@ export default function GymsPage() {
                       {t('fit.gyms.partner')}
                     </span>
                   )}
-                  <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-background-dark/80 px-2 py-1 text-[11px] text-white">
+                  <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-background-dark/80 px-2 py-1 text-[11px] text-content">
                     <Star className="h-3 w-3 text-yellow-400" />
                     {gym.rating.toFixed(1)}
                   </div>
@@ -192,7 +192,7 @@ export default function GymsPage() {
                     {gym.amenities.map((a) => (
                       <span
                         key={a.kind}
-                        className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-text-tertiary"
+                        className="rounded-full bg-surface-2 px-2.5 py-1 text-[11px] font-semibold text-text-tertiary"
                       >
                         {a.kind}
                       </span>
@@ -223,7 +223,7 @@ export default function GymsPage() {
                 <Link
                   key={gym.id}
                   href={`/venue?id=${gym.id}`}
-                  className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 hover:bg-white/10 transition-colors"
+                  className="flex items-center justify-between rounded-2xl border border-hairline bg-surface-2 px-4 py-3 hover:bg-surface-2 transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-full bg-section-primary/20 flex items-center justify-center">

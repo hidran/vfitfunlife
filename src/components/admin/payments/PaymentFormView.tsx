@@ -32,14 +32,14 @@ export function PaymentFormView({ mode, initial, onSubmit }: Props) {
   return (
     <SuperadminOnly
       fallback={
-        <div className="text-xs text-white/40 italic">
+        <div className="text-xs text-content-faint italic">
           {t('admin.payments.superadminOnlyEdits')}
         </div>
       }
     >
       <form id="payment-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <label className="block space-y-1">
-          <span className="text-xs text-white/60">{t('admin.payments.field.notes')}</span>
+          <span className="text-xs text-content-muted">{t('admin.payments.field.notes')}</span>
           <textarea
             {...register('notes')}
             disabled={readonly}
@@ -47,7 +47,7 @@ export function PaymentFormView({ mode, initial, onSubmit }: Props) {
             className="admin-input"
           />
         </label>
-        <label className="flex items-center gap-2 text-white">
+        <label className="flex items-center gap-2 text-content">
           <input type="checkbox" {...register('disputed')} disabled={readonly} />
           <span>{t('admin.payments.field.disputed')}</span>
         </label>

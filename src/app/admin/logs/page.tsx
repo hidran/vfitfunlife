@@ -85,7 +85,7 @@ export default function SystemLogsPage() {
       cell: (log) => {
         const date = toDate(log.timestamp);
         return (
-          <span className="text-sm text-white/50 whitespace-nowrap">
+          <span className="text-sm text-content-muted whitespace-nowrap">
             {formatDate(date || new Date(), {
               month: "short",
               day: "numeric",
@@ -119,7 +119,7 @@ export default function SystemLogsPage() {
       key: "action",
       header: t('admin.logs.col.action'),
       cell: (log) => (
-        <span className="font-medium text-white text-sm">{log.action}</span>
+        <span className="font-medium text-content text-sm">{log.action}</span>
       ),
       width: "w-40",
     },
@@ -130,11 +130,11 @@ export default function SystemLogsPage() {
         <div>
           {log.userName ? (
             <>
-              <p className="text-sm text-white">{log.userName}</p>
-              <p className="text-xs text-white/50">{log.userRole}</p>
+              <p className="text-sm text-content">{log.userName}</p>
+              <p className="text-xs text-content-muted">{log.userRole}</p>
             </>
           ) : (
-            <span className="text-sm text-white/40">{t('admin.logs.col.system')}</span>
+            <span className="text-sm text-content-faint">{t('admin.logs.col.system')}</span>
           )}
         </div>
       ),
@@ -144,14 +144,14 @@ export default function SystemLogsPage() {
       key: "details",
       header: t('admin.logs.col.details'),
       cell: (log) => (
-        <p className="text-sm text-white/70 truncate max-w-md">{log.details}</p>
+        <p className="text-sm text-content-muted truncate max-w-md">{log.details}</p>
       ),
     },
     {
       key: "ip",
       header: t('admin.logs.col.ipAddress'),
       cell: (log) => (
-        <span className="text-sm text-white/40 font-mono">{log.ipAddress || "-"}</span>
+        <span className="text-sm text-content-faint font-mono">{log.ipAddress || "-"}</span>
       ),
       width: "w-32",
     },
@@ -164,8 +164,8 @@ export default function SystemLogsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">{t('admin.logs.title')}</h1>
-          <p className="text-white/50 mt-1">
+          <h1 className="text-2xl font-bold text-content">{t('admin.logs.title')}</h1>
+          <p className="text-content-muted mt-1">
             {t('admin.logs.subtitle')}
           </p>
         </div>
@@ -202,38 +202,38 @@ export default function SystemLogsPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
-        <div className="bg-[#1E2230] rounded-xl border border-white/10 p-4">
+        <div className="bg-surface rounded-xl border border-hairline p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#00C9FF]/20 flex items-center justify-center">
               <FileText className="w-5 h-5 text-[#00C9FF]" />
             </div>
             <div>
-              <p className="text-xs text-white/40">{t('admin.logs.stat.totalLogs')}</p>
-              <p className="text-xl font-bold text-white">{logsTotal}</p>
+              <p className="text-xs text-content-faint">{t('admin.logs.stat.totalLogs')}</p>
+              <p className="text-xl font-bold text-content">{logsTotal}</p>
             </div>
           </div>
         </div>
-        <div className="bg-[#1E2230] rounded-xl border border-white/10 p-4">
+        <div className="bg-surface rounded-xl border border-hairline p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/20 flex items-center justify-center">
               <AlertTriangle className="w-5 h-5 text-[#F59E0B]" />
             </div>
             <div>
-              <p className="text-xs text-white/40">{t('admin.logs.stat.warnings')}</p>
-              <p className="text-xl font-bold text-white">
+              <p className="text-xs text-content-faint">{t('admin.logs.stat.warnings')}</p>
+              <p className="text-xl font-bold text-content">
                 {systemLogs.filter((l) => l.severity === "warning").length}
               </p>
             </div>
           </div>
         </div>
-        <div className="bg-[#1E2230] rounded-xl border border-white/10 p-4">
+        <div className="bg-surface rounded-xl border border-hairline p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#EF4444]/20 flex items-center justify-center">
               <AlertCircle className="w-5 h-5 text-[#EF4444]" />
             </div>
             <div>
-              <p className="text-xs text-white/40">{t('admin.logs.stat.errors')}</p>
-              <p className="text-xl font-bold text-white">
+              <p className="text-xs text-content-faint">{t('admin.logs.stat.errors')}</p>
+              <p className="text-xl font-bold text-content">
                 {systemLogs.filter((l) => l.severity === "error").length}
               </p>
             </div>

@@ -84,8 +84,8 @@ export function UserTypesListView() {
             <Tag className="w-5 h-5 text-[#00C9FF]" />
           </div>
           <div>
-            <p className="font-medium text-white">{ut.name}</p>
-            <p className="text-xs text-white/50">{ut.slug}</p>
+            <p className="font-medium text-content">{ut.name}</p>
+            <p className="text-xs text-content-muted">{ut.slug}</p>
           </div>
         </div>
       ),
@@ -95,7 +95,7 @@ export function UserTypesListView() {
       key: 'description',
       header: t('admin.userTypes.col.description'),
       cell: (ut) => (
-        <p className="text-sm text-white/70 truncate max-w-xs">{ut.description}</p>
+        <p className="text-sm text-content-muted truncate max-w-xs">{ut.description}</p>
       ),
       width: 'w-1/3',
     },
@@ -107,7 +107,7 @@ export function UserTypesListView() {
           className={`px-2.5 py-1 rounded-full text-xs font-medium ${
             ut.isActive
               ? 'bg-[#10B981]/20 text-[#10B981]'
-              : 'bg-white/10 text-white/50'
+              : 'bg-surface-2 text-content-muted'
           }`}
         >
           {ut.isActive
@@ -122,7 +122,7 @@ export function UserTypesListView() {
       key: 'created',
       header: t('admin.userTypes.col.created'),
       cell: (ut) => (
-        <span className="text-sm text-white/50">{formatDate(ut.createdAt)}</span>
+        <span className="text-sm text-content-muted">{formatDate(ut.createdAt)}</span>
       ),
       sortable: true,
       width: 'w-28',
@@ -146,10 +146,10 @@ export function UserTypesListView() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">
+          <h1 className="text-2xl font-bold text-content">
             {t('admin.userTypes.title')}
           </h1>
-          <p className="text-white/50 mt-1">{t('admin.userTypes.subtitle')}</p>
+          <p className="text-content-muted mt-1">{t('admin.userTypes.subtitle')}</p>
         </div>
         <SuperadminOnly>
           <Button

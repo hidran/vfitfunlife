@@ -53,7 +53,7 @@ export default function ProviderVerificationsPage() {
         <Button
           variant="ghost"
           onClick={() => router.push("/admin/providers")}
-          className="text-white/60"
+          className="text-content-muted"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           {t('admin.verificationsPage.back')}
@@ -62,8 +62,8 @@ export default function ProviderVerificationsPage() {
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">{t('admin.verificationsPage.title')}</h1>
-          <p className="text-white/50 mt-1">
+          <h1 className="text-2xl font-bold text-content">{t('admin.verificationsPage.title')}</h1>
+          <p className="text-content-muted mt-1">
             {t('admin.verificationsPage.subtitle')}
           </p>
         </div>
@@ -79,36 +79,36 @@ export default function ProviderVerificationsPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-[#1E2230] rounded-xl border border-white/10 p-4">
+        <div className="bg-surface rounded-xl border border-hairline p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/20 flex items-center justify-center">
               <AlertCircle className="w-5 h-5 text-[#F59E0B]" />
             </div>
             <div>
-              <p className="text-sm text-white/50">{t('admin.verificationsPage.stat.pending')}</p>
-              <p className="text-xl font-bold text-white">{pendingVerifications.length}</p>
+              <p className="text-sm text-content-muted">{t('admin.verificationsPage.stat.pending')}</p>
+              <p className="text-xl font-bold text-content">{pendingVerifications.length}</p>
             </div>
           </div>
         </div>
-        <div className="bg-[#1E2230] rounded-xl border border-white/10 p-4">
+        <div className="bg-surface rounded-xl border border-hairline p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#10B981]/20 flex items-center justify-center">
               <CheckCircle className="w-5 h-5 text-[#10B981]" />
             </div>
             <div>
-              <p className="text-sm text-white/50">{t('admin.verificationsPage.stat.verifiedToday')}</p>
-              <p className="text-xl font-bold text-white">0</p>
+              <p className="text-sm text-content-muted">{t('admin.verificationsPage.stat.verifiedToday')}</p>
+              <p className="text-xl font-bold text-content">0</p>
             </div>
           </div>
         </div>
-        <div className="bg-[#1E2230] rounded-xl border border-white/10 p-4">
+        <div className="bg-surface rounded-xl border border-hairline p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#00C9FF]/20 flex items-center justify-center">
               <CheckCircle className="w-5 h-5 text-[#00C9FF]" />
             </div>
             <div>
-              <p className="text-sm text-white/50">{t('admin.verificationsPage.stat.avgResponseTime')}</p>
-              <p className="text-xl font-bold text-white">2.5h</p>
+              <p className="text-sm text-content-muted">{t('admin.verificationsPage.stat.avgResponseTime')}</p>
+              <p className="text-xl font-bold text-content">2.5h</p>
             </div>
           </div>
         </div>

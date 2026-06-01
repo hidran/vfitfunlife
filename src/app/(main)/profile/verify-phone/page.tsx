@@ -88,11 +88,11 @@ export default function VerifyPhonePage() {
   return (
     <div className="min-h-screen bg-background-dark">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-background-dark/95 backdrop-blur-sm border-b border-white/5">
+      <div className="sticky top-0 z-10 bg-background-dark/95 backdrop-blur-sm border-b border-hairline">
         <div className="flex items-center p-4">
           <button
             onClick={() => router.back()}
-            className="p-2 -ml-2 rounded-lg text-text-secondary hover:text-text-inverse hover:bg-white/10 transition-colors"
+            className="p-2 -ml-2 rounded-lg text-text-secondary hover:text-text-inverse hover:bg-surface-2 transition-colors"
           >
             <ChevronLeft size={24} />
           </button>
@@ -152,7 +152,7 @@ export default function VerifyPhonePage() {
                   placeholder={t('profile.verifyPhone.phonePlaceholder')}
                   maxLength={13}
                   className={cn(
-                    'w-full bg-[#2A2D3A] border border-white/10 rounded-xl px-4 py-4 pl-14 text-white placeholder:text-text-tertiary',
+                    'w-full bg-[#2A2D3A] border border-hairline rounded-xl px-4 py-4 pl-14 text-content placeholder:text-text-tertiary',
                     'focus:outline-none focus:ring-2 focus:ring-section-primary focus:border-transparent',
                     'transition-all duration-200 text-lg tracking-wider'
                   )}
@@ -195,7 +195,7 @@ export default function VerifyPhonePage() {
                 placeholder="123456"
                 maxLength={6}
                 className={cn(
-                  'w-full bg-[#2A2D3A] border border-white/10 rounded-xl px-4 py-4 text-white placeholder:text-text-tertiary',
+                  'w-full bg-[#2A2D3A] border border-hairline rounded-xl px-4 py-4 text-content placeholder:text-text-tertiary',
                   'focus:outline-none focus:ring-2 focus:ring-section-primary focus:border-transparent',
                   'transition-all duration-200 text-center text-2xl tracking-[0.5em] font-mono'
                 )}

@@ -66,8 +66,8 @@ export function BookingsListView() {
       header: t('admin.bookings.col.bookingId'),
       cell: (booking) => (
         <div>
-          <p className="font-medium text-white">#{booking.id.slice(-6).toUpperCase()}</p>
-          <p className="text-xs text-white/40">
+          <p className="font-medium text-content">#{booking.id.slice(-6).toUpperCase()}</p>
+          <p className="text-xs text-content-faint">
             {formatDate(toDate(booking.createdAt) || new Date(), {
               month: "short",
               day: "numeric",
@@ -88,8 +88,8 @@ export function BookingsListView() {
             <User className="w-4 h-4" />
           </div>
           <div>
-            <p className="font-medium text-white text-sm">{booking.userName}</p>
-            <p className="text-xs text-white/50">{booking.userPhone}</p>
+            <p className="font-medium text-content text-sm">{booking.userName}</p>
+            <p className="text-xs text-content-muted">{booking.userPhone}</p>
           </div>
         </div>
       ),
@@ -100,12 +100,12 @@ export function BookingsListView() {
       header: t('admin.bookings.col.provider'),
       cell: (booking) => (
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
-            <Store className="w-4 h-4 text-white/60" />
+          <div className="w-8 h-8 rounded-lg bg-surface-2 flex items-center justify-center">
+            <Store className="w-4 h-4 text-content-muted" />
           </div>
           <div>
-            <p className="font-medium text-white text-sm">{booking.instructorName}</p>
-            <p className="text-xs text-white/50">{booking.venueName}</p>
+            <p className="font-medium text-content text-sm">{booking.instructorName}</p>
+            <p className="text-xs text-content-muted">{booking.venueName}</p>
           </div>
         </div>
       ),
@@ -116,8 +116,8 @@ export function BookingsListView() {
       header: t('admin.bookings.col.service'),
       cell: (booking) => (
         <div>
-          <p className="text-sm text-white">{booking.serviceName}</p>
-          <p className="text-xs text-white/50">
+          <p className="text-sm text-content">{booking.serviceName}</p>
+          <p className="text-xs text-content-muted">
             {formatDate(toDate(booking.scheduledAt) || new Date(), {
               month: "short",
               day: "numeric",
@@ -133,7 +133,7 @@ export function BookingsListView() {
       key: "amount",
       header: t('admin.bookings.col.amount'),
       cell: (booking) => (
-        <span className="font-medium text-white">
+        <span className="font-medium text-content">
           {formatPrice(booking.finalPrice || 0)}
         </span>
       ),
@@ -152,8 +152,8 @@ export function BookingsListView() {
       header: t('admin.bookings.col.payment'),
       cell: (booking) => (
         <div className="flex items-center gap-2">
-          <CreditCard className="w-4 h-4 text-white/40" />
-          <span className="text-sm text-white/70 capitalize">{booking.paymentStatus}</span>
+          <CreditCard className="w-4 h-4 text-content-faint" />
+          <span className="text-sm text-content-muted capitalize">{booking.paymentStatus}</span>
         </div>
       ),
       width: "w-28",
@@ -172,8 +172,8 @@ export function BookingsListView() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">{t('admin.bookings.title')}</h1>
-          <p className="text-white/50 mt-1">{t('admin.bookings.subtitle')}</p>
+          <h1 className="text-2xl font-bold text-content">{t('admin.bookings.title')}</h1>
+          <p className="text-content-muted mt-1">{t('admin.bookings.subtitle')}</p>
         </div>
         <Button variant="secondary" className="flex items-center gap-2">
           <Download className="w-4 h-4" />
@@ -183,47 +183,47 @@ export function BookingsListView() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-[#1E2230] rounded-xl border border-white/10 p-4">
+        <div className="bg-surface rounded-xl border border-hairline p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#00C9FF]/20 flex items-center justify-center">
               <Calendar className="w-5 h-5 text-[#00C9FF]" />
             </div>
             <div>
-              <p className="text-xs text-white/40">{t('admin.bookings.stat.totalBookings')}</p>
-              <p className="text-xl font-bold text-white">{bookingsTotal}</p>
+              <p className="text-xs text-content-faint">{t('admin.bookings.stat.totalBookings')}</p>
+              <p className="text-xl font-bold text-content">{bookingsTotal}</p>
             </div>
           </div>
         </div>
-        <div className="bg-[#1E2230] rounded-xl border border-white/10 p-4">
+        <div className="bg-surface rounded-xl border border-hairline p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#10B981]/20 flex items-center justify-center">
               <CreditCard className="w-5 h-5 text-[#10B981]" />
             </div>
             <div>
-              <p className="text-xs text-white/40">{t('admin.bookings.stat.totalRevenue')}</p>
-              <p className="text-xl font-bold text-white">{formatPrice(totalRevenue)}</p>
+              <p className="text-xs text-content-faint">{t('admin.bookings.stat.totalRevenue')}</p>
+              <p className="text-xl font-bold text-content">{formatPrice(totalRevenue)}</p>
             </div>
           </div>
         </div>
-        <div className="bg-[#1E2230] rounded-xl border border-white/10 p-4">
+        <div className="bg-surface rounded-xl border border-hairline p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/20 flex items-center justify-center">
               <Calendar className="w-5 h-5 text-[#F59E0B]" />
             </div>
             <div>
-              <p className="text-xs text-white/40">{t('admin.bookings.stat.pending')}</p>
-              <p className="text-xl font-bold text-white">{pendingCount}</p>
+              <p className="text-xs text-content-faint">{t('admin.bookings.stat.pending')}</p>
+              <p className="text-xl font-bold text-content">{pendingCount}</p>
             </div>
           </div>
         </div>
-        <div className="bg-[#1E2230] rounded-xl border border-white/10 p-4">
+        <div className="bg-surface rounded-xl border border-hairline p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#7B61FF]/20 flex items-center justify-center">
               <Calendar className="w-5 h-5 text-[#7B61FF]" />
             </div>
             <div>
-              <p className="text-xs text-white/40">{t('admin.bookings.stat.completed')}</p>
-              <p className="text-xl font-bold text-white">{completedCount}</p>
+              <p className="text-xs text-content-faint">{t('admin.bookings.stat.completed')}</p>
+              <p className="text-xl font-bold text-content">{completedCount}</p>
             </div>
           </div>
         </div>

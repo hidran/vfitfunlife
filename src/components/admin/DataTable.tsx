@@ -130,11 +130,11 @@ export function DataTable<T>({
 
   if (isLoading) {
     return (
-      <div className="bg-[#1E2230] rounded-2xl border border-white/10 overflow-hidden">
+      <div className="bg-surface rounded-2xl border border-hairline overflow-hidden">
         <div className="p-8">
           <div className="animate-pulse space-y-4">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-12 bg-white/5 rounded-lg" />
+              <div key={i} className="h-12 bg-surface-2 rounded-lg" />
             ))}
           </div>
         </div>
@@ -143,16 +143,16 @@ export function DataTable<T>({
   }
 
   return (
-    <div className={cn("bg-[#1E2230] rounded-2xl border border-white/10 overflow-hidden", className)}>
+    <div className={cn("bg-surface rounded-2xl border border-hairline overflow-hidden", className)}>
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-white/10">
+            <tr className="border-b border-hairline">
               {selectable && (
                 <th className="px-4 py-3 w-10">
                   <button
                     onClick={toggleSelectAll}
-                    className="text-white/60 hover:text-white transition-colors"
+                    className="text-content-muted hover:text-content transition-colors"
                   >
                     {isAllSelected ? (
                       <CheckSquare className="w-5 h-5" />
@@ -168,8 +168,8 @@ export function DataTable<T>({
                 <th
                   key={column.key}
                   className={cn(
-                    "px-4 py-3 text-left text-xs font-semibold text-white/50 uppercase tracking-wider",
-                    column.sortable && "cursor-pointer select-none hover:text-white",
+                    "px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wider",
+                    column.sortable && "cursor-pointer select-none hover:text-content",
                     column.width
                   )}
                   onClick={() => column.sortable && handleSort(column.key)}
@@ -177,7 +177,7 @@ export function DataTable<T>({
                   <div className="flex items-center gap-2">
                     {column.header}
                     {column.sortable && (
-                      <span className="text-white/30">
+                      <span className="text-content-faint">
                         {sortKey === column.key ? (
                           sortDirection === "asc" ? (
                             <ArrowUp className="w-3 h-3" />
@@ -200,7 +200,7 @@ export function DataTable<T>({
               <tr>
                 <td
                   colSpan={columns.length + (selectable ? 1 : 0) + (actions ? 1 : 0)}
-                  className="px-4 py-12 text-center text-white/40"
+                  className="px-4 py-12 text-center text-content-faint"
                 >
                   {emptyMessage ?? t('admin.table.empty')}
                 </td>
@@ -215,8 +215,8 @@ export function DataTable<T>({
                     key={rowId}
                     onClick={() => onRowClick?.(row)}
                     className={cn(
-                      "border-b border-white/5 last:border-0 transition-colors",
-                      onRowClick && "cursor-pointer hover:bg-white/5",
+                      "border-b border-hairline last:border-0 transition-colors",
+                      onRowClick && "cursor-pointer hover:bg-surface-2",
                       isSelected && "bg-[#00C9FF]/5"
                     )}
                   >
@@ -224,7 +224,7 @@ export function DataTable<T>({
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => toggleSelect(rowId)}
-                          className="text-white/60 hover:text-white transition-colors"
+                          className="text-content-muted hover:text-content transition-colors"
                         >
                           {isSelected ? (
                             <CheckSquare className="w-5 h-5 text-[#00C9FF]" />
@@ -249,7 +249,7 @@ export function DataTable<T>({
                                 actionMenuOpen === rowId ? null : rowId
                               );
                             }}
-                            className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+                            className="p-1.5 rounded-lg text-content-faint hover:text-content hover:bg-surface-2 transition-colors"
                           >
                             <MoreHorizontal className="w-4 h-4" />
                           </button>
@@ -260,14 +260,14 @@ export function DataTable<T>({
                                 className="fixed inset-0 z-10"
                                 onClick={() => setActionMenuOpen(null)}
                               />
-                              <div className="absolute right-0 top-full mt-1 w-36 bg-[#2A2D3A] rounded-xl border border-white/10 shadow-xl z-20 py-1">
+                              <div className="absolute right-0 top-full mt-1 w-36 bg-[#2A2D3A] rounded-xl border border-hairline shadow-xl z-20 py-1">
                                 {actions.view && (
                                   <button
                                     onClick={() => {
                                       actions.view?.(row);
                                       setActionMenuOpen(null);
                                     }}
-                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white/80 hover:bg-white/5 transition-colors"
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white/80 hover:bg-surface-2 transition-colors"
                                   >
                                     <Eye className="w-4 h-4" />
                                     {t('admin.table.actions.view')}
@@ -279,7 +279,7 @@ export function DataTable<T>({
                                       actions.edit?.(row);
                                       setActionMenuOpen(null);
                                     }}
-                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white/80 hover:bg-white/5 transition-colors"
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white/80 hover:bg-surface-2 transition-colors"
                                   >
                                     <Edit className="w-4 h-4" />
                                     {t('admin.table.actions.edit')}
@@ -291,7 +291,7 @@ export function DataTable<T>({
                                       actions.delete?.(row);
                                       setActionMenuOpen(null);
                                     }}
-                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#EF4444] hover:bg-white/5 transition-colors"
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#EF4444] hover:bg-surface-2 transition-colors"
                                   >
                                     <Trash2 className="w-4 h-4" />
                                     {t('admin.table.actions.delete')}
@@ -313,8 +313,8 @@ export function DataTable<T>({
 
       {/* Pagination */}
       {pagination && pagination.totalPages > 1 && (
-        <div className="px-4 py-3 border-t border-white/10 flex items-center justify-between">
-          <div className="text-sm text-white/50">
+        <div className="px-4 py-3 border-t border-hairline flex items-center justify-between">
+          <div className="text-sm text-content-muted">
             {t('admin.table.showing', {
               from: (pagination.currentPage - 1) * pagination.pageSize + 1,
               to: Math.min(pagination.currentPage * pagination.pageSize, pagination.totalItems),
@@ -328,7 +328,7 @@ export function DataTable<T>({
               size="sm"
               onClick={() => pagination.onPageChange(1)}
               disabled={pagination.currentPage === 1}
-              className="text-white/60 hover:text-white disabled:opacity-30"
+              className="text-content-muted hover:text-content disabled:opacity-30"
             >
               <ChevronsLeft className="w-4 h-4" />
             </Button>
@@ -337,12 +337,12 @@ export function DataTable<T>({
               size="sm"
               onClick={() => pagination.onPageChange(pagination.currentPage - 1)}
               disabled={pagination.currentPage === 1}
-              className="text-white/60 hover:text-white disabled:opacity-30"
+              className="text-content-muted hover:text-content disabled:opacity-30"
             >
               <ChevronLeft className="w-4 h-4" />
             </Button>
 
-            <span className="px-3 py-1 text-sm text-white">
+            <span className="px-3 py-1 text-sm text-content">
               {pagination.currentPage} / {pagination.totalPages}
             </span>
 
@@ -351,7 +351,7 @@ export function DataTable<T>({
               size="sm"
               onClick={() => pagination.onPageChange(pagination.currentPage + 1)}
               disabled={pagination.currentPage === pagination.totalPages}
-              className="text-white/60 hover:text-white disabled:opacity-30"
+              className="text-content-muted hover:text-content disabled:opacity-30"
             >
               <ChevronRight className="w-4 h-4" />
             </Button>
@@ -360,7 +360,7 @@ export function DataTable<T>({
               size="sm"
               onClick={() => pagination.onPageChange(pagination.totalPages)}
               disabled={pagination.currentPage === pagination.totalPages}
-              className="text-white/60 hover:text-white disabled:opacity-30"
+              className="text-content-muted hover:text-content disabled:opacity-30"
             >
               <ChevronsRight className="w-4 h-4" />
             </Button>

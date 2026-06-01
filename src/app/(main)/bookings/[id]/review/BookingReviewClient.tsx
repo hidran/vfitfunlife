@@ -81,20 +81,20 @@ export default function BookingReviewClient() {
 
   return (
     <div className="min-h-screen bg-background-dark">
-      <div className="sticky top-0 z-20 border-b border-white/10 bg-background-dark/95 backdrop-blur-md">
+      <div className="sticky top-0 z-20 border-b border-hairline bg-background-dark/95 backdrop-blur-md">
         <div className="flex items-center gap-3 p-4">
           <button
             onClick={() => router.back()}
-            className="rounded-full p-2 transition-colors hover:bg-white/10"
+            className="rounded-full p-2 transition-colors hover:bg-surface-2"
           >
-            <ArrowLeft className="h-5 w-5 text-white" />
+            <ArrowLeft className="h-5 w-5 text-content" />
           </button>
-          <h1 className="text-lg font-semibold text-white">{t('bookings.review.title')}</h1>
+          <h1 className="text-lg font-semibold text-content">{t('bookings.review.title')}</h1>
         </div>
       </div>
 
       <div className="space-y-4 p-4 pb-28">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+        <div className="rounded-2xl border border-hairline bg-surface-2 p-4">
           <div className="mb-2 flex items-center gap-2">
             <span
               className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
@@ -106,7 +106,7 @@ export default function BookingReviewClient() {
           <div className="flex items-center gap-3">
             <Avatar src={booking.providerAvatar} alt={booking.providerName} size="lg" />
             <div>
-              <p className="font-semibold text-white">{booking.providerName}</p>
+              <p className="font-semibold text-content">{booking.providerName}</p>
               <p className="text-sm text-text-secondary">{booking.serviceName}</p>
             </div>
           </div>
@@ -128,7 +128,7 @@ export default function BookingReviewClient() {
           </div>
         ) : (
           <>
-            <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <section className="rounded-2xl border border-hairline bg-surface-2 p-4">
               <p className="text-sm text-text-secondary">{t('bookings.review.ratingLabel')}</p>
               <div className="mt-3 flex items-center justify-center gap-2">
                 {[1, 2, 3, 4, 5].map((value) => (
@@ -141,7 +141,7 @@ export default function BookingReviewClient() {
                     <Star
                       className={cn(
                         'h-9 w-9',
-                        value <= rating ? 'fill-warning text-warning' : 'text-white/30'
+                        value <= rating ? 'fill-warning text-warning' : 'text-content-faint'
                       )}
                     />
                   </button>
@@ -149,7 +149,7 @@ export default function BookingReviewClient() {
               </div>
             </section>
 
-            <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <section className="rounded-2xl border border-hairline bg-surface-2 p-4">
               <p className="mb-3 text-sm text-text-secondary">{t('bookings.review.tagsLabel')}</p>
               <div className="flex flex-wrap gap-2">
                 {QUICK_TAGS.map((tag) => (
@@ -160,7 +160,7 @@ export default function BookingReviewClient() {
                       'rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
                       selectedTags.includes(tag)
                         ? 'border-[var(--section-primary)] bg-[var(--section-primary)]/20 text-white'
-                        : 'border-white/20 text-text-secondary hover:text-white'
+                        : 'border-white/20 text-text-secondary hover:text-content'
                     )}
                   >
                     {tag}
@@ -169,7 +169,7 @@ export default function BookingReviewClient() {
               </div>
             </section>
 
-            <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <section className="rounded-2xl border border-hairline bg-surface-2 p-4">
               <label
                 htmlFor="review-comment"
                 className="mb-2 inline-flex items-center gap-2 text-sm text-text-secondary"
@@ -183,7 +183,7 @@ export default function BookingReviewClient() {
                 value={comment}
                 onChange={(event) => setComment(event.target.value)}
                 placeholder={t('bookings.review.commentPlaceholder')}
-                className="w-full resize-none rounded-xl border border-white/15 bg-black/20 p-3 text-sm text-white outline-none transition-colors focus:border-[var(--section-primary)]"
+                className="w-full resize-none rounded-xl border border-white/15 bg-surface-sunken p-3 text-sm text-content outline-none transition-colors focus:border-[var(--section-primary)]"
               />
               <p className="mt-2 text-xs text-text-tertiary">
                 {t('bookings.review.minChars', { count: comment.trim().length })}
@@ -194,7 +194,7 @@ export default function BookingReviewClient() {
       </div>
 
       {!alreadyReviewed && !submitted && (
-        <div className="fixed bottom-0 left-0 right-0 border-t border-white/10 bg-background-dark/90 p-4 backdrop-blur-xl">
+        <div className="fixed bottom-0 left-0 right-0 border-t border-hairline bg-background-dark/90 p-4 backdrop-blur-xl">
           <Button
             className="w-full"
             onClick={handleSubmit}

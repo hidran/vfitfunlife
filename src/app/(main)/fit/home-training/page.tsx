@@ -12,7 +12,7 @@ export default function HomeTrainingPage() {
 
   return (
     <div className="container-mobile py-6 pb-24 space-y-5">
-      <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
+      <section className="rounded-3xl border border-hairline bg-surface-2 p-5">
         <h1 className="text-2xl font-display font-bold text-text-inverse">{t('fit.homeTraining.title')}</h1>
         <p className="mt-1 text-sm text-text-secondary">
           {t('fit.homeTraining.subtitle')}
@@ -26,7 +26,7 @@ export default function HomeTrainingPage() {
           </Link>
           <Link
             href="/profile/addresses"
-            className="rounded-full border border-white/20 bg-white/5 px-4 py-2 text-xs font-semibold text-text-inverse"
+            className="rounded-full border border-white/20 bg-surface-2 px-4 py-2 text-xs font-semibold text-text-inverse"
           >
             {t('fit.homeTraining.manageAddresses')}
           </Link>
@@ -45,7 +45,7 @@ export default function HomeTrainingPage() {
           <Spinner size="md" />
         ) : (
           services.map((service) => (
-            <article key={service.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <article key={service.id} className="rounded-2xl border border-hairline bg-surface-2 p-4">
               <h2 className="text-sm font-semibold text-text-inverse">{service.title}</h2>
               <p className="mt-1 text-xs text-text-tertiary">{service.coach}</p>
               <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-text-tertiary">
@@ -76,7 +76,7 @@ export default function HomeTrainingPage() {
         )}
       </section>
 
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-text-tertiary">
+      <div className="rounded-2xl border border-hairline bg-surface-2 p-4 text-xs text-text-tertiary">
         <p className="inline-flex items-center gap-2">
           <MapPin className="h-4 w-4" />
           {t('fit.homeTraining.coverage')}

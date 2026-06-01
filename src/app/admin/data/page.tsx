@@ -131,8 +131,8 @@ export default function DataManagementPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">{t('admin.data.title')}</h1>
-          <p className="text-white/50 mt-1">
+          <h1 className="text-2xl font-bold text-content">{t('admin.data.title')}</h1>
+          <p className="text-content-muted mt-1">
             {t('admin.data.subtitle')}
           </p>
         </div>
@@ -147,14 +147,14 @@ export default function DataManagementPage() {
       {/* Operation Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Quick Seed */}
-        <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
+        <div className="bg-surface rounded-2xl border border-hairline p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
               <Zap className="w-6 h-6 text-blue-400" />
             </div>
             <div>
-              <h3 className="font-semibold text-white">{t('admin.data.quickSeed.title')}</h3>
-              <p className="text-xs text-white/50">{t('admin.data.quickSeed.subtitle')}</p>
+              <h3 className="font-semibold text-content">{t('admin.data.quickSeed.title')}</h3>
+              <p className="text-xs text-content-muted">{t('admin.data.quickSeed.subtitle')}</p>
             </div>
           </div>
           <Button
@@ -172,14 +172,14 @@ export default function DataManagementPage() {
         </div>
 
         {/* Full Seed */}
-        <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
+        <div className="bg-surface rounded-2xl border border-hairline p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
               <Database className="w-6 h-6 text-green-400" />
             </div>
             <div>
-              <h3 className="font-semibold text-white">{t('admin.data.fullSeed.title')}</h3>
-              <p className="text-xs text-white/50">{t('admin.data.fullSeed.subtitle')}</p>
+              <h3 className="font-semibold text-content">{t('admin.data.fullSeed.title')}</h3>
+              <p className="text-xs text-content-muted">{t('admin.data.fullSeed.subtitle')}</p>
             </div>
           </div>
           <Button
@@ -197,13 +197,13 @@ export default function DataManagementPage() {
         </div>
 
         {/* Clear Data */}
-        <div className="bg-[#1E2230] rounded-2xl border border-red-500/20 p-6">
+        <div className="bg-surface rounded-2xl border border-red-500/20 p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center">
               <Trash2 className="w-6 h-6 text-red-400" />
             </div>
             <div>
-              <h3 className="font-semibold text-white">{t('admin.data.clearAll.title')}</h3>
+              <h3 className="font-semibold text-content">{t('admin.data.clearAll.title')}</h3>
               <p className="text-xs text-red-400/70">{t('admin.data.clearAll.superadminOnly')}</p>
             </div>
           </div>
@@ -226,11 +226,11 @@ export default function DataManagementPage() {
       {/* Confirmation Dialog */}
       {showConfirmDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-          <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6 max-w-md w-full">
-            <h3 className="text-lg font-semibold text-white mb-2">
+          <div className="bg-surface rounded-2xl border border-hairline p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold text-content mb-2">
               {t('admin.data.confirm.title', { label: getOperationLabel(showConfirmDialog) })}
             </h3>
-            <p className="text-sm text-white/50 mb-6">
+            <p className="text-sm text-content-muted mb-6">
               {showConfirmDialog === "clear"
                 ? t('admin.data.confirm.messageClear')
                 : t('admin.data.confirm.messageSeed')}
@@ -254,10 +254,10 @@ export default function DataManagementPage() {
 
       {/* Operation History */}
       {operations.length > 0 && (
-        <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
+        <div className="bg-surface rounded-2xl border border-hairline p-6">
           <div className="flex items-center gap-3 mb-6">
             <History className="w-5 h-5 text-purple-400" />
-            <h3 className="text-lg font-semibold text-white">{t('admin.data.history.title')}</h3>
+            <h3 className="text-lg font-semibold text-content">{t('admin.data.history.title')}</h3>
           </div>
           <div className="space-y-3">
             {operations.map((op) => (
@@ -273,23 +273,23 @@ export default function DataManagementPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     {op.status === "running" ? (
-                      <Loader2 className="w-5 h-5 animate-spin text-white" />
+                      <Loader2 className="w-5 h-5 animate-spin text-content" />
                     ) : op.status === "completed" ? (
                       <CheckCircle className="w-5 h-5 text-green-400" />
                     ) : (
                       <AlertCircle className="w-5 h-5 text-red-400" />
                     )}
                     <div>
-                      <p className="font-medium text-white">{getOperationLabel(op.type)}</p>
-                      <p className="text-xs text-white/50">{op.timestamp.toLocaleTimeString(toLocaleTag(locale))}</p>
+                      <p className="font-medium text-content">{getOperationLabel(op.type)}</p>
+                      <p className="text-xs text-content-muted">{op.timestamp.toLocaleTimeString(toLocaleTag(locale))}</p>
                     </div>
                   </div>
                   {op.result?.summary && (
                     <div className="text-right">
-                      <p className="text-lg font-semibold text-white">
+                      <p className="text-lg font-semibold text-content">
                         {op.result.summary.totalRecords ?? op.result.summary.totalDeleted ?? 0}
                       </p>
-                      <p className="text-xs text-white/50">
+                      <p className="text-xs text-content-muted">
                         {op.result.summary.totalRecords ? t('admin.data.history.records') : t('admin.data.history.deleted')}
                       </p>
                     </div>

@@ -22,7 +22,7 @@ export function UserRoleSelect({ value, onChange, className }: Props) {
       onClick={(e) => e.stopPropagation()}
       className={
         className ??
-        'rounded-lg border border-white/20 bg-white/5 px-3 py-1.5 text-sm text-white'
+        'rounded-lg border border-white/20 bg-surface-2 px-3 py-1.5 text-sm text-content'
       }
     >
       <option value="" disabled>

@@ -71,7 +71,7 @@ export default function ProviderDashboardPage() {
       {/* Welcome Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">{t('provider.dashboard.title')}</h1>
+          <h1 className="text-2xl font-bold text-content">{t('provider.dashboard.title')}</h1>
           <p className="text-gray-400 mt-1">
             {t('provider.dashboard.subtitle')}
           </p>
@@ -141,9 +141,9 @@ export default function ProviderDashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Upcoming Appointments */}
         <div className="lg:col-span-2">
-          <div className="bg-[#2A2D3A] rounded-xl border border-white/5 overflow-hidden">
-            <div className="flex items-center justify-between p-6 border-b border-white/5">
-              <h2 className="text-lg font-semibold text-white">{t('provider.dashboard.upcoming.title')}</h2>
+          <div className="bg-[#2A2D3A] rounded-xl border border-hairline overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-hairline">
+              <h2 className="text-lg font-semibold text-content">{t('provider.dashboard.upcoming.title')}</h2>
               <Link
                 href="/provider/bookings"
                 className="text-sm text-section-primary hover:underline flex items-center gap-1"
@@ -173,12 +173,12 @@ export default function ProviderDashboardPage() {
                         <span className="text-xs text-gray-400">
                           {formatDate(booking.scheduledAt)}
                         </span>
-                        <span className="text-sm font-semibold text-white">
+                        <span className="text-sm font-semibold text-content">
                           {formatTime(booking.scheduledAt)}
                         </span>
                       </div>
                       <div>
-                        <p className="font-medium text-white">{booking.userName}</p>
+                        <p className="font-medium text-content">{booking.userName}</p>
                         <p className="text-sm text-gray-400">{booking.serviceName}</p>
                         {booking.bookingType === 'virtual' && (
                           <span className="text-xs text-blue-400">{t('provider.dashboard.upcoming.virtual')}</span>
@@ -208,9 +208,9 @@ export default function ProviderDashboardPage() {
 
         {/* Recent Activity */}
         <div>
-          <div className="bg-[#2A2D3A] rounded-xl border border-white/5 overflow-hidden">
-            <div className="flex items-center justify-between p-6 border-b border-white/5">
-              <h2 className="text-lg font-semibold text-white">{t('provider.dashboard.activity.title')}</h2>
+          <div className="bg-[#2A2D3A] rounded-xl border border-hairline overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-hairline">
+              <h2 className="text-lg font-semibold text-content">{t('provider.dashboard.activity.title')}</h2>
               <Bell className="w-5 h-5 text-gray-400" />
             </div>
 
@@ -230,7 +230,7 @@ export default function ProviderDashboardPage() {
                       <Bell className="w-4 h-4 text-section-primary" />
                     </div>
                     <div>
-                      <p className="text-sm text-white">{activity.action}</p>
+                      <p className="text-sm text-content">{activity.action}</p>
                       <p className="text-xs text-gray-400 mt-0.5">
                         {activity.description}
                       </p>

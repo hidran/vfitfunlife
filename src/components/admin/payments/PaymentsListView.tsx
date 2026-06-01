@@ -51,8 +51,8 @@ export function PaymentsListView() {
       header: t('admin.payments.col.transactionId'),
       cell: (tx) => (
         <div>
-          <p className="font-medium text-white">{tx.id.toUpperCase()}</p>
-          <p className="text-xs text-white/40">
+          <p className="font-medium text-content">{tx.id.toUpperCase()}</p>
+          <p className="text-xs text-content-faint">
             {formatDate(tx.createdAt, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
           </p>
         </div>
@@ -84,8 +84,8 @@ export function PaymentsListView() {
       header: t('admin.payments.col.description'),
       cell: (tx) => (
         <div>
-          <p className="text-sm text-white">{tx.description}</p>
-          <p className="text-xs text-white/50">
+          <p className="text-sm text-content">{tx.description}</p>
+          <p className="text-xs text-content-muted">
             {tx.customerName !== "-" && `${t('admin.payments.col.customerPrefix')} ${tx.customerName} · `}
             {t('admin.payments.col.providerPrefix')} {tx.providerName}
           </p>
@@ -103,7 +103,7 @@ export function PaymentsListView() {
               ? "text-[#10B981]"
               : tx.type === "refund"
               ? "text-[#EF4444]"
-              : "text-white"
+              : "text-content"
           }`}
         >
           {tx.type === "booking_payment" || tx.type === "commission" ? "+" : "-"}
@@ -148,8 +148,8 @@ export function PaymentsListView() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">{t('admin.payments.title')}</h1>
-          <p className="text-white/50 mt-1">{t('admin.payments.subtitle')}</p>
+          <h1 className="text-2xl font-bold text-content">{t('admin.payments.title')}</h1>
+          <p className="text-content-muted mt-1">{t('admin.payments.subtitle')}</p>
         </div>
         <div className="flex gap-2">
           <Button
@@ -169,47 +169,47 @@ export function PaymentsListView() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-[#1E2230] rounded-xl border border-white/10 p-4">
+        <div className="bg-surface rounded-xl border border-hairline p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#10B981]/20 flex items-center justify-center">
               <TrendingUp className="w-5 h-5 text-[#10B981]" />
             </div>
             <div>
-              <p className="text-xs text-white/40">{t('admin.payments.stat.totalRevenue')}</p>
-              <p className="text-xl font-bold text-white">{formatPrice(totalRevenue)}</p>
+              <p className="text-xs text-content-faint">{t('admin.payments.stat.totalRevenue')}</p>
+              <p className="text-xl font-bold text-content">{formatPrice(totalRevenue)}</p>
             </div>
           </div>
         </div>
-        <div className="bg-[#1E2230] rounded-xl border border-white/10 p-4">
+        <div className="bg-surface rounded-xl border border-hairline p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#00C9FF]/20 flex items-center justify-center">
               <TrendingDown className="w-5 h-5 text-[#00C9FF]" />
             </div>
             <div>
-              <p className="text-xs text-white/40">{t('admin.payments.stat.totalPayouts')}</p>
-              <p className="text-xl font-bold text-white">{formatPrice(totalPayouts)}</p>
+              <p className="text-xs text-content-faint">{t('admin.payments.stat.totalPayouts')}</p>
+              <p className="text-xl font-bold text-content">{formatPrice(totalPayouts)}</p>
             </div>
           </div>
         </div>
-        <div className="bg-[#1E2230] rounded-xl border border-white/10 p-4">
+        <div className="bg-surface rounded-xl border border-hairline p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/20 flex items-center justify-center">
               <CreditCard className="w-5 h-5 text-[#F59E0B]" />
             </div>
             <div>
-              <p className="text-xs text-white/40">{t('admin.payments.stat.commission')}</p>
-              <p className="text-xl font-bold text-white">{formatPrice(totalCommissions)}</p>
+              <p className="text-xs text-content-faint">{t('admin.payments.stat.commission')}</p>
+              <p className="text-xl font-bold text-content">{formatPrice(totalCommissions)}</p>
             </div>
           </div>
         </div>
-        <div className="bg-[#1E2230] rounded-xl border border-white/10 p-4">
+        <div className="bg-surface rounded-xl border border-hairline p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#7B61FF]/20 flex items-center justify-center">
               <Calendar className="w-5 h-5 text-[#7B61FF]" />
             </div>
             <div>
-              <p className="text-xs text-white/40">{t('admin.payments.stat.thisMonth')}</p>
-              <p className="text-xl font-bold text-white">{formatPrice(totalRevenue * 0.3)}</p>
+              <p className="text-xs text-content-faint">{t('admin.payments.stat.thisMonth')}</p>
+              <p className="text-xl font-bold text-content">{formatPrice(totalRevenue * 0.3)}</p>
             </div>
           </div>
         </div>

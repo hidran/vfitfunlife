@@ -379,7 +379,7 @@ export default function EditProfilePage() {
   return (
     <div className="min-h-screen bg-background-dark">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-background-dark/95 backdrop-blur-sm border-b border-white/5">
+      <div className="sticky top-0 z-10 bg-background-dark/95 backdrop-blur-sm border-b border-hairline">
         <div className="flex items-center justify-between p-4">
           <button
             onClick={() => {
@@ -389,7 +389,7 @@ export default function EditProfilePage() {
                 router.back();
               }
             }}
-            className="p-2 -ml-2 rounded-lg text-text-secondary hover:text-text-inverse hover:bg-white/10 transition-colors"
+            className="p-2 -ml-2 rounded-lg text-text-secondary hover:text-text-inverse hover:bg-surface-2 transition-colors"
           >
             <ChevronLeft size={24} />
           </button>
@@ -423,7 +423,7 @@ export default function EditProfilePage() {
       {/* Unsaved Changes Warning Modal */}
       {showUnsavedWarning && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-          <div className="bg-background-dark border border-white/10 rounded-2xl p-6 max-w-sm w-full">
+          <div className="bg-background-dark border border-hairline rounded-2xl p-6 max-w-sm w-full">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-full bg-warning-DEFAULT/20 flex items-center justify-center">
                 <AlertCircle className="text-warning-DEFAULT" size={20} />
@@ -521,7 +521,7 @@ export default function EditProfilePage() {
                 rows={4}
                 maxLength={500}
                 className={cn(
-                  'w-full bg-[#2A2D3A] border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-text-tertiary',
+                  'w-full bg-[#2A2D3A] border border-hairline rounded-xl px-4 py-3 text-content placeholder:text-text-tertiary',
                   'focus:outline-none focus:ring-2 focus:ring-section-primary focus:border-transparent',
                   'transition-all duration-200 resize-none',
                   errors.bio && 'border-error ring-1 ring-error'
@@ -571,7 +571,7 @@ export default function EditProfilePage() {
                   type="date"
                   value={formData.dateOfBirth}
                   onChange={(e) => updateFormField('dateOfBirth', e.target.value)}
-                  className="w-full bg-[#2A2D3A] border border-white/10 rounded-xl px-4 py-3 pl-12 text-white focus:outline-none focus:ring-2 focus:ring-section-primary focus:border-transparent"
+                  className="w-full bg-[#2A2D3A] border border-hairline rounded-xl px-4 py-3 pl-12 text-content focus:outline-none focus:ring-2 focus:ring-section-primary focus:border-transparent"
                 />
               </div>
             </div>
@@ -591,7 +591,7 @@ export default function EditProfilePage() {
             </div>
 
             {/* Social Links */}
-            <div className="pt-4 border-t border-white/10">
+            <div className="pt-4 border-t border-hairline">
               <h3 className="text-sm font-medium text-text-tertiary mb-3 flex items-center gap-2">
                 <Globe size={16} />
                 {t('profile.social.title')}
@@ -610,7 +610,7 @@ export default function EditProfilePage() {
             </div>
 
             {/* Email Verification Status */}
-            <div className="p-4 rounded-xl bg-background-secondary/5 border border-white/5">
+            <div className="p-4 rounded-xl bg-background-secondary/5 border border-hairline">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-background-secondary/20 flex items-center justify-center">
@@ -643,7 +643,7 @@ export default function EditProfilePage() {
             </div>
 
             {/* Phone Verification Status */}
-            <div className="p-4 rounded-xl bg-background-secondary/5 border border-white/5">
+            <div className="p-4 rounded-xl bg-background-secondary/5 border border-hairline">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-background-secondary/20 flex items-center justify-center">
@@ -694,7 +694,7 @@ export default function EditProfilePage() {
                 placeholder={t('profile.edit.professionalBioPlaceholder')}
                 rows={5}
                 maxLength={1000}
-                className="w-full bg-[#2A2D3A] border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-section-primary focus:border-transparent transition-all duration-200 resize-none"
+                className="w-full bg-[#2A2D3A] border border-hairline rounded-xl px-4 py-3 text-content placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-section-primary focus:border-transparent transition-all duration-200 resize-none"
               />
               <p className="text-xs text-text-tertiary mt-1 text-right">
                 {professionalData.professionalBio.length}/1000
@@ -718,7 +718,7 @@ export default function EditProfilePage() {
                   }));
                   setHasUnsavedChanges(true);
                 }}
-                className="w-full bg-[#2A2D3A] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-section-primary focus:border-transparent"
+                className="w-full bg-[#2A2D3A] border border-hairline rounded-xl px-4 py-3 text-content focus:outline-none focus:ring-2 focus:ring-section-primary focus:border-transparent"
               />
             </div>
 
@@ -795,7 +795,7 @@ export default function EditProfilePage() {
                 placeholder={t('profile.edit.cancellationPolicyPlaceholder')}
                 rows={3}
                 maxLength={500}
-                className="w-full bg-[#2A2D3A] border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-section-primary focus:border-transparent transition-all duration-200 resize-none"
+                className="w-full bg-[#2A2D3A] border border-hairline rounded-xl px-4 py-3 text-content placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-section-primary focus:border-transparent transition-all duration-200 resize-none"
               />
               <p className="text-xs text-text-tertiary mt-1 text-right">
                 {professionalData.cancellationPolicy.length}/500
@@ -803,7 +803,7 @@ export default function EditProfilePage() {
             </div>
 
             {/* Provider Actions */}
-            <div className="pt-4 border-t border-white/10">
+            <div className="pt-4 border-t border-hairline">
               <Button
                 variant="outline"
                 fullWidth

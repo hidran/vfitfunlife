@@ -176,11 +176,11 @@ export function ProviderDetailView({ providerId }: Props) {
   };
 
   if (loading) {
-    return <div className="p-8 text-white/50">{t('common.loading')}</div>;
+    return <div className="p-8 text-content-muted">{t('common.loading')}</div>;
   }
   if (!provider) {
     return (
-      <div className="p-8 text-white/50">{t('admin.providerDetail.notFound')}</div>
+      <div className="p-8 text-content-muted">{t('admin.providerDetail.notFound')}</div>
     );
   }
 
@@ -205,7 +205,7 @@ export function ProviderDetailView({ providerId }: Props) {
         onDelete={() => setConfirmOpen(true)}
       >
         {/* Profile header card */}
-        <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
+        <div className="bg-surface rounded-2xl border border-hairline p-6">
           <div className="flex flex-col md:flex-row gap-6">
             {/* Avatar */}
             <div className="flex-shrink-0">
@@ -216,7 +216,7 @@ export function ProviderDetailView({ providerId }: Props) {
                   width={96}
                   height={96}
                   unoptimized
-                  className="w-24 h-24 rounded-2xl object-cover border border-white/10"
+                  className="w-24 h-24 rounded-2xl object-cover border border-hairline"
                 />
               ) : (
                 <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-[#00C9FF] to-[#7B61FF] flex items-center justify-center text-white text-3xl font-semibold">
@@ -289,14 +289,14 @@ export function ProviderDetailView({ providerId }: Props) {
 
               {showRejectForm && (
                 <div className="mt-4 p-4 bg-[#EF4444]/10 border border-[#EF4444]/30 rounded-xl">
-                  <label className="block text-sm font-medium text-white mb-2">
+                  <label className="block text-sm font-medium text-content mb-2">
                     {t('admin.providerDetail.rejectionReason')}
                   </label>
                   <textarea
                     value={rejectReason}
                     onChange={(e) => setRejectReason(e.target.value)}
                     placeholder={t('admin.providerDetail.rejectionPlaceholder')}
-                    className="w-full px-3 py-2 bg-black/20 border border-white/10 rounded-lg text-white text-sm placeholder:text-white/40 focus:outline-none focus:border-[#EF4444]/50 resize-none"
+                    className="w-full px-3 py-2 bg-surface-sunken border border-hairline rounded-lg text-content text-sm placeholder:text-content-faint focus:outline-none focus:border-[#EF4444]/50 resize-none"
                     rows={2}
                   />
                 </div>
@@ -305,12 +305,12 @@ export function ProviderDetailView({ providerId }: Props) {
               {/* Contact summary */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
                 <ContactRow
-                  icon={<Mail className="w-5 h-5 text-white/50" />}
+                  icon={<Mail className="w-5 h-5 text-content-muted" />}
                   label={t('admin.providerDetail.field.email')}
                   value={provider.email || t('admin.providerDetail.field.naValue')}
                 />
                 <ContactRow
-                  icon={<Phone className="w-5 h-5 text-white/50" />}
+                  icon={<Phone className="w-5 h-5 text-content-muted" />}
                   label={t('admin.providerDetail.field.phone')}
                   value={provider.phone || t('admin.providerDetail.field.naValue')}
                 />
@@ -323,7 +323,7 @@ export function ProviderDetailView({ providerId }: Props) {
                   )}`}
                 />
                 <ContactRow
-                  icon={<Briefcase className="w-5 h-5 text-white/50" />}
+                  icon={<Briefcase className="w-5 h-5 text-content-muted" />}
                   label={t('admin.providerDetail.field.experience')}
                   value={t('admin.providerDetail.field.experienceYears', {
                     count: String(profile?.yearsOfExperience || 0),
@@ -402,12 +402,12 @@ function ContactRow({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
+      <div className="w-10 h-10 rounded-xl bg-surface-2 flex items-center justify-center">
         {icon}
       </div>
       <div className="min-w-0">
-        <p className="text-xs text-white/40">{label}</p>
-        <p className="text-sm text-white truncate">{value}</p>
+        <p className="text-xs text-content-faint">{label}</p>
+        <p className="text-sm text-content truncate">{value}</p>
       </div>
     </div>
   );
@@ -425,14 +425,14 @@ function MetricCard({
   value: string;
 }) {
   return (
-    <div className="bg-[#1E2230] rounded-xl border border-white/10 p-4">
+    <div className="bg-surface rounded-xl border border-hairline p-4">
       <div className="flex items-center gap-3">
         <div className={`w-10 h-10 rounded-xl ${bg} flex items-center justify-center`}>
           {icon}
         </div>
         <div>
-          <p className="text-xs text-white/40">{label}</p>
-          <p className="text-xl font-bold text-white">{value}</p>
+          <p className="text-xs text-content-faint">{label}</p>
+          <p className="text-xl font-bold text-content">{value}</p>
         </div>
       </div>
     </div>

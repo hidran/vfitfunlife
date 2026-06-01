@@ -104,8 +104,8 @@ export function ServicePricingCard({
             className={cn(
               'p-4 rounded-xl border transition-all',
               service.isActive
-                ? 'bg-background-secondary/5 border-white/5'
-                : 'bg-background-secondary/5 border-white/5 opacity-60'
+                ? 'bg-background-secondary/5 border-hairline'
+                : 'bg-background-secondary/5 border-hairline opacity-60'
             )}
           >
             {editingId === service.id ? (
@@ -195,7 +195,7 @@ export function ServicePricingCard({
                   <div className="flex gap-1">
                     <button
                       onClick={() => handleEdit(service)}
-                      className="p-2 rounded-lg text-text-tertiary hover:text-text-inverse hover:bg-white/10 transition-colors"
+                      className="p-2 rounded-lg text-text-tertiary hover:text-text-inverse hover:bg-surface-2 transition-colors"
                     >
                       <Edit2 size={16} />
                     </button>

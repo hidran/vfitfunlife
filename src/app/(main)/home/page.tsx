@@ -210,7 +210,7 @@ function VFitHome() {
                     )}
                   >
                     <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(0,0,0,0.2))]" />
-                    <div className="absolute left-4 top-4 h-12 w-20 rounded-md border border-white/20 bg-white/10" />
+                    <div className="absolute left-4 top-4 h-12 w-20 rounded-md border border-white/20 bg-surface-2" />
                     <div className="absolute left-4 top-20 h-1.5 w-28 rounded-full bg-white/15" />
                     <div className="absolute right-3 top-3 flex items-center gap-1 rounded-lg bg-white/90 px-2 py-1 text-[10px] font-bold text-yellow-500">
                       <Star className="h-3 w-3 fill-current" />
@@ -294,7 +294,7 @@ function VFitHome() {
         </section>
 
         <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-900 to-purple-900 p-5 text-white shadow-lg">
-          <div className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-white/10 blur-2xl" />
+          <div className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-surface-2 blur-2xl" />
           <div className="absolute -left-8 -bottom-8 h-24 w-24 rounded-full bg-vfit-accent/35 blur-xl" />
           <div className="relative">
             <h3 className="text-xl font-bold">{t('home.fit.onlineCoach.title')}</h3>
@@ -310,12 +310,12 @@ function VFitHome() {
                   <Link
                     key={`coach-${trainer.id}`}
                     href={`/provider/${trainer.id}`}
-                    className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/10 p-3 backdrop-blur-sm transition-colors hover:bg-white/15"
+                    className="flex items-center gap-3 rounded-xl border border-hairline bg-surface-2 p-3 backdrop-blur-sm transition-colors hover:bg-white/15"
                   >
                     <Avatar name={trainer.fullName} size="md" src={trainer.avatarUrl} />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="truncate text-sm font-semibold text-white">{trainer.fullName}</p>
+                        <p className="truncate text-sm font-semibold text-content">{trainer.fullName}</p>
                         <div className="flex items-center gap-0.5 text-yellow-300">
                           <Star className="h-3.5 w-3.5 fill-current" />
                           <span className="text-[11px] font-semibold">{trainer.rating.toFixed(1)}</span>
@@ -331,7 +331,7 @@ function VFitHome() {
                   </Link>
                 ))
               ) : (
-                <div className="rounded-xl border border-white/10 bg-white/10 p-4 text-sm text-indigo-100">
+                <div className="rounded-xl border border-hairline bg-surface-2 p-4 text-sm text-indigo-100">
                   {t('home.fit.trainers.empty')}
                 </div>
               )}
@@ -378,7 +378,7 @@ function VFunHome() {
           <div className="absolute -top-8 right-0 h-28 w-28 rounded-full bg-pink-400/20 blur-2xl" />
           <div className="absolute -bottom-8 left-0 h-28 w-28 rounded-full bg-orange-400/20 blur-2xl" />
           <div className="relative text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white/10 ring-4 ring-white/10">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-surface-2 ring-4 ring-white/10">
               <PartyPopper className="h-7 w-7 text-pink-300" />
             </div>
             <h2 className="mt-4 text-2xl font-bold leading-tight">
@@ -394,14 +394,14 @@ function VFunHome() {
             <div className="mt-4 grid grid-cols-2 gap-3">
               <Link
                 href="/fun/party-mode"
-                className="flex flex-col items-center gap-1 rounded-xl border border-white/15 bg-white/10 px-3 py-3 text-xs font-semibold backdrop-blur-sm"
+                className="flex flex-col items-center gap-1 rounded-xl border border-white/15 bg-surface-2 px-3 py-3 text-xs font-semibold backdrop-blur-sm"
               >
                 <PartyPopper className="h-4 w-4 text-pink-300" />
                 {t('home.fun.hero.party')}
               </Link>
               <Link
                 href="/fun/vr"
-                className="flex flex-col items-center gap-1 rounded-xl border border-white/15 bg-white/10 px-3 py-3 text-xs font-semibold backdrop-blur-sm"
+                className="flex flex-col items-center gap-1 rounded-xl border border-white/15 bg-surface-2 px-3 py-3 text-xs font-semibold backdrop-blur-sm"
               >
                 <Glasses className="h-4 w-4 text-orange-300" />
                 {t('home.fun.hero.vr')}

@@ -63,7 +63,7 @@ export default function BookingDetailClient() {
           <div className="w-16 h-16 bg-[#2A2D3A] rounded-full flex items-center justify-center mx-auto mb-4">
             <Calendar className="w-8 h-8 text-gray-500" />
           </div>
-          <h2 className="text-xl font-semibold text-white mb-2">{t('provider.bookingDetail.notFound')}</h2>
+          <h2 className="text-xl font-semibold text-content mb-2">{t('provider.bookingDetail.notFound')}</h2>
           <Link href="/provider/bookings">
             <Button variant="secondary" className="mt-4">
               {t('provider.bookingDetail.backToBookings')}
@@ -122,7 +122,7 @@ export default function BookingDetailClient() {
       {/* Back Link */}
       <Link
         href="/provider/bookings"
-        className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+        className="inline-flex items-center gap-2 text-gray-400 hover:text-content transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         {t('provider.bookingDetail.backToBookings')}
@@ -132,7 +132,7 @@ export default function BookingDetailClient() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-2xl font-bold text-white">{t('provider.bookingDetail.title')}</h1>
+            <h1 className="text-2xl font-bold text-content">{t('provider.bookingDetail.title')}</h1>
             <Badge variant={statusBadgeVariant} size="md">
               {statusBadgeLabel}
             </Badge>
@@ -183,8 +183,8 @@ export default function BookingDetailClient() {
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Client Card */}
-          <div className="bg-[#2A2D3A] rounded-xl border border-white/5 p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">{t('provider.bookingDetail.clientInfo')}</h3>
+          <div className="bg-[#2A2D3A] rounded-xl border border-hairline p-6">
+            <h3 className="text-lg font-semibold text-content mb-4">{t('provider.bookingDetail.clientInfo')}</h3>
             <div className="flex items-start gap-4">
               {booking.clientPhotoUrl ? (
                 <Image
@@ -201,15 +201,15 @@ export default function BookingDetailClient() {
                 </div>
               )}
               <div className="flex-1">
-                <h4 className="text-xl font-medium text-white">{booking.userName}</h4>
+                <h4 className="text-xl font-medium text-content">{booking.userName}</h4>
                 <div className="flex flex-col gap-1 mt-2">
                   {booking.userEmail && (
-                    <a href={`mailto:${booking.userEmail}`} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm">
+                    <a href={`mailto:${booking.userEmail}`} className="flex items-center gap-2 text-gray-400 hover:text-content text-sm">
                       <Mail className="w-4 h-4" />
                       {booking.userEmail}
                     </a>
                   )}
-                  <a href={`tel:${booking.userPhone}`} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm">
+                  <a href={`tel:${booking.userPhone}`} className="flex items-center gap-2 text-gray-400 hover:text-content text-sm">
                     <Phone className="w-4 h-4" />
                     {booking.userPhone}
                   </a>
@@ -231,16 +231,16 @@ export default function BookingDetailClient() {
           </div>
 
           {/* Service Details */}
-          <div className="bg-[#2A2D3A] rounded-xl border border-white/5 p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">{t('provider.bookingDetail.serviceDetails')}</h3>
+          <div className="bg-[#2A2D3A] rounded-xl border border-hairline p-6">
+            <h3 className="text-lg font-semibold text-content mb-4">{t('provider.bookingDetail.serviceDetails')}</h3>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-gray-400">{t('provider.bookingDetail.service')}</span>
-                <span className="text-white font-medium">{booking.serviceName}</span>
+                <span className="text-content font-medium">{booking.serviceName}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-400">{t('provider.bookingDetail.duration')}</span>
-                <span className="text-white">{t('provider.bookingDetail.durationMinutes', { count: booking.durationMinutes })}</span>
+                <span className="text-content">{t('provider.bookingDetail.durationMinutes', { count: booking.durationMinutes })}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-400">{t('provider.bookingDetail.type')}</span>
@@ -256,22 +256,22 @@ export default function BookingDetailClient() {
               {booking.venueName && (
                 <div className="flex items-center justify-between">
                   <span className="text-gray-400">{t('provider.bookingDetail.location')}</span>
-                  <span className="text-white">{booking.venueName}</span>
+                  <span className="text-content">{booking.venueName}</span>
                 </div>
               )}
             </div>
           </div>
 
           {/* Schedule */}
-          <div className="bg-[#2A2D3A] rounded-xl border border-white/5 p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">{t('provider.bookingDetail.schedule')}</h3>
+          <div className="bg-[#2A2D3A] rounded-xl border border-hairline p-6">
+            <h3 className="text-lg font-semibold text-content mb-4">{t('provider.bookingDetail.schedule')}</h3>
             <div className="space-y-4">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-lg bg-[#1A1D29] flex items-center justify-center">
                   <Calendar className="w-6 h-6 text-section-primary" />
                 </div>
                 <div>
-                  <p className="text-white font-medium">{formatDate(booking.scheduledAt)}</p>
+                  <p className="text-content font-medium">{formatDate(booking.scheduledAt)}</p>
                   <p className="text-sm text-gray-400">{t('provider.bookingDetail.date')}</p>
                 </div>
               </div>
@@ -280,7 +280,7 @@ export default function BookingDetailClient() {
                   <Clock className="w-6 h-6 text-section-primary" />
                 </div>
                 <div>
-                  <p className="text-white font-medium">
+                  <p className="text-content font-medium">
                     {formatTime(booking.scheduledAt)} - {formatTime(booking.scheduledEndAt)}
                   </p>
                   <p className="text-sm text-gray-400">{t('provider.bookingDetail.time')}</p>
@@ -291,8 +291,8 @@ export default function BookingDetailClient() {
 
           {/* Client Notes */}
           {booking.userNotes && (
-            <div className="bg-[#2A2D3A] rounded-xl border border-white/5 p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">{t('provider.bookingDetail.clientNotes')}</h3>
+            <div className="bg-[#2A2D3A] rounded-xl border border-hairline p-6">
+              <h3 className="text-lg font-semibold text-content mb-4">{t('provider.bookingDetail.clientNotes')}</h3>
               <div className="bg-[#1A1D29] rounded-lg p-4">
                 <p className="text-gray-300">{booking.userNotes}</p>
               </div>
@@ -300,9 +300,9 @@ export default function BookingDetailClient() {
           )}
 
           {/* Private Notes */}
-          <div className="bg-[#2A2D3A] rounded-xl border border-white/5 p-6">
+          <div className="bg-[#2A2D3A] rounded-xl border border-hairline p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">{t('provider.bookingDetail.privateNotes')}</h3>
+              <h3 className="text-lg font-semibold text-content">{t('provider.bookingDetail.privateNotes')}</h3>
               <Button variant="secondary" size="sm" onClick={() => setShowNotes(!showNotes)}>
                 <Edit className="w-4 h-4 mr-2" />
                 {showNotes ? t('provider.bookingDetail.cancelNote') : t('provider.bookingDetail.addNote')}
@@ -314,7 +314,7 @@ export default function BookingDetailClient() {
                   value={privateNotes}
                   onChange={(e) => setPrivateNotes(e.target.value)}
                   placeholder={t('provider.bookingDetail.privateNotesPlaceholder')}
-                  className="w-full bg-[#1A1D29] border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 outline-none focus:border-section-primary min-h-[100px]"
+                  className="w-full bg-[#1A1D29] border border-hairline rounded-lg px-4 py-3 text-content placeholder-gray-500 outline-none focus:border-section-primary min-h-[100px]"
                 />
                 <div className="flex gap-2">
                   <Button size="sm">{t('provider.bookingDetail.saveNote')}</Button>
@@ -332,12 +332,12 @@ export default function BookingDetailClient() {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Payment Summary */}
-          <div className="bg-[#2A2D3A] rounded-xl border border-white/5 p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">{t('provider.bookingDetail.paymentSummary')}</h3>
+          <div className="bg-[#2A2D3A] rounded-xl border border-hairline p-6">
+            <h3 className="text-lg font-semibold text-content mb-4">{t('provider.bookingDetail.paymentSummary')}</h3>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-gray-400">{t('provider.bookingDetail.originalPrice')}</span>
-                <span className="text-white">€{booking.originalPrice.toFixed(2)}</span>
+                <span className="text-content">€{booking.originalPrice.toFixed(2)}</span>
               </div>
               {booking.discountAmount > 0 && (
                 <div className="flex items-center justify-between">
@@ -348,13 +348,13 @@ export default function BookingDetailClient() {
               {booking.homeServiceFee > 0 && (
                 <div className="flex items-center justify-between">
                   <span className="text-gray-400">{t('provider.bookingDetail.homeServiceFee')}</span>
-                  <span className="text-white">+€{booking.homeServiceFee.toFixed(2)}</span>
+                  <span className="text-content">+€{booking.homeServiceFee.toFixed(2)}</span>
                 </div>
               )}
-              <div className="border-t border-white/5 pt-3">
+              <div className="border-t border-hairline pt-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-white font-medium">{t('provider.bookingDetail.total')}</span>
-                  <span className="text-xl font-bold text-white">€{booking.finalPrice.toFixed(2)}</span>
+                  <span className="text-content font-medium">{t('provider.bookingDetail.total')}</span>
+                  <span className="text-xl font-bold text-content">€{booking.finalPrice.toFixed(2)}</span>
                 </div>
               </div>
               <div className="pt-2">
@@ -380,13 +380,13 @@ export default function BookingDetailClient() {
           </div>
 
           {/* History */}
-          <div className="bg-[#2A2D3A] rounded-xl border border-white/5 p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">{t('provider.bookingDetail.history')}</h3>
+          <div className="bg-[#2A2D3A] rounded-xl border border-hairline p-6">
+            <h3 className="text-lg font-semibold text-content mb-4">{t('provider.bookingDetail.history')}</h3>
             <div className="space-y-4">
               <div className="flex items-start gap-3">
                 <div className="w-2 h-2 rounded-full bg-section-primary mt-2" />
                 <div>
-                  <p className="text-sm text-white">{t('provider.bookingDetail.historyCreated')}</p>
+                  <p className="text-sm text-content">{t('provider.bookingDetail.historyCreated')}</p>
                   <p className="text-xs text-gray-400">
                     {formatDateTime(booking.createdAt)}
                   </p>
@@ -396,7 +396,7 @@ export default function BookingDetailClient() {
                 <div className="flex items-start gap-3">
                   <div className="w-2 h-2 rounded-full bg-green-400 mt-2" />
                   <div>
-                    <p className="text-sm text-white">{t('provider.bookingDetail.historyConfirmed')}</p>
+                    <p className="text-sm text-content">{t('provider.bookingDetail.historyConfirmed')}</p>
                     <p className="text-xs text-gray-400">
                       {formatDateTime(booking.confirmedAt)}
                     </p>
@@ -407,7 +407,7 @@ export default function BookingDetailClient() {
                 <div className="flex items-start gap-3">
                   <div className="w-2 h-2 rounded-full bg-blue-400 mt-2" />
                   <div>
-                    <p className="text-sm text-white">{t('provider.bookingDetail.historyCompleted')}</p>
+                    <p className="text-sm text-content">{t('provider.bookingDetail.historyCompleted')}</p>
                     <p className="text-xs text-gray-400">
                       {formatDateTime(booking.completedAt)}
                     </p>

@@ -141,10 +141,10 @@ export function UserDetailView({ userId }: Props) {
   };
 
   if (loading) {
-    return <div className="p-8 text-white/50">{t('common.loading')}</div>;
+    return <div className="p-8 text-content-muted">{t('common.loading')}</div>;
   }
   if (!user) {
-    return <div className="p-8 text-white/50">{t('admin.userDetail.notFound')}</div>;
+    return <div className="p-8 text-content-muted">{t('admin.userDetail.notFound')}</div>;
   }
 
   const isSuspended = (user as User & { isSuspended?: boolean }).isSuspended;
@@ -202,25 +202,25 @@ export function UserDetailView({ userId }: Props) {
         </div>
 
         {/* Contact summary */}
-        <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
+        <div className="bg-surface rounded-2xl border border-hairline p-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <ContactRow
-              icon={<Mail className="w-5 h-5 text-white/50" />}
+              icon={<Mail className="w-5 h-5 text-content-muted" />}
               label={t('admin.userDetail.field.email')}
               value={user.email || t('admin.userDetail.field.naValue')}
             />
             <ContactRow
-              icon={<Phone className="w-5 h-5 text-white/50" />}
+              icon={<Phone className="w-5 h-5 text-content-muted" />}
               label={t('admin.userDetail.field.phone')}
               value={user.phone || t('admin.userDetail.field.naValue')}
             />
             <ContactRow
-              icon={<Calendar className="w-5 h-5 text-white/50" />}
+              icon={<Calendar className="w-5 h-5 text-content-muted" />}
               label={t('admin.users.col.joined')}
               value={formatDate(toDate(user.createdAt) || new Date())}
             />
             <ContactRow
-              icon={<Clock className="w-5 h-5 text-white/50" />}
+              icon={<Clock className="w-5 h-5 text-content-muted" />}
               label={t('admin.users.col.lastLogin')}
               value={
                 user.lastLoginAt
@@ -271,12 +271,12 @@ function ContactRow({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
+      <div className="w-10 h-10 rounded-xl bg-surface-2 flex items-center justify-center">
         {icon}
       </div>
       <div className="min-w-0">
-        <p className="text-xs text-white/40">{label}</p>
-        <p className="text-sm text-white truncate">{value}</p>
+        <p className="text-xs text-content-faint">{label}</p>
+        <p className="text-sm text-content truncate">{value}</p>
       </div>
     </div>
   );

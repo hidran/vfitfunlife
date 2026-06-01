@@ -112,8 +112,8 @@ export function BookingDetailView({ bookingId }: Props) {
     }
   };
 
-  if (loading) return <div className="p-8 text-white/50">{t('common.loading')}</div>;
-  if (!booking) return <div className="p-8 text-white/50">{t('admin.bookings.notFound')}</div>;
+  if (loading) return <div className="p-8 text-content-muted">{t('common.loading')}</div>;
+  if (!booking) return <div className="p-8 text-content-muted">{t('admin.bookings.notFound')}</div>;
 
   const status = booking.status as BookingStatus;
   const canConfirm = status === 'pending';

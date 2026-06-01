@@ -133,7 +133,7 @@ export function EducationHistory({
           {education.map((edu) => (
             <div
               key={edu.id}
-              className="flex items-start gap-3 p-3 rounded-xl bg-background-secondary/5 border border-white/5"
+              className="flex items-start gap-3 p-3 rounded-xl bg-background-secondary/5 border border-hairline"
             >
               <div className="w-10 h-10 rounded-lg bg-section-gradient/10 flex items-center justify-center flex-shrink-0">
                 <GraduationCap className="text-section-primary" size={18} />
@@ -173,7 +173,7 @@ export function EducationHistory({
 
       {/* Add New Form */}
       {isAdding && (
-        <div className="p-4 rounded-xl bg-background-secondary/5 border border-white/10 space-y-4">
+        <div className="p-4 rounded-xl bg-background-secondary/5 border border-hairline space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-medium text-text-inverse">{t('profile.education.addTitle')}</h4>
             <button
@@ -181,7 +181,7 @@ export function EducationHistory({
                 setIsAdding(false);
                 setError(null);
               }}
-              className="p-1 rounded-lg text-text-tertiary hover:text-text-inverse hover:bg-white/10"
+              className="p-1 rounded-lg text-text-tertiary hover:text-text-inverse hover:bg-surface-2"
             >
               <X size={16} />
             </button>

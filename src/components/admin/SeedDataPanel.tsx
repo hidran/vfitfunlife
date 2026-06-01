@@ -126,7 +126,7 @@ export function SeedDataPanel() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-xl font-bold text-white">{t('admin.seed.title')}</h2>
+        <h2 className="text-xl font-bold text-content">{t('admin.seed.title')}</h2>
         <p className="text-gray-400 mt-1">
           {t('admin.seed.subtitle')}
         </p>
@@ -135,13 +135,13 @@ export function SeedDataPanel() {
       {/* Action Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Quick Seed */}
-        <div className="bg-[#2A2D3A] rounded-xl border border-white/5 p-5">
+        <div className="bg-[#2A2D3A] rounded-xl border border-hairline p-5">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
               <Zap className="w-5 h-5 text-blue-400" />
             </div>
             <div>
-              <h3 className="font-semibold text-white">{t('admin.seed.quickSeed.title')}</h3>
+              <h3 className="font-semibold text-content">{t('admin.seed.quickSeed.title')}</h3>
               <p className="text-xs text-gray-400">{t('admin.seed.quickSeed.subtitle')}</p>
             </div>
           </div>
@@ -176,13 +176,13 @@ export function SeedDataPanel() {
         </div>
 
         {/* Full Seed */}
-        <div className="bg-[#2A2D3A] rounded-xl border border-white/5 p-5">
+        <div className="bg-[#2A2D3A] rounded-xl border border-hairline p-5">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center">
               <Database className="w-5 h-5 text-green-400" />
             </div>
             <div>
-              <h3 className="font-semibold text-white">{t('admin.seed.fullSeed.title')}</h3>
+              <h3 className="font-semibold text-content">{t('admin.seed.fullSeed.title')}</h3>
               <p className="text-xs text-gray-400">{t('admin.seed.fullSeed.subtitle')}</p>
             </div>
           </div>
@@ -217,13 +217,13 @@ export function SeedDataPanel() {
         </div>
 
         {/* Clear Data */}
-        <div className="bg-[#2A2D3A] rounded-xl border border-white/5 p-5">
+        <div className="bg-[#2A2D3A] rounded-xl border border-hairline p-5">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center">
               <Trash2 className="w-5 h-5 text-red-400" />
             </div>
             <div>
-              <h3 className="font-semibold text-white">{t('admin.seed.clearAll.title')}</h3>
+              <h3 className="font-semibold text-content">{t('admin.seed.clearAll.title')}</h3>
               <p className="text-xs text-gray-400">{t('admin.seed.clearAll.subtitle')}</p>
             </div>
           </div>
@@ -282,27 +282,27 @@ export function SeedDataPanel() {
           
           {result.summary && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
-              <div className="bg-black/20 rounded-lg p-3 text-center">
-                <p className="text-2xl font-bold text-white">
+              <div className="bg-surface-sunken rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-content">
                   {result.summary.totalCollections}
                 </p>
                 <p className="text-xs text-gray-400">{t('admin.seed.result.collections')}</p>
               </div>
-              <div className="bg-black/20 rounded-lg p-3 text-center">
+              <div className="bg-surface-sunken rounded-lg p-3 text-center">
                 <p className="text-2xl font-bold text-green-400">
                   {result.summary.successful}
                 </p>
                 <p className="text-xs text-gray-400">{t('admin.seed.result.successful')}</p>
               </div>
-              <div className="bg-black/20 rounded-lg p-3 text-center">
-                <p className="text-2xl font-bold text-white">
+              <div className="bg-surface-sunken rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-content">
                   {result.summary.totalRecords ?? result.summary.totalDeleted ?? 0}
                 </p>
                 <p className="text-xs text-gray-400">
                   {result.summary.totalRecords ? t('admin.seed.result.records') : t('admin.seed.result.deleted')}
                 </p>
               </div>
-              <div className="bg-black/20 rounded-lg p-3 text-center">
+              <div className="bg-surface-sunken rounded-lg p-3 text-center">
                 <p className="text-2xl font-bold text-red-400">
                   {result.summary.failed}
                 </p>
@@ -314,18 +314,18 @@ export function SeedDataPanel() {
           {/* Details */}
           {result.details && result.details.length > 0 && (
             <div className="mt-4">
-              <p className="text-sm font-medium text-white mb-2">{t('admin.seed.result.details')}</p>
+              <p className="text-sm font-medium text-content mb-2">{t('admin.seed.result.details')}</p>
               <div className="space-y-1">
                 {result.details.map((detail) => (
                   <div
                     key={detail.collection}
-                    className="flex items-center justify-between text-sm py-1 px-2 rounded bg-black/20"
+                    className="flex items-center justify-between text-sm py-1 px-2 rounded bg-surface-sunken"
                   >
                     <span className="text-gray-300 capitalize">
                       {detail.collection}
                     </span>
                     <div className="flex items-center gap-3">
-                      <span className="text-white font-medium">
+                      <span className="text-content font-medium">
                         {detail.count}
                       </span>
                       {detail.success ? (

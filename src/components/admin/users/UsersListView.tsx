@@ -132,7 +132,7 @@ export function UsersListView() {
               width={40}
               height={40}
               unoptimized
-              className="w-10 h-10 rounded-xl object-cover border border-white/10"
+              className="w-10 h-10 rounded-xl object-cover border border-hairline"
             />
           ) : (
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00C9FF] to-[#7B61FF] flex items-center justify-center text-white font-semibold">
@@ -140,8 +140,8 @@ export function UsersListView() {
             </div>
           )}
           <div>
-            <p className="font-medium text-white">{user.fullName}</p>
-            <p className="text-sm text-white/50">{user.email || user.phone}</p>
+            <p className="font-medium text-content">{user.fullName}</p>
+            <p className="text-sm text-content-muted">{user.email || user.phone}</p>
           </div>
         </div>
       ),
@@ -169,7 +169,7 @@ export function UsersListView() {
       cell: (user) => {
         const date = toDate(user.createdAt);
         return (
-          <span className="text-sm text-white/50">
+          <span className="text-sm text-content-muted">
             {date ? formatDate(date) : "N/A"}
           </span>
         );
@@ -183,7 +183,7 @@ export function UsersListView() {
       cell: (user) => {
         const date = toDate(user.lastLoginAt);
         return (
-          <span className="text-sm text-white/50">
+          <span className="text-sm text-content-muted">
             {date
               ? formatDate(date, {
                   month: "short",
@@ -218,8 +218,8 @@ export function UsersListView() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">{t('admin.users.title')}</h1>
-          <p className="text-white/50 mt-1">
+          <h1 className="text-2xl font-bold text-content">{t('admin.users.title')}</h1>
+          <p className="text-content-muted mt-1">
             {t('admin.users.subtitle')}
           </p>
         </div>
@@ -290,7 +290,7 @@ export function UsersListView() {
       {/* Bulk Actions */}
       {selectedIds.length > 0 && (
         <div className="flex items-center gap-3 p-3 bg-[#00C9FF]/10 border border-[#00C9FF]/30 rounded-xl">
-          <span className="text-sm text-white">
+          <span className="text-sm text-content">
             {t('admin.users.selected', { count: String(selectedIds.length) })}
           </span>
           <div className="flex-1" />
@@ -339,7 +339,7 @@ export function UsersListView() {
                   console.error('Bulk role change failed:', err);
                 }
               }}
-              className="rounded-lg border border-white/20 bg-white/5 px-3 py-1.5 text-sm text-white"
+              className="rounded-lg border border-white/20 bg-surface-2 px-3 py-1.5 text-sm text-content"
             />
           </SuperadminOnly>
           <SuperadminOnly>

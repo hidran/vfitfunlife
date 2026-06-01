@@ -120,7 +120,7 @@ export default function ProviderServicesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">{t('provider.services.title')}</h1>
+          <h1 className="text-2xl font-bold text-content">{t('provider.services.title')}</h1>
           <p className="text-gray-400 mt-1">
             {t('provider.services.subtitle')}
           </p>
@@ -132,7 +132,7 @@ export default function ProviderServicesPage() {
       </div>
 
       {/* Tab Bar */}
-      <div className="mb-4 flex gap-2 border-b border-white/10">
+      <div className="mb-4 flex gap-2 border-b border-hairline">
         <button
           type="button"
           onClick={() => setActiveTab('services')}
@@ -184,13 +184,13 @@ export default function ProviderServicesPage() {
             key={service.id}
             className={cn(
               'bg-[#2A2D3A] rounded-xl border p-5 transition-all',
-              service.isActive ? 'border-white/5' : 'border-white/5 opacity-70'
+              service.isActive ? 'border-hairline' : 'border-hairline opacity-70'
             )}
           >
             <div className="flex items-start justify-between mb-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-white">{service.serviceName}</h3>
+                  <h3 className="font-semibold text-content">{service.serviceName}</h3>
                   {!service.isActive && (
                     <span className="px-2 py-0.5 bg-gray-500/20 text-gray-400 text-xs rounded-full">
                       {t('provider.services.card.inactive')}
@@ -200,27 +200,27 @@ export default function ProviderServicesPage() {
                 <p className="text-sm text-gray-400 mt-1">{service.categoryName}</p>
               </div>
               <div className="relative group">
-                <button className="p-2 rounded-lg hover:bg-white/10">
+                <button className="p-2 rounded-lg hover:bg-surface-2">
                   <MoreVertical className="w-4 h-4 text-gray-400" />
                 </button>
-                <div className="absolute right-0 mt-1 w-48 bg-[#1A1D29] rounded-lg border border-white/10 shadow-xl opacity-0 group-hover:opacity-100 invisible group-hover:visible transition-all z-10 py-1">
+                <div className="absolute right-0 mt-1 w-48 bg-[#1A1D29] rounded-lg border border-hairline shadow-xl opacity-0 group-hover:opacity-100 invisible group-hover:visible transition-all z-10 py-1">
                   <button
                     onClick={() => setEditingService(service)}
-                    className="w-full px-4 py-2 text-left text-sm text-white hover:bg-white/5 flex items-center gap-2"
+                    className="w-full px-4 py-2 text-left text-sm text-content hover:bg-surface-2 flex items-center gap-2"
                   >
                     <Edit className="w-4 h-4" />
                     {t('provider.services.menu.edit')}
                   </button>
                   <button
                     onClick={() => handleDuplicate(service)}
-                    className="w-full px-4 py-2 text-left text-sm text-white hover:bg-white/5 flex items-center gap-2"
+                    className="w-full px-4 py-2 text-left text-sm text-content hover:bg-surface-2 flex items-center gap-2"
                   >
                     <Copy className="w-4 h-4" />
                     {t('provider.services.menu.duplicate')}
                   </button>
                   <button
                     onClick={() => handleToggleActive(service)}
-                    className="w-full px-4 py-2 text-left text-sm text-white hover:bg-white/5 flex items-center gap-2"
+                    className="w-full px-4 py-2 text-left text-sm text-content hover:bg-surface-2 flex items-center gap-2"
                   >
                     {service.isActive ? (
                       <><X className="w-4 h-4" /> {t('provider.services.menu.deactivate')}</>
@@ -251,18 +251,18 @@ export default function ProviderServicesPage() {
                   <DollarSign className="w-3 h-3" />
                   {t('provider.services.card.price')}
                 </div>
-                <p className="text-lg font-semibold text-white">€{service.price}</p>
+                <p className="text-lg font-semibold text-content">€{service.price}</p>
               </div>
               <div className="bg-[#1A1D29] rounded-lg p-3">
                 <div className="flex items-center gap-1 text-gray-400 text-xs mb-1">
                   <Clock className="w-3 h-3" />
                   {t('provider.services.card.duration')}
                 </div>
-                <p className="text-lg font-semibold text-white">{service.durationMinutes} min</p>
+                <p className="text-lg font-semibold text-content">{service.durationMinutes} min</p>
               </div>
             </div>
 
-            <div className="flex items-center justify-between text-sm text-gray-400 pt-4 border-t border-white/5">
+            <div className="flex items-center justify-between text-sm text-gray-400 pt-4 border-t border-hairline">
               <div className="flex items-center gap-1">
                 <Users className="w-4 h-4" />
                 {t('provider.services.card.bookings', { count: service.bookingCount })}
@@ -279,7 +279,7 @@ export default function ProviderServicesPage() {
       {editingService && (
         <Modal onClose={() => setEditingService(null)}>
           <div className="bg-[#2A2D3A] rounded-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-xl font-semibold text-white mb-6">{t('provider.services.edit.title')}</h3>
+            <h3 className="text-xl font-semibold text-content mb-6">{t('provider.services.edit.title')}</h3>
 
             <div className="space-y-4">
               <div>
@@ -288,7 +288,7 @@ export default function ProviderServicesPage() {
                   type="text"
                   value={editingService.serviceName}
                   onChange={(e) => setEditingService({ ...editingService, serviceName: e.target.value })}
-                  className="w-full bg-[#1A1D29] border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-section-primary"
+                  className="w-full bg-[#1A1D29] border border-hairline rounded-lg px-4 py-2.5 text-content outline-none focus:border-section-primary"
                 />
               </div>
 
@@ -297,7 +297,7 @@ export default function ProviderServicesPage() {
                 <textarea
                   value={editingService.description}
                   onChange={(e) => setEditingService({ ...editingService, description: e.target.value })}
-                  className="w-full bg-[#1A1D29] border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-section-primary min-h-[80px]"
+                  className="w-full bg-[#1A1D29] border border-hairline rounded-lg px-4 py-2.5 text-content outline-none focus:border-section-primary min-h-[80px]"
                 />
               </div>
 
@@ -308,7 +308,7 @@ export default function ProviderServicesPage() {
                     type="number"
                     value={editingService.price}
                     onChange={(e) => setEditingService({ ...editingService, price: parseFloat(e.target.value) })}
-                    className="w-full bg-[#1A1D29] border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-section-primary"
+                    className="w-full bg-[#1A1D29] border border-hairline rounded-lg px-4 py-2.5 text-content outline-none focus:border-section-primary"
                   />
                 </div>
                 <div>
@@ -317,7 +317,7 @@ export default function ProviderServicesPage() {
                     type="number"
                     value={editingService.durationMinutes}
                     onChange={(e) => setEditingService({ ...editingService, durationMinutes: parseInt(e.target.value) })}
-                    className="w-full bg-[#1A1D29] border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-section-primary"
+                    className="w-full bg-[#1A1D29] border border-hairline rounded-lg px-4 py-2.5 text-content outline-none focus:border-section-primary"
                   />
                 </div>
               </div>
@@ -330,7 +330,7 @@ export default function ProviderServicesPage() {
                   onChange={(e) => setEditingService({ ...editingService, isActive: e.target.checked })}
                   className="w-5 h-5 rounded border-white/20 bg-transparent text-section-primary focus:ring-section-primary"
                 />
-                <label htmlFor="isActive" className="text-white">{t('provider.services.edit.isActive')}</label>
+                <label htmlFor="isActive" className="text-content">{t('provider.services.edit.isActive')}</label>
               </div>
             </div>
 
@@ -350,7 +350,7 @@ export default function ProviderServicesPage() {
       {showAddModal && (
         <Modal onClose={() => setShowAddModal(false)}>
           <div className="bg-[#2A2D3A] rounded-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-xl font-semibold text-white mb-6">{t('provider.services.add.title')}</h3>
+            <h3 className="text-xl font-semibold text-content mb-6">{t('provider.services.add.title')}</h3>
 
             <div className="space-y-4">
               <div>
@@ -359,7 +359,7 @@ export default function ProviderServicesPage() {
                   type="text"
                   value={newService.serviceName}
                   onChange={(e) => setNewService({ ...newService, serviceName: e.target.value })}
-                  className="w-full bg-[#1A1D29] border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-section-primary"
+                  className="w-full bg-[#1A1D29] border border-hairline rounded-lg px-4 py-2.5 text-content outline-none focus:border-section-primary"
                   placeholder={t('provider.services.add.serviceNamePlaceholder')}
                 />
               </div>
@@ -369,7 +369,7 @@ export default function ProviderServicesPage() {
                 <textarea
                   value={newService.description}
                   onChange={(e) => setNewService({ ...newService, description: e.target.value })}
-                  className="w-full bg-[#1A1D29] border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-section-primary min-h-[80px]"
+                  className="w-full bg-[#1A1D29] border border-hairline rounded-lg px-4 py-2.5 text-content outline-none focus:border-section-primary min-h-[80px]"
                   placeholder={t('provider.services.add.descriptionPlaceholder')}
                 />
               </div>
@@ -381,7 +381,7 @@ export default function ProviderServicesPage() {
                     type="number"
                     value={newService.price}
                     onChange={(e) => setNewService({ ...newService, price: parseFloat(e.target.value) })}
-                    className="w-full bg-[#1A1D29] border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-section-primary"
+                    className="w-full bg-[#1A1D29] border border-hairline rounded-lg px-4 py-2.5 text-content outline-none focus:border-section-primary"
                     placeholder="0.00"
                   />
                 </div>
@@ -390,7 +390,7 @@ export default function ProviderServicesPage() {
                   <select
                     value={newService.durationMinutes}
                     onChange={(e) => setNewService({ ...newService, durationMinutes: parseInt(e.target.value) })}
-                    className="w-full bg-[#1A1D29] border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-section-primary"
+                    className="w-full bg-[#1A1D29] border border-hairline rounded-lg px-4 py-2.5 text-content outline-none focus:border-section-primary"
                   >
                     <option value={30}>30 min</option>
                     <option value={45}>45 min</option>

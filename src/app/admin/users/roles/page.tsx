@@ -96,7 +96,7 @@ export default function UserRolesPage() {
               width={40}
               height={40}
               unoptimized
-              className="w-10 h-10 rounded-xl object-cover border border-white/10"
+              className="w-10 h-10 rounded-xl object-cover border border-hairline"
             />
           ) : (
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FFD700] to-[#FFA500] flex items-center justify-center text-white font-semibold">
@@ -104,8 +104,8 @@ export default function UserRolesPage() {
             </div>
           )}
           <div>
-            <p className="font-medium text-white">{user.fullName}</p>
-            <p className="text-sm text-white/50">{user.email}</p>
+            <p className="font-medium text-content">{user.fullName}</p>
+            <p className="text-sm text-content-muted">{user.email}</p>
           </div>
         </div>
       ),
@@ -122,10 +122,10 @@ export default function UserRolesPage() {
       header: t('admin.roles.col.added'),
       cell: (user) => (
         <div>
-          <p className="text-sm text-white/70">
+          <p className="text-sm text-content-muted">
             {(user as any).addedAt ? formatDate((user as any).addedAt) : t('admin.userDetail.field.naValue')}
           </p>
-          <p className="text-xs text-white/40">{t('admin.roles.col.addedBy', { by: (user as any).addedBy || 'System' })}</p>
+          <p className="text-xs text-content-faint">{t('admin.roles.col.addedBy', { by: (user as any).addedBy || 'System' })}</p>
         </div>
       ),
       width: "w-40",
@@ -136,7 +136,7 @@ export default function UserRolesPage() {
       cell: (user) => {
         const date = toDate(user.lastLoginAt);
         return (
-          <span className="text-sm text-white/50">
+          <span className="text-sm text-content-muted">
             {date
               ? formatDate(date, {
                   month: "short",
@@ -156,8 +156,8 @@ export default function UserRolesPage() {
     return (
       <div className="flex flex-col items-center justify-center h-96">
         <AlertTriangle className="w-16 h-16 text-[#F59E0B] mb-4" />
-        <h2 className="text-xl font-semibold text-white mb-2">{t('admin.roles.accessDenied.title')}</h2>
-        <p className="text-white/50 text-center max-w-md">
+        <h2 className="text-xl font-semibold text-content mb-2">{t('admin.roles.accessDenied.title')}</h2>
+        <p className="text-content-muted text-center max-w-md">
           {t('admin.roles.accessDenied.message')}
         </p>
         <Button
@@ -176,8 +176,8 @@ export default function UserRolesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">{t('admin.roles.title')}</h1>
-          <p className="text-white/50 mt-1">
+          <h1 className="text-2xl font-bold text-content">{t('admin.roles.title')}</h1>
+          <p className="text-content-muted mt-1">
             {t('admin.roles.subtitle')}
           </p>
         </div>
@@ -196,7 +196,7 @@ export default function UserRolesPage() {
         <Shield className="w-5 h-5 text-[#FFD700] flex-shrink-0 mt-0.5" />
         <div>
           <p className="text-sm font-medium text-[#FFD700]">{t('admin.roles.superadminNotice.label')}</p>
-          <p className="text-sm text-white/70">
+          <p className="text-sm text-content-muted">
             {t('admin.roles.superadminNotice.description')}
           </p>
         </div>
@@ -204,17 +204,17 @@ export default function UserRolesPage() {
 
       {/* Role Permissions Info */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-[#1E2230] rounded-xl border border-white/10 p-5">
+        <div className="bg-surface rounded-xl border border-hairline p-5">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-[#FFD700]/20 flex items-center justify-center">
               <Shield className="w-5 h-5 text-[#FFD700]" />
             </div>
             <div>
-              <h3 className="font-semibold text-white">{t('admin.roles.superadminCard.title')}</h3>
-              <p className="text-sm text-white/50">{t('admin.roles.superadminCard.subtitle')}</p>
+              <h3 className="font-semibold text-content">{t('admin.roles.superadminCard.title')}</h3>
+              <p className="text-sm text-content-muted">{t('admin.roles.superadminCard.subtitle')}</p>
             </div>
           </div>
-          <ul className="space-y-2 text-sm text-white/70">
+          <ul className="space-y-2 text-sm text-content-muted">
             <li className="flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
               {t('admin.roles.superadminCard.perm1')}
@@ -234,17 +234,17 @@ export default function UserRolesPage() {
           </ul>
         </div>
 
-        <div className="bg-[#1E2230] rounded-xl border border-white/10 p-5">
+        <div className="bg-surface rounded-xl border border-hairline p-5">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-[#7B61FF]/20 flex items-center justify-center">
               <Shield className="w-5 h-5 text-[#7B61FF]" />
             </div>
             <div>
-              <h3 className="font-semibold text-white">{t('admin.roles.adminCard.title')}</h3>
-              <p className="text-sm text-white/50">{t('admin.roles.adminCard.subtitle')}</p>
+              <h3 className="font-semibold text-content">{t('admin.roles.adminCard.title')}</h3>
+              <p className="text-sm text-content-muted">{t('admin.roles.adminCard.subtitle')}</p>
             </div>
           </div>
-          <ul className="space-y-2 text-sm text-white/70">
+          <ul className="space-y-2 text-sm text-content-muted">
             <li className="flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
               {t('admin.roles.adminCard.perm1')}

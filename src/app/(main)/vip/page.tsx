@@ -67,7 +67,7 @@ export default function VipPage() {
         </p>
       </section>
 
-      <section className="inline-flex rounded-full border border-white/10 bg-white/5 p-1">
+      <section className="inline-flex rounded-full border border-hairline bg-surface-2 p-1">
         <button
           type="button"
           onClick={() => setBilling('monthly')}
@@ -101,7 +101,7 @@ export default function VipPage() {
                 'rounded-2xl border p-4 transition-colors',
                 isSelected
                   ? 'border-section-primary bg-section-primary/10'
-                  : 'border-white/10 bg-white/5'
+                  : 'border-hairline bg-surface-2'
               )}
             >
               <div className="flex items-start justify-between gap-3">

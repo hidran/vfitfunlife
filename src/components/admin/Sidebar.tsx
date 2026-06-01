@@ -156,7 +156,7 @@ export function Sidebar({
       {/* Mobile Toggle Button */}
       <button
         onClick={() => setIsMobileOpen(!isMobileOpen)}
-        className="fixed top-4 left-4 z-50 lg:hidden w-10 h-10 rounded-xl bg-background-dark border border-white/10 flex items-center justify-center text-white"
+        className="fixed top-4 left-4 z-50 lg:hidden w-10 h-10 rounded-xl bg-background-dark border border-hairline flex items-center justify-center text-content"
       >
         {isMobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
       </button>
@@ -164,19 +164,19 @@ export function Sidebar({
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed left-0 top-0 h-screen bg-[#1E2230] border-r border-white/10 z-40 transition-all duration-300 flex flex-col",
+          "fixed left-0 top-0 h-screen bg-surface border-r border-hairline z-40 transition-all duration-300 flex flex-col",
           isCollapsed ? "w-20" : "w-64",
           isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
       >
         {/* Header */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-white/10">
+        <div className="h-16 flex items-center justify-between px-4 border-b border-hairline">
           {!isCollapsed && (
             <Link href="/admin" className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#00C9FF] to-[#7B61FF] flex items-center justify-center">
                 <Shield className="w-4 h-4 text-white" />
               </div>
-              <span className="font-semibold text-white">{t('admin.sidebar.title')}</span>
+              <span className="font-semibold text-content">{t('admin.sidebar.title')}</span>
             </Link>
           )}
           {isCollapsed && (
@@ -186,7 +186,7 @@ export function Sidebar({
           )}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="hidden lg:flex w-6 h-6 rounded-full bg-white/10 items-center justify-center text-white/60 hover:text-white hover:bg-white/20 transition-colors"
+            className="hidden lg:flex w-6 h-6 rounded-full bg-surface-2 items-center justify-center text-content-muted hover:text-content hover:bg-white/20 transition-colors"
           >
             {isCollapsed ? (
               <ChevronRight className="w-3 h-3" />
@@ -199,7 +199,7 @@ export function Sidebar({
         {/* Navigation */}
         <nav className="flex-1 py-4 overflow-y-auto">
           {/* Logout (top) */}
-          <div className="px-2 pb-3 mb-2 border-b border-white/10">
+          <div className="px-2 pb-3 mb-2 border-b border-hairline">
             <button
               onClick={() => {
                 setIsMobileOpen(false);
@@ -226,8 +226,8 @@ export function Sidebar({
                   className={cn(
                     "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group relative",
                     isActive(item.href)
-                      ? "bg-gradient-to-r from-[#00C9FF]/20 to-[#7B61FF]/20 text-white border border-white/10"
-                      : "text-white/60 hover:text-white hover:bg-white/5"
+                      ? "bg-gradient-to-r from-[#00C9FF]/20 to-[#7B61FF]/20 text-content border border-hairline"
+                      : "text-content-muted hover:text-content hover:bg-surface-2"
                   )}
                 >
                   <span
@@ -260,10 +260,10 @@ export function Sidebar({
         </nav>
 
         {/* User Section */}
-        <div className="border-t border-white/10 p-4">
+        <div className="border-t border-hairline p-4">
           {/* Notifications */}
           {!isCollapsed && (
-            <button className="w-full flex items-center gap-3 px-3 py-2 mb-3 rounded-xl text-white/60 hover:text-white hover:bg-white/5 transition-all">
+            <button className="w-full flex items-center gap-3 px-3 py-2 mb-3 rounded-xl text-content-muted hover:text-content hover:bg-surface-2 transition-all">
               <Bell className="w-5 h-5" />
               <span className="text-sm">{t('admin.sidebar.notifications')}</span>
               {notificationCount > 0 && (
@@ -289,7 +289,7 @@ export function Sidebar({
                   width={40}
                   height={40}
                   unoptimized
-                  className="w-10 h-10 rounded-xl object-cover border border-white/10"
+                  className="w-10 h-10 rounded-xl object-cover border border-hairline"
                 />
               ) : (
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00C9FF] to-[#7B61FF] flex items-center justify-center text-white font-semibold">
@@ -306,10 +306,10 @@ export function Sidebar({
             </div>
             {!isCollapsed && (
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">
+                <p className="text-sm font-medium text-content truncate">
                   {userName}
                 </p>
-                <p className="text-xs text-white/50 capitalize">{userRole}</p>
+                <p className="text-xs text-content-muted capitalize">{userRole}</p>
               </div>
             )}
           </div>

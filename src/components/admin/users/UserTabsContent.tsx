@@ -22,7 +22,7 @@ export function UserTabBar({ active, onChange }: TabBarProps) {
     { id: 'activity', label: t('admin.userDetail.tab.activity'), icon: History },
   ];
   return (
-    <div className="border-b border-white/10">
+    <div className="border-b border-hairline">
       <div className="flex gap-6">
         {tabs.map((tab) => (
           <button
@@ -31,7 +31,7 @@ export function UserTabBar({ active, onChange }: TabBarProps) {
             className={`flex items-center gap-2 px-1 py-3 text-sm font-medium border-b-2 transition-colors ${
               active === tab.id
                 ? 'text-[#00C9FF] border-[#00C9FF]'
-                : 'text-white/50 border-transparent hover:text-white'
+                : 'text-content-muted border-transparent hover:text-content'
             }`}
           >
             <tab.icon className="w-4 h-4" />
@@ -62,18 +62,18 @@ export function UserTabContent({
 
   if (activeTab === 'bookings') {
     return (
-      <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-8 text-center">
-        <CalendarDays className="w-12 h-12 text-white/20 mx-auto mb-4" />
-        <p className="text-white/50">{t('admin.userDetail.bookingHistoryPlaceholder')}</p>
+      <div className="bg-surface rounded-2xl border border-hairline p-8 text-center">
+        <CalendarDays className="w-12 h-12 text-content-faint mx-auto mb-4" />
+        <p className="text-content-muted">{t('admin.userDetail.bookingHistoryPlaceholder')}</p>
       </div>
     );
   }
 
   if (activeTab === 'activity') {
     return (
-      <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-8 text-center">
-        <History className="w-12 h-12 text-white/20 mx-auto mb-4" />
-        <p className="text-white/50">{t('admin.userDetail.activityLogPlaceholder')}</p>
+      <div className="bg-surface rounded-2xl border border-hairline p-8 text-center">
+        <History className="w-12 h-12 text-content-faint mx-auto mb-4" />
+        <p className="text-content-muted">{t('admin.userDetail.activityLogPlaceholder')}</p>
       </div>
     );
   }
@@ -105,9 +105,9 @@ export function UserTabContent({
   return (
     <>
       {/* Account Information (form: view OR edit) */}
-      <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
+      <div className="bg-surface rounded-2xl border border-hairline p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-white">
+          <h3 className="text-lg font-semibold text-content">
             {t('admin.userDetail.accountInfo')}
           </h3>
         </div>
@@ -116,27 +116,27 @@ export function UserTabContent({
 
       {/* Role selector + secondary fields + stats + wallet + notifications */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">
+        <div className="bg-surface rounded-2xl border border-hairline p-6">
+          <h3 className="text-lg font-semibold text-content mb-4">
             {t('admin.userDetail.field.role')}
           </h3>
           <div className="space-y-4">
-            <div className="flex justify-between py-2 border-b border-white/5">
-              <span className="text-white/50">
+            <div className="flex justify-between py-2 border-b border-hairline">
+              <span className="text-content-muted">
                 {t('admin.userDetail.field.dateOfBirth')}
               </span>
-              <span className="text-white">
+              <span className="text-content">
                 {user.dateOfBirth
                   ? formatDate(toDate(user.dateOfBirth) || new Date())
                   : t('admin.userDetail.field.notSet')}
               </span>
             </div>
-            <div className="flex justify-between py-2 border-b border-white/5">
-              <span className="text-white/50">{t('admin.userDetail.field.role')}</span>
+            <div className="flex justify-between py-2 border-b border-hairline">
+              <span className="text-content-muted">{t('admin.userDetail.field.role')}</span>
               <select
                 value={user.role}
                 onChange={(e) => onRoleChange(e.target.value as UserRole)}
-                className="bg-[#2A2D3A] border border-white/10 rounded-lg px-3 py-1 text-sm text-white"
+                className="bg-[#2A2D3A] border border-hairline rounded-lg px-3 py-1 text-sm text-content"
               >
                 <option value="customer">{t('admin.userDetail.field.roleCustomer')}</option>
                 <option value="provider">{t('admin.userDetail.field.roleProvider')}</option>
@@ -148,8 +148,8 @@ export function UserTabContent({
         </div>
 
         {/* Stats */}
-        <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">{t('admin.userDetail.stats')}</h3>
+        <div className="bg-surface rounded-2xl border border-hairline p-6">
+          <h3 className="text-lg font-semibold text-content mb-4">{t('admin.userDetail.stats')}</h3>
           <div className="grid grid-cols-2 gap-4">
             <StatBox
               icon={<CalendarDays className="w-5 h-5 text-[#00C9FF]" />}
@@ -183,20 +183,20 @@ export function UserTabContent({
         </div>
 
         {/* Wallet & Points */}
-        <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">
+        <div className="bg-surface rounded-2xl border border-hairline p-6">
+          <h3 className="text-lg font-semibold text-content mb-4">
             {t('admin.userDetail.walletPoints')}
           </h3>
           <div className="space-y-4">
-            <div className="flex justify-between items-center p-3 bg-black/20 rounded-xl">
-              <span className="text-white/50">{t('admin.userDetail.walletBalance')}</span>
-              <span className="text-xl font-semibold text-white">
+            <div className="flex justify-between items-center p-3 bg-surface-sunken rounded-xl">
+              <span className="text-content-muted">{t('admin.userDetail.walletBalance')}</span>
+              <span className="text-xl font-semibold text-content">
                 {formatPrice(user.walletBalance || 0)}
               </span>
             </div>
-            <div className="flex justify-between items-center p-3 bg-black/20 rounded-xl">
-              <span className="text-white/50">{t('admin.userDetail.pointsBalance')}</span>
-              <span className="text-xl font-semibold text-white">
+            <div className="flex justify-between items-center p-3 bg-surface-sunken rounded-xl">
+              <span className="text-content-muted">{t('admin.userDetail.pointsBalance')}</span>
+              <span className="text-xl font-semibold text-content">
                 {(user.pointsBalance || 0).toLocaleString()}{' '}
                 {t('admin.userDetail.pointsSuffix')}
               </span>
@@ -205,17 +205,17 @@ export function UserTabContent({
         </div>
 
         {/* Notifications */}
-        <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">
+        <div className="bg-surface rounded-2xl border border-hairline p-6">
+          <h3 className="text-lg font-semibold text-content mb-4">
             {t('admin.userDetail.notificationSettings')}
           </h3>
           <div className="space-y-3">
             {notifications.map((setting) => (
               <div key={setting.label} className="flex justify-between items-center">
-                <span className="text-white/70">{setting.label}</span>
+                <span className="text-content-muted">{setting.label}</span>
                 <span
                   className={`text-sm ${
-                    setting.enabled ? 'text-[#10B981]' : 'text-white/40'
+                    setting.enabled ? 'text-[#10B981]' : 'text-content-faint'
                   }`}
                 >
                   {setting.enabled
@@ -241,12 +241,12 @@ function StatBox({
   value: string;
 }) {
   return (
-    <div className="p-4 bg-black/20 rounded-xl">
+    <div className="p-4 bg-surface-sunken rounded-xl">
       <div className="flex items-center gap-3 mb-2">
         {icon}
-        <span className="text-white/50">{label}</span>
+        <span className="text-content-muted">{label}</span>
       </div>
-      <p className="text-2xl font-bold text-white">{value}</p>
+      <p className="text-2xl font-bold text-content">{value}</p>
     </div>
   );
 }

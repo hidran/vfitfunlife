@@ -22,7 +22,7 @@ export default function SettingsPage() {
       <h1 className="text-2xl font-bold text-text-inverse">{t('settings.title')}</h1>
 
       {/* Appearance */}
-      <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
+      <section className="rounded-2xl border border-hairline bg-surface-2 p-4">
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-text-tertiary">
           {t('settings.appearance')}
         </h2>

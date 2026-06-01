@@ -58,10 +58,10 @@ export default function ReferralPage() {
         </p>
       </header>
 
-      <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
+      <section className="rounded-2xl border border-hairline bg-surface-2 p-4">
         <p className="text-xs uppercase tracking-wide text-text-tertiary">{t('referral.yourCode')}</p>
         <div className="mt-2 flex items-center gap-2">
-          <code className="rounded-xl border border-white/15 bg-black/20 px-3 py-2 text-sm text-text-inverse">
+          <code className="rounded-xl border border-white/15 bg-surface-sunken px-3 py-2 text-sm text-text-inverse">
             {referralCode}
           </code>
           <button
@@ -76,11 +76,11 @@ export default function ReferralPage() {
       </section>
 
       <section className="grid grid-cols-2 gap-3">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+        <div className="rounded-2xl border border-hairline bg-surface-2 p-4">
           <p className="text-xs text-text-tertiary">{t('referral.invites')}</p>
           <p className="mt-1 text-xl font-bold text-text-inverse">{REFERRAL_ENTRIES.length}</p>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+        <div className="rounded-2xl border border-hairline bg-surface-2 p-4">
           <p className="text-xs text-text-tertiary">{t('referral.rewards')}</p>
           <p className="mt-1 text-xl font-bold text-section-primary">{formatPrice(totalReward)}</p>
         </div>
@@ -91,7 +91,7 @@ export default function ReferralPage() {
           {t('referral.history')}
         </h2>
         {REFERRAL_ENTRIES.map((entry) => (
-          <article key={entry.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <article key={entry.id} className="rounded-2xl border border-hairline bg-surface-2 p-4">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4 text-section-primary" />

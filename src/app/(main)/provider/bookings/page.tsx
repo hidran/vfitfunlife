@@ -107,7 +107,7 @@ export default function ProviderBookingsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">{t('provider.bookings.title')}</h1>
+          <h1 className="text-2xl font-bold text-content">{t('provider.bookings.title')}</h1>
           <p className="text-gray-400 mt-1">
             {t('provider.bookings.subtitle')}
           </p>
@@ -139,7 +139,7 @@ export default function ProviderBookingsPage() {
               'px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors',
               activeTab === tab.id
                 ? 'bg-section-gradient text-white'
-                : 'bg-[#2A2D3A] text-gray-400 hover:text-white'
+                : 'bg-[#2A2D3A] text-gray-400 hover:text-content'
             )}
           >
             {tab.label}
@@ -156,13 +156,13 @@ export default function ProviderBookingsPage() {
             placeholder={t('provider.bookings.search.placeholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#2A2D3A] border border-white/5 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder-gray-500 outline-none focus:border-section-primary"
+            className="w-full bg-[#2A2D3A] border border-hairline rounded-lg pl-10 pr-4 py-2.5 text-content placeholder-gray-500 outline-none focus:border-section-primary"
           />
         </div>
         <Button
           variant="secondary"
           onClick={() => setShowFilters(!showFilters)}
-          className={showFilters ? 'bg-white/10' : ''}
+          className={showFilters ? 'bg-surface-2' : ''}
         >
           <Filter className="w-4 h-4 mr-2" />
           {t('provider.bookings.btn.filters')}
@@ -172,7 +172,7 @@ export default function ProviderBookingsPage() {
 
       {/* Filters Panel */}
       {showFilters && (
-        <div className="bg-[#2A2D3A] rounded-xl border border-white/5 p-4">
+        <div className="bg-[#2A2D3A] rounded-xl border border-hairline p-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-gray-400 mb-2">{t('provider.bookings.filter.dateRange')}</label>
@@ -180,13 +180,13 @@ export default function ProviderBookingsPage() {
                 <input
                   type="date"
                   onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.valueAsDate || undefined }))}
-                  className="flex-1 bg-[#1A1D29] border border-white/10 rounded-lg px-3 py-2 text-white outline-none focus:border-section-primary"
+                  className="flex-1 bg-[#1A1D29] border border-hairline rounded-lg px-3 py-2 text-content outline-none focus:border-section-primary"
                 />
                 <span className="text-gray-400">{t('provider.bookings.filter.dateTo')}</span>
                 <input
                   type="date"
                   onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.valueAsDate || undefined }))}
-                  className="flex-1 bg-[#1A1D29] border border-white/10 rounded-lg px-3 py-2 text-white outline-none focus:border-section-primary"
+                  className="flex-1 bg-[#1A1D29] border border-hairline rounded-lg px-3 py-2 text-content outline-none focus:border-section-primary"
                 />
               </div>
             </div>

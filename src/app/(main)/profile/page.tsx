@@ -332,7 +332,7 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-background-dark pb-20">
       {/* Profile Header */}
       <div className="p-4 pt-6">
-        <div className="rounded-[28px] border border-white/10 bg-gradient-to-b from-white/10 to-white/[0.03] p-5 shadow-[0_14px_40px_rgba(0,0,0,0.28)]">
+        <div className="rounded-[28px] border border-hairline bg-gradient-to-b from-white/10 to-white/[0.03] p-5 shadow-[0_14px_40px_rgba(0,0,0,0.28)]">
           <div className="flex flex-col items-center">
             <ProfilePhotoUploader
               userId={user?.id || ''}
@@ -371,7 +371,7 @@ export default function ProfilePage() {
               )}
             </div>
 
-            <div className="mt-4 w-full max-w-[240px] rounded-full bg-white/5 p-1">
+            <div className="mt-4 w-full max-w-[240px] rounded-full bg-surface-2 p-1">
               <div className="grid grid-cols-2 gap-1">
                 <div
                   className={cn(
@@ -456,7 +456,7 @@ export default function ProfilePage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-3 gap-3 mt-4 mb-6">
-          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#1f332b] to-[#15241e] p-4">
+          <div className="relative overflow-hidden rounded-2xl border border-hairline bg-gradient-to-br from-[#1f332b] to-[#15241e] p-4">
             <div className="absolute -top-6 -right-6 h-14 w-14 rounded-full bg-vlife-primary/20 blur-xl" />
             <div className="mb-1 flex items-center gap-1 text-vlife-primary">
               <Star size={14} />
@@ -467,7 +467,7 @@ export default function ProfilePage() {
             <p className="text-xl font-bold text-text-inverse">{pointsBalance.toLocaleString()}</p>
           </div>
 
-          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#30261c] to-[#211b14] p-4">
+          <div className="relative overflow-hidden rounded-2xl border border-hairline bg-gradient-to-br from-[#30261c] to-[#211b14] p-4">
             <div className="absolute -top-6 -right-6 h-14 w-14 rounded-full bg-warning-DEFAULT/20 blur-xl" />
             <div className="mb-1 flex items-center gap-1 text-warning-DEFAULT">
               <CreditCard size={14} />
@@ -478,7 +478,7 @@ export default function ProfilePage() {
             <p className="text-xl font-bold text-text-inverse">{formatPrice(walletBalance)}</p>
           </div>
 
-          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#2b1f37] to-[#1b1524] p-4">
+          <div className="relative overflow-hidden rounded-2xl border border-hairline bg-gradient-to-br from-[#2b1f37] to-[#1b1524] p-4">
             <div className="absolute -top-6 -right-6 h-14 w-14 rounded-full bg-vfun-primary/20 blur-xl" />
             <div className="mb-1 flex items-center gap-1 text-vfun-primary">
               <Award size={14} />
@@ -556,7 +556,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Appearance / theme quick toggle */}
-        <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 p-4">
+        <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-hairline bg-surface-2 p-4">
           <p className="font-semibold text-text-inverse">{t('settings.appearance')}</p>
           <ThemeToggle />
         </div>
@@ -687,7 +687,7 @@ export default function ProfilePage() {
                         'text-center p-2 rounded-lg',
                         day.isAvailable
                           ? 'bg-success-DEFAULT/10 border border-success-DEFAULT/30'
-                          : 'bg-background-secondary/5 border border-white/5'
+                          : 'bg-background-secondary/5 border border-hairline'
                       )}
                     >
                       <p className={cn(
@@ -828,10 +828,10 @@ export default function ProfilePage() {
                     }
                   }}
                   className={cn(
-                    'w-full flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-left transition-all hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/10'
+                    'w-full flex items-center gap-3 rounded-2xl border border-hairline bg-surface-2 p-4 text-left transition-all hover:-translate-y-0.5 hover:border-white/20 hover:bg-surface-2'
                   )}
                 >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-2">
                     <item.icon className={cn('h-5 w-5', item.accentClass ?? 'text-text-secondary')} />
                   </div>
                   <div className="min-w-0 flex-1">

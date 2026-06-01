@@ -84,8 +84,8 @@ export function ServiceCategoriesListView() {
             {sc.icon}
           </div>
           <div>
-            <p className="font-medium text-white">{`${sc.icon} ${sc.name}`}</p>
-            <p className="text-xs text-white/50">{sc.slug}</p>
+            <p className="font-medium text-content">{`${sc.icon} ${sc.name}`}</p>
+            <p className="text-xs text-content-muted">{sc.slug}</p>
           </div>
         </div>
       ),
@@ -94,7 +94,7 @@ export function ServiceCategoriesListView() {
     {
       key: 'order',
       header: t('admin.serviceCategories.col.order'),
-      cell: (sc) => <span className="text-sm text-white/70">{sc.order}</span>,
+      cell: (sc) => <span className="text-sm text-content-muted">{sc.order}</span>,
       sortable: true,
       width: 'w-24',
     },
@@ -106,7 +106,7 @@ export function ServiceCategoriesListView() {
           className={`px-2.5 py-1 rounded-full text-xs font-medium ${
             sc.isActive
               ? 'bg-[#10B981]/20 text-[#10B981]'
-              : 'bg-white/10 text-white/50'
+              : 'bg-surface-2 text-content-muted'
           }`}
         >
           {sc.isActive
@@ -121,7 +121,7 @@ export function ServiceCategoriesListView() {
       key: 'created',
       header: t('admin.serviceCategories.col.created'),
       cell: (sc) => (
-        <span className="text-sm text-white/50">{formatDate(sc.createdAt)}</span>
+        <span className="text-sm text-content-muted">{formatDate(sc.createdAt)}</span>
       ),
       sortable: true,
       width: 'w-28',
@@ -143,10 +143,10 @@ export function ServiceCategoriesListView() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">
+          <h1 className="text-2xl font-bold text-content">
             {t('admin.serviceCategories.title')}
           </h1>
-          <p className="text-white/50 mt-1">{t('admin.serviceCategories.subtitle')}</p>
+          <p className="text-content-muted mt-1">{t('admin.serviceCategories.subtitle')}</p>
         </div>
         <Button
           variant="primary"

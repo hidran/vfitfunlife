@@ -48,22 +48,22 @@ export function RefundDialog({ open, paymentId, maxAmount, onClose }: Props) {
       role="dialog"
       aria-modal="true"
     >
-      <div className="w-full max-w-md rounded-2xl bg-[#1E2230] border border-white/10 p-6 space-y-4">
+      <div className="w-full max-w-md rounded-2xl bg-surface border border-hairline p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-content">
             <AlertTriangle className="h-5 w-5 text-yellow-400" />
             {t('admin.payments.refund.title')}
           </h2>
           <button
             onClick={onClose}
             aria-label={t('common.close')}
-            className="text-white/60 hover:text-white"
+            className="text-content-muted hover:text-content"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
         <label className="block space-y-1">
-          <span className="text-xs text-white/60">
+          <span className="text-xs text-content-muted">
             {t('admin.payments.refund.amountLabel')} (max {maxAmount.toFixed(2)})
           </span>
           <input
@@ -77,7 +77,7 @@ export function RefundDialog({ open, paymentId, maxAmount, onClose }: Props) {
           />
         </label>
         <label className="block space-y-1">
-          <span className="text-xs text-white/60">
+          <span className="text-xs text-content-muted">
             {t('admin.payments.refund.reasonLabel')}
           </span>
           <textarea

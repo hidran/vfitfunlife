@@ -14,7 +14,7 @@ const roleColors: Record<UserRole, string> = {
   superadmin: "bg-[#FFD700]/20 text-[#FFD700] border-[#FFD700]/30",
   admin: "bg-[#7B61FF]/20 text-[#7B61FF] border-[#7B61FF]/30",
   provider: "bg-[#00C9FF]/20 text-[#00C9FF] border-[#00C9FF]/30",
-  customer: "bg-white/10 text-white/70 border-white/20",
+  customer: "bg-surface-2 text-content-muted border-white/20",
 };
 
 export function UserRoleBadge({ role, size = "md", className }: UserRoleBadgeProps) {
@@ -80,7 +80,7 @@ export function StatusBadge({ status, size = "md", className }: StatusBadgeProps
     return (
       <span
         className={cn(
-          "inline-flex items-center font-medium rounded-full border bg-white/10 text-white/70 border-white/20",
+          "inline-flex items-center font-medium rounded-full border bg-surface-2 text-content-muted border-white/20",
           size === "sm" && "px-2 py-0.5 text-[10px]",
           size === "md" && "px-2.5 py-1 text-xs",
           className

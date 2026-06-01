@@ -69,8 +69,8 @@ export function PaymentDetailView({ paymentId }: { paymentId: string }) {
     },
   });
 
-  if (loading) return <div className="p-8 text-white/50">{t('common.loading')}</div>;
-  if (!payment) return <div className="p-8 text-white/50">{t('admin.payments.notFound')}</div>;
+  if (loading) return <div className="p-8 text-content-muted">{t('common.loading')}</div>;
+  if (!payment) return <div className="p-8 text-content-muted">{t('admin.payments.notFound')}</div>;
 
   return (
     <>
@@ -88,26 +88,26 @@ export function PaymentDetailView({ paymentId }: { paymentId: string }) {
       >
         <div className="space-y-6">
           {/* Display-only summary */}
-          <div className="grid grid-cols-2 gap-4 rounded-2xl border border-white/10 bg-[#1E2230] p-4 text-sm">
+          <div className="grid grid-cols-2 gap-4 rounded-2xl border border-hairline bg-surface p-4 text-sm">
             <div>
-              <span className="text-white/50">{t('admin.payments.field.customer')}</span>
-              <div className="text-white">{payment.customerName ?? '—'}</div>
+              <span className="text-content-muted">{t('admin.payments.field.customer')}</span>
+              <div className="text-content">{payment.customerName ?? '—'}</div>
             </div>
             <div>
-              <span className="text-white/50">{t('admin.payments.field.provider')}</span>
-              <div className="text-white">{payment.providerName ?? '—'}</div>
+              <span className="text-content-muted">{t('admin.payments.field.provider')}</span>
+              <div className="text-content">{payment.providerName ?? '—'}</div>
             </div>
             <div>
-              <span className="text-white/50">{t('admin.payments.field.amount')}</span>
-              <div className="text-white">{formatPrice(payment.amount)}</div>
+              <span className="text-content-muted">{t('admin.payments.field.amount')}</span>
+              <div className="text-content">{formatPrice(payment.amount)}</div>
             </div>
             <div>
-              <span className="text-white/50">{t('admin.payments.field.status')}</span>
-              <div className="text-white">{payment.status}</div>
+              <span className="text-content-muted">{t('admin.payments.field.status')}</span>
+              <div className="text-content">{payment.status}</div>
             </div>
             <div className="col-span-2">
-              <span className="text-white/50">{t('admin.payments.field.stripeId')}</span>
-              <div className="text-white font-mono text-xs">
+              <span className="text-content-muted">{t('admin.payments.field.stripeId')}</span>
+              <div className="text-content font-mono text-xs">
                 {payment.stripePaymentIntentId ?? '—'}
               </div>
             </div>

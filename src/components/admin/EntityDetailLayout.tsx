@@ -27,14 +27,14 @@ export function EntityDetailLayout({
   const { t } = useI18n();
   return (
     <div className="space-y-6">
-      <Button variant="ghost" onClick={() => router.push(backHref)} className="text-white/60">
+      <Button variant="ghost" onClick={() => router.push(backHref)} className="text-content-muted">
         <ArrowLeft className="mr-2 h-4 w-4" />
         {t('admin.detail.back')}
       </Button>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">{title}</h1>
-          {subtitle && <p className="mt-1 text-white/50">{subtitle}</p>}
+          <h1 className="text-2xl font-bold text-content">{title}</h1>
+          {subtitle && <p className="mt-1 text-content-muted">{subtitle}</p>}
         </div>
         <div className="flex flex-wrap gap-2">
           {!isEditing && onEdit && (

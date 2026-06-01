@@ -87,13 +87,13 @@ export function VenueFormView({ mode, initial, onSubmit }: Props) {
         <input {...register('country')} disabled={readonly} className="admin-input" />
       </Field>
       <Field label={t('admin.venues.field.isActive')}>
-        <label className="flex items-center gap-2 text-white">
+        <label className="flex items-center gap-2 text-content">
           <input type="checkbox" {...register('isActive')} disabled={readonly} />
           <span>{t('admin.venues.field.isActive')}</span>
         </label>
       </Field>
       <Field label={t('admin.venues.field.isPartner')}>
-        <label className="flex items-center gap-2 text-white">
+        <label className="flex items-center gap-2 text-content">
           <input type="checkbox" {...register('isPartner')} disabled={readonly} />
           <span>{t('admin.venues.field.isPartner')}</span>
         </label>
@@ -113,7 +113,7 @@ function Field({
 }) {
   return (
     <label className="block space-y-1">
-      <span className="text-xs text-white/60">{label}</span>
+      <span className="text-xs text-content-muted">{label}</span>
       {children}
       {error && <span className="text-xs text-red-400">{error}</span>}
     </label>
