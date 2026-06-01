@@ -80,7 +80,7 @@ export async function verifyOtp(code: string): Promise<User> {
   confirmationResult = null;
 
   // Update last login
-  await updateUserLastLogin(result.user.uid);
+  void updateUserLastLogin(result.user.uid);
 
   return result.user;
 }
@@ -98,7 +98,7 @@ export async function signInWithGoogle(): Promise<User | null> {
   if (Capacitor.isNativePlatform()) {
     console.log('[Auth] Using native Google sign-in');
     const user = await nativeGoogleSignIn(auth);
-    await updateUserLastLogin(user.uid);
+    void updateUserLastLogin(user.uid);
     return user;
   }
 
@@ -108,7 +108,7 @@ export async function signInWithGoogle(): Promise<User | null> {
   try {
     const result = await signInWithPopup(auth, provider);
     console.log('[Auth] Popup success, uid:', result.user.uid);
-    await updateUserLastLogin(result.user.uid);
+    void updateUserLastLogin(result.user.uid);
     return result.user;
   } catch (error: any) {
     console.error('[Auth] signInWithPopup failed:', error);
@@ -135,7 +135,7 @@ export async function handleAuthRedirect(): Promise<User | null> {
     console.log('[Auth] getRedirectResult result:', result ? 'has result' : 'null');
     if (result?.user) {
       console.log('[Auth] Redirect user found, uid:', result.user.uid);
-      await updateUserLastLogin(result.user.uid);
+      void updateUserLastLogin(result.user.uid);
       return result.user;
     }
     console.log('[Auth] No redirect user found');
@@ -161,7 +161,7 @@ export async function signInWithApple(): Promise<User | null> {
   if (Capacitor.isNativePlatform()) {
     console.log('[Auth] Using native Apple sign-in');
     const user = await nativeAppleSignIn(auth);
-    await updateUserLastLogin(user.uid);
+    void updateUserLastLogin(user.uid);
     return user;
   }
 
@@ -170,7 +170,7 @@ export async function signInWithApple(): Promise<User | null> {
   try {
     const result = await signInWithPopup(auth, provider);
     console.log('[Auth] Apple popup success, uid:', result.user.uid);
-    await updateUserLastLogin(result.user.uid);
+    void updateUserLastLogin(result.user.uid);
     return result.user;
   } catch (error: any) {
     console.error('[Auth] signInWithPopup (Apple) failed:', error);

@@ -57,9 +57,6 @@ let redirectHandled = false;
 // Track the last processed URL to handle HMR and redirects
 let lastProcessedUrl: string | null = null;
 
-// Constants for retry logic
-const RETRY_DELAY_MS = 1000;
-const MAX_RETRIES = 3;
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   // Initial state
@@ -208,18 +205,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // Set a timeout to ensure auth eventually completes (especially for native apps)
     // Sometimes onAuthStateChanged can take a while or not fire properly
     const timeoutId = setTimeout(() => {
-      if (!isCancelled && !authStateReceived) {
-        console.warn('[Auth] Auth state timeout - no response from onAuthStateChanged');
-        const currentState = get();
-        if (currentState.isLoading && !currentState.isInitialized) {
-          set({
-            isLoading: false,
-            isInitialized: true,
-            error: null,
-          });
-        }
+      if (isCancelled) return;
+      // Watchdog: if we're still loading after the timeout — whether because
+      // onAuthStateChanged never fired OR loadUserData/a cold-start Cloud
+      // Function is stuck — force-resolve so the UI can never hang on a spinner.
+      const currentState = get();
+      if (currentState.isLoading) {
+        console.warn('[Auth] Auth watchdog fired - forcing loading to resolve');
+        set({ isLoading: false, isInitialized: true });
       }
-    }, 5000);
+    }, 8000);
 
     // Return cleanup function
     return () => {
@@ -252,13 +247,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
       }
 
-      // For new users, retry a few times with delay
+      // A freshly-written profile (just-registered user) may not be readable
+      // immediately. Retry with short backoff, re-reading each time, so we
+      // proceed the moment it's ready instead of waiting a fixed ~3s.
       if (!userData) {
-        console.log('[Auth] Retrying user data load...');
-        for (let i = 0; i < MAX_RETRIES; i++) {
-          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+        const backoffsMs = [300, 600, 1000];
+        for (let i = 0; i < backoffsMs.length && !userData; i++) {
+          await new Promise((resolve) => setTimeout(resolve, backoffsMs[i]));
           userData = await getUserData(uid);
-          if (userData) break;
         }
       }
 
