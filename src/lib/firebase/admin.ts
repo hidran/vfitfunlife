@@ -919,6 +919,7 @@ async function logAdminAction(action: string, details: string): Promise<void> {
       action,
       details,
       severity: "info",
+      by: auth.currentUser?.uid ?? null,
       timestamp: serverTimestamp(),
     });
   } catch (error) {

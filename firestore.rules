@@ -552,6 +552,16 @@ service cloud.firestore {
     }
 
     // ============================================
+    // SYSTEM LOGS (admin action log — append-only)
+    // ============================================
+
+    match /systemLogs/{logId} {
+      allow read:   if isAdmin();
+      allow create: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // ============================================
     // DELETED USERS (Superadmin only)
     // ============================================
 
