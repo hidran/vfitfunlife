@@ -17,6 +17,7 @@ import {
 } from '@/components/admin';
 import { Button } from '@/components/ui/button';
 import { useAdminStore } from '@/stores/adminStore';
+import { notify } from '@/lib/notify';
 import { useI18n } from '@/hooks/useI18n';
 import { formatPrice } from '@/lib/utils';
 import type { AdminProvider } from '@/types/admin';
@@ -54,14 +55,6 @@ export function ProviderDetailView({ providerId }: Props) {
   const [activeTab, setActiveTab] = useState<ProviderTab>('overview');
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
-  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; messageKey: string } | null>(null);
-
-  // Auto-dismiss the verify/reject confirmation banner after a few seconds.
-  useEffect(() => {
-    if (!feedback) return;
-    const id = setTimeout(() => setFeedback(null), 4000);
-    return () => clearTimeout(id);
-  }, [feedback]);
 
   useEffect(() => {
     let cancelled = false;
@@ -162,10 +155,10 @@ export function ProviderDetailView({ providerId }: Props) {
           ? { ...provider.providerProfile, isVerified: true }
           : provider.providerProfile,
       });
-      setFeedback({ type: 'success', messageKey: 'admin.providerDetail.verifiedSuccess' });
+      notify.success(t('admin.providerDetail.verifiedSuccess'));
     } catch (error) {
       console.error('Failed to verify provider:', error);
-      setFeedback({ type: 'error', messageKey: 'admin.providerDetail.actionError' });
+      notify.error(t('admin.providerDetail.actionError'));
     }
   };
 
@@ -175,10 +168,10 @@ export function ProviderDetailView({ providerId }: Props) {
       await rejectProviderAction(provider.id, rejectReason);
       setShowRejectForm(false);
       setRejectReason('');
-      setFeedback({ type: 'success', messageKey: 'admin.providerDetail.rejectedSuccess' });
+      notify.success(t('admin.providerDetail.rejectedSuccess'));
     } catch (error) {
       console.error('Failed to reject provider:', error);
-      setFeedback({ type: 'error', messageKey: 'admin.providerDetail.actionError' });
+      notify.error(t('admin.providerDetail.actionError'));
     }
   };
 
@@ -213,18 +206,6 @@ export function ProviderDetailView({ providerId }: Props) {
       >
         {/* Profile header card */}
         <div className="bg-[#1E2230] rounded-2xl border border-white/10 p-6">
-          {feedback && (
-            <div
-              role="status"
-              className={`mb-4 rounded-xl border p-3 text-sm ${
-                feedback.type === 'success'
-                  ? 'border-[#10B981]/30 bg-[#10B981]/10 text-[#10B981]'
-                  : 'border-[#EF4444]/30 bg-[#EF4444]/10 text-[#EF4444]'
-              }`}
-            >
-              {t(feedback.messageKey as Parameters<typeof t>[0])}
-            </div>
-          )}
           <div className="flex flex-col md:flex-row gap-6">
             {/* Avatar */}
             <div className="flex-shrink-0">

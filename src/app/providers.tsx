@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, useEffect, type ReactNode } from 'react';
+import { Toaster } from 'sonner';
 import { SectionProvider } from '@/contexts/SectionContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { I18nProvider } from '@/contexts/I18nContext';
@@ -36,6 +37,15 @@ export function Providers({ children }: { children: ReactNode }) {
             <SectionProvider>{children}</SectionProvider>
           </AuthProvider>
         </I18nProvider>
+        <Toaster
+          position="bottom-center"
+          theme="dark"
+          richColors
+          closeButton
+          duration={4000}
+          offset={{ bottom: 24 }}
+          mobileOffset={{ bottom: 'calc(env(safe-area-inset-bottom) + 80px)' }}
+        />
       </QueryClientProvider>
     </ErrorBoundary>
   );
