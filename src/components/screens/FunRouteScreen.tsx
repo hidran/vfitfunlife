@@ -385,7 +385,7 @@ export function FunRouteScreen({ slug }: { slug: FunRouteSlug }) {
                       eventType: event.target.value as PartyEventType,
                     }))
                   }
-                  className="w-full rounded-xl border border-white/10 bg-[#2A2D3A] px-3 py-3 text-sm text-text-inverse focus:outline-none focus:ring-2 focus:ring-section-primary"
+                  className="w-full rounded-xl border border-white/10 bg-surface-elevated px-3 py-3 text-sm text-text-inverse focus:outline-none focus:ring-2 focus:ring-section-primary"
                 >
                   {partyEventTypeOptions.map((eventType) => (
                     <option key={eventType.id} value={eventType.id}>

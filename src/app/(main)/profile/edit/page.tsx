@@ -521,7 +521,7 @@ export default function EditProfilePage() {
                 rows={4}
                 maxLength={500}
                 className={cn(
-                  'w-full bg-[#2A2D3A] border border-hairline rounded-xl px-4 py-3 text-content placeholder:text-text-tertiary',
+                  'w-full bg-surface-elevated border border-hairline rounded-xl px-4 py-3 text-content placeholder:text-text-tertiary',
                   'focus:outline-none focus:ring-2 focus:ring-section-primary focus:border-transparent',
                   'transition-all duration-200 resize-none',
                   errors.bio && 'border-error ring-1 ring-error'
@@ -571,7 +571,7 @@ export default function EditProfilePage() {
                   type="date"
                   value={formData.dateOfBirth}
                   onChange={(e) => updateFormField('dateOfBirth', e.target.value)}
-                  className="w-full bg-[#2A2D3A] border border-hairline rounded-xl px-4 py-3 pl-12 text-content focus:outline-none focus:ring-2 focus:ring-section-primary focus:border-transparent"
+                  className="w-full bg-surface-elevated border border-hairline rounded-xl px-4 py-3 pl-12 text-content focus:outline-none focus:ring-2 focus:ring-section-primary focus:border-transparent"
                 />
               </div>
             </div>
@@ -694,7 +694,7 @@ export default function EditProfilePage() {
                 placeholder={t('profile.edit.professionalBioPlaceholder')}
                 rows={5}
                 maxLength={1000}
-                className="w-full bg-[#2A2D3A] border border-hairline rounded-xl px-4 py-3 text-content placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-section-primary focus:border-transparent transition-all duration-200 resize-none"
+                className="w-full bg-surface-elevated border border-hairline rounded-xl px-4 py-3 text-content placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-section-primary focus:border-transparent transition-all duration-200 resize-none"
               />
               <p className="text-xs text-text-tertiary mt-1 text-right">
                 {professionalData.professionalBio.length}/1000
@@ -718,7 +718,7 @@ export default function EditProfilePage() {
                   }));
                   setHasUnsavedChanges(true);
                 }}
-                className="w-full bg-[#2A2D3A] border border-hairline rounded-xl px-4 py-3 text-content focus:outline-none focus:ring-2 focus:ring-section-primary focus:border-transparent"
+                className="w-full bg-surface-elevated border border-hairline rounded-xl px-4 py-3 text-content focus:outline-none focus:ring-2 focus:ring-section-primary focus:border-transparent"
               />
             </div>
 
@@ -795,7 +795,7 @@ export default function EditProfilePage() {
                 placeholder={t('profile.edit.cancellationPolicyPlaceholder')}
                 rows={3}
                 maxLength={500}
-                className="w-full bg-[#2A2D3A] border border-hairline rounded-xl px-4 py-3 text-content placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-section-primary focus:border-transparent transition-all duration-200 resize-none"
+                className="w-full bg-surface-elevated border border-hairline rounded-xl px-4 py-3 text-content placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-section-primary focus:border-transparent transition-all duration-200 resize-none"
               />
               <p className="text-xs text-text-tertiary mt-1 text-right">
                 {professionalData.cancellationPolicy.length}/500

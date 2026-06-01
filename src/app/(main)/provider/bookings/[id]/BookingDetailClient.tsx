@@ -60,7 +60,7 @@ export default function BookingDetailClient() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="w-16 h-16 bg-[#2A2D3A] rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 bg-surface-elevated rounded-full flex items-center justify-center mx-auto mb-4">
             <Calendar className="w-8 h-8 text-gray-500" />
           </div>
           <h2 className="text-xl font-semibold text-content mb-2">{t('provider.bookingDetail.notFound')}</h2>
@@ -183,7 +183,7 @@ export default function BookingDetailClient() {
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Client Card */}
-          <div className="bg-[#2A2D3A] rounded-xl border border-hairline p-6">
+          <div className="bg-surface-elevated rounded-xl border border-hairline p-6">
             <h3 className="text-lg font-semibold text-content mb-4">{t('provider.bookingDetail.clientInfo')}</h3>
             <div className="flex items-start gap-4">
               {booking.clientPhotoUrl ? (
@@ -231,7 +231,7 @@ export default function BookingDetailClient() {
           </div>
 
           {/* Service Details */}
-          <div className="bg-[#2A2D3A] rounded-xl border border-hairline p-6">
+          <div className="bg-surface-elevated rounded-xl border border-hairline p-6">
             <h3 className="text-lg font-semibold text-content mb-4">{t('provider.bookingDetail.serviceDetails')}</h3>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -263,11 +263,11 @@ export default function BookingDetailClient() {
           </div>
 
           {/* Schedule */}
-          <div className="bg-[#2A2D3A] rounded-xl border border-hairline p-6">
+          <div className="bg-surface-elevated rounded-xl border border-hairline p-6">
             <h3 className="text-lg font-semibold text-content mb-4">{t('provider.bookingDetail.schedule')}</h3>
             <div className="space-y-4">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-lg bg-[#1A1D29] flex items-center justify-center">
+                <div className="w-12 h-12 rounded-lg bg-surface-input flex items-center justify-center">
                   <Calendar className="w-6 h-6 text-section-primary" />
                 </div>
                 <div>
@@ -276,7 +276,7 @@ export default function BookingDetailClient() {
                 </div>
               </div>
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-lg bg-[#1A1D29] flex items-center justify-center">
+                <div className="w-12 h-12 rounded-lg bg-surface-input flex items-center justify-center">
                   <Clock className="w-6 h-6 text-section-primary" />
                 </div>
                 <div>
@@ -291,16 +291,16 @@ export default function BookingDetailClient() {
 
           {/* Client Notes */}
           {booking.userNotes && (
-            <div className="bg-[#2A2D3A] rounded-xl border border-hairline p-6">
+            <div className="bg-surface-elevated rounded-xl border border-hairline p-6">
               <h3 className="text-lg font-semibold text-content mb-4">{t('provider.bookingDetail.clientNotes')}</h3>
-              <div className="bg-[#1A1D29] rounded-lg p-4">
+              <div className="bg-surface-input rounded-lg p-4">
                 <p className="text-gray-300">{booking.userNotes}</p>
               </div>
             </div>
           )}
 
           {/* Private Notes */}
-          <div className="bg-[#2A2D3A] rounded-xl border border-hairline p-6">
+          <div className="bg-surface-elevated rounded-xl border border-hairline p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-content">{t('provider.bookingDetail.privateNotes')}</h3>
               <Button variant="secondary" size="sm" onClick={() => setShowNotes(!showNotes)}>
@@ -314,7 +314,7 @@ export default function BookingDetailClient() {
                   value={privateNotes}
                   onChange={(e) => setPrivateNotes(e.target.value)}
                   placeholder={t('provider.bookingDetail.privateNotesPlaceholder')}
-                  className="w-full bg-[#1A1D29] border border-hairline rounded-lg px-4 py-3 text-content placeholder-gray-500 outline-none focus:border-section-primary min-h-[100px]"
+                  className="w-full bg-surface-input border border-hairline rounded-lg px-4 py-3 text-content placeholder-gray-500 outline-none focus:border-section-primary min-h-[100px]"
                 />
                 <div className="flex gap-2">
                   <Button size="sm">{t('provider.bookingDetail.saveNote')}</Button>
@@ -332,7 +332,7 @@ export default function BookingDetailClient() {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Payment Summary */}
-          <div className="bg-[#2A2D3A] rounded-xl border border-hairline p-6">
+          <div className="bg-surface-elevated rounded-xl border border-hairline p-6">
             <h3 className="text-lg font-semibold text-content mb-4">{t('provider.bookingDetail.paymentSummary')}</h3>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -380,7 +380,7 @@ export default function BookingDetailClient() {
           </div>
 
           {/* History */}
-          <div className="bg-[#2A2D3A] rounded-xl border border-hairline p-6">
+          <div className="bg-surface-elevated rounded-xl border border-hairline p-6">
             <h3 className="text-lg font-semibold text-content mb-4">{t('provider.bookingDetail.history')}</h3>
             <div className="space-y-4">
               <div className="flex items-start gap-3">

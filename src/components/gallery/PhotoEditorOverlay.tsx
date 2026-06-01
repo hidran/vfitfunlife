@@ -27,7 +27,7 @@ export function PhotoEditorOverlay({ title, onClose, children }: PhotoEditorOver
       aria-modal="true"
     >
       <div
-        className="w-full max-w-md rounded-2xl bg-[#1a1d29] p-5 shadow-xl"
+        className="w-full max-w-md rounded-2xl bg-surface-input p-5 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">

@@ -174,7 +174,7 @@ export default function RegisterPage() {
             <ChevronLeft className="h-5 w-5" />
             <span className="text-sm">{t('auth.common.backToLogin')}</span>
           </button>
-          <h1 className="text-3xl font-bold text-white mb-2">{t('auth.register.methodSelection.title')}</h1>
+          <h1 className="text-3xl font-bold text-content mb-2">{t('auth.register.methodSelection.title')}</h1>
           <p className="text-text-secondary">
             {t('auth.register.methodSelection.subtitle')}
           </p>
@@ -187,7 +187,7 @@ export default function RegisterPage() {
               onClick={() => setRegistrationMethod('email')}
               className={cn(
                 'w-full flex items-center gap-4 p-5 rounded-2xl border transition-all',
-                'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
+                'border-hairline bg-surface-2 hover:bg-surface-2 hover:border-white/20'
               )}
             >
               <div className="h-14 w-14 rounded-xl bg-section-primary/20 flex items-center justify-center">
@@ -203,10 +203,10 @@ export default function RegisterPage() {
               onClick={() => router.push('/auth/login')}
               className={cn(
                 'w-full flex items-center gap-4 p-5 rounded-2xl border transition-all',
-                'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
+                'border-hairline bg-surface-2 hover:bg-surface-2 hover:border-white/20'
               )}
             >
-              <div className="h-14 w-14 rounded-xl bg-white/10 flex items-center justify-center">
+              <div className="h-14 w-14 rounded-xl bg-surface-2 flex items-center justify-center">
                 <svg className="h-7 w-7" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                   <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -224,11 +224,11 @@ export default function RegisterPage() {
               onClick={() => router.push('/auth/login')}
               className={cn(
                 'w-full flex items-center gap-4 p-5 rounded-2xl border transition-all',
-                'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
+                'border-hairline bg-surface-2 hover:bg-surface-2 hover:border-white/20'
               )}
             >
-              <div className="h-14 w-14 rounded-xl bg-white/10 flex items-center justify-center">
-                <svg className="h-7 w-7 text-white" viewBox="0 0 24 24" fill="currentColor">
+              <div className="h-14 w-14 rounded-xl bg-surface-2 flex items-center justify-center">
+                <svg className="h-7 w-7 text-content" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.74 1.18 0 2.21-1.21 3.72-1.06 1.4.12 2.69.74 3.51 1.86-3.12 1.87-2.38 5.98.22 7.13-.57 1.5-1.31 2.99-2.53 4.3zM12.03 7.25c-.15-2.55 2.11-4.61 4.65-4.75.26 2.77-2.36 5.26-4.65 4.75z"/>
                 </svg>
               </div>
@@ -242,7 +242,7 @@ export default function RegisterPage() {
               onClick={() => router.push('/auth/login')}
               className={cn(
                 'w-full flex items-center gap-4 p-5 rounded-2xl border transition-all',
-                'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
+                'border-hairline bg-surface-2 hover:bg-surface-2 hover:border-white/20'
               )}
             >
               <div className="h-14 w-14 rounded-xl bg-green-500/20 flex items-center justify-center">
@@ -287,7 +287,7 @@ export default function RegisterPage() {
             <ChevronLeft className="h-5 w-5" />
             <span className="text-sm">{t('auth.common.back')}</span>
           </button>
-          <h1 className="text-3xl font-bold text-white mb-2">{t('auth.register.emailForm.title')}</h1>
+          <h1 className="text-3xl font-bold text-content mb-2">{t('auth.register.emailForm.title')}</h1>
           <p className="text-text-secondary">
             {t('auth.register.emailForm.subtitle')}
           </p>
@@ -321,14 +321,14 @@ export default function RegisterPage() {
                       <button
                         type="button"
                         onClick={() => router.push('/auth/login')}
-                        className="text-xs bg-white/10 hover:bg-white/15 px-3 py-1.5 rounded-full text-text-inverse transition-colors"
+                        className="text-xs bg-surface-2 hover:bg-white/15 px-3 py-1.5 rounded-full text-text-inverse transition-colors"
                       >
                         {t('auth.register.method.google.title')}
                       </button>
                       <button
                         type="button"
                         onClick={() => router.push('/auth/login')}
-                        className="text-xs bg-white/10 hover:bg-white/15 px-3 py-1.5 rounded-full text-text-inverse transition-colors"
+                        className="text-xs bg-surface-2 hover:bg-white/15 px-3 py-1.5 rounded-full text-text-inverse transition-colors"
                       >
                         {t('auth.register.method.phone.title')}
                       </button>
@@ -458,7 +458,7 @@ export default function RegisterPage() {
                       ${
                         preferredSection === section.id
                           ? `bg-gradient-to-br ${section.color} text-white shadow-lg scale-105`
-                          : 'bg-white/5 text-text-secondary border border-white/10 hover:bg-white/10'
+                          : 'bg-surface-2 text-text-secondary border border-hairline hover:bg-surface-2'
                       }
                     `}
                   >
@@ -477,7 +477,7 @@ export default function RegisterPage() {
             />
 
             {/* Terms & Privacy */}
-            <div className="flex items-start gap-3 p-4 bg-white/5 rounded-lg">
+            <div className="flex items-start gap-3 p-4 bg-surface-2 rounded-lg">
               <Checkbox
                 id="terms"
                 checked={acceptTerms}
@@ -525,7 +525,7 @@ export default function RegisterPage() {
       <LanguageSwitcher variant="menu" className="absolute right-4 top-4 z-10" />
       {/* Header */}
       <div className="px-6 pt-12 pb-6">
-        <h1 className="text-3xl font-bold text-white mb-2">{t('auth.register.socialForm.title')}</h1>
+        <h1 className="text-3xl font-bold text-content mb-2">{t('auth.register.socialForm.title')}</h1>
         <p className="text-text-secondary">
           {t('auth.register.socialForm.subtitle')}
         </p>
@@ -545,7 +545,7 @@ export default function RegisterPage() {
           <div className="flex justify-center">
             <button
               type="button"
-              className="w-24 h-24 rounded-full bg-white/10 border-2 border-white/20 flex items-center justify-center hover:bg-white/15 transition-colors"
+              className="w-24 h-24 rounded-full bg-surface-2 border-2 border-white/20 flex items-center justify-center hover:bg-white/15 transition-colors"
             >
               <Camera className="w-8 h-8 text-text-secondary" />
             </button>
@@ -618,7 +618,7 @@ export default function RegisterPage() {
                     ${
                       preferredSection === section.id
                         ? `bg-gradient-to-br ${section.color} text-white shadow-lg scale-105`
-                        : 'bg-white/5 text-text-secondary border border-white/10 hover:bg-white/10'
+                        : 'bg-surface-2 text-text-secondary border border-hairline hover:bg-surface-2'
                     }
                   `}
                 >
@@ -637,7 +637,7 @@ export default function RegisterPage() {
           />
 
           {/* Terms & Privacy */}
-          <div className="flex items-start gap-3 p-4 bg-white/5 rounded-lg">
+          <div className="flex items-start gap-3 p-4 bg-surface-2 rounded-lg">
             <Checkbox
               id="terms"
               checked={acceptTerms}

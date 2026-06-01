@@ -72,7 +72,7 @@ export default function ProviderSchedulePage() {
       {/* Event Detail Modal */}
       {selectedEvent && (
         <Modal onClose={() => setSelectedEvent(null)}>
-          <div className="bg-[#2A2D3A] rounded-xl p-6 max-w-md w-full mx-4">
+          <div className="bg-surface-elevated rounded-xl p-6 max-w-md w-full mx-4">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-semibold text-content">
                 {selectedEvent.type === 'blocked' ? t('provider.schedule.modal.blockedTime') : t('provider.schedule.modal.appointment')}
@@ -101,7 +101,7 @@ export default function ProviderSchedulePage() {
               {selectedEvent.type === 'booking' && (
                 <>
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[#1A1D29] flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-full bg-surface-input flex items-center justify-center">
                       <User className="w-5 h-5 text-gray-400" />
                     </div>
                     <div>
@@ -111,7 +111,7 @@ export default function ProviderSchedulePage() {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[#1A1D29] flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-full bg-surface-input flex items-center justify-center">
                       <FileText className="w-5 h-5 text-gray-400" />
                     </div>
                     <div>
@@ -122,7 +122,7 @@ export default function ProviderSchedulePage() {
 
                   {selectedEvent.location && (
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-[#1A1D29] flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-full bg-surface-input flex items-center justify-center">
                         <MapPin className="w-5 h-5 text-gray-400" />
                       </div>
                       <div>
@@ -180,7 +180,7 @@ export default function ProviderSchedulePage() {
       {/* Date Selection Modal */}
       {selectedDate && !selectedEvent && (
         <Modal onClose={() => setSelectedDate(null)}>
-          <div className="bg-[#2A2D3A] rounded-xl p-6 max-w-md w-full mx-4">
+          <div className="bg-surface-elevated rounded-xl p-6 max-w-md w-full mx-4">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-semibold text-content">
                 {selectedDate.toLocaleDateString(toLocaleTag(locale), {

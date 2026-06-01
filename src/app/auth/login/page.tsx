@@ -201,12 +201,12 @@ export default function LoginPage() {
         <div className="flex-1 flex flex-col items-center justify-center px-6 pt-12 pb-8">
           <div className="w-24 h-24 mb-6 relative">
             <div className="absolute inset-0 bg-vlife-primary/20 rounded-full blur-xl" />
-            <div className="relative w-full h-full bg-white/5 border border-white/10 rounded-full flex items-center justify-center shadow-[0_0_24px_rgba(0,230,118,0.25)]">
+            <div className="relative w-full h-full bg-surface-2 border border-hairline rounded-full flex items-center justify-center shadow-[0_0_24px_rgba(0,230,118,0.25)]">
               <span className="text-4xl font-bold text-vlife-primary">V</span>
             </div>
           </div>
 
-          <h1 className="text-3xl font-bold text-white mb-2">{t('auth.login.welcomeTitle')}</h1>
+          <h1 className="text-3xl font-bold text-content mb-2">{t('auth.login.welcomeTitle')}</h1>
           <p className="text-text-secondary text-center mb-8">
             {t('auth.login.welcomeSubtitle')}
           </p>
@@ -224,7 +224,7 @@ export default function LoginPage() {
               onClick={() => setLoginMethod('phone')}
               className={cn(
                 'w-full flex items-center gap-4 p-4 rounded-2xl border transition-all',
-                'border-white/10 bg-white/5 hover:bg-white/10 hover:border-vlife-primary/30'
+                'border-hairline bg-surface-2 hover:bg-surface-2 hover:border-vlife-primary/30'
               )}
             >
               <div className="h-12 w-12 rounded-xl bg-section-primary/20 flex items-center justify-center">
@@ -240,7 +240,7 @@ export default function LoginPage() {
               onClick={() => setLoginMethod('email')}
               className={cn(
                 'w-full flex items-center gap-4 p-4 rounded-2xl border transition-all',
-                'border-white/10 bg-white/5 hover:bg-white/10 hover:border-vlife-primary/30'
+                'border-hairline bg-surface-2 hover:bg-surface-2 hover:border-vlife-primary/30'
               )}
             >
               <div className="h-12 w-12 rounded-xl bg-section-primary/20 flex items-center justify-center">
@@ -259,7 +259,7 @@ export default function LoginPage() {
               <Button
                 type="button"
                 variant="outline"
-                className="w-full bg-white/5 border-white/10 hover:bg-white/10 text-white"
+                className="w-full bg-surface-2 border-hairline hover:bg-surface-2 text-content"
                 onClick={handleGoogleLogin}
                 disabled={isLoading}
               >
@@ -270,7 +270,7 @@ export default function LoginPage() {
               <Button
                 type="button"
                 variant="outline"
-                className="w-full bg-white/5 border-white/10 hover:bg-white/10 text-white"
+                className="w-full bg-surface-2 border-hairline hover:bg-surface-2 text-content"
                 onClick={handleAppleLogin}
                 disabled={isLoading}
               >
@@ -330,7 +330,7 @@ export default function LoginPage() {
 
         {/* Content */}
         <div className="flex-1 flex flex-col items-center justify-center px-6 pt-8 pb-8">
-          <h1 className="text-2xl font-bold text-white mb-2">{t('auth.login.phone.title')}</h1>
+          <h1 className="text-2xl font-bold text-content mb-2">{t('auth.login.phone.title')}</h1>
           <p className="text-text-secondary text-center mb-8">
             {t('auth.login.phone.subtitle')}
           </p>
@@ -462,12 +462,12 @@ export default function LoginPage() {
               <div className="flex flex-col items-center mb-8">
                 <div className="relative mb-6">
                   <div className="absolute inset-0 rounded-full bg-vlife-primary/25 blur-xl" />
-                  <div className="relative flex h-20 w-20 items-center justify-center rounded-full border border-white/10 bg-white/5 shadow-[0_0_24px_rgba(0,230,118,0.25)]">
+                  <div className="relative flex h-20 w-20 items-center justify-center rounded-full border border-hairline bg-surface-2 shadow-[0_0_24px_rgba(0,230,118,0.25)]">
                     <span className="text-4xl font-bold text-vlife-primary">V</span>
                   </div>
                 </div>
 
-                <h1 className="text-3xl font-display font-bold text-white text-center">
+                <h1 className="text-3xl font-display font-bold text-content text-center">
                   {t('auth.login.email.title')}
                 </h1>
                 <p className="mt-2 text-sm text-text-secondary text-center">
@@ -495,7 +495,7 @@ export default function LoginPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     leftIcon={<Mail className="h-5 w-5" />}
-                    className="h-14 rounded-full border-white/10 bg-white/[0.04] placeholder:text-text-tertiary/80"
+                    className="h-14 rounded-full border-hairline bg-white/[0.04] placeholder:text-text-tertiary/80"
                     disabled={isLoading}
                     required
                   />
@@ -513,7 +513,7 @@ export default function LoginPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       leftIcon={<Lock className="h-5 w-5" />}
-                      className="h-14 rounded-full border-white/10 bg-white/[0.04] pr-24 placeholder:text-text-tertiary/80"
+                      className="h-14 rounded-full border-hairline bg-white/[0.04] pr-24 placeholder:text-text-tertiary/80"
                       disabled={isLoading}
                       required
                       minLength={6}
@@ -552,7 +552,7 @@ export default function LoginPage() {
                   type="button"
                   onClick={handleGoogleLogin}
                   disabled={isLoading}
-                  className="h-14 w-14 rounded-full border border-white/10 bg-white/[0.04] flex items-center justify-center transition-colors hover:bg-white/10 disabled:opacity-50"
+                  className="h-14 w-14 rounded-full border border-hairline bg-white/[0.04] flex items-center justify-center transition-colors hover:bg-surface-2 disabled:opacity-50"
                   aria-label={t('auth.login.continueWithGoogle')}
                 >
                   <FcGoogle className="h-6 w-6" />
@@ -561,16 +561,16 @@ export default function LoginPage() {
                   type="button"
                   onClick={handleAppleLogin}
                   disabled={isLoading}
-                  className="h-14 w-14 rounded-full border border-white/10 bg-white/[0.04] flex items-center justify-center transition-colors hover:bg-white/10 disabled:opacity-50"
+                  className="h-14 w-14 rounded-full border border-hairline bg-white/[0.04] flex items-center justify-center transition-colors hover:bg-surface-2 disabled:opacity-50"
                   aria-label={t('auth.login.continueWithApple')}
                 >
-                  <Apple className="h-6 w-6 text-white" />
+                  <Apple className="h-6 w-6 text-content" />
                 </button>
                 <button
                   type="button"
                   onClick={() => setLoginMethod('phone')}
                   disabled={isLoading}
-                  className="h-14 rounded-full border border-white/10 bg-white/[0.04] px-4 text-sm font-medium text-text-inverse transition-colors hover:bg-white/10 disabled:opacity-50"
+                  className="h-14 rounded-full border border-hairline bg-white/[0.04] px-4 text-sm font-medium text-text-inverse transition-colors hover:bg-surface-2 disabled:opacity-50"
                 >
                   {t('auth.login.method.phone.title')}
                 </button>

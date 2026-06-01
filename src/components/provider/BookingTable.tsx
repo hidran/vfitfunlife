@@ -79,7 +79,7 @@ export function BookingTable({
 
   if (loading) {
     return (
-      <div className="bg-[#2A2D3A] rounded-xl border border-white/5 p-8">
+      <div className="bg-surface-elevated rounded-xl border border-white/5 p-8">
         <div className="flex items-center justify-center">
           <div className="w-8 h-8 border-2 border-white/20 border-t-section-primary rounded-full animate-spin" />
         </div>
@@ -89,8 +89,8 @@ export function BookingTable({
 
   if (bookings.length === 0) {
     return (
-      <div className="bg-[#2A2D3A] rounded-xl border border-white/5 p-12 text-center">
-        <div className="w-16 h-16 bg-[#1A1D29] rounded-full flex items-center justify-center mx-auto mb-4">
+      <div className="bg-surface-elevated rounded-xl border border-white/5 p-12 text-center">
+        <div className="w-16 h-16 bg-surface-input rounded-full flex items-center justify-center mx-auto mb-4">
           <Calendar className="w-8 h-8 text-gray-500" />
         </div>
         <h3 className="text-lg font-medium text-white mb-2">{t('provider.bookingTable.empty.title')}</h3>
@@ -100,11 +100,11 @@ export function BookingTable({
   }
 
   return (
-    <div className="bg-[#2A2D3A] rounded-xl border border-white/5 overflow-hidden">
+    <div className="bg-surface-elevated rounded-xl border border-white/5 overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-white/5 bg-[#1A1D29]/50">
+            <tr className="border-b border-white/5 bg-surface-input/50">
               {onSelect && (
                 <th className="w-12 px-4 py-3">
                   <input
@@ -135,7 +135,7 @@ export function BookingTable({
                 <tr
                   key={booking.id}
                   className={cn(
-                    'hover:bg-[#1A1D29]/30 transition-colors',
+                    'hover:bg-surface-input/30 transition-colors',
                     isSelected && 'bg-section-primary/5'
                   )}
                 >
@@ -161,7 +161,7 @@ export function BookingTable({
                           className="w-10 h-10 rounded-full object-cover"
                         />
                       ) : (
-                        <div className="w-10 h-10 rounded-full bg-[#1A1D29] flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-full bg-surface-input flex items-center justify-center">
                           <User className="w-5 h-5 text-gray-500" />
                         </div>
                       )}
@@ -241,7 +241,7 @@ export function BookingTable({
                         </button>
                         
                         {openMenuId === booking.id && (
-                          <div className="absolute right-0 mt-1 w-48 bg-[#1A1D29] rounded-lg border border-white/10 shadow-xl z-10 py-1">
+                          <div className="absolute right-0 mt-1 w-48 bg-surface-input rounded-lg border border-white/10 shadow-xl z-10 py-1">
                             <button
                               onClick={() => {
                                 onView?.(booking.id);

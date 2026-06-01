@@ -145,7 +145,7 @@ export function BookingCard({
   return (
     <div
       className={cn(
-        'bg-[#2A2D3A]/50 rounded-2xl overflow-hidden',
+        'bg-surface-elevated/50 rounded-2xl overflow-hidden',
         className
       )}
     >

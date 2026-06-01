@@ -277,7 +277,7 @@ export default function ProviderBookingPage() {
                 return (
                   <div
                     key={review.id}
-                    className="bg-[#2A2D3A]/50 rounded-xl p-4"
+                    className="bg-surface-elevated/50 rounded-xl p-4"
                   >
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-medium text-white">{review.userName}</span>
@@ -302,7 +302,7 @@ export default function ProviderBookingPage() {
               exit={{ opacity: 0, y: -10 }}
               className="space-y-4"
             >
-              <div className="bg-[#2A2D3A]/50 rounded-xl p-4">
+              <div className="bg-surface-elevated/50 rounded-xl p-4">
                 <h3 className="font-semibold text-white mb-2">{t('booking.about.bio')}</h3>
                 <p className="text-text-secondary text-sm leading-relaxed">
               Personal trainer certificato CONI con 8 anni di esperienza. Specializzato in 
@@ -312,7 +312,7 @@ export default function ProviderBookingPage() {
                 </p>
               </div>
 
-              <div className="bg-[#2A2D3A]/50 rounded-xl p-4">
+              <div className="bg-surface-elevated/50 rounded-xl p-4">
                 <h3 className="font-semibold text-white mb-2">{t('booking.about.education')}</h3>
                 <ul className="space-y-2 text-sm text-text-secondary">
                   <li className="flex items-start gap-2">
@@ -341,7 +341,7 @@ export default function ProviderBookingPage() {
             initial={{ y: 100 }}
             animate={{ y: 0 }}
             exit={{ y: 100 }}
-            className="fixed bottom-0 left-0 right-0 bg-[#2A2D3A] border-t border-white/10 p-4 safe-area-pb"
+            className="fixed bottom-0 left-0 right-0 bg-surface-elevated border-t border-white/10 p-4 safe-area-pb"
           >
             <div className="flex items-center justify-between gap-4">
               <div>

@@ -260,7 +260,7 @@ export function DataTable<T>({
                                 className="fixed inset-0 z-10"
                                 onClick={() => setActionMenuOpen(null)}
                               />
-                              <div className="absolute right-0 top-full mt-1 w-36 bg-[#2A2D3A] rounded-xl border border-hairline shadow-xl z-20 py-1">
+                              <div className="absolute right-0 top-full mt-1 w-36 bg-surface-elevated rounded-xl border border-hairline shadow-xl z-20 py-1">
                                 {actions.view && (
                                   <button
                                     onClick={() => {

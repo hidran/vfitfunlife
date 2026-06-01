@@ -134,7 +134,7 @@ export function PaymentMethodSelector({
       {/* Add Card Modal - Simplified placeholder */}
       {showAddCard && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#2A2D3A] rounded-2xl p-6 w-full max-w-md">
+          <div className="bg-surface-elevated rounded-2xl p-6 w-full max-w-md">
             <h3 className="text-lg font-semibold text-white mb-4">
               {t('booking.payment.addCardTitle')}
             </h3>

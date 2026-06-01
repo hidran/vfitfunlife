@@ -135,7 +135,7 @@ export function FilterBar({
                 <select
                   value={filter.value}
                   onChange={(e) => filter.onChange(e.target.value)}
-                  className="w-full px-3 py-2 bg-[#2A2D3A] border border-hairline rounded-lg text-content text-sm focus:outline-none focus:border-[#00C9FF]/50"
+                  className="w-full px-3 py-2 bg-surface-elevated border border-hairline rounded-lg text-content text-sm focus:outline-none focus:border-[#00C9FF]/50"
                 >
                   {filter.options.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -163,7 +163,7 @@ export function FilterBar({
                           dateRange.to
                         )
                       }
-                      className="w-full pl-9 pr-3 py-2 bg-[#2A2D3A] border border-hairline rounded-lg text-content text-sm focus:outline-none focus:border-[#00C9FF]/50"
+                      className="w-full pl-9 pr-3 py-2 bg-surface-elevated border border-hairline rounded-lg text-content text-sm focus:outline-none focus:border-[#00C9FF]/50"
                     />
                   </div>
                   <span className="text-content-faint">{t('admin.filter.dateTo')}</span>
@@ -178,7 +178,7 @@ export function FilterBar({
                           e.target.value ? new Date(e.target.value) : null
                         )
                       }
-                      className="w-full pl-9 pr-3 py-2 bg-[#2A2D3A] border border-hairline rounded-lg text-content text-sm focus:outline-none focus:border-[#00C9FF]/50"
+                      className="w-full pl-9 pr-3 py-2 bg-surface-elevated border border-hairline rounded-lg text-content text-sm focus:outline-none focus:border-[#00C9FF]/50"
                     />
                   </div>
                 </div>

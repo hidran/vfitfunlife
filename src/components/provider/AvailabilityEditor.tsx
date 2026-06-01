@@ -133,7 +133,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
   };
 
   return (
-    <div className="bg-[#2A2D3A] rounded-xl border border-white/5 overflow-hidden">
+    <div className="bg-surface-elevated rounded-xl border border-white/5 overflow-hidden">
       {/* Tabs */}
       <div className="flex border-b border-white/5">
         <button
@@ -178,7 +178,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
               <div
                 key={key}
                 className={cn(
-                  'bg-[#1A1D29] rounded-lg border transition-all',
+                  'bg-surface-input rounded-lg border transition-all',
                   isExpanded ? 'border-section-primary/50' : 'border-white/5'
                 )}
               >
@@ -225,7 +225,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                   <div className="px-4 pb-4 space-y-3">
                     {daySchedule.slots.map((slot, index) => (
                       <div key={index} className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 bg-[#2A2D3A] rounded-lg px-3 py-2">
+                        <div className="flex items-center gap-2 bg-surface-elevated rounded-lg px-3 py-2">
                           <select
                             value={slot.start}
                             onChange={(e) => updateTimeSlot(key, index, 'start', e.target.value)}
@@ -239,7 +239,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                         
                         <span className="text-gray-500">{t('provider.availabilityEditor.slotTo')}</span>
 
-                        <div className="flex items-center gap-2 bg-[#2A2D3A] rounded-lg px-3 py-2">
+                        <div className="flex items-center gap-2 bg-surface-elevated rounded-lg px-3 py-2">
                           <select
                             value={slot.end}
                             onChange={(e) => updateTimeSlot(key, index, 'end', e.target.value)}
@@ -296,7 +296,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                 type="date"
                 value={newOverrideDate}
                 onChange={(e) => setNewOverrideDate(e.target.value)}
-                className="w-full bg-[#1A1D29] border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-section-primary"
+                className="w-full bg-surface-input border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-section-primary"
               />
             </div>
             <Button onClick={addDateOverride} disabled={!newOverrideDate}>
@@ -318,7 +318,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
               {localSettings.dateOverrides.map((override) => (
                 <div
                   key={override.id}
-                  className="bg-[#1A1D29] rounded-lg border border-white/5 p-4"
+                  className="bg-surface-input rounded-lg border border-white/5 p-4"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -358,7 +358,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                             <div key={index} className="flex items-center gap-2">
                               <select
                                 value={slot.start}
-                                className="bg-[#2A2D3A] rounded px-2 py-1 text-sm text-white outline-none"
+                                className="bg-surface-elevated rounded px-2 py-1 text-sm text-white outline-none"
                               >
                                 {TIME_OPTIONS.map(time => (
                                   <option key={time} value={time}>{time}</option>
@@ -367,7 +367,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                               <span className="text-gray-500">{t('provider.availabilityEditor.slotTo')}</span>
                               <select
                                 value={slot.end}
-                                className="bg-[#2A2D3A] rounded px-2 py-1 text-sm text-white outline-none"
+                                className="bg-surface-elevated rounded px-2 py-1 text-sm text-white outline-none"
                               >
                                 {TIME_OPTIONS.map(time => (
                                   <option key={time} value={time}>{time}</option>
@@ -387,7 +387,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                         placeholder={t('provider.availabilityEditor.override.reason')}
                         value={override.reason || ''}
                         onChange={(e) => updateDateOverride(override.id, { reason: e.target.value })}
-                        className="mt-3 w-full bg-[#2A2D3A] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 outline-none focus:border-section-primary"
+                        className="mt-3 w-full bg-surface-elevated border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 outline-none focus:border-section-primary"
                       />
                     </div>
                     
@@ -415,7 +415,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
             <select
               value={localSettings.bufferMinutes}
               onChange={(e) => setLocalSettings(prev => ({ ...prev, bufferMinutes: parseInt(e.target.value) }))}
-              className="w-full bg-[#1A1D29] border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-section-primary"
+              className="w-full bg-surface-input border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-section-primary"
             >
               <option value={0}>{t('provider.availabilityEditor.settings.bufferNone')}</option>
               <option value={5}>{t('provider.availabilityEditor.settings.buffer5')}</option>
@@ -430,7 +430,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
             <select
               value={localSettings.minAdvanceNoticeHours}
               onChange={(e) => setLocalSettings(prev => ({ ...prev, minAdvanceNoticeHours: parseInt(e.target.value) }))}
-              className="w-full bg-[#1A1D29] border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-section-primary"
+              className="w-full bg-surface-input border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-section-primary"
             >
               <option value={0}>{t('provider.availabilityEditor.settings.sameDay')}</option>
               <option value={1}>1 hour</option>
@@ -450,7 +450,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
               max={50}
               value={localSettings.maxBookingsPerDay}
               onChange={(e) => setLocalSettings(prev => ({ ...prev, maxBookingsPerDay: parseInt(e.target.value) || 1 }))}
-              className="w-full bg-[#1A1D29] border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-section-primary"
+              className="w-full bg-surface-input border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-section-primary"
             />
           </div>
           
@@ -459,7 +459,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
             <select
               value={localSettings.timezone}
               onChange={(e) => setLocalSettings(prev => ({ ...prev, timezone: e.target.value }))}
-              className="w-full bg-[#1A1D29] border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-section-primary"
+              className="w-full bg-surface-input border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-section-primary"
             >
               <option value="Europe/Rome">Europe/Rome (CET/CEST)</option>
               <option value="Europe/London">Europe/London (GMT/BST)</option>

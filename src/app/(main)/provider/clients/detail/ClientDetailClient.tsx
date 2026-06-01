@@ -100,7 +100,7 @@ export default function ClientDetailClient() {
       </Link>
 
       {/* Profile Header */}
-      <div className="bg-[#2A2D3A] rounded-xl border border-hairline p-6">
+      <div className="bg-surface-elevated rounded-xl border border-hairline p-6">
         <div className="flex flex-col sm:flex-row items-start gap-6">
           {client.photoUrl ? (
             <Image
@@ -204,7 +204,7 @@ export default function ClientDetailClient() {
         {activeTab === 'overview' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Notes */}
-            <div className="bg-[#2A2D3A] rounded-xl border border-hairline p-6">
+            <div className="bg-surface-elevated rounded-xl border border-hairline p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-content">{t('provider.clientDetail.notes.title')}</h3>
                 <Button
@@ -225,7 +225,7 @@ export default function ClientDetailClient() {
                   <textarea
                     value={editedNotes}
                     onChange={(e) => setEditedNotes(e.target.value)}
-                    className="w-full bg-[#1A1D29] border border-hairline rounded-lg px-4 py-3 text-content placeholder-gray-500 outline-none focus:border-section-primary min-h-[150px]"
+                    className="w-full bg-surface-input border border-hairline rounded-lg px-4 py-3 text-content placeholder-gray-500 outline-none focus:border-section-primary min-h-[150px]"
                   />
                   <Button onClick={handleSaveNotes} size="sm">
                     <Save className="w-4 h-4 mr-2" />
@@ -240,13 +240,13 @@ export default function ClientDetailClient() {
             </div>
 
             {/* Recent Activity */}
-            <div className="bg-[#2A2D3A] rounded-xl border border-hairline p-6">
+            <div className="bg-surface-elevated rounded-xl border border-hairline p-6">
               <h3 className="text-lg font-semibold text-content mb-4">{t('provider.clientDetail.recentActivity')}</h3>
               <div className="space-y-4">
                 {bookingHistory.slice(0, 3).map((entry) => (
                   <div
                     key={entry.booking.id}
-                    className="flex items-center justify-between p-3 bg-[#1A1D29] rounded-lg"
+                    className="flex items-center justify-between p-3 bg-surface-input rounded-lg"
                   >
                     <div>
                       <p className="font-medium text-content">{entry.serviceName}</p>
@@ -266,7 +266,7 @@ export default function ClientDetailClient() {
         )}
 
         {activeTab === 'history' && (
-          <div className="bg-[#2A2D3A] rounded-xl border border-hairline overflow-hidden">
+          <div className="bg-surface-elevated rounded-xl border border-hairline overflow-hidden">
             <div className="p-6 border-b border-hairline">
               <h3 className="text-lg font-semibold text-content">{t('provider.clientDetail.bookingHistory')}</h3>
             </div>
@@ -274,10 +274,10 @@ export default function ClientDetailClient() {
               {bookingHistory.map((entry) => (
                 <div
                   key={entry.booking.id}
-                  className="flex items-center justify-between p-4 hover:bg-[#1A1D29]/30"
+                  className="flex items-center justify-between p-4 hover:bg-surface-input/30"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-lg bg-[#1A1D29] flex items-center justify-center">
+                    <div className="w-12 h-12 rounded-lg bg-surface-input flex items-center justify-center">
                       <Calendar className="w-6 h-6 text-section-primary" />
                     </div>
                     <div>
@@ -298,7 +298,7 @@ export default function ClientDetailClient() {
         )}
 
         {activeTab === 'notes' && (
-          <div className="bg-[#2A2D3A] rounded-xl border border-hairline p-6">
+          <div className="bg-surface-elevated rounded-xl border border-hairline p-6">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold text-content">{t('provider.clientDetail.allNotes')}</h3>
               <Button variant="secondary" size="sm">
@@ -308,7 +308,7 @@ export default function ClientDetailClient() {
             </div>
 
             <div className="space-y-4">
-              <div className="bg-[#1A1D29] rounded-lg p-4">
+              <div className="bg-surface-input rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-gray-400">January 15, 2024</span>
                   <div className="flex gap-2">
@@ -325,7 +325,7 @@ export default function ClientDetailClient() {
                 </p>
               </div>
 
-              <div className="bg-[#1A1D29] rounded-lg p-4">
+              <div className="bg-surface-input rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-gray-400">January 10, 2024</span>
                   <div className="flex gap-2">

@@ -59,7 +59,7 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
   return (
     <div className="flex min-h-[calc(100vh-64px)]">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:block w-64 bg-[#1A1D29] border-r border-hairline">
+      <aside className="hidden lg:block w-64 bg-background-dark border-r border-hairline">
         <div className="p-6">
           <h2 className="text-lg font-semibold text-content">{t('provider.layout.title')}</h2>
           <p className="text-sm text-gray-400">{t('provider.layout.subtitle')}</p>
@@ -90,7 +90,7 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
       </aside>
 
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-16 left-0 right-0 z-30 bg-[#1A1D29] border-b border-hairline">
+      <div className="lg:hidden fixed top-16 left-0 right-0 z-30 bg-background-dark border-b border-hairline">
         <div className="flex items-center justify-between p-4">
           <h2 className="text-lg font-semibold text-content">{t('provider.layout.title')}</h2>
           <button

@@ -65,7 +65,7 @@ export function EarningsChart({ data, className }: EarningsChartProps) {
   };
 
   return (
-    <div className={cn('bg-[#2A2D3A] rounded-xl border border-white/5 p-6', className)}>
+    <div className={cn('bg-surface-elevated rounded-xl border border-white/5 p-6', className)}>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
@@ -76,7 +76,7 @@ export function EarningsChart({ data, className }: EarningsChartProps) {
         </div>
         
         <div className="flex items-center gap-2">
-          <div className="flex bg-[#1A1D29] rounded-lg p-1">
+          <div className="flex bg-surface-input rounded-lg p-1">
             {(['7d', '30d', '90d', '1y'] as TimeRange[]).map((range) => (
               <button
                 key={range}
@@ -96,7 +96,7 @@ export function EarningsChart({ data, className }: EarningsChartProps) {
             ))}
           </div>
           
-          <div className="flex bg-[#1A1D29] rounded-lg p-1">
+          <div className="flex bg-surface-input rounded-lg p-1">
             <button
               onClick={() => setChartType('line')}
               className={cn(
@@ -121,7 +121,7 @@ export function EarningsChart({ data, className }: EarningsChartProps) {
 
       {/* Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="bg-[#1A1D29] rounded-lg p-4">
+        <div className="bg-surface-input rounded-lg p-4">
           <div className="flex items-center gap-2 text-gray-400 text-sm mb-1">
             <DollarSign className="w-4 h-4" />
             {t('provider.earningsChart.stat.totalEarnings')}
@@ -144,7 +144,7 @@ export function EarningsChart({ data, className }: EarningsChartProps) {
           </div>
         </div>
         
-        <div className="bg-[#1A1D29] rounded-lg p-4">
+        <div className="bg-surface-input rounded-lg p-4">
           <div className="flex items-center gap-2 text-gray-400 text-sm mb-1">
             <BarChart3 className="w-4 h-4" />
             {t('provider.earningsChart.stat.totalBookings')}
@@ -152,7 +152,7 @@ export function EarningsChart({ data, className }: EarningsChartProps) {
           <p className="text-2xl font-bold text-white">{stats.totalBookings}</p>
         </div>
         
-        <div className="bg-[#1A1D29] rounded-lg p-4">
+        <div className="bg-surface-input rounded-lg p-4">
           <div className="flex items-center gap-2 text-gray-400 text-sm mb-1">
             <DollarSign className="w-4 h-4" />
             {t('provider.earningsChart.stat.avgPerBooking')}
@@ -182,7 +182,7 @@ export function EarningsChart({ data, className }: EarningsChartProps) {
                 >
                   {/* Tooltip */}
                   <div className="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                    <div className="bg-[#1A1D29] rounded-lg border border-white/10 p-2 text-xs whitespace-nowrap">
+                    <div className="bg-surface-input rounded-lg border border-white/10 p-2 text-xs whitespace-nowrap">
                       <p className="text-gray-400">{formatDate(item.date)}</p>
                       <p className="text-green-400 font-medium">
                         €{item.earnings.toFixed(2)}

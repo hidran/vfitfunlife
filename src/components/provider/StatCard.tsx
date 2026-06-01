@@ -29,7 +29,7 @@ export function StatCard({
     <div
       onClick={onClick}
       className={cn(
-        'bg-[#2A2D3A] rounded-xl p-5 border border-white/5',
+        'bg-surface-elevated rounded-xl p-5 border border-white/5',
         'transition-all duration-200',
         onClick && 'cursor-pointer hover:bg-[#3A3D4A] hover:border-white/10',
         className

@@ -65,7 +65,7 @@ export default function ProviderClientsPage() {
             placeholder={t('provider.clients.search.placeholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#2A2D3A] border border-hairline rounded-lg pl-10 pr-4 py-2.5 text-content placeholder-gray-500 outline-none focus:border-section-primary"
+            className="w-full bg-surface-elevated border border-hairline rounded-lg pl-10 pr-4 py-2.5 text-content placeholder-gray-500 outline-none focus:border-section-primary"
           />
         </div>
       </div>
@@ -76,7 +76,7 @@ export default function ProviderClientsPage() {
           <Link
             key={client.id}
             href={`/provider/clients/detail?id=${client.id}`}
-            className="bg-[#2A2D3A] rounded-xl border border-hairline p-5 hover:border-section-primary/50 transition-colors group"
+            className="bg-surface-elevated rounded-xl border border-hairline p-5 hover:border-section-primary/50 transition-colors group"
           >
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-4">

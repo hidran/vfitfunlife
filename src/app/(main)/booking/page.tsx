@@ -90,7 +90,7 @@ export default function BookingPage() {
             <h1 className="text-2xl font-display font-bold text-text-inverse">
               {t('booking.page.title')}
             </h1>
-            <div className="flex items-center gap-2 bg-[#2A2D3A] rounded-lg p-1">
+            <div className="flex items-center gap-2 bg-surface-elevated rounded-lg p-1">
               <button
                 onClick={() => setViewMode('list')}
                 className={cn(
@@ -143,7 +143,7 @@ export default function BookingPage() {
                 'flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors',
                 !searchFilters.category
                   ? 'bg-[var(--section-primary)] text-white'
-                  : 'bg-[#2A2D3A] text-text-secondary hover:text-content'
+                  : 'bg-surface-elevated text-text-secondary hover:text-content'
               )}
             >
               {t('booking.category.all')}
@@ -156,7 +156,7 @@ export default function BookingPage() {
                   'flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5',
                   searchFilters.category === cat.name
                     ? 'bg-[var(--section-primary)] text-white'
-                    : 'bg-[#2A2D3A] text-text-secondary hover:text-content'
+                    : 'bg-surface-elevated text-text-secondary hover:text-content'
                 )}
               >
                 <span>{cat.icon}</span>
@@ -187,7 +187,7 @@ export default function BookingPage() {
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden border-b border-hairline"
           >
-            <div className="p-4 bg-[#2A2D3A]/50 space-y-4">
+            <div className="p-4 bg-surface-elevated/50 space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-content flex items-center gap-2">
                   <SlidersHorizontal className="w-4 h-4" />
@@ -236,7 +236,7 @@ export default function BookingPage() {
                         'flex items-center gap-1 px-3 py-2 rounded-lg text-sm transition-colors',
                         searchFilters.rating === rating
                           ? 'bg-[var(--section-primary)] text-white'
-                          : 'bg-[#2A2D3A] text-text-secondary hover:text-content'
+                          : 'bg-surface-elevated text-text-secondary hover:text-content'
                       )}
                     >
                       <Star className="w-4 h-4 fill-current" />
@@ -268,7 +268,7 @@ export default function BookingPage() {
                         'px-3 py-2 rounded-lg text-sm transition-colors',
                         searchFilters.availability === opt.value
                           ? 'bg-[var(--section-primary)] text-white'
-                          : 'bg-[#2A2D3A] text-text-secondary hover:text-content'
+                          : 'bg-surface-elevated text-text-secondary hover:text-content'
                       )}
                     >
                       {opt.label}
@@ -294,7 +294,7 @@ export default function BookingPage() {
                         'px-3 py-2 rounded-lg text-sm transition-colors',
                         searchFilters.sortBy === opt.value
                           ? 'bg-[var(--section-primary)] text-white'
-                          : 'bg-[#2A2D3A] text-text-secondary hover:text-content'
+                          : 'bg-surface-elevated text-text-secondary hover:text-content'
                       )}
                     >
                       {opt.label}
@@ -353,7 +353,7 @@ export default function BookingPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   onClick={() => handleProviderSelect(provider)}
-                  className="bg-[#2A2D3A]/50 rounded-2xl overflow-hidden cursor-pointer hover:bg-[#2A2D3A] transition-colors"
+                  className="bg-surface-elevated/50 rounded-2xl overflow-hidden cursor-pointer hover:bg-surface-elevated transition-colors"
                 >
                   {provider.photoUrls && provider.photoUrls[0] && (
                     <div className="h-28 overflow-hidden rounded-t-2xl">

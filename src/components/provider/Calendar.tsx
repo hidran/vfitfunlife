@@ -24,7 +24,7 @@ const STATUS_COLORS: Record<ScheduleEventStatus | string, string> = {
   confirmed: 'bg-green-500/20 border-green-500/50 text-green-400',
   completed: 'bg-gray-500/20 border-gray-500/50 text-gray-400',
   cancelled: 'bg-red-500/20 border-red-500/50 text-red-400',
-  blocked: 'bg-[#1A1D29] border-white/10 text-gray-400',
+  blocked: 'bg-surface-input border-white/10 text-gray-400',
 };
 
 export function Calendar({
@@ -140,7 +140,7 @@ export function Calendar({
   const today = new Date();
 
   return (
-    <div className="bg-[#2A2D3A] rounded-xl border border-white/5 overflow-hidden">
+    <div className="bg-surface-elevated rounded-xl border border-white/5 overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-white/5">
         <div className="flex items-center gap-4">
@@ -164,7 +164,7 @@ export function Calendar({
         </div>
         
         <div className="flex items-center gap-2">
-          <div className="flex bg-[#1A1D29] rounded-lg p-1">
+          <div className="flex bg-surface-input rounded-lg p-1">
             {VIEW_KEYS.map((v) => (
               <button
                 key={v}
@@ -210,7 +210,7 @@ export function Calendar({
           <span className="text-gray-400">{t('provider.calendar.legend.cancelled')}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-[#1A1D29] border border-white/20" />
+          <div className="w-3 h-3 rounded-full bg-surface-input border border-white/20" />
           <span className="text-gray-400">{t('provider.calendar.legend.blocked')}</span>
         </div>
       </div>
@@ -250,8 +250,8 @@ export function Calendar({
                 className={cn(
                   'min-h-[100px] p-2 rounded-lg border transition-all cursor-pointer',
                   isCurrentMonth
-                    ? 'bg-[#1A1D29] border-white/5'
-                    : 'bg-[#1A1D29]/50 border-transparent',
+                    ? 'bg-surface-input border-white/5'
+                    : 'bg-surface-input/50 border-transparent',
                   isToday && 'ring-1 ring-section-primary',
                   isSelected && 'ring-2 ring-section-primary',
                   'hover:border-white/10'
@@ -301,7 +301,7 @@ export function Calendar({
       </div>
 
       {loading && (
-        <div className="absolute inset-0 bg-[#1A1D29]/50 flex items-center justify-center">
+        <div className="absolute inset-0 bg-surface-input/50 flex items-center justify-center">
           <div className="w-8 h-8 border-2 border-white/20 border-t-section-primary rounded-full animate-spin" />
         </div>
       )}

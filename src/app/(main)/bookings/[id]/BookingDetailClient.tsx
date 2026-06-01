@@ -248,7 +248,7 @@ export default function BookingDetailPage() {
 
       <div className="p-4 space-y-4 pb-32">
         {/* Status Card */}
-        <div className="bg-[#2A2D3A]/50 rounded-2xl p-4">
+        <div className="bg-surface-elevated/50 rounded-2xl p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className={cn(
@@ -276,7 +276,7 @@ export default function BookingDetailPage() {
         </div>
 
         {/* Provider Card */}
-        <div className="bg-[#2A2D3A]/50 rounded-2xl p-4">
+        <div className="bg-surface-elevated/50 rounded-2xl p-4">
           <div className="flex items-center gap-4">
             <Avatar
               src={booking.providerAvatar}
@@ -300,7 +300,7 @@ export default function BookingDetailPage() {
 
         {/* Check-in ticket */}
         {booking.status !== 'cancelled' && (
-          <div className="bg-[#2A2D3A]/60 rounded-2xl border border-hairline p-4">
+          <div className="bg-surface-elevated/60 rounded-2xl border border-hairline p-4">
             <div className="mb-3 flex items-center justify-between">
               <div>
                 <p className="text-xs uppercase tracking-wide text-text-tertiary">Check-in</p>
@@ -330,7 +330,7 @@ export default function BookingDetailPage() {
         )}
 
         {/* Date & Time */}
-        <div className="bg-[#2A2D3A]/50 rounded-2xl p-4 space-y-3">
+        <div className="bg-surface-elevated/50 rounded-2xl p-4 space-y-3">
           <h3 className="font-semibold text-content">{t('bookings.detail.dateAndTime')}</h3>
 
           <div className="flex items-center gap-3">
@@ -373,7 +373,7 @@ export default function BookingDetailPage() {
 
         {/* Location */}
         {booking.location && (
-          <div className="bg-[#2A2D3A]/50 rounded-2xl p-4 space-y-3">
+          <div className="bg-surface-elevated/50 rounded-2xl p-4 space-y-3">
             <h3 className="font-semibold text-content">{t('bookings.detail.location')}</h3>
 
             <div className="flex items-start gap-3">
@@ -411,7 +411,7 @@ export default function BookingDetailPage() {
         )}
 
         {/* Payment Info */}
-        <div className="bg-[#2A2D3A]/50 rounded-2xl p-4 space-y-3">
+        <div className="bg-surface-elevated/50 rounded-2xl p-4 space-y-3">
           <h3 className="font-semibold text-content">{t('bookings.detail.payment')}</h3>
 
           <div className="flex items-center justify-between">
@@ -497,7 +497,7 @@ export default function BookingDetailPage() {
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="bg-[#2A2D3A] rounded-2xl p-6 w-full max-w-sm"
+            className="bg-surface-elevated rounded-2xl p-6 w-full max-w-sm"
           >
             <h3 className="text-lg font-semibold text-content mb-2">
               {t('bookings.detail.cancelModal.title')}

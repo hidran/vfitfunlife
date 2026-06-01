@@ -438,7 +438,7 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
                   onChange={(event) =>
                     setCardForm((current) => ({ ...current, brand: event.target.value }))
                   }
-                  className="w-full rounded-xl border border-white/10 bg-[#2A2D3A] px-3 py-3 text-sm text-text-inverse focus:outline-none focus:ring-2 focus:ring-section-primary"
+                  className="w-full rounded-xl border border-white/10 bg-surface-elevated px-3 py-3 text-sm text-text-inverse focus:outline-none focus:ring-2 focus:ring-section-primary"
                 >
                   {CARD_BRANDS.map((brand) => (
                     <option key={brand.value} value={brand.value}>

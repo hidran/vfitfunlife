@@ -162,14 +162,14 @@ export function AvailabilityPicker({
               className={cn(
                 'py-2 px-3 rounded-lg text-sm font-medium transition-all duration-200',
                 slot.isAvailable && !slot.isBooked && [
-                  'bg-[#2A2D3A] text-white hover:bg-[var(--section-primary)]/20',
+                  'bg-surface-elevated text-white hover:bg-[var(--section-primary)]/20',
                   selectedTime === slot.time && [
                     'bg-[var(--section-primary)] text-white',
                     'ring-2 ring-[var(--section-primary)] ring-offset-2 ring-offset-background-dark',
                   ],
                 ],
                 (!slot.isAvailable || slot.isBooked) && [
-                  'bg-[#2A2D3A]/50 text-text-tertiary cursor-not-allowed',
+                  'bg-surface-elevated/50 text-text-tertiary cursor-not-allowed',
                   'line-through',
                 ]
               )}
@@ -185,7 +185,7 @@ export function AvailabilityPicker({
   return (
     <div className={cn('space-y-6', className)}>
       {/* Calendar */}
-      <div className="bg-[#2A2D3A]/50 rounded-2xl p-4">
+      <div className="bg-surface-elevated/50 rounded-2xl p-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <button
@@ -252,7 +252,7 @@ export function AvailabilityPicker({
 
       {/* Time slots */}
       {selectedDate && (
-        <div className="bg-[#2A2D3A]/50 rounded-2xl p-4">
+        <div className="bg-surface-elevated/50 rounded-2xl p-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-[var(--section-primary)]" />

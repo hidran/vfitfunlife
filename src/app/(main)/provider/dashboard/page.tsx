@@ -141,7 +141,7 @@ export default function ProviderDashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Upcoming Appointments */}
         <div className="lg:col-span-2">
-          <div className="bg-[#2A2D3A] rounded-xl border border-hairline overflow-hidden">
+          <div className="bg-surface-elevated rounded-xl border border-hairline overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b border-hairline">
               <h2 className="text-lg font-semibold text-content">{t('provider.dashboard.upcoming.title')}</h2>
               <Link
@@ -166,10 +166,10 @@ export default function ProviderDashboardPage() {
                 upcomingBookings.map((booking) => (
                   <div
                     key={booking.id}
-                    className="flex items-center justify-between p-4 hover:bg-[#1A1D29]/30 transition-colors"
+                    className="flex items-center justify-between p-4 hover:bg-surface-input/30 transition-colors"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="flex flex-col items-center justify-center w-14 h-14 bg-[#1A1D29] rounded-lg">
+                      <div className="flex flex-col items-center justify-center w-14 h-14 bg-surface-input rounded-lg">
                         <span className="text-xs text-gray-400">
                           {formatDate(booking.scheduledAt)}
                         </span>
@@ -208,7 +208,7 @@ export default function ProviderDashboardPage() {
 
         {/* Recent Activity */}
         <div>
-          <div className="bg-[#2A2D3A] rounded-xl border border-hairline overflow-hidden">
+          <div className="bg-surface-elevated rounded-xl border border-hairline overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b border-hairline">
               <h2 className="text-lg font-semibold text-content">{t('provider.dashboard.activity.title')}</h2>
               <Bell className="w-5 h-5 text-gray-400" />

@@ -59,7 +59,7 @@ export default function ForgotPasswordPage() {
               <CheckCircle className="w-10 h-10 text-green-400" />
             </div>
 
-            <h1 className="text-2xl font-bold text-white mb-4">{t('auth.forgot.success.title')}</h1>
+            <h1 className="text-2xl font-bold text-content mb-4">{t('auth.forgot.success.title')}</h1>
             <p className="text-text-secondary mb-8">
               {t('auth.forgot.success.descriptionPrefix')}{' '}
               <span className="text-text-inverse font-medium">{email}</span>.{' '}
@@ -102,7 +102,7 @@ export default function ForgotPasswordPage() {
 
       {/* Content */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 pt-8 pb-8">
-        <h1 className="text-2xl font-bold text-white mb-2">{t('auth.forgot.title')}</h1>
+        <h1 className="text-2xl font-bold text-content mb-2">{t('auth.forgot.title')}</h1>
         <p className="text-text-secondary text-center mb-8 max-w-sm">
           {t('auth.forgot.subtitle')}
         </p>

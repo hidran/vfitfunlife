@@ -134,7 +134,7 @@ export default function SettingsPage() {
                 onChange={(e) =>
                   setSettings((prev) => ({ ...prev, platformName: e.target.value }))
                 }
-                className="w-full px-4 py-2.5 bg-[#2A2D3A] border border-hairline rounded-xl text-content focus:outline-none focus:border-[#00C9FF]/50"
+                className="w-full px-4 py-2.5 bg-surface-elevated border border-hairline rounded-xl text-content focus:outline-none focus:border-[#00C9FF]/50"
               />
             </div>
 
@@ -148,7 +148,7 @@ export default function SettingsPage() {
                 onChange={(e) =>
                   setSettings((prev) => ({ ...prev, supportEmail: e.target.value }))
                 }
-                className="w-full px-4 py-2.5 bg-[#2A2D3A] border border-hairline rounded-xl text-content focus:outline-none focus:border-[#00C9FF]/50"
+                className="w-full px-4 py-2.5 bg-surface-elevated border border-hairline rounded-xl text-content focus:outline-none focus:border-[#00C9FF]/50"
               />
             </div>
 
@@ -162,7 +162,7 @@ export default function SettingsPage() {
                 onChange={(e) =>
                   setSettings((prev) => ({ ...prev, supportPhone: e.target.value }))
                 }
-                className="w-full px-4 py-2.5 bg-[#2A2D3A] border border-hairline rounded-xl text-content focus:outline-none focus:border-[#00C9FF]/50"
+                className="w-full px-4 py-2.5 bg-surface-elevated border border-hairline rounded-xl text-content focus:outline-none focus:border-[#00C9FF]/50"
               />
             </div>
 
@@ -175,7 +175,7 @@ export default function SettingsPage() {
                 onChange={(e) =>
                   setSettings((prev) => ({ ...prev, currency: e.target.value }))
                 }
-                className="w-full px-4 py-2.5 bg-[#2A2D3A] border border-hairline rounded-xl text-content focus:outline-none focus:border-[#00C9FF]/50"
+                className="w-full px-4 py-2.5 bg-surface-elevated border border-hairline rounded-xl text-content focus:outline-none focus:border-[#00C9FF]/50"
               >
                 <option value="EUR">EUR (€)</option>
                 <option value="USD">USD ($)</option>
@@ -213,7 +213,7 @@ export default function SettingsPage() {
                     commissionPercentage: parseInt(e.target.value) || 0,
                   }))
                 }
-                className="w-full px-4 py-2.5 bg-[#2A2D3A] border border-hairline rounded-xl text-content focus:outline-none focus:border-[#00C9FF]/50"
+                className="w-full px-4 py-2.5 bg-surface-elevated border border-hairline rounded-xl text-content focus:outline-none focus:border-[#00C9FF]/50"
               />
               <p className="text-xs text-content-faint mt-1">
                 {t('admin.settings.payment.commissionHint')}
@@ -232,7 +232,7 @@ export default function SettingsPage() {
                     cancellationPolicy: e.target.value,
                   }))
                 }
-                className="w-full px-4 py-2.5 bg-[#2A2D3A] border border-hairline rounded-xl text-content focus:outline-none focus:border-[#00C9FF]/50"
+                className="w-full px-4 py-2.5 bg-surface-elevated border border-hairline rounded-xl text-content focus:outline-none focus:border-[#00C9FF]/50"
               >
                 <option value="12 hours">{t('admin.settings.payment.policy12h')}</option>
                 <option value="24 hours">{t('admin.settings.payment.policy24h')}</option>
@@ -259,7 +259,7 @@ export default function SettingsPage() {
             {Object.entries(settings.featureFlags).map(([key, enabled]) => (
               <div
                 key={key}
-                className="flex items-center justify-between p-4 bg-[#2A2D3A] rounded-xl"
+                className="flex items-center justify-between p-4 bg-surface-elevated rounded-xl"
               >
                 <div>
                   <p className="font-medium text-content">

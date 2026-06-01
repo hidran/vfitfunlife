@@ -136,7 +136,7 @@ export function UserTabContent({
               <select
                 value={user.role}
                 onChange={(e) => onRoleChange(e.target.value as UserRole)}
-                className="bg-[#2A2D3A] border border-hairline rounded-lg px-3 py-1 text-sm text-content"
+                className="bg-surface-elevated border border-hairline rounded-lg px-3 py-1 text-sm text-content"
               >
                 <option value="customer">{t('admin.userDetail.field.roleCustomer')}</option>
                 <option value="provider">{t('admin.userDetail.field.roleProvider')}</option>

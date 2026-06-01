@@ -59,7 +59,7 @@ export function SectionSelector({ value, onChange, error }: SectionSelectorProps
                 'min-h-[100px] touch-target',
                 isSelected
                   ? 'border-transparent bg-gradient-to-br ' + section.gradient
-                  : 'border-white/10 bg-[#2A2D3A] hover:bg-[#3A3D4A]'
+                  : 'border-white/10 bg-surface-elevated hover:bg-[#3A3D4A]'
               )}
             >
               <Icon

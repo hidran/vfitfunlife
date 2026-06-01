@@ -30,6 +30,8 @@
   --color-text-inverse: #14171F;
   --color-surface: #FFFFFF;
   --color-surface-2: rgba(0, 0, 0, 0.04);
+  --color-surface-elevated: #FFFFFF;
+  --color-surface-input: #EEF1F6;
   --color-surface-sunken: rgba(0, 0, 0, 0.05);
   --color-content: #14171F;
   --color-content-muted: rgba(0, 0, 0, 0.6);
@@ -106,6 +108,8 @@
      so components adapt to light mode. */
   --color-surface: #1E2230;
   --color-surface-2: rgba(255, 255, 255, 0.05);
+  --color-surface-elevated: #2A2D3A;
+  --color-surface-input: #1A1D29;
   --color-surface-sunken: rgba(0, 0, 0, 0.2);
   --color-content: #FFFFFF;
   --color-content-muted: rgba(255, 255, 255, 0.6);

@@ -139,7 +139,7 @@ export default function ProviderBookingsPage() {
               'px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors',
               activeTab === tab.id
                 ? 'bg-section-gradient text-white'
-                : 'bg-[#2A2D3A] text-gray-400 hover:text-content'
+                : 'bg-surface-elevated text-gray-400 hover:text-content'
             )}
           >
             {tab.label}
@@ -156,7 +156,7 @@ export default function ProviderBookingsPage() {
             placeholder={t('provider.bookings.search.placeholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#2A2D3A] border border-hairline rounded-lg pl-10 pr-4 py-2.5 text-content placeholder-gray-500 outline-none focus:border-section-primary"
+            className="w-full bg-surface-elevated border border-hairline rounded-lg pl-10 pr-4 py-2.5 text-content placeholder-gray-500 outline-none focus:border-section-primary"
           />
         </div>
         <Button
@@ -172,7 +172,7 @@ export default function ProviderBookingsPage() {
 
       {/* Filters Panel */}
       {showFilters && (
-        <div className="bg-[#2A2D3A] rounded-xl border border-hairline p-4">
+        <div className="bg-surface-elevated rounded-xl border border-hairline p-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-gray-400 mb-2">{t('provider.bookings.filter.dateRange')}</label>
@@ -180,13 +180,13 @@ export default function ProviderBookingsPage() {
                 <input
                   type="date"
                   onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.valueAsDate || undefined }))}
-                  className="flex-1 bg-[#1A1D29] border border-hairline rounded-lg px-3 py-2 text-content outline-none focus:border-section-primary"
+                  className="flex-1 bg-surface-input border border-hairline rounded-lg px-3 py-2 text-content outline-none focus:border-section-primary"
                 />
                 <span className="text-gray-400">{t('provider.bookings.filter.dateTo')}</span>
                 <input
                   type="date"
                   onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.valueAsDate || undefined }))}
-                  className="flex-1 bg-[#1A1D29] border border-hairline rounded-lg px-3 py-2 text-content outline-none focus:border-section-primary"
+                  className="flex-1 bg-surface-input border border-hairline rounded-lg px-3 py-2 text-content outline-none focus:border-section-primary"
                 />
               </div>
             </div>

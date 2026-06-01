@@ -30,7 +30,7 @@ export function PriceBreakdown({
   const hasPoints = pointsUsed > 0;
 
   return (
-    <div className={cn('bg-[#2A2D3A]/50 rounded-2xl p-4', className)}>
+    <div className={cn('bg-surface-elevated/50 rounded-2xl p-4', className)}>
       <h3 className="font-semibold text-white mb-4">{t('booking.price.summary')}</h3>
 
       <div className="space-y-3">

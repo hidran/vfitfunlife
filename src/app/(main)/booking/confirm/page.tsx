@@ -162,7 +162,7 @@ export default function BookingConfirmPage() {
 
       <div className="p-4 space-y-4 pb-32">
         {/* Provider & Service Summary */}
-        <div className="bg-[#2A2D3A]/50 rounded-2xl p-4">
+        <div className="bg-surface-elevated/50 rounded-2xl p-4">
           <div className="flex gap-3">
             <Avatar
               src={selectedProvider.avatarUrl}
@@ -204,7 +204,7 @@ export default function BookingConfirmPage() {
         </div>
 
         {/* Promo Code */}
-        <div className="bg-[#2A2D3A]/50 rounded-2xl p-4">
+        <div className="bg-surface-elevated/50 rounded-2xl p-4">
           <h3 className="font-semibold text-content mb-3 flex items-center gap-2">
             <Ticket className="w-4 h-4 text-[var(--section-primary)]" />
             {t('bookings.confirm.promoTitle')}
@@ -247,7 +247,7 @@ export default function BookingConfirmPage() {
 
         {/* Points Redemption */}
         {user && user.pointsBalance > 0 && (
-          <div className="bg-[#2A2D3A]/50 rounded-2xl p-4">
+          <div className="bg-surface-elevated/50 rounded-2xl p-4">
             <h3 className="font-semibold text-content mb-3 flex items-center gap-2">
               <Coins className="w-4 h-4 text-[var(--section-accent)]" />
               {t('bookings.confirm.pointsTitle')}
@@ -290,7 +290,7 @@ export default function BookingConfirmPage() {
         />
 
         {/* Payment Method */}
-        <div className="bg-[#2A2D3A]/50 rounded-2xl p-4">
+        <div className="bg-surface-elevated/50 rounded-2xl p-4">
           <h3 className="font-semibold text-content mb-3 flex items-center gap-2">
             <CreditCard className="w-4 h-4 text-[var(--section-primary)]" />
             {t('bookings.confirm.paymentTitle')}
@@ -346,7 +346,7 @@ export default function BookingConfirmPage() {
       </div>
 
       {/* Bottom Action Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-[#2A2D3A] border-t border-hairline p-4 safe-area-pb">
+      <div className="fixed bottom-0 left-0 right-0 bg-surface-elevated border-t border-hairline p-4 safe-area-pb">
         <div className="flex items-center justify-between gap-4">
           <div>
             <p className="text-text-secondary text-sm">{t('common.total')}</p>

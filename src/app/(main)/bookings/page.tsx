@@ -108,7 +108,7 @@ export default function BookingsPage() {
             exit={{ opacity: 0, y: -20 }}
             className="fixed top-0 left-0 right-0 z-50 flex justify-center pt-4"
           >
-            <div className="bg-[#2A2D3A] rounded-full px-4 py-2 flex items-center gap-2 shadow-lg">
+            <div className="bg-surface-elevated rounded-full px-4 py-2 flex items-center gap-2 shadow-lg">
               <Spinner size="sm" />
               <span className="text-sm text-content">{t('bookings.list.refreshing')}</span>
             </div>
@@ -145,7 +145,7 @@ export default function BookingsPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex bg-[#2A2D3A]/50 rounded-xl p-1">
+        <div className="flex bg-surface-elevated/50 rounded-xl p-1">
           {[
             { id: 'upcoming', label: t('bookings.list.tab.upcoming') },
             { id: 'past', label: t('bookings.list.tab.past') },

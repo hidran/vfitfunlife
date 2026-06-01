@@ -148,7 +148,7 @@ export default function ProviderEarningsPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-[#2A2D3A] rounded-xl p-6 border border-hairline">
+        <div className="bg-surface-elevated rounded-xl p-6 border border-hairline">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-green-500/20 rounded-lg">
               <Wallet className="w-6 h-6 text-green-400" />
@@ -164,7 +164,7 @@ export default function ProviderEarningsPage() {
           <p className="text-sm text-gray-400 mt-1">{t('provider.earnings.stat.availableLabel')}</p>
         </div>
 
-        <div className="bg-[#2A2D3A] rounded-xl p-6 border border-hairline">
+        <div className="bg-surface-elevated rounded-xl p-6 border border-hairline">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-yellow-500/20 rounded-lg">
               <Clock className="w-6 h-6 text-yellow-400" />
@@ -179,7 +179,7 @@ export default function ProviderEarningsPage() {
           <p className="text-sm text-gray-400 mt-1">{t('provider.earnings.stat.pendingLabel')}</p>
         </div>
 
-        <div className="bg-[#2A2D3A] rounded-xl p-6 border border-hairline">
+        <div className="bg-surface-elevated rounded-xl p-6 border border-hairline">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-blue-500/20 rounded-lg">
               <DollarSign className="w-6 h-6 text-blue-400" />
@@ -195,7 +195,7 @@ export default function ProviderEarningsPage() {
           <p className="text-sm text-gray-400 mt-1">{t('provider.earnings.stat.thisMonth')}</p>
         </div>
 
-        <div className="bg-[#2A2D3A] rounded-xl p-6 border border-hairline">
+        <div className="bg-surface-elevated rounded-xl p-6 border border-hairline">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-purple-500/20 rounded-lg">
               <CheckCircle className="w-6 h-6 text-purple-400" />
@@ -216,11 +216,11 @@ export default function ProviderEarningsPage() {
       <EarningsChart data={chartData} />
 
       {/* Transactions */}
-      <div className="bg-[#2A2D3A] rounded-xl border border-hairline overflow-hidden">
+      <div className="bg-surface-elevated rounded-xl border border-hairline overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b border-hairline">
           <h2 className="text-lg font-semibold text-content">{t('provider.earnings.transactions.title')}</h2>
           <div className="flex items-center gap-2">
-            <select className="bg-[#1A1D29] border border-hairline rounded-lg px-3 py-2 text-sm text-content outline-none">
+            <select className="bg-surface-input border border-hairline rounded-lg px-3 py-2 text-sm text-content outline-none">
               <option value="all">{t('provider.earnings.transactions.filter.all')}</option>
               <option value="booking_payment">{t('provider.earnings.transactions.filter.booking')}</option>
               <option value="withdrawal">{t('provider.earnings.transactions.filter.withdrawal')}</option>
@@ -239,7 +239,7 @@ export default function ProviderEarningsPage() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-hairline bg-[#1A1D29]/50">
+                <tr className="border-b border-hairline bg-surface-input/50">
                   <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">{t('provider.earnings.table.date')}</th>
                   <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">{t('provider.earnings.table.type')}</th>
                   <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">{t('provider.earnings.table.description')}</th>
@@ -249,7 +249,7 @@ export default function ProviderEarningsPage() {
               </thead>
               <tbody className="divide-y divide-white/5">
                 {earningsData.transactions.map((transaction) => (
-                  <tr key={transaction.id} className="hover:bg-[#1A1D29]/30">
+                  <tr key={transaction.id} className="hover:bg-surface-input/30">
                     <td className="px-6 py-4 text-sm text-gray-300">
                       {formatDate(transaction.createdAt)}
                     </td>
@@ -293,7 +293,7 @@ export default function ProviderEarningsPage() {
       {/* Withdrawal Modal */}
       {showWithdrawModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#2A2D3A] rounded-xl p-6 max-w-md w-full">
+          <div className="bg-surface-elevated rounded-xl p-6 max-w-md w-full">
             <h3 className="text-xl font-semibold text-content mb-4">{t('provider.earnings.withdraw.title')}</h3>
 
             <div className="mb-6">
@@ -313,7 +313,7 @@ export default function ProviderEarningsPage() {
                   onChange={(e) => setWithdrawAmount(e.target.value)}
                   placeholder="0.00"
                   max={earningsData.availableBalance}
-                  className="w-full bg-[#1A1D29] border border-hairline rounded-lg pl-8 pr-4 py-3 text-content placeholder-gray-500 outline-none focus:border-section-primary"
+                  className="w-full bg-surface-input border border-hairline rounded-lg pl-8 pr-4 py-3 text-content placeholder-gray-500 outline-none focus:border-section-primary"
                 />
               </div>
               <button
