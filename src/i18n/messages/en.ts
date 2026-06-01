@@ -136,6 +136,7 @@ export const enMessages: Messages = {
   'admin.sidebar.nav.dataManagement': 'Data Management',
   'admin.sidebar.nav.settings': 'Settings',
   'admin.sidebar.nav.systemLogs': 'System Logs',
+  'admin.sidebar.nav.myProfile': 'My Profile',
   'admin.sidebar.notifications': 'Notifications',
   'admin.sidebar.logout': 'Logout',
   'admin.sidebar.roleTitle.superadmin': 'Superadmin',

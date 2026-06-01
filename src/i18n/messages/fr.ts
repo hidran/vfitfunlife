@@ -136,6 +136,7 @@ export const frMessages: Messages = {
   'admin.sidebar.nav.dataManagement': 'Gestion des données',
   'admin.sidebar.nav.settings': 'Paramètres',
   'admin.sidebar.nav.systemLogs': 'Journaux système',
+  'admin.sidebar.nav.myProfile': 'Mon profil',
   'admin.sidebar.notifications': 'Notifications',
   'admin.sidebar.logout': 'Se déconnecter',
   'admin.sidebar.roleTitle.superadmin': 'Superadmin',

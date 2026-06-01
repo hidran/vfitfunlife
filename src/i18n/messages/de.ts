@@ -136,6 +136,7 @@ export const deMessages: Messages = {
   'admin.sidebar.nav.dataManagement': 'Datenverwaltung',
   'admin.sidebar.nav.settings': 'Einstellungen',
   'admin.sidebar.nav.systemLogs': 'Systemprotokolle',
+  'admin.sidebar.nav.myProfile': 'Mein Profil',
   'admin.sidebar.notifications': 'Benachrichtigungen',
   'admin.sidebar.logout': 'Abmelden',
   'admin.sidebar.roleTitle.superadmin': 'Superadmin',

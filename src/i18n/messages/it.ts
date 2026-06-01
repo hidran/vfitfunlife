@@ -134,6 +134,7 @@ export const itMessages = {
   'admin.sidebar.nav.dataManagement': 'Gestione dati',
   'admin.sidebar.nav.settings': 'Impostazioni',
   'admin.sidebar.nav.systemLogs': 'Log di sistema',
+  'admin.sidebar.nav.myProfile': 'Il mio profilo',
   'admin.sidebar.notifications': 'Notifiche',
   'admin.sidebar.logout': 'Esci',
   'admin.sidebar.roleTitle.superadmin': 'Superadmin',

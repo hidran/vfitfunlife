@@ -136,6 +136,7 @@ export const esMessages: Messages = {
   'admin.sidebar.nav.dataManagement': 'Gestión de datos',
   'admin.sidebar.nav.settings': 'Configuración',
   'admin.sidebar.nav.systemLogs': 'Registros del sistema',
+  'admin.sidebar.nav.myProfile': 'Mi perfil',
   'admin.sidebar.notifications': 'Notificaciones',
   'admin.sidebar.logout': 'Cerrar sesión',
   'admin.sidebar.roleTitle.superadmin': 'Superadmin',

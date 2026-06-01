@@ -26,6 +26,7 @@ import {
   Bell,
   Database,
   Dumbbell,
+  UserCircle,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -123,6 +124,12 @@ export function Sidebar({
       icon: <FileText className="w-5 h-5" />,
       allowedRoles: ["superadmin"],
     },
+    {
+      label: t('admin.sidebar.nav.myProfile'),
+      href: "/profile",
+      icon: <UserCircle className="w-5 h-5" />,
+      allowedRoles: ["superadmin", "admin"],
+    },
   ];
 
   const filteredNavItems = navItems.filter((item) =>
@@ -191,6 +198,25 @@ export function Sidebar({
 
         {/* Navigation */}
         <nav className="flex-1 py-4 overflow-y-auto">
+          {/* Logout (top) */}
+          <div className="px-2 pb-3 mb-2 border-b border-white/10">
+            <button
+              onClick={() => {
+                setIsMobileOpen(false);
+                onLogout();
+              }}
+              className={cn(
+                "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-[#EF4444] hover:bg-[#EF4444]/10",
+                isCollapsed && "justify-center"
+              )}
+              title={t('admin.sidebar.logout')}
+            >
+              <LogOut className="w-5 h-5" />
+              {!isCollapsed && (
+                <span className="font-medium text-sm">{t('admin.sidebar.logout')}</span>
+              )}
+            </button>
+          </div>
           <ul className="space-y-1 px-2">
             {filteredNavItems.map((item) => (
               <li key={item.href}>
@@ -286,16 +312,6 @@ export function Sidebar({
                 <p className="text-xs text-white/50 capitalize">{userRole}</p>
               </div>
             )}
-            <button
-              onClick={onLogout}
-              className={cn(
-                "p-2 rounded-xl text-white/50 hover:text-white hover:bg-white/10 transition-colors",
-                isCollapsed && "mt-2"
-              )}
-              title={t('admin.sidebar.logout')}
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
           </div>
         </div>
       </aside>
