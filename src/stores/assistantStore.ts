@@ -57,6 +57,7 @@ export const useAssistantStore = create<AssistantState>()((set, get) => ({
           patchAsst((m) => ({ ...m, resultCards: [...cards] }));
         } else if (chunk.type === "error") {
           set({ error: chunk.code });
+          patchAsst((m) => ({ ...m, pending: false }));
         } else if (chunk.type === "done") {
           set({ currentChatId: chunk.chatId });
         }
@@ -71,7 +72,9 @@ export const useAssistantStore = create<AssistantState>()((set, get) => ({
       set({ currentChatId: final.chatId });
     } catch (e: unknown) {
       const err = e as { code?: string; message?: string };
-      set({ error: err?.code || err?.message || "error" });
+      if (!get().error) {
+        set({ error: err?.code || err?.message || "error" });
+      }
       patchAsst((m) => ({ ...m, pending: false }));
     } finally {
       set({ isStreaming: false });

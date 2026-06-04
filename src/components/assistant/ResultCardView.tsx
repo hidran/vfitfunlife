@@ -10,7 +10,12 @@ export function ResultCardView({ card }: { card: ResultCard }) {
     <div className="bg-surface-elevated border border-hairline rounded-xl p-3 flex gap-3 items-center">
       {card.imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={card.imageUrl} alt="" className="w-12 h-12 rounded-lg object-cover" />
+        <img
+          src={card.imageUrl}
+          alt=""
+          loading="lazy"
+          className="w-12 h-12 rounded-lg object-cover"
+        />
       ) : (
         <div className="w-12 h-12 rounded-lg bg-[#00C9FF]/20" />
       )}

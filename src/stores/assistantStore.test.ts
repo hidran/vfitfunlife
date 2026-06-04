@@ -54,6 +54,24 @@ describe("assistantStore.send", () => {
     expect(s.isStreaming).toBe(false);
   });
 
+  it("keeps friendly error code from error chunk over Firebase code in rejected data promise", async () => {
+    const { streamAssistant } = await import("@/lib/firebase/functions");
+    vi.mocked(streamAssistant).mockImplementationOnce(async () => ({
+      stream: (async function* () {
+        yield { type: "error", code: "quota-exceeded" } as AiStreamChunk;
+      })(),
+      data: Promise.reject(
+        Object.assign(new Error("quota"), { code: "functions/resource-exhausted" }),
+      ),
+    }));
+
+    await useAssistantStore.getState().send("hi", "en").catch(() => {});
+    const s = useAssistantStore.getState();
+    expect(s.isStreaming).toBe(false);
+    expect(s.messages[1]).toMatchObject({ role: "assistant", pending: false });
+    expect(s.error).toBe("quota-exceeded");
+  });
+
   it("open/close/newChat manage open + reset state", () => {
     useAssistantStore.getState().open();
     expect(useAssistantStore.getState().isOpen).toBe(true);
