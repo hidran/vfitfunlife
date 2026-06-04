@@ -8,6 +8,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { I18nProvider } from '@/contexts/I18nContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { FloatingAssistantButton } from '@/components/assistant/FloatingAssistantButton';
 import { initializeCapacitor } from '@/lib/capacitor';
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -37,6 +38,7 @@ export function Providers({ children }: { children: ReactNode }) {
           <I18nProvider>
             <AuthProvider>
               <SectionProvider>{children}</SectionProvider>
+              <FloatingAssistantButton />
             </AuthProvider>
           </I18nProvider>
         </ThemeProvider>
