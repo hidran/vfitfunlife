@@ -907,8 +907,10 @@ export async function seedSampleInstructors(): Promise<SeedingResult> {
         ? Math.min(...i.services.map((s) => s.price))
         : 60;
 
-      // Canonical flat searchable-catalog shape (no nested providerProfile),
-      // matching the demo-trainer loop above.
+      // Canonical shape: nested `providerProfile` is the verification source of
+      // truth (required by the /instructors public-read rule + flattenProvider).
+      // Flat fields are browse/search conveniences. `userType` and
+      // `availabilitySchedule` are the only fields ADDED for AI search.
       const instructorDoc: Record<string, unknown> = {
         uid: i.id,
         fullName: i.fullName,
@@ -920,12 +922,20 @@ export async function seedSampleInstructors(): Promise<SeedingResult> {
         ratingAvg: i.rating,
         reviewCount: i.reviewCount,
         hourlyRate,
+        lowestPrice: hourlyRate,
         serviceAreaCenter: new GeoPoint(coords.lat, coords.lng),
         serviceAreaGeohash: ngeohash.encode(coords.lat, coords.lng),
-        isVerified: true,
         isActive: true,
         availabilitySchedule: defaultWeeklySchedule(),
         yearsOfExperience: i.yearsOfExperience,
+        providerProfile: {
+          isVerified: true,
+          rating: i.rating,
+          reviewCount: i.reviewCount,
+          specialties: i.specialties,
+          languages: i.languages,
+          yearsOfExperience: i.yearsOfExperience,
+        },
         createdAt: now,
         updatedAt: now,
       };
@@ -1263,23 +1273,38 @@ export async function generateDemoData(): Promise<SeedingResult[]> {
 
         const ref = db.collection("instructors").doc(id);
 
-        // Canonical flat searchable-catalog shape (no nested providerProfile).
+        const rating = randomFloat(4.2, 5.0, 1);
+        const reviewCount = randomInt(15, 320);
+        const allSpecialties = [specialty, ...secondaries];
+
+        // Canonical shape: nested `providerProfile` is the verification source of
+        // truth (required by the /instructors public-read rule + flattenProvider).
+        // Flat fields are conveniences for browse/search. `userType` and
+        // `availabilitySchedule` are the only fields ADDED for AI search.
         const instructorDoc: Record<string, unknown> = {
           uid: id,
           fullName: `${firstName} ${lastName}`,
           avatarUrl: null,
           userType: userTypeForSpecialty(specialty),
           city,
-          specialties: [specialty, ...secondaries],
+          specialties: allSpecialties,
           languages,
-          ratingAvg: randomFloat(4.2, 5.0, 1),
-          reviewCount: randomInt(15, 320),
+          ratingAvg: rating,
+          reviewCount,
           hourlyRate,
+          lowestPrice: hourlyRate,
           serviceAreaCenter: new GeoPoint(cityEntry.lat, cityEntry.lng),
           serviceAreaGeohash: ngeohash.encode(cityEntry.lat, cityEntry.lng),
-          isVerified: true,
           isActive: true,
           availabilitySchedule: defaultWeeklySchedule(),
+          providerProfile: {
+            isVerified: true,
+            rating,
+            reviewCount,
+            specialties: allSpecialties,
+            languages,
+            yearsOfExperience: randomInt(2, 15),
+          },
           createdAt: now,
           updatedAt: now,
         };
