@@ -2,8 +2,9 @@ import { tool } from "ai";
 import { z } from "zod";
 import * as admin from "firebase-admin";
 import { ResultCard } from "../types";
-import { matchesAvailability, formatSlotLabel, AvailabilitySlot } from "../search/match";
-import { providerDocToCard } from "../search/mapCards";
+import { matchesAvailability, formatSlotLabel } from "../search/match";
+import { normalizeAvailability } from "../search/normalize";
+import { instructorDocToCard } from "../search/mapCards";
 
 const DEFAULT_LIMIT = 8;
 
@@ -30,39 +31,51 @@ export function createAiTools() {
       limit: z.number().int().min(1).max(20).optional(),
     }),
     execute: async (args): Promise<ResultCard[]> => {
+      // NOTE: the `.limit(50)` pre-filter caps how many verified+active
+      // instructors we scan. In-loop city/specialty/time filters run on those
+      // 50 raw docs, so matches beyond the first 50 verified+active docs may be
+      // missed. Acceptable for the current catalog size; revisit (paginate or
+      // narrow the server-side query) if the instructors collection grows large.
       const snap = await db()
-        .collection("users")
-        .where("role", "==", "provider")
+        .collection("instructors")
         .where("isVerified", "==", true)
+        .where("isActive", "==", true)
         .limit(50)
         .get();
 
       const cards: ResultCard[] = [];
       for (const doc of snap.docs) {
         const data = doc.data() as Record<string, any>;
-        const pp = data.providerProfile ?? {};
-        if (args.city && !cityEq(pp.serviceArea?.city, args.city)) continue;
+        // Defense in depth: the mock `where` is a passthrough and prod data may
+        // be inconsistent, so re-assert the verified/active gate in the loop.
+        if (data.isVerified !== true || data.isActive !== true) continue;
+
+        if (args.city && !cityEq(data.city, args.city)) continue;
         if (args.specialty) {
-          const specs: string[] = Array.isArray(pp.specialties) ? pp.specialties : [];
-          const hit = specs.some((s) => s.toLowerCase().includes(args.specialty!.toLowerCase())) ||
-            (typeof data.userType === "string" && data.userType.toLowerCase().includes(args.specialty!.toLowerCase()));
+          const specs: string[] = Array.isArray(data.specialties) ? data.specialties : [];
+          const needle = args.specialty.toLowerCase();
+          const hit = specs.some((s) => typeof s === "string" && s.toLowerCase().includes(needle)) ||
+            (typeof data.userType === "string" && data.userType.toLowerCase().includes(needle));
           if (!hit) continue;
         }
         if (args.language) {
-          const langs: string[] = Array.isArray(pp.languages) ? pp.languages : [];
-          if (!langs.map((l) => l.toLowerCase()).includes(args.language.toLowerCase())) continue;
+          const langs: string[] = Array.isArray(data.languages) ? data.languages : [];
+          if (!langs.map((l) => String(l).toLowerCase()).includes(args.language.toLowerCase())) continue;
         }
-        if (typeof args.priceMax === "number" && typeof pp.hourlyRate === "number" && pp.hourlyRate > args.priceMax) continue;
+        if (typeof args.priceMax === "number" && typeof data.hourlyRate === "number" && data.hourlyRate > args.priceMax) continue;
 
-        const schedule: AvailabilitySlot[] = Array.isArray(pp.availabilitySchedule) ? pp.availabilitySchedule : [];
+        // Availability is BEST-EFFORT: if an instructor has no parseable
+        // availability, include them without time gating (so results aren't
+        // empty) and omit matchingSlots; otherwise apply the time filter.
+        const slots = normalizeAvailability(data.availabilitySchedule);
         let matchingSlots: string[] | undefined;
-        if (typeof args.dayOfWeek === "number") {
-          if (!matchesAvailability(schedule, args.dayOfWeek, args.startTime, args.endTime)) continue;
-          matchingSlots = schedule
+        if (typeof args.dayOfWeek === "number" && slots.length > 0) {
+          if (!matchesAvailability(slots, args.dayOfWeek, args.startTime, args.endTime)) continue;
+          matchingSlots = slots
             .filter((s) => s.dayOfWeek === args.dayOfWeek && s.isAvailable !== false)
             .map((s) => formatSlotLabel(s.dayOfWeek, s.startTime, s.endTime));
         }
-        cards.push(providerDocToCard(doc.id, data, matchingSlots));
+        cards.push(instructorDocToCard(doc.id, data, matchingSlots));
         if (cards.length >= (args.limit ?? DEFAULT_LIMIT)) break;
       }
       return cards;
@@ -70,16 +83,19 @@ export function createAiTools() {
   });
 
   const searchClasses = tool({
-    description: "Search fitness classes by city, day and time window.",
+    description: "Search fitness classes by city and section.",
+    // TODO: schedule filtering (dayOfWeek / startTime / endTime) requires the
+    // `/schedules` subcollection, which isn't wired up yet. Until then we do not
+    // advertise those params to the LLM so it can't promise filters we can't honor.
     inputSchema: z.object({
       city: z.string().optional(),
-      dayOfWeek: z.number().int().min(0).max(6).optional(),
-      startTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
-      endTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+      section: z.enum(["fit", "fun", "life"]).optional(),
       limit: z.number().int().min(1).max(20).optional(),
     }),
     execute: async (args): Promise<ResultCard[]> => {
-      const snap = await db().collection("fitnessClasses").limit(50).get();
+      let q: FirebaseFirestore.Query = db().collection("fitnessClasses");
+      if (args.section) q = q.where("section", "==", args.section);
+      const snap = await q.limit(50).get();
       const cards: ResultCard[] = [];
       for (const doc of snap.docs) {
         const data = doc.data() as Record<string, any>;
@@ -132,11 +148,15 @@ export function createAiTools() {
   const getProviderAvailability = tool({
     description: "Get the weekly availability slots for one provider, to confirm a specific time.",
     inputSchema: z.object({ providerId: z.string() }),
-    execute: async ({ providerId }): Promise<{ slots: string[] }> => {
-      const doc = await db().collection("users").doc(providerId).get();
-      const pp = (doc.data()?.providerProfile ?? {}) as Record<string, any>;
-      const schedule: AvailabilitySlot[] = Array.isArray(pp.availabilitySchedule) ? pp.availabilitySchedule : [];
-      return { slots: schedule.filter((s) => s.isAvailable !== false).map((s) => formatSlotLabel(s.dayOfWeek, s.startTime, s.endTime)) };
+    execute: async ({ providerId }): Promise<{ slots: string[]; error?: string }> => {
+      const doc = await db().collection("instructors").doc(providerId).get();
+      if (!doc.exists) return { slots: [], error: "provider_not_found" };
+      const slots = normalizeAvailability(doc.data()?.availabilitySchedule);
+      return {
+        slots: slots
+          .filter((s) => s.isAvailable !== false)
+          .map((s) => formatSlotLabel(s.dayOfWeek, s.startTime, s.endTime)),
+      };
     },
   });
 
