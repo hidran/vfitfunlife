@@ -26,6 +26,17 @@ export async function reserveQuota(uid: string, quota: number, now: Date): Promi
   });
 }
 
+/** Best-effort refund of one reserved message (e.g. when the AI call fails). Floors at 0. */
+export async function releaseQuota(uid: string, now: Date): Promise<void> {
+  const ref = admin.firestore().doc(usageDocPath(uid, now));
+  await admin.firestore().runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const raw = snap.exists ? snap.data()?.count : undefined;
+    const current = typeof raw === "number" ? raw : 0;
+    tx.set(ref, { count: Math.max(0, current - 1) }, { merge: true });
+  }).catch((e) => console.error("[ai] releaseQuota failed", e));
+}
+
 /**
  * Record token usage after a completed request (best-effort).
  * Must only be called after a successful reserveQuota for the same uid+now.

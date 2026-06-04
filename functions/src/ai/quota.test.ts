@@ -24,7 +24,7 @@ vi.mock("firebase-admin", () => {
   return { firestore };
 });
 
-import { usageDocPath, nextCountOrThrow, reserveQuota } from "./quota";
+import { usageDocPath, nextCountOrThrow, reserveQuota, releaseQuota } from "./quota";
 
 describe("usageDocPath", () => {
   it("builds a per-user per-day path", () => {
@@ -69,5 +69,29 @@ describe("reserveQuota (transaction)", () => {
     fx.snap = { exists: true, data: () => ({ count: 30 }) };
     await expect(reserveQuota("u1", 30, now)).rejects.toMatchObject({ code: "quota-exceeded" });
     expect(fx.setSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe("releaseQuota (transaction)", () => {
+  const now = new Date("2026-06-04T10:00:00Z");
+
+  beforeEach(() => {
+    fx.setSpy.mockReset();
+    fx.snap = { exists: false, data: () => ({}) };
+  });
+
+  it("decrements the stored count by one", async () => {
+    fx.snap = { exists: true, data: () => ({ count: 3 }) };
+    await expect(releaseQuota("u1", now)).resolves.toBeUndefined();
+    expect(fx.setSpy).toHaveBeenCalledTimes(1);
+    const payload = fx.setSpy.mock.calls[0][1] as { count: number };
+    expect(payload.count).toBe(2);
+  });
+
+  it("floors at 0 and never goes negative", async () => {
+    fx.snap = { exists: true, data: () => ({ count: 0 }) };
+    await expect(releaseQuota("u1", now)).resolves.toBeUndefined();
+    const payload = fx.setSpy.mock.calls[0][1] as { count: number };
+    expect(payload.count).toBe(0);
   });
 });

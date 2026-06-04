@@ -63,7 +63,9 @@ export const updateAiSettings = onCall(
 
     const before = await getAiSettings();
     const callerEmail =
-      (await admin.firestore().collection("users").doc(callerId).get()).data()?.email ?? "";
+      (await admin.firestore().collection("users").doc(callerId).get()).data()?.email ??
+      request.auth?.token?.email ??
+      "";
 
     await admin.firestore().doc(AI_SETTINGS_DOC).set(
       { ...patch, updatedAt: admin.firestore.FieldValue.serverTimestamp(), updatedBy: callerId },
