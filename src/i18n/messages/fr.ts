@@ -2526,6 +2526,7 @@ export const frMessages: Messages = {
   'admin.settings.ai.temperature': 'Température',
   'admin.settings.ai.maxOutputTokens': 'Tokens de sortie maximum',
   'admin.settings.ai.maxContextMessages': 'Messages de contexte',
+  'admin.settings.ai.maxInputChars': 'Caractères max en entrée',
   'admin.settings.ai.dailyQuota': 'Limite de messages/jour',
   'admin.settings.ai.systemPrompt': 'Instructions système (facultatif)',
   'admin.settings.ai.keyStatus': 'État des clés API',

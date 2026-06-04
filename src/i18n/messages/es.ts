@@ -2517,6 +2517,7 @@ export const esMessages: Messages = {
   'admin.settings.ai.temperature': 'Temperatura',
   'admin.settings.ai.maxOutputTokens': 'Tokens máximos de salida',
   'admin.settings.ai.maxContextMessages': 'Mensajes de contexto',
+  'admin.settings.ai.maxInputChars': 'Máximo de caracteres de entrada',
   'admin.settings.ai.dailyQuota': 'Límite de mensajes/día',
   'admin.settings.ai.systemPrompt': 'Instrucciones del sistema (opcional)',
   'admin.settings.ai.keyStatus': 'Estado de las claves API',

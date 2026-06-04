@@ -12,6 +12,7 @@ export function AiAssistantSettings() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [keys, setKeys] = useState<Record<AiProviderId, boolean> | null>(null);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
   const [testMsg, setTestMsg] = useState<string | null>(null);
 
   useEffect(() => {
@@ -20,7 +21,7 @@ export function AiAssistantSettings() {
         setSettings(r.settings);
         setKeys(r.keyPresence);
       })
-      .catch(() => {});
+      .catch((err) => console.error("[AiAssistantSettings] failed to load", err));
   }, []);
 
   if (!settings) return null;
@@ -48,12 +49,21 @@ export function AiAssistantSettings() {
 
   const test = async () => {
     setTestMsg(null);
-    const r = await testAiConnection({ provider: settings.provider, model: settings.model });
-    setTestMsg(
-      r.ok
-        ? `${t("admin.settings.ai.testOk")}: ${r.sample ?? ""}`
-        : `${t("admin.settings.ai.testFail")}: ${r.error ?? ""}`,
-    );
+    setTesting(true);
+    try {
+      const r = await testAiConnection({ provider: settings.provider, model: settings.model });
+      setTestMsg(
+        r.ok
+          ? `${t("admin.settings.ai.testOk")}: ${r.sample ?? ""}`
+          : `${t("admin.settings.ai.testFail")}: ${r.error ?? ""}`,
+      );
+    } catch (err) {
+      setTestMsg(
+        `${t("admin.settings.ai.testFail")}: ${err instanceof Error ? err.message : "unknown error"}`,
+      );
+    } finally {
+      setTesting(false);
+    }
   };
 
   const input =
@@ -127,7 +137,10 @@ export function AiAssistantSettings() {
             min={0}
             max={2}
             value={settings.temperature}
-            onChange={(e) => set("temperature", Number(e.target.value))}
+            onChange={(e) => {
+              const n = parseFloat(e.target.value);
+              if (!Number.isNaN(n)) set("temperature", n);
+            }}
           />
         </div>
         <div>
@@ -136,7 +149,10 @@ export function AiAssistantSettings() {
             className={input}
             type="number"
             value={settings.maxOutputTokens}
-            onChange={(e) => set("maxOutputTokens", Number(e.target.value))}
+            onChange={(e) => {
+              const n = parseInt(e.target.value, 10);
+              if (!Number.isNaN(n)) set("maxOutputTokens", n);
+            }}
           />
         </div>
         <div>
@@ -145,7 +161,22 @@ export function AiAssistantSettings() {
             className={input}
             type="number"
             value={settings.maxContextMessages}
-            onChange={(e) => set("maxContextMessages", Number(e.target.value))}
+            onChange={(e) => {
+              const n = parseInt(e.target.value, 10);
+              if (!Number.isNaN(n)) set("maxContextMessages", n);
+            }}
+          />
+        </div>
+        <div>
+          <label className={label}>{t("admin.settings.ai.maxInputChars")}</label>
+          <input
+            className={input}
+            type="number"
+            value={settings.maxInputChars}
+            onChange={(e) => {
+              const n = parseInt(e.target.value, 10);
+              if (!Number.isNaN(n)) set("maxInputChars", n);
+            }}
           />
         </div>
         <div>
@@ -154,7 +185,10 @@ export function AiAssistantSettings() {
             className={input}
             type="number"
             value={settings.dailyMessageQuota}
-            onChange={(e) => set("dailyMessageQuota", Number(e.target.value))}
+            onChange={(e) => {
+              const n = parseInt(e.target.value, 10);
+              if (!Number.isNaN(n)) set("dailyMessageQuota", n);
+            }}
           />
         </div>
       </div>
@@ -184,7 +218,11 @@ export function AiAssistantSettings() {
         >
           {t("common.save") || "Save"}
         </button>
-        <button onClick={test} className="px-4 py-2 rounded-xl border border-hairline text-content">
+        <button
+          onClick={test}
+          disabled={testing}
+          className="px-4 py-2 rounded-xl border border-hairline text-content disabled:opacity-50"
+        >
           {t("admin.settings.ai.testConnection")}
         </button>
         {testMsg && <span className="text-xs text-content-muted">{testMsg}</span>}

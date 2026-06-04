@@ -2524,6 +2524,7 @@ export const deMessages: Messages = {
   'admin.settings.ai.temperature': 'Temperatur',
   'admin.settings.ai.maxOutputTokens': 'Maximale Ausgabe-Tokens',
   'admin.settings.ai.maxContextMessages': 'Kontextnachrichten',
+  'admin.settings.ai.maxInputChars': 'Max. Eingabezeichen',
   'admin.settings.ai.dailyQuota': 'Nachrichten/Tag-Limit',
   'admin.settings.ai.systemPrompt': 'Systemanweisungen (optional)',
   'admin.settings.ai.keyStatus': 'API-Schlüssel-Status',
