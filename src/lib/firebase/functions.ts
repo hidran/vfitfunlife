@@ -1,6 +1,12 @@
 import { httpsCallable } from "firebase/functions";
 import { functions } from "./config";
 import type { AppLocale } from "@/types/locale";
+import type {
+  AiStreamChunk,
+  AiAssistantSettings,
+  AiProviderId,
+  ResultCard,
+} from "@/types/assistant";
 
 // Type definitions for function responses
 interface BookingResult {
@@ -227,4 +233,51 @@ export async function markAllNotificationsRead(): Promise<{ markedCount: number 
   const fn = httpsCallable<void, { markedCount: number }>(functions, "markAllNotificationsRead");
   const result = await fn();
   return result.data;
+}
+
+// AI assistant functions
+type AssistantStreamFinal = {
+  chatId: string;
+  messageId: string;
+  text: string;
+  cards: ResultCard[];
+};
+
+/** Stream a chat turn. Yields chunks; resolves final on the returned promise. */
+export function streamAssistant(input: { chatId?: string; message: string; locale: string }) {
+  const fn = httpsCallable<typeof input, AssistantStreamFinal>(functions, "chatWithAssistant");
+  return fn.stream(input) as Promise<{
+    stream: AsyncIterable<AiStreamChunk>;
+    data: Promise<AssistantStreamFinal>;
+  }>;
+}
+
+export async function getAiSettingsAdmin(): Promise<{
+  settings: AiAssistantSettings;
+  keyPresence: Record<AiProviderId, boolean>;
+}> {
+  const fn = httpsCallable<
+    void,
+    { settings: AiAssistantSettings; keyPresence: Record<AiProviderId, boolean> }
+  >(functions, "getAiSettingsAdmin");
+  return (await fn()).data;
+}
+
+export async function updateAiSettings(patch: Partial<AiAssistantSettings>): Promise<void> {
+  const fn = httpsCallable<Partial<AiAssistantSettings>, { success: boolean }>(
+    functions,
+    "updateAiSettings",
+  );
+  await fn(patch);
+}
+
+export async function testAiConnection(input: {
+  provider?: AiProviderId;
+  model?: string;
+}): Promise<{ ok: boolean; sample?: string; error?: string }> {
+  const fn = httpsCallable<typeof input, { ok: boolean; sample?: string; error?: string }>(
+    functions,
+    "testAiConnection",
+  );
+  return (await fn(input)).data;
 }
