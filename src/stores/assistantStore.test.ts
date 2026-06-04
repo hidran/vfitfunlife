@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import type { AiStreamChunk } from "@/types/assistant";
 
 const chunks: AiStreamChunk[] = [
+  { type: "tool", name: "searchProviders", status: "running" },
   { type: "delta", text: "Hello " },
   { type: "delta", text: "there" },
   {
@@ -33,6 +34,7 @@ describe("assistantStore.send", () => {
       messages: [],
       currentChatId: undefined,
       isStreaming: false,
+      activeTool: undefined,
       error: undefined,
     }),
   );
@@ -45,6 +47,8 @@ describe("assistantStore.send", () => {
     expect(s.messages[1].resultCards?.[0].id).toBe("p1");
     expect(s.currentChatId).toBe("c1");
     expect(s.isStreaming).toBe(false);
+    // tool chunk surfaced activeTool while running; a subsequent delta + finally clears it
+    expect(s.activeTool).toBeUndefined();
   });
 
   it("ignores empty messages and does not stream", async () => {

@@ -2529,6 +2529,7 @@ export const enMessages: Messages = {
   'assistant.send': 'Send',
   'assistant.book': 'Book',
   'assistant.newChat': 'New chat',
+  'assistant.searching': 'Searching…',
   'assistant.error.disabled': 'The assistant is currently unavailable.',
   'assistant.error.quota-exceeded': 'You have reached your daily message limit.',
   'assistant.error.input-too-long': 'Message too long.',

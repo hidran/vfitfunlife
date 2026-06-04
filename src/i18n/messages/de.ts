@@ -2512,6 +2512,7 @@ export const deMessages: Messages = {
   'assistant.send': 'Senden',
   'assistant.book': 'Buchen',
   'assistant.newChat': 'Neuer Chat',
+  'assistant.searching': 'Suche…',
   'assistant.error.disabled': 'Der Assistent ist derzeit nicht verfügbar.',
   'assistant.error.quota-exceeded': 'Du hast dein tägliches Nachrichtenlimit erreicht.',
   'assistant.error.input-too-long': 'Nachricht zu lang.',

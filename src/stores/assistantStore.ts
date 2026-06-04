@@ -7,6 +7,7 @@ interface AssistantState {
   currentChatId?: string;
   messages: ChatMessage[];
   isStreaming: boolean;
+  activeTool?: string;
   error?: string;
   open: () => void;
   close: () => void;
@@ -21,6 +22,7 @@ export const useAssistantStore = create<AssistantState>()((set, get) => ({
   isOpen: false,
   messages: [],
   isStreaming: false,
+  activeTool: undefined,
   open: () => set({ isOpen: true }),
   close: () => set({ isOpen: false }),
   newChat: () => set({ currentChatId: undefined, messages: [], error: undefined }),
@@ -51,7 +53,10 @@ export const useAssistantStore = create<AssistantState>()((set, get) => ({
       const cards: ResultCard[] = [];
       for await (const chunk of stream) {
         if (chunk.type === "delta") {
+          if (get().activeTool) set({ activeTool: undefined });
           patchAsst((m) => ({ ...m, content: m.content + chunk.text, pending: false }));
+        } else if (chunk.type === "tool") {
+          set({ activeTool: chunk.status === "running" ? chunk.name : undefined });
         } else if (chunk.type === "cards") {
           cards.push(...chunk.cards);
           patchAsst((m) => ({ ...m, resultCards: [...cards] }));
@@ -77,7 +82,7 @@ export const useAssistantStore = create<AssistantState>()((set, get) => ({
       }
       patchAsst((m) => ({ ...m, pending: false }));
     } finally {
-      set({ isStreaming: false });
+      set({ isStreaming: false, activeTool: undefined });
     }
   },
 }));

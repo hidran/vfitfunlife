@@ -2529,6 +2529,7 @@ export const itMessages = {
   'assistant.send': 'Invia',
   'assistant.book': 'Prenota',
   'assistant.newChat': 'Nuova chat',
+  'assistant.searching': 'Sto cercando…',
   'assistant.error.disabled': "L'assistente non è al momento disponibile.",
   'assistant.error.quota-exceeded': 'Hai raggiunto il limite giornaliero di messaggi.',
   'assistant.error.input-too-long': 'Messaggio troppo lungo.',

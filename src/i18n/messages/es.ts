@@ -2505,6 +2505,7 @@ export const esMessages: Messages = {
   'assistant.send': 'Enviar',
   'assistant.book': 'Reservar',
   'assistant.newChat': 'Nuevo chat',
+  'assistant.searching': 'Buscando…',
   'assistant.error.disabled': 'El asistente no está disponible en este momento.',
   'assistant.error.quota-exceeded': 'Has alcanzado el límite diario de mensajes.',
   'assistant.error.input-too-long': 'Mensaje demasiado largo.',

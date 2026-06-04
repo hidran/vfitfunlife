@@ -9,7 +9,7 @@ import { Composer } from "./Composer";
 
 export function AssistantSheet() {
   const { t, locale } = useI18n();
-  const { isOpen, close, messages, isStreaming, error, send, newChat } = useAssistantStore();
+  const { isOpen, close, messages, isStreaming, activeTool, error, send, newChat } = useAssistantStore();
   const endRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -46,6 +46,9 @@ export function AssistantSheet() {
             <p className="text-red-400 text-xs text-center">
               {t(`assistant.error.${error}` as MessageKey) || t("assistant.error.internal")}
             </p>
+          )}
+          {isStreaming && activeTool && (
+            <p className="text-content-muted text-xs px-1">{t("assistant.searching")}</p>
           )}
           <div ref={endRef} />
         </div>

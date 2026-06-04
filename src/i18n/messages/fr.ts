@@ -2514,6 +2514,7 @@ export const frMessages: Messages = {
   'assistant.send': 'Envoyer',
   'assistant.book': 'Réserver',
   'assistant.newChat': 'Nouvelle discussion',
+  'assistant.searching': 'Recherche…',
   'assistant.error.disabled': "L'assistant n'est pas disponible pour le moment.",
   'assistant.error.quota-exceeded': 'Vous avez atteint la limite quotidienne de messages.',
   'assistant.error.input-too-long': 'Message trop long.',
