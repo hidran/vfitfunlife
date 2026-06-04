@@ -34,6 +34,12 @@ describe("matchesAvailability", () => {
   it("ignores unavailable slots", () => {
     expect(matchesAvailability([{ dayOfWeek: 1, startTime: "14:00", endTime: "18:00", isAvailable: false }], 1, "15:00", "16:00")).toBe(false);
   });
+  it("rejects a half-specified window (startTime without endTime)", () => {
+    expect(matchesAvailability(schedule, 1, "15:00")).toBe(false);
+  });
+  it("rejects a half-specified window (endTime without startTime)", () => {
+    expect(matchesAvailability(schedule, 1, undefined, "17:00")).toBe(false);
+  });
 });
 
 describe("formatSlotLabel", () => {

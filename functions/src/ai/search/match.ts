@@ -26,7 +26,10 @@ export function matchesAvailability(
   if (!schedule || schedule.length === 0) return false;
   const daySlots = schedule.filter((s) => s.dayOfWeek === dayOfWeek && s.isAvailable !== false);
   if (daySlots.length === 0) return false;
-  if (!startTime || !endTime) return true;
+  // Require both-or-neither: a half-specified window (exactly one of
+  // startTime/endTime) is ambiguous and must NOT silently pass the time gate.
+  if (!startTime && !endTime) return true;
+  if (!startTime || !endTime) return false;
   return daySlots.some((s) => slotCovers(s, startTime, endTime));
 }
 
