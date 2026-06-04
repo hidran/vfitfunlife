@@ -7,6 +7,8 @@ import { useAuthStore } from "@/stores/authStore";
 import { Button } from "@/components/ui/button";
 import { PlatformSettings } from "@/types/admin";
 import { SeedDataPanel } from "@/components/admin";
+import { SuperadminOnly } from "@/components/admin/SuperadminOnly";
+import { AiAssistantSettings } from "@/components/admin/settings/AiAssistantSettings";
 import { useI18n } from "@/hooks/useI18n";
 import {
   Save,
@@ -335,6 +337,11 @@ export default function SettingsPage() {
           
           <SeedDataPanel />
         </div>
+
+        {/* AI Assistant */}
+        <SuperadminOnly>
+          <AiAssistantSettings />
+        </SuperadminOnly>
       </div>
     </div>
   );
