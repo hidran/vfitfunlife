@@ -3,7 +3,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import { requireSuperAdmin } from "../utils/roles";
 import { writeAuditLog } from "../lib/audit";
 import { normalizeAvailability } from "./search/normalize";
-import { defaultWeeklySchedule } from "./catalog";
+import { defaultWeeklySchedule, userTypeForSpecialty } from "./catalog";
 
 const region = process.env.FIREBASE_REGION || "europe-west1";
 const MAX_BATCH = 450;
@@ -121,7 +121,22 @@ export const migrateInstructorCatalog = onCall({ region }, async (req) => {
       continue;
     }
 
+    // Lift flat CONVENIENCE fields from providerProfile (never deletes nested).
     const patch: Record<string, unknown> = { ...liftProviderProfileFields(data) };
+
+    // Verification source of truth is NESTED providerProfile.isVerified. Ensure
+    // it exists (default from nested ?? legacy top-level ?? false) without ever
+    // dropping the providerProfile object the read rule depends on.
+    const pp = (data.providerProfile ?? {}) as Record<string, any>;
+    if (typeof pp.isVerified !== "boolean") {
+      const derivedVerified =
+        typeof data.providerProfile?.isVerified === "boolean" ? data.providerProfile.isVerified
+        : typeof data.isVerified === "boolean" ? data.isVerified
+        : false;
+      // Nested object merge (set({merge:true}) deep-merges objects, so this
+      // adds providerProfile.isVerified without clobbering sibling nested fields).
+      patch.providerProfile = { isVerified: derivedVerified };
+    }
 
     // city
     if (typeof data.city !== "string" || !data.city) {
@@ -133,21 +148,32 @@ export const migrateInstructorCatalog = onCall({ region }, async (req) => {
       }
     }
 
-    // availabilitySchedule (canonical array). Fall back to a default week.
-    const normalized = normalizeAvailability(
-      data.availabilitySchedule ?? data.providerProfile?.availabilitySchedule ?? {},
-    );
-    patch.availabilitySchedule = normalized.length ? normalized : defaultWeeklySchedule();
+    // userType (flat, ADDED for AI search): derive from first specialty if missing.
+    if (typeof data.userType !== "string" || !data.userType) {
+      const specialties: unknown = Array.isArray(data.specialties) ? data.specialties
+        : Array.isArray(pp.specialties) ? pp.specialties
+        : [];
+      const first = Array.isArray(specialties) && typeof specialties[0] === "string"
+        ? (specialties[0] as string)
+        : "";
+      if (first) patch.userType = userTypeForSpecialty(first);
+    }
 
-    // isActive / isVerified booleans
+    // availabilitySchedule (flat canonical array, ADDED for AI search). Only
+    // write when the existing array is missing/empty — never overwrite a valid
+    // existing schedule (idempotency).
+    const existingAvailability = normalizeAvailability(data.availabilitySchedule);
+    if (existingAvailability.length === 0) {
+      const normalized = normalizeAvailability(
+        data.availabilitySchedule ?? data.providerProfile?.availabilitySchedule ?? {},
+      );
+      patch.availabilitySchedule = normalized.length ? normalized : defaultWeeklySchedule();
+    }
+
+    // isActive boolean convenience (flat). flattenProvider defaults missing to
+    // true; persist that so server-side filters behave consistently.
     if (typeof data.isActive !== "boolean") {
       patch.isActive = true;
-    }
-    if (typeof data.isVerified !== "boolean") {
-      patch.isVerified =
-        typeof data.providerProfile?.isVerified === "boolean"
-          ? data.providerProfile.isVerified
-          : false;
     }
 
     if (Object.keys(patch).length > 0) {
