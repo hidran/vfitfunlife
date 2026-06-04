@@ -19,4 +19,10 @@ describe("mergeAiSettings", () => {
     expect(merged.model).toBe("gpt-4o-mini");
     expect(merged.temperature).toBe(DEFAULT_AI_SETTINGS.temperature);
   });
+
+  it("preserves default provider lists when only one is overridden", () => {
+    const merged = mergeAiSettings({ availableModels: { openai: ["gpt-4o"] } } as any);
+    expect(merged.availableModels.openai).toEqual(["gpt-4o"]);
+    expect(merged.availableModels.google).toEqual(DEFAULT_AI_SETTINGS.availableModels.google);
+  });
 });

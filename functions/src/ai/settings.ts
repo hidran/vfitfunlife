@@ -34,8 +34,12 @@ export function mergeAiSettings(stored: Partial<AiAssistantSettings> | undefined
 
 /** Read settings from Firestore, falling back to defaults. */
 export async function getAiSettings(): Promise<AiAssistantSettings> {
-  const snap = await admin.firestore().doc(AI_SETTINGS_DOC).get();
-  return mergeAiSettings(snap.exists ? (snap.data() as Partial<AiAssistantSettings>) : undefined);
+  try {
+    const snap = await admin.firestore().doc(AI_SETTINGS_DOC).get();
+    return mergeAiSettings(snap.exists ? (snap.data() as Partial<AiAssistantSettings>) : undefined);
+  } catch (err) {
+    throw new Error(`Failed to load AI assistant settings from Firestore: ${err}`);
+  }
 }
 
-export const AI_PROVIDER_IDS: AiProviderId[] = ["anthropic", "openai", "google", "openai-compatible"];
+export const AI_PROVIDER_IDS = Object.keys(DEFAULT_AI_SETTINGS.availableModels) as AiProviderId[];
