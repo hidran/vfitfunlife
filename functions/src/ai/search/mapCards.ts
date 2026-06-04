@@ -1,19 +1,18 @@
 import { ResultCard } from "../types";
 
-/** Map a /users provider doc to a public-safe ResultCard. Never include PII (phone/email). */
-export function providerDocToCard(id: string, data: Record<string, any>, matchingSlots?: string[]): ResultCard {
-  const pp = data.providerProfile ?? {};
+/** Map an instructors/{id} doc (canonical flat shape) to a public-safe ResultCard. Never include phone/email. */
+export function instructorDocToCard(id: string, data: Record<string, any>, matchingSlots?: string[]): ResultCard {
   const card: ResultCard = {
-    kind: "provider",
+    kind: "instructor",
     id,
     title: data.fullName ?? "Provider",
     bookingHref: `/book?providerId=${id}`,
   };
-  if (Array.isArray(pp.specialties) && pp.specialties.length) card.subtitle = pp.specialties.join(", ");
+  if (Array.isArray(data.specialties) && data.specialties.length) card.subtitle = data.specialties.join(", ");
   if (data.avatarUrl) card.imageUrl = data.avatarUrl;
-  if (typeof pp.rating === "number") card.rating = pp.rating;
-  if (typeof pp.reviewCount === "number") card.reviewCount = pp.reviewCount;
-  if (typeof pp.hourlyRate === "number") card.priceLabel = `€${pp.hourlyRate}/h`;
+  if (typeof data.ratingAvg === "number") card.rating = data.ratingAvg;
+  if (typeof data.reviewCount === "number") card.reviewCount = data.reviewCount;
+  if (typeof data.hourlyRate === "number" && data.hourlyRate > 0) card.priceLabel = `€${data.hourlyRate}/h`;
   if (matchingSlots && matchingSlots.length) card.matchingSlots = matchingSlots;
   return card;
 }
