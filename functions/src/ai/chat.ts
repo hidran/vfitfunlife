@@ -5,7 +5,7 @@ import { getAiSettings } from "./settings";
 import { buildModel, AI_SECRETS } from "./providers";
 import { createAiTools } from "./tools";
 import { buildSystemPrompt } from "./prompt";
-import { reserveQuota, recordTokens } from "./quota";
+import { reserveQuota, recordTokens, releaseQuota } from "./quota";
 import { ResultCard, AiStreamChunk } from "./types";
 
 const region = process.env.FIREBASE_REGION || "europe-west1";
@@ -71,7 +71,12 @@ export const chatWithAssistant = onCall<ChatRequest>(
       .orderBy("createdAt", "asc")
       .limitToLast(settings.maxContextMessages)
       .get()
-      .catch(() => null);
+      .catch((e) => {
+        console.warn("[ai] history fetch failed", e);
+        return null;
+      });
+    // Prior tool-call/tool-result pairs are intentionally collapsed to plain text
+    // content for context; multi-turn tool continuity is not preserved by design.
     const history: ModelMessage[] = (histSnap?.docs ?? []).map((d) => {
       const m = d.data() as any;
       return {
@@ -132,6 +137,10 @@ export const chatWithAssistant = onCall<ChatRequest>(
             collectedCards.push(...(out as ResultCard[]));
             send({ type: "cards", cards: out as ResultCard[] });
           }
+        } else if (part.type === "tool-error") {
+          const toolName = (part as any).toolName ?? "unknown";
+          console.error("[ai] tool error", toolName, (part as any).error);
+          send({ type: "tool", name: toolName, status: "done" });
         } else if (part.type === "error") {
           throw (part as any).error ?? new Error("stream error part");
         }
@@ -139,12 +148,20 @@ export const chatWithAssistant = onCall<ChatRequest>(
     } catch (err) {
       console.error("[ai] stream error", err);
       send({ type: "error", code: "internal" });
+      // Keep history paired by writing a best-effort stub assistant message.
+      await chatRef.collection("messages").add({
+        role: "assistant", content: "", error: true,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      }).catch(() => {});
+      // Refund the reserved quota since the request did not complete.
+      await releaseQuota(uid, now);
       throw new HttpsError("internal", "AI request failed");
     }
 
     // usage fields in ai@5 are inputTokens/outputTokens (LanguageModelV2Usage);
     // keep promptTokens/completionTokens fallbacks for older provider shapes.
-    const usage = await result.usage.catch(() => undefined as any);
+    // totalUsage aggregates across all agentic steps (vs. usage = final step only).
+    const usage = await result.totalUsage.catch(() => undefined as any);
     const inTok = usage?.inputTokens ?? usage?.promptTokens ?? 0;
     const outTok = usage?.outputTokens ?? usage?.completionTokens ?? 0;
 
@@ -166,7 +183,7 @@ export const chatWithAssistant = onCall<ChatRequest>(
     // Build the chat doc update. Set title + createdAt only when creating a new
     // chat; never overwrite an existing chat's title.
     const chatUpdate: Record<string, unknown> = {
-      lastMessagePreview: finalText.slice(0, 120),
+      lastMessagePreview: finalText.slice(0, 120) || (dedupedCards.length ? `${dedupedCards.length} results` : ""),
       locale,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       messageCount: admin.firestore.FieldValue.increment(2),
