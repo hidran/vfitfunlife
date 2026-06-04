@@ -332,6 +332,16 @@ export interface Instructor {
   bio: string;
   shortBio: string;
 
+  // Canonical searchable catalog fields
+  userType: string; // kind of provider, e.g. "personal_trainer"
+  city: string; // e.g. "Torino"
+  availabilitySchedule: Array<{
+    dayOfWeek: number; // 0=Sun..6=Sat
+    startTime: string; // "HH:MM"
+    endTime: string; // "HH:MM"
+    isAvailable: boolean;
+  }>;
+
   // Professional
   specialties: string[];
   certifications: string[];
