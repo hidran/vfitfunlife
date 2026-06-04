@@ -844,16 +844,14 @@ interface SampleInstructorData {
   id: string;
   fullName: string;
   avatarUrl: string | null;
-  isActive: boolean;
-  providerProfile: {
-    isVerified: boolean;
-    isActive: boolean;
-    rating: number;
-    reviewCount: number;
-    specialties: string[];
-    yearsOfExperience: number;
-    languages: string[];
-  };
+  /** City name; must exist in DEMO_CITY_COORDS for geo derivation. */
+  city: string;
+  rating: number;
+  reviewCount: number;
+  specialties: string[];
+  yearsOfExperience: number;
+  languages: string[];
+  bio?: string;
   services: {
     id: string;
     name: string;
@@ -869,16 +867,12 @@ const SAMPLE_INSTRUCTORS: SampleInstructorData[] = [
     id: "provider-1",
     fullName: "Marco Rossi",
     avatarUrl: null,
-    isActive: true,
-    providerProfile: {
-      isVerified: true,
-      isActive: true,
-      rating: 4.8,
-      reviewCount: 127,
-      specialties: ["Personal Training", "Nutrizione", "Bodybuilding"],
-      yearsOfExperience: 8,
-      languages: ["Italiano", "English"],
-    },
+    city: "Milano",
+    rating: 4.8,
+    reviewCount: 127,
+    specialties: ["Personal Training", "Nutrizione", "Bodybuilding"],
+    yearsOfExperience: 8,
+    languages: ["Italiano", "English"],
     services: [
       {
         id: "svc-1",
@@ -906,13 +900,39 @@ export async function seedSampleInstructors(): Promise<SeedingResult> {
     const now = Timestamp.now();
     for (const i of SAMPLE_INSTRUCTORS) {
       const ref = db.collection("instructors").doc(i.id);
-      const { services, ...doc } = i;
-      batch.set(
-        ref,
-        { ...doc, uid: i.id, createdAt: now, updatedAt: now },
-        { merge: true }
-      );
-      for (const s of services) {
+      const primarySpecialty = i.specialties[0] ?? "Personal Training";
+      const coords =
+        DEMO_CITY_COORDS.find((c) => c.name === i.city) ?? DEMO_CITY_COORDS[0];
+      const hourlyRate = i.services.length
+        ? Math.min(...i.services.map((s) => s.price))
+        : 60;
+
+      // Canonical flat searchable-catalog shape (no nested providerProfile),
+      // matching the demo-trainer loop above.
+      const instructorDoc: Record<string, unknown> = {
+        uid: i.id,
+        fullName: i.fullName,
+        avatarUrl: i.avatarUrl,
+        userType: userTypeForSpecialty(primarySpecialty),
+        city: i.city,
+        specialties: i.specialties,
+        languages: i.languages,
+        ratingAvg: i.rating,
+        reviewCount: i.reviewCount,
+        hourlyRate,
+        serviceAreaCenter: new GeoPoint(coords.lat, coords.lng),
+        serviceAreaGeohash: ngeohash.encode(coords.lat, coords.lng),
+        isVerified: true,
+        isActive: true,
+        availabilitySchedule: defaultWeeklySchedule(),
+        yearsOfExperience: i.yearsOfExperience,
+        createdAt: now,
+        updatedAt: now,
+      };
+      if (i.bio) instructorDoc.bio = i.bio;
+
+      batch.set(ref, instructorDoc, { merge: true });
+      for (const s of i.services) {
         batch.set(ref.collection("services").doc(s.id), s, { merge: true });
       }
     }
