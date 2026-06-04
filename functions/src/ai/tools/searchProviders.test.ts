@@ -2,19 +2,26 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock firebase-admin firestore with an in-memory instructors catalog.
 // Defined via vi.hoisted so it is available inside the hoisted vi.mock factory.
+// Corrected canonical shape: verification lives in NESTED providerProfile
+// (source of truth, required by the /instructors read rule). Rating/specialties/
+// languages are nested too on these fixtures; the tool reads them dual-aware.
+// Flat fields (city, userType, availabilitySchedule, lowestPrice, isActive) sit
+// at the top level.
 const INSTRUCTORS = vi.hoisted(() => [
   {
     id: "i1",
     fullName: "Mario Rossi",
     userType: "personal_trainer",
     city: "Torino",
-    specialties: ["Personal Training"],
-    languages: ["it", "en"],
-    ratingAvg: 4.8,
-    reviewCount: 22,
-    hourlyRate: 40,
-    isVerified: true,
+    lowestPrice: 40,
     isActive: true,
+    providerProfile: {
+      isVerified: true,
+      specialties: ["Personal Training"],
+      languages: ["it", "en"],
+      rating: 4.8,
+      reviewCount: 22,
+    },
     availabilitySchedule: [{ dayOfWeek: 1, startTime: "14:00", endTime: "18:00", isAvailable: true }],
   },
   {
@@ -22,13 +29,15 @@ const INSTRUCTORS = vi.hoisted(() => [
     fullName: "Lucia Bianchi",
     userType: "yoga_teacher",
     city: "Milano",
-    specialties: ["Yoga"],
-    languages: ["it"],
-    ratingAvg: 4.5,
-    reviewCount: 10,
-    hourlyRate: 30,
-    isVerified: true,
+    lowestPrice: 30,
     isActive: true,
+    providerProfile: {
+      isVerified: true,
+      specialties: ["Yoga"],
+      languages: ["it"],
+      rating: 4.5,
+      reviewCount: 10,
+    },
     availabilitySchedule: [{ dayOfWeek: 1, startTime: "09:00", endTime: "11:00", isAvailable: true }],
   },
   {
@@ -37,53 +46,61 @@ const INSTRUCTORS = vi.hoisted(() => [
     fullName: "Giulia Verdi",
     userType: "personal_trainer",
     city: "Torino",
-    specialties: ["Personal Training"],
-    languages: ["it"],
-    ratingAvg: 4.2,
-    reviewCount: 5,
-    hourlyRate: 35,
-    isVerified: true,
+    lowestPrice: 35,
     isActive: true,
+    providerProfile: {
+      isVerified: true,
+      specialties: ["Personal Training"],
+      languages: ["it"],
+      rating: 4.2,
+      reviewCount: 5,
+    },
   },
   {
-    // Not verified -> must be excluded by the in-loop guard.
+    // Not verified (nested) -> must be excluded by the in-loop guard.
     id: "i4",
     fullName: "Hidden Trainer",
     userType: "personal_trainer",
     city: "Torino",
-    specialties: ["Personal Training"],
-    languages: ["it"],
-    hourlyRate: 20,
-    isVerified: false,
+    lowestPrice: 20,
     isActive: true,
+    providerProfile: {
+      isVerified: false,
+      specialties: ["Personal Training"],
+      languages: ["it"],
+    },
     availabilitySchedule: [{ dayOfWeek: 1, startTime: "14:00", endTime: "18:00", isAvailable: true }],
   },
   {
-    // Inactive -> must be excluded by the in-loop guard.
+    // Explicitly inactive -> must be excluded by the in-loop guard.
     id: "i5",
     fullName: "Inactive Trainer",
     userType: "personal_trainer",
     city: "Torino",
-    specialties: ["Personal Training"],
-    languages: ["it"],
-    hourlyRate: 20,
-    isVerified: true,
+    lowestPrice: 20,
     isActive: false,
+    providerProfile: {
+      isVerified: true,
+      specialties: ["Personal Training"],
+      languages: ["it"],
+    },
     availabilitySchedule: [{ dayOfWeek: 1, startTime: "14:00", endTime: "18:00", isAvailable: true }],
   },
   {
-    // VFun activity doc sharing the instructors collection. Even with verified
-    // + active flags set, it must never surface as a provider.
+    // VFun activity doc sharing the instructors collection. Even verified, it
+    // must never surface as a provider.
     id: "i6",
     fullName: "Summer Beach Party",
     activityKind: "event",
     userType: "personal_trainer",
     city: "Torino",
-    specialties: ["Personal Training"],
-    languages: ["it"],
-    hourlyRate: 25,
-    isVerified: true,
+    lowestPrice: 25,
     isActive: true,
+    providerProfile: {
+      isVerified: true,
+      specialties: ["Personal Training"],
+      languages: ["it"],
+    },
     availabilitySchedule: [{ dayOfWeek: 1, startTime: "14:00", endTime: "18:00", isAvailable: true }],
   },
 ]);

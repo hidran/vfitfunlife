@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { instructorDocToCard } from "./mapCards";
 
 describe("instructorDocToCard", () => {
-  it("maps an instructors/{id} doc (flat shape) to a public-safe ResultCard", () => {
+  it("maps a flat-shape instructors/{id} doc to a public-safe ResultCard", () => {
     const card = instructorDocToCard("i1", {
       fullName: "Mario Rossi",
       avatarUrl: "https://x/a.jpg",
@@ -15,8 +15,8 @@ describe("instructorDocToCard", () => {
       ratingAvg: 4.8,
       reviewCount: 22,
       hourlyRate: 40,
-      isVerified: true,
       isActive: true,
+      providerProfile: { isVerified: true },
     }, ["Mon 15:00–17:00"]);
 
     expect(card).toEqual({
@@ -33,6 +33,40 @@ describe("instructorDocToCard", () => {
     });
     expect(JSON.stringify(card)).not.toContain("+39123");
     expect(JSON.stringify(card)).not.toContain("m@x.it");
+  });
+
+  it("maps a NESTED-only doc (specialties/rating/reviewCount under providerProfile)", () => {
+    const card = instructorDocToCard("iN", {
+      fullName: "Lucia Bianchi",
+      avatarUrl: "https://x/b.jpg",
+      providerProfile: {
+        isVerified: true,
+        specialties: ["Yoga", "Pilates"],
+        rating: 4.5,
+        reviewCount: 10,
+      },
+      hourlyRate: 30,
+    });
+    expect(card).toEqual({
+      kind: "instructor",
+      id: "iN",
+      title: "Lucia Bianchi",
+      subtitle: "Yoga, Pilates",
+      imageUrl: "https://x/b.jpg",
+      rating: 4.5,
+      reviewCount: 10,
+      priceLabel: "€30/h",
+      bookingHref: "/book?providerId=iN",
+    });
+  });
+
+  it("prefers lowestPrice ('Da €N') over hourlyRate when present", () => {
+    const card = instructorDocToCard("iP", {
+      fullName: "Marco Verdi",
+      lowestPrice: 25,
+      hourlyRate: 40,
+    });
+    expect(card.priceLabel).toBe("Da €25");
   });
 
   it("omits optional fields and price when hourlyRate is 0 / missing", () => {

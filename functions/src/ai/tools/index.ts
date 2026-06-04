@@ -19,7 +19,9 @@ export function createAiTools() {
   const searchProviders = tool({
     description:
       "Search verified personal trainers / providers by specialty, city, day and time window. " +
-      "Use when the user wants a person (e.g. a personal trainer) at a place and time.",
+      "Use when the user wants a person (e.g. a personal trainer) at a place and time. " +
+      "Instructors without stored availability are included as a best-effort fallback (no matchingSlots) " +
+      "and must NOT be presented to the user as confirmed-available at a specific time.",
     inputSchema: z.object({
       city: z.string().optional().describe("City name, e.g. 'Torino'"),
       specialty: z.string().optional().describe("Specialty / userType, e.g. 'Personal Training'"),
@@ -31,42 +33,61 @@ export function createAiTools() {
       limit: z.number().int().min(1).max(20).optional(),
     }),
     execute: async (args): Promise<ResultCard[]> => {
-      // NOTE: the `.limit(50)` pre-filter caps how many verified+active
-      // instructors we scan. In-loop city/specialty/time filters run on those
-      // 50 raw docs, so matches beyond the first 50 verified+active docs may be
-      // missed. Acceptable for the current catalog size; revisit (paginate or
-      // narrow the server-side query) if the instructors collection grows large.
+      // Single-equality query on the NESTED `providerProfile.isVerified` —
+      // this is the verification source of truth (written by the admin
+      // verifyProvider flow and required by the /instructors public-read rule).
+      // A single equality needs no composite index. `isActive` is filtered
+      // in-loop instead (legacy docs may omit it; flattenProvider defaults it
+      // to true, so we only exclude explicit `isActive === false`).
+      //
+      // NOTE: the `.limit(50)` pre-filter caps how many verified instructors we
+      // scan. In-loop city/specialty/time filters run on those 50 raw docs, so
+      // matches beyond the first 50 verified docs may be missed. Acceptable for
+      // the current catalog size; revisit (paginate or narrow the server-side
+      // query) if the instructors collection grows large.
       const snap = await db()
         .collection("instructors")
-        .where("isVerified", "==", true)
-        .where("isActive", "==", true)
+        .where("providerProfile.isVerified", "==", true)
         .limit(50)
         .get();
 
       const cards: ResultCard[] = [];
       for (const doc of snap.docs) {
         const data = doc.data() as Record<string, any>;
-        // Defense in depth: the mock `where` is a passthrough and prod data may
-        // be inconsistent, so re-assert the verified/active gate in the loop.
-        if (data.isVerified !== true || data.isActive !== true) continue;
         // VFun activity docs (events, parties, VR) share the `instructors`
-        // collection but are never searchable providers — exclude them even if
-        // their verified/active flags happen to be set.
+        // collection but are never searchable providers — exclude them.
         if (data.activityKind) continue;
+        // Defense in depth: the mock `where` is a passthrough and prod data may
+        // be inconsistent, so re-assert the verified gate (nested) in the loop.
+        if (data.providerProfile?.isVerified !== true) continue;
+        // Exclude only explicitly-inactive docs (mirror flattenProvider, which
+        // defaults a missing isActive to true).
+        if (data.isActive === false) continue;
+
+        // Field reads mirror flattenProvider's dual-shape fallbacks: flat first,
+        // then nested providerProfile.
+        const specialties: string[] = (Array.isArray(data.specialties) ? data.specialties
+          : Array.isArray(data.providerProfile?.specialties) ? data.providerProfile.specialties
+          : []) as string[];
+        const languages: string[] = (Array.isArray(data.languages) ? data.languages
+          : Array.isArray(data.providerProfile?.languages) ? data.providerProfile.languages
+          : []) as string[];
+        const price: number | undefined =
+          typeof data.lowestPrice === "number" ? data.lowestPrice
+          : typeof data.hourlyRate === "number" ? data.hourlyRate
+          : undefined;
 
         if (args.city && !cityEq(data.city, args.city)) continue;
         if (args.specialty) {
-          const specs: string[] = Array.isArray(data.specialties) ? data.specialties : [];
           const needle = args.specialty.toLowerCase();
-          const hit = specs.some((s) => typeof s === "string" && s.toLowerCase().includes(needle)) ||
+          const hit = specialties.some((s) => typeof s === "string" && s.toLowerCase().includes(needle)) ||
             (typeof data.userType === "string" && data.userType.toLowerCase().includes(needle));
           if (!hit) continue;
         }
         if (args.language) {
-          const langs: string[] = Array.isArray(data.languages) ? data.languages : [];
-          if (!langs.map((l) => String(l).toLowerCase()).includes(args.language.toLowerCase())) continue;
+          if (!languages.map((l) => String(l).toLowerCase()).includes(args.language.toLowerCase())) continue;
         }
-        if (typeof args.priceMax === "number" && typeof data.hourlyRate === "number" && data.hourlyRate > args.priceMax) continue;
+        if (typeof args.priceMax === "number" && typeof price === "number" && price > args.priceMax) continue;
 
         // Availability is BEST-EFFORT: if an instructor has no parseable
         // availability, include them without time gating (so results aren't
