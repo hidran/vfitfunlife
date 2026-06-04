@@ -106,7 +106,7 @@ Provider registry (functions/src/ai/providers.ts)
 interface AiAssistantSettings {
   enabled: boolean;                 // kill-switch
   provider: 'anthropic' | 'openai' | 'google' | 'openai-compatible';
-  model: string;                    // e.g. 'claude-sonnet-4-6'
+  model: string;                    // default: 'gemini-2.5-flash' (cheap)
   availableModels: Record<string, string[]>; // provider -> selectable models
   temperature: number;              // default 0.3
   maxOutputTokens: number;          // default 1024
@@ -118,7 +118,18 @@ interface AiAssistantSettings {
   updatedBy: string;
 }
 ```
-Defaults are seeded on first read if the document is missing.
+**Seeded defaults** (on first read if the document is missing):
+- `provider: 'google'`, `model: 'gemini-2.5-flash'` — cheap, fast, EU residency
+  via Vertex matching `europe-west1`.
+- `availableModels`:
+  - `google`: `['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro']`
+  - `openai`: `['gpt-4o-mini', 'gpt-5-mini', 'gpt-4o']`
+  - `anthropic`: `['claude-haiku-4-5', 'claude-sonnet-4-6']`
+  - `openai-compatible`: `[]` (admin enters the model id for their endpoint)
+
+The cheap defaults (Gemini Flash / GPT-mini / Claude Haiku) are listed first per
+provider so the admin picks an inexpensive model by default. Model IDs are
+verified against current provider docs (via Context7) during planning.
 
 ### 4.3 Cloud Function `chatWithAssistant`
 - `onCall` v2 streaming callable, region `europe-west1`, declares all provider
