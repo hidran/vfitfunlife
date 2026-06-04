@@ -71,6 +71,21 @@ const INSTRUCTORS = vi.hoisted(() => [
     isActive: false,
     availabilitySchedule: [{ dayOfWeek: 1, startTime: "14:00", endTime: "18:00", isAvailable: true }],
   },
+  {
+    // VFun activity doc sharing the instructors collection. Even with verified
+    // + active flags set, it must never surface as a provider.
+    id: "i6",
+    fullName: "Summer Beach Party",
+    activityKind: "event",
+    userType: "personal_trainer",
+    city: "Torino",
+    specialties: ["Personal Training"],
+    languages: ["it"],
+    hourlyRate: 25,
+    isVerified: true,
+    isActive: true,
+    availabilitySchedule: [{ dayOfWeek: 1, startTime: "14:00", endTime: "18:00", isAvailable: true }],
+  },
 ]);
 
 vi.mock("firebase-admin", () => {
@@ -149,6 +164,11 @@ describe("searchProviders tool", () => {
     const ids = cards.map((c) => c.id);
     expect(ids).not.toContain("i4"); // isVerified:false
     expect(ids).not.toContain("i5"); // isActive:false
+  });
+
+  it("excludes activity docs (activityKind set) even when verified+active", async () => {
+    const cards = await tools.searchProviders.execute({ city: "Torino", specialty: "Personal Training" }, ctx);
+    expect(cards.map((c) => c.id)).not.toContain("i6");
   });
 
   it("filters by priceMax against hourlyRate", async () => {

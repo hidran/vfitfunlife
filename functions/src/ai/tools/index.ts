@@ -49,6 +49,10 @@ export function createAiTools() {
         // Defense in depth: the mock `where` is a passthrough and prod data may
         // be inconsistent, so re-assert the verified/active gate in the loop.
         if (data.isVerified !== true || data.isActive !== true) continue;
+        // VFun activity docs (events, parties, VR) share the `instructors`
+        // collection but are never searchable providers — exclude them even if
+        // their verified/active flags happen to be set.
+        if (data.activityKind) continue;
 
         if (args.city && !cityEq(data.city, args.city)) continue;
         if (args.specialty) {

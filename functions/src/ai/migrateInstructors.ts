@@ -97,6 +97,7 @@ export const migrateInstructorCatalog = onCall({ region }, async (req) => {
   let scanned = 0;
   let updated = 0;
   let skippedCity = 0;
+  let skippedActivity = 0;
 
   let batch = db.batch();
   let ops = 0;
@@ -111,6 +112,15 @@ export const migrateInstructorCatalog = onCall({ region }, async (req) => {
   for (const docSnap of snap.docs) {
     scanned++;
     const data = docSnap.data() as Record<string, any>;
+
+    // VFun activity docs (events, parties, VR) live in `instructors` with an
+    // `activityKind` field. They are NOT searchable providers — never promote
+    // them into the catalog or lift their flags.
+    if (data.activityKind) {
+      skippedActivity++;
+      continue;
+    }
+
     const patch: Record<string, unknown> = { ...liftProviderProfileFields(data) };
 
     // city
@@ -156,9 +166,9 @@ export const migrateInstructorCatalog = onCall({ region }, async (req) => {
     action: "update",
     entityType: "migration",
     entityId: "instructors",
-    after: { scanned, updated, skippedCity },
+    after: { scanned, updated, skippedCity, skippedActivity },
     reason: "Normalize instructors collection to canonical provider-catalog shape",
   });
 
-  return { scanned, updated, skippedCity };
+  return { scanned, updated, skippedCity, skippedActivity };
 });
