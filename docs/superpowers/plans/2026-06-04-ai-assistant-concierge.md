@@ -353,6 +353,26 @@ git commit -m "feat(ai): add multi-provider model registry with key presence"
 >
 > **Decision (user):** "An instructor is a kind of provider — fix the data so all provider kinds share the same info." The **`instructors`** collection is THE single searchable provider catalog. Normalize to one canonical shape and **migrate existing data**.
 
+### ⚠️ CORRECTION (v2): keep the existing nested convention — do NOT flatten
+
+A first pass flattened everything and dropped `providerProfile`. That was wrong: the existing app (and `firestore.rules`) treats **`providerProfile.isVerified` (nested)** as the verification source of truth — it's written by the admin `verifyProvider` flow and **required by the `instructors` public-read rule** (`resource.data.providerProfile.isVerified == true`). Dropping `providerProfile` makes seeded instructors unreadable and invisible to the existing browse/search (`fetchProviders`, `searchProviders`). The canonical client reader `flattenProvider` (`src/lib/firebase/providers.ts`) is **dual-shape aware**.
+
+**Corrected canonical `instructors/{id}` shape** — keep existing fields, ADD three:
+- **Nested `providerProfile`** (PRESERVE — source of truth, required by rules): `{ isVerified, rating, reviewCount, specialties, languages, yearsOfExperience }`.
+- **Flat (existing):** `fullName`, `avatarUrl`, `city`, `lat`, `lng` (and/or `serviceAreaCenter`/`serviceAreaGeohash`), `lowestPrice`, `isActive`, `activityKind` (activities only).
+- **Flat (ADDED for AI search):** `userType` (kind of provider), `availabilitySchedule` (canonical weekly array).
+
+**Field-reading rules (mirror `flattenProvider`) for the AI tool + mapper:**
+- verified → `data.providerProfile?.isVerified === true`
+- specialties → `data.specialties ?? data.providerProfile?.specialties ?? []`
+- languages → `data.languages ?? data.providerProfile?.languages ?? []`
+- rating → `data.ratingAvg ?? data.providerProfile?.rating ?? 0`; reviewCount → `data.reviewCount ?? data.providerProfile?.reviewCount`
+- price → `data.lowestPrice ?? data.hourlyRate`
+- city → `data.city`; availability → `normalizeAvailability(data.availabilitySchedule)`; exclude `data.activityKind`
+- Firestore query filter: `where("providerProfile.isVerified","==",true)` (single equality — **no composite index needed**, so the Task 11 users-index is obsolete; drop it).
+
+The seeder and migration must therefore **keep `providerProfile`** and only ADD `city`/`userType`/`availabilitySchedule` (+ ensure `lowestPrice`). `firebookings.ts`/`providers.ts` need **no change** under this correction. The original "flat canonical" text below is superseded by this correction.
+
 ### Canonical instructor (provider catalog) shape
 
 The canonical doc aligns with the existing flat `Instructor` type (what booking/`useProvider` read) **plus three added searchable fields**. All searchable fields live at the **top level** of `instructors/{id}`:
