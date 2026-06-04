@@ -2521,6 +2521,32 @@ export const itMessages = {
   'terms.s5.body': 'Per richieste legali o contrattuali:',
   'terms.linkToPrivacy': 'Leggi la Privacy Policy',
   'terms.backToLogin': 'Torna al Login',
+
+  // ─── AI Assistant ─────────────────────────────────────────────────────
+  'assistant.title': 'Assistente VFit',
+  'assistant.empty': 'Ciao! Dimmi cosa cerchi, es. "Un personal trainer a Torino lunedì dalle 15 alle 17".',
+  'assistant.placeholder': 'Scrivi un messaggio…',
+  'assistant.send': 'Invia',
+  'assistant.book': 'Prenota',
+  'assistant.newChat': 'Nuova chat',
+  'assistant.error.disabled': "L'assistente non è al momento disponibile.",
+  'assistant.error.quota-exceeded': 'Hai raggiunto il limite giornaliero di messaggi.',
+  'assistant.error.input-too-long': 'Messaggio troppo lungo.',
+  'assistant.error.internal': 'Si è verificato un errore. Riprova.',
+  'admin.settings.ai.title': 'Assistente AI',
+  'admin.settings.ai.subtitle': 'Provider, modello e limiti del concierge AI',
+  'admin.settings.ai.enabled': 'Abilita assistente',
+  'admin.settings.ai.provider': 'Provider',
+  'admin.settings.ai.model': 'Modello',
+  'admin.settings.ai.temperature': 'Temperatura',
+  'admin.settings.ai.maxOutputTokens': 'Token massimi in output',
+  'admin.settings.ai.maxContextMessages': 'Messaggi di contesto',
+  'admin.settings.ai.dailyQuota': 'Limite messaggi/giorno',
+  'admin.settings.ai.systemPrompt': 'Istruzioni di sistema (opzionale)',
+  'admin.settings.ai.keyStatus': 'Stato chiavi API',
+  'admin.settings.ai.testConnection': 'Prova connessione',
+  'admin.settings.ai.testOk': 'Connessione riuscita',
+  'admin.settings.ai.testFail': 'Connessione fallita',
 } as const;
 
 export type MessageKey = keyof typeof itMessages;
