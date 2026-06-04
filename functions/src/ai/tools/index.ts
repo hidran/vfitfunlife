@@ -131,7 +131,7 @@ export function createAiTools() {
           title: data.name ?? data.title ?? "Class",
           subtitle: data.venueName ?? undefined,
           imageUrl: data.imageUrl ?? undefined,
-          bookingHref: `/book?classId=${doc.id}`,
+          bookingHref: `/fit/classes`,
         });
         if (cards.length >= (args.limit ?? DEFAULT_LIMIT)) break;
       }
@@ -162,7 +162,7 @@ export function createAiTools() {
           title: data.name ?? "Venue",
           subtitle: data.address ?? undefined,
           imageUrl: data.imageUrl ?? data.coverImageUrl ?? undefined,
-          bookingHref: `/book?venueId=${doc.id}`,
+          bookingHref: `/venue?id=${doc.id}`,
         });
         if (cards.length >= (args.limit ?? DEFAULT_LIMIT)) break;
       }
