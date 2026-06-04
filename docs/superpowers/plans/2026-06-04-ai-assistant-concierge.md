@@ -343,6 +343,151 @@ git commit -m "feat(ai): add multi-provider model registry with key presence"
 
 ---
 
+## Phase 2 (REVISED) — Provider catalog normalization + search tools
+
+> **Why revised:** Real seed/Firestore data does not match the loose TS types the original Phase 2 was written against. Findings:
+> - Provider `users` (role=provider) have **no `city`** (only geo `serviceArea`); only the **`instructors`** collection has a top-level `city`.
+> - `availabilitySchedule` on `users`-providers is a **weekday-keyed object** (`{ monday: { isAvailable, slots:[{start,end}] }, … }`), not an array.
+> - There is no reliable `hourlyRate` on `users`-providers (pricing is `servicePricing[]` / a `services` subcollection).
+> - The `Instructor` TS type is **flat** (`specialties`, `languages`, `ratingAvg`, `reviewCount`, `hourlyRate`, `serviceAreaCenter`, `serviceAreaGeohash`, `isVerified`, `isActive`) but seed path B wrote those **nested under `providerProfile`** and omitted `city`/`availabilitySchedule`.
+>
+> **Decision (user):** "An instructor is a kind of provider — fix the data so all provider kinds share the same info." The **`instructors`** collection is THE single searchable provider catalog. Normalize to one canonical shape and **migrate existing data**.
+
+### Canonical instructor (provider catalog) shape
+
+The canonical doc aligns with the existing flat `Instructor` type (what booking/`useProvider` read) **plus three added searchable fields**. All searchable fields live at the **top level** of `instructors/{id}`:
+
+```ts
+// Canonical searchable fields on instructors/{id}
+{
+  uid: string | null;              // link to the provider's users doc (auth identity)
+  fullName: string;
+  avatarUrl: string | null;
+  userType: string;                // ADDED — kind of provider: 'personal_trainer' | 'yoga_teacher' | ...
+  city: string;                    // ADDED — e.g. "Torino"
+  specialties: string[];
+  languages: string[];
+  ratingAvg: number;
+  reviewCount: number;
+  hourlyRate: number;
+  serviceAreaCenter: GeoPoint | null;
+  serviceAreaGeohash: string | null;
+  isVerified: boolean;
+  isActive: boolean;
+  // ADDED — canonical denormalized weekly availability for fast search:
+  availabilitySchedule: Array<{ dayOfWeek: number /*0=Sun..6=Sat*/, startTime: string /*"HH:MM"*/, endTime: string /*"HH:MM"*/, isAvailable: boolean }>;
+}
+```
+
+The search tool reads ONLY these flat fields. `match.ts` stays array-based (no change). `mapCards.ts` becomes `instructorDocToCard` reading flat fields. A new pure `normalizeAvailability()` converts any legacy shape (weekday-keyed object with `slots`, or already-array) into the canonical array — used by both the migration and the seeder.
+
+`bookingHref` = `/book?providerId=<instructorId>` (verified: the book page fetches the instructor by `providerId`).
+
+### Task 4 (REVISED): availability matching + normalizer (pure)
+
+**Files:**
+- Create: `functions/src/ai/search/match.ts` (+ `match.test.ts`) — as originally specified (array-based `hhmmToMinutes`, `slotCovers`, `matchesAvailability`, `formatSlotLabel`, `AvailabilitySlot`).
+- Add to the same module (or `functions/src/ai/search/normalize.ts` + test): `normalizeAvailability(input: unknown): AvailabilitySlot[]`.
+
+`matchesAvailability` MUST treat a half-specified window as "no time filter is unsafe": require **both or neither** of `startTime`/`endTime` (if exactly one is provided, return `false`). (Fix from review.)
+
+`normalizeAvailability` contract + tests:
+
+```ts
+// Day name -> index (0=Sun..6=Sat)
+const DAY_INDEX: Record<string, number> = { sunday:0, monday:1, tuesday:2, wednesday:3, thursday:4, friday:5, saturday:6 };
+
+export function normalizeAvailability(input: unknown): AvailabilitySlot[] {
+  if (Array.isArray(input)) {
+    // Already canonical-ish: keep entries that have dayOfWeek+startTime+endTime
+    return input
+      .filter((s: any) => s && typeof s.dayOfWeek === "number" && s.startTime && s.endTime)
+      .map((s: any) => ({ dayOfWeek: s.dayOfWeek, startTime: s.startTime, endTime: s.endTime, isAvailable: s.isAvailable !== false }));
+  }
+  if (input && typeof input === "object") {
+    // Weekday-keyed object: { monday: { isAvailable, slots:[{start,end}] }, ... }
+    const out: AvailabilitySlot[] = [];
+    for (const [day, val] of Object.entries(input as Record<string, any>)) {
+      const idx = DAY_INDEX[day.toLowerCase()];
+      if (idx === undefined || !val) continue;
+      const isAvailable = val.isAvailable !== false;
+      const slots = Array.isArray(val.slots) ? val.slots : [];
+      for (const slot of slots) {
+        if (slot?.start && slot?.end) out.push({ dayOfWeek: idx, startTime: slot.start, endTime: slot.end, isAvailable });
+      }
+    }
+    return out;
+  }
+  return [];
+}
+```
+
+Tests must cover: array passthrough; weekday-object→array (monday with two slots → two entries with dayOfWeek 1); empty/garbage → `[]`; `isAvailable:false` preserved. Plus the `matchesAvailability` half-window fix test (`startTime` without `endTime` → `false`).
+
+### Task 5 (REVISED): instructor → ResultCard mapper (pure)
+
+**Files:** `functions/src/ai/search/mapCards.ts` (+ test) — replace `providerDocToCard` with `instructorDocToCard`.
+
+```ts
+import { ResultCard } from "../types";
+
+/** Map an instructors/{id} doc (canonical flat shape) to a public-safe ResultCard. Never include phone/email. */
+export function instructorDocToCard(id: string, data: Record<string, any>, matchingSlots?: string[]): ResultCard {
+  const card: ResultCard = {
+    kind: "instructor",
+    id,
+    title: data.fullName ?? "Provider",
+    bookingHref: `/book?providerId=${id}`,
+  };
+  if (Array.isArray(data.specialties) && data.specialties.length) card.subtitle = data.specialties.join(", ");
+  if (data.avatarUrl) card.imageUrl = data.avatarUrl;
+  if (typeof data.ratingAvg === "number") card.rating = data.ratingAvg;
+  if (typeof data.reviewCount === "number") card.reviewCount = data.reviewCount;
+  if (typeof data.hourlyRate === "number" && data.hourlyRate > 0) card.priceLabel = `€${data.hourlyRate}/h`;
+  if (matchingSlots && matchingSlots.length) card.matchingSlots = matchingSlots;
+  return card;
+}
+```
+
+Test: maps a sample instructor doc; asserts `kind:"instructor"`, `bookingHref:"/book?providerId=<id>"`, price label, and that phone/email do NOT appear in the serialized card.
+
+### Task 6 (REVISED): search tools querying the `instructors` catalog
+
+**Files:** `functions/src/ai/tools/index.ts` (+ `searchProviders.test.ts`).
+
+`searchProviders` (name kept) queries the **`instructors`** collection:
+- Firestore query: `.where("isVerified","==",true).where("isActive","==",true).limit(50)` (add composite index in Task 11).
+- In-loop filters (all optional): `city` (case-insensitive vs top-level `data.city`), `specialty` (substring across `data.specialties` and `data.userType`), `language` (vs `data.languages`), `priceMax` (vs `data.hourlyRate`), and availability via `matchesAvailability(normalizeAvailability(data.availabilitySchedule), dayOfWeek, startTime, endTime)`.
+- **Time matching is best-effort (per user decision):** if `dayOfWeek` is given AND the instructor has parseable availability, require a covering slot to be ranked first; if the instructor has **no** availability data, still include them (so results aren't empty) and OMIT `matchingSlots`. Implement by: compute `slots = normalizeAvailability(...)`; if `slots.length === 0` → include without time gating; else apply `matchesAvailability` and `continue` if it fails. Build `matchingSlots` from the matching day's slots.
+- Map via `instructorDocToCard`. Cap at `args.limit ?? 8`.
+- Add a `log`/comment noting the `.limit(50)` pre-filter tradeoff (results beyond 50 raw docs may be missed).
+
+`searchClasses`: **remove** the unimplemented `dayOfWeek`/`startTime`/`endTime` params from its `inputSchema` (keep `city`, `section`, `limit`) so the LLM isn't told about filters that don't work. Add a `// TODO` noting schedule filtering needs the `/schedules` subcollection.
+
+`searchVenues`: unchanged from original (queries `venues`, city filter in-loop).
+
+`getProviderAvailability({ providerId })`: query `instructors/{providerId}`; if `!doc.exists` return `{ slots: [], error: "provider_not_found" }`; else return `{ slots: normalizeAvailability(doc.data()?.availabilitySchedule).filter(s=>s.isAvailable!==false).map(s=>formatSlotLabel(...)) }`.
+
+Test (`searchProviders.test.ts`) mocks `firebase-admin` with **instructor** fixtures (use `vi.hoisted`). Cover: Torino + "Personal Training" + Monday 15:00–17:00 returns the matching verified instructor with `matchingSlots`; a Milano instructor is excluded; an instructor with NO availability data is still returned (best-effort) when only city/specialty are given; include an `isActive:false` or `isVerified:false` fixture and assert it is absent (documents the verified/active gate even though the mock `where` is a passthrough — assert via the in-loop guard, so also add an explicit in-loop `if (data.isVerified !== true || data.isActive !== true) continue;` defense).
+
+### Task 6.5 (NEW): Canonical type + seeder normalization + migration
+
+**Files:**
+- Modify: `src/types/firebase.ts` — extend `Instructor` with `city: string`, `userType: string`, and `availabilitySchedule: Array<{ dayOfWeek: number; startTime: string; endTime: string; isAvailable: boolean }>`.
+- Modify: `functions/src/seed/seedData.ts` — every seeded `instructors` doc writes the canonical flat shape: top-level `city`, `userType`, `specialties`, `languages`, `ratingAvg`, `reviewCount`, `hourlyRate`, `serviceAreaCenter`, `serviceAreaGeohash`, `isVerified`, `isActive`, and a canonical weekly `availabilitySchedule` array (e.g. Mon–Fri 09:00–12:00 & 14:00–18:00, dayOfWeek 1–5). Move any fields currently nested under `providerProfile` (specialties/rating/etc.) to the flat top level; drop the nested `providerProfile` on instructors OR keep it in sync — canonical is flat. Reuse the existing `DEMO_CITIES`/`cityCoords` helpers for `city` + `serviceAreaCenter`/`serviceAreaGeohash` (use `ngeohash` which is already a dependency).
+- Create: `functions/src/ai/migrateInstructors.ts` — a superadmin-only callable `migrateInstructorCatalog` that backfills existing `instructors` docs to the canonical shape:
+  - For each `instructors` doc: if `specialties`/`languages`/`ratingAvg`/`reviewCount`/`hourlyRate` are missing at top level but present under `providerProfile`, lift them up. Ensure `city` exists (if missing, derive from `serviceAreaCenter` via nearest `DEMO_CITIES` or leave and log). Set `availabilitySchedule = normalizeAvailability(existing availabilitySchedule || providerProfile.availabilitySchedule || {})`; if empty, write a sensible default weekly schedule. Ensure `isActive`/`isVerified` booleans exist.
+  - Batch writes (≤450/batch). Guard with `requireSuperAdmin`. Write one `audit_logs` entry (`action:"update"`, `entityType:"ai_settings"` is wrong here — use a new `entityType:"migration"`; add it to the audit union in Task 10, or reuse `"provider"`). Return `{ scanned, updated }`.
+  - Export from `functions/src/index.ts`.
+
+**Tests:** `normalizeAvailability` is covered in Task 4. Add a small unit test for any pure helper extracted from the migration (e.g. `liftProviderProfileFields(doc)` and `nearestCity(geo, cities)`), so migration logic is testable without the emulator. The callable wiring itself is verified manually in Phase 8.
+
+**Commit** each sub-step. After Task 6.5, run `cd functions && npm run build` and the full `npm run test`.
+
+---
+
+### (Original Phase 2 spec retained below for reference — superseded by the REVISED tasks above where they conflict.)
+
 ## Phase 2 — Search tools (pure logic + Firestore fetch)
 
 Each tool is split into a **pure** part (filter/rank/map — unit tested) and a thin Firestore fetch. This keeps logic testable without the emulator and DRY.
