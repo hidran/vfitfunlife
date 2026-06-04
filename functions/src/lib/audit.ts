@@ -20,7 +20,8 @@ export interface ServerAuditPayload {
     | "booking"
     | "payment"
     | "user_type"
-    | "migration";
+    | "migration"
+    | "ai_settings";
   entityId: string;
   before?: Record<string, unknown>;
   after?: Record<string, unknown>;
