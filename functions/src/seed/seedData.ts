@@ -7,7 +7,9 @@
 
 import * as functions from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import { getFirestore, Timestamp } from "firebase-admin/firestore";
+import { getFirestore, Timestamp, GeoPoint } from "firebase-admin/firestore";
+import * as ngeohash from "ngeohash";
+import { defaultWeeklySchedule, userTypeForSpecialty } from "../ai/catalog";
 
 const db = getFirestore();
 
@@ -1214,7 +1216,8 @@ export async function generateDemoData(): Promise<SeedingResult[]> {
         const id = `demo-trainer-${specialtySlug}-${pad}`;
         const firstName = randomItem(FIRST_NAMES);
         const lastName = randomItem(LAST_NAMES);
-        const city = DEMO_CITIES[(i - 1) % DEMO_CITIES.length].name;
+        const cityEntry = DEMO_CITIES[(i - 1) % DEMO_CITIES.length];
+        const city = cityEntry.name;
 
         // Build secondary specialties from same pool, excluding primary
         const otherSpecialties = pool.filter((s) => s !== specialty);
@@ -1223,44 +1226,57 @@ export async function generateDemoData(): Promise<SeedingResult[]> {
 
         const languages = Math.random() < 0.7 ? ["Italiano"] : ["Italiano", "English"];
 
+        // Pre-build services so the instructor's hourlyRate can derive from
+        // the cheapest service price.
+        const serviceCount = randomInt(2, 4);
+        const shuffled = [...serviceDefs].sort(() => 0.5 - Math.random()).slice(0, serviceCount);
+        const services = shuffled.map((svc, si) => ({
+          svcId: `svc-${si + 1}`,
+          name: svc.name,
+          description: svc.description,
+          durationMinutes: randomItem([30, 45, 60, 90]),
+          price: Math.round(randomInt(30, 120) / 5) * 5,
+        }));
+        const hourlyRate = services.length
+          ? Math.min(...services.map((s) => s.price))
+          : Math.round(randomInt(30, 120) / 5) * 5;
+
+        const ref = db.collection("instructors").doc(id);
+
+        // Canonical flat searchable-catalog shape (no nested providerProfile).
         const instructorDoc: Record<string, unknown> = {
+          uid: id,
           fullName: `${firstName} ${lastName}`,
           avatarUrl: null,
-          uid: id,
-          isActive: true,
+          userType: userTypeForSpecialty(specialty),
           city,
-          providerProfile: {
-            isVerified: true,
-            isActive: true,
-            rating: randomFloat(4.2, 5.0, 1),
-            reviewCount: randomInt(15, 320),
-            specialties: [specialty, ...secondaries],
-            yearsOfExperience: randomInt(2, 18),
-            languages,
-          },
+          specialties: [specialty, ...secondaries],
+          languages,
+          ratingAvg: randomFloat(4.2, 5.0, 1),
+          reviewCount: randomInt(15, 320),
+          hourlyRate,
+          serviceAreaCenter: new GeoPoint(cityEntry.lat, cityEntry.lng),
+          serviceAreaGeohash: ngeohash.encode(cityEntry.lat, cityEntry.lng),
+          isVerified: true,
+          isActive: true,
+          availabilitySchedule: defaultWeeklySchedule(),
           createdAt: now,
           updatedAt: now,
         };
 
-        const ref = db.collection("instructors").doc(id);
         await queueWrite(ref, instructorDoc);
         instructorCount++;
 
-        // Services subcollection: 2–4 services
-        const serviceCount = randomInt(2, 4);
-        const shuffled = [...serviceDefs].sort(() => 0.5 - Math.random()).slice(0, serviceCount);
-        for (let si = 0; si < shuffled.length; si++) {
-          const svcId = `svc-${si + 1}`;
-          const dur = randomItem([30, 45, 60, 90]);
-          const price = Math.round(randomInt(30, 120) / 5) * 5;
+        // Services subcollection
+        for (const svc of services) {
           const svcData: Record<string, unknown> = {
-            name: shuffled[si].name,
-            description: shuffled[si].description,
-            durationMinutes: dur,
-            price,
+            name: svc.name,
+            description: svc.description,
+            durationMinutes: svc.durationMinutes,
+            price: svc.price,
             isActive: true,
           };
-          await queueWrite(ref.collection("services").doc(svcId), svcData);
+          await queueWrite(ref.collection("services").doc(svc.svcId), svcData);
           instructorServiceCount++;
         }
       }
