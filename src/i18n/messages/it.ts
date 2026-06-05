@@ -2549,6 +2549,9 @@ export const itMessages = {
   'admin.settings.ai.testConnection': 'Prova connessione',
   'admin.settings.ai.testOk': 'Connessione riuscita',
   'admin.settings.ai.testFail': 'Connessione fallita',
+  'admin.settings.ai.runMigration': 'Aggiorna catalogo provider',
+  'admin.settings.ai.migrationDone': 'Aggiornati',
+  'admin.settings.ai.migrationHelp': 'Aggiunge disponibilità e tipo a tutti i provider del catalogo.',
 } as const;
 
 export type MessageKey = keyof typeof itMessages;

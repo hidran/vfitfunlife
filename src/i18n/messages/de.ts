@@ -2532,4 +2532,7 @@ export const deMessages: Messages = {
   'admin.settings.ai.testConnection': 'Verbindung testen',
   'admin.settings.ai.testOk': 'Verbindung erfolgreich',
   'admin.settings.ai.testFail': 'Verbindung fehlgeschlagen',
+  'admin.settings.ai.runMigration': 'Anbieterkatalog aktualisieren',
+  'admin.settings.ai.migrationDone': 'Aktualisiert',
+  'admin.settings.ai.migrationHelp': 'Fügt allen Anbietern Verfügbarkeit und Typ hinzu.',
 };

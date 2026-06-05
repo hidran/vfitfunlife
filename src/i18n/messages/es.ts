@@ -2525,4 +2525,7 @@ export const esMessages: Messages = {
   'admin.settings.ai.testConnection': 'Probar conexión',
   'admin.settings.ai.testOk': 'Conexión exitosa',
   'admin.settings.ai.testFail': 'Conexión fallida',
+  'admin.settings.ai.runMigration': 'Actualizar catálogo de proveedores',
+  'admin.settings.ai.migrationDone': 'Actualizados',
+  'admin.settings.ai.migrationHelp': 'Añade disponibilidad y tipo a todos los proveedores.',
 };

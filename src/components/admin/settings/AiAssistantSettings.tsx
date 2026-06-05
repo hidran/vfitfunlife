@@ -2,7 +2,12 @@
 import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
 import { useI18n } from "@/hooks/useI18n";
-import { getAiSettingsAdmin, updateAiSettings, testAiConnection } from "@/lib/firebase/functions";
+import {
+  getAiSettingsAdmin,
+  updateAiSettings,
+  testAiConnection,
+  migrateInstructorCatalog,
+} from "@/lib/firebase/functions";
 import type { AiAssistantSettings as Settings, AiProviderId } from "@/types/assistant";
 
 const PROVIDERS: AiProviderId[] = ["anthropic", "openai", "google", "openai-compatible"];
@@ -14,6 +19,8 @@ export function AiAssistantSettings() {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testMsg, setTestMsg] = useState<string | null>(null);
+  const [migrating, setMigrating] = useState(false);
+  const [migrateMsg, setMigrateMsg] = useState<string | null>(null);
 
   useEffect(() => {
     getAiSettingsAdmin()
@@ -63,6 +70,19 @@ export function AiAssistantSettings() {
       );
     } finally {
       setTesting(false);
+    }
+  };
+
+  const runMigration = async () => {
+    setMigrating(true);
+    setMigrateMsg(null);
+    try {
+      const r = await migrateInstructorCatalog();
+      setMigrateMsg(`${t("admin.settings.ai.migrationDone")}: ${r.updated}/${r.scanned}`);
+    } catch (err) {
+      setMigrateMsg(err instanceof Error ? err.message : "error");
+    } finally {
+      setMigrating(false);
     }
   };
 
@@ -226,6 +246,20 @@ export function AiAssistantSettings() {
           {t("admin.settings.ai.testConnection")}
         </button>
         {testMsg && <span className="text-xs text-content-muted">{testMsg}</span>}
+      </div>
+
+      <div className="space-y-1.5 pt-2 border-t border-hairline">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={runMigration}
+            disabled={migrating}
+            className="px-4 py-2 rounded-xl border border-hairline text-content disabled:opacity-50"
+          >
+            {t("admin.settings.ai.runMigration")}
+          </button>
+          {migrateMsg && <span className="text-xs text-content-muted">{migrateMsg}</span>}
+        </div>
+        <p className="text-xs text-content-muted">{t("admin.settings.ai.migrationHelp")}</p>
       </div>
     </div>
   );

@@ -2534,4 +2534,7 @@ export const frMessages: Messages = {
   'admin.settings.ai.testConnection': 'Tester la connexion',
   'admin.settings.ai.testOk': 'Connexion réussie',
   'admin.settings.ai.testFail': 'Échec de la connexion',
+  'admin.settings.ai.runMigration': 'Mettre à jour le catalogue',
+  'admin.settings.ai.migrationDone': 'Mis à jour',
+  'admin.settings.ai.migrationHelp': 'Ajoute disponibilité et type à tous les prestataires.',
 };

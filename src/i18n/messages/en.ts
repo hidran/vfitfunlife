@@ -2549,4 +2549,7 @@ export const enMessages: Messages = {
   'admin.settings.ai.testConnection': 'Test connection',
   'admin.settings.ai.testOk': 'Connection successful',
   'admin.settings.ai.testFail': 'Connection failed',
+  'admin.settings.ai.runMigration': 'Backfill provider catalog',
+  'admin.settings.ai.migrationDone': 'Updated',
+  'admin.settings.ai.migrationHelp': 'Adds availability and type to all catalog providers.',
 };

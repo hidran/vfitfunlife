@@ -281,3 +281,8 @@ export async function testAiConnection(input: {
   );
   return (await fn(input)).data;
 }
+
+export async function migrateInstructorCatalog(): Promise<{ scanned: number; updated: number; skippedCity?: number; skippedActivity?: number }> {
+  const fn = httpsCallable<void, { scanned: number; updated: number; skippedCity?: number; skippedActivity?: number }>(functions, "migrateInstructorCatalog");
+  return (await fn()).data;
+}
