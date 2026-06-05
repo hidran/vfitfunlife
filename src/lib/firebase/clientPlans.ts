@@ -16,18 +16,24 @@ function toIso(v: unknown): string | undefined {
   return v instanceof Timestamp ? v.toDate().toISOString() : undefined;
 }
 
+function toDateOrThrow(v: string): Date {
+  const d = new Date(v);
+  if (isNaN(d.getTime())) throw new Error(`Invalid date: ${v}`);
+  return d;
+}
+
 // ---- Goals ----
 export async function listGoals(clientId: string): Promise<ClientGoal[]> {
   const snap = await getDocs(query(collection(db, CLIENTS, clientId, "goals"), orderBy("createdAt", "desc")));
   return snap.docs.map((d) => {
-    const data = d.data();
-    return { id: d.id, ...data, targetDate: toIso(data.targetDate) ?? null, createdAt: toIso(data.createdAt), updatedAt: toIso(data.updatedAt) } as ClientGoal;
+    const { targetDate, createdAt, updatedAt, ...rest } = d.data();
+    return { id: d.id, ...rest, targetDate: toIso(targetDate) ?? null, createdAt: toIso(createdAt), updatedAt: toIso(updatedAt) } as ClientGoal;
   });
 }
 export async function createGoal(clientId: string, goal: Omit<ClientGoal, "id" | "createdBy" | "createdAt" | "updatedAt">): Promise<string> {
   const ref = await addDoc(collection(db, CLIENTS, clientId, "goals"), {
     ...goal,
-    targetDate: goal.targetDate ? Timestamp.fromDate(new Date(goal.targetDate)) : null,
+    targetDate: goal.targetDate ? Timestamp.fromDate(toDateOrThrow(goal.targetDate)) : null,
     createdBy: uid(), createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
   });
   return ref.id;
@@ -36,7 +42,7 @@ export async function updateGoal(clientId: string, goalId: string, patch: Partia
   const { id, createdBy, createdAt, ...rest } = patch;
   await updateDoc(doc(db, CLIENTS, clientId, "goals", goalId), {
     ...rest,
-    ...(rest.targetDate !== undefined ? { targetDate: rest.targetDate ? Timestamp.fromDate(new Date(rest.targetDate)) : null } : {}),
+    ...(rest.targetDate !== undefined ? { targetDate: rest.targetDate ? Timestamp.fromDate(toDateOrThrow(rest.targetDate as string)) : null } : {}),
     updatedAt: serverTimestamp(),
   });
 }
@@ -49,8 +55,8 @@ type PlanKind = "trainingPrograms" | "dietPlans" | "recipes";
 async function listPlans<T>(clientId: string, kind: PlanKind): Promise<T[]> {
   const snap = await getDocs(query(collection(db, CLIENTS, clientId, kind), orderBy("createdAt", "desc")));
   return snap.docs.map((d) => {
-    const data = d.data();
-    return { id: d.id, ...data, createdAt: toIso(data.createdAt), updatedAt: toIso(data.updatedAt) } as T;
+    const { createdAt, updatedAt, ...rest } = d.data();
+    return { id: d.id, ...rest, createdAt: toIso(createdAt), updatedAt: toIso(updatedAt) } as T;
   });
 }
 async function createPlan(clientId: string, kind: PlanKind, plan: Record<string, unknown>): Promise<string> {
@@ -60,7 +66,7 @@ async function createPlan(clientId: string, kind: PlanKind, plan: Record<string,
   return ref.id;
 }
 async function updatePlan(clientId: string, kind: PlanKind, id: string, patch: Record<string, unknown>): Promise<void> {
-  const { id: _i, createdBy: _c, createdAt: _ca, source: _s, ...rest } = patch as Record<string, unknown>;
+  const { id: _i, createdBy: _c, createdAt: _ca, source: _s, updatedAt: _u, ...rest } = patch as Record<string, unknown>;
   await updateDoc(doc(db, CLIENTS, clientId, kind, id), { ...rest, updatedAt: serverTimestamp() });
 }
 async function deletePlan(clientId: string, kind: PlanKind, id: string): Promise<void> {
