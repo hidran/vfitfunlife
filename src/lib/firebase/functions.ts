@@ -286,3 +286,33 @@ export async function migrateInstructorCatalog(): Promise<{ scanned: number; upd
   const fn = httpsCallable<void, { scanned: number; updated: number; skippedCity?: number; skippedActivity?: number }>(functions, "migrateInstructorCatalog");
   return (await fn()).data;
 }
+
+// AI Authoring settings (superadmin)
+export interface AiAuthoringSettings {
+  enabled: boolean;
+  provider: AiProviderId;
+  model: string;
+  temperature: number;
+  maxOutputTokens: number;
+  dailyQuota: number;
+  systemPromptOverride?: string;
+}
+
+export async function getAiAuthoringSettingsAdmin(): Promise<{
+  settings: AiAuthoringSettings;
+  keyPresence: Record<AiProviderId, boolean>;
+}> {
+  const fn = httpsCallable<
+    void,
+    { settings: AiAuthoringSettings; keyPresence: Record<AiProviderId, boolean> }
+  >(functions, "getAiAuthoringSettingsAdmin");
+  return (await fn()).data;
+}
+
+export async function updateAiAuthoringSettings(patch: Partial<AiAuthoringSettings>): Promise<void> {
+  const fn = httpsCallable<Partial<AiAuthoringSettings>, { success: boolean }>(
+    functions,
+    "updateAiAuthoringSettings",
+  );
+  await fn(patch);
+}

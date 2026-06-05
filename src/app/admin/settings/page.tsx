@@ -9,6 +9,7 @@ import { PlatformSettings } from "@/types/admin";
 import { SeedDataPanel } from "@/components/admin";
 import { SuperadminOnly } from "@/components/admin/SuperadminOnly";
 import { AiAssistantSettings } from "@/components/admin/settings/AiAssistantSettings";
+import { AiAuthoringSettings } from "@/components/admin/settings/AiAuthoringSettings";
 import { useI18n } from "@/hooks/useI18n";
 import {
   Save,
@@ -341,6 +342,11 @@ export default function SettingsPage() {
         {/* AI Assistant */}
         <SuperadminOnly>
           <AiAssistantSettings />
+        </SuperadminOnly>
+
+        {/* AI Authoring */}
+        <SuperadminOnly>
+          <AiAuthoringSettings />
         </SuperadminOnly>
       </div>
     </div>
