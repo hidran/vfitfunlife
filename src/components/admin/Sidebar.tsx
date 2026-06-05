@@ -27,6 +27,7 @@ import {
   Database,
   Dumbbell,
   UserCircle,
+  UserCheck,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -74,6 +75,12 @@ export function Sidebar({
       label: t('admin.sidebar.nav.providers'),
       href: "/admin/providers",
       icon: <Store className="w-5 h-5" />,
+      allowedRoles: ["superadmin", "admin"],
+    },
+    {
+      label: t('admin.sidebar.nav.clients'),
+      href: "/admin/clients",
+      icon: <UserCheck className="w-5 h-5" />,
       allowedRoles: ["superadmin", "admin"],
     },
     {

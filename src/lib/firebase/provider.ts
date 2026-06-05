@@ -508,23 +508,37 @@ export async function getProviderClients(): Promise<ProviderClient[]> {
 }
 
 // Get Client Details
-export async function getClientDetails(clientId: string): Promise<{
+//
+// When `isAdmin` is true (caller is admin/superadmin), the provider-role
+// requirement and the per-client ownership check are skipped, so staff can
+// open any client. Booking history is then scoped to the client's own
+// providerId rather than the (non-provider) caller's uid.
+export async function getClientDetails(
+  clientId: string,
+  isAdmin = false
+): Promise<{
   client: ProviderClient;
   bookingHistory: ClientBookingHistory[];
   notes: ClientNote[];
 }> {
-  const providerId = await getCurrentProviderId();
-  
+  // Admins are not required to hold the provider role.
+  const callerId = isAdmin
+    ? auth.currentUser?.uid
+    : await getCurrentProviderId();
+  if (!callerId) {
+    throw new Error("Not authenticated");
+  }
+
   // Get client document
   const clientRef = doc(db, CLIENTS_COLLECTION, clientId);
   const clientSnap = await getDoc(clientRef);
-  
+
   if (!clientSnap.exists()) {
     throw new Error("Client not found");
   }
 
   const clientData = clientSnap.data();
-  if (clientData.providerId !== providerId) {
+  if (!isAdmin && clientData.providerId !== callerId) {
     throw new Error("Not authorized to view this client");
   }
 
@@ -535,10 +549,14 @@ export async function getClientDetails(clientId: string): Promise<{
     firstVisit: clientData.firstVisit?.toDate(),
   } as ProviderClient;
 
+  // Scope booking history to the owning provider (admins use the client's
+  // providerId; owners use their own uid).
+  const bookingProviderId = isAdmin ? clientData.providerId : callerId;
+
   // Get booking history
   const bookingsQuery = query(
     collection(db, BOOKINGS_COLLECTION),
-    where("providerId", "==", providerId),
+    where("providerId", "==", bookingProviderId),
     where("userId", "==", client.userId),
     orderBy("scheduledAt", "desc")
   );

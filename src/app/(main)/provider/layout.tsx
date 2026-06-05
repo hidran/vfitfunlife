@@ -45,14 +45,16 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
   const user = useAuthStore((s) => s.user);
   const isInitialized = useAuthStore((s) => s.isInitialized);
   const status = user?.providerStatus ?? 'none';
+  const isStaff = user?.role === 'admin' || user?.role === 'superadmin';
+  const canAccess = isStaff || canAccessProviderArea(status);
 
   useEffect(() => {
-    if (isInitialized && user && !canAccessProviderArea(status)) {
+    if (isInitialized && user && !canAccess) {
       router.replace('/profile');
     }
-  }, [isInitialized, user, status, router]);
+  }, [isInitialized, user, canAccess, router]);
 
-  if (isInitialized && user && !canAccessProviderArea(status)) {
+  if (isInitialized && user && !canAccess) {
     return null; // redirecting
   }
 

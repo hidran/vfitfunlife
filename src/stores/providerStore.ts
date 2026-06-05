@@ -34,6 +34,7 @@ import {
   AvailabilitySettings,
   ActivityItem,
 } from '@/types/provider';
+import { useAuthStore } from '@/stores/authStore';
 
 interface ProviderState {
   // Data
@@ -267,7 +268,9 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
   fetchClientDetails: async (clientId: string) => {
     set({ isLoading: true, error: null });
     try {
-      const { client, bookingHistory, notes } = await getClientDetails(clientId);
+      const role = useAuthStore.getState().user?.role;
+      const isAdmin = role === 'admin' || role === 'superadmin';
+      const { client, bookingHistory, notes } = await getClientDetails(clientId, isAdmin);
       set({ 
         currentClient: client, 
         clientBookingHistory: bookingHistory, 
