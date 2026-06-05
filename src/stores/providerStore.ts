@@ -271,8 +271,8 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
       const role = useAuthStore.getState().user?.role;
       const isAdmin = role === 'admin' || role === 'superadmin';
       const { client, bookingHistory, notes } = await getClientDetails(clientId, isAdmin);
-      set({ 
-        currentClient: client, 
+      set({
+        currentClient: client,
         clientBookingHistory: bookingHistory, 
         clientNotes: notes, 
         isLoading: false 

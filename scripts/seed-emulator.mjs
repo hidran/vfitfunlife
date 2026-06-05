@@ -122,10 +122,31 @@ await writeProfile("test-customer", { email: "test@vfit.dev", fullName: "Test Cu
 await ensureUser("test-admin", "admin@vfit.dev", "test1234", "Test Admin");
 await writeProfile("test-admin", { email: "admin@vfit.dev", fullName: "Test Admin", role: "superadmin", permissions: SUPERADMIN_PERMS });
 
+// Verified provider + a client roster entry (provider <-> the test customer)
+// so the provider client-detail flow (goals/training/diet/recipes) is testable.
+const PROVIDER_PERMS = ["bookings:read", "services:read", "venues:read"];
+await ensureUser("test-provider", "provider@vfit.dev", "test1234", "Test Provider");
+await writeProfile("test-provider", { email: "provider@vfit.dev", fullName: "Test Provider", role: "provider", providerStatus: "verified", permissions: PROVIDER_PERMS });
+await db.collection("clients").doc("test-provider_test-customer").set(
+  {
+    providerId: "test-provider",
+    userId: "test-customer",
+    name: "Test Customer",
+    email: "test@vfit.dev",
+    totalBookings: 3,
+    totalSpent: 150,
+    lastVisit: serverTimestamp(),
+    firstVisit: serverTimestamp(),
+    tags: ["regular"],
+  },
+  { merge: true },
+);
+
 await seedInstructors();
 
-// Enable the AI assistant by default in the emulator for testing.
+// Enable the AI assistant + authoring by default in the emulator for testing.
 await db.doc("systemSettings/aiAssistant").set({ enabled: true, provider: "google", model: "gemini-2.5-flash", updatedAt: serverTimestamp() }, { merge: true });
+await db.doc("systemSettings/aiAuthoring").set({ enabled: true, provider: "google", model: "gemini-2.5-flash", dailyQuota: 20, updatedAt: serverTimestamp() }, { merge: true });
 
-console.log("Done. Logins: test@vfit.dev / admin@vfit.dev (password: test1234)");
+console.log("Done. Logins: test@vfit.dev (customer) / provider@vfit.dev (provider) / admin@vfit.dev (superadmin) — password: test1234");
 process.exit(0);

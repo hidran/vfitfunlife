@@ -577,27 +577,33 @@ export async function getClientDetails(
     return { client, bookingHistory: [], notes };
   }
 
-  // Get booking history
-  const bookingsQuery = query(
-    collection(db, BOOKINGS_COLLECTION),
-    where("providerId", "==", bookingProviderId),
-    where("userId", "==", client.userId),
-    orderBy("scheduledAt", "desc")
-  );
-
-  const bookingsSnap = await getDocs(bookingsQuery);
+  // Get booking history. Bookings store the provider as `instructorId` (the
+  // field both the schema and the /bookings read rule use), so we filter on
+  // that. Wrapped defensively: a failure here (e.g. missing index or a denied
+  // query) must NOT block loading the client's goals/plans/notes — the meetings
+  // list simply comes back empty.
   const bookingHistory: ClientBookingHistory[] = [];
-
-  bookingsSnap.forEach(doc => {
-    const booking = doc.data();
-    bookingHistory.push({
-      booking: { id: doc.id, ...booking } as Booking,
-      serviceName: booking.serviceName,
-      date: booking.scheduledAt.toDate(),
-      status: booking.status,
-      amount: booking.finalPrice,
+  try {
+    const bookingsQuery = query(
+      collection(db, BOOKINGS_COLLECTION),
+      where("instructorId", "==", bookingProviderId),
+      where("userId", "==", client.userId),
+      orderBy("scheduledAt", "desc")
+    );
+    const bookingsSnap = await getDocs(bookingsQuery);
+    bookingsSnap.forEach(doc => {
+      const booking = doc.data();
+      bookingHistory.push({
+        booking: { id: doc.id, ...booking } as Booking,
+        serviceName: booking.serviceName,
+        date: booking.scheduledAt.toDate(),
+        status: booking.status,
+        amount: booking.finalPrice,
+      });
     });
-  });
+  } catch (err) {
+    console.error("[getClientDetails] booking history query failed", err);
+  }
 
   return { client, bookingHistory, notes };
 }
