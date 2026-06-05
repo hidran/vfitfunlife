@@ -17,7 +17,12 @@ export const trainingProgramSchema = z.object({
   })),
 });
 
-const macro = z.object({ kcal: z.number().optional(), protein: z.number().optional(), carbs: z.number().optional(), fat: z.number().optional() });
+const macro = z.object({
+  kcal: z.number().optional(),
+  protein: z.number().optional(),
+  carbs: z.number().optional(),
+  fat: z.number().optional(),
+});
 
 export const dietPlanSchema = z.object({
   title: z.string(),
@@ -27,7 +32,11 @@ export const dietPlanSchema = z.object({
     label: z.string(),
     meals: z.array(z.object({
       name: z.string(), time: z.string().optional(),
-      items: z.array(z.object({ food: z.string(), quantity: z.string(), kcal: z.number().optional(), protein: z.number().optional(), carbs: z.number().optional(), fat: z.number().optional() })),
+      items: z.array(z.object({
+        food: z.string(), quantity: z.string(),
+        kcal: z.number().optional(), protein: z.number().optional(),
+        carbs: z.number().optional(), fat: z.number().optional(),
+      })),
     })),
   })),
 });

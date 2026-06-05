@@ -71,7 +71,8 @@ function header(locale: string, goals: ClientGoalLite[], recentSessions: string[
 export function buildTrainingPrompt(ctx: PromptContext<TrainingParams>): string {
   const { params } = ctx;
   const lines = [
-    "You are an expert fitness coach. Produce a realistic, safe, well-structured training program as a JSON object matching the provided schema.",
+    "You are an expert fitness coach. Produce a realistic, safe, well-structured " +
+      "training program as a JSON object matching the provided schema.",
     "",
     header(ctx.locale, ctx.goals, ctx.recentSessions),
     "",
@@ -84,7 +85,8 @@ export function buildTrainingPrompt(ctx: PromptContext<TrainingParams>): string 
     params.equipment ? `- Available equipment: ${params.equipment}` : "",
     params.constraints ? `- Constraints/injuries: ${params.constraints}` : "",
     "",
-    "Respect the client's goals and recent sessions. Use safe progressions appropriate to the stated level and constraints.",
+    "Respect the client's goals and recent sessions. Use safe progressions " +
+      "appropriate to the stated level and constraints.",
     DISCLAIMER + " Put this note in an exercise `notes` field on the first day.",
   ];
   return lines.filter((l) => l !== "").join("\n");
@@ -93,7 +95,8 @@ export function buildTrainingPrompt(ctx: PromptContext<TrainingParams>): string 
 export function buildDietPrompt(ctx: PromptContext<DietParams>): string {
   const { params } = ctx;
   const lines = [
-    "You are an expert nutrition coach. Produce a realistic, balanced, well-structured diet plan as a JSON object matching the provided schema.",
+    "You are an expert nutrition coach. Produce a realistic, balanced, well-structured " +
+      "diet plan as a JSON object matching the provided schema.",
     "",
     header(ctx.locale, ctx.goals, ctx.recentSessions),
     "",
@@ -112,16 +115,17 @@ export function buildDietPrompt(ctx: PromptContext<DietParams>): string {
 
 export function buildRecipePrompt(ctx: PromptContext<RecipeParams>): string {
   const { params } = ctx;
-  const macros = params.targetMacros
-    ? `- Target macros: ${[
-        params.targetMacros.kcal != null ? `${params.targetMacros.kcal} kcal` : "",
-        params.targetMacros.protein != null ? `${params.targetMacros.protein}g protein` : "",
-        params.targetMacros.carbs != null ? `${params.targetMacros.carbs}g carbs` : "",
-        params.targetMacros.fat != null ? `${params.targetMacros.fat}g fat` : "",
-      ].filter(Boolean).join(", ")}`
-    : "";
+  const macros = params.targetMacros ?
+    `- Target macros: ${[
+      params.targetMacros.kcal != null ? `${params.targetMacros.kcal} kcal` : "",
+      params.targetMacros.protein != null ? `${params.targetMacros.protein}g protein` : "",
+      params.targetMacros.carbs != null ? `${params.targetMacros.carbs}g carbs` : "",
+      params.targetMacros.fat != null ? `${params.targetMacros.fat}g fat` : "",
+    ].filter(Boolean).join(", ")}` :
+    "";
   const lines = [
-    "You are an expert chef and nutritionist. Produce a realistic, healthy recipe as a JSON object matching the provided schema.",
+    "You are an expert chef and nutritionist. Produce a realistic, healthy recipe " +
+      "as a JSON object matching the provided schema.",
     "",
     header(ctx.locale, ctx.goals, ctx.recentSessions),
     "",

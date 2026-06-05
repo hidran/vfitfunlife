@@ -41,7 +41,9 @@ export async function releaseQuota(uid: string, now: Date, bucket = "ai_usage"):
  * Record token usage after a completed request (best-effort).
  * Must only be called after a successful reserveQuota for the same uid+now.
  */
-export async function recordTokens(uid: string, now: Date, inTok: number, outTok: number, bucket = "ai_usage"): Promise<void> {
+export async function recordTokens(
+  uid: string, now: Date, inTok: number, outTok: number, bucket = "ai_usage",
+): Promise<void> {
   const ref = admin.firestore().doc(usageDocPath(uid, now, bucket));
   await ref.set(
     {
