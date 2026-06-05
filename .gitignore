@@ -77,3 +77,6 @@ firestore-debug.log
 .playwright-mcp/
 playwright-report/
 test-results/
+
+# Firebase emulator persisted data
+.emulator-data/

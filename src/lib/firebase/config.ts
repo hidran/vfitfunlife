@@ -1,13 +1,14 @@
 import { initializeApp, getApps, FirebaseApp } from "firebase/app";
-import { getAuth, Auth } from "firebase/auth";
+import { getAuth, Auth, connectAuthEmulator } from "firebase/auth";
 import {
   getFirestore,
   initializeFirestore,
   persistentLocalCache,
   persistentMultipleTabManager,
+  connectFirestoreEmulator,
   Firestore,
 } from "firebase/firestore";
-import { getStorage, FirebaseStorage } from "firebase/storage";
+import { getStorage, FirebaseStorage, connectStorageEmulator } from "firebase/storage";
 import { getFunctions, Functions, connectFunctionsEmulator } from "firebase/functions";
 import { getAnalytics, Analytics, isSupported } from "firebase/analytics";
 import { getMessaging, Messaging, isSupported as isMessagingSupported } from "firebase/messaging";
@@ -59,9 +60,15 @@ function initializeFirebase() {
   const region = process.env.NEXT_PUBLIC_FIREBASE_REGION || "europe-west1";
   functions = getFunctions(app, region);
 
-  // Connect to emulators in development
+  // Connect to the local Firebase emulator suite in development.
+  // Ports mirror firebase.json. Each connect is guarded so Fast Refresh
+  // re-runs (which re-import this module) don't throw "already connected".
   if (process.env.NODE_ENV === "development" && process.env.NEXT_PUBLIC_USE_EMULATORS === "true") {
-    connectFunctionsEmulator(functions, "localhost", 5001);
+    const host = "localhost";
+    try { connectAuthEmulator(auth, `http://${host}:9099`, { disableWarnings: true }); } catch { /* already connected */ }
+    try { connectFirestoreEmulator(db, host, 8080); } catch { /* already connected */ }
+    try { connectStorageEmulator(storage, host, 9199); } catch { /* already connected */ }
+    try { connectFunctionsEmulator(functions, host, 5001); } catch { /* already connected */ }
   }
 
   return { app, auth, db, storage, functions };
