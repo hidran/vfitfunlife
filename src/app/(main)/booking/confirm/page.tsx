@@ -160,7 +160,7 @@ export default function BookingConfirmPage() {
         </div>
       </div>
 
-      <div className="p-4 space-y-4 pb-32">
+      <div className="p-4 space-y-4 pb-44">
         {/* Provider & Service Summary */}
         <div className="bg-surface-elevated/50 rounded-2xl p-4">
           <div className="flex gap-3">
@@ -345,8 +345,8 @@ export default function BookingConfirmPage() {
         )}
       </div>
 
-      {/* Bottom Action Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-surface-elevated border-t border-hairline p-4 safe-area-pb">
+      {/* Bottom Action Bar — sits above the fixed TabBar (h-16 + safe area) so the confirm button isn't covered */}
+      <div className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] left-0 right-0 z-40 bg-surface-elevated border-t border-hairline p-4">
         <div className="flex items-center justify-between gap-4">
           <div>
             <p className="text-text-secondary text-sm">{t('common.total')}</p>
