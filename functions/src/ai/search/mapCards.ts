@@ -6,30 +6,34 @@ import { ResultCard } from "../types";
  * first, then nested `providerProfile`, so both the canonical seeded shape and
  * legacy nested-only docs produce correct cards.
  */
-export function instructorDocToCard(id: string, data: Record<string, any>, matchingSlots?: string[]): ResultCard {
-  const pp = (data.providerProfile ?? {}) as Record<string, any>;
+export function instructorDocToCard(
+  id: string,
+  data: Record<string, unknown>,
+  matchingSlots?: string[],
+): ResultCard {
+  const pp = (data.providerProfile ?? {}) as Record<string, unknown>;
   const card: ResultCard = {
     kind: "instructor",
     id,
-    title: data.fullName ?? "Provider",
+    title: (typeof data.fullName === "string" ? data.fullName : undefined) ?? "Provider",
     bookingHref: `/book?providerId=${id}`,
   };
 
-  const specialties: unknown = Array.isArray(data.specialties) ? data.specialties
-    : Array.isArray(pp.specialties) ? pp.specialties
-    : undefined;
+  const specialties: unknown = Array.isArray(data.specialties) ? data.specialties :
+    Array.isArray(pp.specialties) ? pp.specialties :
+      undefined;
   if (Array.isArray(specialties) && specialties.length) card.subtitle = specialties.join(", ");
 
-  if (data.avatarUrl) card.imageUrl = data.avatarUrl;
+  if (typeof data.avatarUrl === "string") card.imageUrl = data.avatarUrl;
 
-  const rating = typeof data.ratingAvg === "number" ? data.ratingAvg
-    : typeof pp.rating === "number" ? pp.rating
-    : undefined;
+  const rating = typeof data.ratingAvg === "number" ? data.ratingAvg :
+    typeof pp.rating === "number" ? pp.rating :
+      undefined;
   if (typeof rating === "number") card.rating = rating;
 
-  const reviewCount = typeof data.reviewCount === "number" ? data.reviewCount
-    : typeof pp.reviewCount === "number" ? pp.reviewCount
-    : undefined;
+  const reviewCount = typeof data.reviewCount === "number" ? data.reviewCount :
+    typeof pp.reviewCount === "number" ? pp.reviewCount :
+      undefined;
   if (typeof reviewCount === "number") card.reviewCount = reviewCount;
 
   // Price: prefer flat lowestPrice ("Da €N"), else hourlyRate ("€N/h"). Omit

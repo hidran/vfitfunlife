@@ -1,7 +1,7 @@
 export interface AvailabilitySlot {
   dayOfWeek: number; // 0=Sun..6=Sat
   startTime: string; // "HH:MM"
-  endTime: string;   // "HH:MM"
+  endTime: string; // "HH:MM"
   isAvailable?: boolean;
 }
 

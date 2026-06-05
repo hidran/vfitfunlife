@@ -49,8 +49,8 @@ export const chatWithAssistant = onCall<ChatRequest>(
     // Quota (transactional reserve)
     try {
       await reserveQuota(uid, settings.dailyMessageQuota, now);
-    } catch (e: any) {
-      if (e?.code === "quota-exceeded") {
+    } catch (e: unknown) {
+      if ((e as { code?: string })?.code === "quota-exceeded") {
         send({ type: "error", code: "quota-exceeded" });
         throw new HttpsError("resource-exhausted", "quota-exceeded");
       }
@@ -60,9 +60,9 @@ export const chatWithAssistant = onCall<ChatRequest>(
     // Resolve / create chat. Track creation so we set title/createdAt only once.
     const userRef = db.collection("users").doc(uid);
     const isNewChat = !request.data.chatId;
-    const chatRef = isNewChat
-      ? userRef.collection("chats").doc()
-      : userRef.collection("chats").doc(request.data.chatId as string);
+    const chatRef = isNewChat ?
+      userRef.collection("chats").doc() :
+      userRef.collection("chats").doc(request.data.chatId as string);
     const chatId = chatRef.id;
 
     // Load capped history (oldest first)
@@ -78,7 +78,7 @@ export const chatWithAssistant = onCall<ChatRequest>(
     // Prior tool-call/tool-result pairs are intentionally collapsed to plain text
     // content for context; multi-turn tool continuity is not preserved by design.
     const history: ModelMessage[] = (histSnap?.docs ?? []).map((d) => {
-      const m = d.data() as any;
+      const m = d.data() as Record<string, unknown>;
       return {
         role: m.role === "assistant" ? "assistant" : "user",
         content: String(m.content ?? ""),
@@ -87,8 +87,8 @@ export const chatWithAssistant = onCall<ChatRequest>(
 
     // City hint from the requesting customer's users/{uid} doc.
     // Customers have no providerProfile/serviceArea, so read the flat `city`.
-    const userData = (await userRef.get()).data() as any;
-    const city: string | undefined = userData?.city ?? undefined;
+    const userData = (await userRef.get()).data() as Record<string, unknown> | undefined;
+    const city: string | undefined = typeof userData?.city === "string" ? userData.city : undefined;
 
     const system = buildSystemPrompt({
       locale,
@@ -125,23 +125,30 @@ export const chatWithAssistant = onCall<ChatRequest>(
         //  - tool-call carries `.toolName`
         //  - tool-result carries `.output` (the tool's return value)
         if (part.type === "text-delta") {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const text = (part as any).text ?? (part as any).textDelta ?? "";
           finalText += text;
           send({ type: "delta", text });
         } else if (part.type === "tool-call") {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           send({ type: "tool", name: (part as any).toolName, status: "running" });
         } else if (part.type === "tool-result") {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const out = (part as any).output ?? (part as any).result;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           send({ type: "tool", name: (part as any).toolName, status: "done" });
           if (Array.isArray(out)) {
             collectedCards.push(...(out as ResultCard[]));
             send({ type: "cards", cards: out as ResultCard[] });
           }
         } else if (part.type === "tool-error") {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const toolName = (part as any).toolName ?? "unknown";
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           console.error("[ai] tool error", toolName, (part as any).error);
           send({ type: "tool", name: toolName, status: "done" });
         } else if (part.type === "error") {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           throw (part as any).error ?? new Error("stream error part");
         }
       }
@@ -161,7 +168,13 @@ export const chatWithAssistant = onCall<ChatRequest>(
     // usage fields in ai@5 are inputTokens/outputTokens (LanguageModelV2Usage);
     // keep promptTokens/completionTokens fallbacks for older provider shapes.
     // totalUsage aggregates across all agentic steps (vs. usage = final step only).
-    const usage = await result.totalUsage.catch(() => undefined as any);
+    type UsageShape = {
+      inputTokens?: number;
+      outputTokens?: number;
+      promptTokens?: number;
+      completionTokens?: number;
+    };
+    const usage = await result.totalUsage.catch(() => undefined) as UsageShape | undefined;
     const inTok = usage?.inputTokens ?? usage?.promptTokens ?? 0;
     const outTok = usage?.outputTokens ?? usage?.completionTokens ?? 0;
 

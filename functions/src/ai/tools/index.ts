@@ -12,6 +12,10 @@ function cityEq(a: unknown, b: string): boolean {
   return typeof a === "string" && a.trim().toLowerCase() === b.trim().toLowerCase();
 }
 
+function asString(v: unknown): string | undefined {
+  return typeof v === "string" ? v : undefined;
+}
+
 /** Build the read-only tool set. Pass nothing in prod; tests mock firebase-admin. */
 export function createAiTools() {
   const db = () => admin.firestore();
@@ -53,29 +57,30 @@ export function createAiTools() {
 
       const cards: ResultCard[] = [];
       for (const doc of snap.docs) {
-        const data = doc.data() as Record<string, any>;
+        const data = doc.data() as Record<string, unknown>;
+        const pp = (data.providerProfile ?? {}) as Record<string, unknown>;
         // VFun activity docs (events, parties, VR) share the `instructors`
         // collection but are never searchable providers — exclude them.
         if (data.activityKind) continue;
         // Defense in depth: the mock `where` is a passthrough and prod data may
         // be inconsistent, so re-assert the verified gate (nested) in the loop.
-        if (data.providerProfile?.isVerified !== true) continue;
+        if (pp.isVerified !== true) continue;
         // Exclude only explicitly-inactive docs (mirror flattenProvider, which
         // defaults a missing isActive to true).
         if (data.isActive === false) continue;
 
         // Field reads mirror flattenProvider's dual-shape fallbacks: flat first,
         // then nested providerProfile.
-        const specialties: string[] = (Array.isArray(data.specialties) ? data.specialties
-          : Array.isArray(data.providerProfile?.specialties) ? data.providerProfile.specialties
-          : []) as string[];
-        const languages: string[] = (Array.isArray(data.languages) ? data.languages
-          : Array.isArray(data.providerProfile?.languages) ? data.providerProfile.languages
-          : []) as string[];
+        const specialties: string[] = (Array.isArray(data.specialties) ? data.specialties :
+          Array.isArray(pp.specialties) ? pp.specialties :
+            []) as string[];
+        const languages: string[] = (Array.isArray(data.languages) ? data.languages :
+          Array.isArray(pp.languages) ? pp.languages :
+            []) as string[];
         const price: number | undefined =
-          typeof data.lowestPrice === "number" ? data.lowestPrice
-          : typeof data.hourlyRate === "number" ? data.hourlyRate
-          : undefined;
+          typeof data.lowestPrice === "number" ? data.lowestPrice :
+            typeof data.hourlyRate === "number" ? data.hourlyRate :
+              undefined;
 
         if (args.city && !cityEq(data.city, args.city)) continue;
         if (args.specialty) {
@@ -123,15 +128,15 @@ export function createAiTools() {
       const snap = await q.limit(50).get();
       const cards: ResultCard[] = [];
       for (const doc of snap.docs) {
-        const data = doc.data() as Record<string, any>;
+        const data = doc.data() as Record<string, unknown>;
         if (args.city && !cityEq(data.city, args.city)) continue;
         cards.push({
           kind: "class",
           id: doc.id,
-          title: data.name ?? data.title ?? "Class",
-          subtitle: data.venueName ?? undefined,
-          imageUrl: data.imageUrl ?? undefined,
-          bookingHref: `/fit/classes`,
+          title: asString(data.name) ?? asString(data.title) ?? "Class",
+          subtitle: asString(data.venueName),
+          imageUrl: asString(data.imageUrl),
+          bookingHref: "/fit/classes",
         });
         if (cards.length >= (args.limit ?? DEFAULT_LIMIT)) break;
       }
@@ -154,14 +159,14 @@ export function createAiTools() {
       const snap = await q.limit(50).get();
       const cards: ResultCard[] = [];
       for (const doc of snap.docs) {
-        const data = doc.data() as Record<string, any>;
+        const data = doc.data() as Record<string, unknown>;
         if (args.city && !cityEq(data.city, args.city)) continue;
         cards.push({
           kind: "venue",
           id: doc.id,
-          title: data.name ?? "Venue",
-          subtitle: data.address ?? undefined,
-          imageUrl: data.imageUrl ?? data.coverImageUrl ?? undefined,
+          title: asString(data.name) ?? "Venue",
+          subtitle: asString(data.address),
+          imageUrl: asString(data.imageUrl) ?? asString(data.coverImageUrl),
           bookingHref: `/venue?id=${doc.id}`,
         });
         if (cards.length >= (args.limit ?? DEFAULT_LIMIT)) break;

@@ -35,11 +35,12 @@ interface GeoLike {
  * `ratingAvg`. Pure (no Firestore).
  */
 export function liftProviderProfileFields(
-  doc: Record<string, any>,
+  doc: Record<string, unknown>,
 ): Record<string, unknown> {
   const patch: Record<string, unknown> = {};
-  const pp = doc?.providerProfile;
-  if (!pp || typeof pp !== "object") return patch;
+  const ppRaw = doc?.providerProfile;
+  if (!ppRaw || typeof ppRaw !== "object") return patch;
+  const pp = ppRaw as Record<string, unknown>;
 
   if (doc.ratingAvg === undefined && pp.rating !== undefined) patch.ratingAvg = pp.rating;
   if (doc.reviewCount === undefined && pp.reviewCount !== undefined) patch.reviewCount = pp.reviewCount;
@@ -111,7 +112,7 @@ export const migrateInstructorCatalog = onCall({ region }, async (req) => {
 
   for (const docSnap of snap.docs) {
     scanned++;
-    const data = docSnap.data() as Record<string, any>;
+    const data = docSnap.data() as Record<string, unknown>;
 
     // VFun activity docs (events, parties, VR) live in `instructors` with an
     // `activityKind` field. They are NOT searchable providers — never promote
@@ -127,12 +128,12 @@ export const migrateInstructorCatalog = onCall({ region }, async (req) => {
     // Verification source of truth is NESTED providerProfile.isVerified. Ensure
     // it exists (default from nested ?? legacy top-level ?? false) without ever
     // dropping the providerProfile object the read rule depends on.
-    const pp = (data.providerProfile ?? {}) as Record<string, any>;
+    const pp = (data.providerProfile ?? {}) as Record<string, unknown>;
     if (typeof pp.isVerified !== "boolean") {
       const derivedVerified =
-        typeof data.providerProfile?.isVerified === "boolean" ? data.providerProfile.isVerified
-        : typeof data.isVerified === "boolean" ? data.isVerified
-        : false;
+        typeof pp.isVerified === "boolean" ? pp.isVerified :
+          typeof data.isVerified === "boolean" ? data.isVerified :
+            false;
       // Nested object merge (set({merge:true}) deep-merges objects, so this
       // adds providerProfile.isVerified without clobbering sibling nested fields).
       patch.providerProfile = { isVerified: derivedVerified };
@@ -150,12 +151,12 @@ export const migrateInstructorCatalog = onCall({ region }, async (req) => {
 
     // userType (flat, ADDED for AI search): derive from first specialty if missing.
     if (typeof data.userType !== "string" || !data.userType) {
-      const specialties: unknown = Array.isArray(data.specialties) ? data.specialties
-        : Array.isArray(pp.specialties) ? pp.specialties
-        : [];
-      const first = Array.isArray(specialties) && typeof specialties[0] === "string"
-        ? (specialties[0] as string)
-        : "";
+      const specialties: unknown = Array.isArray(data.specialties) ? data.specialties :
+        Array.isArray(pp.specialties) ? pp.specialties :
+          [];
+      const first = Array.isArray(specialties) && typeof specialties[0] === "string" ?
+        (specialties[0] as string) :
+        "";
       if (first) patch.userType = userTypeForSpecialty(first);
     }
 
@@ -165,7 +166,7 @@ export const migrateInstructorCatalog = onCall({ region }, async (req) => {
     const existingAvailability = normalizeAvailability(data.availabilitySchedule);
     if (existingAvailability.length === 0) {
       const normalized = normalizeAvailability(
-        data.availabilitySchedule ?? data.providerProfile?.availabilitySchedule ?? {},
+        data.availabilitySchedule ?? pp.availabilitySchedule ?? {},
       );
       patch.availabilitySchedule = normalized.length ? normalized : defaultWeeklySchedule();
     }

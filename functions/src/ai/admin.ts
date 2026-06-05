@@ -57,8 +57,9 @@ export const updateAiSettings = onCall(
     let patch;
     try {
       patch = validateSettingsPatch(request.data);
-    } catch (e: any) {
-      throw new HttpsError("invalid-argument", e?.message ?? "Invalid settings");
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : undefined;
+      throw new HttpsError("invalid-argument", message ?? "Invalid settings");
     }
 
     const before = await getAiSettings();
@@ -79,8 +80,8 @@ export const updateAiSettings = onCall(
       action: "update",
       entityType: "ai_settings",
       entityId: "aiAssistant",
-      before: before as any,
-      after: patch as any,
+      before: before as unknown as Record<string, unknown>,
+      after: patch as Record<string, unknown>,
     });
 
     return { success: true };
@@ -107,8 +108,9 @@ export const testAiConnection = onCall(
         maxOutputTokens: 5,
       });
       return { ok: true, sample: text.slice(0, 20) };
-    } catch (e: any) {
-      return { ok: false, error: String(e?.message ?? e).slice(0, 300) };
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : e;
+      return { ok: false, error: String(message ?? e).slice(0, 300) };
     }
   },
 );

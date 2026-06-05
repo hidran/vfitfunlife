@@ -8,9 +8,9 @@ export const DEFAULT_AI_SETTINGS: AiAssistantSettings = {
   provider: "google",
   model: "gemini-2.5-flash",
   availableModels: {
-    google: ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-pro"],
-    openai: ["gpt-4o-mini", "gpt-5-mini", "gpt-4o"],
-    anthropic: ["claude-haiku-4-5", "claude-sonnet-4-6"],
+    "google": ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-pro"],
+    "openai": ["gpt-4o-mini", "gpt-5-mini", "gpt-4o"],
+    "anthropic": ["claude-haiku-4-5", "claude-sonnet-4-6"],
     "openai-compatible": [],
   },
   temperature: 0.3,

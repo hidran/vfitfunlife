@@ -903,9 +903,9 @@ export async function seedSampleInstructors(): Promise<SeedingResult> {
       const primarySpecialty = i.specialties[0] ?? "Personal Training";
       const coords =
         DEMO_CITY_COORDS.find((c) => c.name === i.city) ?? DEMO_CITY_COORDS[0];
-      const hourlyRate = i.services.length
-        ? Math.min(...i.services.map((s) => s.price))
-        : 60;
+      const hourlyRate = i.services.length ?
+        Math.min(...i.services.map((s) => s.price)) :
+        60;
 
       // Canonical shape: nested `providerProfile` is the verification source of
       // truth (required by the /instructors public-read rule + flattenProvider).
@@ -1267,9 +1267,9 @@ export async function generateDemoData(): Promise<SeedingResult[]> {
           durationMinutes: randomItem([30, 45, 60, 90]),
           price: Math.round(randomInt(30, 120) / 5) * 5,
         }));
-        const hourlyRate = services.length
-          ? Math.min(...services.map((s) => s.price))
-          : Math.round(randomInt(30, 120) / 5) * 5;
+        const hourlyRate = services.length ?
+          Math.min(...services.map((s) => s.price)) :
+          Math.round(randomInt(30, 120) / 5) * 5;
 
         const ref = db.collection("instructors").doc(id);
 

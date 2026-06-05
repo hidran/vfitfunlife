@@ -24,26 +24,26 @@ const DAY_INDEX: Record<string, number> = {
 export function normalizeAvailability(input: unknown): AvailabilitySlot[] {
   if (Array.isArray(input)) {
     // Already canonical-ish: keep entries that have dayOfWeek+startTime+endTime
-    return input
-      .filter((s: any) => s && typeof s.dayOfWeek === "number" && s.startTime && s.endTime)
-      .map((s: any) => ({
-        dayOfWeek: s.dayOfWeek,
-        startTime: s.startTime,
-        endTime: s.endTime,
+    return (input as Array<Record<string, unknown>>)
+      .filter((s) => s && typeof s.dayOfWeek === "number" && s.startTime && s.endTime)
+      .map((s) => ({
+        dayOfWeek: s.dayOfWeek as number,
+        startTime: s.startTime as string,
+        endTime: s.endTime as string,
         isAvailable: s.isAvailable !== false,
       }));
   }
   if (input && typeof input === "object") {
     // Weekday-keyed object: { monday: { isAvailable, slots:[{start,end}] }, ... }
     const out: AvailabilitySlot[] = [];
-    for (const [day, val] of Object.entries(input as Record<string, any>)) {
+    for (const [day, val] of Object.entries(input as Record<string, Record<string, unknown>>)) {
       const idx = DAY_INDEX[day.toLowerCase()];
       if (idx === undefined || !val) continue;
       const isAvailable = val.isAvailable !== false;
-      const slots = Array.isArray(val.slots) ? val.slots : [];
+      const slots = Array.isArray(val.slots) ? (val.slots as Array<Record<string, unknown>>) : [];
       for (const slot of slots) {
         if (slot?.start && slot?.end) {
-          out.push({ dayOfWeek: idx, startTime: slot.start, endTime: slot.end, isAvailable });
+          out.push({ dayOfWeek: idx, startTime: slot.start as string, endTime: slot.end as string, isAvailable });
         }
       }
     }

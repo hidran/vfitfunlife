@@ -8,7 +8,7 @@ export function usageDocPath(uid: string, now: Date): string {
 export function nextCountOrThrow(current: number, quota: number): number {
   if (current >= quota) {
     const err = new Error("Daily message quota exceeded");
-    (err as any).code = "quota-exceeded";
+    (err as { code?: string }).code = "quota-exceeded";
     throw err;
   }
   return current + 1;
