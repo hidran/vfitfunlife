@@ -16,6 +16,8 @@ import MeetingsTab from './tabs/MeetingsTab';
 import NotesTab from './tabs/NotesTab';
 import GoalsTab from './tabs/GoalsTab';
 import TrainingTab from './tabs/TrainingTab';
+import DietTab from './tabs/DietTab';
+import RecipesTab from './tabs/RecipesTab';
 
 type TabId = 'overview' | 'meetings' | 'goals' | 'training' | 'diet' | 'recipes' | 'notes';
 
@@ -185,16 +187,8 @@ export default function ClientDetailClient() {
         {activeTab === 'meetings' && <MeetingsTab bookingHistory={bookingHistory} />}
         {activeTab === 'goals' && <GoalsTab clientId={clientId} />}
         {activeTab === 'training' && <TrainingTab clientId={clientId} />}
-        {activeTab === 'diet' && (
-          <div className="bg-surface-elevated rounded-xl border border-hairline p-10 text-center">
-            <p className="text-gray-400 text-sm">{t('clientDetail.comingSoon')}</p>
-          </div>
-        )}
-        {activeTab === 'recipes' && (
-          <div className="bg-surface-elevated rounded-xl border border-hairline p-10 text-center">
-            <p className="text-gray-400 text-sm">{t('clientDetail.comingSoon')}</p>
-          </div>
-        )}
+        {activeTab === 'diet' && <DietTab clientId={clientId} />}
+        {activeTab === 'recipes' && <RecipesTab clientId={clientId} />}
         {activeTab === 'notes' && <NotesTab clientId={clientId} initialNotes={clientNotes} />}
       </div>
     </div>
