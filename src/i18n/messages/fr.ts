@@ -1091,6 +1091,7 @@ export const frMessages: Messages = {
   'profile.menu.subtitle.addresses': 'Gérer les adresses enregistrées',
   'profile.menu.subtitle.helpCenter': 'Support et FAQ',
   'profile.menu.subtitle.rateApp': 'Laisser un avis rapide',
+  'drawer.item.admin': 'Administration',
   'drawer.item.promo': 'Promo',
   'drawer.item.challenges': 'Défis',
   'drawer.section.categories': 'Catégories',

@@ -14,6 +14,7 @@ import {
   Instagram,
   LogOut,
   Search,
+  ShieldCheck,
   Sparkles,
   Star,
   Trophy,
@@ -104,6 +105,8 @@ export function SideDrawer({
   const { t } = useI18n();
   const logout = useAuthStore((state) => state.logout);
   const isLoading = useAuthStore((state) => state.isLoading);
+  const role = useAuthStore((state) => state.user?.role);
+  const isStaff = role === 'admin' || role === 'superadmin';
 
   useEffect(() => {
     if (!isOpen) {
@@ -263,6 +266,19 @@ export function SideDrawer({
           </div>
 
           <div className="flex-1 overflow-y-auto p-4">
+            {isStaff && (
+              <button
+                type="button"
+                onClick={() => handleNavigate('/admin')}
+                className="mb-4 flex w-full items-center gap-3 rounded-xl bg-gradient-to-r from-[#8A4FFF] to-[#FFA96B] px-3 py-3 text-left shadow-sm transition-opacity hover:opacity-90"
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">
+                  <ShieldCheck className="h-4 w-4 text-white" />
+                </div>
+                <span className="flex-1 text-sm font-semibold text-white">{t('drawer.item.admin')}</span>
+              </button>
+            )}
+
             <div className="space-y-2">
               {accountItems.map((item) => {
                 const Icon = item.icon;

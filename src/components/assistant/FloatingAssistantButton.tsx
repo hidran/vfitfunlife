@@ -12,8 +12,8 @@ export function FloatingAssistantButton() {
   const open = useAssistantStore((s) => s.open);
   const isOpen = useAssistantStore((s) => s.isOpen);
 
-  // Logged-in customers only.
-  if (!isInitialized || !user || user.role !== "customer") return null;
+  // Any logged-in user (customers, providers, and staff/superadmin).
+  if (!isInitialized || !user) return null;
 
   return (
     <>

@@ -1089,6 +1089,7 @@ export const deMessages: Messages = {
   'profile.menu.subtitle.addresses': 'Gespeicherte Adressen verwalten',
   'profile.menu.subtitle.helpCenter': 'Support und FAQ',
   'profile.menu.subtitle.rateApp': 'Kurze Bewertung abgeben',
+  'drawer.item.admin': 'Verwaltung',
   'drawer.item.promo': 'Promo',
   'drawer.item.challenges': 'Challenges',
   'drawer.section.categories': 'Kategorien',

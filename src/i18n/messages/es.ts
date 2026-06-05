@@ -1085,6 +1085,7 @@ export const esMessages: Messages = {
   'profile.menu.subtitle.addresses': 'Gestiona direcciones guardadas',
   'profile.menu.subtitle.helpCenter': 'Soporte y FAQ',
   'profile.menu.subtitle.rateApp': 'Deja una resena rapida',
+  'drawer.item.admin': 'Administración',
   'drawer.item.promo': 'Promo',
   'drawer.item.challenges': 'Desafios',
   'drawer.section.categories': 'Categorias',

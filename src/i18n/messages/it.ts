@@ -1247,6 +1247,7 @@ export const itMessages = {
   'profile.menu.subtitle.addresses': 'Gestisci indirizzi',
   'profile.menu.subtitle.helpCenter': 'Assistenza e FAQ',
   'profile.menu.subtitle.rateApp': 'Lascia una recensione',
+  'drawer.item.admin': 'Amministrazione',
   'drawer.item.promo': 'Promo',
   'drawer.item.challenges': 'Sfide',
   'drawer.section.categories': 'Categorie',

@@ -1248,6 +1248,7 @@ export const enMessages: Messages = {
   'profile.menu.subtitle.addresses': 'Manage saved addresses',
   'profile.menu.subtitle.helpCenter': 'Support and FAQ',
   'profile.menu.subtitle.rateApp': 'Leave a quick review',
+  'drawer.item.admin': 'Admin',
   'drawer.item.promo': 'Promo',
   'drawer.item.challenges': 'Challenges',
   'drawer.section.categories': 'Categories',
