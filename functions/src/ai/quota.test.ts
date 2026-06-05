@@ -30,6 +30,11 @@ describe("usageDocPath", () => {
   it("builds a per-user per-day path", () => {
     expect(usageDocPath("u1", new Date("2026-06-04T10:00:00Z"))).toBe("users/u1/ai_usage/2026-06-04");
   });
+
+  it("supports a custom usage bucket", () => {
+    expect(usageDocPath("u1", new Date("2026-06-05T10:00:00Z"), "ai_authoring_usage"))
+      .toBe("users/u1/ai_authoring_usage/2026-06-05");
+  });
 });
 
 describe("nextCountOrThrow", () => {

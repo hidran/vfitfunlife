@@ -1,8 +1,8 @@
 import * as admin from "firebase-admin";
 
-export function usageDocPath(uid: string, now: Date): string {
+export function usageDocPath(uid: string, now: Date, bucket = "ai_usage"): string {
   const day = now.toISOString().slice(0, 10); // UTC date — resets at midnight UTC (~01:00–02:00 Italian time)
-  return `users/${uid}/ai_usage/${day}`;
+  return `users/${uid}/${bucket}/${day}`;
 }
 
 export function nextCountOrThrow(current: number, quota: number): number {
@@ -15,8 +15,8 @@ export function nextCountOrThrow(current: number, quota: number): number {
 }
 
 /** Atomically reserve one message against the daily quota. Throws {code:'quota-exceeded'}. */
-export async function reserveQuota(uid: string, quota: number, now: Date): Promise<void> {
-  const ref = admin.firestore().doc(usageDocPath(uid, now));
+export async function reserveQuota(uid: string, quota: number, now: Date, bucket = "ai_usage"): Promise<void> {
+  const ref = admin.firestore().doc(usageDocPath(uid, now, bucket));
   await admin.firestore().runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     const raw = snap.exists ? snap.data()?.count : undefined;
@@ -27,8 +27,8 @@ export async function reserveQuota(uid: string, quota: number, now: Date): Promi
 }
 
 /** Best-effort refund of one reserved message (e.g. when the AI call fails). Floors at 0. */
-export async function releaseQuota(uid: string, now: Date): Promise<void> {
-  const ref = admin.firestore().doc(usageDocPath(uid, now));
+export async function releaseQuota(uid: string, now: Date, bucket = "ai_usage"): Promise<void> {
+  const ref = admin.firestore().doc(usageDocPath(uid, now, bucket));
   await admin.firestore().runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     const raw = snap.exists ? snap.data()?.count : undefined;
@@ -41,8 +41,8 @@ export async function releaseQuota(uid: string, now: Date): Promise<void> {
  * Record token usage after a completed request (best-effort).
  * Must only be called after a successful reserveQuota for the same uid+now.
  */
-export async function recordTokens(uid: string, now: Date, inTok: number, outTok: number): Promise<void> {
-  const ref = admin.firestore().doc(usageDocPath(uid, now));
+export async function recordTokens(uid: string, now: Date, inTok: number, outTok: number, bucket = "ai_usage"): Promise<void> {
+  const ref = admin.firestore().doc(usageDocPath(uid, now, bucket));
   await ref.set(
     {
       tokensIn: admin.firestore.FieldValue.increment(Number.isFinite(inTok) ? inTok : 0),
