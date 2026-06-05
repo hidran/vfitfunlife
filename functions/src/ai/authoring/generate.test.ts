@@ -116,6 +116,17 @@ describe("generateTrainingProgram authorization", () => {
     expect(res.source).toBe("ai");
   });
 
+  it("rejects an owner provider whose account is deactivated", async () => {
+    fx.users = { ownerProvider: { role: "provider", isActive: false } };
+    await expect(
+      invoke(generateTrainingProgram, {
+        auth: { uid: "ownerProvider", token: {} },
+        data: { clientId: "c1", params: baseParams },
+      }),
+    ).rejects.toMatchObject({ code: "permission-denied" });
+    expect(fx.addSpy).not.toHaveBeenCalled();
+  });
+
   it("throws failed-precondition when authoring is disabled", async () => {
     fx.users = { ownerProvider: { role: "provider" } };
     fx.settings = { ...fx.settings, enabled: false };

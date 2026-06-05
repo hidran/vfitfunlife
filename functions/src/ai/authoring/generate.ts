@@ -7,8 +7,14 @@ import { getAiAuthoringSettings } from "./settings";
 import { reserveQuota, recordTokens, releaseQuota } from "../quota";
 import { writeAuditLog } from "../../lib/audit";
 import { getUserRoleInfo } from "../../utils/roles";
-import { trainingProgramSchema, dietPlanSchema, recipeSchema, trainingParamsSchema, dietParamsSchema, recipeParamsSchema } from "./schemas";
-import { buildTrainingPrompt, buildDietPrompt, buildRecipePrompt } from "./prompts";
+import {
+  trainingProgramSchema, dietPlanSchema, recipeSchema,
+  trainingParamsSchema, dietParamsSchema, recipeParamsSchema,
+} from "./schemas";
+import {
+  buildTrainingPrompt, buildDietPrompt, buildRecipePrompt,
+  ClientGoalLite, PromptContext,
+} from "./prompts";
 
 const region = process.env.FIREBASE_REGION || "europe-west1";
 const BUCKET = "ai_authoring_usage";
@@ -19,6 +25,7 @@ interface GenReq { clientId: string; locale?: string; params: unknown; }
 async function authorizeClient(uid: string, clientId: string) {
   const role = await getUserRoleInfo(uid);
   if (!role) throw new HttpsError("permission-denied", "Unknown user");
+  if (role.isActive === false) throw new HttpsError("permission-denied", "Account is deactivated");
   const isStaff = role.role === "admin" || role.role === "superadmin";
   const snap = await admin.firestore().collection("clients").doc(clientId).get();
   if (!snap.exists) throw new HttpsError("not-found", "Client not found");
@@ -28,11 +35,11 @@ async function authorizeClient(uid: string, clientId: string) {
   return { snap, client };
 }
 
-async function runGeneration<T extends z.ZodTypeAny>(opts: {
+async function runGeneration<T extends z.ZodObject<z.ZodRawShape>, P>(opts: {
   request: CallableRequest<GenReq>;
-  paramsSchema: z.ZodTypeAny;
+  paramsSchema: z.ZodType<P>;
   outputSchema: T;
-  buildPrompt: (ctx: { locale: string; params: any; goals: any[]; recentSessions: string[] }) => string;
+  buildPrompt: (ctx: PromptContext<P>) => string;
   subcollection: "trainingPrograms" | "dietPlans" | "recipes";
 }) {
   const { request } = opts;
@@ -45,30 +52,45 @@ async function runGeneration<T extends z.ZodTypeAny>(opts: {
   if (!clientId) throw new HttpsError("invalid-argument", "Missing clientId");
   await authorizeClient(uid, clientId);
 
-  let params;
-  try { params = opts.paramsSchema.parse(request.data.params); }
-  catch (e: any) { throw new HttpsError("invalid-argument", e?.message ?? "Invalid params"); }
+  let params: P;
+  try {
+    params = opts.paramsSchema.parse(request.data.params);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Invalid params";
+    throw new HttpsError("invalid-argument", msg);
+  }
 
   const settings = await getAiAuthoringSettings();
   if (!settings.enabled) throw new HttpsError("failed-precondition", "disabled");
 
-  try { await reserveQuota(uid, settings.dailyQuota, now, BUCKET); }
-  catch (e: any) { if (e?.code === "quota-exceeded") throw new HttpsError("resource-exhausted", "quota-exceeded"); throw e; }
+  try {
+    await reserveQuota(uid, settings.dailyQuota, now, BUCKET);
+  } catch (e) {
+    if ((e as { code?: string })?.code === "quota-exceeded") {
+      throw new HttpsError("resource-exhausted", "quota-exceeded");
+    }
+    throw e;
+  }
 
   // Context: active goals + recent completed sessions
   const clientSnap = await db.collection("clients").doc(clientId).get();
-  const userId = (clientSnap.data() as any)?.userId;
-  const goalsSnap = await db.collection("clients").doc(clientId).collection("goals").where("status", "==", "active").get().catch(() => null);
-  const goals = (goalsSnap?.docs ?? []).map((d) => d.data());
+  const userId = (clientSnap.data() as { userId?: string } | undefined)?.userId;
+  const goalsSnap = await db.collection("clients").doc(clientId).collection("goals")
+    .where("status", "==", "active").get().catch(() => null);
+  const goals = (goalsSnap?.docs ?? []).map((d) => d.data() as ClientGoalLite);
   let recentSessions: string[] = [];
   if (userId) {
-    const bk = await db.collection("bookings").where("userId", "==", userId).where("status", "==", "completed").limit(5).get().catch(() => null);
-    recentSessions = (bk?.docs ?? []).map((d) => (d.data() as any).serviceName).filter(Boolean);
+    const bk = await db.collection("bookings")
+      .where("userId", "==", userId).where("status", "==", "completed")
+      .limit(5).get().catch(() => null);
+    recentSessions = (bk?.docs ?? [])
+      .map((d) => (d.data() as { serviceName?: string }).serviceName)
+      .filter((s): s is string => Boolean(s));
   }
 
   const prompt = opts.buildPrompt({ locale: request.data.locale ?? "it", params, goals, recentSessions });
 
-  let object: any;
+  let object: z.infer<T>;
   try {
     const res = await generateObject({
       model: buildModel(settings.provider, settings.model),
@@ -77,9 +99,11 @@ async function runGeneration<T extends z.ZodTypeAny>(opts: {
       temperature: settings.temperature,
       maxOutputTokens: settings.maxOutputTokens,
     });
-    object = res.object;
-    const usage = (res as any).usage;
-    await recordTokens(uid, now, usage?.inputTokens ?? usage?.promptTokens ?? 0, usage?.outputTokens ?? usage?.completionTokens ?? 0, BUCKET);
+    object = res.object as z.infer<T>;
+    const usage = (res as { usage?: Record<string, number> }).usage;
+    const inTok = usage?.inputTokens ?? usage?.promptTokens ?? 0;
+    const outTok = usage?.outputTokens ?? usage?.completionTokens ?? 0;
+    await recordTokens(uid, now, inTok, outTok, BUCKET);
   } catch (err) {
     console.error("[ai-authoring] generateObject failed", err);
     await releaseQuota(uid, now, BUCKET);
@@ -106,10 +130,28 @@ async function runGeneration<T extends z.ZodTypeAny>(opts: {
 }
 
 export const generateTrainingProgram = onCall<GenReq>({ region, secrets: AI_SECRETS }, (request) =>
-  runGeneration({ request, paramsSchema: trainingParamsSchema, outputSchema: trainingProgramSchema, buildPrompt: buildTrainingPrompt, subcollection: "trainingPrograms" }));
+  runGeneration({
+    request,
+    paramsSchema: trainingParamsSchema,
+    outputSchema: trainingProgramSchema,
+    buildPrompt: buildTrainingPrompt,
+    subcollection: "trainingPrograms",
+  }));
 
 export const generateDietPlan = onCall<GenReq>({ region, secrets: AI_SECRETS }, (request) =>
-  runGeneration({ request, paramsSchema: dietParamsSchema, outputSchema: dietPlanSchema, buildPrompt: buildDietPrompt, subcollection: "dietPlans" }));
+  runGeneration({
+    request,
+    paramsSchema: dietParamsSchema,
+    outputSchema: dietPlanSchema,
+    buildPrompt: buildDietPrompt,
+    subcollection: "dietPlans",
+  }));
 
 export const generateRecipe = onCall<GenReq>({ region, secrets: AI_SECRETS }, (request) =>
-  runGeneration({ request, paramsSchema: recipeParamsSchema, outputSchema: recipeSchema, buildPrompt: buildRecipePrompt, subcollection: "recipes" }));
+  runGeneration({
+    request,
+    paramsSchema: recipeParamsSchema,
+    outputSchema: recipeSchema,
+    buildPrompt: buildRecipePrompt,
+    subcollection: "recipes",
+  }));
