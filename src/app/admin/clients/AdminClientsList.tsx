@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { Search, UserCircle, ChevronRight } from 'lucide-react';
 import { db } from '@/lib/firebase/config';
 import { Spinner } from '@/components/ui/Spinner';
@@ -31,25 +31,28 @@ export default function AdminClientsList() {
     (async () => {
       setLoading(true);
       try {
-        const snap = await getDocs(
-          query(collection(db, 'clients'), orderBy('lastVisit', 'desc'))
-        );
+        const snap = await getDocs(collection(db, 'clients'));
         if (cancelled) return;
-        setClients(
-          snap.docs.map((d) => {
-            const data = d.data();
-            return {
-              id: d.id,
-              name: data.name ?? '',
-              email: data.email ?? '',
-              phone: data.phone,
-              photoUrl: data.photoUrl,
-              totalBookings: data.totalBookings,
-              totalSpent: data.totalSpent,
-              lastVisit: data.lastVisit?.toDate?.(),
-            } as AdminClientRow;
-          })
-        );
+        const rows = snap.docs.map((d) => {
+          const data = d.data();
+          return {
+            id: d.id,
+            name: data.name ?? '',
+            email: data.email ?? '',
+            phone: data.phone,
+            photoUrl: data.photoUrl,
+            totalBookings: data.totalBookings,
+            totalSpent: data.totalSpent,
+            lastVisit: data.lastVisit?.toDate?.(),
+          } as AdminClientRow;
+        });
+        // Sort by lastVisit descending; clients missing lastVisit sort LAST.
+        rows.sort((a, b) => {
+          const av = a.lastVisit ? a.lastVisit.getTime() : 0;
+          const bv = b.lastVisit ? b.lastVisit.getTime() : 0;
+          return bv - av;
+        });
+        setClients(rows);
       } finally {
         if (!cancelled) setLoading(false);
       }

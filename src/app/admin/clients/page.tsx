@@ -1,7 +1,1 @@
-'use client';
-
-import AdminClientsList from './AdminClientsList';
-
-export default function AdminClientsPage() {
-  return <AdminClientsList />;
-}
+export { default } from './AdminClientsList';

@@ -549,9 +549,33 @@ export async function getClientDetails(
     firstVisit: clientData.firstVisit?.toDate(),
   } as ProviderClient;
 
+  // Get notes (computed before the booking query so the early-return below
+  // can include them).
+  const notesQuery = query(
+    collection(db, CLIENTS_COLLECTION, clientId, "notes"),
+    orderBy("createdAt", "desc")
+  );
+
+  const notesSnap = await getDocs(notesQuery);
+  const notes: ClientNote[] = [];
+
+  notesSnap.forEach(doc => {
+    const note = doc.data();
+    notes.push({
+      id: doc.id,
+      ...note,
+      createdAt: note.createdAt?.toDate(),
+      updatedAt: note.updatedAt?.toDate(),
+    } as ClientNote);
+  });
+
   // Scope booking history to the owning provider (admins use the client's
   // providerId; owners use their own uid).
-  const bookingProviderId = isAdmin ? clientData.providerId : callerId;
+  const bookingProviderId = isAdmin ? (clientData.providerId ?? null) : callerId;
+  if (!bookingProviderId) {
+    // Admin opening a client that has no providerId: cannot scope bookings.
+    return { client, bookingHistory: [], notes };
+  }
 
   // Get booking history
   const bookingsQuery = query(
@@ -573,25 +597,6 @@ export async function getClientDetails(
       status: booking.status,
       amount: booking.finalPrice,
     });
-  });
-
-  // Get notes
-  const notesQuery = query(
-    collection(db, CLIENTS_COLLECTION, clientId, "notes"),
-    orderBy("createdAt", "desc")
-  );
-
-  const notesSnap = await getDocs(notesQuery);
-  const notes: ClientNote[] = [];
-
-  notesSnap.forEach(doc => {
-    const note = doc.data();
-    notes.push({
-      id: doc.id,
-      ...note,
-      createdAt: note.createdAt?.toDate(),
-      updatedAt: note.updatedAt?.toDate(),
-    } as ClientNote);
   });
 
   return { client, bookingHistory, notes };
