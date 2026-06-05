@@ -14,3 +14,4 @@ export * from "./seed/seedData";
 export * from "./ai/migrateInstructors";
 export * from "./ai/chat";
 export * from "./ai/admin";
+export * from "./ai/authoring/generate";

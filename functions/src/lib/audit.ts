@@ -21,7 +21,8 @@ export interface ServerAuditPayload {
     | "payment"
     | "user_type"
     | "migration"
-    | "ai_settings";
+    | "ai_settings"
+    | "ai_plan";
   entityId: string;
   before?: Record<string, unknown>;
   after?: Record<string, unknown>;
