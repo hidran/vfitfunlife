@@ -4,24 +4,22 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import {
-  ArrowLeft,
-  Mail,
-  Phone,
-  Calendar,
-  MessageSquare,
-  Plus,
-  Edit,
-  Trash2,
-  Save,
-  X,
-} from 'lucide-react';
+import { ArrowLeft, Mail, Phone, Calendar, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/Spinner';
 import { cn } from '@/lib/utils';
 import { useProviderStore } from '@/stores/providerStore';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
+import OverviewTab from './tabs/OverviewTab';
+import MeetingsTab from './tabs/MeetingsTab';
+import NotesTab from './tabs/NotesTab';
+import GoalsTab from './tabs/GoalsTab';
+import TrainingTab from './tabs/TrainingTab';
+
+type TabId = 'overview' | 'meetings' | 'goals' | 'training' | 'diet' | 'recipes' | 'notes';
+
+const TABS: TabId[] = ['overview', 'meetings', 'goals', 'training', 'diet', 'recipes', 'notes'];
 
 export default function ClientDetailClient() {
   const { t, locale } = useI18n();
@@ -35,21 +33,13 @@ export default function ClientDetailClient() {
     fetchClientDetails,
   } = useProviderStore();
 
-  const [isEditingNotes, setIsEditingNotes] = useState(false);
-  const [editedNotes, setEditedNotes] = useState('');
-  const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'notes'>('overview');
+  const [activeTab, setActiveTab] = useState<TabId>('overview');
 
   useEffect(() => {
     if (clientId) {
       void fetchClientDetails(clientId);
     }
   }, [clientId, fetchClientDetails]);
-
-  useEffect(() => {
-    if (client) {
-      setEditedNotes(client.notes ?? '');
-    }
-  }, [client]);
 
   if (!clientId) {
     return (
@@ -67,10 +57,6 @@ export default function ClientDetailClient() {
     );
   }
 
-  const handleSaveNotes = () => {
-    setIsEditingNotes(false);
-  };
-
   const formatDate = (date: Date | { toDate(): Date } | undefined) => {
     if (!date) return t('provider.clientDetail.dateNever');
     const d = typeof date === 'object' && 'toDate' in date ? date.toDate() : date;
@@ -79,13 +65,6 @@ export default function ClientDetailClient() {
       day: 'numeric',
       year: 'numeric',
     });
-  };
-
-  const STATUS_COLORS = {
-    completed: 'bg-green-500/20 text-green-400',
-    confirmed: 'bg-blue-500/20 text-blue-400',
-    pending: 'bg-yellow-500/20 text-yellow-400',
-    cancelled: 'bg-red-500/20 text-red-400',
   };
 
   return (
@@ -182,168 +161,40 @@ export default function ClientDetailClient() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-hairline">
-        {(['overview', 'history', 'notes'] as const).map((tab) => (
+      <div className="flex items-center gap-2 border-b border-hairline overflow-x-auto scrollbar-none">
+        {TABS.map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={cn(
-              'px-4 py-3 text-sm font-medium transition-colors border-b-2',
+              'px-4 py-3 text-sm font-medium transition-colors border-b-2 whitespace-nowrap shrink-0',
               activeTab === tab
                 ? 'text-content border-section-primary'
                 : 'text-gray-400 border-transparent hover:text-content'
             )}
           >
-            {t(`provider.clientDetail.tab.${tab}`)}
+            {t(`clientDetail.tab.${tab}`)}
           </button>
         ))}
       </div>
 
       {/* Tab Content */}
       <div className="space-y-6">
-        {activeTab === 'overview' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Notes */}
-            <div className="bg-surface-elevated rounded-xl border border-hairline p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-content">{t('provider.clientDetail.notes.title')}</h3>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setIsEditingNotes(!isEditingNotes)}
-                >
-                  {isEditingNotes ? (
-                    <><X className="w-4 h-4 mr-2" /> {t('provider.clientDetail.notes.cancel')}</>
-                  ) : (
-                    <><Edit className="w-4 h-4 mr-2" /> {t('provider.clientDetail.notes.edit')}</>
-                  )}
-                </Button>
-              </div>
-
-              {isEditingNotes ? (
-                <div className="space-y-3">
-                  <textarea
-                    value={editedNotes}
-                    onChange={(e) => setEditedNotes(e.target.value)}
-                    className="w-full bg-surface-input border border-hairline rounded-lg px-4 py-3 text-content placeholder-gray-500 outline-none focus:border-section-primary min-h-[150px]"
-                  />
-                  <Button onClick={handleSaveNotes} size="sm">
-                    <Save className="w-4 h-4 mr-2" />
-                    {t('provider.clientDetail.notes.save')}
-                  </Button>
-                </div>
-              ) : (
-                <p className="text-gray-300 leading-relaxed">
-                  {client.notes || t('provider.clientDetail.notes.empty')}
-                </p>
-              )}
-            </div>
-
-            {/* Recent Activity */}
-            <div className="bg-surface-elevated rounded-xl border border-hairline p-6">
-              <h3 className="text-lg font-semibold text-content mb-4">{t('provider.clientDetail.recentActivity')}</h3>
-              <div className="space-y-4">
-                {bookingHistory.slice(0, 3).map((entry) => (
-                  <div
-                    key={entry.booking.id}
-                    className="flex items-center justify-between p-3 bg-surface-input rounded-lg"
-                  >
-                    <div>
-                      <p className="font-medium text-content">{entry.serviceName}</p>
-                      <p className="text-sm text-gray-400">{formatDate(entry.date)}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium text-content">€{entry.amount}</p>
-                      <span className={cn('text-xs px-2 py-0.5 rounded', STATUS_COLORS[entry.status as keyof typeof STATUS_COLORS])}>
-                        {entry.status}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+        {activeTab === 'overview' && <OverviewTab client={client} bookingHistory={bookingHistory} />}
+        {activeTab === 'meetings' && <MeetingsTab bookingHistory={bookingHistory} />}
+        {activeTab === 'goals' && <GoalsTab clientId={clientId} />}
+        {activeTab === 'training' && <TrainingTab clientId={clientId} />}
+        {activeTab === 'diet' && (
+          <div className="bg-surface-elevated rounded-xl border border-hairline p-10 text-center">
+            <p className="text-gray-400 text-sm">{t('clientDetail.comingSoon')}</p>
           </div>
         )}
-
-        {activeTab === 'history' && (
-          <div className="bg-surface-elevated rounded-xl border border-hairline overflow-hidden">
-            <div className="p-6 border-b border-hairline">
-              <h3 className="text-lg font-semibold text-content">{t('provider.clientDetail.bookingHistory')}</h3>
-            </div>
-            <div className="divide-y divide-white/5">
-              {bookingHistory.map((entry) => (
-                <div
-                  key={entry.booking.id}
-                  className="flex items-center justify-between p-4 hover:bg-surface-input/30"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-lg bg-surface-input flex items-center justify-center">
-                      <Calendar className="w-6 h-6 text-section-primary" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-content">{entry.serviceName}</p>
-                      <p className="text-sm text-gray-400">{formatDate(entry.date)}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <span className={cn('text-xs px-3 py-1 rounded-full', STATUS_COLORS[entry.status as keyof typeof STATUS_COLORS])}>
-                      {entry.status}
-                    </span>
-                    <p className="font-medium text-content">€{entry.amount}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+        {activeTab === 'recipes' && (
+          <div className="bg-surface-elevated rounded-xl border border-hairline p-10 text-center">
+            <p className="text-gray-400 text-sm">{t('clientDetail.comingSoon')}</p>
           </div>
         )}
-
-        {activeTab === 'notes' && (
-          <div className="bg-surface-elevated rounded-xl border border-hairline p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-content">{t('provider.clientDetail.allNotes')}</h3>
-              <Button variant="secondary" size="sm">
-                <Plus className="w-4 h-4 mr-2" />
-                {t('provider.clientDetail.addNote')}
-              </Button>
-            </div>
-
-            <div className="space-y-4">
-              <div className="bg-surface-input rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-400">January 15, 2024</span>
-                  <div className="flex gap-2">
-                    <button className="p-1.5 text-gray-400 hover:text-content rounded">
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button className="p-1.5 text-red-400 hover:text-red-300 rounded">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-                <p className="text-gray-300">
-                  Client mentioned knee pain during squats. Modified exercise to leg press instead.
-                </p>
-              </div>
-
-              <div className="bg-surface-input rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-400">January 10, 2024</span>
-                  <div className="flex gap-2">
-                    <button className="p-1.5 text-gray-400 hover:text-content rounded">
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button className="p-1.5 text-red-400 hover:text-red-300 rounded">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-                <p className="text-gray-300">
-                  Excellent progress on core strength. Increased plank hold to 2 minutes.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
+        {activeTab === 'notes' && <NotesTab />}
       </div>
     </div>
   );
