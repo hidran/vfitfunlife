@@ -1,8 +1,12 @@
 import {
   collection, doc, addDoc, updateDoc, deleteDoc, getDocs, query, orderBy, serverTimestamp, Timestamp,
 } from "firebase/firestore";
-import { db, auth } from "./config";
-import type { ClientGoal, TrainingProgram, DietPlan, Recipe } from "@/types/clientPlans";
+import { httpsCallable } from "firebase/functions";
+import { db, auth, functions } from "./config";
+import type {
+  ClientGoal, TrainingProgram, DietPlan, Recipe,
+  TrainingParams, DietParams, RecipeParams,
+} from "@/types/clientPlans";
 
 const CLIENTS = "clients";
 
@@ -87,3 +91,17 @@ export const listRecipes = (c: string) => listPlans<Recipe>(c, "recipes");
 export const createRecipe = (c: string, p: Omit<Recipe, "id" | "source" | "createdBy" | "createdAt" | "updatedAt">) => createPlan(c, "recipes", p);
 export const updateRecipe = (c: string, id: string, p: Partial<Recipe>) => updatePlan(c, "recipes", id, p);
 export const deleteRecipe = (c: string, id: string) => deletePlan(c, "recipes", id);
+
+// ---- AI generation callable wrappers ----
+export async function aiGenerateTraining(clientId: string, params: TrainingParams, locale: string): Promise<TrainingProgram> {
+  const fn = httpsCallable<{ clientId: string; params: TrainingParams; locale: string }, TrainingProgram>(functions, "generateTrainingProgram");
+  return (await fn({ clientId, params, locale })).data;
+}
+export async function aiGenerateDiet(clientId: string, params: DietParams, locale: string): Promise<DietPlan> {
+  const fn = httpsCallable<{ clientId: string; params: DietParams; locale: string }, DietPlan>(functions, "generateDietPlan");
+  return (await fn({ clientId, params, locale })).data;
+}
+export async function aiGenerateRecipe(clientId: string, params: RecipeParams, locale: string): Promise<Recipe> {
+  const fn = httpsCallable<{ clientId: string; params: RecipeParams; locale: string }, Recipe>(functions, "generateRecipe");
+  return (await fn({ clientId, params, locale })).data;
+}
