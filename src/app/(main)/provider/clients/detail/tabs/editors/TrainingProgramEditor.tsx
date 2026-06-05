@@ -137,7 +137,10 @@ export default function TrainingProgramEditor({
             type="number"
             min={1}
             value={durationWeeks}
-            onChange={(e) => setDurationWeeks(Number(e.target.value))}
+            onChange={(e) => {
+              const n = parseInt(e.target.value, 10);
+              if (!isNaN(n) && n >= 1) setDurationWeeks(n);
+            }}
             className={inputClass}
           />
         </div>
@@ -147,7 +150,10 @@ export default function TrainingProgramEditor({
             type="number"
             min={1}
             value={daysPerWeek}
-            onChange={(e) => setDaysPerWeek(Number(e.target.value))}
+            onChange={(e) => {
+              const n = parseInt(e.target.value, 10);
+              if (!isNaN(n) && n >= 1) setDaysPerWeek(n);
+            }}
             className={inputClass}
           />
         </div>
@@ -212,7 +218,10 @@ export default function TrainingProgramEditor({
                         type="number"
                         min={1}
                         value={ex.sets}
-                        onChange={(e) => setExerciseField(wi, di, ei, { sets: Number(e.target.value) })}
+                        onChange={(e) => {
+                          const n = parseInt(e.target.value, 10);
+                          if (!isNaN(n) && n >= 1) setExerciseField(wi, di, ei, { sets: n });
+                        }}
                         placeholder={t('clients.training.sets')}
                         className={cn(inputClass, 'sm:col-span-1')}
                       />
@@ -227,11 +236,14 @@ export default function TrainingProgramEditor({
                         type="number"
                         min={0}
                         value={ex.restSec ?? ''}
-                        onChange={(e) =>
-                          setExerciseField(wi, di, ei, {
-                            restSec: e.target.value !== '' ? Number(e.target.value) : undefined,
-                          })
-                        }
+                        onChange={(e) => {
+                          if (e.target.value === '') {
+                            setExerciseField(wi, di, ei, { restSec: undefined });
+                            return;
+                          }
+                          const n = parseInt(e.target.value, 10);
+                          if (!isNaN(n) && n >= 0) setExerciseField(wi, di, ei, { restSec: n });
+                        }}
                         placeholder={t('clients.training.rest')}
                         className={cn(inputClass, 'sm:col-span-2')}
                       />
@@ -279,7 +291,11 @@ export default function TrainingProgramEditor({
       </div>
 
       <div className="flex gap-2 pt-2 border-t border-hairline">
-        <Button size="sm" onClick={handleSave} disabled={saving || !title.trim()}>
+        <Button
+          size="sm"
+          onClick={handleSave}
+          disabled={saving || !title.trim() || durationWeeks < 1 || daysPerWeek < 1}
+        >
           <Save className="w-4 h-4 mr-2" />
           {t('clients.common.save')}
         </Button>
