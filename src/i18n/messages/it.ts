@@ -2387,6 +2387,11 @@ export const itMessages = {
   'clients.goals.status.achieved': 'Raggiunto',
   'clients.goals.status.paused': 'In pausa',
 
+  'clients.notes.title': 'Note',
+  'clients.notes.add': 'Aggiungi nota',
+  'clients.notes.placeholder': 'Scrivi una nota su questo cliente...',
+  'clients.notes.empty': 'Nessuna nota ancora.',
+
   'clients.training.title.heading': 'Programmi di allenamento',
   'clients.training.new': 'Nuovo programma',
   'clients.training.empty': 'Nessun programma ancora.',

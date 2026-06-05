@@ -2370,6 +2370,11 @@ export const deMessages: Messages = {
   'clients.goals.status.achieved': 'Erreicht',
   'clients.goals.status.paused': 'Pausiert',
 
+  'clients.notes.title': 'Notizen',
+  'clients.notes.add': 'Notiz hinzufügen',
+  'clients.notes.placeholder': 'Schreiben Sie eine Notiz zu diesem Kunden...',
+  'clients.notes.empty': 'Noch keine Notizen.',
+
   'clients.training.title.heading': 'Trainingsprogramme',
   'clients.training.new': 'Neues Programm',
   'clients.training.empty': 'Noch keine Programme.',

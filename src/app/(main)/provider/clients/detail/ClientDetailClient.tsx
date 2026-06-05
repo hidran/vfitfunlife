@@ -29,6 +29,7 @@ export default function ClientDetailClient() {
   const {
     currentClient: client,
     clientBookingHistory: bookingHistory,
+    clientNotes,
     isLoading,
     fetchClientDetails,
   } = useProviderStore();
@@ -194,7 +195,7 @@ export default function ClientDetailClient() {
             <p className="text-gray-400 text-sm">{t('clientDetail.comingSoon')}</p>
           </div>
         )}
-        {activeTab === 'notes' && <NotesTab />}
+        {activeTab === 'notes' && <NotesTab clientId={clientId} initialNotes={clientNotes} />}
       </div>
     </div>
   );

@@ -2387,6 +2387,11 @@ export const enMessages: Messages = {
   'clients.goals.status.achieved': 'Achieved',
   'clients.goals.status.paused': 'Paused',
 
+  'clients.notes.title': 'Notes',
+  'clients.notes.add': 'Add note',
+  'clients.notes.placeholder': 'Write a note about this client...',
+  'clients.notes.empty': 'No notes yet.',
+
   'clients.training.title.heading': 'Training programs',
   'clients.training.new': 'New program',
   'clients.training.empty': 'No programs yet.',

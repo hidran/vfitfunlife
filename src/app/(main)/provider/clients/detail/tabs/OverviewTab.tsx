@@ -1,8 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Edit, X, Save } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
@@ -22,16 +19,6 @@ interface OverviewTabProps {
 
 export default function OverviewTab({ client, bookingHistory }: OverviewTabProps) {
   const { t, locale } = useI18n();
-  const [isEditingNotes, setIsEditingNotes] = useState(false);
-  const [editedNotes, setEditedNotes] = useState('');
-
-  useEffect(() => {
-    setEditedNotes(client.notes ?? '');
-  }, [client]);
-
-  const handleSaveNotes = () => {
-    setIsEditingNotes(false);
-  };
 
   const formatDate = (date: Date | { toDate(): Date } | undefined) => {
     if (!date) return t('provider.clientDetail.dateNever');
@@ -49,36 +36,11 @@ export default function OverviewTab({ client, bookingHistory }: OverviewTabProps
       <div className="bg-surface-elevated rounded-xl border border-hairline p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-content">{t('provider.clientDetail.notes.title')}</h3>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setIsEditingNotes(!isEditingNotes)}
-          >
-            {isEditingNotes ? (
-              <><X className="w-4 h-4 mr-2" /> {t('provider.clientDetail.notes.cancel')}</>
-            ) : (
-              <><Edit className="w-4 h-4 mr-2" /> {t('provider.clientDetail.notes.edit')}</>
-            )}
-          </Button>
         </div>
 
-        {isEditingNotes ? (
-          <div className="space-y-3">
-            <textarea
-              value={editedNotes}
-              onChange={(e) => setEditedNotes(e.target.value)}
-              className="w-full bg-surface-input border border-hairline rounded-lg px-4 py-3 text-content placeholder-gray-500 outline-none focus:border-section-primary min-h-[150px]"
-            />
-            <Button onClick={handleSaveNotes} size="sm">
-              <Save className="w-4 h-4 mr-2" />
-              {t('provider.clientDetail.notes.save')}
-            </Button>
-          </div>
-        ) : (
-          <p className="text-gray-300 leading-relaxed">
-            {client.notes || t('provider.clientDetail.notes.empty')}
-          </p>
-        )}
+        <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">
+          {client.notes || t('provider.clientDetail.notes.empty')}
+        </p>
       </div>
 
       {/* Recent Activity */}
