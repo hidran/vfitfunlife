@@ -22,16 +22,33 @@ interface EditorProgram {
   weeks: TrainingWeek[];
 }
 
-function emptyExercise(): TrainingExercise {
-  return { name: '', sets: 3, reps: '10', restSec: undefined, notes: undefined };
+// Working types: `sets` is held as a raw string while editing so required
+// integer inputs can be cleared and retyped without snapping back. Converted
+// to a number at save time.
+type EditExercise = Omit<TrainingExercise, 'sets'> & { sets: string };
+type EditDay = Omit<TrainingDay, 'exercises'> & { exercises: EditExercise[] };
+type EditWeek = Omit<TrainingWeek, 'days'> & { days: EditDay[] };
+
+function emptyExercise(): EditExercise {
+  return { name: '', sets: '3', reps: '10', restSec: undefined, notes: undefined };
 }
 
-function emptyDay(index: number): TrainingDay {
+function emptyDay(index: number): EditDay {
   return { label: `Day ${index + 1}`, focus: undefined, exercises: [emptyExercise()] };
 }
 
-function emptyWeek(weekNumber: number): TrainingWeek {
+function emptyWeek(weekNumber: number): EditWeek {
   return { weekNumber, days: [emptyDay(0)] };
+}
+
+function toEditWeeks(weeks: TrainingWeek[]): EditWeek[] {
+  return weeks.map((w) => ({
+    ...w,
+    days: w.days.map((d) => ({
+      ...d,
+      exercises: d.exercises.map((ex) => ({ ...ex, sets: String(ex.sets) })),
+    })),
+  }));
 }
 
 interface TrainingProgramEditorProps {
@@ -49,13 +66,17 @@ export default function TrainingProgramEditor({
 }: TrainingProgramEditorProps) {
   const { t } = useI18n();
   const [title, setTitle] = useState(initial?.title ?? '');
-  const [durationWeeks, setDurationWeeks] = useState<number>(initial?.durationWeeks ?? 4);
-  const [daysPerWeek, setDaysPerWeek] = useState<number>(initial?.daysPerWeek ?? 3);
-  const [weeks, setWeeks] = useState<TrainingWeek[]>(
-    initial?.weeks?.length ? initial.weeks : [emptyWeek(1)]
+  const [durationWeeks, setDurationWeeks] = useState<string>(
+    initial?.durationWeeks != null ? String(initial.durationWeeks) : '4'
+  );
+  const [daysPerWeek, setDaysPerWeek] = useState<string>(
+    initial?.daysPerWeek != null ? String(initial.daysPerWeek) : '3'
+  );
+  const [weeks, setWeeks] = useState<EditWeek[]>(
+    initial?.weeks?.length ? toEditWeeks(initial.weeks) : [emptyWeek(1)]
   );
 
-  const updateWeeks = (next: TrainingWeek[]) => setWeeks(next);
+  const updateWeeks = (next: EditWeek[]) => setWeeks(next);
 
   const addWeek = () => {
     setWeeks([...weeks, emptyWeek(weeks.length + 1)]);
@@ -88,7 +109,7 @@ export default function TrainingProgramEditor({
     updateWeeks(next);
   };
 
-  const setDayField = (wi: number, di: number, patch: Partial<TrainingDay>) => {
+  const setDayField = (wi: number, di: number, patch: Partial<EditDay>) => {
     const next = [...weeks];
     const days = [...next[wi].days];
     days[di] = { ...days[di], ...patch };
@@ -99,7 +120,7 @@ export default function TrainingProgramEditor({
     wi: number,
     di: number,
     ei: number,
-    patch: Partial<TrainingExercise>
+    patch: Partial<EditExercise>
   ) => {
     const next = [...weeks];
     const days = [...next[wi].days];
@@ -110,12 +131,26 @@ export default function TrainingProgramEditor({
     updateWeeks(next);
   };
 
+  const durationWeeksNum = parseInt(durationWeeks, 10);
+  const daysPerWeekNum = parseInt(daysPerWeek, 10);
+
   const handleSave = () => {
+    const normalizedWeeks: TrainingWeek[] = weeks.map((w, i) => ({
+      ...w,
+      weekNumber: i + 1,
+      days: w.days.map((d) => ({
+        ...d,
+        exercises: d.exercises.map((ex) => {
+          const setsNum = parseInt(ex.sets, 10);
+          return { ...ex, sets: !isNaN(setsNum) && setsNum >= 1 ? setsNum : 1 };
+        }),
+      })),
+    }));
     onSave({
       title: title.trim(),
-      durationWeeks,
-      daysPerWeek,
-      weeks: weeks.map((w, i) => ({ ...w, weekNumber: i + 1 })),
+      durationWeeks: durationWeeksNum,
+      daysPerWeek: daysPerWeekNum,
+      weeks: normalizedWeeks,
     });
   };
 
@@ -137,10 +172,7 @@ export default function TrainingProgramEditor({
             type="number"
             min={1}
             value={durationWeeks}
-            onChange={(e) => {
-              const n = parseInt(e.target.value, 10);
-              if (!isNaN(n) && n >= 1) setDurationWeeks(n);
-            }}
+            onChange={(e) => setDurationWeeks(e.target.value)}
             className={inputClass}
           />
         </div>
@@ -150,10 +182,7 @@ export default function TrainingProgramEditor({
             type="number"
             min={1}
             value={daysPerWeek}
-            onChange={(e) => {
-              const n = parseInt(e.target.value, 10);
-              if (!isNaN(n) && n >= 1) setDaysPerWeek(n);
-            }}
+            onChange={(e) => setDaysPerWeek(e.target.value)}
             className={inputClass}
           />
         </div>
@@ -218,10 +247,9 @@ export default function TrainingProgramEditor({
                         type="number"
                         min={1}
                         value={ex.sets}
-                        onChange={(e) => {
-                          const n = parseInt(e.target.value, 10);
-                          if (!isNaN(n) && n >= 1) setExerciseField(wi, di, ei, { sets: n });
-                        }}
+                        onChange={(e) =>
+                          setExerciseField(wi, di, ei, { sets: e.target.value })
+                        }
                         placeholder={t('clients.training.sets')}
                         className={cn(inputClass, 'sm:col-span-1')}
                       />
@@ -294,7 +322,17 @@ export default function TrainingProgramEditor({
         <Button
           size="sm"
           onClick={handleSave}
-          disabled={saving || !title.trim() || durationWeeks < 1 || daysPerWeek < 1}
+          disabled={
+            saving ||
+            !title.trim() ||
+            !(durationWeeksNum >= 1) ||
+            !(daysPerWeekNum >= 1) ||
+            weeks.some((w) =>
+              w.days.some((d) =>
+                d.exercises.some((ex) => !(parseInt(ex.sets, 10) >= 1))
+              )
+            )
+          }
         >
           <Save className="w-4 h-4 mr-2" />
           {t('clients.common.save')}

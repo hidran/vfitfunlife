@@ -35,7 +35,9 @@ interface RecipeEditorProps {
 export default function RecipeEditor({ initial, saving, onSave, onCancel }: RecipeEditorProps) {
   const { t } = useI18n();
   const [title, setTitle] = useState(initial?.title ?? '');
-  const [servings, setServings] = useState<number>(initial?.servings ?? 1);
+  const [servings, setServings] = useState<string>(
+    initial?.servings != null ? String(initial.servings) : '1'
+  );
   const [prepMinutes, setPrepMinutes] = useState<string>(
     initial?.prepMinutes != null ? String(initial.prepMinutes) : ''
   );
@@ -90,6 +92,8 @@ export default function RecipeEditor({ initial, saving, onSave, onCancel }: Reci
     return !isNaN(n) && n >= 0 ? n : undefined;
   };
 
+  const servingsNum = parseInt(servings, 10);
+
   const handleSave = () => {
     const nutrition: MacroTargets = {
       kcal: optNum(kcal),
@@ -108,7 +112,7 @@ export default function RecipeEditor({ initial, saving, onSave, onCancel }: Reci
       .filter(Boolean);
     onSave({
       title: title.trim(),
-      servings,
+      servings: servingsNum,
       prepMinutes: optInt(prepMinutes),
       cookMinutes: optInt(cookMinutes),
       ingredients: ingredients.filter((ing) => ing.item.trim() || ing.quantity.trim()),
@@ -136,10 +140,7 @@ export default function RecipeEditor({ initial, saving, onSave, onCancel }: Reci
             type="number"
             min={1}
             value={servings}
-            onChange={(e) => {
-              const n = parseInt(e.target.value, 10);
-              if (!isNaN(n) && n >= 1) setServings(n);
-            }}
+            onChange={(e) => setServings(e.target.value)}
             className={inputClass}
           />
         </div>
@@ -288,7 +289,7 @@ export default function RecipeEditor({ initial, saving, onSave, onCancel }: Reci
       </div>
 
       <div className="flex gap-2 pt-2 border-t border-hairline">
-        <Button size="sm" onClick={handleSave} disabled={saving || !title.trim() || servings < 1}>
+        <Button size="sm" onClick={handleSave} disabled={saving || !title.trim() || !(servingsNum >= 1)}>
           <Save className="w-4 h-4 mr-2" />
           {t('clients.common.save')}
         </Button>

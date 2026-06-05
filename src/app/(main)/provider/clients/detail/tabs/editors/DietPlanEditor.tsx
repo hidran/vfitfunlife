@@ -57,7 +57,9 @@ export default function DietPlanEditor({
 }: DietPlanEditorProps) {
   const { t } = useI18n();
   const [title, setTitle] = useState(initial?.title ?? '');
-  const [durationDays, setDurationDays] = useState<number>(initial?.durationDays ?? 7);
+  const [durationDays, setDurationDays] = useState<string>(
+    initial?.durationDays != null ? String(initial.durationDays) : '7'
+  );
   const [kcal, setKcal] = useState<string>(
     initial?.targets?.kcal != null ? String(initial.targets.kcal) : ''
   );
@@ -137,6 +139,8 @@ export default function DietPlanEditor({
     if (!isNaN(n) && n >= 0) onSet(n);
   };
 
+  const durationDaysNum = parseInt(durationDays, 10);
+
   const handleSave = () => {
     const targets: MacroTargets = {
       kcal: kcal.trim() !== '' ? Number(kcal) : undefined,
@@ -151,7 +155,7 @@ export default function DietPlanEditor({
       targets.fat != null;
     onSave({
       title: title.trim(),
-      durationDays,
+      durationDays: durationDaysNum,
       targets: hasTargets ? targets : undefined,
       days,
     });
@@ -175,10 +179,7 @@ export default function DietPlanEditor({
             type="number"
             min={1}
             value={durationDays}
-            onChange={(e) => {
-              const n = parseInt(e.target.value, 10);
-              if (!isNaN(n) && n >= 1) setDurationDays(n);
-            }}
+            onChange={(e) => setDurationDays(e.target.value)}
             className={inputClass}
           />
         </div>
@@ -376,7 +377,7 @@ export default function DietPlanEditor({
         <Button
           size="sm"
           onClick={handleSave}
-          disabled={saving || !title.trim() || durationDays < 1}
+          disabled={saving || !title.trim() || !(durationDaysNum >= 1)}
         >
           <Save className="w-4 h-4 mr-2" />
           {t('clients.common.save')}

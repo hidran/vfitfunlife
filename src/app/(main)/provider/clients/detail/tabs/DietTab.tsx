@@ -83,8 +83,16 @@ export default function DietTab({ clientId }: { clientId: string }) {
   };
 
   const handleDelete = async (id: string) => {
-    await deleteDietPlan(clientId, id);
-    await reload();
+    if (saving) return;
+    setSaving(true);
+    try {
+      await deleteDietPlan(clientId, id);
+      await reload();
+    } catch (e) {
+      console.error('[DietTab] delete failed', e);
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (showEditor) {
@@ -143,7 +151,8 @@ export default function DietTab({ clientId }: { clientId: string }) {
                     </button>
                     <button
                       onClick={() => handleDelete(plan.id)}
-                      className="p-1.5 text-red-400 hover:text-red-300 rounded"
+                      disabled={saving}
+                      className="p-1.5 text-red-400 hover:text-red-300 rounded disabled:opacity-50"
                       aria-label={t('clients.common.delete')}
                     >
                       <Trash2 className="w-4 h-4" />
