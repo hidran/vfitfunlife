@@ -59,9 +59,9 @@ export default function RecipesTab({ clientId }: { clientId: string }) {
       };
       const created = await aiGenerateRecipe(clientId, params, locale);
       setShowAi(false);
-      await reload();
       setEditing(created);
       setShowEditor(true);
+      reload().catch(console.error);
     } catch (e) {
       setAiError(aiGenerateErrorMessage(e, t));
     } finally {

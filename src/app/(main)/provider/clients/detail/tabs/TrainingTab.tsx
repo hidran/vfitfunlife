@@ -59,9 +59,9 @@ export default function TrainingTab({ clientId }: { clientId: string }) {
       };
       const created = await aiGenerateTraining(clientId, params, locale);
       setShowAi(false);
-      await reload();
       setEditing(created);
       setShowEditor(true);
+      reload().catch(console.error);
     } catch (e) {
       setAiError(aiGenerateErrorMessage(e, t));
     } finally {

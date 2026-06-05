@@ -106,7 +106,7 @@ describe("generateTrainingProgram authorization", () => {
     const res = (await invoke(generateTrainingProgram, {
       auth: { uid: "ownerProvider", token: { email: "p@vfit.dev" } },
       data: { clientId: "c1", params: baseParams },
-    })) as { id: string; source: string };
+    })) as { id: string; source: string; status: string; createdBy: string };
     expect(fx.addSpy).toHaveBeenCalledTimes(1);
     expect(fx.lastSubcollection).toBe("trainingPrograms");
     const payload = fx.addSpy.mock.calls[0][0] as { source: string; status: string };
@@ -114,6 +114,8 @@ describe("generateTrainingProgram authorization", () => {
     expect(payload.status).toBe("active");
     expect(res.id).toBe("newPlan1");
     expect(res.source).toBe("ai");
+    expect(res.status).toBe("active");
+    expect(res.createdBy).toBe("ownerProvider");
   });
 
   it("rejects an owner provider whose account is deactivated", async () => {

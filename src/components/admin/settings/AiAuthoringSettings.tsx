@@ -42,7 +42,7 @@ export function AiAuthoringSettings() {
         temperature: settings.temperature,
         maxOutputTokens: settings.maxOutputTokens,
         dailyQuota: settings.dailyQuota,
-        systemPromptOverride: settings.systemPromptOverride,
+        systemPromptOverride: settings.systemPromptOverride?.trim() || undefined,
       });
     } finally {
       setSaving(false);

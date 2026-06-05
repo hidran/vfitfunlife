@@ -13,15 +13,11 @@ export function aiGenerateErrorMessage(err: unknown, t: Translate): string {
     typeof err === 'object' && err !== null && 'code' in err
       ? String((err as { code: unknown }).code)
       : '';
-  const message =
-    typeof err === 'object' && err !== null && 'message' in err
-      ? String((err as { message: unknown }).message)
-      : '';
 
-  if (code === 'functions/failed-precondition' || message === 'disabled') {
+  if (code === 'functions/failed-precondition') {
     return t('clients.aiGenerate.error.disabled');
   }
-  if (code === 'functions/resource-exhausted' || message === 'quota-exceeded') {
+  if (code === 'functions/resource-exhausted') {
     return t('clients.aiGenerate.error.quotaExceeded');
   }
   return t('clients.aiGenerate.error.generic');

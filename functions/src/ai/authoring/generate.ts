@@ -126,7 +126,14 @@ async function runGeneration<T extends z.ZodObject<z.ZodRawShape>, P>(opts: {
     after: { clientId, kind: opts.subcollection },
   });
 
-  return { id: ref.id, ...object, source: "ai", model: settings.model };
+  return {
+    id: ref.id,
+    ...object,
+    source: "ai",
+    model: settings.model,
+    createdBy: uid,
+    ...(opts.subcollection === "recipes" ? {} : { status: "active" as const }),
+  };
 }
 
 export const generateTrainingProgram = onCall<GenReq>({ region, secrets: AI_SECRETS }, (request) =>
