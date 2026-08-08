@@ -6,6 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import {
   ArrowLeft,
+  Euro,
   Calendar,
   Clock,
   MapPin,
@@ -25,6 +26,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/Badge';
 import { useProviderStore } from '@/stores/providerStore';
+import { RecordPaymentSheet } from '@/components/provider/RecordPaymentSheet';
+import type { MessageKey } from '@/i18n/messages';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
@@ -41,8 +44,20 @@ const STATUS_BADGE_VARIANTS = {
 export default function BookingDetailClient() {
   const { t, locale } = useI18n();
   const { id } = useParams<{ id: string }>();
-  const { bookings, confirmBooking, completeBooking, cancelBooking } = useProviderStore();
+  const {
+    bookings, confirmBooking, declineBooking, completeBooking,
+    markBookingNoShow, cancelBooking, confirmBookingPayment,
+  } = useProviderStore();
+  const [showPaymentSheet, setShowPaymentSheet] = useState(false);
+
   const booking = bookings.find((entry) => entry.id === id);
+  // Mirrors the server guard in canTransition: completed/no_show are only valid once the
+  // session has actually ended. Offering the button earlier would just produce an error.
+  const sessionEndsAt = booking?.scheduledEndAt
+    ? (booking.scheduledEndAt as unknown as { toDate?: () => Date })?.toDate?.() ??
+      new Date(booking.scheduledEndAt as unknown as string)
+    : null;
+  const sessionHasEnded = sessionEndsAt ? sessionEndsAt <= new Date() : false;
   const [showNotes, setShowNotes] = useState(false);
   const [privateNotes, setPrivateNotes] = useState('');
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
@@ -76,6 +91,14 @@ export default function BookingDetailClient() {
 
   const handleConfirm = async () => {
     await confirmBooking(booking.id);
+  };
+
+  const handleDecline = async () => {
+    await declineBooking(booking.id);
+  };
+
+  const handleNoShow = async () => {
+    await markBookingNoShow(booking.id);
   };
 
   const handleComplete = async () => {
@@ -149,18 +172,32 @@ export default function BookingDetailClient() {
                 <CheckCircle className="w-4 h-4 mr-2" />
                 {t('provider.bookingDetail.confirm')}
               </Button>
-              <Button variant="outline" onClick={handleCancel} className="border-red-500/50 text-red-400 hover:bg-red-500/10">
+              <Button variant="outline" onClick={handleDecline} className="border-red-500/50 text-red-400 hover:bg-red-500/10">
                 <XCircle className="w-4 h-4 mr-2" />
                 {t('provider.bookingDetail.decline')}
               </Button>
             </>
           )}
+          {booking.status === 'accepted' && sessionHasEnded && (
+            <Button variant="outline" onClick={handleNoShow} className="border-amber-500/50 text-amber-400 hover:bg-amber-500/10">
+              <XCircle className="w-4 h-4 mr-2" />
+              {t('provider.bookingDetail.noShow' as MessageKey)}
+            </Button>
+          )}
+          {booking.status === 'completed' && (
+            <Button onClick={() => setShowPaymentSheet(true)}>
+              <Euro className="w-4 h-4 mr-2" />
+              {t('provider.bookingDetail.recordPayment' as MessageKey)}
+            </Button>
+          )}
           {booking.status === 'accepted' && (
             <>
-              <Button onClick={handleComplete}>
-                <CheckCircle className="w-4 h-4 mr-2" />
-                {t('provider.bookingDetail.markComplete')}
-              </Button>
+              {sessionHasEnded && (
+                <Button onClick={handleComplete}>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  {t('provider.bookingDetail.markComplete')}
+                </Button>
+              )}
               <Button
                 variant="secondary"
                 onClick={() => setShowRescheduleModal(true)}
@@ -178,6 +215,14 @@ export default function BookingDetailClient() {
           )}
         </div>
       </div>
+
+      {showPaymentSheet && (
+        <RecordPaymentSheet
+          defaultAmount={booking.finalPrice ?? 0}
+          onSubmit={(method, amount) => confirmBookingPayment(booking.id, method, amount)}
+          onClose={() => setShowPaymentSheet(false)}
+        />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}

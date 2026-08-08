@@ -22,6 +22,10 @@ import { motion } from 'framer-motion';
 import { cn, formatPrice } from '@/lib/utils';
 import { buildFallbackBooking } from '@/lib/bookingUtils';
 import { useBookingStore } from '@/stores/bookingStore';
+import { PaymentConfirmationBanner } from '@/components/booking/PaymentConfirmationBanner';
+import { respondToPaymentConfirmation } from '@/lib/firebase/functions';
+import { wouldBeLateCancellation } from '@/lib/bookingStatus';
+import type { MessageKey } from '@/i18n/messages';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
 import { Button } from '@/components/ui/button';
@@ -81,6 +85,22 @@ export default function BookingDetailPage() {
       return ((seed + index * 13) % 4) <= 1;
     });
   }, [booking.id, booking.providerId, booking.scheduledAt]);
+
+  const handleRespondToPayment = async (
+    response: 'confirmed' | 'disputed',
+    disputeReason?: string,
+  ) => {
+    await respondToPaymentConfirmation({ bookingId, response, disputeReason });
+    const updated = {
+      ...booking,
+      paymentConfirmation: {
+        ...booking.paymentConfirmation!,
+        clientResponse: response,
+      },
+    } as typeof booking;
+    updateBookingInList(updated);
+    updateCurrentBooking(updated);
+  };
 
   const handleCancel = async () => {
     try {
@@ -506,6 +526,12 @@ export default function BookingDetailPage() {
             <p className="text-text-secondary text-sm mb-4">
               {t('bookings.detail.cancelModal.body')}
             </p>
+            {/* PILOT: late cancellations are flagged for data collection, never charged. */}
+            {wouldBeLateCancellation(booking.scheduledAt.toDate()) && (
+              <p className="text-sm text-warning bg-warning/10 border border-warning/30 rounded-lg p-3 mb-4">
+                {t('booking.cancel.lateWarning' as MessageKey)}
+              </p>
+            )}
             <div className="flex gap-3">
               <Button
                 variant="secondary"

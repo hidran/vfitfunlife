@@ -1,12 +1,16 @@
 import { create } from 'zustand';
+import type { PaymentConfirmationMethod } from '@/types/firebase';
 import {
   getProviderDashboardStats,
   getProviderBookings,
   getProviderSchedule,
   updateAvailability,
   confirmBooking,
+  declineBooking,
   completeBooking,
+  markBookingNoShow,
   cancelBooking,
+  confirmBookingPayment,
   getProviderEarnings,
   getProviderClients,
   getClientDetails,
@@ -69,8 +73,15 @@ interface ProviderState {
   // Actions - Bookings
   fetchBookings: (filters?: BookingFilters) => Promise<void>;
   confirmBooking: (id: string) => Promise<void>;
+  declineBooking: (id: string, note?: string) => Promise<void>;
   completeBooking: (id: string) => Promise<void>;
+  markBookingNoShow: (id: string) => Promise<void>;
   cancelBooking: (id: string, reason?: string) => Promise<void>;
+  confirmBookingPayment: (
+    id: string,
+    method: PaymentConfirmationMethod,
+    amount: number,
+  ) => Promise<void>;
 
   // Actions - Schedule
   fetchSchedule: (start: Date, end: Date) => Promise<void>;
@@ -181,6 +192,35 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
       await get().fetchBookings();
     } catch (error: any) {
       set({ bookingError: error.message || 'Failed to cancel booking' });
+    }
+  },
+
+  declineBooking: async (id: string, note?: string) => {
+    try {
+      await declineBooking(id, note);
+      await get().fetchBookings();
+    } catch (error: any) {
+      set({ bookingError: error.message || 'Failed to decline booking' });
+    }
+  },
+
+  markBookingNoShow: async (id: string) => {
+    try {
+      await markBookingNoShow(id);
+      await get().fetchBookings();
+    } catch (error: any) {
+      set({ bookingError: error.message || 'Failed to record no-show' });
+    }
+  },
+
+  /** Records a payment the client made off-platform. Rethrows so the sheet can show the error. */
+  confirmBookingPayment: async (id, method, amount) => {
+    try {
+      await confirmBookingPayment(id, method, amount);
+      await get().fetchBookings();
+    } catch (error: any) {
+      set({ bookingError: error.message || 'Failed to record payment' });
+      throw error;
     }
   },
 
