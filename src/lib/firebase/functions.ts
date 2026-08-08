@@ -7,6 +7,7 @@ import type {
   AiProviderId,
   ResultCard,
 } from "@/types/assistant";
+import type { BookingStatus, PaymentConfirmationMethod } from "@/types/firebase";
 
 // Type definitions for function responses
 interface BookingResult {
@@ -64,8 +65,13 @@ interface LeaderboardResult {
 }
 
 // Booking functions
+//
+// These wrappers are the ONLY write path for bookings. Every status transition runs
+// server-side with Admin SDK privileges, which is what lets firestore.rules deny client
+// and trainer writes to `status` and `paymentConfirmation` outright.
 export async function createBooking(data: {
-  venueId: string;
+  /** Omit for trainer sessions (home / online / outdoor) — they have no venue. */
+  venueId?: string;
   serviceId: string;
   instructorId?: string;
   scheduledAt: string;
@@ -99,6 +105,86 @@ export async function confirmBooking(data: {
   bookingId: string;
 }): Promise<{ success: boolean }> {
   const fn = httpsCallable<typeof data, { success: boolean }>(functions, "confirmBooking");
+  const result = await fn(data);
+  return result.data;
+}
+
+// --- Trainer transition callables (P0-1) ---
+
+export interface TransitionResult {
+  success: boolean;
+  bookingId: string;
+  status: BookingStatus;
+}
+
+async function callTransition<T extends { bookingId: string }>(
+  name: string,
+  data: T
+): Promise<TransitionResult> {
+  const fn = httpsCallable<T, TransitionResult>(functions, name);
+  const result = await fn(data);
+  return result.data;
+}
+
+/** Trainer accepts a requested session. */
+export function acceptBooking(data: { bookingId: string; note?: string }) {
+  return callTransition("acceptBooking", data);
+}
+
+/** Trainer declines a requested session. */
+export function declineBooking(data: { bookingId: string; note?: string }) {
+  return callTransition("declineBooking", data);
+}
+
+/** Trainer cancels a session they had already accepted. */
+export function cancelBookingAsTrainer(data: { bookingId: string; reason?: string }) {
+  return callTransition("cancelBookingAsTrainer", { bookingId: data.bookingId, note: data.reason });
+}
+
+/**
+ * Trainer marks the session done. `noShow: true` records a no-show instead — which
+ * deliberately awards no loyalty points and does not stamp completedAt.
+ */
+export function completeBooking(data: { bookingId: string; noShow?: boolean }) {
+  return callTransition("completeBooking", data);
+}
+
+/** Trainer records a payment received off-platform. Amount is revalidated server-side. */
+export function confirmBookingPayment(data: {
+  bookingId: string;
+  method: PaymentConfirmationMethod;
+  amount: number;
+}) {
+  return callTransition("confirmBookingPayment", data);
+}
+
+/** Client's optional confirm-or-dispute. Silence auto-confirms after 48h. */
+export async function respondToPaymentConfirmation(data: {
+  bookingId: string;
+  response: "confirmed" | "disputed";
+  disputeReason?: string;
+}): Promise<{ success: boolean; bookingId: string; response: string }> {
+  const fn = httpsCallable<typeof data, { success: boolean; bookingId: string; response: string }>(
+    functions,
+    "respondToPaymentConfirmation"
+  );
+  const result = await fn(data);
+  return result.data;
+}
+
+/** Superadmin-only status backfill. Defaults to a dry run. */
+export async function migrateBookingStatuses(data: { dryRun?: boolean } = {}): Promise<{
+  dryRun: boolean;
+  scanned: number;
+  migrated: number;
+  skipped: number;
+  instructorIdBackfilled: number;
+  counts: Record<string, number>;
+}> {
+  const fn = httpsCallable<typeof data, {
+    dryRun: boolean; scanned: number; migrated: number;
+    skipped: number; instructorIdBackfilled: number; counts: Record<string, number>;
+  }>(functions, "migrateBookingStatuses");
   const result = await fn(data);
   return result.data;
 }

@@ -21,6 +21,14 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 import { db } from "./config";
+import {
+  acceptBooking as acceptBookingFn,
+  declineBooking as declineBookingFn,
+  cancelBookingAsTrainer as cancelBookingAsTrainerFn,
+  completeBooking as completeBookingFn,
+  confirmBookingPayment as confirmBookingPaymentFn,
+} from "./functions";
+import type { PaymentConfirmationMethod } from "@/types/firebase";
 import { auth } from "./config";
 import {
   DashboardStats,
@@ -98,7 +106,7 @@ export async function getProviderDashboardStats(): Promise<DashboardStats> {
 
   const todayBookingsQuery = query(
     collection(db, BOOKINGS_COLLECTION),
-    where("providerId", "==", providerId),
+    where("instructorId", "==", providerId),
     where("scheduledAt", ">=", todayTimestamp),
     where("scheduledAt", "<", tomorrowTimestamp),
     where("status", "in", ["confirmed", "in_progress", "completed"])
@@ -115,7 +123,7 @@ export async function getProviderDashboardStats(): Promise<DashboardStats> {
 
   const weekBookingsQuery = query(
     collection(db, BOOKINGS_COLLECTION),
-    where("providerId", "==", providerId),
+    where("instructorId", "==", providerId),
     where("scheduledAt", ">=", Timestamp.fromDate(weekStart)),
     where("scheduledAt", "<", Timestamp.fromDate(weekEnd)),
     where("status", "in", ["pending", "confirmed", "in_progress", "completed"])
@@ -130,7 +138,7 @@ export async function getProviderDashboardStats(): Promise<DashboardStats> {
 
   const monthEarningsQuery = query(
     collection(db, BOOKINGS_COLLECTION),
-    where("providerId", "==", providerId),
+    where("instructorId", "==", providerId),
     where("scheduledAt", ">=", Timestamp.fromDate(monthStart)),
     where("scheduledAt", "<=", Timestamp.fromDate(monthEnd)),
     where("status", "==", "completed")
@@ -159,7 +167,7 @@ export async function getProviderDashboardStats(): Promise<DashboardStats> {
 
   const recentBookingsQuery = query(
     collection(db, BOOKINGS_COLLECTION),
-    where("providerId", "==", providerId),
+    where("instructorId", "==", providerId),
     where("scheduledAt", ">=", Timestamp.fromDate(last30Days)),
     where("status", "in", ["completed", "cancelled", "no_show"])
   );
@@ -229,7 +237,7 @@ function generateChartData(bookingsSnap: any): { date: string; bookings: number;
 export async function getProviderBookings(filters?: BookingFilters): Promise<ProviderBooking[]> {
   const providerId = await getCurrentProviderId();
   
-  let constraints: QueryConstraint[] = [where("providerId", "==", providerId)];
+  let constraints: QueryConstraint[] = [where("instructorId", "==", providerId)];
   
   if (filters?.status && filters.status !== 'all') {
     constraints.push(where("status", "==", filters.status));
@@ -284,7 +292,7 @@ export async function getProviderSchedule(startDate: Date, endDate: Date): Promi
   // Get bookings in the date range
   const bookingsQuery = query(
     collection(db, BOOKINGS_COLLECTION),
-    where("providerId", "==", providerId),
+    where("instructorId", "==", providerId),
     where("scheduledAt", ">=", Timestamp.fromDate(startDate)),
     where("scheduledAt", "<=", Timestamp.fromDate(endDate))
   );
@@ -347,75 +355,45 @@ export async function updateAvailability(settings: AvailabilitySettings): Promis
   });
 }
 
-// Confirm Booking
+/**
+ * Trainer booking actions.
+ *
+ * These used to `updateDoc` the status straight from the browser. firestore.rules now
+ * denies that, and the authorization + transition rules live server-side in one place.
+ */
+
+// Accept a requested session
 export async function confirmBooking(bookingId: string): Promise<void> {
-  const providerId = await getCurrentProviderId();
-  
-  const bookingRef = doc(db, BOOKINGS_COLLECTION, bookingId);
-  const bookingSnap = await getDoc(bookingRef);
-  
-  if (!bookingSnap.exists()) {
-    throw new Error("Booking not found");
-  }
-
-  const booking = bookingSnap.data();
-  if (booking.providerId !== providerId) {
-    throw new Error("Not authorized to confirm this booking");
-  }
-
-  await updateDoc(bookingRef, {
-    status: "confirmed",
-    confirmedAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
+  await acceptBookingFn({ bookingId });
 }
 
-// Complete Booking
+// Decline a requested session
+export async function declineBooking(bookingId: string, note?: string): Promise<void> {
+  await declineBookingFn({ bookingId, note });
+}
+
+// Mark a session as done ("Sessione svolta")
 export async function completeBooking(bookingId: string): Promise<void> {
-  const providerId = await getCurrentProviderId();
-  
-  const bookingRef = doc(db, BOOKINGS_COLLECTION, bookingId);
-  const bookingSnap = await getDoc(bookingRef);
-  
-  if (!bookingSnap.exists()) {
-    throw new Error("Booking not found");
-  }
-
-  const booking = bookingSnap.data();
-  if (booking.providerId !== providerId) {
-    throw new Error("Not authorized to complete this booking");
-  }
-
-  await updateDoc(bookingRef, {
-    status: "completed",
-    completedAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
+  await completeBookingFn({ bookingId });
 }
 
-// Cancel Booking
+// Record a no-show: deliberately awards no points and does not stamp completedAt
+export async function markBookingNoShow(bookingId: string): Promise<void> {
+  await completeBookingFn({ bookingId, noShow: true });
+}
+
+// Cancel a session the trainer had accepted
 export async function cancelBooking(bookingId: string, reason?: string): Promise<void> {
-  const providerId = await getCurrentProviderId();
-  
-  const bookingRef = doc(db, BOOKINGS_COLLECTION, bookingId);
-  const bookingSnap = await getDoc(bookingRef);
-  
-  if (!bookingSnap.exists()) {
-    throw new Error("Booking not found");
-  }
+  await cancelBookingAsTrainerFn({ bookingId, reason });
+}
 
-  const booking = bookingSnap.data();
-  if (booking.providerId !== providerId) {
-    throw new Error("Not authorized to cancel this booking");
-  }
-
-  await updateDoc(bookingRef, {
-    status: "cancelled",
-    cancelledBy: "provider",
-    cancellationReason: reason || "Cancelled by provider",
-    cancelledAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
+// Record an off-platform payment received from the client
+export async function confirmBookingPayment(
+  bookingId: string,
+  method: PaymentConfirmationMethod,
+  amount: number
+): Promise<void> {
+  await confirmBookingPaymentFn({ bookingId, method, amount });
 }
 
 // Get Provider Earnings
@@ -809,7 +787,7 @@ export function subscribeToProviderBookings(
 ): () => void {
   const bookingsQuery = query(
     collection(db, BOOKINGS_COLLECTION),
-    where("providerId", "==", providerId),
+    where("instructorId", "==", providerId),
     orderBy("scheduledAt", "desc"),
     limit(50)
   );

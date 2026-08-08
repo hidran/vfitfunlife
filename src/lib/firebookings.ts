@@ -17,9 +17,14 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase/config';
 import { isCancelled, isDelivered } from './bookingStatus';
+import {
+  createBooking as createBookingFn,
+  cancelBooking as cancelBookingFn,
+} from './firebase/functions';
 import type {
   Booking,
   BookingData,
+  LocationType,
   ProviderSearchResult,
   TimeSlot,
   SearchParams,
@@ -171,137 +176,43 @@ function generateDefaultTimeSlots(): TimeSlot[] {
   return slots;
 }
 
-// Create a new booking
+/**
+ * Create a booking.
+ *
+ * Delegates to the `createBooking` Cloud Function. It used to write the document (and the
+ * provider's availability slot) directly from the client, which meant the browser decided
+ * the price and the status — firestore.rules now denies that outright.
+ *
+ * The callable resolves the service and computes pricing server-side, so the local
+ * service-lookup and fee arithmetic that lived here are gone.
+ */
 export async function createBooking(data: BookingData): Promise<Booking> {
-  const batch = writeBatch(db);
-  
-  // Get provider data for denormalization
-  const providerDoc = await getDoc(doc(db, INSTRUCTORS_COLLECTION, data.providerId));
-  if (!providerDoc.exists()) {
-    throw new Error('Provider not found');
-  }
-  const providerData = providerDoc.data();
-
-  // Get service details from /instructors/{id}/services/{serviceId}.
-  // Falls back to the legacy inline providerProfile.servicePricing[] for older
-  // documents that still embed services on the provider doc.
-  let service: {
-    name: string;
-    price: number;
-    durationMinutes?: number;
-    description?: string;
-  } | null = null;
-  const serviceDoc = await getDoc(
-    doc(db, INSTRUCTORS_COLLECTION, data.providerId, 'services', data.serviceId)
-  );
-  if (serviceDoc.exists()) {
-    const s = serviceDoc.data();
-    service = {
-      name: s.name ?? s.serviceName ?? 'Service',
-      price: s.price,
-      durationMinutes: s.durationMinutes,
-      description: s.description,
-    };
-  } else {
-    const inline = (providerData.providerProfile?.servicePricing ?? []).find(
-      (s: { id: string }) => s.id === data.serviceId
-    );
-    if (inline) {
-      service = {
-        name: inline.serviceName ?? inline.name ?? 'Service',
-        price: inline.price,
-        durationMinutes: inline.durationMinutes,
-        description: inline.description,
-      };
-    }
-  }
-  if (!service) {
-    throw new Error('Service not found');
-  }
-
-  // Calculate pricing
-  const platformFee = service.price * 0.05; // 5% platform fee
-  const totalPrice = service.price + platformFee;
-
-  // Create booking document
-  const bookingRef = doc(collection(db, BOOKINGS_COLLECTION));
-  const bookingData = {
-    id: bookingRef.id,
-    userId: '', // Will be set from auth context
-    providerId: data.providerId,
+  const result = await createBookingFn({
+    // `instructorId` is the canonical trainer link; BookingData still says providerId.
+    instructorId: data.providerId,
     serviceId: data.serviceId,
-    serviceName: service.name,
-    providerName: providerData.fullName || 'Unknown',
-    providerAvatar: providerData.avatarUrl || null,
-    
-    // Schedule
-    scheduledAt: Timestamp.fromDate(data.scheduledAt),
-    scheduledEndAt: Timestamp.fromDate(
-      new Date(data.scheduledAt.getTime() + data.duration * 60000)
-    ),
-    duration: data.duration,
-    
-    // Location
-    locationType: data.locationType,
-    location: data.location || null,
-    
-    // Pricing
-    servicePrice: service.price,
-    platformFee,
-    discountAmount: 0,
-    pointsUsed: data.pointsToUse || 0,
-    pointsValue: (data.pointsToUse || 0) * 0.01, // 1 point = €0.01
-    totalPrice,
-    
-    // Promotion
-    promotionCode: data.promotionCode || null,
-    
-    // Status
-    // FIXME(P0-1 Task 13): 'pending' is no longer a valid BookingStatus, and this whole
-    // direct-write create path must be replaced by the `createBooking` callable. tsc does
-    // not catch this because batch.set takes untyped DocumentData. This file also writes
-    // `providerId` where the callable writes `instructorId` — see plan Task 14 Step 2.
-    // DO NOT DEPLOY this branch until Tasks 12-17 are done; bookings created here would
-    // carry a dead status and no statusHistory.
-    status: 'requested',
-    statusHistory: [],
-    paymentStatus: 'pending',
-    paymentMethod: data.paymentMethod,
-    
-    // Notes
-    userNotes: data.userNotes || null,
-    
-    // Review
-    hasReviewed: false,
-    
-    // Timestamps
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  };
-
-  batch.set(bookingRef, bookingData);
-
-  // Mark time slot as booked in provider's availability
-  const dateStr = data.scheduledAt.toISOString().split('T')[0];
-  const timeStr = data.scheduledAt.toTimeString().slice(0, 5);
-  const availabilityRef = doc(
-    db,
-    INSTRUCTORS_COLLECTION,
-    data.providerId,
-    AVAILABILITY_COLLECTION,
-    dateStr
-  );
-  
-  // This is a simplified version - in production, you'd update specific slot
-  batch.update(availabilityRef, {
-    [`slots.${timeStr}.isBooked`]: true,
-    [`slots.${timeStr}.bookingId`]: bookingRef.id,
-    updatedAt: serverTimestamp(),
+    scheduledAt: data.scheduledAt.toISOString(),
+    bookingType: toBookingType(data.locationType),
+    promotionCode: data.promotionCode,
+    usePoints: (data.pointsToUse ?? 0) > 0,
+    userNotes: data.userNotes,
   });
 
-  await batch.commit();
+  const created = await getBooking(result.bookingId);
+  if (!created) throw new Error('Booking was created but could not be read back');
+  return created;
+}
 
-  return { ...bookingData, id: bookingRef.id } as unknown as Booking;
+/** BookingData still speaks LocationType; the booking document speaks BookingType. */
+function toBookingType(locationType: LocationType): 'in_venue' | 'home_service' | 'virtual' | 'outdoor' {
+  switch (locationType) {
+  case 'online':
+    return 'virtual';
+  case 'home_visit':
+    return 'home_service';
+  default:
+    return 'in_venue';
+  }
 }
 
 // Get user's bookings
@@ -347,19 +258,17 @@ export async function getBooking(bookingId: string): Promise<Booking | null> {
 }
 
 // Cancel a booking
+/**
+ * Cancel a booking.
+ *
+ * Delegates to the `cancelBooking` callable, which owns the client-vs-trainer branch, the
+ * lateCancellation flag and the statusHistory entry. Rules deny a direct status write.
+ */
 export async function cancelBooking(
   bookingId: string,
   reason?: string
 ): Promise<void> {
-  const bookingRef = doc(db, BOOKINGS_COLLECTION, bookingId);
-  
-  await updateDoc(bookingRef, {
-    status: 'cancelled_by_client',
-    cancellationReason: reason || null,
-    cancelledBy: 'user',
-    cancelledAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
+  await cancelBookingFn({ bookingId, reason });
 }
 
 // Reschedule a booking

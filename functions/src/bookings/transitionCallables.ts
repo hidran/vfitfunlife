@@ -12,7 +12,6 @@ import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https
 import * as admin from "firebase-admin";
 import { getUserRoleInfo } from "../utils/roles";
 import { writeAuditLog } from "../lib/audit";
-import { EMAIL_SECRETS } from "../lib/email";
 import { canTransition } from "./transitions";
 import { notifyTransition } from "./notify";
 import type { BookingStatus, StatusActorRole, TransitionActorRole } from "./types";
@@ -156,7 +155,7 @@ export async function applyTransition(opts: ApplyTransitionOptions) {
 }
 
 export const acceptBooking = onCall<TransitionRequest>(
-  { region, secrets: EMAIL_SECRETS },
+  { region },
   (request) => applyTransition({
     request,
     to: "accepted",
@@ -169,7 +168,7 @@ export const acceptBooking = onCall<TransitionRequest>(
 );
 
 export const declineBooking = onCall<TransitionRequest>(
-  { region, secrets: EMAIL_SECRETS },
+  { region },
   (request) => applyTransition({
     request,
     to: "declined",
@@ -178,7 +177,7 @@ export const declineBooking = onCall<TransitionRequest>(
 );
 
 export const cancelBookingAsTrainer = onCall<TransitionRequest>(
-  { region, secrets: EMAIL_SECRETS },
+  { region },
   (request) => applyTransition({
     request,
     to: "cancelled_by_trainer",
@@ -207,7 +206,7 @@ interface CompleteRequest extends TransitionRequest {
  * no-show must not inflate it. Spec §8.
  */
 export const completeBooking = onCall<CompleteRequest>(
-  { region, secrets: EMAIL_SECRETS },
+  { region },
   (request) => {
     const noShow = request.data?.noShow === true;
 

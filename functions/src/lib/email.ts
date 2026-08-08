@@ -1,6 +1,15 @@
 /**
  * Transactional email via Resend.
  *
+ * ⚠️ POSTPONED (2026-08-08). Resend is deferred past P0-1: the account, verified sending
+ * domain and DPA are not in place. This module is written and dormant — `sendEmail` returns
+ * false and logs when no API key is present, which is the current state everywhere.
+ *
+ * `EMAIL_SECRETS` is deliberately NOT bound to any callable: `defineSecret` makes Firebase
+ * require the secret to exist in Secret Manager at deploy time, which would block deploys
+ * on the very thing being postponed. To switch email on later: provision the secret, then
+ * add `secrets: EMAIL_SECRETS` back to the transition and payment callables.
+ *
  * Uses Resend's REST API directly rather than the `resend` SDK: Node 24 ships global
  * fetch, so this adds no dependency and cannot break the build before the package is
  * installed. Swap in the SDK later if retries/batching are needed.

@@ -19,6 +19,7 @@ import {
 } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { auth, db, functions } from "./config";
+import { cancelBooking as cancelBookingFn } from "./functions";
 import {
   AdminDashboardStats,
   UserFilters,
@@ -465,18 +466,17 @@ export async function getBookings(
   }
 }
 
-// Cancel booking as admin
+/**
+ * Cancel a booking as admin.
+ *
+ * Goes through the `cancelBooking` callable rather than writing the document. Admin still
+ * has rules-level update access, but a direct write would skip the statusHistory entry and
+ * the actorRole attribution that P0-2's trainer-reliability metric depends on — an admin
+ * cancellation must not read as the trainer's.
+ */
 export async function cancelBookingAdmin(bookingId: string, reason: string): Promise<void> {
   try {
-    const bookingRef = doc(db, BOOKINGS_COLLECTION, bookingId);
-    await updateDoc(bookingRef, {
-      status: "cancelled",
-      cancelledBy: "admin",
-      cancellationReason: reason,
-      cancelledAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-
+    await cancelBookingFn({ bookingId, reason });
     await logAdminAction("CANCEL_BOOKING", `Cancelled booking ${bookingId}. Reason: ${reason}`);
   } catch (error) {
     console.error("Error cancelling booking:", error);
