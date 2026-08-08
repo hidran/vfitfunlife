@@ -822,3 +822,4 @@ export const updateBookingStatus = onCall<UpdateBookingStatusData>(
 // does `export * from "./bookings"`, so nothing is added there (avoids duplicate stars).
 export * from "./transitionCallables";
 export * from "./payments";
+export * from "./migrate";
