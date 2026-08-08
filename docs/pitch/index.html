@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>V Fitness &amp; Wellness — Pitch Tecnico</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#07070c;
+    --bg-2:#0b0b14;
+    --ink:#ECECF4;
+    --ink-dim:#9A9AB4;
+    --ink-faint:#5C5C76;
+    --line:rgba(255,255,255,.08);
+    --line-2:rgba(255,255,255,.14);
+    --cyan:#27E0E8;
+    --violet:#8A6CFF;
+    --grad:linear-gradient(110deg,#27E0E8 0%,#5CA8FF 45%,#8A6CFF 100%);
+    --grad-soft:linear-gradient(110deg,rgba(39,224,232,.16),rgba(138,108,255,.16));
+    --card:rgba(255,255,255,.025);
+    --card-2:rgba(255,255,255,.045);
+    --ok:#3FE0A0;
+    --warn:#FFB454;
+    --display:"Bricolage Grotesque",sans-serif;
+    --body:"Hanken Grotesk",sans-serif;
+    --mono:"JetBrains Mono",monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--body);-webkit-font-smoothing:antialiased}
+
+  /* atmospheric background */
+  .bg{position:fixed;inset:0;z-index:0;overflow:hidden}
+  .bg::before{content:"";position:absolute;width:75vw;height:75vw;left:-15vw;top:-25vw;border-radius:50%;
+    background:radial-gradient(circle at center,rgba(39,224,232,.20),transparent 60%);filter:blur(40px)}
+  .bg::after{content:"";position:absolute;width:70vw;height:70vw;right:-20vw;bottom:-30vw;border-radius:50%;
+    background:radial-gradient(circle at center,rgba(138,108,255,.22),transparent 60%);filter:blur(50px)}
+  .grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.05;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .gridlines{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.5;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:64px 64px;mask-image:radial-gradient(ellipse 90% 80% at 50% 45%,#000 35%,transparent 80%)}
+
+  /* deck */
+  .deck{position:relative;z-index:2;height:100%;width:100%}
+  .slide{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;
+    padding:clamp(32px,6vw,110px);opacity:0;visibility:hidden;transform:translateY(14px) scale(.99);
+    transition:opacity .5s ease,transform .6s cubic-bezier(.2,.8,.2,1),visibility .5s}
+  .slide.active{opacity:1;visibility:visible;transform:none}
+  .slide.past{transform:translateY(-14px) scale(.99)}
+
+  /* reveal */
+  [data-r]{opacity:0;transform:translateY(18px);transition:opacity .6s ease,transform .7s cubic-bezier(.2,.8,.2,1)}
+  .active [data-r]{opacity:1;transform:none}
+  .active [data-r]{transition-delay:calc(var(--i,0)*70ms + 120ms)}
+
+  /* typographic system */
+  .kicker{font-family:var(--mono);font-size:clamp(11px,1vw,13px);letter-spacing:.28em;text-transform:uppercase;
+    color:var(--cyan);display:inline-flex;align-items:center;gap:10px}
+  .kicker::before{content:"";width:26px;height:1px;background:var(--grad)}
+  h1{font-family:var(--display);font-weight:700;line-height:.96;letter-spacing:-.02em;font-size:clamp(44px,8.5vw,128px)}
+  h2{font-family:var(--display);font-weight:700;line-height:1;letter-spacing:-.02em;font-size:clamp(32px,5vw,68px)}
+  h3{font-family:var(--display);font-weight:600;font-size:clamp(18px,1.5vw,23px);letter-spacing:-.01em}
+  .lead{font-size:clamp(16px,1.6vw,22px);color:var(--ink-dim);max-width:60ch;line-height:1.5}
+  .grad-text{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .muted{color:var(--ink-dim)} .faint{color:var(--ink-faint)}
+  .mono{font-family:var(--mono)}
+
+  /* chrome */
+  .chrome{position:fixed;z-index:6;left:0;right:0;display:flex;align-items:center;justify-content:space-between;
+    padding:22px clamp(28px,5vw,56px);pointer-events:none}
+  .chrome.top{top:0}.chrome.bot{bottom:0}
+  .brand{font-family:var(--display);font-weight:700;letter-spacing:-.01em;font-size:15px;display:flex;align-items:center;gap:9px}
+  .brand .dot{width:9px;height:9px;border-radius:50%;background:var(--grad);box-shadow:0 0 14px rgba(92,168,255,.8)}
+  .tag{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-faint)}
+  .count{font-family:var(--mono);font-size:12px;color:var(--ink-dim)}
+  .count b{color:var(--ink)}
+  .progress{position:fixed;left:0;top:0;height:2px;background:var(--grad);z-index:7;width:0;transition:width .5s cubic-bezier(.2,.8,.2,1);box-shadow:0 0 12px rgba(92,168,255,.6)}
+  .hint{font-family:var(--mono);font-size:11px;color:var(--ink-faint);letter-spacing:.12em}
+
+  /* layout helpers */
+  .row{display:flex;gap:clamp(20px,3vw,54px)}
+  .col{display:flex;flex-direction:column}
+  .between{justify-content:space-between}.center{align-items:center}.wrap{flex-wrap:wrap}
+  .grid{display:grid;gap:14px}
+  .mt-s{margin-top:14px}.mt-m{margin-top:26px}.mt-l{margin-top:44px}
+
+  /* cards */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px 24px;backdrop-filter:blur(6px)}
+  .card.hi{background:var(--grad-soft);border-color:var(--line-2)}
+  .card h3{margin-bottom:6px}
+  .card p{font-size:14.5px;color:var(--ink-dim);line-height:1.5}
+  .chip{font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--ink-dim);
+    border:1px solid var(--line-2);border-radius:999px;padding:6px 13px;background:rgba(255,255,255,.02)}
+  .chip b{color:var(--cyan);font-weight:500}
+
+  .feat{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .feat .card{display:flex;flex-direction:column;gap:7px}
+  .feat .ic{font-family:var(--mono);font-size:12px;color:var(--cyan);letter-spacing:.1em}
+
+  /* stat numbers */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(16px,2.4vw,40px)}
+  .stat .n{font-family:var(--display);font-weight:700;font-size:clamp(40px,6vw,86px);line-height:.9;letter-spacing:-.03em}
+  .stat .l{font-size:13.5px;color:var(--ink-dim);margin-top:10px;line-height:1.4}
+
+  /* architecture */
+  .arch{display:flex;flex-direction:column;gap:14px;width:100%}
+  .layer{border:1px solid var(--line);border-radius:16px;padding:16px 20px;background:var(--card);display:flex;align-items:center;gap:18px}
+  .layer .lname{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);width:120px;flex-shrink:0}
+  .layer .nodes{display:flex;gap:10px;flex-wrap:wrap;flex:1}
+  .node{font-size:13.5px;border:1px solid var(--line-2);border-radius:10px;padding:9px 14px;background:rgba(255,255,255,.03);white-space:nowrap}
+  .node b{color:var(--cyan);font-weight:600}
+  .conn{height:18px;width:2px;background:linear-gradient(var(--line-2),transparent);margin:0 auto;margin-left:60px}
+
+  /* comparison */
+  .vs{display:grid;grid-template-columns:1fr auto 1fr;gap:clamp(18px,2.5vw,40px);align-items:stretch}
+  .vs .panel{border:1px solid var(--line);border-radius:20px;padding:26px;display:flex;flex-direction:column}
+  .vs .panel.poc{background:var(--card)}
+  .vs .panel.deliv{background:var(--grad-soft);border-color:var(--line-2)}
+  .vs .price{font-family:var(--display);font-weight:700;font-size:clamp(34px,4.4vw,58px);letter-spacing:-.02em;line-height:1}
+  .vs ul{list-style:none;margin-top:16px;display:flex;flex-direction:column;gap:9px}
+  .vs li{font-size:14px;color:var(--ink-dim);display:flex;gap:9px;line-height:1.4}
+  .vs li::before{content:"›";color:var(--ink-faint);font-family:var(--mono)}
+  .vs .deliv li::before{content:"✓";color:var(--ok)}
+  .arrow{display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12px;color:var(--cyan);
+    writing-mode:vertical-rl;letter-spacing:.2em;text-transform:uppercase}
+
+  /* method steps */
+  .flow{display:flex;align-items:stretch;gap:0}
+  .flow .step{flex:1;border:1px solid var(--line);border-radius:16px;padding:20px;background:var(--card);position:relative}
+  .flow .step+.step{margin-left:-1px}
+  .flow .n{font-family:var(--mono);font-size:11px;color:var(--cyan);letter-spacing:.14em}
+  .flow .step h3{margin:8px 0 6px;font-size:17px}
+  .flow .step p{font-size:13px;color:var(--ink-dim);line-height:1.45}
+  .flow .step::after{content:"→";position:absolute;right:-10px;top:50%;transform:translateY(-50%);color:var(--ink-faint);z-index:3;font-family:var(--mono)}
+  .flow .step:last-child::after{display:none}
+
+  .pill-row{display:flex;gap:10px;flex-wrap:wrap}
+  .big-quote{font-family:var(--display);font-weight:600;font-size:clamp(26px,3.6vw,52px);line-height:1.08;letter-spacing:-.02em;max-width:18ch}
+
+  .navzone{position:fixed;top:0;bottom:0;width:18%;z-index:5;cursor:pointer}
+  .navzone.l{left:0}.navzone.r{right:0}
+  @media (max-width:760px){
+    .feat{grid-template-columns:1fr 1fr}.stats{grid-template-columns:1fr 1fr;gap:24px}
+    .vs{grid-template-columns:1fr}.arrow{writing-mode:horizontal-tb}
+    .flow{flex-direction:column}.flow .step+.step{margin-left:0;margin-top:-1px}.flow .step::after{display:none}
+    .layer{flex-direction:column;align-items:flex-start;gap:10px}.layer .lname{width:auto}
+    .phones{gap:18px}.phone{width:160px}
+  }
+
+  /* phone mockups */
+  .phones{display:flex;justify-content:center;align-items:flex-end;gap:clamp(16px,3vw,46px);width:100%}
+  .phone{width:clamp(170px,17vw,232px);flex-shrink:0;position:relative;transition:transform .5s cubic-bezier(.2,.8,.2,1)}
+  .phone .frame{border:2px solid var(--line-2);border-radius:30px;padding:7px;background:#0c0c14;
+    box-shadow:0 30px 70px -20px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.04);position:relative;overflow:hidden}
+  .phone .frame::before{content:"";position:absolute;top:9px;left:50%;transform:translateX(-50%);width:34%;height:6px;border-radius:99px;background:rgba(255,255,255,.14);z-index:3}
+  .phone img{display:block;width:100%;border-radius:23px}
+  .phone .cap{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim);text-align:center;margin-top:14px}
+  .phone.mid{transform:translateY(-22px) scale(1.06);z-index:2}
+  .active .phone:hover{transform:translateY(-10px) scale(1.04)}
+  .active .phone.mid:hover{transform:translateY(-30px) scale(1.09)}
+  .shot-card{border:1px solid var(--line-2);border-radius:22px;overflow:hidden;background:#0c0c14;box-shadow:0 30px 70px -25px rgba(0,0,0,.7);max-width:300px}
+  .shot-card img{display:block;width:100%}
+
+  /* print → one slide per landscape page, for PDF export */
+  @media print{
+    @page{size:1280px 720px;margin:0}
+    html,body{overflow:visible!important;height:auto!important;background:var(--bg)!important;
+      -webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+    .chrome,.navzone,.progress,.grain{display:none!important}
+    .bg,.gridlines{position:fixed!important}
+    .deck{position:static!important;height:auto!important}
+    .slide{position:relative!important;inset:auto!important;width:1280px!important;height:720px!important;
+      opacity:1!important;visibility:visible!important;transform:none!important;transition:none!important;
+      padding:60px 84px!important;page-break-after:always;break-after:page;
+      page-break-inside:avoid;break-inside:avoid;overflow:hidden}
+    .slide:last-child{page-break-after:avoid;break-after:auto}
+    [data-r]{opacity:1!important;transform:none!important;transition:none!important}
+  }
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="gridlines"></div>
+<div class="grain"></div>
+<div class="progress" id="progress"></div>
+
+<div class="chrome top">
+  <div class="brand"><span class="dot"></span>V&nbsp;Fitness&nbsp;&amp;&nbsp;Wellness</div>
+  <div class="tag">Pitch Tecnico · 2026</div>
+</div>
+<div class="chrome bot">
+  <div class="hint">← → per navigare</div>
+  <div class="count"><b id="cur">01</b> / <span id="tot">12</span></div>
+</div>
+
+<div class="navzone l" onclick="go(-1)"></div>
+<div class="navzone r" onclick="go(1)"></div>
+
+<div class="deck" id="deck">
+
+  <!-- 1 — COVER -->
+  <section class="slide">
+    <div class="kicker" data-r style="--i:0">Piattaforma Fitness · Fun · Wellness</div>
+    <h1 data-r style="--i:1;margin-top:22px">Una sola app.<br><span class="grad-text">Tre mondi.</span></h1>
+    <p class="lead" data-r style="--i:3;margin-top:26px">VFit · VFun · VLife — fitness, eventi e benessere in un'unica piattaforma ibrida web + mobile. Un MVP costruito, vivo e dimostrabile.</p>
+    <div class="pill-row mt-l" data-r style="--i:4">
+      <span class="chip"><b>Next.js</b> · static export</span>
+      <span class="chip"><b>Firebase</b> · serverless</span>
+      <span class="chip"><b>Capacitor</b> · iOS / Android / PWA</span>
+      <span class="chip"><b>AI</b> · spec-driven dev</span>
+    </div>
+  </section>
+
+  <!-- 2 — LA SFIDA -->
+  <section class="slide">
+    <div class="kicker" data-r>La sfida</div>
+    <h2 data-r style="--i:1;margin-top:18px">Un marketplace di servizi <span class="grad-text">a domicilio</span>, mobile-first.</h2>
+    <div class="row mt-l wrap">
+      <div class="card" data-r style="--i:2;flex:1;min-width:240px">
+        <h3>Trovare &amp; prenotare</h3>
+        <p>L'utente cerca trainer e palestre vicino a sé, ne vede profilo e prezzi, richiede una sessione e paga — tutto in pochi tap.</p>
+      </div>
+      <div class="card" data-r style="--i:3;flex:1;min-width:240px">
+        <h3>Offrire &amp; gestire</h3>
+        <p>Il professionista pubblica profilo, foto, servizi, canale streaming e disponibilità; riceve e gestisce le richieste.</p>
+      </div>
+      <div class="card" data-r style="--i:4;flex:1;min-width:240px">
+        <h3>Un'unica esperienza</h3>
+        <p>Web e mobile dallo stesso codice. Offline-ready. Installabile come app nativa. Tre verticali, un solo prodotto.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 — STACK -->
+  <section class="slide">
+    <div class="kicker" data-r>Stack tecnologico</div>
+    <h2 data-r style="--i:1;margin-top:18px">Serverless, type-safe, <span class="grad-text">un solo codebase.</span></h2>
+    <div class="feat mt-l">
+      <div class="card" data-r style="--i:2"><span class="ic">FRONTEND</span><h3>Next.js 16 · React 19</h3><p>App Router, static export, Tailwind v4, TanStack Query + Zustand.</p></div>
+      <div class="card" data-r style="--i:3"><span class="ic">BACKEND</span><h3>Firebase</h3><p>Auth, Firestore, Cloud Functions (Node 24), Storage, FCM — regioni EU.</p></div>
+      <div class="card" data-r style="--i:4"><span class="ic">MOBILE</span><h3>Capacitor</h3><p>iOS, Android e PWA dallo stesso build. Camera, geolocation, push.</p></div>
+      <div class="card" data-r style="--i:5"><span class="ic">PAGAMENTI</span><h3>Stripe</h3><p>Payment Intents, webhook, gestione clienti — pronto al charge.</p></div>
+      <div class="card" data-r style="--i:6"><span class="ic">MAPPE</span><h3>Google Maps</h3><p>Posizionamento reale dei trainer + filtro per vicinanza.</p></div>
+      <div class="card" data-r style="--i:7"><span class="ic">QUALITÀ</span><h3>i18n · Vitest</h3><p>3 lingue, design system, test unitari sulla logica core.</p></div>
+    </div>
+  </section>
+
+  <!-- 4 — ARCHITETTURA -->
+  <section class="slide">
+    <div class="kicker" data-r>Architettura</div>
+    <h2 data-r style="--i:1;margin-top:18px">Client statico, <span class="grad-text">backend gestito.</span></h2>
+    <div class="arch mt-l">
+      <div class="layer" data-r style="--i:2">
+        <span class="lname">Client</span>
+        <div class="nodes"><span class="node"><b>Next.js</b> static export</span><span class="node">PWA</span><span class="node"><b>Capacitor</b> iOS/Android</span><span class="node">TanStack Query cache</span></div>
+      </div>
+      <div class="conn" data-r style="--i:3"></div>
+      <div class="layer" data-r style="--i:4">
+        <span class="lname">Firebase</span>
+        <div class="nodes"><span class="node"><b>Auth</b></span><span class="node"><b>Firestore</b> + regole</span><span class="node"><b>Functions</b> EU-west1</span><span class="node"><b>Storage</b></span><span class="node">FCM push</span></div>
+      </div>
+      <div class="conn" data-r style="--i:5"></div>
+      <div class="layer" data-r style="--i:6">
+        <span class="lname">Terze parti</span>
+        <div class="nodes"><span class="node"><b>Stripe</b> checkout + webhook</span><span class="node"><b>Google Maps</b></span><span class="node">YouTube / Twitch embed</span></div>
+      </div>
+    </div>
+    <p class="lead mono mt-m" data-r style="--i:7;font-size:13px">Routing dinamico via query-string + hosting rewrite → ogni contenuto creato in admin è online senza rebuild.</p>
+  </section>
+
+  <!-- 5 — COSA ABBIAMO COSTRUITO -->
+  <section class="slide">
+    <div class="kicker" data-r>Cosa è stato costruito</div>
+    <h2 data-r style="--i:1;margin-top:18px">Non un prototipo. <span class="grad-text">Un prodotto.</span></h2>
+    <div class="feat mt-l">
+      <div class="card" data-r style="--i:2"><span class="ic">AUTH</span><h3>Accesso completo</h3><p>Email, Google, Apple. Ruoli utente / professionista / admin.</p></div>
+      <div class="card" data-r style="--i:3"><span class="ic">BOOKING</span><h3>Ricerca &amp; prenotazione</h3><p>Filtri per categoria e vicinanza, dettaglio, richiesta sessione, stati.</p></div>
+      <div class="card" data-r style="--i:4"><span class="ic">PROVIDER</span><h3>Dashboard pro</h3><p>Clienti, prenotazioni, guadagni, agenda, servizi, galleria foto.</p></div>
+      <div class="card" data-r style="--i:5"><span class="ic">ADMIN</span><h3>Console completa</h3><p>Utenti, professionisti, venue, pagamenti, prenotazioni, ruoli.</p></div>
+      <div class="card" data-r style="--i:6"><span class="ic">GEO</span><h3>Mappe &amp; vicinanza</h3><p>Posizioni GPS reali, filtro per raggio, ordinamento per distanza.</p></div>
+      <div class="card" data-r style="--i:7"><span class="ic">LIVE</span><h3>Streaming</h3><p>Canali Twitch/YouTube dei trainer embeddati in "Live &amp; Contenuti".</p></div>
+    </div>
+  </section>
+
+  <!-- 5b — IL PRODOTTO, DAL VIVO -->
+  <section class="slide">
+    <div class="kicker" data-r>Il prodotto, dal vivo</div>
+    <h2 data-r style="--i:1;margin-top:14px">Schermate reali. <span class="grad-text">Dati reali.</span></h2>
+    <div class="phones mt-l">
+      <div class="phone" data-r style="--i:2">
+        <div class="frame"><img src="shots/booking.png" alt="Ricerca e prenotazione" loading="lazy" /></div>
+        <div class="cap">Ricerca &amp; prenota</div>
+      </div>
+      <div class="phone mid" data-r style="--i:3">
+        <div class="frame"><img src="shots/home.png" alt="Home VFit" loading="lazy" /></div>
+        <div class="cap">Home</div>
+      </div>
+      <div class="phone" data-r style="--i:4">
+        <div class="frame"><img src="shots/trainer.png" alt="Profilo trainer" loading="lazy" /></div>
+        <div class="cap">Profilo trainer</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 — DATI REALI -->
+  <section class="slide">
+    <div class="kicker" data-r>Dati reali, non finti</div>
+    <h2 data-r style="--i:1;margin-top:18px">Tutto vive su <span class="grad-text">Firestore.</span></h2>
+    <p class="lead mt-s" data-r style="--i:2">Niente mock hardcoded: ogni schermata legge dati live, in cache lato client. Un demo già popolato, in tutta Italia.</p>
+    <div class="stats mt-l">
+      <div class="stat" data-r style="--i:3"><div class="n grad-text">321</div><div class="l">trainer verificati con servizi, recensioni e avatar</div></div>
+      <div class="stat" data-r style="--i:4"><div class="n grad-text">120</div><div class="l">venue (palestre, spa, centri) con gallerie foto</div></div>
+      <div class="stat" data-r style="--i:5"><div class="n grad-text">12</div><div class="l">città italiane con posizioni GPS reali</div></div>
+      <div class="stat" data-r style="--i:6"><div class="n grad-text">3</div><div class="l">verticali · 3 lingue · 1 codebase</div></div>
+    </div>
+  </section>
+
+  <!-- 7 — GEO -->
+  <section class="slide">
+    <div class="kicker" data-r>Geolocalizzazione &amp; mappe</div>
+    <h2 data-r style="--i:1;margin-top:18px">"Vicino a me", <span class="grad-text">davvero.</span></h2>
+    <div class="row mt-l wrap center">
+      <div class="col" style="flex:1;min-width:260px">
+        <div class="card" data-r style="--i:2"><h3>Posizionamento reale</h3><p>Trainer e venue con coordinate vere, mostrati sulla mappa nelle loro posizioni — non segnaposto finti.</p></div>
+        <div class="card mt-s" data-r style="--i:3"><h3>Filtro per vicinanza</h3><p>Permesso di posizione → distanza su ogni card, ordinamento dal più vicino, raggio 5 / 10 / 25 / 50 km.</p></div>
+        <div class="card mt-s" data-r style="--i:4"><h3>Haversine + cache</h3><p>Calcolo distanza puro e testato; la mappa riflette il filtro in tempo reale.</p></div>
+      </div>
+      <div class="col center" style="flex:1;min-width:260px">
+        <div class="phone mid" data-r style="--i:5;transform:none">
+          <div class="frame"><img src="shots/map.png" alt="Mappa trainer per vicinanza" loading="lazy" /></div>
+          <div class="cap">Trainer &amp; venue, sulla mappa</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 — STREAMING -->
+  <section class="slide">
+    <div class="kicker" data-r>Live &amp; Contenuti</div>
+    <h2 data-r style="--i:1;margin-top:18px">I trainer <span class="grad-text">vanno in onda.</span></h2>
+    <div class="row mt-l wrap">
+      <div class="card" data-r style="--i:2;flex:1;min-width:230px"><span class="ic mono" style="color:var(--cyan);font-size:12px">PROFILO</span><h3 class="mt-s">Un link, fatto.</h3><p>Il trainer incolla l'URL Twitch o YouTube; la piattaforma riconosce ed embedda automaticamente il canale.</p></div>
+      <div class="card" data-r style="--i:3;flex:1;min-width:230px"><span class="ic mono" style="color:var(--cyan);font-size:12px">SCOPERTA</span><h3 class="mt-s">Pagina Live</h3><p>Una hub "Live &amp; Contenuti" elenca i trainer in diretta; tap → player a tutto schermo + CTA prenota.</p></div>
+      <div class="card" data-r style="--i:4;flex:1;min-width:230px"><span class="ic mono" style="color:var(--cyan);font-size:12px">CONTROLLO</span><h3 class="mt-s">Visibilità</h3><p>Toggle "visibile nella lista pubblica" — il professionista decide quando comparire.</p></div>
+    </div>
+    <p class="lead mono mt-m" data-r style="--i:5;font-size:13px">YouTube ovunque · Twitch con parent host a runtime · fallback "apri canale" dove l'embed è bloccato.</p>
+  </section>
+
+  <!-- 9 — POC vs CONSEGNATO -->
+  <section class="slide">
+    <div class="kicker" data-r>Oltre il proof-of-concept</div>
+    <h2 data-r style="--i:1;margin-top:14px">Proposto come POC. <span class="grad-text">Consegnato come MVP.</span></h2>
+    <div class="vs mt-m">
+      <div class="panel poc" data-r style="--i:2">
+        <span class="tag">Scope del POC</span>
+        <div class="price mt-s">POC</div>
+        <ul>
+          <li>web app base, una città pilota</li>
+          <li>profili, lista &amp; dettaglio trainer</li>
+          <li>richiesta sessione manuale</li>
+          <li>checkout di pagamento semplice</li>
+          <li>niente mappe, niente app native</li>
+          <li>niente gamification / admin avanzato</li>
+        </ul>
+      </div>
+      <div class="arrow" data-r style="--i:3">consegnato →</div>
+      <div class="panel deliv" data-r style="--i:4">
+        <span class="tag" style="color:var(--cyan)">Scope consegnato</span>
+        <div class="price grad-text mt-s">MVP completo</div>
+        <ul>
+          <li>12 città, 3 verticali, dati live</li>
+          <li>GPS reale + mappe + filtro vicinanza</li>
+          <li>gallerie foto, avatar, recensioni</li>
+          <li>streaming Live &amp; Contenuti</li>
+          <li>app native iOS/Android (Capacitor)</li>
+          <li>gamification + console admin completa</li>
+        </ul>
+      </div>
+    </div>
+    <p class="lead mono mt-m" data-r style="--i:5;font-size:13px">Un salto di categoria: dal proof-of-concept a un MVP completo, multi-piattaforma e su dati reali.</p>
+  </section>
+
+  <!-- 10 — METODO AI -->
+  <section class="slide">
+    <div class="kicker" data-r>Il metodo</div>
+    <h2 data-r style="--i:1;margin-top:18px">Sviluppo <span class="grad-text">AI spec-driven.</span></h2>
+    <p class="lead mt-s" data-r style="--i:2">Ogni feature passa per lo stesso flusso disciplinato: l'AI accelera il "come", l'ingegnere possiede il "cosa" e il "perché".</p>
+    <div class="flow mt-l">
+      <div class="step" data-r style="--i:3"><div class="n">01</div><h3>Brainstorm</h3><p>Si chiariscono intento, vincoli e scope prima di una riga di codice.</p></div>
+      <div class="step" data-r style="--i:4"><div class="n">02</div><h3>Spec</h3><p>Design doc rivisto e versionato: l'allineamento è esplicito.</p></div>
+      <div class="step" data-r style="--i:5"><div class="n">03</div><h3>Plan</h3><p>Task atomici, TDD, commit frequenti — niente ambiguità.</p></div>
+      <div class="step" data-r style="--i:6"><div class="n">04</div><h3>Build + Review</h3><p>Sub-agent per task, doppia review: conformità allo spec + qualità.</p></div>
+    </div>
+    <p class="lead mono mt-m" data-r style="--i:7;font-size:13px">Risultato: iterazioni rapide sui flussi core, qualità verificata, zero deriva dallo scope.</p>
+  </section>
+
+  <!-- 11 — STATO / NUMERI -->
+  <section class="slide">
+    <div class="kicker" data-r>Stato attuale</div>
+    <h2 data-r style="--i:1;margin-top:18px">Vivo, online, <span class="grad-text">dimostrabile.</span></h2>
+    <div class="stats mt-l">
+      <div class="stat" data-r style="--i:2"><div class="n grad-text">83</div><div class="l">pagine generate in static export</div></div>
+      <div class="stat" data-r style="--i:3"><div class="n grad-text">EU</div><div class="l">deploy live su Firebase Hosting (HTTPS)</div></div>
+      <div class="stat" data-r style="--i:4"><div class="n grad-text">iOS</div><div class="l">progetto nativo pronto per Xcode</div></div>
+      <div class="stat" data-r style="--i:5"><div class="n grad-text">100%</div><div class="l">feature core su dati reali Firestore</div></div>
+    </div>
+    <div class="pill-row mt-l" data-r style="--i:6">
+      <span class="chip">Demo da <b>laptop</b></span>
+      <span class="chip">Demo da <b>iPhone</b> (Safari / PWA)</span>
+      <span class="chip">Suite test <b>vitest</b> verde sul core</span>
+    </div>
+  </section>
+
+  <!-- 12 — CLOSE / ROADMAP -->
+  <section class="slide">
+    <div class="kicker" data-r>Prossimi passi</div>
+    <h1 data-r style="--i:1;margin-top:18px;font-size:clamp(40px,7vw,104px)">Pronti a<br><span class="grad-text">scalare.</span></h1>
+    <div class="row mt-l wrap">
+      <div class="card" data-r style="--i:2;flex:1;min-width:220px"><h3>Beta chiusa</h3><p>Onboarding professionisti reali in una città pilota, dati di produzione.</p></div>
+      <div class="card" data-r style="--i:3;flex:1;min-width:220px"><h3>Pagamenti live</h3><p>Stripe in produzione + split payout verso i professionisti.</p></div>
+      <div class="card" data-r style="--i:4;flex:1;min-width:220px"><h3>Store nativi</h3><p>Pubblicazione App Store / Play Store dal build Capacitor esistente.</p></div>
+    </div>
+    <div class="row between center mt-l" data-r style="--i:5">
+      <div class="big-quote">Costruito con metodo. <span class="grad-text">Pronto domani.</span></div>
+      <div class="brand" style="font-size:18px"><span class="dot"></span>V Fitness &amp; Wellness</div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  const slides=[...document.querySelectorAll('.slide')];
+  const total=slides.length;
+  let idx=0;
+  const curEl=document.getElementById('cur');
+  const totEl=document.getElementById('tot');
+  const prog=document.getElementById('progress');
+  totEl.textContent=String(total).padStart(2,'0');
+
+  function render(){
+    slides.forEach((s,i)=>{
+      s.classList.toggle('active',i===idx);
+      s.classList.toggle('past',i<idx);
+    });
+    curEl.textContent=String(idx+1).padStart(2,'0');
+    prog.style.width=((idx)/(total-1)*100)+'%';
+  }
+  function go(d){idx=Math.min(total-1,Math.max(0,idx+d));render();}
+  function goto(n){idx=Math.min(total-1,Math.max(0,n));render();}
+
+  window.addEventListener('keydown',e=>{
+    if(['ArrowRight','ArrowDown',' ','PageDown'].includes(e.key)){e.preventDefault();go(1);}
+    else if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){e.preventDefault();go(-1);}
+    else if(e.key==='Home'){goto(0);}
+    else if(e.key==='End'){goto(total-1);}
+    else if(e.key==='f'||e.key==='F'){if(!document.fullscreenElement)document.documentElement.requestFullscreen();else document.exitFullscreen();}
+  });
+  // touch swipe
+  let tx=0;
+  window.addEventListener('touchstart',e=>tx=e.touches[0].clientX,{passive:true});
+  window.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>50)go(dx<0?1:-1);},{passive:true});
+  render();
+</script>
+</body>
+</html>

@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>V Fitness &amp; Wellness — Investor Deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#07070c; --bg-2:#0b0b14;
+    --ink:#ECECF4; --ink-dim:#9A9AB4; --ink-faint:#5C5C76;
+    --line:rgba(255,255,255,.08); --line-2:rgba(255,255,255,.14);
+    --cyan:#27E0E8; --violet:#8A6CFF;
+    --grad:linear-gradient(110deg,#27E0E8 0%,#5CA8FF 45%,#8A6CFF 100%);
+    --grad-soft:linear-gradient(110deg,rgba(39,224,232,.16),rgba(138,108,255,.16));
+    --card:rgba(255,255,255,.025); --card-2:rgba(255,255,255,.045);
+    --ok:#3FE0A0; --warn:#FFB454;
+    --display:"Bricolage Grotesque",sans-serif;
+    --body:"Hanken Grotesk",sans-serif;
+    --mono:"JetBrains Mono",monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--body);-webkit-font-smoothing:antialiased}
+
+  .bg{position:fixed;inset:0;z-index:0;overflow:hidden}
+  .bg::before{content:"";position:absolute;width:75vw;height:75vw;left:-15vw;top:-25vw;border-radius:50%;
+    background:radial-gradient(circle at center,rgba(39,224,232,.20),transparent 60%);filter:blur(40px)}
+  .bg::after{content:"";position:absolute;width:70vw;height:70vw;right:-20vw;bottom:-30vw;border-radius:50%;
+    background:radial-gradient(circle at center,rgba(138,108,255,.22),transparent 60%);filter:blur(50px)}
+  .grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.05;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .gridlines{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.5;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:64px 64px;mask-image:radial-gradient(ellipse 90% 80% at 50% 45%,#000 35%,transparent 80%)}
+
+  .deck{position:relative;z-index:2;height:100%;width:100%}
+  .slide{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;
+    padding:clamp(32px,6vw,110px);opacity:0;visibility:hidden;transform:translateY(14px) scale(.99);
+    transition:opacity .5s ease,transform .6s cubic-bezier(.2,.8,.2,1),visibility .5s}
+  .slide.active{opacity:1;visibility:visible;transform:none}
+  .slide.past{transform:translateY(-14px) scale(.99)}
+
+  [data-r]{opacity:0;transform:translateY(18px);transition:opacity .6s ease,transform .7s cubic-bezier(.2,.8,.2,1)}
+  .active [data-r]{opacity:1;transform:none}
+  .active [data-r]{transition-delay:calc(var(--i,0)*70ms + 120ms)}
+
+  .kicker{font-family:var(--mono);font-size:clamp(11px,1vw,13px);letter-spacing:.28em;text-transform:uppercase;
+    color:var(--cyan);display:inline-flex;align-items:center;gap:10px}
+  .kicker::before{content:"";width:26px;height:1px;background:var(--grad)}
+  h1{font-family:var(--display);font-weight:700;line-height:.96;letter-spacing:-.02em;font-size:clamp(44px,8.5vw,128px)}
+  h2{font-family:var(--display);font-weight:700;line-height:1;letter-spacing:-.02em;font-size:clamp(30px,4.8vw,66px)}
+  h3{font-family:var(--display);font-weight:600;font-size:clamp(18px,1.5vw,23px);letter-spacing:-.01em}
+  .lead{font-size:clamp(16px,1.6vw,22px);color:var(--ink-dim);max-width:62ch;line-height:1.5}
+  .grad-text{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .muted{color:var(--ink-dim)} .faint{color:var(--ink-faint)} .mono{font-family:var(--mono)}
+
+  .chrome{position:fixed;z-index:6;left:0;right:0;display:flex;align-items:center;justify-content:space-between;
+    padding:22px clamp(28px,5vw,56px);pointer-events:none}
+  .chrome.top{top:0}.chrome.bot{bottom:0}
+  .brand{font-family:var(--display);font-weight:700;letter-spacing:-.01em;font-size:15px;display:flex;align-items:center;gap:9px}
+  .brand .dot{width:9px;height:9px;border-radius:50%;background:var(--grad);box-shadow:0 0 14px rgba(92,168,255,.8)}
+  .tag{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-faint)}
+  .count{font-family:var(--mono);font-size:12px;color:var(--ink-dim)} .count b{color:var(--ink)}
+  .progress{position:fixed;left:0;top:0;height:2px;background:var(--grad);z-index:7;width:0;transition:width .5s cubic-bezier(.2,.8,.2,1);box-shadow:0 0 12px rgba(92,168,255,.6)}
+  .hint{font-family:var(--mono);font-size:11px;color:var(--ink-faint);letter-spacing:.12em}
+
+  .row{display:flex;gap:clamp(20px,3vw,54px)}
+  .col{display:flex;flex-direction:column}
+  .between{justify-content:space-between}.center{align-items:center}.wrap{flex-wrap:wrap}
+  .mt-s{margin-top:14px}.mt-m{margin-top:26px}.mt-l{margin-top:44px}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px 24px;backdrop-filter:blur(6px)}
+  .card.hi{background:var(--grad-soft);border-color:var(--line-2)}
+  .card h3{margin-bottom:6px} .card p{font-size:14.5px;color:var(--ink-dim);line-height:1.5}
+  .chip{font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--ink-dim);
+    border:1px solid var(--line-2);border-radius:999px;padding:6px 13px;background:rgba(255,255,255,.02)}
+  .chip b{color:var(--cyan);font-weight:500}
+
+  .feat{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .feat .card{display:flex;flex-direction:column;gap:7px}
+  .feat .ic{font-family:var(--mono);font-size:12px;color:var(--cyan);letter-spacing:.1em}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(16px,2.4vw,40px)}
+  .stat .n{font-family:var(--display);font-weight:700;font-size:clamp(34px,5vw,76px);line-height:.9;letter-spacing:-.03em}
+  .stat .l{font-size:13.5px;color:var(--ink-dim);margin-top:10px;line-height:1.4}
+
+  /* comparison */
+  .vs{display:grid;grid-template-columns:1fr auto 1fr;gap:clamp(18px,2.5vw,40px);align-items:stretch}
+  .vs .panel{border:1px solid var(--line);border-radius:20px;padding:26px;display:flex;flex-direction:column}
+  .vs .panel.poc{background:var(--card)}
+  .vs .panel.deliv{background:var(--grad-soft);border-color:var(--line-2)}
+  .vs .price{font-family:var(--display);font-weight:700;font-size:clamp(26px,3.2vw,42px);letter-spacing:-.02em;line-height:1.05}
+  .vs ul{list-style:none;margin-top:16px;display:flex;flex-direction:column;gap:9px}
+  .vs li{font-size:14px;color:var(--ink-dim);display:flex;gap:9px;line-height:1.4}
+  .vs li::before{content:"✕";color:var(--warn);font-family:var(--mono);font-size:12px}
+  .vs .deliv li::before{content:"✓";color:var(--ok)}
+  .arrow{display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12px;color:var(--cyan);
+    writing-mode:vertical-rl;letter-spacing:.2em;text-transform:uppercase}
+
+  /* flow / timeline */
+  .flow{display:flex;align-items:stretch;gap:0}
+  .flow .step{flex:1;border:1px solid var(--line);border-radius:16px;padding:20px;background:var(--card);position:relative}
+  .flow .step+.step{margin-left:-1px}
+  .flow .n{font-family:var(--mono);font-size:11px;color:var(--cyan);letter-spacing:.14em}
+  .flow .step h3{margin:8px 0 6px;font-size:17px}
+  .flow .step p{font-size:13px;color:var(--ink-dim);line-height:1.45}
+  .flow .step::after{content:"→";position:absolute;right:-10px;top:50%;transform:translateY(-50%);color:var(--ink-faint);z-index:3;font-family:var(--mono)}
+  .flow .step:last-child::after{display:none}
+
+  .pill-row{display:flex;gap:10px;flex-wrap:wrap}
+  .big-quote{font-family:var(--display);font-weight:600;font-size:clamp(26px,3.6vw,52px);line-height:1.08;letter-spacing:-.02em;max-width:20ch}
+
+  /* market funnel */
+  .funnel{display:flex;flex-direction:column;gap:14px;width:100%;align-items:center}
+  .funnel .tier{border:1px solid var(--line-2);border-radius:16px;padding:18px 28px;display:flex;justify-content:space-between;align-items:center;background:var(--card);gap:20px}
+  .funnel .t1{width:100%;background:var(--grad-soft)}
+  .funnel .t2{width:74%}
+  .funnel .t3{width:48%}
+  .funnel .tlabel{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--cyan)}
+  .funnel .tname{font-size:14px;color:var(--ink-dim);margin-top:3px}
+  .funnel .tval{font-family:var(--display);font-weight:700;font-size:clamp(20px,2.6vw,38px);letter-spacing:-.02em;white-space:nowrap}
+
+  /* use-of-funds bars */
+  .bars{display:flex;flex-direction:column;gap:20px;width:100%}
+  .bar-row{display:grid;grid-template-columns:clamp(150px,18vw,230px) 1fr 56px;align-items:center;gap:20px}
+  .bar-row .bl{font-size:15.5px}.bar-row .bl small{display:block;color:var(--ink-faint);font-size:12.5px;margin-top:2px}
+  .bar-track{height:16px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden;border:1px solid var(--line)}
+  .bar-fill{height:100%;border-radius:99px;background:var(--grad)}
+  .bar-row .bv{font-family:var(--mono);font-size:14px;color:var(--ink);text-align:right}
+
+  /* phones */
+  .phones{display:flex;justify-content:center;align-items:flex-end;gap:clamp(14px,2.4vw,40px);width:100%}
+  .phones.four .phone{width:clamp(150px,14.5vw,210px)}
+  .phone{width:clamp(170px,17vw,232px);flex-shrink:0;position:relative;transition:transform .5s cubic-bezier(.2,.8,.2,1)}
+  .phone .frame{border:2px solid var(--line-2);border-radius:30px;padding:7px;background:#0c0c14;
+    box-shadow:0 30px 70px -20px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.04);position:relative;overflow:hidden}
+  .phone .frame::before{content:"";position:absolute;top:9px;left:50%;transform:translateX(-50%);width:34%;height:6px;border-radius:99px;background:rgba(255,255,255,.14);z-index:3}
+  .phone img{display:block;width:100%;border-radius:23px}
+  .phone .cap{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim);text-align:center;margin-top:13px}
+  .phone.mid{transform:translateY(-22px) scale(1.06);z-index:2}
+  .active .phone:hover{transform:translateY(-10px) scale(1.04)}
+
+  .navzone{position:fixed;top:0;bottom:0;width:18%;z-index:5;cursor:pointer}
+  .navzone.l{left:0}.navzone.r{right:0}
+  @media (max-width:760px){
+    .feat{grid-template-columns:1fr 1fr}.stats{grid-template-columns:1fr 1fr;gap:24px}
+    .vs{grid-template-columns:1fr}.arrow{writing-mode:horizontal-tb}
+    .flow{flex-direction:column}.flow .step+.step{margin-left:0;margin-top:-1px}.flow .step::after{display:none}
+    .phones{gap:14px;flex-wrap:wrap}.phone,.phones.four .phone{width:150px}
+    .bar-row{grid-template-columns:120px 1fr 48px;gap:12px}
+  }
+
+  @media print{
+    @page{size:1280px 720px;margin:0}
+    html,body{overflow:visible!important;height:auto!important;background:var(--bg)!important;
+      -webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+    .chrome,.navzone,.progress,.grain{display:none!important}
+    .bg,.gridlines{position:fixed!important}
+    .deck{position:static!important;height:auto!important}
+    .slide{position:relative!important;inset:auto!important;width:1280px!important;height:720px!important;
+      opacity:1!important;visibility:visible!important;transform:none!important;transition:none!important;
+      padding:60px 84px!important;page-break-after:always;break-after:page;
+      page-break-inside:avoid;break-inside:avoid;overflow:hidden}
+    .slide:last-child{page-break-after:avoid;break-after:auto}
+    [data-r]{opacity:1!important;transform:none!important;transition:none!important}
+  }
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="gridlines"></div>
+<div class="grain"></div>
+<div class="progress" id="progress"></div>
+
+<div class="chrome top">
+  <div class="brand"><span class="dot"></span>V&nbsp;Fitness&nbsp;&amp;&nbsp;Wellness</div>
+  <div class="tag">Investor Deck · Pre-seed 2026</div>
+</div>
+<div class="chrome bot">
+  <div class="hint">← → per navigare</div>
+  <div class="count"><b id="cur">01</b> / <span id="tot">12</span></div>
+</div>
+
+<div class="navzone l" onclick="go(-1)"></div>
+<div class="navzone r" onclick="go(1)"></div>
+
+<div class="deck" id="deck">
+
+  <!-- 1 — COVER -->
+  <section class="slide">
+    <div class="kicker" data-r style="--i:0">Investor Deck · Pre-seed</div>
+    <h1 data-r style="--i:1;margin-top:22px">Il sistema operativo<br>del <span class="grad-text">benessere.</span></h1>
+    <p class="lead" data-r style="--i:3;margin-top:26px">VFit · VFun · VLife — un'unica app per scoprire, prenotare e vivere fitness, eventi e wellness. Partiamo dall'Italia, costruiamo per l'Europa.</p>
+    <div class="pill-row mt-l" data-r style="--i:4">
+      <span class="chip"><b>MVP completo</b> &amp; live</span>
+      <span class="chip"><b>3 verticali</b> in una app</span>
+      <span class="chip"><b>Marketplace + SaaS</b></span>
+      <span class="chip">Raccogliamo <b>€300k</b></span>
+    </div>
+  </section>
+
+  <!-- 2 — PROBLEMA -->
+  <section class="slide">
+    <div class="kicker" data-r>Il problema</div>
+    <h2 data-r style="--i:1;margin-top:16px">Il benessere è ovunque.<br><span class="grad-text">Prenotarlo è un caos.</span></h2>
+    <div class="row mt-l wrap">
+      <div class="card" data-r style="--i:2;flex:1;min-width:280px">
+        <h3>Per le persone</h3>
+        <p>Trovare un trainer, una spa o una palestra affidabile vicino a casa significa passaparola, telefonate, DM su Instagram e pagamenti in contanti. Nessun posto unico, nessuna fiducia, zero comodità.</p>
+      </div>
+      <div class="card" data-r style="--i:3;flex:1;min-width:280px">
+        <h3>Per i professionisti</h3>
+        <p>Niente vetrina, niente agenda digitale, niente incassi tracciati. Vivono di WhatsApp e contanti e perdono clienti ogni giorno. Vogliono crescere, ma non hanno gli strumenti.</p>
+      </div>
+    </div>
+    <p class="lead mono mt-m" data-r style="--i:4;font-size:14px">Un mercato enorme, gestito con strumenti del 2010.</p>
+  </section>
+
+  <!-- 3 — SOLUZIONE -->
+  <section class="slide">
+    <div class="kicker" data-r>La soluzione</div>
+    <h2 data-r style="--i:1;margin-top:16px">Una app. <span class="grad-text">Tre mondi.</span></h2>
+    <div class="feat mt-l">
+      <div class="card" data-r style="--i:2"><span class="ic">VFIT</span><h3>Fitness</h3><p>Palestre, personal trainer, corsi e allenamenti a domicilio o in struttura.</p></div>
+      <div class="card" data-r style="--i:3"><span class="ic">VFUN</span><h3>Eventi &amp; esperienze</h3><p>Eventi, esperienze e contenuti live: il lato sociale del benessere.</p></div>
+      <div class="card" data-r style="--i:4"><span class="ic">VLIFE</span><h3>Wellness &amp; beauty</h3><p>Spa, estetica, massaggi e benessere mentale. Tutto in un posto solo.</p></div>
+    </div>
+    <div class="flow mt-l">
+      <div class="step" data-r style="--i:5"><div class="n">01</div><h3>Scopri</h3><p>Trova servizi e professionisti vicini, con foto, recensioni e prezzi.</p></div>
+      <div class="step" data-r style="--i:6"><div class="n">02</div><h3>Prenoti</h3><p>Disponibilità in tempo reale, in pochi tap.</p></div>
+      <div class="step" data-r style="--i:7"><div class="n">03</div><h3>Paghi</h3><p>Pagamento sicuro in-app. Niente contanti, niente attriti.</p></div>
+      <div class="step" data-r style="--i:8"><div class="n">04</div><h3>Vivi</h3><p>Esperienza, recensione, fidelizzazione. Il loop riparte.</p></div>
+    </div>
+  </section>
+
+  <!-- 4 — PRODOTTO DAL VIVO -->
+  <section class="slide">
+    <div class="kicker" data-r>Il prodotto, dal vivo</div>
+    <h2 data-r style="--i:1;margin-top:14px">Non un mockup. <span class="grad-text">Un'app che funziona.</span></h2>
+    <div class="phones four mt-l">
+      <div class="phone" data-r style="--i:2"><div class="frame"><img src="shots/home.png" alt="Home" loading="lazy" /></div><div class="cap">Home</div></div>
+      <div class="phone" data-r style="--i:3"><div class="frame"><img src="shots/booking.png" alt="Ricerca e prenotazione" loading="lazy" /></div><div class="cap">Cerca &amp; prenota</div></div>
+      <div class="phone" data-r style="--i:4"><div class="frame"><img src="shots/map.png" alt="Mappa" loading="lazy" /></div><div class="cap">Mappa &amp; vicinanza</div></div>
+      <div class="phone" data-r style="--i:5"><div class="frame"><img src="shots/trainer.png" alt="Profilo trainer" loading="lazy" /></div><div class="cap">Profilo &amp; booking</div></div>
+    </div>
+  </section>
+
+  <!-- 5 — MERCATO -->
+  <section class="slide">
+    <div class="kicker" data-r>Il mercato</div>
+    <h2 data-r style="--i:1;margin-top:14px">Grande, in crescita, <span class="grad-text">ancora offline.</span></h2>
+    <div class="funnel mt-m">
+      <div class="tier t1" data-r style="--i:2"><div><div class="tlabel">TAM</div><div class="tname">Benessere &amp; fitness · Europa</div></div><div class="tval grad-text">€100+ mld</div></div>
+      <div class="tier t2" data-r style="--i:3"><div><div class="tlabel">SAM</div><div class="tname">Servizi prenotabili online · Italia</div></div><div class="tval">€6–8 mld</div></div>
+      <div class="tier t3" data-r style="--i:4"><div><div class="tlabel">SOM</div><div class="tname">GMV obiettivo · 3 anni</div></div><div class="tval">€15–20 mln</div></div>
+    </div>
+    <p class="lead mono mt-m" data-r style="--i:5;font-size:13px">Italia first → EU · la maggior parte di queste transazioni avviene ancora offline. Stime indicative, da validare.</p>
+  </section>
+
+  <!-- 6 — MODELLO DI BUSINESS -->
+  <section class="slide">
+    <div class="kicker" data-r>Come guadagniamo</div>
+    <h2 data-r style="--i:1;margin-top:16px">Due motori di ricavo. <span class="grad-text">Entrambi ricorrenti.</span></h2>
+    <div class="feat mt-l">
+      <div class="card hi" data-r style="--i:2"><span class="ic">01 · TRANSAZIONALE</span><h3>Commissione 15–20%</h3><p>Su ogni prenotazione che passa dalla piattaforma. Scala direttamente con il volume (GMV).</p></div>
+      <div class="card hi" data-r style="--i:3"><span class="ic">02 · RICORRENTE</span><h3>Abbonamento PRO</h3><p>Canone mensile per professionisti e venue: vetrina, agenda, pagamenti, gallerie, streaming.</p></div>
+      <div class="card" data-r style="--i:4"><span class="ic">03 · UPSIDE</span><h3>Premium B2C &amp; partner</h3><p>Membership consumatori, posizionamenti in evidenza e partnership di brand.</p></div>
+    </div>
+    <p class="lead mono mt-m" data-r style="--i:5;font-size:13px">Ogni prenotazione genera commissione · ogni PRO abbonato genera ricavo ricorrente · i due si rinforzano.</p>
+  </section>
+
+  <!-- 7 — PERCHÉ ORA -->
+  <section class="slide">
+    <div class="kicker" data-r>Perché ora</div>
+    <h2 data-r style="--i:1;margin-top:16px">Il momento è <span class="grad-text">adesso.</span></h2>
+    <div class="feat mt-l">
+      <div class="card" data-r style="--i:2"><span class="ic">DOMANDA</span><h3>Boom del benessere</h3><p>Salute, fitness e cura di sé sono diventati spesa prioritaria, non più un lusso.</p></div>
+      <div class="card" data-r style="--i:3"><span class="ic">GAP</span><h3>Servizi ancora offline</h3><p>Il mercato locale del benessere è frammentato e quasi del tutto non digitalizzato.</p></div>
+      <div class="card" data-r style="--i:4"><span class="ic">ABITUDINI</span><h3>Mobile &amp; pagamenti</h3><p>Prenotare e pagare da smartphone è ormai lo standard atteso dall'utente.</p></div>
+      <div class="card" data-r style="--i:5"><span class="ic">VELOCITÀ</span><h3>Costruire costa meno</h3><p>L'AI abbatte il costo di costruire e iterare: vantaggio a chi esegue più veloce.</p></div>
+    </div>
+  </section>
+
+  <!-- 8 — VANTAGGIO COMPETITIVO -->
+  <section class="slide">
+    <div class="kicker" data-r>Perché noi</div>
+    <h2 data-r style="--i:1;margin-top:14px">Full-stack, non <span class="grad-text">una nicchia.</span></h2>
+    <div class="vs mt-m">
+      <div class="panel poc" data-r style="--i:2">
+        <span class="tag">Soluzioni puntuali</span>
+        <div class="price mt-s">Un solo verticale</div>
+        <ul>
+          <li>solo palestre, o solo beauty, o solo eventi</li>
+          <li>l'utente deve usare più app diverse</li>
+          <li>offerta locale costruita da zero, città per città</li>
+          <li>nessuna esperienza unificata</li>
+        </ul>
+      </div>
+      <div class="arrow" data-r style="--i:3">il nostro edge →</div>
+      <div class="panel deliv" data-r style="--i:4">
+        <span class="tag" style="color:var(--cyan)">V Fitness &amp; Wellness</span>
+        <div class="price grad-text mt-s">3 verticali, 1 app</div>
+        <ul>
+          <li>fitness + eventi + wellness nello stesso posto</li>
+          <li>rete di palestre esistente come beachhead</li>
+          <li>MVP completo già costruito, multipiattaforma</li>
+          <li>dati e infrastruttura pronti a scalare</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9 — TRACTION / A CHE PUNTO SIAMO -->
+  <section class="slide">
+    <div class="kicker" data-r>A che punto siamo</div>
+    <h2 data-r style="--i:1;margin-top:16px">Non un'idea. <span class="grad-text">Un prodotto.</span></h2>
+    <div class="stats mt-l">
+      <div class="stat" data-r style="--i:2"><div class="n grad-text">MVP</div><div class="l">completo e funzionante, già demo-ready</div></div>
+      <div class="stat" data-r style="--i:3"><div class="n grad-text">Live</div><div class="l">web online su HTTPS, provabile oggi</div></div>
+      <div class="stat" data-r style="--i:4"><div class="n grad-text">iOS<span style="font-size:.5em"> / </span>And.</div><div class="l">app native pronte (Capacitor)</div></div>
+      <div class="stat" data-r style="--i:5"><div class="n grad-text">Rete</div><div class="l">network di palestre come partner di lancio</div></div>
+    </div>
+    <div class="pill-row mt-l" data-r style="--i:6">
+      <span class="chip"><b>3 verticali</b></span><span class="chip"><b>multi-città</b></span><span class="chip"><b>3 lingue</b></span>
+    </div>
+    <p class="lead mono mt-m" data-r style="--i:7;font-size:13px">Pronti a lanciare: il round finanzia la crescita, non il prototipo.</p>
+  </section>
+
+  <!-- 10 — GO-TO-MARKET -->
+  <section class="slide">
+    <div class="kicker" data-r>Go-to-market</div>
+    <h2 data-r style="--i:1;margin-top:16px">Città per città, <span class="grad-text">partendo dalla rete.</span></h2>
+    <div class="flow mt-l">
+      <div class="step" data-r style="--i:2"><div class="n">FASE 1</div><h3>Milano</h3><p>Attiviamo la rete di palestre esistente: offerta e domanda dal giorno uno.</p></div>
+      <div class="step" data-r style="--i:3"><div class="n">FASE 2</div><h3>Città chiave</h3><p>Roma, Torino, Bologna: playbook ripetibile, città per città.</p></div>
+      <div class="step" data-r style="--i:4"><div class="n">FASE 3</div><h3>Europa</h3><p>Esportiamo il modello sui mercati EU comparabili.</p></div>
+      <div class="step" data-r style="--i:5"><div class="n">LOOP</div><h3>Effetto rete</h3><p>Ogni PRO porta i suoi clienti; ogni cliente scopre nuovi PRO.</p></div>
+    </div>
+    <p class="lead mono mt-m" data-r style="--i:6;font-size:13px">Crescita bottom-up, densità prima della scala — la stessa che ha vinto nei marketplace locali.</p>
+  </section>
+
+  <!-- 11 — L'ASK -->
+  <section class="slide">
+    <div class="kicker" data-r>L'investimento</div>
+    <h2 data-r style="--i:1;margin-top:14px">Raccogliamo <span class="grad-text">€300k pre-seed.</span></h2>
+    <div class="row mt-m wrap">
+      <div class="col" style="flex:1.3;min-width:300px">
+        <div class="bars">
+          <div class="bar-row" data-r style="--i:2"><div class="bl">Prodotto &amp; team <small>finire features, primi hire</small></div><div class="bar-track"><div class="bar-fill" style="width:40%"></div></div><div class="bv">40%</div></div>
+          <div class="bar-row" data-r style="--i:3"><div class="bl">Go-to-market <small>acquisizione utenti &amp; PRO</small></div><div class="bar-track"><div class="bar-fill" style="width:35%"></div></div><div class="bv">35%</div></div>
+          <div class="bar-row" data-r style="--i:4"><div class="bl">Operations <small>partnership rete palestre</small></div><div class="bar-track"><div class="bar-fill" style="width:25%"></div></div><div class="bv">25%</div></div>
+        </div>
+      </div>
+      <div class="card hi" data-r style="--i:5;flex:1;min-width:260px">
+        <h3>Cosa compra il round <span class="faint" style="font-weight:400;font-size:14px">· ~18 mesi</span></h3>
+        <ul style="list-style:none;margin-top:12px;display:flex;flex-direction:column;gap:10px">
+          <li style="font-size:14.5px;color:var(--ink-dim)">✓ Lancio in 2 città</li>
+          <li style="font-size:14.5px;color:var(--ink-dim)">✓ 300+ professionisti attivi · 50+ venue partner</li>
+          <li style="font-size:14.5px;color:var(--ink-dim)">✓ Prime entrate ricorrenti (commissioni + abbonamenti)</li>
+          <li style="font-size:14.5px;color:var(--ink-dim)">✓ Metriche solide per il round seed</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12 — VISION / CLOSE -->
+  <section class="slide">
+    <div class="kicker" data-r>La visione</div>
+    <h1 data-r style="--i:1;margin-top:16px;font-size:clamp(40px,7.5vw,108px)">Italia oggi.<br><span class="grad-text">Europa domani.</span></h1>
+    <div class="row between center mt-l wrap" data-r style="--i:3">
+      <div class="big-quote">Il sistema operativo del <span class="grad-text">benessere.</span></div>
+      <div class="col" style="gap:8px;text-align:right">
+        <div class="brand" style="font-size:18px;justify-content:flex-end"><span class="dot"></span>V Fitness &amp; Wellness</div>
+        <div class="tag">Pre-seed €300k · 2026 · parliamone</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  const slides=[...document.querySelectorAll('.slide')];
+  const total=slides.length;
+  let idx=0;
+  const curEl=document.getElementById('cur'), totEl=document.getElementById('tot'), prog=document.getElementById('progress');
+  totEl.textContent=String(total).padStart(2,'0');
+  function render(){
+    slides.forEach((s,i)=>{s.classList.toggle('active',i===idx);s.classList.toggle('past',i<idx);});
+    curEl.textContent=String(idx+1).padStart(2,'0');
+    prog.style.width=((idx)/(total-1)*100)+'%';
+  }
+  function go(d){idx=Math.min(total-1,Math.max(0,idx+d));render();}
+  function goto(n){idx=Math.min(total-1,Math.max(0,n));render();}
+  window.addEventListener('keydown',e=>{
+    if(['ArrowRight','ArrowDown',' ','PageDown'].includes(e.key)){e.preventDefault();go(1);}
+    else if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){e.preventDefault();go(-1);}
+    else if(e.key==='Home'){goto(0);}
+    else if(e.key==='End'){goto(total-1);}
+    else if(e.key==='f'||e.key==='F'){if(!document.fullscreenElement)document.documentElement.requestFullscreen();else document.exitFullscreen();}
+  });
+  let tx=0;
+  window.addEventListener('touchstart',e=>tx=e.touches[0].clientX,{passive:true});
+  window.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>50)go(dx<0?1:-1);},{passive:true});
+  render();
+</script>
+</body>
+</html>

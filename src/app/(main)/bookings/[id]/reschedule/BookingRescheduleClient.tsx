@@ -53,7 +53,7 @@ export default function BookingRescheduleClient() {
   const sectionMeta = getBookingSectionMeta(booking.serviceName);
   const currentDate = booking.scheduledAt.toDate();
   const currentTime = formatTime(currentDate);
-  const isReschedulable = booking.status === 'confirmed' || booking.status === 'pending';
+  const isReschedulable = booking.status === 'accepted' || booking.status === 'requested';
 
   const [selectedDate, setSelectedDate] = useState<Date | null>(currentDate);
   const [selectedTime, setSelectedTime] = useState<string | null>(currentTime);

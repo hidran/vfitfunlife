@@ -109,7 +109,7 @@ export function buildFallbackBooking(bookingId: string): Booking {
     pointsUsed: 0,
     pointsValue: 0,
     totalPrice: 63,
-    status: 'confirmed',
+    status: 'accepted',
     paymentStatus: 'paid',
     hasReviewed: false,
     createdAt: toTimestampLike(new Date(now - 1000 * 60 * 60 * 6)),

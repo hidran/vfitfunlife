@@ -19,10 +19,10 @@ export default function ProviderBookingsPage() {
 
   const TABS: { id: BookingStatus | 'all'; label: string }[] = [
     { id: 'all', label: t('provider.bookings.tab.all') },
-    { id: 'pending', label: t('provider.bookings.tab.pending') },
-    { id: 'confirmed', label: t('provider.bookings.tab.confirmed') },
+    { id: 'requested', label: t('provider.bookings.tab.pending') },
+    { id: 'accepted', label: t('provider.bookings.tab.confirmed') },
     { id: 'completed', label: t('provider.bookings.tab.completed') },
-    { id: 'cancelled', label: t('provider.bookings.tab.cancelled') },
+    { id: 'cancelled_by_trainer', label: t('provider.bookings.tab.cancelled') },
   ];
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);

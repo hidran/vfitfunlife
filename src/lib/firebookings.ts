@@ -16,6 +16,7 @@ import {
   type QueryConstraint,
 } from 'firebase/firestore';
 import { db } from './firebase/config';
+import { isCancelled, isDelivered } from './bookingStatus';
 import type {
   Booking,
   BookingData,
@@ -346,7 +347,7 @@ export async function cancelBooking(
   const bookingRef = doc(db, BOOKINGS_COLLECTION, bookingId);
   
   await updateDoc(bookingRef, {
-    status: 'cancelled',
+    status: 'cancelled_by_client',
     cancellationReason: reason || null,
     cancelledBy: 'user',
     cancelledAt: serverTimestamp(),
@@ -434,7 +435,7 @@ export function calculateRefundAmount(booking: Booking): number {
 
 // Check if booking can be cancelled
 export function canCancelBooking(booking: Booking): boolean {
-  if (booking.status === 'cancelled' || booking.status === 'completed') {
+  if (isCancelled(booking.status) || isDelivered(booking.status)) {
     return false;
   }
   
@@ -451,7 +452,7 @@ export function canCancelBooking(booking: Booking): boolean {
 
 // Check if booking can be rescheduled
 export function canRescheduleBooking(booking: Booking): boolean {
-  if (booking.status === 'cancelled' || booking.status === 'completed') {
+  if (isCancelled(booking.status) || isDelivered(booking.status)) {
     return false;
   }
   

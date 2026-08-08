@@ -188,8 +188,8 @@ export default function ProviderDashboardPage() {
                     <div className="flex items-center gap-2">
                       <span className={`
                         px-2 py-1 rounded text-xs font-medium
-                        ${booking.status === 'confirmed' ? 'bg-green-500/20 text-green-400' : ''}
-                        ${booking.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' : ''}
+                        ${booking.status === 'accepted' ? 'bg-green-500/20 text-green-400' : ''}
+                        ${booking.status === 'requested' ? 'bg-yellow-500/20 text-yellow-400' : ''}
                       `}>
                         {booking.status}
                       </span>

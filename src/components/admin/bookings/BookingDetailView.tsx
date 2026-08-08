@@ -19,6 +19,7 @@ import {
 } from '@/components/admin';
 import { Button } from '@/components/ui/button';
 import { BookingFormView, type BookingFormData } from './BookingFormView';
+import { isActive } from '@/lib/bookingStatus';
 import type { Booking, BookingStatus } from '@/types/firebase';
 import { useI18n } from '@/hooks/useI18n';
 import { formatDate, toDate } from '@/lib/utils';
@@ -116,9 +117,9 @@ export function BookingDetailView({ bookingId }: Props) {
   if (!booking) return <div className="p-8 text-content-muted">{t('admin.bookings.notFound')}</div>;
 
   const status = booking.status as BookingStatus;
-  const canConfirm = status === 'pending';
-  const canCancel = status === 'pending' || status === 'confirmed' || status === 'in_progress';
-  const canComplete = status === 'confirmed' || status === 'in_progress';
+  const canConfirm = status === 'requested';
+  const canCancel = isActive(status);
+  const canComplete = status === 'accepted';
 
   const subtitle = `${booking.serviceName} — ${formatDate(toDate(booking.scheduledAt) || new Date(), {
     month: 'short',

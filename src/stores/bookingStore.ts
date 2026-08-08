@@ -204,12 +204,12 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     set((state) => {
       const updatedBookings = state.userBookings.map((b) =>
         b.id === id
-          ? { ...b, status: 'cancelled' as const, cancellationReason: reason }
+          ? { ...b, status: 'cancelled_by_client' as const, cancellationReason: reason }
           : b
       );
       const updatedCurrent =
         state.currentBooking?.id === id
-          ? { ...state.currentBooking, status: 'cancelled' as const, cancellationReason: reason }
+          ? { ...state.currentBooking, status: 'cancelled_by_client' as const, cancellationReason: reason }
           : state.currentBooking;
       
       return {

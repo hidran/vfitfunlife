@@ -15,6 +15,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { Button } from '@/components/ui/button';
 import { BookingCard } from '@/components/booking';
 import { useI18n } from '@/hooks/useI18n';
+import { isActive, isCancelled, isDelivered } from '@/lib/bookingStatus';
 import type { Booking } from '@/types/booking';
 
 type BookingTab = 'upcoming' | 'past' | 'cancelled';
@@ -37,11 +38,9 @@ export default function BookingsPage() {
   const loadBookings = useCallback(async () => {
     if (!user) return;
 
-    const status = activeTab === 'upcoming'
-      ? 'confirmed'
-      : activeTab === 'past'
-        ? 'completed'
-        : 'cancelled';
+    // 'upcoming' and 'cancelled' each span several statuses now, so the fetch is
+    // unfiltered for those and narrowed client-side in filteredBookings below.
+    const status = activeTab === 'past' ? 'completed' : undefined;
 
     await fetchUserBookings(user.uid, { status });
   }, [user, activeTab, fetchUserBookings]);
@@ -64,11 +63,11 @@ export default function BookingsPage() {
   const filteredBookings = userBookings.filter((booking) => {
     switch (activeTab) {
       case 'upcoming':
-        return ['confirmed', 'pending', 'in_progress'].includes(booking.status);
+        return isActive(booking.status);
       case 'past':
-        return booking.status === 'completed';
+        return isDelivered(booking.status) || booking.status === 'no_show';
       case 'cancelled':
-        return booking.status === 'cancelled';
+        return isCancelled(booking.status) || booking.status === 'declined';
       default:
         return true;
     }

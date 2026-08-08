@@ -18,7 +18,13 @@ import { Avatar } from '@/components/ui/Avatar';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
 // IconButton component is used below
-import type { Booking, BookingStatus } from '@/types/booking';
+import {
+  BOOKING_STATUS_META,
+  canClientCancel,
+  canReschedule as canRescheduleBooking,
+  canReview as canReviewBooking,
+} from '@/lib/bookingStatus';
+import type { Booking } from '@/types/booking';
 
 interface BookingCardProps {
   booking: Booking;
@@ -29,14 +35,6 @@ interface BookingCardProps {
   className?: string;
 }
 
-const statusVariants: Record<BookingStatus, 'warning' | 'success' | 'info' | 'default' | 'error'> = {
-  pending: 'warning',
-  confirmed: 'success',
-  in_progress: 'info',
-  completed: 'default',
-  cancelled: 'error',
-  no_show: 'error',
-};
 
 export function BookingCard({
   booking,
@@ -49,24 +47,16 @@ export function BookingCard({
   const router = useRouter();
   const { t, locale } = useI18n();
 
-  const statusLabels: Record<BookingStatus, string> = {
-    pending: t('booking.status.pending'),
-    confirmed: t('booking.status.confirmed'),
-    in_progress: t('booking.status.inProgress'),
-    completed: t('booking.status.completed'),
-    cancelled: t('booking.status.cancelled'),
-    no_show: t('booking.status.noShow'),
-  };
-
-  const statusVariant = statusVariants[booking.status];
-  const statusLabel = statusLabels[booking.status];
+  const statusMeta = BOOKING_STATUS_META[booking.status];
+  const statusVariant = statusMeta.tone;
+  const statusLabel = t(statusMeta.labelKey);
   const sectionMeta = getBookingSectionMeta(booking.serviceName);
 
   const scheduledAt = booking.scheduledAt.toDate();
   const isPast = scheduledAt < new Date();
-  const canCancel = booking.status === 'confirmed' || booking.status === 'pending';
-  const canReschedule = booking.status === 'confirmed' && !isPast;
-  const canReview = booking.status === 'completed' && !booking.hasReviewed;
+  const canCancel = canClientCancel(booking.status);
+  const canReschedule = canRescheduleBooking(booking.status, isPast);
+  const canReview = canReviewBooking(booking.status, booking.hasReviewed);
 
   if (compact) {
     return (

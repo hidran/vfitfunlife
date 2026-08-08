@@ -6,7 +6,7 @@ import { MoreVertical, Check, X, Calendar, Clock, User } from 'lucide-react';
 import { ProviderBooking, BookingFilters } from '@/types/provider';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/button';
-import { BookingStatus } from '@/types/firebase';
+import { BOOKING_STATUS_META, isActive } from '@/lib/bookingStatus';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
 import { cn } from '@/lib/utils';
@@ -24,15 +24,6 @@ interface BookingTableProps {
   loading?: boolean;
 }
 
-const STATUS_BADGE_VARIANTS: Record<BookingStatus, { variant: any }> = {
-  pending: { variant: 'warning' },
-  confirmed: { variant: 'success' },
-  in_progress: { variant: 'info' },
-  completed: { variant: 'default' },
-  cancelled: { variant: 'error' },
-  no_show: { variant: 'error' },
-};
-
 export function BookingTable({
   bookings,
   onConfirm,
@@ -48,14 +39,6 @@ export function BookingTable({
   const { t, locale } = useI18n();
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
-  const STATUS_BADGE_LABELS: Record<BookingStatus, string> = {
-    pending: t('provider.bookingTable.status.pending'),
-    confirmed: t('provider.bookingTable.status.confirmed'),
-    in_progress: t('provider.bookingTable.status.inProgress'),
-    completed: t('provider.bookingTable.status.completed'),
-    cancelled: t('provider.bookingTable.status.cancelled'),
-    no_show: t('provider.bookingTable.status.noShow'),
-  };
 
   const formatDate = (date: Date | { toDate(): Date }) => {
     const d = typeof date === 'object' && 'toDate' in date ? date.toDate() : date;
@@ -129,7 +112,8 @@ export function BookingTable({
           <tbody className="divide-y divide-white/5">
             {bookings.map((booking) => {
               const isSelected = selectedIds.includes(booking.id);
-              const statusBadge = { variant: STATUS_BADGE_VARIANTS[booking.status].variant, label: STATUS_BADGE_LABELS[booking.status] };
+              const statusMeta = BOOKING_STATUS_META[booking.status];
+              const statusBadge = { variant: statusMeta.tone, label: t(statusMeta.labelKey) };
 
               return (
                 <tr
@@ -198,7 +182,7 @@ export function BookingTable({
                   </td>
                   <td className="px-4 py-4">
                     <div className="flex items-center justify-end gap-2">
-                      {booking.status === 'pending' && (
+                      {booking.status === 'requested' && (
                         <>
                           <Button
                             variant="primary"
@@ -220,7 +204,7 @@ export function BookingTable({
                           </Button>
                         </>
                       )}
-                      {booking.status === 'confirmed' && (
+                      {booking.status === 'accepted' && (
                         <Button
                           variant="primary"
                           size="sm"
@@ -260,7 +244,7 @@ export function BookingTable({
                             >
                               {t('provider.bookingTable.action.messageClient')}
                             </button>
-                            {(booking.status === 'confirmed' || booking.status === 'pending') && (
+                            {isActive(booking.status) && (
                               <button
                                 onClick={() => {
                                   onCancel?.(booking.id);

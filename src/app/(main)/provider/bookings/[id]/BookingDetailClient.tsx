@@ -143,7 +143,7 @@ export default function BookingDetailClient() {
         </div>
 
         <div className="flex items-center gap-2">
-          {booking.status === 'pending' && (
+          {booking.status === 'requested' && (
             <>
               <Button onClick={handleConfirm}>
                 <CheckCircle className="w-4 h-4 mr-2" />
@@ -155,7 +155,7 @@ export default function BookingDetailClient() {
               </Button>
             </>
           )}
-          {booking.status === 'confirmed' && (
+          {booking.status === 'accepted' && (
             <>
               <Button onClick={handleComplete}>
                 <CheckCircle className="w-4 h-4 mr-2" />
@@ -170,7 +170,7 @@ export default function BookingDetailClient() {
               </Button>
             </>
           )}
-          {(booking.status === 'confirmed' || booking.status === 'pending') && (
+          {(booking.status === 'accepted' || booking.status === 'requested') && (
             <Button variant="outline" onClick={handleCancel} className="border-red-500/50 text-red-400 hover:bg-red-500/10">
               <XCircle className="w-4 h-4 mr-2" />
               {t('provider.bookingDetail.cancel')}

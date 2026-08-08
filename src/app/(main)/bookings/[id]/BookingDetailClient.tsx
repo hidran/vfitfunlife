@@ -28,18 +28,18 @@ import { Button } from '@/components/ui/button';
 import { Badge, type BadgeProps } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
 import { GoogleMap } from '@/components/map/GoogleMap';
+import { BOOKING_STATUS_META, isCancelled, canClientCancel } from '@/lib/bookingStatus';
 import type { Booking, BookingStatus } from '@/types/booking';
 
-const statusConfig: Record<
-  BookingStatus,
-  { labelKey: string; variant: BadgeProps['variant']; icon: LucideIcon }
-> = {
-  pending: { labelKey: 'booking.status.pending', variant: 'warning', icon: AlertCircle },
-  confirmed: { labelKey: 'booking.status.confirmed', variant: 'success', icon: CheckCircle },
-  in_progress: { labelKey: 'booking.status.inProgress', variant: 'info', icon: Clock },
-  completed: { labelKey: 'booking.status.completed', variant: 'default', icon: CheckCircle },
-  cancelled: { labelKey: 'booking.status.cancelled', variant: 'error', icon: X },
-  no_show: { labelKey: 'booking.status.noShow', variant: 'error', icon: AlertCircle },
+const statusIcons: Record<BookingStatus, LucideIcon> = {
+  requested: AlertCircle,
+  accepted: CheckCircle,
+  declined: X,
+  cancelled_by_client: X,
+  cancelled_by_trainer: X,
+  completed: CheckCircle,
+  no_show: AlertCircle,
+  payment_confirmed: CheckCircle,
 };
 
 export default function BookingDetailPage() {
@@ -87,7 +87,7 @@ export default function BookingDetailPage() {
       if (isFallbackBooking) {
         setLocalBookingOverride({
           ...booking,
-          status: 'cancelled',
+          status: 'cancelled_by_client',
           cancellationReason: "Annullato dall'utente",
         });
         setShowCancelModal(false);
@@ -97,7 +97,7 @@ export default function BookingDetailPage() {
       await cancelBooking(bookingId, "Annullato dall'utente");
       const cancelledBooking = {
         ...booking,
-        status: 'cancelled' as const,
+        status: 'cancelled_by_client' as const,
         cancellationReason: "Annullato dall'utente",
       };
       updateBookingInList(cancelledBooking);
@@ -163,12 +163,13 @@ export default function BookingDetailPage() {
     router.push(`/bookings/${bookingId}/review`);
   };
 
-  const statusEntry = statusConfig[booking.status];
+  const statusEntry = BOOKING_STATUS_META[booking.status];
+  const StatusIcon = statusIcons[booking.status];
   const statusLabel = t(statusEntry.labelKey as Parameters<typeof t>[0]);
   const scheduledAt = booking.scheduledAt.toDate();
   const isPast = scheduledAt < new Date();
-  const canCancel = (booking.status === 'confirmed' || booking.status === 'pending') && !isPast;
-  const canReschedule = booking.status === 'confirmed' && !isPast;
+  const canCancel = (booking.status === 'accepted' || booking.status === 'requested') && !isPast;
+  const canReschedule = booking.status === 'accepted' && !isPast;
   const canReview = booking.status === 'completed' && !booking.hasReviewed;
 
   return (
@@ -253,16 +254,16 @@ export default function BookingDetailPage() {
             <div className="flex items-center gap-3">
               <div className={cn(
                 'w-12 h-12 rounded-full flex items-center justify-center',
-                booking.status === 'confirmed' && 'bg-success/20',
-                booking.status === 'pending' && 'bg-warning/20',
-                booking.status === 'cancelled' && 'bg-error/20',
+                booking.status === 'accepted' && 'bg-success/20',
+                booking.status === 'requested' && 'bg-warning/20',
+                isCancelled(booking.status) && 'bg-error/20',
                 booking.status === 'completed' && 'bg-[var(--section-primary)]/20',
               )}>
-                <statusEntry.icon className={cn(
+                <StatusIcon className={cn(
                   'w-6 h-6',
-                  booking.status === 'confirmed' && 'text-success',
-                  booking.status === 'pending' && 'text-warning',
-                  booking.status === 'cancelled' && 'text-error',
+                  booking.status === 'accepted' && 'text-success',
+                  booking.status === 'requested' && 'text-warning',
+                  isCancelled(booking.status) && 'text-error',
                   booking.status === 'completed' && 'text-[var(--section-primary)]',
                 )} />
               </div>
@@ -271,7 +272,7 @@ export default function BookingDetailPage() {
                 <p className="font-semibold text-content">{statusLabel}</p>
               </div>
             </div>
-            <Badge variant={statusEntry.variant}>{statusLabel}</Badge>
+            <Badge variant={statusEntry.tone}>{statusLabel}</Badge>
           </div>
         </div>
 
@@ -299,7 +300,7 @@ export default function BookingDetailPage() {
         </div>
 
         {/* Check-in ticket */}
-        {booking.status !== 'cancelled' && (
+        {!isCancelled(booking.status) && (
           <div className="bg-surface-elevated/60 rounded-2xl border border-hairline p-4">
             <div className="mb-3 flex items-center justify-between">
               <div>
@@ -360,7 +361,7 @@ export default function BookingDetailPage() {
             </div>
           </div>
 
-          {!isPast && booking.status !== 'cancelled' && (
+          {!isPast && !isCancelled(booking.status) && (
             <button
               onClick={handleAddToCalendar}
               className="w-full mt-2 py-2.5 bg-surface-2 rounded-xl text-sm font-medium text-content hover:bg-white/20 transition-colors flex items-center justify-center gap-2"

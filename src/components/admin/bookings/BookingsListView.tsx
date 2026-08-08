@@ -164,7 +164,7 @@ export function BookingsListView() {
 
   // Calculate stats
   const totalRevenue = bookings.reduce((sum, b) => sum + (b.finalPrice || 0), 0);
-  const pendingCount = bookings.filter((b) => b.status === "pending").length;
+  const pendingCount = bookings.filter((b) => b.status === "requested").length;
   const completedCount = bookings.filter((b) => b.status === "completed").length;
 
   return (
