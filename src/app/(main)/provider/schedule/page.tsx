@@ -159,7 +159,7 @@ export default function ProviderSchedulePage() {
             <div className="flex gap-3 mt-6">
               {selectedEvent.type === 'booking' && selectedEvent.bookingId && (
                 <Button
-                  onClick={() => window.location.href = `/provider/bookings/${selectedEvent.bookingId}`}
+                  onClick={() => window.location.href = `/provider/bookings/detail?id=${selectedEvent.bookingId}`}
                   fullWidth
                 >
                   {t('provider.schedule.modal.viewBookingDetails')}

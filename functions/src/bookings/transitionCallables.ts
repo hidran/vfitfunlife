@@ -10,6 +10,7 @@
 
 import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
+import { logger } from "firebase-functions";
 import { getUserRoleInfo } from "../utils/roles";
 import { writeAuditLog } from "../lib/audit";
 import { canTransition } from "./transitions";
@@ -55,11 +56,18 @@ export interface ApplyTransitionOptions {
   to: BookingStatus;
   /** Extra document fields to write alongside the status. */
   extraFields?: (booking: BookingDoc, uid: string) => Record<string, unknown>;
+  /**
+   * Documents to read before any write. Firestore transactions require all reads to
+   * precede all writes, so a side effect that needs to check a document must declare it
+   * here rather than reading inline.
+   */
+  prefetch?: (booking: BookingDoc) => admin.firestore.DocumentReference[];
   /** Runs inside the same transaction — used to award loyalty points. */
   sideEffects?: (
     tx: admin.firestore.Transaction,
     booking: BookingDoc,
-    bookingId: string
+    bookingId: string,
+    prefetched: admin.firestore.DocumentSnapshot[]
   ) => void;
   /** Who to notify, and about what. */
   notify?: (booking: BookingDoc, uid: string) => {
@@ -106,6 +114,11 @@ export async function applyTransition(opts: ApplyTransitionOptions) {
       throw new HttpsError("failed-precondition", verdict.reason);
     }
 
+    // All reads must happen before the first write in a Firestore transaction.
+    const prefetched = opts.prefetch ?
+      await Promise.all(opts.prefetch(doc).map((r) => tx.get(r))) :
+      [];
+
     const historyRole: StatusActorRole = role;
     tx.update(ref, {
       status: to,
@@ -120,7 +133,7 @@ export async function applyTransition(opts: ApplyTransitionOptions) {
       ...(opts.extraFields?.(doc, uid) ?? {}),
     });
 
-    opts.sideEffects?.(tx, doc, bookingId);
+    opts.sideEffects?.(tx, doc, bookingId, prefetched);
 
     return { booking: doc, actorRole: role };
   });
@@ -221,16 +234,30 @@ export const completeBooking = onCall<CompleteRequest>(
           completedBy: uid,
         },
 
-      sideEffects: (tx, booking) => {
+      prefetch: (booking) => noShow ? [] : [db.collection("users").doc(booking.userId)],
+
+      sideEffects: (tx, booking, _bookingId, prefetched) => {
         if (noShow) return;
         // Taken over from processCompletedBookings, which now skips trainer bookings.
         const points = booking.pointsEarned ?? 0;
-        if (points > 0) {
-          tx.update(db.collection("users").doc(booking.userId), {
-            pointsBalance: admin.firestore.FieldValue.increment(points),
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        if (points <= 0) return;
+
+        // The client's user doc can be missing — a deleted account, or seed data that
+        // never had one. tx.update() would throw NOT_FOUND and roll back the whole
+        // transaction, leaving the trainer permanently unable to mark the session done.
+        // Awarding points is secondary to recording that the session happened.
+        const userSnap = prefetched[0];
+        if (!userSnap?.exists) {
+          logger.warn("[completeBooking] client user doc missing; skipping points award", {
+            userId: booking.userId, bookingId: _bookingId,
           });
+          return;
         }
+
+        tx.update(userSnap.ref, {
+          pointsBalance: admin.firestore.FieldValue.increment(points),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
       },
 
       notify: (b) => noShow ? null : { recipientUid: b.userId, event: "completed" },

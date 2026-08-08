@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAdminStore } from "@/stores/adminStore";
+import { BOOKING_STATUS_META } from "@/lib/bookingStatus";
+import type { BookingStatus } from "@/types/firebase";
+import type { MessageKey } from "@/i18n/messages";
 import { DataTable, FilterBar, StatusBadge } from "@/components/admin";
 import { Button } from "@/components/ui/button";
 import { BookingFilters } from "@/types/admin";
@@ -238,13 +241,16 @@ export function BookingsListView() {
           {
             key: "status",
             label: t('admin.bookings.filter.status'),
+            // Derived from BOOKING_STATUS_META so this list cannot drift from the enum
+            // again — as plain strings it silently survived the vocabulary migration and
+            // every option matched zero bookings.
             options: [
               { value: "all", label: t('admin.bookings.filter.allStatus') },
-              { value: "pending", label: t('admin.bookings.filter.pending') },
-              { value: "confirmed", label: t('admin.bookings.filter.confirmed') },
-              { value: "in_progress", label: t('admin.bookings.filter.inProgress') },
-              { value: "completed", label: t('admin.bookings.filter.completed') },
-              { value: "cancelled", label: t('admin.bookings.filter.cancelled') },
+              ...(Object.keys(BOOKING_STATUS_META) as BookingStatus[]).map((s) => ({
+                value: s,
+                label: t(BOOKING_STATUS_META[s].labelKey),
+              })),
+              { value: "disputed", label: t('admin.bookings.filter.disputes' as MessageKey) },
             ],
             value: filters.status || "all",
             onChange: handleStatusChange,

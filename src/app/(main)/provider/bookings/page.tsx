@@ -212,7 +212,7 @@ export default function ProviderBookingsPage() {
         onConfirm={handleConfirm}
         onCancel={handleCancel}
         onComplete={handleComplete}
-        onView={(id) => window.location.href = `/provider/bookings/${id}`}
+        onView={(id) => window.location.href = `/provider/bookings/detail?id=${id}`}
         selectedIds={selectedIds}
         onSelect={handleSelect}
         onSelectAll={handleSelectAll}

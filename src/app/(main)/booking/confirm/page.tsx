@@ -112,7 +112,7 @@ export default function BookingConfirmPage() {
       };
 
       const booking = await createBooking(bookingData);
-      router.push(`/bookings/${booking.id}?confirmed=true`);
+      router.push(`/bookings/detail?id=${booking.id}&confirmed=true`);
     } catch (err: any) {
       setError(err.message || t('bookings.confirm.bookingError'));
       setIsCreating(false);

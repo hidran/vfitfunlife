@@ -83,7 +83,7 @@ export default function BookingRescheduleClient() {
       await rescheduleBooking(booking.id, nextDate, selectedTime);
       setIsComplete(true);
       setTimeout(() => {
-        router.replace(`/bookings/${booking.id}?rescheduled=true`);
+        router.replace(`/bookings/detail?id=${booking.id}&rescheduled=true`);
       }, 1000);
     } catch {
       setError(t('bookings.reschedule.error'));
@@ -131,7 +131,7 @@ export default function BookingRescheduleClient() {
             <p className="mt-1 text-sm text-warning/90">
               {t('bookings.reschedule.notAllowed.subtitle')}
             </p>
-            <Button className="mt-4" onClick={() => router.replace(`/bookings/${booking.id}`)}>
+            <Button className="mt-4" onClick={() => router.replace(`/bookings/detail?id=${booking.id}`)}>
               {t('bookings.reschedule.backToDetails')}
             </Button>
           </div>

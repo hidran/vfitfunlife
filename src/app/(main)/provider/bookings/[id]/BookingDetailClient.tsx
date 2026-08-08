@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useParams, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -26,28 +26,34 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/Badge';
 import { useProviderStore } from '@/stores/providerStore';
+import { useAuthStore } from '@/stores/authStore';
 import { RecordPaymentSheet } from '@/components/provider/RecordPaymentSheet';
+import { BOOKING_STATUS_META } from '@/lib/bookingStatus';
+import { Spinner } from '@/components/ui/Spinner';
 import type { MessageKey } from '@/i18n/messages';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
 
-const STATUS_BADGE_VARIANTS = {
-  pending: 'warning' as const,
-  confirmed: 'success' as const,
-  in_progress: 'info' as const,
-  completed: 'default' as const,
-  cancelled: 'error' as const,
-  no_show: 'error' as const,
-};
-
 export default function BookingDetailClient() {
   const { t, locale } = useI18n();
-  const { id } = useParams<{ id: string }>();
+  const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
+  // See /provider/bookings/detail — the path param is always 'placeholder' in the export.
+  // Static export can hydrate useSearchParams empty on first paint, and this route has
+  // no [id] segment to fall back to, so read the URL directly as the last resort.
+  // See /provider/bookings/detail — useSearchParams can hydrate empty under
+  // output:'export', so fall back to the raw URL, then to the [id] segment.
+  const id = searchParams.get('id') ??
+    (typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('id')
+      : null) ??
+    (params?.id as string | undefined);
   const {
-    bookings, confirmBooking, declineBooking, completeBooking,
+    bookings, isLoadingBookings, bookingError, fetchBookings, confirmBooking, declineBooking, completeBooking,
     markBookingNoShow, cancelBooking, confirmBookingPayment,
   } = useProviderStore();
+  const { user } = useAuthStore();
   const [showPaymentSheet, setShowPaymentSheet] = useState(false);
 
   const booking = bookings.find((entry) => entry.id === id);
@@ -58,23 +64,39 @@ export default function BookingDetailClient() {
       new Date(booking.scheduledEndAt as unknown as string)
     : null;
   const sessionHasEnded = sessionEndsAt ? sessionEndsAt <= new Date() : false;
+  useEffect(() => {
+    // Deep links from push notifications land here directly, with the store unpopulated —
+    // the list page is what normally fills it.
+    //
+    // This must wait for auth: on a cold load Firebase restores the session
+    // asynchronously, so getCurrentProviderId() throws "Not authenticated" if we fetch on
+    // mount. Keying the effect on `user` retries once the session is available.
+    if (user && bookings.length === 0 && !isLoadingBookings) void fetchBookings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
   const [showNotes, setShowNotes] = useState(false);
   const [privateNotes, setPrivateNotes] = useState('');
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
 
-  const STATUS_BADGE_LABELS: Record<string, string> = {
-    pending: t('provider.bookingTable.status.pending'),
-    confirmed: t('provider.bookingTable.status.confirmed'),
-    in_progress: t('provider.bookingTable.status.inProgress'),
-    completed: t('provider.bookingTable.status.completed'),
-    cancelled: t('provider.bookingTable.status.cancelled'),
-    no_show: t('provider.bookingTable.status.noShow'),
-  };
+
+  if (!booking && isLoadingBookings) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Spinner size="md" />
+      </div>
+    );
+  }
 
   if (!booking) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
+          {/* The store swallows fetch failures into state; without this a missing index or
+              a denied read renders as a bare "not found", which is impossible to diagnose. */}
+          {bookingError && (
+            <p className="text-sm text-error mb-3 max-w-md">{bookingError}</p>
+          )}
           <div className="w-16 h-16 bg-surface-elevated rounded-full flex items-center justify-center mx-auto mb-4">
             <Calendar className="w-8 h-8 text-gray-500" />
           </div>
@@ -137,8 +159,9 @@ export default function BookingDetailClient() {
     return new Date(d).toLocaleString(toLocaleTag(locale));
   };
 
-  const statusBadgeVariant = STATUS_BADGE_VARIANTS[booking.status as keyof typeof STATUS_BADGE_VARIANTS] ?? 'default';
-  const statusBadgeLabel = STATUS_BADGE_LABELS[booking.status] ?? booking.status;
+  const statusMeta = BOOKING_STATUS_META[booking.status];
+  const statusBadgeVariant = statusMeta.tone;
+  const statusBadgeLabel = t(statusMeta.labelKey);
 
   return (
     <div className="space-y-6">

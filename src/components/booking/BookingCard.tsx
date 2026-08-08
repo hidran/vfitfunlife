@@ -61,7 +61,7 @@ export function BookingCard({
   if (compact) {
     return (
       <button
-        onClick={() => router.push(`/bookings/${booking.id}`)}
+        onClick={() => router.push(`/bookings/detail?id=${booking.id}`)}
         className={cn(
           'group relative w-full overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-4 text-left',
           'hover:bg-white/10 transition-colors',
@@ -233,7 +233,7 @@ export function BookingCard({
         )}
 
         <button
-          onClick={() => router.push(`/bookings/${booking.id}`)}
+          onClick={() => router.push(`/bookings/detail?id=${booking.id}`)}
           className="flex-1 bg-white/10 text-white py-2.5 rounded-xl font-medium text-sm hover:bg-white/20 transition-colors flex items-center justify-center gap-2"
         >
           {t('booking.card.details')}

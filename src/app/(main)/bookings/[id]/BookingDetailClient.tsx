@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
   ChevronLeft,
@@ -51,7 +51,15 @@ export default function BookingDetailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t, locale } = useI18n();
-  const bookingId = params.id as string;
+  // Served from /bookings/detail?id=... ; the [id] path param only ever resolves to the
+  // static 'placeholder' under output:'export', so the query string wins.
+  // Served from /bookings/detail?id=... . useSearchParams can hydrate empty on the first
+  // paint under output:'export', so fall back to the raw URL, then to the [id] segment.
+  const bookingId = (searchParams.get('id') ??
+    (typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('id')
+      : null) ??
+    (params.id as string)) as string;
   const justConfirmed = searchParams.get('confirmed') === 'true';
   const justRescheduled = searchParams.get('rescheduled') === 'true';
   const justReviewed = searchParams.get('reviewed') === 'true';

@@ -75,7 +75,7 @@ export default function BookingReviewClient() {
     setSubmitted(true);
 
     setTimeout(() => {
-      router.replace(`/bookings/${booking.id}?reviewed=true`);
+      router.replace(`/bookings/detail?id=${booking.id}&reviewed=true`);
     }, 1000);
   };
 
@@ -121,7 +121,7 @@ export default function BookingReviewClient() {
             </p>
             <Button
               className="mt-4"
-              onClick={() => router.replace(`/bookings/${booking.id}`)}
+              onClick={() => router.replace(`/bookings/detail?id=${booking.id}`)}
             >
               {t('bookings.reschedule.backToDetails')}
             </Button>

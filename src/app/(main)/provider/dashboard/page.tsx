@@ -193,7 +193,7 @@ export default function ProviderDashboardPage() {
                       `}>
                         {booking.status}
                       </span>
-                      <Link href={`/provider/bookings/${booking.id}`}>
+                      <Link href={`/provider/bookings/detail?id=${booking.id}`}>
                         <Button variant="secondary" size="sm">
                           {t('provider.dashboard.upcoming.details')}
                         </Button>
