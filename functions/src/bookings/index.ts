@@ -4,12 +4,15 @@ import { addMinutes } from "date-fns";
 import { UserData, VenueData, ServiceData, InstructorData, PromotionData } from "../types";
 import { getUserRoleInfo, requirePermission, checkIsAdmin } from "../utils/roles";
 import { writeAuditLog } from "../lib/audit";
+import { BOOKING_STATUSES, type BookingStatus, type StatusActorRole } from "./types";
+import { isLateCancellation } from "./transitions";
 
 const db = admin.firestore();
 const region = process.env.FIREBASE_REGION || "europe-west1";
 
 interface BookingData {
-  venueId: string;
+  /** Absent for trainer sessions (home / online / outdoor), which have no venue. */
+  venueId?: string;
   serviceId: string;
   instructorId?: string;
   scheduledAt: string;
@@ -48,9 +51,20 @@ interface UpdateBookingStatusData {
 
 interface BookingResources {
   userData: UserData;
-  venue: VenueData;
+  /** Null for trainer sessions, which have no venue. */
+  venue: VenueData | null;
   service: ServiceData;
   instructor: InstructorData | null;
+}
+
+/** Legacy shape: some provider docs still embed their services inline instead of in a subcollection. */
+interface InlineServicePricing {
+  id: string;
+  name?: string;
+  serviceName?: string;
+  price: number;
+  durationMinutes?: number;
+  description?: string;
 }
 
 /**
@@ -63,38 +77,59 @@ interface BookingResources {
  */
 async function fetchBookingResources(
   userId: string,
-  venueId: string,
+  venueId: string | undefined,
   serviceId: string,
   instructorId?: string
 ): Promise<BookingResources> {
-  const userPromise = db.collection("users").doc(userId).get();
-  const venuePromise = db.collection("venues").doc(venueId).get();
-  const servicePromise = db
-    .collection("venues")
-    .doc(venueId)
-    .collection("services")
-    .doc(serviceId)
-    .get();
+  // Trainer sessions (home / online / outdoor) have no venue: the service lives under
+  // instructors/{id}/services/{id} rather than venues/{id}/services/{id}.
+  const isTrainerBooking = !venueId && !!instructorId;
 
-  const [userDoc, venueDoc, serviceDoc] = await Promise.all([
-    userPromise,
-    venuePromise,
-    servicePromise,
+  if (!venueId && !instructorId) {
+    throw new HttpsError("invalid-argument", "A booking needs either a venueId or an instructorId");
+  }
+
+  const [userDoc, venueDoc, serviceDoc, instructorDoc] = await Promise.all([
+    db.collection("users").doc(userId).get(),
+    venueId ? db.collection("venues").doc(venueId).get() : Promise.resolve(null),
+    isTrainerBooking
+      ? db.collection("instructors").doc(instructorId as string)
+        .collection("services").doc(serviceId).get()
+      : db.collection("venues").doc(venueId as string)
+        .collection("services").doc(serviceId).get(),
+    instructorId ? db.collection("instructors").doc(instructorId).get() : Promise.resolve(null),
   ]);
 
   if (!userDoc.exists) throw new HttpsError("not-found", "User not found");
-  if (!venueDoc.exists) throw new HttpsError("not-found", "Venue not found");
-  if (!serviceDoc.exists) throw new HttpsError("not-found", "Service not found");
+  if (venueId && !venueDoc?.exists) throw new HttpsError("not-found", "Venue not found");
 
-  let instructorDoc = null;
-  if (instructorId) {
-    instructorDoc = await db.collection("instructors").doc(instructorId).get();
+  let service: ServiceData | null = serviceDoc.exists
+    ? (serviceDoc.data() as ServiceData)
+    : null;
+
+  // PILOT: legacy fallback — older provider docs embed services inline on the provider
+  // profile rather than in the services subcollection. Mirrors the client-side path in
+  // src/lib/firebookings.ts that this callable replaces.
+  if (!service && isTrainerBooking) {
+    const profile = instructorDoc?.data()?.providerProfile as
+      { servicePricing?: InlineServicePricing[] } | undefined;
+    const inline = (profile?.servicePricing ?? []).find((s) => s.id === serviceId);
+    if (inline) {
+      service = {
+        name: inline.serviceName ?? inline.name ?? "Service",
+        price: inline.price,
+        durationMinutes: inline.durationMinutes,
+        description: inline.description,
+      } as ServiceData;
+    }
   }
+
+  if (!service) throw new HttpsError("not-found", "Service not found");
 
   return {
     userData: userDoc.data() as UserData,
-    venue: venueDoc.data() as VenueData,
-    service: serviceDoc.data() as ServiceData,
+    venue: (venueDoc?.data() as VenueData) || null,
+    service,
     instructor: (instructorDoc?.data() as InstructorData) || null,
   };
 }
@@ -246,7 +281,7 @@ export const createBooking = onCall<BookingData>(
     const bookingRef = db.collection("bookings").doc();
     const bookingData = {
       userId,
-      venueId,
+      venueId: venueId || null,
       serviceId,
       instructorId: instructorId || null,
 
@@ -254,8 +289,8 @@ export const createBooking = onCall<BookingData>(
       userName: userData.fullName,
       userPhone: userData.phone,
       userEmail: userData.email,
-      venueName: venue.name,
-      venueAddress: venue.address,
+      venueName: venue?.name ?? null,
+      venueAddress: venue?.address ?? null,
       serviceName: service.name,
       instructorName: instructor?.fullName || null,
 
@@ -269,7 +304,18 @@ export const createBooking = onCall<BookingData>(
       durationMinutes: service.durationMinutes,
 
       // Status
-      status: "pending",
+      status: "requested" as BookingStatus,
+      statusHistory: [
+        {
+          status: "requested" as BookingStatus,
+          actorUid: userId,
+          actorRole: "client" as StatusActorRole,
+          at: admin.firestore.Timestamp.now(),
+        },
+      ],
+      lateCancellation: false,
+      paymentConfirmation: null,
+      completionReminderSentAt: null,
 
       // Financials
       ...financials,
@@ -485,7 +531,8 @@ export const cancelBooking = onCall<CancelBookingData>(
       throw new HttpsError("permission-denied", "Cannot cancel this booking");
     }
 
-    if (["completed", "cancelled"].includes(booking.status)) {
+    const cancellableFrom: BookingStatus[] = ["requested", "accepted"];
+    if (!cancellableFrom.includes(booking.status)) {
       throw new HttpsError("failed-precondition", "Booking cannot be cancelled");
     }
 
@@ -501,18 +548,35 @@ export const cancelBooking = onCall<CancelBookingData>(
       refundAmount = booking.finalPrice * 0.5; // 50% refund
     }
 
-    // Determine who cancelled
+    // Determine who cancelled. The status records client-vs-trainer; the actorRole on the
+    // history entry records the true actor, so admin cancellations are not misattributed
+    // to trainers in the P0-2 reliability metric. Spec §7.3.
     let cancelledBy = "user";
+    let newStatus: BookingStatus = "cancelled_by_client";
+    let actorRole: StatusActorRole = "client";
     if (isAssignedProvider) {
       cancelledBy = "provider";
+      newStatus = "cancelled_by_trainer";
+      actorRole = "trainer";
     } else if (isAdminUser) {
       cancelledBy = "admin";
+      newStatus = "cancelled_by_trainer";
+      actorRole = "admin";
     }
 
     const batch = db.batch();
 
     batch.update(bookingRef, {
-      status: "cancelled",
+      status: newStatus,
+      statusHistory: admin.firestore.FieldValue.arrayUnion({
+        status: newStatus,
+        actorUid: callerId,
+        actorRole,
+        at: admin.firestore.Timestamp.now(),
+        ...(reason ? { note: reason } : {}),
+      }),
+      // PILOT: flagged for data collection only — no cancellation fees in the pilot.
+      lateCancellation: isLateCancellation(scheduledAt, now),
       cancelledAt: admin.firestore.FieldValue.serverTimestamp(),
       cancelledBy,
       cancellationReason: reason || null,
@@ -558,7 +622,7 @@ export const cancelBooking = onCall<CancelBookingData>(
         entityType: "booking",
         entityId: bookingId,
         before: { status: booking.status },
-        after: { status: "cancelled" },
+        after: { status: newStatus },
         ...(reason ? { reason } : {}),
       });
     }
@@ -596,12 +660,18 @@ export const confirmBooking = onCall<ConfirmBookingData>(
 
     const booking = bookingDoc.data()!;
 
-    if (booking.status !== "pending") {
-      throw new HttpsError("failed-precondition", "Booking is not pending");
+    if (booking.status !== "requested") {
+      throw new HttpsError("failed-precondition", "Booking is not awaiting a response");
     }
 
     await bookingRef.update({
-      status: "confirmed",
+      status: "accepted" as BookingStatus,
+      statusHistory: admin.firestore.FieldValue.arrayUnion({
+        status: "accepted" as BookingStatus,
+        actorUid: callerId,
+        actorRole: "admin" as StatusActorRole,
+        at: admin.firestore.Timestamp.now(),
+      }),
       confirmedAt: admin.firestore.FieldValue.serverTimestamp(),
       confirmedBy: callerId,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -631,7 +701,7 @@ export const confirmBooking = onCall<ConfirmBookingData>(
         entityType: "booking",
         entityId: bookingId,
         before: { status: booking.status },
-        after: { status: "confirmed" },
+        after: { status: "accepted" },
       });
     }
 
@@ -666,13 +736,24 @@ export const updateBookingStatus = onCall<UpdateBookingStatusData>(
       throw new HttpsError("not-found", "Booking not found");
     }
 
-    const validStatuses = ["pending", "confirmed", "in_progress", "completed", "cancelled", "no_show"];
-    if (!validStatuses.includes(status)) {
-      throw new HttpsError("invalid-argument", `Invalid status. Valid statuses: ${validStatuses.join(", ")}`);
+    // Sourced from the shared type so it cannot drift from the enum again. Spec §5.6.
+    if (!(BOOKING_STATUSES as readonly string[]).includes(status)) {
+      throw new HttpsError(
+        "invalid-argument",
+        `Invalid status. Valid statuses: ${BOOKING_STATUSES.join(", ")}`
+      );
     }
+    const nextStatus = status as BookingStatus;
 
     const updateData: Record<string, unknown> = {
-      status,
+      status: nextStatus,
+      statusHistory: admin.firestore.FieldValue.arrayUnion({
+        status: nextStatus,
+        actorUid: callerId,
+        actorRole: "admin" as StatusActorRole,
+        at: admin.firestore.Timestamp.now(),
+        ...(notes ? { note: notes } : {}),
+      }),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       statusUpdatedBy: callerId,
       statusUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -683,10 +764,10 @@ export const updateBookingStatus = onCall<UpdateBookingStatusData>(
     }
 
     // Add timestamp for specific statuses
-    if (status === "confirmed") {
+    if (nextStatus === "accepted") {
       updateData.confirmedAt = admin.firestore.FieldValue.serverTimestamp();
       updateData.confirmedBy = callerId;
-    } else if (status === "completed") {
+    } else if (nextStatus === "completed") {
       updateData.completedAt = admin.firestore.FieldValue.serverTimestamp();
       updateData.completedBy = callerId;
     }
@@ -695,18 +776,21 @@ export const updateBookingStatus = onCall<UpdateBookingStatusData>(
 
     // Send notification to user for status changes
     const booking = bookingDoc.data()!;
-    const statusMessages: Record<string, string> = {
-      confirmed: "La tua prenotazione è stata confermata",
-      in_progress: "La tua prenotazione è in corso",
+    // PILOT: admin-initiated overrides keep the legacy Italian copy. Trainer-initiated
+    // transitions go through the localized catalog in notifications/bookingMessages.ts.
+    const statusMessages: Partial<Record<BookingStatus, string>> = {
+      accepted: "La tua prenotazione è stata confermata",
       completed: "La tua prenotazione è stata completata",
-      cancelled: "La tua prenotazione è stata cancellata",
+      declined: "La tua prenotazione è stata rifiutata",
+      cancelled_by_client: "La tua prenotazione è stata cancellata",
+      cancelled_by_trainer: "La tua prenotazione è stata cancellata",
     };
 
-    if (statusMessages[status]) {
+    if (statusMessages[nextStatus]) {
       await db.collection("users").doc(booking.userId).collection("notifications").add({
         title: "Aggiornamento prenotazione",
-        body: statusMessages[status],
-        type: `booking_${status}`,
+        body: statusMessages[nextStatus],
+        type: `booking_${nextStatus}`,
         data: { bookingId },
         imageUrl: null,
         isRead: false,
