@@ -4,6 +4,7 @@ import { onDocumentUpdated } from "firebase-functions/v2/firestore";
 import * as admin from "firebase-admin";
 import { subHours, addDays, startOfDay, endOfDay } from "date-fns";
 import { sendPushToUser } from "../notifications";
+import { buildMessage } from "../notifications/bookingMessages";
 
 const db = admin.firestore();
 const region = process.env.FIREBASE_REGION || "europe-west1";
@@ -13,10 +14,13 @@ interface BookingData {
   serviceName: string;
   venueName: string;
   scheduledAt: admin.firestore.Timestamp;
+  scheduledEndAt?: admin.firestore.Timestamp;
   reminder24hSent?: boolean;
   reminder2hSent?: boolean;
   pointsEarned: number;
   status: string;
+  /** Present on trainer sessions; absent on venue bookings. The discriminator throughout. */
+  instructorId?: string | null;
   [key: string]: unknown;
 }
 
@@ -51,10 +55,11 @@ export const sendBookingReminders = onSchedule(
       end: admin.firestore.Timestamp.fromDate(addDays(now, 1)),
     };
 
-    // Get bookings scheduled for tomorrow that haven't received reminders
+    // Get bookings scheduled for tomorrow that haven't received reminders.
+    // "accepted" is the post-migration equivalent of the old "confirmed".
     const upcomingBookings = await db
       .collection("bookings")
-      .where("status", "==", "confirmed")
+      .where("status", "==", "accepted")
       .where("scheduledAt", ">=", reminderWindow.start)
       .where("scheduledAt", "<=", reminderWindow.end)
       .get();
@@ -104,21 +109,36 @@ export const processCompletedBookings = onSchedule(
     const now = new Date();
     const cutoffTime = admin.firestore.Timestamp.fromDate(subHours(now, 2));
 
-    // Get confirmed bookings that should have ended by now
+    // Get accepted bookings that should have ended by now.
+    // "accepted" is the post-migration equivalent of the old "confirmed".
     const pastBookings = await db
       .collection("bookings")
-      .where("status", "==", "confirmed")
+      .where("status", "==", "accepted")
       .where("scheduledEndAt", "<=", cutoffTime)
       .get();
 
     const batch = db.batch();
+    let skippedTrainerBookings = 0;
 
     for (const doc of pastBookings.docs) {
       const booking = doc.data() as BookingData;
 
-      // Mark as completed (in a real app, this might need staff confirmation)
+      // Trainer sessions are completed by the trainer tapping "Sessione svolta", never
+      // automatically — the pilot needs a human-attested completion. completeBooking takes
+      // over awarding pointsEarned for these. Venue bookings keep auto-completing here.
+      if (booking.instructorId) {
+        skippedTrainerBookings++;
+        continue;
+      }
+
       batch.update(doc.ref, {
         status: "completed",
+        statusHistory: admin.firestore.FieldValue.arrayUnion({
+          status: "completed",
+          actorUid: "system",
+          actorRole: "system",
+          at: admin.firestore.Timestamp.now(),
+        }),
         completedAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
@@ -134,7 +154,109 @@ export const processCompletedBookings = onSchedule(
     }
 
     await batch.commit();
-    logger.info(`Completed ${pastBookings.size} bookings`);
+    logger.info(
+      `Auto-completed ${pastBookings.size - skippedTrainerBookings} venue bookings; ` +
+      `skipped ${skippedTrainerBookings} trainer bookings (completed by the trainer)`
+    );
+  }
+);
+
+/**
+ * Nudge trainers to mark a session as done (runs every hour).
+ *
+ * Trainer sessions are never auto-completed — the pilot needs a human-attested
+ * completion — so a trainer who forgets would strand the booking before `completed`
+ * and it would never reach `payment_confirmed`. Spec §8.
+ */
+export const remindTrainerToComplete = onSchedule(
+  {
+    region,
+    schedule: "15 * * * *",
+    timeZone: "Europe/Rome",
+  },
+  async (_event: ScheduledEvent) => {
+    const cutoff = admin.firestore.Timestamp.fromDate(subHours(new Date(), 2));
+
+    // completionReminderSentAt is initialized to null on create and by the migration —
+    // Firestore cannot query for an absent field, so it must exist to be matched here.
+    const stale = await db
+      .collection("bookings")
+      .where("status", "==", "accepted")
+      .where("scheduledEndAt", "<=", cutoff)
+      .where("completionReminderSentAt", "==", null)
+      .get();
+
+    let sent = 0;
+    for (const doc of stale.docs) {
+      const booking = doc.data() as BookingData;
+      if (!booking.instructorId) continue; // venue bookings auto-complete elsewhere
+
+      const trainerSnap = await db.collection("users").doc(booking.instructorId).get();
+      const locale = trainerSnap.data()?.preferredLanguage;
+      const message = buildMessage("completion_reminder", locale, {
+        serviceName: booking.serviceName,
+      });
+
+      await sendPushToUser(booking.instructorId, {
+        title: message.title,
+        body: message.body,
+        data: { bookingId: doc.id, type: "booking_completion_reminder" },
+      });
+
+      await db.collection("users").doc(booking.instructorId).collection("notifications").add({
+        title: message.title,
+        body: message.body,
+        type: "booking_completion_reminder",
+        data: { bookingId: doc.id },
+        imageUrl: null,
+        isRead: false,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      await doc.ref.update({
+        completionReminderSentAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      sent++;
+    }
+
+    logger.info(`Sent ${sent} completion reminders to trainers`);
+  }
+);
+
+/**
+ * Auto-confirm payments the client never responded to (runs every hour).
+ *
+ * Client confirmation is optional by design; silence for 48h is treated as agreement so
+ * a booking is not left hanging. A dispute, by contrast, flags it for admin review.
+ * Spec §8.
+ */
+export const autoConfirmPayments = onSchedule(
+  {
+    region,
+    schedule: "45 * * * *",
+    timeZone: "Europe/Rome",
+  },
+  async (_event: ScheduledEvent) => {
+    const cutoff = admin.firestore.Timestamp.fromDate(subHours(new Date(), 48));
+
+    const pending = await db
+      .collection("bookings")
+      .where("status", "==", "payment_confirmed")
+      .where("paymentConfirmation.clientResponse", "==", null)
+      .where("paymentConfirmation.confirmedByTrainerAt", "<=", cutoff)
+      .get();
+
+    const batch = db.batch();
+    for (const doc of pending.docs) {
+      batch.update(doc.ref, {
+        "paymentConfirmation.autoConfirmed": true,
+        "paymentConfirmation.clientRespondedAt": admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+    await batch.commit();
+
+    logger.info(`Auto-confirmed ${pending.size} payments after the 48h window`);
   }
 );
 

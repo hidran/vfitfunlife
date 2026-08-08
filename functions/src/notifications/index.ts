@@ -41,6 +41,8 @@ interface BookingData {
   pointsEarned: number;
   cancelledBy?: string;
   status: string;
+  /** Present on trainer sessions; absent on venue bookings. The discriminator throughout. */
+  instructorId?: string | null;
 }
 
 /**
@@ -312,32 +314,18 @@ export const onBookingStatusChange = onDocumentUpdated(
     const userId = after.userId;
     let notification: NotificationPayload | null = null;
 
-    switch (after.status) {
-    case "confirmed":
-      notification = {
-        title: "Prenotazione confermata",
-        body: `La tua prenotazione per ${after.serviceName} è stata confermata`,
-        data: { bookingId, type: "booking_confirmed" },
-      };
-      break;
+    // Trainer sessions are notified by the transition callables, using the localized
+    // catalog in ./bookingMessages. This legacy trigger is narrowed to venue bookings so
+    // a trainer completion does not fire both. The old "confirmed" and "cancelled" cases
+    // are deleted rather than left keyed to a vocabulary that no longer exists. Spec §5.5.
+    const isVenueBooking = !after.instructorId;
 
-    case "cancelled":
-      if (after.cancelledBy !== "user") {
-        notification = {
-          title: "Prenotazione cancellata",
-          body: `La tua prenotazione per ${after.serviceName} è stata cancellata`,
-          data: { bookingId, type: "booking_cancelled" },
-        };
-      }
-      break;
-
-    case "completed":
+    if (after.status === "completed" && isVenueBooking) {
       notification = {
         title: "Sessione completata",
         body: `Hai guadagnato ${after.pointsEarned} punti! Lascia una recensione.`,
         data: { bookingId, type: "booking_completed" },
       };
-      break;
     }
 
     if (notification) {
