@@ -68,7 +68,7 @@ largest work item in this feature and must be planned as such, not treated as in
 | Admin confirm | `functions/src/bookings/index.ts:573` (`confirmBooking`) — requires `bookings:confirm` |
 | Push delivery | `functions/src/notifications/index.ts:52` (`sendPushToUser`) |
 | Status-change trigger | `functions/src/notifications/index.ts:293` (`onBookingStatusChange`) |
-| Migration pattern | `functions/src/ai/migrateInstructors.ts` (dry-run, batched, idempotent) |
+| Migration pattern | `functions/src/ai/migrateInstructors.ts` — batched, idempotent, superadmin-gated. **No dry-run mode** (see §7.3) |
 | Audit log | `functions/src/lib/audit.ts` (`writeAuditLog`) |
 | Role helpers | `functions/src/utils/roles.ts` (`getUserRoleInfo`, `requirePermission`) |
 | Booking rules | `firestore.rules:350` |
@@ -126,6 +126,12 @@ the existing `src/lib/firebase/functions.ts` wrapper, which becomes the single w
 There are currently **three** competing `cancelBooking` implementations (`firebookings.ts`,
 `provider.ts`, `functions.ts`). They collapse into one.
 
+**This is cheaper than it looks.** The three booking wrappers already in
+`src/lib/firebase/functions.ts` (`createBooking:67`, `cancelBooking:89`, `confirmBooking:98`)
+have **zero importers** — only the AI exports from that module are consumed anywhere. So the
+rewiring has no existing callers to preserve and no deprecation window to manage; it is a
+substitution at the store layer, not a migration. The plan should not over-sequence around it.
+
 These layers also use a divergent field vocabulary that must be reconciled, because
 `canTransition` keys on `instructorId`:
 
@@ -145,6 +151,15 @@ localized notification.
 
 → The trigger's `completed` case is **narrowed to bookings without an `instructorId`**. This is
 a deliberate, minimal exception to the otherwise hands-off treatment of legacy notifications.
+
+Narrowing, not disabling: venue bookings still auto-complete via `processCompletedBookings` and
+have no replacement notification path, since §9's catalog and fan-out live in the new trainer
+callables that venue completions never reach. The legacy body ("Hai guadagnato N punti!") also
+stays accurate for venue bookings, because §5.1 leaves their point award where it is.
+
+The now-dead `case "confirmed"` and `case "cancelled"` branches are **deleted** rather than left
+in place — switch cases keyed to a vocabulary that no longer exists are a trap for whoever
+touches the file next.
 
 ### 5.6 `updateBookingStatus` hardcodes the old enum
 
@@ -276,18 +291,40 @@ batched, idempotent, audit-logged.
 | `cancelled` | `"admin"` \| `"venue"` \| `null` | `cancelled_by_trainer`, with `actorRole` recorded accurately |
 
 `cancelledBy` has five real values (`"user" | "instructor" | "venue" | "admin" | null`,
-`src/types/firebase.ts:466`) but the status enum has only two cancellation states. Rather than
+`src/types/firebase.ts:467`) but the status enum has only two cancellation states. Rather than
 add a ninth status nobody asked for, admin- and venue-initiated cancellations land in
-`cancelled_by_trainer` **but record their true actor in `statusHistory[].actorRole`**
-(`"admin"` / `"system"`).
+`cancelled_by_trainer` **but record their true actor in `statusHistory[].actorRole`**.
+
+For that to mean anything, the synthetic history entry must be **derived per-document**, not
+uniform:
+
+```ts
+// actorUid stays "migration"; actorRole is derived from cancelledBy
+"user"       → "client"
+"instructor" → "trainer"
+"admin"      → "admin"
+"venue"|null → "system"
+```
+
+A uniform `actorRole: "system"` would erase attribution across the entire backfill and make the
+P0-2 rule below unusable on exactly the historical data it exists to produce.
+
+`cancelledBy` is **retained** on the document (§7.2 does not remove it) and remains the
+authoritative attribution source for pre-migration records.
+
+**Known limitation:** `actorRole` has no `"venue"` member, so venue-initiated cancellations are
+indistinguishable from the migration marker even after this fix. Acceptable for the pilot —
+venue cancellations are not part of the trainer metric — but stated here rather than left to be
+rediscovered.
 
 **P0-2 consequence, stated here so it is not rediscovered later:** the trainer-reliability
 metric must attribute cancellations using `statusHistory[].actorRole`, *not* the status alone.
 Counting `cancelled_by_trainer` naively would blame trainers for admin cancellations.
 
 Every migrated doc receives a single synthetic history entry
-`{ status, actorUid: "migration", actorRole: "system", at: updatedAt }` so the array is never
-empty for downstream consumers.
+`{ status, actorUid: "migration", actorRole: <derived per the table above>, at: updatedAt }` so
+the array is never empty for downstream consumers. Non-cancellation statuses derive `actorRole`
+as `"system"`.
 
 **Dry-run output is reviewed before the live run.** Applies to the whole `bookings` collection
 (venue bookings included) so one vocabulary exists; `classBookings` is not touched.
@@ -314,12 +351,25 @@ functions/src/bookings/
 | `acceptBooking` | trainer | `{ bookingId, note? }` → `accepted` |
 | `declineBooking` | trainer | `{ bookingId, note? }` → `declined` |
 | `cancelBookingAsTrainer` | trainer | `{ bookingId, reason? }` → `cancelled_by_trainer` |
-| `completeBooking` | trainer | `{ bookingId, noShow?: boolean }` → `completed` \| `no_show`; **awards `pointsEarned`** and writes `completedAt` (see §5.1) |
+| `completeBooking` | trainer | `{ bookingId, noShow?: boolean }` → `completed` \| `no_show` |
 | `confirmBookingPayment` | trainer | `{ bookingId, method, amount }` → `payment_confirmed` |
 | `respondToPaymentConfirmation` | client | `{ bookingId, response, disputeReason? }` |
 
 `cancelBooking` (existing) gains client/trainer branching and sets `lateCancellation` when
 `scheduledAt - now < 24h`.
+
+**`completeBooking` branch behaviour — the two outcomes are not symmetric:**
+
+| Branch | `completedAt` | `pointsEarned` awarded |
+|---|---|---|
+| `completed` | written | **yes** — taken over from `processCompletedBookings` (§5.1) |
+| `no_show` | **not** written | **no** |
+
+A no-show must not award loyalty points for a session the client did not attend, and must not
+stamp `completedAt` — that field feeds `aggregateDailyStats.completedSessions`
+(`functions/src/scheduled/index.ts:251`) and the P0-2 metric built on it, both of which would
+be inflated. This mirrors current behaviour, where points are awarded only on the `completed`
+write.
 
 ### Scheduled functions
 
@@ -368,9 +418,15 @@ existing `completeness.test.ts` enforces parity.
 `match /bookings/{bookingId}` is tightened:
 
 - **read** — unchanged: owner (`userId`), assigned trainer (`instructorId`), or admin.
-- **create** — client only; `userId == request.auth.uid`; `status == "requested"`;
-  `statusHistory`, `paymentConfirmation`, `lateCancellation` must be absent. The existing
-  `hasOnly([...])` allowlist is updated for the new field names.
+- **create** — **denied for clients entirely.** Creation goes through the `createBooking`
+  callable, which §11.0 makes the only create path.
+
+  The current rule's `hasOnly([...])` allowlist includes `originalPrice`, `discountAmount`,
+  `homeServiceFee` and `finalPrice`, so a client can hand-craft a booking with `finalPrice: 0`.
+  That hole is pre-existing, but this design both opens the alternative (a working callable
+  path) and states the goal of closing it — §14 requires that amounts are not client-editable,
+  and leaving client create in place would contradict that. Removing the rule is the smaller
+  change than curating the allowlist, and it matches how §10 already treats trainers on update.
 - **update** — clients may write only `userNotes` and `updatedAt`. **Trainers get no direct
   update path at all** (today they can write `status` freely — that is how a trainer could
   self-confirm a payment). Admin retains full update.
@@ -422,8 +478,8 @@ exhaustive list; these are the known sites, not a complete one.
 
 | Level | Coverage |
 |---|---|
-| Unit (vitest) | `canTransition` full matrix incl. rejected transitions; 24h late-cancellation boundary (both sides); migration mapping table incl. every `cancelledBy` value; locale resolution + fallback for unsupported/absent values; `completeBooking` awards `pointsEarned` exactly once |
-| Rules | Client cannot write `status`; trainer cannot write `status` or `paymentConfirmation`; client can write `userNotes` |
+| Unit (vitest) | `canTransition` full matrix incl. rejected transitions; 24h late-cancellation boundary (both sides); migration mapping incl. every `cancelledBy` value **and its derived `actorRole`**; locale resolution + fallback for unsupported/absent values; `completeBooking` awards `pointsEarned` exactly once on `completed` and **never** on `no_show` |
+| Rules | Client cannot write `status`; trainer cannot write `status` or `paymentConfirmation`; client can write `userNotes`; **client cannot create a booking directly** (and therefore cannot set `finalPrice`) |
 | E2E (Playwright) | Happy path request → accept → complete → confirm → client confirms; plus a decline path and a late-cancellation path |
 | Manual | Browser verification of each screen (client, trainer, admin) per standing project preference |
 
@@ -437,7 +493,7 @@ Firestore composite indexes are added for the two scheduled queries
 | **Resend account, verified sending domain and GDPR DPA are required before ship** — the one external dependency on the critical path | **Owner: Hidran.** Code is written behind the secret; absent the key, email is skipped and logged, so it does not block the rest of P0-1 |
 | Migration runs against production booking data | Dry-run reviewed before live run; idempotent and re-runnable |
 | Trainers who never tap "Sessione svolta" stall bookings before `completed` | 2h reminder + per-trainer table in the P0-2 dashboard. No auto-complete, by design |
-| **Rewiring the client/trainer write paths (§5.4) is the largest and riskiest item** — it touches create, cancel, accept and complete across three files with divergent field names | Sequenced first in the plan, behind e2e coverage of the existing happy path so regressions surface immediately |
+| **Rewiring the client/trainer write paths (§5.4) is the largest item** — it touches create, cancel, accept and complete across three files with divergent field names | Sequenced first in the plan, behind e2e coverage of the existing happy path so regressions surface immediately. Risk is bounded: the target wrappers have no existing importers, so this is substitution rather than migration |
 | The enum migration silently breaks read-side branching in ~25 UI sites | Exhaustive sweep required by §11.0; `BookingStatus` is a union type so `tsc` catches most, but string comparisons in JSX will not error — grep-based audit needed |
 | Points double-award if `processCompletedBookings` isn't correctly narrowed | Unit test asserts `pointsEarned` is granted exactly once per booking |
 | `bookingType` / `locationType` divergence persists | Documented above; deliberately deferred |
