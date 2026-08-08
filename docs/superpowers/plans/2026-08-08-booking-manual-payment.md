@@ -18,6 +18,13 @@
 - Role helpers: `getUserRoleInfo`, `requirePermission` in `functions/src/utils/roles.ts`. Audit: `writeAuditLog` in `functions/src/lib/audit.ts`.
 - Functions tests: `functions/` has its own vitest (`npm test` → `vitest run` from `functions/`), setup at `functions/test/setup.ts`. Rules-test precedent: `functions/test/profile-rules.test.ts`.
 - App tests: root vitest, jsdom, setup `tests/setup.ts`. E2E: `npx playwright test`.
+- **Any Firestore-touching test needs the emulator running first**, or it fails with opaque google-gax DEADLINE errors:
+  ```bash
+  firebase emulators:start --only firestore
+  ```
+  Callable-test precedent: `functions/test/profile.test.ts` (`firebase-functions-test` + `testEnv.wrap()`). Rules-test precedent: `functions/test/profile-rules.test.ts`. Use these rather than inventing a mocking strategy per task.
+- **`functions/` has its own tsconfig with `include: ["src"]`** — it cannot import the app's `src/types/`. The status union is duplicated in `functions/src/bookings/types.ts` by design.
+- Root `npx tsc --noEmit` does **not** cover `functions/`. Run `cd functions && npm run build` separately.
 - i18n: five sibling files `src/i18n/messages/{it,en,es,fr,de}.ts`; `src/i18n/messages/completeness.test.ts` enforces key parity. Italian is authoritative.
 - **Static export**: dynamic routes use `?id=` query strings, not path params, for Firestore-backed ids.
 - The trainer/venue discriminator throughout is **presence of `instructorId`** on the booking doc.
@@ -26,7 +33,8 @@
 
 1. **Task 4 (`createBooking` venue-optional) ships before Task 16 (rules).** Otherwise trainer booking creation fails with `Venue not found`.
 2. **Tasks 12–14 (rewiring) ship before Task 16 (rules).** Otherwise client and trainer writes are denied.
-3. **Task 11 (migration) runs after Task 10 (scheduled-job amendments) is deployed.** Otherwise 24h reminders break in the gap.
+3. **Task 11 (migration) runs after Task 10 (scheduled-job amendments) is deployed.** Otherwise 24h reminders and venue auto-completion both break in the gap.
+4. **The web bundle must be deployed alongside the rules change (Task 16).** Tasks 12–15 only commit. If the pilot has live users, deploying rules while the old bundle is still served means every direct write is denied. Either deploy hosting at the end of Task 15, or confirm there is no live traffic before Task 16.
 
 ## File structure
 
@@ -437,9 +445,30 @@ git commit -am "feat(booking): payment confirmation and client response callable
 
 ---
 
-## Task 9: Register new exports
+## Task 9: Register new exports — **one barrel owns everything**
 
-- [ ] Add `export * from "./bookings/payments";` and `"./bookings/migrate";` to `functions/src/index.ts` (transitions arrives via the bookings barrel). Build, commit.
+`functions/src/index.ts` already has `export * from "./bookings";`. To avoid ambiguous duplicate star-exports, **`functions/src/bookings/index.ts` is the single owner**: nothing new is added to `functions/src/index.ts`.
+
+- [ ] Append to `functions/src/bookings/index.ts`:
+
+```ts
+export * from "./transitions";
+export * from "./payments";
+export * from "./migrate";
+```
+
+Without this the new callables compile, the build stays green, and they never deploy — a silent failure.
+
+- [ ] Verify every callable is registered:
+
+```bash
+cd functions && npm run build && node -e "const m=require('./lib/index.js'); \
+  ['acceptBooking','declineBooking','cancelBookingAsTrainer','completeBooking', \
+   'confirmBookingPayment','respondToPaymentConfirmation','migrateBookingStatuses'] \
+  .forEach(n => console.log(n, typeof m[n]))"
+```
+
+Expected: every name prints `object` (a registered function), never `undefined`.
 
 ---
 
@@ -451,10 +480,14 @@ git commit -am "feat(booking): payment confirmation and client response callable
 - Test: `functions/test/scheduled-bookings.test.ts`
 
 - [ ] **Step 1: Amend `sendBookingReminders`** — query `"accepted"` not `"confirmed"` (spec §5.2). **Platform-wide regression if missed.**
-- [ ] **Step 2: Amend `processCompletedBookings`** — skip docs with an `instructorId`; venue bookings keep auto-completing *and* keep their point award (spec §5.1).
+- [ ] **Step 2: Amend `processCompletedBookings`** — **two changes, both required.**
+  1. Its query at `functions/src/scheduled/index.ts:110` is also `where("status","==","confirmed")` → change to `"accepted"`. Miss this and after migration the job matches zero documents: venue bookings stop auto-completing **and** stop receiving loyalty points — silently, with the DoD still reading as satisfied.
+  2. Skip docs with an `instructorId`, so trainer bookings are completed only by the trainer.
 - [ ] **Step 3: Amend `onBookingStatusChange`** — narrow `case "completed"` to `!after.instructorId`; **delete** the now-dead `confirmed` and `cancelled` cases (spec §5.5).
 - [ ] **Step 4: Add `remindTrainerToComplete`** — hourly; `accepted` + `scheduledEndAt` ≥2h past + `completionReminderSentAt` unset → notify trainer, stamp the field.
 - [ ] **Step 5: Add `autoConfirmPayments`** — hourly; `payment_confirmed` + `clientResponse == null` + `confirmedByTrainerAt` >48h → set `autoConfirmed: true`.
+
+> **Firestore cannot query for an absent field.** `where("completionReminderSentAt","==",null)` matches only documents where the field *exists* and is null. `createBooking` already initializes it to `null`; **Task 11's migration must do the same for every backfilled doc**, or `remindTrainerToComplete` never fires for pre-migration bookings.
 - [ ] **Step 6: Test that points are never awarded twice** for a booking completed by the trainer and then swept by the scheduled job.
 - [ ] **Step 7: Green, build, commit, deploy**
 
@@ -492,6 +525,11 @@ A uniform `actorRole` here would erase attribution and break the P0-2 trainer me
 
 - [ ] **Step 2: Test idempotency** — running twice leaves docs untouched the second time.
 - [ ] **Step 3: Implement.** Superadmin-gated, `{ dryRun: boolean }`, batches of 400, audit-logged, returns per-status counts. Retains `cancelledBy`.
+
+  Each migrated doc must also get:
+  - `instructorId` backfilled from `providerId` where present (Task 14 Step 2 depends on this)
+  - `completionReminderSentAt: null` — absent fields are unqueryable
+  - `lateCancellation: false` and `paymentConfirmation: null` where absent
 - [ ] **Step 4: Green, build, deploy, then run dry-run against production**
 
 ```bash
@@ -525,12 +563,27 @@ npm run deploy:functions
 
 ---
 
-## Task 14: Rewire the trainer write path
+## Task 14: Rewire the trainer write path — **includes a query-key migration**
 
 **Files:**
-- Modify: `src/lib/firebase/provider.ts:366` (accept), `:389` (complete), `:397` (cancel)
+- Modify: `src/lib/firebase/provider.ts` — status writes at `:366`, `:389`, `:397`
+- Modify: `src/lib/firebase/index.ts:14-16` (re-exports `confirmProviderBooking` / `completeProviderBooking` / `cancelProviderBooking`)
+- Modify: `src/stores/providerStore.ts:157/167/177`
 
-- [ ] Replace all three `updateDoc` status writes with callables. Delete the now-duplicate `cancelBooking` (three implementations collapse to one). `npx tsc --noEmit`, commit.
+- [ ] **Step 1:** Replace all three `updateDoc` status writes with callables. Delete the now-duplicate `cancelBooking`.
+
+- [ ] **Step 2 — `providerId` → `instructorId`. Do not skip this; it silently empties the trainer dashboard.**
+
+  `src/lib/firebookings.ts:230` writes `providerId` on the booking doc. The `createBooking` callable writes `instructorId` and does **not** write `providerId`. The moment Task 13 routes creation through the callable, every one of these stops matching new bookings:
+
+  - Queries: `provider.ts:101, 118, 133, 149, 162, 232, 287, 490, 638, 812` — `where("providerId", "==", providerId)`
+  - Auth guards: `provider.ts:362, 385, 408` — `if (booking.providerId !== providerId)` → these throw "Not authorized" on every new booking
+
+  Per the project's standing preference, fix this **at the data layer**: `instructorId` is the canonical trainer link (instructors = the provider catalog), Task 11's migration backfills `instructorId` from `providerId` on existing docs, and these call sites move to `instructorId`.
+
+- [ ] **Step 3:** Update `src/stores/providerStore.ts` — the trainer pages call the store, not `provider.ts` directly. New accept / decline / no-show / confirm-payment actions land here.
+
+- [ ] **Step 4:** `npx tsc --noEmit`, commit.
 
 ---
 
@@ -556,8 +609,9 @@ npm run deploy:functions
 - [ ] **Step 3: Green, deploy, commit**
 
 ```bash
-npx vitest run functions/test/booking-rules.test.ts
-npm run deploy:rules
+# must run from functions/ — the root vitest config is jsdom and would load the wrong setup
+cd functions && npx vitest run test/booking-rules.test.ts
+cd .. && npm run deploy:rules
 git commit -am "feat(booking): callable-only transitions; deny client create and trainer status writes"
 ```
 
