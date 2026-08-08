@@ -247,9 +247,9 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
 /** Narrows arbitrary stored input to a supported locale, defaulting to Italian. */
 export function resolveLocale(input: unknown): AppLocale {
   if (typeof input !== "string") return DEFAULT_LOCALE;
-  return (SUPPORTED_LOCALES as readonly string[]).includes(input)
-    ? (input as AppLocale)
-    : DEFAULT_LOCALE;
+  return (SUPPORTED_LOCALES as readonly string[]).includes(input) ?
+    (input as AppLocale) :
+    DEFAULT_LOCALE;
 }
 
 export function buildMessage(

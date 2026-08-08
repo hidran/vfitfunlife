@@ -251,7 +251,7 @@ export const autoConfirmPayments = onSchedule(
       batch.update(doc.ref, {
         "paymentConfirmation.autoConfirmed": true,
         "paymentConfirmation.clientRespondedAt": admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        "updatedAt": admin.firestore.FieldValue.serverTimestamp(),
       });
     }
     await batch.commit();

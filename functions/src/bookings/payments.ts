@@ -107,9 +107,9 @@ export const respondToPaymentConfirmation = onCall<RespondToPaymentRequest>(
       throw new HttpsError("invalid-argument", "Response must be 'confirmed' or 'disputed'");
     }
 
-    const disputeReason = typeof request.data.disputeReason === "string"
-      ? request.data.disputeReason.slice(0, 500)
-      : undefined;
+    const disputeReason = typeof request.data.disputeReason === "string" ?
+      request.data.disputeReason.slice(0, 500) :
+      undefined;
 
     const ref = db.collection("bookings").doc(bookingId);
     const booking = await db.runTransaction(async (tx) => {
@@ -141,7 +141,7 @@ export const respondToPaymentConfirmation = onCall<RespondToPaymentRequest>(
         ...(disputeReason ? { "paymentConfirmation.disputeReason": disputeReason } : {}),
         // A dispute is surfaced to admin via the Disputes filter; it does not revert status.
         ...(response === "disputed" ? { needsAdminReview: true } : {}),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        "updatedAt": admin.firestore.FieldValue.serverTimestamp(),
       });
 
       return doc;

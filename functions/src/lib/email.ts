@@ -40,15 +40,15 @@ export interface SendEmailArgs {
 
 /** Minimal, inline-styled layout — email clients are hostile to stylesheets. */
 function renderHtml(args: SendEmailArgs): string {
-  const button = args.action
-    ? `<p style="margin:24px 0;">
+  const button = args.action ?
+    `<p style="margin:24px 0;">
          <a href="${escapeHtml(args.action.url)}"
             style="background:#111;color:#fff;text-decoration:none;padding:12px 20px;
                    border-radius:8px;display:inline-block;font-weight:600;">
            ${escapeHtml(args.action.label)}
          </a>
-       </p>`
-    : "";
+       </p>` :
+    "";
 
   return `<!doctype html>
 <html><body style="margin:0;padding:24px;background:#f6f6f6;

@@ -92,10 +92,10 @@ async function fetchBookingResources(
   const [userDoc, venueDoc, serviceDoc, instructorDoc] = await Promise.all([
     db.collection("users").doc(userId).get(),
     venueId ? db.collection("venues").doc(venueId).get() : Promise.resolve(null),
-    isTrainerBooking
-      ? db.collection("instructors").doc(instructorId as string)
-        .collection("services").doc(serviceId).get()
-      : db.collection("venues").doc(venueId as string)
+    isTrainerBooking ?
+      db.collection("instructors").doc(instructorId as string)
+        .collection("services").doc(serviceId).get() :
+      db.collection("venues").doc(venueId as string)
         .collection("services").doc(serviceId).get(),
     instructorId ? db.collection("instructors").doc(instructorId).get() : Promise.resolve(null),
   ]);
@@ -103,9 +103,9 @@ async function fetchBookingResources(
   if (!userDoc.exists) throw new HttpsError("not-found", "User not found");
   if (venueId && !venueDoc?.exists) throw new HttpsError("not-found", "Venue not found");
 
-  let service: ServiceData | null = serviceDoc.exists
-    ? (serviceDoc.data() as ServiceData)
-    : null;
+  let service: ServiceData | null = serviceDoc.exists ?
+    (serviceDoc.data() as ServiceData) :
+    null;
 
   // PILOT: legacy fallback — older provider docs embed services inline on the provider
   // profile rather than in the services subcollection. Mirrors the client-side path in

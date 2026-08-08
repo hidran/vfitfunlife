@@ -214,9 +214,9 @@ export const completeBooking = onCall<CompleteRequest>(
       request,
       to: noShow ? "no_show" : "completed",
 
-      extraFields: (_b, uid) => noShow
-        ? {}
-        : {
+      extraFields: (_b, uid) => noShow ?
+        {} :
+        {
           completedAt: admin.firestore.FieldValue.serverTimestamp(),
           completedBy: uid,
         },

@@ -68,9 +68,9 @@ export async function notifyTransition(opts: {
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     }),
 
-    recipient.email
-      ? sendEmail({ to: recipient.email, subject: message.title, body: message.body })
-      : Promise.resolve(false),
+    recipient.email ?
+      sendEmail({ to: recipient.email, subject: message.title, body: message.body }) :
+      Promise.resolve(false),
   ]).then((results) => {
     results.forEach((r, i) => {
       if (r.status === "rejected") {
