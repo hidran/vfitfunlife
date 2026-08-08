@@ -6,6 +6,10 @@ export type {
   PaymentStatus,
   PaymentMethod,
   BookingType,
+  StatusActorRole,
+  BookingStatusHistoryEntry,
+  PaymentConfirmationMethod,
+  BookingPaymentConfirmation,
 } from './firebase';
 
 // Additional location type for provider bookings
@@ -95,6 +99,14 @@ export interface Booking {
   cancelledBy?: 'user' | 'instructor' | 'venue' | 'admin' | null;
   cancellationReason?: string | null;
   refundAmount?: number | null;
+  lateCancellation?: boolean;
+
+  // Status audit trail (append-only; written by Cloud Functions only)
+  statusHistory?: import('./firebase').BookingStatusHistoryEntry[];
+
+  // Manual payment confirmation (payments happen off-platform, directly to the trainer)
+  paymentConfirmation?: import('./firebase').BookingPaymentConfirmation | null;
+  completionReminderSentAt?: Timestamp | null;
 
   // Review
   hasReviewed: boolean;

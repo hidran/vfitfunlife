@@ -403,10 +403,46 @@ export interface AvailabilitySlot {
 }
 
 // Booking types
-export type BookingStatus = "pending" | "confirmed" | "in_progress" | "completed" | "cancelled" | "no_show";
+export type BookingStatus =
+  | "requested"
+  | "accepted"
+  | "declined"
+  | "cancelled_by_client"
+  | "cancelled_by_trainer"
+  | "completed"
+  | "no_show"
+  | "payment_confirmed";
+
 export type PaymentStatus = "pending" | "deposit_paid" | "paid" | "refunded" | "partial_refund";
 export type PaymentMethod = "card" | "wallet" | "points" | "cash" | "mixed";
 export type BookingType = "in_venue" | "home_service" | "virtual" | "outdoor";
+
+/** Who performed a booking status transition. "system" covers scheduled jobs and the backfill. */
+export type StatusActorRole = "client" | "trainer" | "admin" | "system";
+
+/** Append-only audit entry written on every booking status transition. */
+export interface BookingStatusHistoryEntry {
+  status: BookingStatus;
+  actorUid: string;
+  actorRole: StatusActorRole;
+  at: Timestamp;
+  note?: string;
+}
+
+/** Off-platform payment methods the trainer can record. Stripe is Phase 2. */
+export type PaymentConfirmationMethod = "cash" | "satispay" | "bank_transfer" | "other";
+
+export interface BookingPaymentConfirmation {
+  method: PaymentConfirmationMethod;
+  /** Amount actually received. Prefilled from finalPrice, trainer-editable, revalidated server-side. */
+  amount: number;
+  confirmedByTrainerAt: Timestamp;
+  clientResponse: "confirmed" | "disputed" | null;
+  clientRespondedAt: Timestamp | null;
+  /** True when the 48h job closed it rather than the client responding. */
+  autoConfirmed: boolean;
+  disputeReason?: string;
+}
 
 export interface Booking {
   id: string;
@@ -464,9 +500,22 @@ export interface Booking {
 
   // Cancellation
   cancelledAt: Timestamp | null;
+  /**
+   * Retained after the status migration as the authoritative attribution source for
+   * pre-migration records — the status enum has only two cancellation states but this
+   * field has five values. See the P0-1 spec §7.3.
+   */
   cancelledBy: "user" | "instructor" | "venue" | "admin" | null;
   cancellationReason: string | null;
   refundAmount: number | null;
+  /** Cancelled less than 24h before the slot. Flagged only — no fees in the pilot. */
+  lateCancellation?: boolean;
+
+  // Status audit trail (append-only; written by Cloud Functions only)
+  statusHistory: BookingStatusHistoryEntry[];
+
+  // Manual payment confirmation (payments happen off-platform, directly to the trainer)
+  paymentConfirmation?: BookingPaymentConfirmation | null;
 
   // Review
   hasReviewed: boolean;
@@ -477,6 +526,8 @@ export interface Booking {
   updatedAt: Timestamp;
   confirmedAt: Timestamp | null;
   completedAt: Timestamp | null;
+  /** Guards the 2h "mark it complete" nudge against re-sending. */
+  completionReminderSentAt?: Timestamp | null;
 }
 
 export interface ServiceAddress {
