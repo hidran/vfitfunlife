@@ -56,6 +56,11 @@ function validateMethod(raw: unknown): PaymentConfirmationMethod {
 export const confirmBookingPayment = onCall<ConfirmPaymentRequest>(
   { region },
   (request: CallableRequest<ConfirmPaymentRequest>) => {
+    // Authenticate before validating arguments. Otherwise an anonymous caller gets
+    // INVALID_ARGUMENT instead of UNAUTHENTICATED, which leaks the expected payload shape
+    // and is inconsistent with every other callable here.
+    if (!request.auth) throw new HttpsError("unauthenticated", "Must be authenticated");
+
     const amount = validateAmount(request.data?.amount);
     const method = validateMethod(request.data?.method);
 

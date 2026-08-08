@@ -19,13 +19,21 @@
  */
 
 import { logger } from "firebase-functions";
-import { defineSecret } from "firebase-functions/params";
 
-export const RESEND_API_KEY = defineSecret("RESEND_API_KEY");
-
-/** Secrets to attach to any callable that sends email. */
-export const EMAIL_SECRETS = [RESEND_API_KEY];
-
+// NOTE: `defineSecret("RESEND_API_KEY")` is deliberately NOT called here.
+//
+// Merely declaring a secret at module scope registers it with the deployment, and the
+// Firebase CLI then refuses to deploy without a value:
+//   "In non-interactive mode but have no value for the secret: RESEND_API_KEY"
+// Unbinding `secrets: [...]` from the callables is not sufficient — the declaration alone
+// is enough to block every deploy in this codebase.
+//
+// To switch email on:
+//   1. firebase functions:secrets:set RESEND_API_KEY
+//   2. re-add `export const RESEND_API_KEY = defineSecret("RESEND_API_KEY");`
+//      and `export const EMAIL_SECRETS = [RESEND_API_KEY];`
+//   3. add `secrets: EMAIL_SECRETS` to the transition and payment callables
+//   4. read the key from RESEND_API_KEY.value() below instead of process.env
 const FROM_ADDRESS = process.env.EMAIL_FROM || "V Fitness <noreply@vfitness.it>";
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
 
@@ -76,12 +84,8 @@ function escapeHtml(value: string): string {
  *          Never throws.
  */
 export async function sendEmail(args: SendEmailArgs): Promise<boolean> {
-  let apiKey: string | undefined;
-  try {
-    apiKey = RESEND_API_KEY.value();
-  } catch {
-    apiKey = process.env.RESEND_API_KEY;
-  }
+  // While Resend is postponed this is always undefined, so sendEmail is a logged no-op.
+  const apiKey = process.env.RESEND_API_KEY;
 
   if (!apiKey) {
     // Expected before the Resend account is provisioned. The rest of the flow works.
