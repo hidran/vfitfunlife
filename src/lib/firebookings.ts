@@ -257,7 +257,14 @@ export async function createBooking(data: BookingData): Promise<Booking> {
     promotionCode: data.promotionCode || null,
     
     // Status
-    status: 'pending',
+    // FIXME(P0-1 Task 13): 'pending' is no longer a valid BookingStatus, and this whole
+    // direct-write create path must be replaced by the `createBooking` callable. tsc does
+    // not catch this because batch.set takes untyped DocumentData. This file also writes
+    // `providerId` where the callable writes `instructorId` — see plan Task 14 Step 2.
+    // DO NOT DEPLOY this branch until Tasks 12-17 are done; bookings created here would
+    // carry a dead status and no statusHistory.
+    status: 'requested',
+    statusHistory: [],
     paymentStatus: 'pending',
     paymentMethod: data.paymentMethod,
     
