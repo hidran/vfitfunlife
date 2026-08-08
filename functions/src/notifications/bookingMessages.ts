@@ -19,6 +19,8 @@ export type BookingMessageEvent =
   | "cancelled_by_trainer"
   | "completed"
   | "payment_confirmed"
+  | "payment_client_confirmed"
+  | "payment_disputed"
   | "completion_reminder";
 
 export interface MessageContext {
@@ -71,6 +73,14 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
       title: "Conferma il pagamento",
       body: `Il trainer ha confermato il pagamento di ${money(c.amount)} per ${svc(c, "la sessione")}. Confermi?`,
     }),
+    payment_client_confirmed: (c) => ({
+      title: "Pagamento confermato",
+      body: `Il cliente ha confermato il pagamento per ${svc(c, "la sessione")}.`,
+    }),
+    payment_disputed: (c) => ({
+      title: "Pagamento contestato",
+      body: `Il cliente ha contestato il pagamento per ${svc(c, "la sessione")}. Lo staff verificherà.`,
+    }),
     completion_reminder: (c) => ({
       title: "Sessione svolta?",
       body: `Segna come svolta la sessione di ${svc(c, "allenamento")} e registra il pagamento.`,
@@ -101,6 +111,14 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
     payment_confirmed: (c) => ({
       title: "Confirm the payment",
       body: `Your trainer recorded a payment of ${money(c.amount)} for ${svc(c, "the session")}. Confirm?`,
+    }),
+    payment_client_confirmed: (c) => ({
+      title: "Payment confirmed",
+      body: `The client confirmed the payment for ${svc(c, "the session")}.`,
+    }),
+    payment_disputed: (c) => ({
+      title: "Payment disputed",
+      body: `The client disputed the payment for ${svc(c, "the session")}. Our team will review it.`,
     }),
     completion_reminder: (c) => ({
       title: "Session done?",
@@ -133,6 +151,14 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
       title: "Confirma el pago",
       body: `Tu entrenador ha registrado un pago de ${money(c.amount)} por ${svc(c, "la sesión")}. ¿Lo confirmas?`,
     }),
+    payment_client_confirmed: (c) => ({
+      title: "Pago confirmado",
+      body: `El cliente ha confirmado el pago de ${svc(c, "la sesión")}.`,
+    }),
+    payment_disputed: (c) => ({
+      title: "Pago cuestionado",
+      body: `El cliente ha cuestionado el pago de ${svc(c, "la sesión")}. El equipo lo revisará.`,
+    }),
     completion_reminder: (c) => ({
       title: "¿Sesión realizada?",
       body: `Marca la sesión de ${svc(c, "entrenamiento")} como realizada y registra el pago.`,
@@ -164,6 +190,14 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
       title: "Confirmez le paiement",
       body: `Votre coach a enregistré un paiement de ${money(c.amount)} pour ${svc(c, "la séance")}. Confirmez-vous ?`,
     }),
+    payment_client_confirmed: (c) => ({
+      title: "Paiement confirmé",
+      body: `Le client a confirmé le paiement pour ${svc(c, "la séance")}.`,
+    }),
+    payment_disputed: (c) => ({
+      title: "Paiement contesté",
+      body: `Le client a contesté le paiement pour ${svc(c, "la séance")}. Notre équipe va vérifier.`,
+    }),
     completion_reminder: (c) => ({
       title: "Séance effectuée ?",
       body: `Marquez la séance de ${svc(c, "training")} comme effectuée et enregistrez le paiement.`,
@@ -194,6 +228,14 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
     payment_confirmed: (c) => ({
       title: "Zahlung bestätigen",
       body: `Dein Trainer hat eine Zahlung von ${money(c.amount)} für ${svc(c, "die Einheit")} erfasst. Bestätigen?`,
+    }),
+    payment_client_confirmed: (c) => ({
+      title: "Zahlung bestätigt",
+      body: `Der Kunde hat die Zahlung für ${svc(c, "die Einheit")} bestätigt.`,
+    }),
+    payment_disputed: (c) => ({
+      title: "Zahlung beanstandet",
+      body: `Der Kunde hat die Zahlung für ${svc(c, "die Einheit")} beanstandet. Das Team prüft das.`,
     }),
     completion_reminder: (c) => ({
       title: "Einheit durchgeführt?",
