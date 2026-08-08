@@ -93,6 +93,8 @@ silently drops loyalty points for exactly the bookings this feature is about. Th
 status write, and must also keep writing `completedAt` (which `aggregateDailyStats` counts on
 at `scheduled/index.ts:251`, and which P0-2 will build upon).
 
+Both apply **only on the `completed` branch, never on `no_show`** — see the branch table in §8.
+
 ### 5.2 `sendBookingReminders` queries the old vocabulary
 
 `functions/src/scheduled/index.ts:57` queries `where("status", "==", "confirmed")`. Once the
@@ -260,8 +262,8 @@ trainer writes to the field entirely.
 - `finalPrice` remains the authoritative price field on the Firestore document. The UI type's
   `totalPrice` (`src/types/booking.ts:75`) is **not** persisted server-side; the payment sheet
   must prefill from `finalPrice`.
-- `completedAt` keeps being written by `completeBooking` — `aggregateDailyStats` counts
-  completed sessions off it, and P0-2 extends that.
+- `completedAt` keeps being written by `completeBooking` on the `completed` branch (see §8) —
+  `aggregateDailyStats` counts completed sessions off it, and P0-2 extends that.
 - `bookingType` becomes the authoritative session-type field. Trainer sessions use
   `home_service | virtual | outdoor`; `in_venue` remains for venue bookings. `locationType`
   keeps being written for back-compat.
@@ -344,6 +346,36 @@ functions/src/bookings/
   migrate.ts      # migrateBookingStatuses
 ```
 
+### 8.0 Prerequisite: `createBooking` cannot currently create trainer sessions
+
+`fetchBookingResources` (`functions/src/bookings/index.ts:64`) **hard-requires a venue**:
+
+- it fetches `venues/{venueId}` and throws `not-found: "Venue not found"` when absent (`:71, :86`)
+- it resolves the service from the venue subcollection `venues/{venueId}/services/{serviceId}` (`:72-77, :87`)
+- its only instructor read is a name-denormalization lookup (`:91`)
+
+Trainer sessions have no venue. The existing client-side path resolves the service from
+`instructors/{providerId}/services/{serviceId}`, with a legacy fallback to inline
+`providerProfile.servicePricing[]` (`src/lib/firebookings.ts:178, 194-215`).
+
+So §10 (client create denied) plus §11.0 (callable is the only create path) would make **every
+home_service / virtual / outdoor trainer booking fail with `Venue not found`** — the exact
+sessions this feature exists to support.
+
+**Scoped work item, required before §10 lands:**
+
+1. Make `venueId` optional on `createBooking`'s input.
+2. Branch service resolution on `instructorId` presence: venue subcollection when `venueId` is
+   set, otherwise `instructors/{instructorId}/services/{serviceId}` with the inline
+   `providerProfile.servicePricing[]` fallback, matching the client path being retired.
+3. Make the denormalized `venueName` / `venueAddress` writes conditional.
+
+`calculateBookingFinancials` reads only `service.price` and carries over unchanged. Permissions
+are already fine — `customer` holds `bookings:write` (`functions/src/utils/roles.ts:92`).
+
+> **Sequencing is not optional.** The callable extension ships **before** the rules change.
+> Reversing the order breaks booking creation outright in the window between them.
+
 ### New callables
 
 | Callable | Caller | Behaviour |
@@ -419,7 +451,8 @@ existing `completeness.test.ts` enforces parity.
 
 - **read** — unchanged: owner (`userId`), assigned trainer (`instructorId`), or admin.
 - **create** — **denied for clients entirely.** Creation goes through the `createBooking`
-  callable, which §11.0 makes the only create path.
+  callable, which §11.0 makes the only create path. **Blocked on §8.0** — that callable cannot
+  create trainer sessions today, so this rule change must not ship before the extension does.
 
   The current rule's `hasOnly([...])` allowlist includes `originalPrice`, `discountAmount`,
   `homeServiceFee` and `finalPrice`, so a client can hand-craft a booking with `finalPrice: 0`.
@@ -439,7 +472,8 @@ are therefore a deny-by-default backstop rather than the enforcement layer.
 
 ### 11.0 Write-path rewiring (prerequisite)
 
-Before any new UI lands, the surfaces in §5.4 are migrated onto callables:
+Before any new UI lands, the surfaces in §5.4 are migrated onto callables. **§8.0 must land
+first** — `createBooking` cannot create trainer sessions until it does.
 
 - `src/lib/firebase/functions.ts` becomes the **only** booking write path and gains wrappers for
   the six new callables.
@@ -502,8 +536,11 @@ Firestore composite indexes are added for the two scheduled queries
 
 - Full flow works on web and an Android build.
 - E2E covers request → accept → complete → confirm.
-- Rules verified: clients create/cancel only their own; trainers act only on bookings addressed
-  to them; amounts and status are not client-editable.
+- Rules verified: clients cannot write bookings directly at all (create denied, status and
+  amounts not editable); clients can cancel only their own via the callable; trainers act only
+  on bookings addressed to them.
+- `createBooking` creates trainer sessions without a venue (§8.0), verified before the rules
+  change ships.
 - All new strings present in `it`, `en`, `es`, `fr`, `de`; `completeness.test.ts` green.
 - No direct `updateDoc`/`setDoc` writes to `bookings.status` remain outside Cloud Functions
   (verified by grep, as a checklist item).
