@@ -347,45 +347,34 @@ service cloud.firestore {
     // BOOKINGS COLLECTION
     // ============================================
 
+    // Every booking state transition runs through a Cloud Function using the Admin SDK,
+    // which bypasses these rules. They are therefore a deny-by-default backstop, not the
+    // enforcement layer. See docs/superpowers/specs/2026-08-08-booking-manual-payment-design.md §10
     match /bookings/{bookingId} {
-      // Read: Owner, assigned provider, or admin
+      // Read: Owner, assigned trainer, or admin
       allow read: if isAuthenticated() && (
         resource.data.userId == request.auth.uid ||
         resource.data.instructorId == request.auth.uid ||
         isAdmin()
       );
 
-      // Create: Customers can create their own bookings
-      allow create: if isAuthenticated() &&
-        request.resource.data.userId == request.auth.uid &&
-        request.resource.data.keys().hasOnly([
-          'userId', 'venueId', 'serviceId', 'instructorId',
-          'userName', 'userPhone', 'userEmail', 'venueName', 'venueAddress',
-          'serviceName', 'instructorName', 'bookingType', 'serviceAddress',
-          'scheduledAt', 'scheduledEndAt', 'durationMinutes', 'status',
-          'originalPrice', 'discountAmount', 'homeServiceFee', 'finalPrice',
-          'depositAmount', 'pointsUsed', 'pointsValue', 'pointsEarned',
-          'promotionId', 'promotionCode', 'depositPaid', 'paymentStatus',
-          'paymentMethod', 'stripePaymentIntentId', 'userNotes', 'internalNotes',
-          'cancelledAt', 'cancelledBy', 'cancellationReason', 'refundAmount',
-          'hasReviewed', 'reviewId', 'createdAt', 'updatedAt', 'confirmedAt', 'completedAt'
-        ]);
+      // Create: DENIED for clients. Bookings are created only by the createBooking
+      // callable, which resolves the service and computes pricing server-side.
+      //
+      // The previous rule let a client write the document directly, and its allowlist
+      // included originalPrice / discountAmount / homeServiceFee / finalPrice — so a
+      // hand-crafted request could book at finalPrice: 0.
+      allow create: if false;
 
-      // Update: Owner (limited fields), assigned provider (status), or admin
+      // Update: clients may touch only their own notes. Status, amounts and the payment
+      // confirmation are not writable from any client — not by the customer, and not by
+      // the trainer (who could otherwise self-confirm a payment for any amount).
       allow update: if isAuthenticated() && (
-        // Admin can update all bookings
         isAdmin()
       ) || (
-        // Customer can update their own booking (limited fields - mainly for cancellation)
         resource.data.userId == request.auth.uid &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'userNotes', 'cancelledAt', 'cancelledBy', 'cancellationReason', 'updatedAt'
-        ])
-      ) || (
-        // Assigned provider can update status
-        resource.data.instructorId == request.auth.uid &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'status', 'updatedAt', 'internalNotes'
+          'userNotes', 'updatedAt'
         ])
       );
 
