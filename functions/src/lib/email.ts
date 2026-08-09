@@ -1,14 +1,13 @@
 /**
  * Transactional email via Resend.
  *
- * ⚠️ POSTPONED (2026-08-08). Resend is deferred past P0-1: the account, verified sending
- * domain and DPA are not in place. This module is written and dormant — `sendEmail` returns
- * false and logs when no API key is present, which is the current state everywhere.
+ * Enabled 2026-08-09. The key lives in Secret Manager as RESEND_API_KEY; `EMAIL_SECRETS`
+ * is bound to every callable that can send. Note that merely declaring the secret here
+ * registers it with the deployment, so the CLI refuses to deploy if it is ever removed
+ * from Secret Manager — unbinding it from the callables is not enough to make it optional.
  *
- * `EMAIL_SECRETS` is deliberately NOT bound to any callable: `defineSecret` makes Firebase
- * require the secret to exist in Secret Manager at deploy time, which would block deploys
- * on the very thing being postponed. To switch email on later: provision the secret, then
- * add `secrets: EMAIL_SECRETS` back to the transition and payment callables.
+ * `sendEmail` still returns false rather than throwing when the key is absent, so the
+ * booking flow keeps working if the secret is rotated or revoked.
  *
  * Uses Resend's REST API directly rather than the `resend` SDK: Node 24 ships global
  * fetch, so this adds no dependency and cannot break the build before the package is
@@ -19,21 +18,17 @@
  */
 
 import { logger } from "firebase-functions";
+import { defineSecret } from "firebase-functions/params";
 
-// NOTE: `defineSecret("RESEND_API_KEY")` is deliberately NOT called here.
-//
-// Merely declaring a secret at module scope registers it with the deployment, and the
-// Firebase CLI then refuses to deploy without a value:
-//   "In non-interactive mode but have no value for the secret: RESEND_API_KEY"
-// Unbinding `secrets: [...]` from the callables is not sufficient — the declaration alone
-// is enough to block every deploy in this codebase.
-//
-// To switch email on:
-//   1. firebase functions:secrets:set RESEND_API_KEY
-//   2. re-add `export const RESEND_API_KEY = defineSecret("RESEND_API_KEY");`
-//      and `export const EMAIL_SECRETS = [RESEND_API_KEY];`
-//   3. add `secrets: EMAIL_SECRETS` to the transition and payment callables
-//   4. read the key from RESEND_API_KEY.value() below instead of process.env
+export const RESEND_API_KEY = defineSecret("RESEND_API_KEY");
+
+/** Attach to any callable that can send email, via `secrets: EMAIL_SECRETS`. */
+export const EMAIL_SECRETS = [RESEND_API_KEY];
+
+/**
+ * Resend rejects any From address whose domain is not verified in the account, so this
+ * must match a verified domain. Override with the EMAIL_FROM env var.
+ */
 const FROM_ADDRESS = process.env.EMAIL_FROM || "V Fitness <noreply@vfitness.it>";
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
 
@@ -84,8 +79,14 @@ function escapeHtml(value: string): string {
  *          Never throws.
  */
 export async function sendEmail(args: SendEmailArgs): Promise<boolean> {
-  // While Resend is postponed this is always undefined, so sendEmail is a logged no-op.
-  const apiKey = process.env.RESEND_API_KEY;
+  // .value() throws outside a function that declares the secret; fall back to the env var
+  // so local runs and tests behave rather than crash.
+  let apiKey: string | undefined;
+  try {
+    apiKey = RESEND_API_KEY.value();
+  } catch {
+    apiKey = process.env.RESEND_API_KEY;
+  }
 
   if (!apiKey) {
     // Expected before the Resend account is provisioned. The rest of the flow works.

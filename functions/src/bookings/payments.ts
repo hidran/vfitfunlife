@@ -11,6 +11,7 @@
 
 import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
+import { EMAIL_SECRETS } from "../lib/email";
 import { notifyTransition } from "./notify";
 import { applyTransition } from "./transitionCallables";
 import { PAYMENT_CONFIRMATION_METHODS, type PaymentConfirmationMethod } from "./types";
@@ -54,7 +55,7 @@ function validateMethod(raw: unknown): PaymentConfirmationMethod {
 }
 
 export const confirmBookingPayment = onCall<ConfirmPaymentRequest>(
-  { region },
+  { region, secrets: EMAIL_SECRETS },
   (request: CallableRequest<ConfirmPaymentRequest>) => {
     // Authenticate before validating arguments. Otherwise an anonymous caller gets
     // INVALID_ARGUMENT instead of UNAUTHENTICATED, which leaks the expected payload shape
@@ -100,7 +101,7 @@ interface RespondToPaymentRequest {
  * stays `payment_confirmed` — so it does not go through `applyTransition`.
  */
 export const respondToPaymentConfirmation = onCall<RespondToPaymentRequest>(
-  { region },
+  { region, secrets: EMAIL_SECRETS },
   async (request: CallableRequest<RespondToPaymentRequest>) => {
     if (!request.auth) throw new HttpsError("unauthenticated", "Must be authenticated");
 

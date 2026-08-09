@@ -13,6 +13,7 @@ import * as admin from "firebase-admin";
 import { logger } from "firebase-functions";
 import { getUserRoleInfo } from "../utils/roles";
 import { writeAuditLog } from "../lib/audit";
+import { EMAIL_SECRETS } from "../lib/email";
 import { canTransition } from "./transitions";
 import { notifyTransition } from "./notify";
 import type { BookingStatus, StatusActorRole, TransitionActorRole } from "./types";
@@ -168,7 +169,7 @@ export async function applyTransition(opts: ApplyTransitionOptions) {
 }
 
 export const acceptBooking = onCall<TransitionRequest>(
-  { region },
+  { region, secrets: EMAIL_SECRETS },
   (request) => applyTransition({
     request,
     to: "accepted",
@@ -181,7 +182,7 @@ export const acceptBooking = onCall<TransitionRequest>(
 );
 
 export const declineBooking = onCall<TransitionRequest>(
-  { region },
+  { region, secrets: EMAIL_SECRETS },
   (request) => applyTransition({
     request,
     to: "declined",
@@ -190,7 +191,7 @@ export const declineBooking = onCall<TransitionRequest>(
 );
 
 export const cancelBookingAsTrainer = onCall<TransitionRequest>(
-  { region },
+  { region, secrets: EMAIL_SECRETS },
   (request) => applyTransition({
     request,
     to: "cancelled_by_trainer",
@@ -219,7 +220,7 @@ interface CompleteRequest extends TransitionRequest {
  * no-show must not inflate it. Spec §8.
  */
 export const completeBooking = onCall<CompleteRequest>(
-  { region },
+  { region, secrets: EMAIL_SECRETS },
   (request) => {
     const noShow = request.data?.noShow === true;
 
