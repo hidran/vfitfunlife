@@ -171,3 +171,44 @@ describe("screenRecipe (output)", () => {
     })).not.toBeNull();
   });
 });
+
+import { buildRecipesPrompt } from "../src/recipes/prompt";
+
+describe("buildRecipesPrompt", () => {
+  const params = {
+    count: 2, servings: 4, dietStyle: "vegetariana" as const,
+    excludes: ["lattosio" as const], orientation: "piatti_leggeri" as const,
+    cuisine: "mediterranea" as const, maxPrepMinutes: 30 as const, budget: "economico" as const,
+  };
+
+  it("renders the enum selections as natural language", () => {
+    const prompt = buildRecipesPrompt({ params, ingredients: [], locale: "it" });
+    expect(prompt).toContain("Italian");
+    expect(prompt).toContain("2");
+    expect(prompt).toContain("vegetarian");
+    expect(prompt).toContain("30");
+  });
+
+  it("includes sanitized ingredients when present", () => {
+    const prompt = buildRecipesPrompt({ params, ingredients: ["pollo", "zucchine"], locale: "it" });
+    expect(prompt).toContain("pollo");
+    expect(prompt).toContain("zucchine");
+  });
+
+  it("states the prohibitions explicitly", () => {
+    const prompt = buildRecipesPrompt({ params, ingredients: [], locale: "it" });
+    expect(prompt.toLowerCase()).toContain("meal plan");
+    expect(prompt.toLowerCase()).toContain("medical");
+    expect(prompt.toLowerCase()).toContain("preference");
+  });
+
+  it("frames the exclusion list as a taste preference, not a health matter", () => {
+    // Assert on the exclusion LINE, not on the whole prompt: the hard-rules block
+    // legitimately contains the words "intolerance" and "allergy" while forbidding them
+    // as framings. A whole-prompt `not.toContain` would force deleting that rule.
+    const line = buildRecipesPrompt({ params, ingredients: [], locale: "it" })
+      .split("\n").find((l) => l.includes("lactose"));
+    expect(line).toContain("TASTE PREFERENCE");
+    expect(line).not.toContain("intolerance");
+  });
+});
