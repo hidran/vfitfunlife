@@ -24,6 +24,10 @@
   `3 failed | 19 passed` files, `13 failed | 176 passed | 20 skipped` tests. The functions
   failures are `booking-rules`, `profile-rules` and `profile`, which need the Firestore
   emulator and fail without it.
+- **With** the emulator running, the real baseline is `2 failed | 239 passed` tests — only two
+  avatar-URL-regex cases in `profile.test.ts`, unrelated to anything here. `booking-rules` and
+  `profile-rules` both pass. So under `firebase emulators:exec`, expect exactly those two
+  failures and nothing else.
 
 So: **always run `npx vitest run <path>` scoped to the files the task touches.** Never gate on
 a whole-suite green, because there isn't one. When a task needs the emulator, wrap it:
