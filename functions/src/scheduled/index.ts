@@ -2,7 +2,7 @@ import { logger } from "firebase-functions";
 import { onSchedule, ScheduledEvent } from "firebase-functions/v2/scheduler";
 import { onDocumentUpdated } from "firebase-functions/v2/firestore";
 import * as admin from "firebase-admin";
-import { subHours, addDays, startOfDay, endOfDay } from "date-fns";
+import { subHours, addDays } from "date-fns";
 import { sendPushToUser } from "../notifications";
 import { buildMessage } from "../notifications/bookingMessages";
 
@@ -335,63 +335,14 @@ export const expirePromotions = onSchedule(
 );
 
 /**
- * Daily stats aggregation (runs at 2 AM)
+ * Daily stats aggregation was REMOVED in P0-2 (2026-08-09).
+ *
+ * It wrote a `dailyStats` collection that nothing ever read. Its replacement is
+ * `aggregateMetricsDaily` in functions/src/metrics/daily.ts, which computes the full
+ * metric set into `metrics_daily`. The Cloud Scheduler job for this function must be
+ * deleted so two jobs do not write overlapping aggregates.
  */
-export const aggregateDailyStats = onSchedule(
-  {
-    region,
-    schedule: "0 2 * * *",
-    timeZone: "Europe/Rome",
-  },
-  async (_event: ScheduledEvent) => {
-    const yesterday = startOfDay(addDays(new Date(), -1));
-    const yesterdayEnd = endOfDay(yesterday);
 
-    const startTimestamp = admin.firestore.Timestamp.fromDate(yesterday);
-    const endTimestamp = admin.firestore.Timestamp.fromDate(yesterdayEnd);
-
-    // Count new users
-    const newUsers = await db
-      .collection("users")
-      .where("createdAt", ">=", startTimestamp)
-      .where("createdAt", "<=", endTimestamp)
-      .count()
-      .get();
-
-    // Count bookings
-    const bookings = await db
-      .collection("bookings")
-      .where("createdAt", ">=", startTimestamp)
-      .where("createdAt", "<=", endTimestamp)
-      .get();
-
-    const totalRevenue = bookings.docs.reduce((sum, doc) => {
-      const data = doc.data();
-      return data.paymentStatus === "paid" ? sum + data.finalPrice : sum;
-    }, 0);
-
-    // Count completed sessions
-    const completedSessions = await db
-      .collection("bookings")
-      .where("completedAt", ">=", startTimestamp)
-      .where("completedAt", "<=", endTimestamp)
-      .count()
-      .get();
-
-    // Save daily stats
-    const dateStr = yesterday.toISOString().split("T")[0];
-    await db.collection("dailyStats").doc(dateStr).set({
-      date: startTimestamp,
-      newUsers: newUsers.data().count,
-      totalBookings: bookings.size,
-      completedSessions: completedSessions.data().count,
-      totalRevenue,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-
-    logger.info(`Daily stats aggregated for ${dateStr}`);
-  }
-);
 
 /**
  * Clean up old notifications (runs weekly)

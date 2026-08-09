@@ -16,3 +16,4 @@ export * from "./ai/chat";
 export * from "./ai/admin";
 export * from "./ai/authoring/generate";
 export * from "./ai/authoring/admin";
+export * from "./metrics";
