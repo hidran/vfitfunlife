@@ -2175,7 +2175,7 @@ export const itMessages = {
   'provider.payment.cancel': 'Annulla',
   'provider.payment.error': 'Impossibile registrare il pagamento. Riprova.',
   'booking.payment.banner.title': 'Conferma il pagamento',
-  'booking.payment.banner.body': 'Il trainer ha confermato il pagamento di {amount} € — confermi?',
+  'booking.payment.banner.body': 'Il trainer ha confermato il pagamento di {{amount}} € — confermi?',
   'booking.payment.confirm': 'Confermo',
   'booking.payment.dispute': 'Contesta',
   'booking.payment.disputeReason': 'Cosa non torna?',

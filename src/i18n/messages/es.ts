@@ -2151,7 +2151,7 @@ export const esMessages: Messages = {
   'provider.payment.cancel': 'Cancelar',
   'provider.payment.error': 'No se pudo registrar el pago. Inténtalo de nuevo.',
   'booking.payment.banner.title': 'Confirma el pago',
-  'booking.payment.banner.body': 'Tu entrenador ha registrado un pago de {amount} € — ¿lo confirmas?',
+  'booking.payment.banner.body': 'Tu entrenador ha registrado un pago de {{amount}} € — ¿lo confirmas?',
   'booking.payment.confirm': 'Confirmo',
   'booking.payment.dispute': 'Cuestionar',
   'booking.payment.disputeReason': '¿Qué no cuadra?',

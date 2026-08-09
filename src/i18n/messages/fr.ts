@@ -2160,7 +2160,7 @@ export const frMessages: Messages = {
   'provider.payment.cancel': 'Annuler',
   'provider.payment.error': 'Impossible d enregistrer le paiement. Réessayez.',
   'booking.payment.banner.title': 'Confirmez le paiement',
-  'booking.payment.banner.body': 'Votre coach a enregistré un paiement de {amount} € — confirmez-vous ?',
+  'booking.payment.banner.body': 'Votre coach a enregistré un paiement de {{amount}} € — confirmez-vous ?',
   'booking.payment.confirm': 'Je confirme',
   'booking.payment.dispute': 'Contester',
   'booking.payment.disputeReason': 'Quel est le problème ?',

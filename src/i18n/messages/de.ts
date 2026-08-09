@@ -2158,7 +2158,7 @@ export const deMessages: Messages = {
   'provider.payment.cancel': 'Abbrechen',
   'provider.payment.error': 'Zahlung konnte nicht erfasst werden. Bitte erneut versuchen.',
   'booking.payment.banner.title': 'Zahlung bestätigen',
-  'booking.payment.banner.body': 'Dein Trainer hat eine Zahlung von {amount} € erfasst — bestätigen?',
+  'booking.payment.banner.body': 'Dein Trainer hat eine Zahlung von {{amount}} € erfasst — bestätigen?',
   'booking.payment.confirm': 'Bestätigen',
   'booking.payment.dispute': 'Beanstanden',
   'booking.payment.disputeReason': 'Was stimmt nicht?',

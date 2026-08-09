@@ -2175,7 +2175,7 @@ export const enMessages: Messages = {
   'provider.payment.cancel': 'Cancel',
   'provider.payment.error': 'Could not record the payment. Please try again.',
   'booking.payment.banner.title': 'Confirm the payment',
-  'booking.payment.banner.body': 'Your trainer recorded a payment of {amount} € — confirm?',
+  'booking.payment.banner.body': 'Your trainer recorded a payment of {{amount}} € — confirm?',
   'booking.payment.confirm': 'Confirm',
   'booking.payment.dispute': 'Dispute',
   'booking.payment.disputeReason': 'What is wrong?',

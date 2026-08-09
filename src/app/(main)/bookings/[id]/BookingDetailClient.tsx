@@ -22,6 +22,7 @@ import { motion } from 'framer-motion';
 import { cn, formatPrice } from '@/lib/utils';
 import { buildFallbackBooking } from '@/lib/bookingUtils';
 import { useBookingStore } from '@/stores/bookingStore';
+import { useAuthStore } from '@/stores/authStore';
 import { PaymentConfirmationBanner } from '@/components/booking/PaymentConfirmationBanner';
 import { respondToPaymentConfirmation } from '@/lib/firebase/functions';
 import { wouldBeLateCancellation } from '@/lib/bookingStatus';
@@ -32,7 +33,14 @@ import { Button } from '@/components/ui/button';
 import { Badge, type BadgeProps } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
 import { GoogleMap } from '@/components/map/GoogleMap';
-import { BOOKING_STATUS_META, isCancelled, canClientCancel } from '@/lib/bookingStatus';
+import {
+  BOOKING_STATUS_META,
+  isCancelled,
+  isActive,
+  canClientCancel,
+  canReschedule as canRescheduleBooking,
+  canReview as canReviewBooking,
+} from '@/lib/bookingStatus';
 import type { Booking, BookingStatus } from '@/types/booking';
 
 const statusIcons: Record<BookingStatus, LucideIcon> = {
@@ -70,9 +78,25 @@ export default function BookingDetailPage() {
     currentBooking,
     updateBookingInList,
     updateCurrentBooking,
+    fetchUserBookings,
+    isLoadingBookings,
   } = useBookingStore();
+  const { user } = useAuthStore();
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [localBookingOverride, setLocalBookingOverride] = useState<Booking | null>(null);
+
+  // Deep links (push notifications, emailed links, a shared URL) land here with an empty
+  // store, and the render below falls back to a SYNTHETIC booking — so without this the
+  // client sees fabricated data instead of their real one.
+  //
+  // Gated on `user`: Firebase restores the session asynchronously, so fetching on mount
+  // alone would run before there is a uid and never retry.
+  useEffect(() => {
+    if (user?.uid && userBookings.length === 0 && !isLoadingBookings) {
+      void fetchUserBookings(user.uid);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid]);
 
   const storeBooking = useMemo(() => {
     return (
@@ -196,9 +220,10 @@ export default function BookingDetailPage() {
   const statusLabel = t(statusEntry.labelKey as Parameters<typeof t>[0]);
   const scheduledAt = booking.scheduledAt.toDate();
   const isPast = scheduledAt < new Date();
-  const canCancel = (booking.status === 'accepted' || booking.status === 'requested') && !isPast;
-  const canReschedule = booking.status === 'accepted' && !isPast;
-  const canReview = booking.status === 'completed' && !booking.hasReviewed;
+  // Derived from the shared helpers so these gates cannot drift from the status machine.
+  const canCancel = canClientCancel(booking.status) && !isPast;
+  const canReschedule = canRescheduleBooking(booking.status, isPast);
+  const canReview = canReviewBooking(booking.status, booking.hasReviewed);
 
   return (
     <div className="min-h-screen bg-background-dark">
@@ -276,6 +301,15 @@ export default function BookingDetailPage() {
       </div>
 
       <div className="p-4 space-y-4 pb-32">
+        {/* The trainer recorded an off-platform payment; the client confirms or disputes.
+            Optional — silence auto-confirms after 48h. */}
+        {booking.paymentConfirmation && (
+          <PaymentConfirmationBanner
+            confirmation={booking.paymentConfirmation}
+            onRespond={handleRespondToPayment}
+          />
+        )}
+
         {/* Status Card */}
         <div className="bg-surface-elevated/50 rounded-2xl p-4">
           <div className="flex items-center justify-between">
@@ -328,7 +362,7 @@ export default function BookingDetailPage() {
         </div>
 
         {/* Check-in ticket */}
-        {!isCancelled(booking.status) && (
+        {isActive(booking.status) && (
           <div className="bg-surface-elevated/60 rounded-2xl border border-hairline p-4">
             <div className="mb-3 flex items-center justify-between">
               <div>
@@ -389,7 +423,7 @@ export default function BookingDetailPage() {
             </div>
           </div>
 
-          {!isPast && !isCancelled(booking.status) && (
+          {!isPast && isActive(booking.status) && (
             <button
               onClick={handleAddToCalendar}
               className="w-full mt-2 py-2.5 bg-surface-2 rounded-xl text-sm font-medium text-content hover:bg-white/20 transition-colors flex items-center justify-center gap-2"
