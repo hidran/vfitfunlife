@@ -126,6 +126,12 @@ export async function sendEmail(args: SendEmailArgs): Promise<boolean> {
       });
       return false;
     }
+
+    // Log the accepted send too. Without this, "no error" is indistinguishable from
+    // "never attempted" — which is exactly how a silently-misconfigured sending domain
+    // looks from the outside. The id is Resend's, for cross-referencing in their console.
+    const sent = (await res.json().catch(() => ({}))) as { id?: string };
+    logger.info("[email] accepted by provider", { to: args.to, id: sent.id ?? "unknown" });
     return true;
   } catch (err) {
     // Swallowed deliberately: a transition must not fail because email did.
