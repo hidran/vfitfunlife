@@ -15,6 +15,7 @@ const patchSchema = z.object({
   temperature: z.number().min(0).max(2).optional(),
   maxOutputTokens: z.number().int().min(256).max(8192).optional(),
   dailyQuota: z.number().int().min(0).max(500).optional(),
+  recipeClientDailyQuota: z.number().int().min(0).max(100).optional(),
   systemPromptOverride: z.string().max(4000).optional(),
 });
 

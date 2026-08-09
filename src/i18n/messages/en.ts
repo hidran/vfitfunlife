@@ -2802,6 +2802,7 @@ export const enMessages: Messages = {
   'admin.settings.authoring.temperature': 'Temperature',
   'admin.settings.authoring.maxOutputTokens': 'Max output tokens',
   'admin.settings.authoring.dailyQuota': 'Generations/day limit',
+  'admin.settings.authoring.recipeClientDailyQuota': 'Client daily quota (recipes)',
   'admin.settings.authoring.systemPrompt': 'System instructions (optional)',
   'admin.settings.authoring.keyStatus': 'API key status',
   'admin.settings.authoring.testConnection': 'Test connection',

@@ -10,6 +10,7 @@ export interface AiAuthoringSettings {
   temperature: number;
   maxOutputTokens: number;
   dailyQuota: number;
+  recipeClientDailyQuota: number;
   systemPromptOverride?: string;
   updatedAt?: FirebaseFirestore.Timestamp;
   updatedBy?: string;
@@ -22,6 +23,7 @@ export const DEFAULT_AI_AUTHORING_SETTINGS: AiAuthoringSettings = {
   temperature: 0.4,
   maxOutputTokens: 4096,
   dailyQuota: 20,
+  recipeClientDailyQuota: 3,
 };
 
 /** Merge a partial stored settings doc over the defaults. */

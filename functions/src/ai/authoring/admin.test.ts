@@ -16,11 +16,13 @@ describe("validateAuthoringPatch", () => {
       temperature: 0.4,
       maxOutputTokens: 4096,
       dailyQuota: 20,
+      recipeClientDailyQuota: 3,
       systemPromptOverride: "Be concise.",
     });
     expect(v.provider).toBe("google");
     expect(v.maxOutputTokens).toBe(4096);
     expect(v.dailyQuota).toBe(20);
+    expect(v.recipeClientDailyQuota).toBe(3);
   });
 
   it("rejects unknown provider", () => {
@@ -33,6 +35,8 @@ describe("validateAuthoringPatch", () => {
     expect(() => validateAuthoringPatch({ maxOutputTokens: 9000 })).toThrow();
     expect(() => validateAuthoringPatch({ dailyQuota: -1 })).toThrow();
     expect(() => validateAuthoringPatch({ dailyQuota: 1000 })).toThrow();
+    expect(() => validateAuthoringPatch({ recipeClientDailyQuota: -1 })).toThrow();
+    expect(() => validateAuthoringPatch({ recipeClientDailyQuota: 200 })).toThrow();
   });
 
   it("rejects an over-long systemPromptOverride", () => {

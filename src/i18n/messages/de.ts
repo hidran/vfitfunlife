@@ -2785,6 +2785,7 @@ export const deMessages: Messages = {
   'admin.settings.authoring.temperature': 'Temperatur',
   'admin.settings.authoring.maxOutputTokens': 'Max. Ausgabe-Tokens',
   'admin.settings.authoring.dailyQuota': 'Generierungen/Tag-Limit',
+  'admin.settings.authoring.recipeClientDailyQuota': 'Tageskontingent für Kunden (Rezepte)',
   'admin.settings.authoring.systemPrompt': 'Systemanweisungen (optional)',
   'admin.settings.authoring.keyStatus': 'API-Schlüsselstatus',
   'admin.settings.authoring.testConnection': 'Verbindung testen',

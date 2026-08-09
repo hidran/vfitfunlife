@@ -381,6 +381,7 @@ export interface AiAuthoringSettings {
   temperature: number;
   maxOutputTokens: number;
   dailyQuota: number;
+  recipeClientDailyQuota: number;
   systemPromptOverride?: string;
 }
 

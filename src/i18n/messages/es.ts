@@ -2778,6 +2778,7 @@ export const esMessages: Messages = {
   'admin.settings.authoring.temperature': 'Temperatura',
   'admin.settings.authoring.maxOutputTokens': 'Tokens máximos de salida',
   'admin.settings.authoring.dailyQuota': 'Límite de generaciones/día',
+  'admin.settings.authoring.recipeClientDailyQuota': 'Cuota diaria de clientes (recetas)',
   'admin.settings.authoring.systemPrompt': 'Instrucciones del sistema (opcional)',
   'admin.settings.authoring.keyStatus': 'Estado de claves API',
   'admin.settings.authoring.testConnection': 'Probar conexión',

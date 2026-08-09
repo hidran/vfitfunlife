@@ -2787,6 +2787,7 @@ export const frMessages: Messages = {
   'admin.settings.authoring.temperature': 'Température',
   'admin.settings.authoring.maxOutputTokens': 'Tokens de sortie max',
   'admin.settings.authoring.dailyQuota': 'Limite de générations/jour',
+  'admin.settings.authoring.recipeClientDailyQuota': 'Quota quotidien clients (recettes)',
   'admin.settings.authoring.systemPrompt': 'Instructions système (facultatif)',
   'admin.settings.authoring.keyStatus': 'État des clés API',
   'admin.settings.authoring.testConnection': 'Tester la connexion',

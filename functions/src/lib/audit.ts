@@ -3,7 +3,7 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 export interface ServerAuditPayload {
   actorUid: string;
   actorEmail: string;
-  actorRole: "admin" | "superadmin";
+  actorRole: "admin" | "superadmin" | "provider" | "client";
   action:
     | "create"
     | "update"
@@ -22,7 +22,8 @@ export interface ServerAuditPayload {
     | "user_type"
     | "migration"
     | "ai_settings"
-    | "ai_plan";
+    | "ai_plan"
+    | "recipe";
   entityId: string;
   before?: Record<string, unknown>;
   after?: Record<string, unknown>;

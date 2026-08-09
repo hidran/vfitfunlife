@@ -42,6 +42,7 @@ export function AiAuthoringSettings() {
         temperature: settings.temperature,
         maxOutputTokens: settings.maxOutputTokens,
         dailyQuota: settings.dailyQuota,
+        recipeClientDailyQuota: settings.recipeClientDailyQuota,
         systemPromptOverride: settings.systemPromptOverride?.trim() || undefined,
       });
     } finally {
@@ -149,6 +150,18 @@ export function AiAuthoringSettings() {
             onChange={(e) => {
               const n = parseInt(e.target.value, 10);
               if (!Number.isNaN(n)) set("dailyQuota", n);
+            }}
+          />
+        </div>
+        <div>
+          <label className={label}>{t("admin.settings.authoring.recipeClientDailyQuota")}</label>
+          <input
+            className={input}
+            type="number"
+            value={settings.recipeClientDailyQuota}
+            onChange={(e) => {
+              const n = parseInt(e.target.value, 10);
+              if (!Number.isNaN(n)) set("recipeClientDailyQuota", n);
             }}
           />
         </div>
