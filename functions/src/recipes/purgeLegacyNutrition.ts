@@ -88,7 +88,11 @@ export const purgeLegacyNutritionData = onCall<PurgeReq>({ region }, async (
 
   let exportPath: string | null = null;
   if (found.length) {
-    exportPath = `legal-purge/nutrition-${new Date().toISOString()}.json`;
+    // Colons are legal in GCS object names but need quoting in a shell and escaping in a
+    // URL. This export is the evidence that a deletion happened, so someone may well be
+    // fetching it by hand under time pressure; keep the name paste-able.
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    exportPath = `legal-purge/nutrition-${stamp}.json`;
     try {
       const file = admin.storage().bucket().file(exportPath);
       // `resumable: false` — a single-request upload for a small payload; a resumable
