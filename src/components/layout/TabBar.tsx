@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Dumbbell, PartyPopper, Plus, Sparkles, User } from 'lucide-react';
 import { useI18n } from '@/hooks/useI18n';
 import { useSection, type Section } from '@/contexts/SectionContext';
+import { useVisibleSections } from '@/hooks/usePilotFlags';
 import { cn } from '@/lib/utils';
 
 interface SectionTab {
@@ -18,7 +19,7 @@ interface RouteTab {
   icon: typeof User;
 }
 
-const sectionTabs: SectionTab[] = [
+const ALL_SECTION_TABS: SectionTab[] = [
   { section: 'fit', label: 'VFit', icon: Dumbbell },
   { section: 'fun', label: 'VFun', icon: PartyPopper },
   { section: 'life', label: 'VLife', icon: Sparkles },
@@ -53,6 +54,7 @@ export function TabBar() {
   const router = useRouter();
   const { t } = useI18n();
   const { section, setSection } = useSection();
+  const visibleSections = useVisibleSections();
   const ProfileIcon = profileTab.icon;
 
   const handleRoutePush = (href: string) => {
@@ -67,6 +69,16 @@ export function TabBar() {
   const isBookingActive = pathname?.startsWith('/booking');
   const isProfileActive = pathname?.startsWith('/profile');
 
+  // Hidden sections are filtered rather than removed from the source list, so re-enabling
+  // one from the Firebase console needs no release.
+  const sectionTabs = ALL_SECTION_TABS.filter((tab) => visibleSections.includes(tab.section));
+  const splitAt = Math.ceil(sectionTabs.length / 2);
+  const leftTabs = sectionTabs.slice(0, splitAt);
+  const rightTabs = sectionTabs.slice(splitAt);
+  // +2 for the centre booking button and the profile tab: with VFun/VLife hidden a fixed
+  // grid-cols-5 would leave two dead columns and push the layout off-centre.
+  const columns = sectionTabs.length + 2;
+
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200/80 bg-white/95 backdrop-blur-md"
@@ -74,8 +86,11 @@ export function TabBar() {
       aria-label={t('tab.mainNavigation')}
     >
       <div className="pb-safe">
-        <div className="relative grid h-16 grid-cols-5 items-center px-2">
-          {sectionTabs.slice(0, 2).map((tab) => {
+        <div
+            className="relative grid h-16 items-center px-2"
+            style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
+          >
+          {leftTabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = section === tab.section && matchesSectionRoute(pathname, tab.section);
 
@@ -131,7 +146,7 @@ export function TabBar() {
             </span>
           </button>
 
-          {sectionTabs.slice(2).map((tab) => {
+          {rightTabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = section === tab.section && matchesSectionRoute(pathname, tab.section);
 

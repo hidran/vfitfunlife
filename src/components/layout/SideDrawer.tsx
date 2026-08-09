@@ -24,6 +24,7 @@ import {
   Youtube,
 } from 'lucide-react';
 import { useI18n } from '@/hooks/useI18n';
+import { useVisibleSections } from '@/hooks/usePilotFlags';
 import { useSection, type Section } from '@/contexts/SectionContext';
 import { cn, formatPrice } from '@/lib/utils';
 import { Avatar } from '@/components/ui/Avatar';
@@ -62,7 +63,7 @@ const drawerLinks: DrawerLinkItem[] = [
   { href: '/help', icon: HelpCircle, labelKey: 'common.helpCenter' },
 ];
 
-const sectionPills: Array<{ section: Section; label: string; icon: typeof Dumbbell }> = [
+const ALL_SECTION_PILLS: Array<{ section: Section; label: string; icon: typeof Dumbbell }> = [
   { section: 'fit', label: 'VFit', icon: Dumbbell },
   { section: 'fun', label: 'VFun', icon: Sparkles },
   { section: 'life', label: 'VLife', icon: Tv },
@@ -102,6 +103,9 @@ export function SideDrawer({
   const router = useRouter();
   const pathname = usePathname();
   const { section, setSection } = useSection();
+  const visibleSections = useVisibleSections();
+  // Filtered, never deleted — a section returns by flipping a Remote Config flag.
+  const sectionPills = ALL_SECTION_PILLS.filter((p) => visibleSections.includes(p.section));
   const { t } = useI18n();
   const logout = useAuthStore((state) => state.logout);
   const isLoading = useAuthStore((state) => state.isLoading);
@@ -306,7 +310,9 @@ export function SideDrawer({
               <h3 className="mt-2 text-lg font-bold text-slate-900">{t('drawer.category.vfit')}</h3>
 
               <div className="mt-3 grid grid-cols-2 gap-y-2">
-                {categoryLinks.map((category) => (
+                {categoryLinks
+                  .filter((c) => !c.section || visibleSections.includes(c.section))
+                  .map((category) => (
                   <button
                     key={category.href}
                     type="button"

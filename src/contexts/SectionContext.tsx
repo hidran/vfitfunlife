@@ -35,6 +35,20 @@ const getInitialSection = (): Section => {
 export function SectionProvider({ children }: { children: ReactNode }) {
   const [section, setSection] = useState<Section>(getInitialSection);
 
+  // A returning user whose stored preference is a hidden section would otherwise boot
+  // straight into it. Hiding the entrances is not enough — the preference itself has to be
+  // coerced back. Imported lazily to keep Remote Config out of the module graph on the
+  // server render pass under output:'export'.
+  useEffect(() => {
+    let cancelled = false;
+    void import('@/lib/firebase/remoteConfig').then(async ({ loadPilotFlags, isSectionVisible }) => {
+      const flags = await loadPilotFlags();
+      if (cancelled) return;
+      setSection((current) => (isSectionVisible(current, flags) ? current : 'fit'));
+    });
+    return () => { cancelled = true; };
+  }, []);
+
   // Apply section to document for CSS theming
   useEffect(() => {
     document.documentElement.setAttribute('data-section', section);
