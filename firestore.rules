@@ -498,6 +498,13 @@ service cloud.firestore {
       allow write: if isSuperAdmin();
     }
 
+    // Shared exercise library. Readable by anyone signed in (clients see the movements in
+    // their scheda); written only by the seed callable.
+    match /exercises/{exerciseId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
     // Recruitment leads from the public /diventa-trainer page.
     //
     // Writes go exclusively through the submitTrainerLead callable, which validates the
