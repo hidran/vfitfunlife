@@ -21,3 +21,4 @@ export * from "./leads";
 export * from "./ai/authoring/generateWorkoutPlan";
 export * from "./exercises/seed";
 export * from "./recipes/generateRecipes";
+export * from "./recipes/purgeLegacyNutrition";
