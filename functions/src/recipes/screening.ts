@@ -76,7 +76,12 @@ export const OUTPUT_DENYLIST = [
   "perdere peso", "weight loss", "meal plan",
   // diagnosis framing — spec §7.1: an exclusion is a preference, never a medical fact.
   // The prompt forbids this framing; these two enforce it on the way back.
-  "intolleran", "allerg",
+  //
+  // "allergi" and NOT "allerg": EU food labelling makes "allergeni" standard vocabulary in
+  // Italian recipe writing, so the shorter stem would drop "contiene allergeni: frutta a
+  // guscio" — the same class of false positive that got "cura per" removed below. "allergi"
+  // still catches allergia/allergico/allergie, which are the diagnosis words.
+  "intolleran", "allergi",
   // clinical framing
   //
   // NOTE: "cura per" was here and was REMOVED. Do not add it back. It substring-matches the

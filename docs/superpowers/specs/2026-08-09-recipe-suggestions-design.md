@@ -333,7 +333,7 @@ The output list targets only what is actually forbidden:
 | Category | Patterns |
 |---|---|
 | Medical conditions | `diabet*`, `ipertens*`, `colesterol*`, `tiroid*`, `celiac*`, `gastrit*`, `reflusso`, `ulcera`, `tumor*`, `oncolog*`, `insufficienza renale`, `epatic*`, `gravidanza`, `allattamento`, `menopaus*`, `anoress*`, `bulim*`, `obes*`, `patolog*`, `diabetes`, `hypertension`, `cholesterol` |
-| Diagnosis framing | `intolleran*`, `allerg*` — §7.1 calls the preference-vs-diagnosis distinction the whole point, so "adatta a chi ha una intolleranza al lattosio" must not survive while "senza lattosio" must |
+| Diagnosis framing | `intolleran*`, `allergi*` — §7.1 calls the preference-vs-diagnosis distinction the whole point, so "adatta a chi ha una intolleranza al lattosio" must not survive while "senza lattosio" must. The stem is `allergi`, **not** `allerg`: EU food labelling makes *allergeni* ordinary recipe vocabulary, so the shorter stem would drop "contiene allergeni: frutta a guscio" — the same false-positive class as `cura per` below. `allergi` still catches *allergia*/*allergico*/*allergie* |
 | Per-person prescription | `dieta personalizzata`, `piano alimentare`, `la tua dieta`, `il tuo fabbisogno`, `fabbisogno calorico`, `deficit calorico`, `dieta dimagrante`, `per dimagrire`, `perdere peso`, `weight loss`, `meal plan` |
 | Clinical framing | `prescriv*`, `terapia`, `terapeutic*`, `indicato per chi soffre`, `consigliato in caso di` |
 

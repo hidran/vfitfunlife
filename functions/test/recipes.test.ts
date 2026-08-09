@@ -201,6 +201,13 @@ describe("screenRecipe (output)", () => {
       ...base,
       steps: [...base.steps, "Adatta a chi segue una dieta vegetariana."],
     })).toBeNull();
+    // "allergi" not "allerg": EU labelling makes "allergeni" ordinary recipe vocabulary,
+    // while allergia/allergico are the diagnosis words we actually mean to catch.
+    expect(screenRecipe({ ...base, tags: ["contiene allergeni: frutta a guscio"] })).toBeNull();
+    expect(screenRecipe({
+      ...base,
+      steps: [...base.steps, "Sconsigliata a chi è allergico alle arachidi."],
+    })).not.toBeNull();
   });
 
   it("screens ingredient quantities, where a model can also put prose", () => {
