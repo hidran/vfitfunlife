@@ -58,7 +58,7 @@ a whole-suite green, because there isn't one. When a task needs the emulator, wr
 | `src/components/recipes/ShareRecipeModal.tsx` | Trainer-only share picker |
 | `src/app/(main)/recipes/page.tsx` + `RecipesClient.tsx` | Client-facing page |
 
-**Modified:** `functions/src/ai/authoring/{schemas,prompts,generate,settings,admin}.ts`, their tests, `functions/src/lib/audit.ts`, `functions/src/index.ts`, `firestore.rules`, `firestore.indexes.json`, `src/types/clientPlans.ts`, `src/lib/firebase/{clientPlans,functions}.ts`, `src/app/(main)/provider/clients/detail/ClientDetailClient.tsx`, `.../tabs/RecipesTab.tsx`, `.../tabs/editors/RecipeEditor.tsx`, `src/components/layout/SideDrawer.tsx`, `src/i18n/messages/*.ts`, `src/app/admin/settings/page.tsx`, three docs.
+**Modified:** `functions/src/ai/authoring/{schemas,prompts,generate,settings,admin}.ts`, their tests, `functions/src/lib/audit.ts`, `functions/src/index.ts`, `firestore.rules`, `firestore.indexes.json`, `src/types/clientPlans.ts`, `src/lib/firebase/{clientPlans,functions}.ts`, `src/app/(main)/provider/clients/detail/ClientDetailClient.tsx`, `.../tabs/RecipesTab.tsx`, `.../tabs/editors/RecipeEditor.tsx`, `src/components/layout/SideDrawer.tsx`, `src/i18n/messages/*.ts`, `src/components/admin/settings/AiAuthoringSettings.tsx` (**not** `src/app/admin/settings/page.tsx` — the quota input lives in the component), three docs.
 
 **Deleted:** `.../tabs/DietTab.tsx`, `.../tabs/editors/DietPlanEditor.tsx`.
 
@@ -1128,6 +1128,18 @@ Model the file on `functions/test/booking-rules.test.ts` (same imports, same emu
 The last two are the point of the task — they are what force the compound query in the UI — so
 write them explicitly rather than paraphrasing:
 
+Note on APIs: `booking-rules.test.ts` uses the compat chaining style throughout
+(`ctx.firestore().collection(...).doc(...).get()`) and imports nothing from
+`firebase/firestore`. The snippet below uses the **modular** free functions instead, because
+list queries need them. That mix works — the modular helpers unwrap the compat instance — but
+it means this file needs an import the reference file does not have:
+
+```ts
+import { collection, query, where, getDocs } from "firebase/firestore";
+```
+
+and `trainerDb` is `testEnv.authenticatedContext(TRAINER_UID).firestore()`.
+
 ```ts
 const recipes = collection(trainerDb, "recipes");
 
@@ -1640,7 +1652,8 @@ Share modal: `recipes.shareModal.title`, `.noClients`, `.noAccount` ("Cliente se
 
 Nav: `common.recipes` ('Ricette'), `common.myPlans` ('Le mie schede').
 
-Admin: `admin.aiAuthoring.recipeClientDailyQuota` ('Quota giornaliera clienti (ricette)').
+Admin: nothing to add — `admin.settings.authoring.recipeClientDailyQuota` was already added in
+Task 5, and it had to be, because `t()` is typed against `MessageKey`.
 
 - [ ] **Step 4: Verify all five locales match**
 
