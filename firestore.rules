@@ -498,6 +498,21 @@ service cloud.firestore {
       allow write: if isSuperAdmin();
     }
 
+    // Recruitment leads from the public /diventa-trainer page.
+    //
+    // Writes go exclusively through the submitTrainerLead callable, which validates the
+    // shape and caps volume per IP. A public create rule here would make the collection
+    // world-writable — the one thing an unauthenticated form must not do.
+    match /trainer_leads/{leadId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // Per-IP submission counters for the lead form. Function-only.
+    match /lead_throttle/{key} {
+      allow read, write: if false;
+    }
+
     // Computed nightly by Cloud Functions; never writable from a client.
     match /metrics_daily/{dateKey} {
       allow read: if isAdmin();
