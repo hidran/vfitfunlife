@@ -14,7 +14,21 @@
 
 ## Ground rules for every task
 
-- Run `cd functions && npm test` for backend tasks, `npm test` at the repo root for frontend/i18n tasks.
+**Read this before running any test command.** Neither `npm test` script is usable as a gate:
+
+- Root `package.json` has `"test": "vitest"` — **watch mode**. It never exits, so any
+  `npm test && …` chain hangs forever. The root vitest config declares no `include`, so it also
+  sweeps in `e2e/*.spec.ts` (Playwright) and `functions/**`.
+- **Both suites are red before you touch anything.** Measured on this branch, 2026-08-09:
+  root `npx vitest run` → `13 failed | 41 passed` files; `cd functions && npx vitest run` →
+  `3 failed | 19 passed` files, `13 failed | 176 passed | 20 skipped` tests. The functions
+  failures are `booking-rules`, `profile-rules` and `profile`, which need the Firestore
+  emulator and fail without it.
+
+So: **always run `npx vitest run <path>` scoped to the files the task touches.** Never gate on
+a whole-suite green, because there isn't one. When a task needs the emulator, wrap it:
+`firebase emulators:exec --only firestore "npx vitest run <path>"`.
+
 - Commit after each task. Never bundle two tasks into one commit.
 - Do not add features the spec's Non-Goals section excludes (§4).
 - Italian is the source locale. `src/i18n/messages/it.ts` defines the key set; the other four must match exactly or `completeness.test.ts` fails.
@@ -87,8 +101,8 @@ export { localeLanguage };
 
 - [ ] **Step 3: Verify nothing broke**
 
-Run: `cd functions && npm test`
-Expected: PASS, same test count as before.
+Run: `cd functions && npx vitest run src/ai/authoring/prompts.test.ts && npm run build`
+Expected: prompts tests PASS, build clean.
 
 - [ ] **Step 4: Commit**
 
@@ -429,12 +443,23 @@ export class ForbiddenInputError extends Error {
   }
 }
 
-/** Lowercase and strip diacritics, so `Diabète` and `DIABETICI` match `diabet`. */
+/**
+ * Lowercase and strip diacritics, so `Diabète` and `DIABETICI` match `diabet`.
+ * The class is written with escapes on purpose — literal combining marks after a `[` are
+ * invisible and get mangled by anything that reformats this file.
+ */
 export function normalize(text: string): string {
-  return text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
-/** Terms banned in a generation REQUEST. Substring match against normalized text. */
+/**
+ * Terms banned in a generation REQUEST.
+ *
+ * Substring match, deliberately — the spec writes these as `diabet*` wildcards, and for an
+ * INPUT list over-matching is the safe direction: the cost of rejecting "diabetico" inside a
+ * longer word is a retry, while the cost of missing it is the thing the feature exists to
+ * prevent. Do not "fix" this to word-boundary matching.
+ */
 export const INPUT_DENYLIST = [
   // conditions
   "diabet", "ipertens", "colesterol", "tiroid", "celiac", "gastrit", "reflusso", "ulcera",
@@ -571,10 +596,14 @@ describe("buildRecipesPrompt", () => {
     expect(prompt.toLowerCase()).toContain("preference");
   });
 
-  it("frames exclusions as preferences, never as intolerances", () => {
-    const prompt = buildRecipesPrompt({ params, ingredients: [], locale: "it" }).toLowerCase();
-    expect(prompt).not.toContain("intolerance");
-    expect(prompt).not.toContain("allergy");
+  it("frames the exclusion list as a taste preference, not a health matter", () => {
+    // Assert on the exclusion LINE, not on the whole prompt: the hard-rules block
+    // legitimately contains the words "intolerance" and "allergy" while forbidding them
+    // as framings. A whole-prompt `not.toContain` would force deleting that rule.
+    const line = buildRecipesPrompt({ params, ingredients: [], locale: "it" })
+      .split("\n").find((l) => l.includes("lactose"));
+    expect(line).toContain("TASTE PREFERENCE");
+    expect(line).not.toContain("intolerance");
   });
 });
 ```
@@ -692,9 +721,13 @@ git commit -m "feat(recipes): prompt builder with no client context"
 ## Task 5: Settings field and audit type
 
 **Files:**
-- Modify: `functions/src/ai/authoring/settings.ts`, `functions/src/ai/authoring/admin.ts`, `functions/src/ai/authoring/admin.test.ts`, `functions/src/lib/audit.ts`, `src/lib/firebase/functions.ts`, `src/app/admin/settings/page.tsx`
+- Modify: `functions/src/ai/authoring/settings.ts`, `functions/src/ai/authoring/admin.ts`, `functions/src/ai/authoring/admin.test.ts`, `functions/src/lib/audit.ts`, `src/lib/firebase/functions.ts`, `src/components/admin/settings/AiAuthoringSettings.tsx`, `src/i18n/messages/*.ts`
 
-**Spec §8.2 warns this fails silently if any of the four places is missed.** `patchSchema` is a plain `z.object`, which strips unknown keys, and the client mirrors the interface rather than importing it.
+**This setting fails silently in two places if you miss them.** `patchSchema` is a plain
+`z.object`, which strips unknown keys; and the settings component's `save()` **enumerates**
+the fields it sends, so an input wired to state that `save()` doesn't forward will appear to
+work and discard the value on every save. Spec §8.2 lists four wiring points; the `save()`
+enumeration is a fifth, found during plan review.
 
 - [ ] **Step 1: Add the field to the server settings**
 
@@ -725,19 +758,41 @@ and to the valid-patch test, pass `recipeClientDailyQuota: 3` and assert it surv
 
 - [ ] **Step 5: Mirror the setting client-side**
 
-`src/lib/firebase/functions.ts:377` — add `recipeClientDailyQuota: number;` to the mirrored `AiAuthoringSettings` interface. Then add the input to `src/app/admin/settings/page.tsx` next to the existing `dailyQuota` field, labelled with a new i18n key `admin.aiAuthoring.recipeClientDailyQuota` (added in Task 11).
+`src/lib/firebase/functions.ts:377` — add `recipeClientDailyQuota: number;` to the mirrored
+`AiAuthoringSettings` interface.
 
-- [ ] **Step 6: Verify**
+- [ ] **Step 6: Wire the admin UI — both halves**
 
-Run: `cd functions && npm test` — PASS.
-Run: `npx tsc --noEmit` at the repo root — no new errors.
+The file is **`src/components/admin/settings/AiAuthoringSettings.tsx`**, not
+`src/app/admin/settings/page.tsx`.
 
-- [ ] **Step 7: Commit**
+1. Add the number input next to the existing `dailyQuota` field at lines 143-153, labelled
+   `t('admin.settings.authoring.recipeClientDailyQuota')`. The namespace is
+   `admin.settings.authoring.*` — match the sibling keys.
+2. **Add `recipeClientDailyQuota: settings.recipeClientDailyQuota,` to the object passed to
+   `updateAiAuthoringSettings` in `save()` (lines 38-47).** Without this the input renders,
+   accepts a value, and silently discards it on save.
+
+- [ ] **Step 7: Add the i18n key now, not in Task 11**
+
+`t()` is typed against `MessageKey`, so referencing a key that does not exist yet is a
+compile error. Add `'admin.settings.authoring.recipeClientDailyQuota'` to **all five**
+locale files in this task. Italian: `'Quota giornaliera clienti (ricette)'`.
+
+- [ ] **Step 8: Verify**
+
+Run: `cd functions && npx vitest run src/ai/authoring/admin.test.ts` — PASS.
+Run: `npx tsc --noEmit` at the repo root — **0 errors**. The baseline is clean, so any error
+here is yours.
+Run: `npx vitest run src/i18n/messages/completeness.test.ts` — PASS.
+
+- [ ] **Step 9: Commit**
 
 ```bash
 git add functions/src/ai/authoring/settings.ts functions/src/ai/authoring/admin.ts \
         functions/src/ai/authoring/admin.test.ts functions/src/lib/audit.ts \
-        src/lib/firebase/functions.ts src/app/admin/settings/page.tsx
+        src/lib/firebase/functions.ts src/components/admin/settings/AiAuthoringSettings.tsx \
+        src/i18n/messages
 git commit -m "feat(recipes): recipeClientDailyQuota setting and recipe audit type"
 ```
 
@@ -745,11 +800,106 @@ git commit -m "feat(recipes): recipeClientDailyQuota setting and recipe audit ty
 
 ## Task 6: The `generateRecipes` callable
 
-**Files:**
-- Create: `functions/src/recipes/generateRecipes.ts`
-- Modify: `functions/src/index.ts`
+Spec §13 requires three tests that only make sense against the callable's logic: a forbidden
+input consumes no quota, an all-dropped batch throws and refunds, and role maps to the right
+quota. A `onCall` handler is awkward to unit test, so **the two decisions are extracted as
+pure functions and tested directly**, leaving the handler as wiring.
 
-- [ ] **Step 1: Implement the callable**
+**Files:**
+- Create: `functions/src/recipes/policy.ts`, `functions/src/recipes/generateRecipes.ts`
+- Modify: `functions/src/index.ts`
+- Test: `functions/test/recipes.test.ts` (append)
+
+- [ ] **Step 1: Write the failing tests**
+
+```ts
+import { quotaForRole, partitionRecipes } from "../src/recipes/policy";
+
+describe("quotaForRole", () => {
+  const settings = { dailyQuota: 20, recipeClientDailyQuota: 3 };
+
+  it("gives trainers and staff the authoring quota", () => {
+    for (const role of ["provider", "admin", "superadmin"]) {
+      expect(quotaForRole(role, settings)).toEqual({ quota: 20, ownerRole: role === "provider" ? "provider" : "admin" });
+    }
+  });
+
+  it("gives everyone else the lower client quota", () => {
+    expect(quotaForRole("customer", settings)).toEqual({ quota: 3, ownerRole: "client" });
+  });
+});
+
+describe("partitionRecipes", () => {
+  const clean = {
+    title: "Pollo al limone", servings: 2, prepMinutes: 15,
+    ingredients: [{ item: "pollo", quantity: "300 g" }, { item: "limone", quantity: "1" }],
+    steps: ["Marinare.", "Cuocere."],
+  };
+  const dirty = { ...clean, steps: [...clean.steps, "Indicato per chi soffre di diabete."] };
+
+  it("keeps clean recipes and drops screened ones", () => {
+    const { kept, dropped } = partitionRecipes([clean, dirty]);
+    expect(kept).toHaveLength(1);
+    expect(dropped).toEqual(["diabet"]);
+  });
+
+  it("reports an entirely dropped batch, which the caller turns into generation-unusable", () => {
+    const { kept, dropped } = partitionRecipes([dirty]);
+    expect(kept).toHaveLength(0);
+    expect(dropped).toHaveLength(1);
+  });
+});
+```
+
+- [ ] **Step 2: Run to verify it fails**
+
+Run: `cd functions && npx vitest run test/recipes.test.ts`
+Expected: FAIL — cannot resolve `../src/recipes/policy`.
+
+- [ ] **Step 3: Implement the policy module**
+
+```ts
+// functions/src/recipes/policy.ts
+/** The two decisions in generateRecipes worth testing without a callable harness. */
+import { screenRecipe } from "./screening";
+import type { GeneratedRecipe } from "./schema";
+
+export type OwnerRole = "provider" | "admin" | "client";
+
+/**
+ * Trainers and staff draw on the authoring quota; everyone else gets the lower client quota.
+ * A client generating recipes for themselves is an intended use, not an exception.
+ */
+export function quotaForRole(
+  role: string,
+  settings: { dailyQuota: number; recipeClientDailyQuota: number },
+): { quota: number; ownerRole: OwnerRole } {
+  if (role === "provider") return { quota: settings.dailyQuota, ownerRole: "provider" };
+  if (role === "admin" || role === "superadmin") return { quota: settings.dailyQuota, ownerRole: "admin" };
+  return { quota: settings.recipeClientDailyQuota, ownerRole: "client" };
+}
+
+/** Split a generated batch into what may be persisted and the terms that got the rest dropped. */
+export function partitionRecipes(recipes: GeneratedRecipe[]): {
+  kept: GeneratedRecipe[]; dropped: string[];
+} {
+  const kept: GeneratedRecipe[] = [];
+  const dropped: string[] = [];
+  for (const recipe of recipes) {
+    const hit = screenRecipe(recipe);
+    if (hit) dropped.push(hit);
+    else kept.push(recipe);
+  }
+  return { kept, dropped };
+}
+```
+
+- [ ] **Step 4: Run to verify it passes**
+
+Run: `cd functions && npx vitest run test/recipes.test.ts`
+Expected: PASS.
+
+- [ ] **Step 5: Implement the callable**
 
 ```ts
 // functions/src/recipes/generateRecipes.ts
@@ -773,7 +923,8 @@ import { reserveQuota, recordTokens, releaseQuota } from "../ai/quota";
 import { writeAuditLog } from "../lib/audit";
 import { getUserRoleInfo } from "../utils/roles";
 import { recipeParamsSchema, recipeBatchSchema } from "./schema";
-import { validateIngredients, screenRecipe, ForbiddenInputError } from "./screening";
+import { validateIngredients, ForbiddenInputError } from "./screening";
+import { quotaForRole, partitionRecipes } from "./policy";
 import { buildRecipesPrompt } from "./prompt";
 
 const region = process.env.FIREBASE_REGION || "europe-west1";
@@ -815,15 +966,10 @@ export const generateRecipes = onCall<GenReq>(
     if (!role) throw new HttpsError("permission-denied", "Unknown user");
     if (role.isActive === false) throw new HttpsError("permission-denied", "Account is deactivated");
 
-    const isTrainerOrStaff =
-      role.role === "provider" || role.role === "admin" || role.role === "superadmin";
-    const ownerRole = role.role === "provider" ? "provider" :
-      isTrainerOrStaff ? "admin" : "client";
-
     const settings = await getAiAuthoringSettings();
     if (!settings.enabled) throw new HttpsError("failed-precondition", "disabled");
 
-    const quota = isTrainerOrStaff ? settings.dailyQuota : settings.recipeClientDailyQuota;
+    const { quota, ownerRole } = quotaForRole(role.role, settings);
     try {
       await reserveQuota(uid, quota, now, BUCKET);
     } catch (e) {
@@ -858,13 +1004,7 @@ export const generateRecipes = onCall<GenReq>(
       throw new HttpsError("internal", "Generation failed");
     }
 
-    const kept: typeof batch.recipes = [];
-    const dropped: string[] = [];
-    for (const recipe of batch.recipes) {
-      const hit = screenRecipe(recipe);
-      if (hit) dropped.push(hit);
-      else kept.push(recipe);
-    }
+    const { kept, dropped } = partitionRecipes(batch.recipes);
 
     if (dropped.length) {
       logger.warn("[recipes] screening dropped recipes", { dropped, kept: kept.length });
@@ -904,7 +1044,15 @@ export const generateRecipes = onCall<GenReq>(
       });
       created.push({ id: ref.id });
     }
-    await writeBatch.commit();
+
+    try {
+      await writeBatch.commit();
+    } catch (err) {
+      // The user paid quota for a generation they never received.
+      logger.error("[recipes] persist failed", err);
+      await releaseQuota(uid, now, BUCKET);
+      throw new HttpsError("internal", "persist-failed");
+    }
 
     await writeAuditLog({
       actorUid: uid,
@@ -924,7 +1072,7 @@ export const generateRecipes = onCall<GenReq>(
 );
 ```
 
-- [ ] **Step 2: Export it**
+- [ ] **Step 6: Export it**
 
 `functions/src/index.ts`, after line 22:
 
@@ -934,15 +1082,16 @@ export * from "./recipes/generateRecipes";
 
 Line 17's `export * from "./ai/authoring/generate"` **stays** — `generateTrainingProgram` survives.
 
-- [ ] **Step 3: Verify it compiles**
+- [ ] **Step 7: Verify it compiles**
 
-Run: `cd functions && npm run build`
-Expected: no errors.
+Run: `cd functions && npm run build && npx vitest run test/recipes.test.ts`
+Expected: no build errors, tests PASS.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-git add functions/src/recipes/generateRecipes.ts functions/src/index.ts
+git add functions/src/recipes/policy.ts functions/src/recipes/generateRecipes.ts \
+        functions/src/index.ts functions/test/recipes.test.ts
 git commit -m "feat(recipes): generateRecipes callable with no clientId parameter"
 ```
 
@@ -976,7 +1125,27 @@ Model the file on `functions/test/booking-rules.test.ts` (same imports, same emu
 - LIST: trainer queries ownerUid == uid AND array-contains clientUid    → allowed
 ```
 
-The last two are the point of the task: they are what force the compound query in the UI.
+The last two are the point of the task — they are what force the compound query in the UI — so
+write them explicitly rather than paraphrasing:
+
+```ts
+const recipes = collection(trainerDb, "recipes");
+
+// DENIED: the array-contains value is the client's uid, but the rule tests the caller's.
+await assertFails(getDocs(query(
+  recipes, where("sharedWithUserIds", "array-contains", CLIENT_UID),
+)));
+
+// ALLOWED: the ownerUid constraint is what makes the query provably safe.
+await assertSucceeds(getDocs(query(
+  recipes,
+  where("ownerUid", "==", TRAINER_UID),
+  where("sharedWithUserIds", "array-contains", CLIENT_UID),
+)));
+```
+
+Omit `orderBy("createdAt")` in the rules tests — the emulator does not need the composite
+index, and including it only adds a failure mode unrelated to what is being tested.
 
 - [ ] **Step 2: Run to verify it fails**
 
@@ -1205,7 +1374,7 @@ From `functions/src/ai/authoring/generate.ts` remove the `generateDietPlan` and 
 
 - [ ] **Step 5: Verify**
 
-Run: `cd functions && npm test`
+Run: `cd functions && npx vitest run src/ai/authoring/`
 Expected: PASS. Test count drops by the removed cases; nothing should error.
 
 Run: `cd functions && npm run build` — no errors.
@@ -1297,6 +1466,7 @@ export interface Recipe {
 import {
   collection, doc, addDoc, updateDoc, deleteDoc, getDocs, query, where, orderBy,
   serverTimestamp, arrayUnion, arrayRemove, Timestamp,
+  type QuerySnapshot, type DocumentData,
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, auth, functions } from './config';
@@ -1314,7 +1484,9 @@ function toIso(v: unknown): string | undefined {
   return v instanceof Timestamp ? v.toDate().toISOString() : undefined;
 }
 
-function mapDocs(snap: Awaited<ReturnType<typeof getDocs>>): Recipe[] {
+// NB: must be QuerySnapshot<DocumentData>, not Awaited<ReturnType<typeof getDocs>> — the
+// latter resolves d.data() to `unknown` and the file will not compile.
+function mapDocs(snap: QuerySnapshot<DocumentData>): Recipe[] {
   return snap.docs.map((d) => {
     const { createdAt, updatedAt, ...rest } = d.data();
     return {
@@ -1416,7 +1588,11 @@ From `src/types/clientPlans.ts` remove: `DietItem`, `DietMeal`, `DietDay`, `Diet
 - [ ] **Step 4: Verify**
 
 Run: `npx tsc --noEmit`
-Expected: errors ONLY in `DietTab.tsx`, `DietPlanEditor.tsx`, `RecipesTab.tsx`, `RecipeEditor.tsx` and `ClientDetailClient.tsx` — those are fixed in Tasks 12 and 13. Note them and continue.
+Expected: errors ONLY in `DietTab.tsx`, `DietPlanEditor.tsx`, `RecipesTab.tsx`, `RecipeEditor.tsx` and `ClientDetailClient.tsx` — those are fixed in Task 13. Note them and continue.
+
+**If `src/lib/firebase/recipes.ts` itself reports errors, stop and fix them** — the baseline
+is clean (`npx tsc --noEmit` → 0 errors on the untouched branch), so anything in a file you
+just wrote is yours, not the expected breakage above.
 
 - [ ] **Step 5: Commit**
 
@@ -1579,25 +1755,32 @@ git commit -m "feat(recipes)!: trainer library, per-client sharing tab, diet UI 
 
 - [ ] **Step 1: Build the page**
 
-Same `Suspense` shape as Task 13. `RecipesClient.tsx` renders `RecipeDisclaimer`, then two sections: `t('recipes.sharedByTrainer')` from `listSharedWithMe()` (read-only cards), and `t('recipes.myRecipes')` from `listMyRecipes()` with delete plus a "Genera" button opening `RecipeGenerateModal` with `ownerRole: 'client'`.
+Same `Suspense` shape as Task 13. `RecipesClient.tsx` renders `RecipeDisclaimer`, then two sections: `t('recipes.sharedByTrainer')` from `listSharedWithMe()` (read-only cards), and `t('recipes.myRecipes')` from `listMyRecipes()` with delete plus a "Genera" button opening `RecipeGenerateModal`. The modal takes no
+`ownerRole` prop — the server derives it from the caller's role, which is the only place it
+can be trusted.
 
 Empty states use `recipes.emptyShared` and `recipes.empty`.
 
 - [ ] **Step 2: Add navigation**
 
-In `src/components/layout/SideDrawer.tsx`, add to the `navItems` array (after `/bookings`, around line 61):
+In `src/components/layout/SideDrawer.tsx`, add to the **`drawerLinks`** array (it is not called
+`navItems`), after the `/bookings` entry at **line 60**:
 
 ```tsx
   { href: '/recipes', icon: ChefHat, labelKey: 'common.recipes' },
   { href: '/plans', icon: Dumbbell, labelKey: 'common.myPlans' },
 ```
 
-Import `ChefHat` and `Dumbbell` from `lucide-react`. **`/plans` is a P2-5 gap**: the page exists but has never been reachable from any navigation.
+Add **only `ChefHat`** to the `lucide-react` import — `Dumbbell` is already imported at line 9,
+and adding it again is a duplicate-identifier compile error.
+
+**`/plans` is a P2-5 gap**: the page exists but has never been reachable from any navigation.
 
 - [ ] **Step 3: Verify**
 
 Run: `npm run build` — succeeds, `/recipes` in the route list.
-Run: `npm test` — PASS.
+Run: `npx tsc --noEmit` — 0 errors.
+Run: `npx vitest run src/i18n/messages/completeness.test.ts` — PASS.
 
 - [ ] **Step 4: Commit**
 
@@ -1632,11 +1815,21 @@ git commit -m "docs(recipes): document the recipes collection and the diet remov
 
 - [ ] **Step 1: Full verification before deploying anything**
 
+Do **not** run the bare `npm test` scripts — see the ground rules. Run the scoped gates:
+
 ```bash
-cd functions && npm test && npm run build && cd ..
-npm test && npm run build
+cd functions && npx vitest run test/recipes.test.ts src/ai/authoring/ && npm run build && cd ..
+npx tsc --noEmit
+npx vitest run src/i18n/messages/completeness.test.ts
+npm run build
+firebase emulators:exec --only firestore "cd functions && npx vitest run test/recipes-rules.test.ts"
 ```
-All must pass. Do not proceed on a failure.
+
+All five must pass. Do not proceed on a failure.
+
+The three pre-existing emulator-dependent failures in `functions/test/` (`booking-rules`,
+`profile-rules`, `profile`) are **baseline**, not yours — they fail on the untouched branch
+too. Do not try to fix them, and do not let them block the deploy.
 
 - [ ] **Step 2: Deploy rules and indexes first**
 
