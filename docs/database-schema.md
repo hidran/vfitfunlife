@@ -25,6 +25,7 @@
 /challenges/{challengeId}
 /promotions/{promotionId}
 /streamingSchedule/{scheduleId}
+/recipes/{recipeId}
 ```
 
 ## Document Schemas
@@ -783,6 +784,134 @@ The following top-level collections exist in `firestore.rules` and/or `functions
 - **Purpose:** Legacy admin marker collection. **Deprecated** — the platform now derives admin status from `users/{userId}.role in ['admin', 'superadmin']`. Retained in `firestore.rules` for backwards compatibility only; do not write new code against this collection.
 - **Key fields:** Schema TBD — see firestore.rules.
 - **Access:** Admin read/write (legacy).
+
+## Recipes (P2-6, 2026-08-09)
+
+### recipes
+
+- **Path:** `/recipes/{recipeId}` — **top level**, not under a client.
+- **Purpose:** Generic AI-generated or manually authored recipe suggestions. Owned by whoever
+  created them; shared with named clients by adding uids to `sharedWithUserIds`.
+
+```typescript
+// /recipes/{recipeId}
+interface Recipe {
+  title: string;
+  servings: number;                  // 1–8
+  prepMinutes: number;
+  cookMinutes?: number;
+  ingredients: { item: string; quantity: string }[];
+  steps: string[];
+  nutritionPerServing?: { kcal?: number; protein?: number; carbs?: number; fat?: number };
+  tags: string[];
+
+  // The enum selections that produced it — used for filtering and re-generation.
+  params: {
+    dietStyle: 'onnivora' | 'vegetariana' | 'vegana' | 'pescetariana';
+    excludes: ('glutine' | 'lattosio' | 'frutta_secca' | 'uova' | 'crostacei' | 'soia')[];
+    orientation: 'ricche_di_proteine' | 'piatti_leggeri' | 'piatto_unico' | 'colazione'
+      | 'spuntino' | 'pre_allenamento' | 'post_allenamento';
+    cuisine: 'italiana' | 'mediterranea' | 'asiatica' | 'mediorientale' | 'messicana' | 'qualsiasi';
+    maxPrepMinutes: 15 | 30 | 45 | 60;
+    budget: 'economico' | 'medio' | 'qualsiasi';
+  };
+
+  source: 'ai' | 'manual';
+  model?: string;
+  aiPromptSnapshot?: string;         // ≤ 20000 chars, audit trail
+  screening?: { droppedCount: number };  // recipes discarded by output screening
+
+  ownerUid: string;
+  ownerRole: 'provider' | 'client' | 'admin';
+  sharedWithUserIds: string[];       // auth uids; [] on create; max 50
+
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+```
+
+#### There is no `clientId` field, and that absence is the entire guardrail
+
+Under Italian law only *medici*, *biologi nutrizionisti* and *dietisti* may prescribe a
+personalized diet. A recipe cannot be "for Marco" because **the document has nowhere to record
+Marco** — and the `generateRecipes` callable has no `clientId` parameter to put there either.
+Do not add one, and do not add anything that reintroduces per-person prescription by another
+name: there is no `targets`, no `kcalTarget`, no `durationDays` and no `days[]`, and the AI
+output schema cannot express a day, a week or a meal sequence.
+
+`sharedWithUserIds` is not a back door to that. It grants *read access* to a document whose
+contents are generic by construction; it does not make the recipe about the reader.
+
+`nutritionPerServing` is per portion — standard food labelling, which is permitted. Values are
+surfaced in the UI as "valori indicativi per porzione", never as a target.
+
+`ownerRole` is written by the Cloud Function from the caller's own role. Clients may own
+recipes they generated for themselves, at a lower daily quota.
+
+#### Access
+
+Rules live in `firestore.rules` under `match /recipes/{recipeId}`:
+
+- **get, list:** admin, the owner (`resource.data.ownerUid == request.auth.uid`), or a uid
+  present in `resource.data.sharedWithUserIds`.
+- **create:** authenticated, `ownerUid == request.auth.uid`, and `sharedWithUserIds` empty.
+  (AI documents are written by the Cloud Function through the Admin SDK and bypass rules; this
+  clause covers manual authoring from the client SDK.)
+- **update:** admin, or the owner with `ownerUid` unchanged and `sharedWithUserIds.size() <= 50`.
+  The cap stops the field being used as a broadcast channel.
+- **delete:** admin or the owner.
+
+**Accepted limitation:** an owner may share to any uid, not only to their own clients.
+Verifying the relationship would cost a `get()` on every share write; the UI only offers the
+trainer's own roster, and there is nothing personal in a generic recipe to leak.
+
+#### Queries and indexes
+
+Firestore evaluates `list` rules against the **query**, not the documents it would return, so
+these query shapes are part of the security design, not an implementation detail:
+
+| Screen | Query | Authorizing clause |
+|---|---|---|
+| `/provider/recipes` | `ownerUid == uid` + `orderBy createdAt desc` | owner |
+| `/recipes` → "Consigliate dal tuo trainer" | `sharedWithUserIds array-contains uid` + `orderBy createdAt desc` | shared-with |
+| `/recipes` → "Le mie ricette" | `ownerUid == uid` + `orderBy createdAt desc` | owner |
+| Client detail → Recipes tab | `ownerUid == uid` **and** `sharedWithUserIds array-contains clientUserId` + `orderBy createdAt desc` | owner |
+
+The last row is the trap. The obvious query — `sharedWithUserIds array-contains clientUserId`
+alone — is denied **for everyone including the trainer**, because the array-contains value is
+the *client's* uid while the rule tests the *caller's*. The `ownerUid == uid` constraint is
+what makes the query provably safe, so it is mandatory rather than an optimization.
+
+Deployed in `firestore.indexes.json`:
+
+- `recipes`: `ownerUid` ASC, `createdAt` DESC
+- `recipes`: `sharedWithUserIds` ARRAY_CONTAINS, `createdAt` DESC
+- `recipes`: `ownerUid` ASC, `sharedWithUserIds` ARRAY_CONTAINS, `createdAt` DESC
+
+### Removed collections (2026-08-09)
+
+| Path | Fate |
+|---|---|
+| `clients/{clientId}/dietPlans` | **Removed.** Exported to `gs://<default-bucket>/legal-purge/nutrition-<ISO8601>.json`, then deleted by the `purgeLegacyNutritionData` callable. Rules block deleted, types deleted, `generateDietPlan` deleted and the deployed function removed with `firebase functions:delete` |
+| `clients/{clientId}/recipes` | **Removed.** Same export-then-delete path. Superseded by the top-level `recipes` collection above |
+
+**Reason:** a per-day meal plan with a `kcalTarget`, and a recipe stored under a named client
+and generated from that client's goals and recent sessions, are personalized diets. Issuing one
+is reserved by Italian law to *medici*, *biologi nutrizionisti* and *dietisti*, so a personal
+trainer doing it commits *abuso di professione*.
+
+The legacy per-client recipes were **not migrated** to the new collection: they were produced
+with the client's goals in the prompt and macro targets in the params, which makes them exactly
+the personalized artifacts this change exists to stop producing.
+
+Production held **zero** documents in either subcollection at the time of the change (all four
+`clients/*` documents had no subcollections). The purge callable exists so that anything created
+between the decision and the deploy is caught, and so that the deletion is evidenced if it is
+ever questioned.
+
+Note for anyone touching `purgeLegacyNutritionData`: `db.collectionGroup("recipes")` matches
+the new **top-level** `recipes` collection as well. The callable filters on
+`path.startsWith("clients/")` for exactly that reason. Do not remove that guard.
 
 ## Security Rules
 

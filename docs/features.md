@@ -9,6 +9,7 @@
 - [VFit Screens](#5-vfit-screens)
 - [User Profile](#user-profile)
 - [Booking System](#booking-system)
+- [Recipe Suggestions (P2-6)](#recipe-suggestions-p2-6)
 - [Admin Backoffice](#admin-backoffice)
 - [User Roles & Permissions](#user-roles--permissions)
 - [User Types (Provider Categories)](#user-types-provider-categories)
@@ -193,7 +194,10 @@ These routes are reachable from the main tabs, profile menu, or notifications.
 | `/help` | Help center and support resources |
 | `/vip` | VIP membership management, benefits, billing |
 | `/referral` | Referral program — share code, track invites, claim rewards |
+| `/plans` | "Le mie schede" — workout plans the client's trainer published (P2-5) |
+| `/recipes` | Generic recipe suggestions: shared by the trainer, plus the client's own (P2-6) |
 | `/provider/schedule` | Provider availability and schedule management (provider role only) |
+| `/provider/recipes` | Trainer recipe library — generate, author, share, delete (P2-6) |
 
 ---
 
@@ -432,6 +436,114 @@ completed  ──→  payment_confirmed ●
   - New vs returning clients
   - Client retention rate
   - Referral tracking
+
+---
+
+## Recipe Suggestions (P2-6)
+
+Shipped 2026-08-09. Design: `docs/superpowers/specs/2026-08-09-recipe-suggestions-design.md`.
+
+### The legal framing — read this first
+
+Under Italian law, prescribing a personalized diet is reserved to *medici*, *biologi
+nutrizionisti* and *dietisti*. A personal trainer who issues one commits *abuso di
+professione*, and a platform that supplies the tool facilitates it.
+
+This feature therefore ships **generic recipe suggestions, never diets**. What separates the
+two is not tone, it is structure:
+
+| | |
+|---|---|
+| Allowed | Generic recipes filtered by preference (vegetarian/vegan, no-gluten/no-lactose *as a preference*, cuisine, prep time, budget) and by generic orientation ("ricche di proteine", "piatti leggeri"), with indicative nutrition **per portion** |
+| Forbidden by design | Personalized calorie targets; anything structured per day or per week as a *dieta*; inputs describing a medical condition; weight-loss goals tied to a person; body weight or measurements anywhere in the feature |
+
+**Diet plans were removed from the platform entirely in the same change** — the callable, the
+schemas, the types, the two UI screens, the rules, the i18n keys, and any stored documents
+(see `docs/database-schema.md` and `docs/backend/cloud-functions.md`).
+
+The guardrail is not prompt wording. It is that the forbidden thing has nowhere to live: the
+callable has no `clientId` parameter, the output schema has no day/week field, and there is no
+numeric input for a calorie target. The denylists are the third line of defence, not the first.
+
+### Screens
+
+| Route | Audience | Content |
+|---|---|---|
+| `/provider/recipes` | Trainer | Library: generate (closed-enum form), author manually, view, share with a client, edit, delete. Header carries the trainer notice **and** the disclaimer |
+| Client detail → Recipes tab | Trainer | Recipes shared with *this* client, plus "condividi dalla libreria". **No generate button, by design** — generation is never per-client |
+| `/recipes` | Client | "Consigliate dal tuo trainer" (read-only) and "Le mie ricette" (own, deletable), with their own generate button |
+
+Navigation: "Ricette" in the client `SideDrawer` and in the provider sidebar (`NAV_ITEMS`,
+next to Clienti). The same commit also linked `/plans`, which P2-5 shipped without ever adding
+to any menu.
+
+`recipes.disclaimer` — "Suggerimenti a scopo informativo, non sostituiscono il parere di un
+professionista della nutrizione." — renders on **every** screen that shows a recipe, in both
+apps. It is not dismissible and not conditional. `recipes.trainerNotice` additionally states,
+in the library header and in the generate modal, that the trainer may not prescribe diets.
+
+### Generation inputs
+
+Closed enums only, plus one policed free-text box:
+
+- `dietStyle`, `excludes[]` (max 4, labelled **"preferenze"** in every locale — never
+  "intolleranze" or "allergie"), `orientation`, `cuisine`, `maxPrepMinutes`, `budget`,
+  `servings` (1–8), `count` (1–3).
+- `ingredientsOnHand` — optional, max 6 items, NFC-normalized then matched against a
+  letters-only pattern. **No digits are accepted at all**, which kills "1500 kcal" and "80 kg"
+  without enumerating them; then a diacritic-insensitive denylist of condition, weight and
+  regime terms. Rejections happen **before quota is reserved**, so a refused attempt is free,
+  and the UI names the rule that was broken rather than saying "invalid input".
+
+Quota is a dedicated `ai_recipes_usage` bucket: providers/admins draw on
+`aiAuthoring.dailyQuota` (default 20), everyone else on `aiAuthoring.recipeClientDailyQuota`
+(default 3). Clients generating for themselves is an intended use, not an exception.
+
+Generated recipes are screened again on the way out, against a **narrower** list than the input
+one — nutrition per portion is permitted content, so "tipico della dieta mediterranea" and
+"circa 300 calorie a porzione" must survive while "indicato per chi soffre di diabete" is
+dropped. Offending recipes are discarded and counted, never edited into compliance; if nothing
+survives, the call fails loudly and refunds the quota.
+
+### Sharing
+
+A recipe is born attached to nobody, so the trainer's **share action is the human review
+gate** — there is no draft/published status. Sharing toggles the client's uid in
+`sharedWithUserIds`; un-sharing removes access immediately, since rules are evaluated per read.
+Roster entries without a linked account cannot read anything and are shown disabled.
+
+### Not built (deliberate)
+
+No shopping list, no meal calendar, no "plan my week" — the second of those is the illegal
+feature wearing a different hat. Also no recipe photos, no share notifications, no ratings or
+favourites, no platform-wide catalog, and no admin curation screen.
+
+### Where the build diverged from the design spec
+
+The spec is the design record; these four points are what actually shipped, and this list is
+the authority where the two disagree.
+
+- **`cura per` is not in the output denylist.** The spec listed it under clinical framing.
+  Empirical probing during implementation showed substring matching fires it on the everyday
+  cooking idiom "mescolare con cura per 5 minuti" and on "sicura per", dropping correct recipes
+  and — when a whole batch matched — turning a good generation into `generation-unusable`.
+  Word-boundary matching would not have helped, since those boundaries are real. A genuine
+  "cura per X" names a condition, which the medical row already catches. Do not add it back.
+- **The allergy stem is `allergi`, not `allerg`.** EU food labelling makes *allergeni* ordinary
+  Italian recipe vocabulary, so the shorter stem would drop "contiene allergeni: frutta a
+  guscio". `allergi` still catches *allergia*/*allergico*/*allergie*, which are the diagnosis
+  words the rule is aimed at.
+- **`ingredientsOnHand` items are NFC-normalized before validation.** Not cosmetic: combining
+  marks are `\p{M}`, not `\p{L}`, so an NFD-decomposed "ragù" — which macOS and iOS clients do
+  send — would otherwise fail the letters-only pattern while the precomposed form passes.
+  Composing is the fix; loosening the character class is not, because the class is what keeps
+  digits out.
+- **`MacroTargets` was deleted, not reused.** The spec proposed keeping it as the type behind
+  `nutritionPerServing` so it would not be orphaned by the removal of `DietPlan.targets` and
+  `RecipeParams.targetMacros`. It was dropped instead, in favour of a purpose-named
+  `NutritionPerServing` in `src/types/recipes.ts` — a type called "macro targets" is the wrong
+  name for indicative per-portion labelling, and reusing it invited exactly the confusion this
+  feature exists to prevent.
 
 ---
 

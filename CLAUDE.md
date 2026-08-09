@@ -21,7 +21,7 @@ The app serves a fitness center network with multiple activities and venues acro
 - **State Management:** Zustand (client stores: auth, booking, provider, admin) + TanStack Query (server state)
 - **Forms:** React Hook Form + Zod
 - **Maps:** Google Maps (`@react-google-maps/api`)
-- **i18n:** Sprint i18n, locale messages in `src/i18n/` (it, en, es)
+- **i18n:** Sprint i18n, locale messages in `src/i18n/` — **five locales: it, en, es, fr, de**. Italian is the source locale; `src/i18n/messages/completeness.test.ts` fails on any key missing from any of the five
 - **Icons:** Lucide React
 
 ### Mobile Packaging
@@ -63,7 +63,7 @@ v-fitness/
 │   ├── contexts/               # React contexts (section theme, etc.)
 │   ├── dataconnect-generated/  # Firebase Data Connect generated client
 │   ├── hooks/                  # Custom React hooks
-│   ├── i18n/                   # Locale messages (it, en, es)
+│   ├── i18n/                   # Locale messages (it, en, es, fr, de)
 │   ├── lib/                    # Libraries & utilities
 │   ├── stores/                 # Zustand stores
 │   ├── types/                  # TypeScript types
