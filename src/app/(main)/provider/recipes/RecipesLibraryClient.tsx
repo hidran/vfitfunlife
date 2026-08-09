@@ -159,6 +159,7 @@ export default function RecipesLibraryClient() {
         onClose={() => setShowGenerate(false)}
         onGenerated={() => void reload()}
         locale={locale}
+        audience="provider"
       />
 
       {sharing && (

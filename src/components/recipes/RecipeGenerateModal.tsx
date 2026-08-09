@@ -67,13 +67,23 @@ export interface RecipeGenerateModalProps {
   onClose: () => void;
   onGenerated: (recipes: Recipe[]) => void;
   locale: string;
+  /**
+   * Selects COPY ONLY. It confers nothing: the server derives ownership and quota from the
+   * caller's own role, and this component never sends it. It exists because
+   * `recipes.trainerNotice` is addressed to a trainer — telling a client they may not
+   * prescribe diets "to share with your clients" is simply the wrong sentence.
+   * Defaults to 'client', the narrower copy.
+   */
+  audience?: 'provider' | 'client';
 }
 
 const selectClass =
   'w-full min-h-11 bg-surface-input border border-hairline rounded-lg px-3 py-2 text-sm text-content outline-none focus:border-section-primary';
 const labelClass = 'block text-xs font-medium text-content-muted mb-1';
 
-export function RecipeGenerateModal({ open, onClose, onGenerated, locale }: RecipeGenerateModalProps) {
+export function RecipeGenerateModal({
+  open, onClose, onGenerated, locale, audience = 'client',
+}: RecipeGenerateModalProps) {
   const { t } = useI18n();
 
   const [count, setCount] = useState(1);
@@ -178,10 +188,14 @@ export function RecipeGenerateModal({ open, onClose, onGenerated, locale }: Reci
           </button>
         </div>
 
-        {/* Spec §12.1: the notice renders in the library header AND inside this modal. */}
-        <p className="rounded-lg border border-warning-DEFAULT/40 bg-warning-DEFAULT/10 px-3 py-2 text-xs text-content">
-          {t('recipes.trainerNotice')}
-        </p>
+        {/* Spec §12.1: the notice renders in the library header AND inside this modal — but it
+            is addressed to a trainer, so a client generating for themselves does not see it.
+            The disclaimer below is the one that is legally required, and it always renders. */}
+        {audience === 'provider' && (
+          <p className="rounded-lg border border-warning-DEFAULT/40 bg-warning-DEFAULT/10 px-3 py-2 text-xs text-content">
+            {t('recipes.trainerNotice')}
+          </p>
+        )}
         <RecipeDisclaimer />
 
         <div className="grid grid-cols-2 gap-3">
