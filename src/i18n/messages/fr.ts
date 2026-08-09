@@ -692,6 +692,7 @@ export const frMessages: Messages = {
   'provider.layout.nav.schedule': 'Planning',
   'provider.layout.nav.bookings': 'Réservations',
   'provider.layout.nav.clients': 'Clients',
+  'provider.layout.nav.recipes': 'Recettes',
   'provider.layout.nav.earnings': 'Revenus',
   'provider.layout.nav.services': 'Services',
   'provider.layout.nav.availability': 'Disponibilité',

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   Bell,
   Calendar,
+  ChefHat,
   CircleDollarSign,
   Dumbbell,
   Facebook,
@@ -58,6 +59,9 @@ const drawerLinks: DrawerLinkItem[] = [
   { href: '/home', icon: Home, labelKey: 'common.home' },
   { href: '/search', icon: Search, labelKey: 'common.search' },
   { href: '/bookings', icon: Calendar, labelKey: 'common.bookings' },
+  { href: '/recipes', icon: ChefHat, labelKey: 'common.recipes' },
+  // P2-5 shipped /plans without ever linking it; it was reachable only by typing the URL.
+  { href: '/plans', icon: Dumbbell, labelKey: 'common.myPlans' },
   { href: '/notifications', icon: Bell, labelKey: 'common.notifications' },
   { href: '/profile', icon: User, labelKey: 'common.profile' },
   { href: '/help', icon: HelpCircle, labelKey: 'common.helpCenter' },

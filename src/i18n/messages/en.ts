@@ -715,6 +715,7 @@ export const enMessages: Messages = {
   'provider.layout.nav.schedule': 'Schedule',
   'provider.layout.nav.bookings': 'Bookings',
   'provider.layout.nav.clients': 'Clients',
+  'provider.layout.nav.recipes': 'Recipes',
   'provider.layout.nav.earnings': 'Earnings',
   'provider.layout.nav.services': 'Services',
   'provider.layout.nav.availability': 'Availability',

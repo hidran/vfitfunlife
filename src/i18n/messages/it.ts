@@ -713,6 +713,7 @@ export const itMessages = {
   'provider.layout.nav.schedule': 'Agenda',
   'provider.layout.nav.bookings': 'Prenotazioni',
   'provider.layout.nav.clients': 'Clienti',
+  'provider.layout.nav.recipes': 'Ricette',
   'provider.layout.nav.earnings': 'Guadagni',
   'provider.layout.nav.services': 'Servizi',
   'provider.layout.nav.availability': 'Disponibilità',

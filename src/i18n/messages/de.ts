@@ -690,6 +690,7 @@ export const deMessages: Messages = {
   'provider.layout.nav.schedule': 'Zeitplan',
   'provider.layout.nav.bookings': 'Buchungen',
   'provider.layout.nav.clients': 'Kunden',
+  'provider.layout.nav.recipes': 'Rezepte',
   'provider.layout.nav.earnings': 'Einnahmen',
   'provider.layout.nav.services': 'Services',
   'provider.layout.nav.availability': 'Verfügbarkeit',

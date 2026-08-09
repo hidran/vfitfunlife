@@ -689,6 +689,7 @@ export const esMessages: Messages = {
   'provider.layout.nav.schedule': 'Agenda',
   'provider.layout.nav.bookings': 'Reservas',
   'provider.layout.nav.clients': 'Clientes',
+  'provider.layout.nav.recipes': 'Recetas',
   'provider.layout.nav.earnings': 'Ganancias',
   'provider.layout.nav.services': 'Servicios',
   'provider.layout.nav.availability': 'Disponibilidad',
