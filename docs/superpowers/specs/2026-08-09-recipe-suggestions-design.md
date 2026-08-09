@@ -170,12 +170,32 @@ only the trainer's own roster, and the payload is generic by construction — th
 personal in a recipe to leak. The `size() <= 50` cap stops the field being used as a
 broadcast channel.
 
-### 6.4 Indexes (`firestore.indexes.json`)
+### 6.4 Queries and indexes
+
+Firestore evaluates `list` rules against the **query**, not the documents it would return: a
+query is allowed only if its constraints guarantee every possible result satisfies the rule.
+That makes the query shapes part of the security design, not an implementation detail.
+
+| Screen | Query | Rule clause that authorizes it |
+|---|---|---|
+| `/provider/recipes` | `ownerUid == uid` + `orderBy createdAt desc` | `resource.data.ownerUid == request.auth.uid` |
+| `/recipes` → "Consigliate dal tuo trainer" | `sharedWithUserIds array-contains uid` + `orderBy createdAt desc` | `request.auth.uid in resource.data.sharedWithUserIds` |
+| `/recipes` → "Le mie ricette" | `ownerUid == uid` + `orderBy createdAt desc` | `resource.data.ownerUid == request.auth.uid` |
+| Client detail → `RecipesTab` | `ownerUid == uid` **and** `sharedWithUserIds array-contains clientUserId` + `orderBy createdAt desc` | `resource.data.ownerUid == request.auth.uid` |
+
+The last row is the one that is easy to get wrong. The obvious query — `sharedWithUserIds
+array-contains clientUserId` alone — is denied for everyone including the trainer, because
+the array-contains value is the *client's* uid while the rule tests the *caller's*. The
+`ownerUid == uid` constraint is what makes the query provably safe, so it is mandatory rather
+than an optimization.
+
+Indexes required in `firestore.indexes.json`:
 
 | Collection | Fields |
 |---|---|
 | `recipes` | `ownerUid` ASC, `createdAt` DESC |
 | `recipes` | `sharedWithUserIds` ARRAY_CONTAINS, `createdAt` DESC |
+| `recipes` | `ownerUid` ASC, `sharedWithUserIds` ARRAY_CONTAINS, `createdAt` DESC |
 
 ## 7. Inputs
 
@@ -259,8 +279,23 @@ since `count ≤ 3`.
 | `provider`, `admin`, `superadmin` | `settings.dailyQuota` (default 20) |
 | `client` / any other authenticated user | `settings.recipeClientDailyQuota` (**new field**, default 3) |
 
-`recipeClientDailyQuota` is added to `AiAuthoringSettings`, its defaults, and the admin
-settings screen alongside the existing quota field.
+`recipeClientDailyQuota` must be wired in **five** places, not three. Two of them are easy to
+miss and fail silently:
+
+1. `AiAuthoringSettings` and `DEFAULT_AI_AUTHORING_SETTINGS` (`functions/src/ai/authoring/settings.ts`).
+2. **`patchSchema` in `functions/src/ai/authoring/admin.ts:11`** — a plain `z.object`, which
+   *strips* unknown keys. Omit it here and every save silently discards the value.
+3. **The independent copy of the `AiAuthoringSettings` interface in
+   `src/lib/firebase/functions.ts:377`** — the client mirrors the type rather than importing it.
+4. The admin settings screen input.
+
+`functions/src/ai/authoring/admin.test.ts` will not break — it asserts on specific fields, not
+exhaustively — but should gain a range case for the new field alongside the existing
+`dailyQuota` ones.
+
+Token accounting is unchanged: `recordTokens` is called after a successful generation against
+the same `ai_recipes_usage` bucket, exactly as `generateWorkoutPlan` does against
+`ai_authoring_usage`.
 
 ### 8.3 Prompt
 
@@ -273,13 +308,32 @@ belt; §6.1 and §8.5 are braces.
 Stored on each document as `aiPromptSnapshot` (≤ 20000 chars) so a questioned recipe is
 reconstructible, exactly as P2-5 does for plans.
 
-### 8.4 Output screening
+### 8.4 Output screening — a *different*, narrower list
 
-The same denylist from §7.2 is applied to each generated recipe's `title`, `tags`, `steps`
-and ingredient `item` values. A recipe that matches is **dropped and logged**, not persisted
-— the model volunteering "ideale per chi soffre di diabete" is the failure mode this catches.
-Surviving recipes are saved with `screening.droppedCount`. If every recipe is dropped, the
-call fails loudly and refunds the quota rather than saving nothing silently (P2-5 precedent).
+Each generated recipe's `title`, `tags`, `steps` and ingredient `item` values are screened. A
+recipe that matches is **dropped and logged**, not persisted — the model volunteering "ideale
+per chi soffre di diabete" is the failure mode this catches. Surviving recipes are saved with
+`screening.droppedCount`. If every recipe is dropped, the call fails loudly and refunds the
+quota rather than saving nothing silently (P2-5 precedent).
+
+**The §7.2 input denylist must not be reused here.** It bans `kcal`, `calorie`, `dieta` and
+`dimagr*`, all of which are legitimate in output: §2 permits nutritional information per
+portion, §6.1 stores `nutritionPerServing.kcal`, and `cuisine: mediterranea` is an offered
+enum — a model given it will write "tipico della dieta mediterranea" and "circa 300 calorie a
+porzione" as a matter of course. Reusing the input list would drop ordinary recipes and,
+per §8.1 step 7, turn a correct generation into `generation-unusable`.
+
+The output list targets only what is actually forbidden:
+
+| Category | Patterns |
+|---|---|
+| Medical conditions | `diabet*`, `ipertens*`, `colesterol*`, `tiroid*`, `celiac*`, `gastrit*`, `reflusso`, `ulcera`, `tumor*`, `oncolog*`, `insufficienza renale`, `epatic*`, `gravidanza`, `allattamento`, `menopaus*`, `anoress*`, `bulim*`, `obes*`, `patolog*`, `diabetes`, `hypertension`, `cholesterol` |
+| Per-person prescription | `dieta personalizzata`, `piano alimentare`, `la tua dieta`, `il tuo fabbisogno`, `fabbisogno calorico`, `deficit calorico`, `dieta dimagrante`, `per dimagrire`, `perdere peso`, `weight loss`, `meal plan` |
+| Clinical framing | `prescriv*`, `terapia`, `terapeutic*`, `cura per`, `indicato per chi soffre`, `consigliato in caso di` |
+
+Bare `dieta`, `kcal`, `calorie` and `proteine` are **allowed** in output. The phrase
+`dieta mediterranea` is explicitly allowed and must be covered by a test, since it is the
+most likely false positive.
 
 ### 8.5 Output schema
 
@@ -326,14 +380,37 @@ status field is added.
 | Area | Items |
 |---|---|
 | Functions | `generateDietPlan`, `generateRecipe` (legacy singular), `dietPlanSchema`, `dietParamsSchema`, `recipeSchema`, `recipeParamsSchema`, `buildDietPrompt`, `buildRecipePrompt`, and the `dietPlans`/`recipes` branches of `runGeneration` |
+| Function tests | `functions/src/ai/authoring/schemas.test.ts` imports all four deleted schemas (lines 4–8) and has `describe` blocks for each — it must be trimmed to the training schemas in the same commit or the build breaks. `generate.test.ts` covers only training and needs no change. `functions/src/ai/authoring/prompts.test.ts` imports `buildDietPrompt` and `buildRecipePrompt` and has a `describe` block for each — same treatment |
+| Function exports | `functions/src/index.ts` gains `export * from "./recipes/generateRecipes"` and the purge callable. Line 17's `export * from "./ai/authoring/generate"` **stays** — `generateTrainingProgram` survives |
 | Types | `DietPlan`, `DietDay`, `DietMeal`, `DietItem`, `DietParams`; `RecipeParams` replaced; `Recipe` reshaped per §6.1 |
 | Client lib | `listDietPlans`, `createDietPlan`, `updateDietPlan`, `deleteDietPlan`, `aiGenerateDiet`, `aiGenerateRecipe`; recipe CRUD moves out of `clientPlans.ts` into a new `src/lib/firebase/recipes.ts` |
 | UI | `DietTab.tsx` (297 lines), `editors/DietPlanEditor.tsx` (392 lines), the `diet` tab in `ClientDetailClient.tsx` |
 | Rules | `clients/{id}/dietPlans` and `clients/{id}/recipes` blocks |
-| i18n | ~32 `clients.diet.*` / `clients.aiGenerate.diet.*` / `clientDetail.tab.diet` keys × 5 locales |
+| i18n | ~32 `clients.diet.*` / `clients.aiGenerate.diet.*` / `clientDetail.tab.diet` keys × 5 locales removed. The **additions** are much larger than the three legal strings in §12.1: a full `recipes.*` namespace covering the library page, the enum form (every value in §7.1 needs a label), the share modal, the client page and the error states — plan for roughly 60–80 new keys × 5 locales |
 
 `editors/RecipeEditor.tsx` survives, adapted to §6.1 — manually authoring a generic recipe is
-legal and useful. Its macro-target inputs become indicative per-portion nutrition.
+legal and useful. Three concrete shape changes: `nutrition` → `nutritionPerServing`,
+`prepMinutes` becomes required (it is optional at `src/types/clientPlans.ts:115`), and the
+`onSave` payload typed inline at `RecipesTab.tsx:100-109` moves with it. `MacroTargets` is
+reused for `nutritionPerServing`; without that it would be left orphaned when `DietPlan.targets`
+and `RecipeParams.targetMacros` go.
+
+### 10.1.1 Deleting the *deployed* functions
+
+Removing the exports is not enough. `npm run deploy:functions` runs `firebase deploy --only
+functions`, and the CLI only removes functions missing from source after an interactive
+confirmation that is skipped when it is not attached to a TTY. Without an explicit step,
+`generateDietPlan` and `generateRecipe` **stay live and invokable in `vfit-funlife`** with
+their current `clientId` + `kcalTarget` signatures after this feature ships — and §11's
+argument that the exposure is closed would be false.
+
+The deploy step is therefore:
+
+```bash
+firebase functions:delete generateDietPlan generateRecipe --region europe-west1 --force
+```
+
+run after the deploy, and its output recorded in the implementation plan's verification.
 
 `generateTrainingProgram` is **not** touched. It is the pre-P2-5 workout generator, out of
 scope here, and removing it belongs to whatever retires the legacy training path.
@@ -355,8 +432,9 @@ Expected result on today's database: zero documents (§5).
 
 The 2026-08-08 decision to leave `generateDietPlan` live until this feature, rather than
 pulling its removal forward as an emergency fix, is recorded here as an **accepted risk with a
-known owner (Hidran)**, closed by §10. Exposure window: 2026-08-08 to the deploy of this
-feature. No diet plan documents were ever created in production (§5), so the exposure was the
+known owner (Hidran)**, closed by §10 — specifically by §10.1.1, since deleting the source
+export alone would leave the callable live. Exposure window: 2026-08-08 to the completion of
+the `functions:delete` step. No diet plan documents were ever created in production (§5), so the exposure was the
 availability of the tool, not the existence of artifacts.
 
 ## 12. Screens
@@ -388,6 +466,9 @@ added: `/plans` is currently reachable only by typing the URL.
 - Ingredient validation rejects any digit; rejects `diabete`, `Diabète`, `DIABETICI`, `per
   diabetici`, `dimagrire`, `1500 kcal`; accepts `pollo`, `zucchine`, `olio d'oliva`.
 - A forbidden input consumes no quota (`reserveQuota` not called).
+- **Output screening does not use the input list**: a recipe whose steps say "tipico della
+  dieta mediterranea" and whose tags say "300 calorie a porzione" survives, while one saying
+  "indicato per chi soffre di diabete" or "per il tuo deficit calorico" is dropped.
 - The built prompt contains only enum-derived phrases and sanitized ingredients — asserted by
   the absence of any client identifier, since the callable has no `clientId` to begin with.
 - Output screening drops a recipe whose steps mention a condition; when all are dropped the
@@ -401,6 +482,9 @@ added: `/plans` is currently reachable only by typing the URL.
 - An outsider cannot create a recipe claiming another `ownerUid`.
 - A create with a non-empty `sharedWithUserIds` is denied.
 - An update pushing `sharedWithUserIds` past 50 is denied.
+- **The four §6.4 query shapes are each exercised**, including the negative case: a bare
+  `sharedWithUserIds array-contains <clientUid>` list by the owning trainer is denied, which
+  is what forces the compound query.
 
 ## 14. Documentation updates
 
