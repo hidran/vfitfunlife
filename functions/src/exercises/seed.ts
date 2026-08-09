@@ -29,8 +29,12 @@ export const seedExerciseLibrary = onCall<{ dryRun?: boolean }>(
 
     for (const e of EXERCISE_CATALOG) {
       if (dryRun) continue;
+      // `secondary` is optional in the catalog, and Firestore rejects undefined values
+      // outright — writing the spread as-is throws for every exercise without secondary
+      // muscles, which is most of them.
       batch.set(db.collection("exercises").doc(e.id), {
         ...e,
+        secondary: e.secondary ?? [],
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       }, { merge: true });
     }
