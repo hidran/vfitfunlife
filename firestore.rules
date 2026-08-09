@@ -716,14 +716,41 @@ service cloud.firestore {
         allow read, write: if isAdmin() ||
           (isAuthenticated() && get(/databases/$(database)/documents/clients/$(clientId)).data.providerId == request.auth.uid);
       }
-      match /dietPlans/{planId} {
-        allow read, write: if isAdmin() ||
-          (isAuthenticated() && get(/databases/$(database)/documents/clients/$(clientId)).data.providerId == request.auth.uid);
-      }
-      match /recipes/{recipeId} {
-        allow read, write: if isAdmin() ||
-          (isAuthenticated() && get(/databases/$(database)/documents/clients/$(clientId)).data.providerId == request.auth.uid);
-      }
+      // NOTE: the former clients/{clientId}/dietPlans and clients/{clientId}/recipes blocks
+      // were removed in P2-6. Diet plans are gone entirely (they were personalised nutrition
+      // advice, which this platform must not give), and recipes moved to the top-level
+      // `recipes` collection below — a recipe is owned, not addressed to a client.
+    }
+
+    // ============================================
+    // RECIPES (P2-6 — generic suggestions, owned, shareable)
+    // ============================================
+    // A recipe belongs to whoever generated it and is NOT addressed to any client: there is
+    // deliberately no clientId field. Sharing grants read access to named users and is the
+    // human review gate — P2-5 needed draft/publish because a plan was born attached to a
+    // client; a recipe is born attached to nobody.
+    //
+    // NOTE ON QUERIES (spec §6.4): list rules are evaluated against the QUERY. A trainer
+    // listing what they shared with a client MUST also constrain ownerUid == their own uid;
+    // `sharedWithUserIds array-contains <clientUid>` alone is denied, because the array value
+    // is the client's uid while this rule tests the caller's.
+    match /recipes/{recipeId} {
+      allow get, list: if isAdmin() ||
+        (isAuthenticated() && resource.data.ownerUid == request.auth.uid) ||
+        (isAuthenticated() && request.auth.uid in resource.data.sharedWithUserIds);
+
+      allow create: if isAuthenticated() &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.sharedWithUserIds.size() == 0;
+
+      allow update: if isAdmin() ||
+        (isAuthenticated() &&
+         resource.data.ownerUid == request.auth.uid &&
+         request.resource.data.ownerUid == resource.data.ownerUid &&
+         request.resource.data.sharedWithUserIds.size() <= 50);
+
+      allow delete: if isAdmin() ||
+        (isAuthenticated() && resource.data.ownerUid == request.auth.uid);
     }
 
     // ============================================
