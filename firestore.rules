@@ -485,9 +485,23 @@ service cloud.firestore {
     // SYSTEM SETTINGS (Superadmin only)
     // ============================================
 
+    // Pilot gate targets drive the Gate 1 banner on /admin/metrics, which is served to
+    // admin as well as superadmin — so a superadmin-only read would break the page's
+    // primary element for plain admins. Writes stay superadmin.
+    match /systemSettings/pilotGates {
+      allow read: if isAdmin();
+      allow write: if isSuperAdmin();
+    }
+
     match /systemSettings/{settingId} {
       allow read: if isSuperAdmin();
       allow write: if isSuperAdmin();
+    }
+
+    // Computed nightly by Cloud Functions; never writable from a client.
+    match /metrics_daily/{dateKey} {
+      allow read: if isAdmin();
+      allow write: if false;
     }
 
     // ============================================
