@@ -217,7 +217,10 @@ The distinction is the whole point: a preference is a taste, an intolerance is a
 
 ### 7.2 `ingredientsOnHand` — the only free text
 
-- Optional, maximum 6 items, each matching `/^[\p{L}][\p{L}\s'’-]{1,29}$/u`.
+- Optional, maximum 6 items, each **NFC-normalized** and then matched against
+  `/^[\p{L}][\p{L}\s'’-]{1,29}$/u`. The normalization is not cosmetic: combining marks are
+  `\p{M}`, not `\p{L}`, so an NFD-decomposed "ragù" — which macOS and iOS clients do send —
+  would otherwise be rejected as invalid while the precomposed form passes.
 - **No digits are accepted at all.** That single rule kills "1500 kcal", "80 kg" and "2000
   calorie" without enumerating them.
 - Then a word-boundary denylist, case- and accent-insensitive, applied after NFD
@@ -234,7 +237,9 @@ diet, weight loss, diabetes, hypertension, cholesterol, pregnan*, allergy, intol
 
 Violations throw `invalid-argument` with message prefix `forbidden-input:` **before quota is
 reserved**, so a rejected attempt costs the user nothing. The UI renders a specific
-explanation, not a generic "invalid input".
+explanation, not a generic "invalid input" — which means the thrown term has to distinguish
+the cases: `too-long` and `too-many-items` are user error, `invalid-characters` covers digits
+and symbols, and a denylist hit returns the matched stem.
 
 ### 7.3 Strictness
 
@@ -328,8 +333,16 @@ The output list targets only what is actually forbidden:
 | Category | Patterns |
 |---|---|
 | Medical conditions | `diabet*`, `ipertens*`, `colesterol*`, `tiroid*`, `celiac*`, `gastrit*`, `reflusso`, `ulcera`, `tumor*`, `oncolog*`, `insufficienza renale`, `epatic*`, `gravidanza`, `allattamento`, `menopaus*`, `anoress*`, `bulim*`, `obes*`, `patolog*`, `diabetes`, `hypertension`, `cholesterol` |
+| Diagnosis framing | `intolleran*`, `allerg*` — §7.1 calls the preference-vs-diagnosis distinction the whole point, so "adatta a chi ha una intolleranza al lattosio" must not survive while "senza lattosio" must |
 | Per-person prescription | `dieta personalizzata`, `piano alimentare`, `la tua dieta`, `il tuo fabbisogno`, `fabbisogno calorico`, `deficit calorico`, `dieta dimagrante`, `per dimagrire`, `perdere peso`, `weight loss`, `meal plan` |
-| Clinical framing | `prescriv*`, `terapia`, `terapeutic*`, `cura per`, `indicato per chi soffre`, `consigliato in caso di` |
+| Clinical framing | `prescriv*`, `terapia`, `terapeutic*`, `indicato per chi soffre`, `consigliato in caso di` |
+
+**`cura per` was in the clinical row and has been removed** (found by empirical probing during
+implementation review). Substring matching fires it on the everyday cooking idiom "mescolare
+con cura per 5 minuti" and on "sicura per", which would drop ordinary recipes and, when a whole
+batch matched, turn a correct generation into `generation-unusable`. Word-boundary matching
+would not have helped — the boundaries in "con cura per" are real. A genuine "cura per X" names
+a condition, which the medical row already catches. Do not add it back.
 
 Bare `dieta`, `kcal`, `calorie` and `proteine` are **allowed** in output. The phrase
 `dieta mediterranea` is explicitly allowed and must be covered by a test, since it is the
