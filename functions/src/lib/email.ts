@@ -28,8 +28,12 @@ export const EMAIL_SECRETS = [RESEND_API_KEY];
 /**
  * Resend rejects any From address whose domain is not verified in the account, so this
  * must match a verified domain. Override with the EMAIL_FROM env var.
+ *
+ * PILOT: hidranbooks.com is a stand-in until the real sending domain is set up — swap it
+ * (or set EMAIL_FROM) before the Torino pilot goes out to actual trainers, since the
+ * From domain is what recipients see and what deliverability is built on.
  */
-const FROM_ADDRESS = process.env.EMAIL_FROM || "V Fitness <noreply@vfitness.it>";
+const FROM_ADDRESS = process.env.EMAIL_FROM || "V Fitness <noreply@hidranbooks.com>";
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
 
 export interface SendEmailArgs {
