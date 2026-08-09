@@ -1,6 +1,13 @@
 // src/types/clientPlans.ts (client) — mirrored server-side in functions/src/ai/authoring/schemas.ts
 export type PlanSource = "ai" | "manual";
-export type PlanStatus = "active" | "archived";
+/**
+ * P2-5: AI-generated plans always start as `draft` and must be published by a trainer.
+ * `active` is retained for plans created before the draft/publish lifecycle existed.
+ */
+export type PlanStatus = "draft" | "published" | "active" | "archived";
+
+/** Body areas a client can flag. Coarse and non-medical by design. */
+export type InjuryArea = "knee" | "lower_back" | "shoulder" | "wrist" | "ankle" | "neck" | "hip";
 
 export interface MacroTargets { kcal?: number; protein?: number; carbs?: number; fat?: number; }
 
@@ -19,7 +26,48 @@ export interface ClientGoal {
   updatedAt?: string;
 }
 
-export interface TrainingExercise { name: string; sets: number; reps: string; restSec?: number; notes?: string; }
+export interface TrainingExercise {
+  /** Present on P2-5 plans: references the shared /exercises library. Absent on legacy
+   *  free-text plans, which is why `name` stays optional-but-supported. */
+  exerciseId?: string;
+  name?: string;
+  sets: number;
+  reps: string;
+  restSec?: number;
+  tempo?: string;
+  loadNote?: string;
+  notes?: string;
+}
+
+export interface Exercise {
+  id: string;
+  name: { it: string; en: string };
+  primary: string;
+  secondary?: string[];
+  equipment: string[];
+  difficulty: "beginner" | "intermediate" | "advanced";
+  contraindicatedFor: InjuryArea[];
+  instructions: { it: string };
+  videoUrl?: string;
+}
+
+/** One client's record of actually doing a day. Written by the client, not the trainer. */
+export interface PlanProgressEntry {
+  id: string;
+  planId: string;
+  weekNumber: number;
+  dayLabel: string;
+  completedAt?: string;
+  /** Per-exercise actuals, keyed by index within the day. */
+  exercises: Record<string, {
+    done: boolean;
+    actualLoad?: string;
+    actualReps?: string;
+  }>;
+  /** Rate of perceived exertion, 1-10. */
+  rpe?: number;
+  notes?: string;
+}
 export interface TrainingDay { label: string; focus?: string; exercises: TrainingExercise[]; }
 export interface TrainingWeek { weekNumber: number; days: TrainingDay[]; }
 export interface TrainingProgram {
@@ -31,6 +79,13 @@ export interface TrainingProgram {
   source: PlanSource;
   model?: string;
   status: PlanStatus;
+  /** True for plans produced by generateWorkoutPlan. */
+  generatedByAi?: boolean;
+  /** The exact prompt used, kept for audit if a plan is ever questioned. */
+  aiPromptSnapshot?: string;
+  /** Set when the client flagged an injury: shown prominently in both apps. */
+  medicalClearanceNote?: string | null;
+  goal?: string;
   createdBy: string;
   createdAt?: string;
   updatedAt?: string;

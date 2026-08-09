@@ -1,5 +1,6 @@
 'use client';
 
+import type { MessageKey } from '@/i18n/messages';
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Edit, Trash2, Dumbbell, Sparkles, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -41,6 +42,20 @@ export default function TrainingTab({ clientId }: { clientId: string }) {
   const [level, setLevel] = useState<TrainingParams['level']>('beginner');
   const [equipment, setEquipment] = useState('');
   const [constraints, setConstraints] = useState('');
+
+  /**
+   * Publishing is the human review gate: until a trainer does this, the client cannot see
+   * the plan (enforced by firestore.rules, not just by this UI).
+   */
+  const handlePublish = async (programId: string) => {
+    await updateTrainingProgram(clientId, programId, { status: 'published' });
+    setPrograms((prev) => prev.map((p) => (p.id === programId ? { ...p, status: 'published' } : p)));
+  };
+
+  const handleArchive = async (programId: string) => {
+    await updateTrainingProgram(clientId, programId, { status: 'archived' });
+    setPrograms((prev) => prev.map((p) => (p.id === programId ? { ...p, status: 'archived' } : p)));
+  };
 
   const handleGenerate = async () => {
     setGenerating(true);
@@ -108,7 +123,9 @@ export default function TrainingTab({ clientId }: { clientId: string }) {
       if (editing) {
         await updateTrainingProgram(clientId, editing.id, data);
       } else {
-        await createTrainingProgram(clientId, { ...data, status: 'active' });
+        // Manually authored plans are published immediately — the review step exists for
+        // AI output, and making a trainer publish their own work twice is friction.
+        await createTrainingProgram(clientId, { ...data, status: 'published' });
       }
       closeEditor();
       await reload();
@@ -281,14 +298,55 @@ export default function TrainingTab({ clientId }: { clientId: string }) {
                 <span
                   className={cn(
                     'px-2.5 py-1 rounded-full text-xs',
-                    program.status === 'active'
+                    program.status === 'published' || program.status === 'active'
                       ? 'bg-green-500/20 text-green-400'
-                      : 'bg-gray-500/20 text-gray-400'
+                      : program.status === 'draft'
+                        ? 'bg-amber-500/20 text-amber-400'
+                        : 'bg-gray-500/20 text-gray-400'
                   )}
                 >
                   {t(`clients.training.status.${program.status}`)}
                 </span>
               </div>
+
+              {/* An AI draft must be reviewed before the client can see it. The banner and
+                  the explicit Publish action are what make that a deliberate human step
+                  rather than something that happens by default. */}
+              {program.status === 'draft' && (
+                <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+                  <p className="text-xs text-amber-300">
+                    {program.generatedByAi
+                      ? t('plans.reviewFirst' as MessageKey)
+                      : t('plans.draftBadge' as MessageKey)}
+                  </p>
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handlePublish(program.id)}
+                      className="min-h-11 flex-1 rounded-lg bg-green-600 px-3 text-sm font-medium text-white"
+                    >
+                      {t('plans.publish' as MessageKey)}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleArchive(program.id)}
+                      className="min-h-11 rounded-lg border border-hairline px-3 text-sm text-content-muted"
+                    >
+                      {t('plans.archive' as MessageKey)}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {(program.status === 'published' || program.status === 'active') && (
+                <button
+                  type="button"
+                  onClick={() => handleArchive(program.id)}
+                  className="mt-3 min-h-11 w-full rounded-lg border border-hairline px-3 text-sm text-content-muted"
+                >
+                  {t('plans.archive' as MessageKey)}
+                </button>
+              )}
             </div>
           ))}
         </div>

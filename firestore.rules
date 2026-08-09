@@ -673,8 +673,11 @@ service cloud.firestore {
     // ============================================
 
     match /clients/{clientId} {
+      // The client themselves may read their own relationship document — P2-5 gives them a
+      // "Le mie schede" view, which has to resolve their own clientId first.
       allow read: if isAdmin() ||
-                    (isAuthenticated() && resource.data.providerId == request.auth.uid);
+                    (isAuthenticated() && resource.data.providerId == request.auth.uid) ||
+                    (isAuthenticated() && resource.data.userId == request.auth.uid);
       allow write: if isAdmin() ||
                      (isAuthenticated() && request.resource.data.providerId == request.auth.uid);
 
@@ -682,6 +685,29 @@ service cloud.firestore {
         allow read, write: if isAdmin() ||
           (isAuthenticated() && get(/databases/$(database)/documents/clients/$(clientId)).data.providerId == request.auth.uid);
       }
+      // Workout plans. The owning provider and staff have full access; the client may read
+      // ONLY published plans — a draft is the trainer's working copy, and showing it would
+      // undermine the human review that keeps AI output from reaching anyone unchecked.
+      match /trainingPrograms/{planId} {
+        allow read: if isAdmin() ||
+          (isAuthenticated() && get(/databases/$(database)/documents/clients/$(clientId)).data.providerId == request.auth.uid) ||
+          (isAuthenticated() &&
+           get(/databases/$(database)/documents/clients/$(clientId)).data.userId == request.auth.uid &&
+           resource.data.status == 'published');
+        allow write: if isAdmin() ||
+          (isAuthenticated() && get(/databases/$(database)/documents/clients/$(clientId)).data.providerId == request.auth.uid);
+      }
+
+      // Training progress is the CLIENT's record of what they actually did, so unusually
+      // for this codebase they are the writer. The trainer reads it but must not author it.
+      match /planProgress/{progressId} {
+        allow read: if isAdmin() ||
+          (isAuthenticated() && get(/databases/$(database)/documents/clients/$(clientId)).data.providerId == request.auth.uid) ||
+          (isAuthenticated() && get(/databases/$(database)/documents/clients/$(clientId)).data.userId == request.auth.uid);
+        allow write: if isAuthenticated() &&
+          get(/databases/$(database)/documents/clients/$(clientId)).data.userId == request.auth.uid;
+      }
+
       match /goals/{goalId} {
         allow read, write: if isAdmin() ||
           (isAuthenticated() && get(/databases/$(database)/documents/clients/$(clientId)).data.providerId == request.auth.uid);
