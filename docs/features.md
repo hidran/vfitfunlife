@@ -302,6 +302,39 @@ Provider profiles extend the base user profile with professional features:
 - Contact provider (pre-booking)
 
 #### Booking Flow
+
+> **P0-1 (shipped 2026-08-09) — trainer sessions use manual payment confirmation.**
+> Payments happen **off-platform, directly to the trainer** (cash / Satispay / bank
+> transfer); the platform only *records* them. Steps 8–10 below describe the Stripe flow,
+> which still applies to venue bookings but **not** to trainer sessions. Stripe split
+> payments are Phase 2.
+> Spec: `docs/superpowers/specs/2026-08-08-booking-manual-payment-design.md`
+
+**Status machine (trainer sessions):**
+
+```
+                    ┌──→ declined ●
+requested ──────────┼──→ cancelled_by_client ●
+    │               └──→ cancelled_by_trainer ●
+    ↓
+ accepted ──────────┬──→ cancelled_by_client / cancelled_by_trainer ●
+    │               └──→ no_show ●
+completed  ──→  payment_confirmed ●
+```
+
+- [x] Client requests a session (home / online / outdoor); no venue required
+- [x] Trainer accepts or declines, with an optional message
+- [x] Trainer marks "Sessione svolta" — only after the session end time; no auto-complete
+- [x] Trainer records "Pagamento ricevuto": method + amount, prefilled from `finalPrice`
+- [x] Client optionally confirms or disputes; silence auto-confirms after 48h
+- [x] Every transition appends to `statusHistory` (status, actor, role, timestamp)
+- [x] Late cancellations (<24h) flagged — **no fees in the pilot**, data only
+- [x] Push + in-app + email (Resend) notification per transition, in the recipient's language
+- [x] Trainer nudged 2h after the session end if still un-completed
+- [x] Transitions are callable-only; Firestore rules deny client/trainer writes to status
+- [ ] Stripe split payments (Phase 2)
+
+**Original Stripe flow (venue bookings):**
 1. Select service from provider's offerings
 2. Choose booking type (in-venue, home service, virtual)
 3. Select date and time from available slots

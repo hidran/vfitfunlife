@@ -19,6 +19,7 @@ import {
 } from '@/components/admin';
 import { Button } from '@/components/ui/button';
 import { BookingFormView, type BookingFormData } from './BookingFormView';
+import { StatusHistoryTimeline } from './StatusHistoryTimeline';
 import { isActive } from '@/lib/bookingStatus';
 import type { Booking, BookingStatus } from '@/types/firebase';
 import { useI18n } from '@/hooks/useI18n';
@@ -197,6 +198,8 @@ export function BookingDetailView({ bookingId }: Props) {
           initial={booking}
           onSubmit={(d) => updateMut.mutate(d)}
         />
+
+        <StatusHistoryTimeline history={booking.statusHistory} />
       </EntityDetailLayout>
 
       <ConfirmDeleteDialog

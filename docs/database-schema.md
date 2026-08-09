@@ -283,8 +283,11 @@ interface InstructorAvailability {
 interface Booking {
   // References
   userId: string;
-  venueId: string;
+  // Absent for trainer sessions (home / online / outdoor), which have no venue.
+  venueId: string | null;
   serviceId: string;
+  // The canonical trainer link. Older documents carried `providerId` instead; the P0-1
+  // migration backfilled this from it, and all booking queries key on this field.
   instructorId: string | null;
   
   // Denormalized data (for queries without joins)
@@ -313,7 +316,19 @@ interface Booking {
   durationMinutes: number;
   
   // Status
-  status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
+  // P0-1 (2026-08-08): migrated from
+  // 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show'.
+  // Transitions are written ONLY by Cloud Functions; firestore.rules denies client and
+  // trainer writes to this field. See docs/superpowers/specs/2026-08-08-booking-manual-payment-design.md
+  status:
+    | 'requested'            // client asked; trainer has not responded
+    | 'accepted'             // trainer took it
+    | 'declined'             // trainer refused
+    | 'cancelled_by_client'
+    | 'cancelled_by_trainer' // also covers admin/venue cancellations — see actorRole below
+    | 'completed'            // trainer attested the session happened
+    | 'no_show'              // client did not attend: no points, no completedAt
+    | 'payment_confirmed';   // off-platform payment recorded by the trainer
   
   // Pricing
   originalPrice: number;
@@ -343,10 +358,45 @@ interface Booking {
   
   // Cancellation
   cancelledAt: Timestamp | null;
+  // Retained after the P0-1 status migration: this has five values where the status enum
+  // has two cancellation states, so it stays the authoritative attribution source for
+  // pre-migration records.
   cancelledBy: 'user' | 'instructor' | 'venue' | 'admin' | null;
   cancellationReason: string | null;
   refundAmount: number | null;
-  
+  // Cancelled <24h before the slot. PILOT: flagged for data only, never charged.
+  lateCancellation?: boolean;
+
+  // Status audit trail — append-only, written by Cloud Functions only.
+  //
+  // Attribution comes from actorRole, NOT from the status: an admin cancelling a booking
+  // still lands it in 'cancelled_by_trainer', so any trainer-reliability metric that reads
+  // the status alone will blame the trainer. P0-2 must key on actorRole.
+  // actorUid is the literal string 'migration' for entries synthesised by the backfill.
+  statusHistory: Array<{
+    status: BookingStatus;
+    actorUid: string;
+    actorRole: 'client' | 'trainer' | 'admin' | 'system';
+    at: Timestamp;
+    note?: string;
+  }>;
+
+  // Manual payment confirmation. Payments happen off-platform, directly to the trainer;
+  // the platform only records them. Stripe split payments are Phase 2.
+  paymentConfirmation?: {
+    method: 'cash' | 'satispay' | 'bank_transfer' | 'other';
+    amount: number;                  // prefilled from finalPrice, trainer-editable, revalidated server-side
+    confirmedByTrainerAt: Timestamp;
+    clientResponse: 'confirmed' | 'disputed' | null;
+    clientRespondedAt: Timestamp | null;
+    autoConfirmed: boolean;          // true when the 48h job closed it
+    disputeReason?: string;
+  } | null;
+
+  // Guards the 2h "mark it complete" nudge against re-sending. Initialised to null on
+  // create and by the migration — Firestore cannot query for an absent field.
+  completionReminderSentAt?: Timestamp | null;
+
   // Review
   hasReviewed: boolean;
   reviewId: string | null;
@@ -563,6 +613,22 @@ interface StreamingSchedule {
 ## Firestore Indexes
 
 > **Note (audit sync 2026-05):** As of 2026-05, `firestore.indexes.json` is empty (only commented examples and empty `indexes`/`fieldOverrides` arrays). Composite indexes are currently auto-created from query patterns at runtime via the Firebase console error link. The block below is the **intended** index set and should be added to `firestore.indexes.json` before relying on it in production.
+>
+> **Update (P0-1, 2026-08-09):** `firestore.indexes.json` is no longer empty — it now holds
+> 8 real `bookings` indexes, deployed. Note the failure mode this closed: a missing index
+> makes the query throw, `providerStore` catches it into `bookingError`, and the UI renders
+> an empty list or a bare "not found" with **nothing in the browser console**. If a booking
+> list or detail page looks empty, check for a missing index before anything else.
+>
+> Deployed `bookings` indexes:
+> - `instructorId` + `scheduledAt DESC` — the trainer's bookings list
+> - `instructorId` + `status` + `scheduledAt DESC` — that list, filtered
+> - `instructorId` + `userId` + `scheduledAt DESC` — a client's history with one trainer
+> - `userId` + `scheduledAt DESC` — the client's own bookings
+> - `status` + `scheduledAt` — `sendBookingReminders`
+> - `status` + `scheduledEndAt` — `processCompletedBookings`
+> - `status` + `completionReminderSentAt` + `scheduledEndAt` — `remindTrainerToComplete`
+> - `status` + `paymentConfirmation.clientResponse` + `paymentConfirmation.confirmedByTrainerAt` — `autoConfirmPayments`
 
 Create these composite indexes in `firestore.indexes.json`:
 
