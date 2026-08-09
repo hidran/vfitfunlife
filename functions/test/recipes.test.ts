@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { recipeParamsSchema, recipeBatchSchema } from "../src/recipes/schema";
+import {
+  validateIngredients, screenRecipe, ForbiddenInputError,
+} from "../src/recipes/screening";
+import { buildRecipesPrompt } from "../src/recipes/prompt";
+
+/** U+0300 COMBINING GRAVE ACCENT, as an escape so it survives any reformatting. */
+const COMBINING_GRAVE = "\u0300";
 
 const validParams = {
   count: 2,
@@ -80,10 +87,6 @@ describe("recipeBatchSchema", () => {
   });
 });
 
-import {
-  validateIngredients, screenRecipe, ForbiddenInputError,
-} from "../src/recipes/screening";
-
 describe("validateIngredients (input)", () => {
   it("accepts ordinary ingredients", () => {
     expect(validateIngredients(["pollo", "zucchine", "olio d'oliva", "basilico"]))
@@ -111,9 +114,20 @@ describe("validateIngredients (input)", () => {
     }
   });
 
-  it("rejects over-long entries and too many entries", () => {
-    expect(() => validateIngredients(["x".repeat(31)])).toThrow(ForbiddenInputError);
-    expect(() => validateIngredients(new Array(7).fill("pollo"))).toThrow(ForbiddenInputError);
+  it("rejects over-long entries and too many entries, distinguishably", () => {
+    // The UI has to explain which rule was broken, so "too long" must not surface as
+    // "invalid characters".
+    expect(() => validateIngredients(["x".repeat(31)])).toThrow(/forbidden-input:too-long/);
+    expect(() => validateIngredients(new Array(7).fill("pollo")))
+      .toThrow(/forbidden-input:too-many-items/);
+  });
+
+  it("accepts a decomposed (NFD) accented ingredient, as iOS and macOS may send it", () => {
+    // Built from an escape rather than a pasted character: a literal combining mark here is
+    // invisible and any editor that normalizes the file would silently defeat the test.
+    const nfd = "ragu" + COMBINING_GRAVE;
+    expect(nfd).toHaveLength(5);
+    expect(validateIngredients([nfd])).toEqual([nfd.normalize("NFC")]);
   });
 
   it("trims and drops blanks", () => {
@@ -163,6 +177,39 @@ describe("screenRecipe (output)", () => {
     }
   });
 
+  it("keeps ordinary cooking idioms — the reason `cura per` is not on the list", () => {
+    // "cura per" substring-matched all of these. Word boundaries would not have helped:
+    // the boundaries in "con cura per" are real.
+    for (const ok of [
+      "Mescolare con cura per 5 minuti.",
+      "Insaporire con cura per esaltare i sapori.",
+      "Una ricetta sicura per i bambini.",
+    ]) {
+      expect(screenRecipe({ ...base, steps: [...base.steps, ok] })).toBeNull();
+    }
+  });
+
+  it("drops the diagnosis framing of an exclusion but keeps the plain exclusion", () => {
+    // Spec §7.1: an exclusion is a taste preference. Calling it an intolerance is the
+    // medical claim the whole feature is shaped to avoid.
+    expect(screenRecipe({
+      ...base,
+      steps: [...base.steps, "Adatta a chi ha una intolleranza al lattosio."],
+    })).not.toBeNull();
+    expect(screenRecipe({ ...base, tags: ["senza lattosio"] })).toBeNull();
+    expect(screenRecipe({
+      ...base,
+      steps: [...base.steps, "Adatta a chi segue una dieta vegetariana."],
+    })).toBeNull();
+  });
+
+  it("screens ingredient quantities, where a model can also put prose", () => {
+    expect(screenRecipe({
+      ...base,
+      ingredients: [{ item: "riso", quantity: "1 dose terapeutica" }, ...base.ingredients],
+    })).not.toBeNull();
+  });
+
   it("screens the title and ingredient names too, not only the steps", () => {
     expect(screenRecipe({ ...base, title: "Ricetta per ipertensione" })).not.toBeNull();
     expect(screenRecipe({
@@ -172,8 +219,6 @@ describe("screenRecipe (output)", () => {
   });
 });
 
-import { buildRecipesPrompt } from "../src/recipes/prompt";
-
 describe("buildRecipesPrompt", () => {
   const params = {
     count: 2, servings: 4, dietStyle: "vegetariana" as const,
@@ -182,11 +227,15 @@ describe("buildRecipesPrompt", () => {
   };
 
   it("renders the enum selections as natural language", () => {
+    // Per LINE, not per prompt: a bare toContain("2") passes even when count and servings
+    // are rendered into each other's lines, which is the mistake worth catching here.
     const prompt = buildRecipesPrompt({ params, ingredients: [], locale: "it" });
+    const line = (prefix: string) => prompt.split("\n").find((l) => l.startsWith(prefix));
     expect(prompt).toContain("Italian");
-    expect(prompt).toContain("2");
-    expect(prompt).toContain("vegetarian");
-    expect(prompt).toContain("30");
+    expect(line("Produce exactly")).toContain("2 distinct recipe(s)");
+    expect(line("- Diet style:")).toContain("vegetarian");
+    expect(line("- Maximum preparation time:")).toContain("30 minutes");
+    expect(line("- Servings:")).toContain("4");
   });
 
   it("includes sanitized ingredients when present", () => {

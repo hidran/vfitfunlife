@@ -74,8 +74,17 @@ export const OUTPUT_DENYLIST = [
   "dieta personalizzata", "piano alimentare", "la tua dieta", "il tuo fabbisogno",
   "fabbisogno calorico", "deficit calorico", "dieta dimagrante", "per dimagrire",
   "perdere peso", "weight loss", "meal plan",
+  // diagnosis framing — spec §7.1: an exclusion is a preference, never a medical fact.
+  // The prompt forbids this framing; these two enforce it on the way back.
+  "intolleran", "allerg",
   // clinical framing
-  "prescriv", "terapia", "terapeutic", "cura per", "indicato per chi soffre",
+  //
+  // NOTE: "cura per" was here and was REMOVED. Do not add it back. It substring-matches the
+  // everyday cooking idiom "mescolare con cura per 5 minuti" and "una ricetta sicura per i
+  // bambini", dropping correct recipes — and word-boundary matching would not help, because
+  // those boundaries are real. A genuine "cura per X" always names the condition it claims to
+  // cure, which the medical-conditions entries above already catch.
+  "prescriv", "terapia", "terapeutic", "indicato per chi soffre",
   "consigliato in caso di",
 ];
 
@@ -88,10 +97,16 @@ const INGREDIENT_PATTERN = new RegExp(`^[\\p{L}][\\p{L}\\s'’-]{1,${INGREDIENT_
  * attempt costs the user nothing.
  */
 export function validateIngredients(raw: string[] | undefined): string[] {
-  const items = (raw ?? []).map((s) => s.trim()).filter((s) => s.length > 0);
+  // NFC first: iOS and macOS can send decomposed text, where the accent of "ragu`" is a
+  // separate combining mark. Combining marks are \p{M}, not \p{L}, so the decomposed form
+  // would fail INGREDIENT_PATTERN while the precomposed form passes. Compose, don't loosen
+  // the character class — the class is what keeps digits out.
+  const items = (raw ?? []).map((s) => s.trim().normalize("NFC")).filter((s) => s.length > 0);
   if (items.length > INGREDIENTS_MAX_ITEMS) throw new ForbiddenInputError("too-many-items");
 
   for (const item of items) {
+    // Length is checked separately from the pattern so the UI can say which rule was broken.
+    if (item.length > INGREDIENT_MAX_LENGTH) throw new ForbiddenInputError("too-long");
     if (!INGREDIENT_PATTERN.test(item)) throw new ForbiddenInputError("invalid-characters");
     const normalized = normalize(item);
     const hit = INPUT_DENYLIST.find((term) => normalized.includes(term));
@@ -117,7 +132,8 @@ export function screenRecipe(recipe: ScreenableRecipe): string | null {
     recipe.title,
     ...recipe.steps,
     ...(recipe.tags ?? []),
-    ...recipe.ingredients.map((i) => i.item),
+    // Both halves: a model that wants to editorialise will happily do it in `quantity`.
+    ...recipe.ingredients.flatMap((i) => [i.item, i.quantity]),
   ].join(" \n "));
 
   return OUTPUT_DENYLIST.find((term) => haystack.includes(term)) ?? null;

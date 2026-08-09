@@ -36,7 +36,7 @@ export const recipeParamsSchema = z.object({
   excludes: z.array(z.enum(EXCLUSIONS)).max(4).default([]),
   orientation: z.enum(ORIENTATIONS),
   cuisine: z.enum(CUISINES),
-  maxPrepMinutes: z.union([z.literal(15), z.literal(30), z.literal(45), z.literal(60)]),
+  maxPrepMinutes: z.literal(MAX_PREP_MINUTES),
   budget: z.enum(BUDGETS),
   ingredientsOnHand: z.array(z.string()).max(INGREDIENTS_MAX_ITEMS).optional(),
 }).strict();

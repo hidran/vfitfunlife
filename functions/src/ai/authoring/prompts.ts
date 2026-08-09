@@ -29,8 +29,6 @@ const DISCLAIMER =
   "Include a brief note that this plan is general fitness/wellness guidance, not medical advice, " +
   "and the client should consult a qualified professional for medical conditions.";
 
-export { localeLanguage };
-
 function goalsBlock(goals: ClientGoalLite[]): string {
   if (!goals.length) return "No specific goals recorded.";
   return goals
