@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildTrainingPrompt, buildDietPrompt, buildRecipePrompt } from "./prompts";
+import { buildTrainingPrompt } from "./prompts";
 
 const DISCLAIMER = "not medical advice";
 
@@ -15,34 +15,6 @@ describe("buildTrainingPrompt", () => {
     expect(prompt).toContain("upper body strength");
     expect(prompt).toContain("build upper-body mass");
     expect(prompt).toContain("Personal training session");
-    expect(prompt).toContain(DISCLAIMER);
-  });
-});
-
-describe("buildDietPrompt", () => {
-  it("includes locale language, restrictions, and disclaimer", () => {
-    const prompt = buildDietPrompt({
-      locale: "en",
-      params: { durationDays: 7, mealsPerDay: 3, restrictions: "vegetarian, no nuts" },
-      goals: [],
-      recentSessions: [],
-    });
-    expect(prompt).toContain("English");
-    expect(prompt).toContain("vegetarian, no nuts");
-    expect(prompt).toContain(DISCLAIMER);
-  });
-});
-
-describe("buildRecipePrompt", () => {
-  it("includes locale language, constraints, and disclaimer", () => {
-    const prompt = buildRecipePrompt({
-      locale: "es",
-      params: { servings: 2, constraints: "gluten free", mealType: "dinner" },
-      goals: [],
-      recentSessions: [],
-    });
-    expect(prompt).toContain("Spanish");
-    expect(prompt).toContain("gluten free");
     expect(prompt).toContain(DISCLAIMER);
   });
 });

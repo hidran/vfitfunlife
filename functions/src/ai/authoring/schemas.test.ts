@@ -1,12 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  trainingProgramSchema,
-  dietPlanSchema,
-  recipeSchema,
-  trainingParamsSchema,
-  dietParamsSchema,
-  recipeParamsSchema,
-} from "./schemas";
+import { trainingProgramSchema, trainingParamsSchema } from "./schemas";
 
 describe("trainingProgramSchema", () => {
   const valid = {
@@ -38,32 +31,6 @@ describe("trainingProgramSchema", () => {
   });
 });
 
-describe("dietPlanSchema", () => {
-  it("parses a valid diet object", () => {
-    const valid = {
-      title: "Cutting Plan",
-      durationDays: 7,
-      targets: { kcal: 2000, protein: 150 },
-      days: [
-        { label: "Day 1", meals: [{ name: "Breakfast", items: [{ food: "Oats", quantity: "80g" }] }] },
-      ],
-    };
-    expect(dietPlanSchema.parse(valid)).toEqual(valid);
-  });
-});
-
-describe("recipeSchema", () => {
-  it("parses a valid recipe object", () => {
-    const valid = {
-      title: "Protein Pancakes",
-      servings: 2,
-      ingredients: [{ item: "Oats", quantity: "100g" }],
-      steps: ["Mix", "Cook"],
-    };
-    expect(recipeSchema.parse(valid)).toEqual(valid);
-  });
-});
-
 describe("param schemas reject out-of-range values", () => {
   it("trainingParamsSchema rejects durationWeeks: 0", () => {
     expect(() => trainingParamsSchema.parse({ durationWeeks: 0, daysPerWeek: 3 })).toThrow();
@@ -72,13 +39,5 @@ describe("param schemas reject out-of-range values", () => {
   it("trainingParamsSchema accepts a valid payload", () => {
     expect(trainingParamsSchema.parse({ durationWeeks: 8, daysPerWeek: 4, level: "intermediate" }))
       .toMatchObject({ durationWeeks: 8, daysPerWeek: 4, level: "intermediate" });
-  });
-
-  it("dietParamsSchema rejects mealsPerDay: 1", () => {
-    expect(() => dietParamsSchema.parse({ durationDays: 7, mealsPerDay: 1 })).toThrow();
-  });
-
-  it("recipeParamsSchema rejects servings: 0", () => {
-    expect(() => recipeParamsSchema.parse({ servings: 0 })).toThrow();
   });
 });

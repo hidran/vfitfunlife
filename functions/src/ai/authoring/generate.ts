@@ -7,14 +7,8 @@ import { getAiAuthoringSettings } from "./settings";
 import { reserveQuota, recordTokens, releaseQuota } from "../quota";
 import { writeAuditLog } from "../../lib/audit";
 import { getUserRoleInfo } from "../../utils/roles";
-import {
-  trainingProgramSchema, dietPlanSchema, recipeSchema,
-  trainingParamsSchema, dietParamsSchema, recipeParamsSchema,
-} from "./schemas";
-import {
-  buildTrainingPrompt, buildDietPrompt, buildRecipePrompt,
-  ClientGoalLite, PromptContext,
-} from "./prompts";
+import { trainingProgramSchema, trainingParamsSchema } from "./schemas";
+import { buildTrainingPrompt, ClientGoalLite, PromptContext } from "./prompts";
 
 const region = process.env.FIREBASE_REGION || "europe-west1";
 const BUCKET = "ai_authoring_usage";
@@ -40,7 +34,7 @@ async function runGeneration<T extends z.ZodObject<z.ZodRawShape>, P>(opts: {
   paramsSchema: z.ZodType<P>;
   outputSchema: T;
   buildPrompt: (ctx: PromptContext<P>) => string;
-  subcollection: "trainingPrograms" | "dietPlans" | "recipes";
+  subcollection: "trainingPrograms";
 }) {
   const { request } = opts;
   if (!request.auth) throw new HttpsError("unauthenticated", "Must be authenticated");
@@ -114,7 +108,7 @@ async function runGeneration<T extends z.ZodObject<z.ZodRawShape>, P>(opts: {
     ...object,
     source: "ai",
     model: settings.model,
-    status: opts.subcollection === "recipes" ? undefined : "active",
+    status: "active",
     createdBy: uid,
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -132,7 +126,7 @@ async function runGeneration<T extends z.ZodObject<z.ZodRawShape>, P>(opts: {
     source: "ai",
     model: settings.model,
     createdBy: uid,
-    ...(opts.subcollection === "recipes" ? {} : { status: "active" as const }),
+    status: "active" as const,
   };
 }
 
@@ -143,22 +137,4 @@ export const generateTrainingProgram = onCall<GenReq>({ region, secrets: AI_SECR
     outputSchema: trainingProgramSchema,
     buildPrompt: buildTrainingPrompt,
     subcollection: "trainingPrograms",
-  }));
-
-export const generateDietPlan = onCall<GenReq>({ region, secrets: AI_SECRETS }, (request) =>
-  runGeneration({
-    request,
-    paramsSchema: dietParamsSchema,
-    outputSchema: dietPlanSchema,
-    buildPrompt: buildDietPrompt,
-    subcollection: "dietPlans",
-  }));
-
-export const generateRecipe = onCall<GenReq>({ region, secrets: AI_SECRETS }, (request) =>
-  runGeneration({
-    request,
-    paramsSchema: recipeParamsSchema,
-    outputSchema: recipeSchema,
-    buildPrompt: buildRecipePrompt,
-    subcollection: "recipes",
   }));
