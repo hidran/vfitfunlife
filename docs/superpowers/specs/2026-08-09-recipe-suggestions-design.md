@@ -279,7 +279,7 @@ since `count ≤ 3`.
 | `provider`, `admin`, `superadmin` | `settings.dailyQuota` (default 20) |
 | `client` / any other authenticated user | `settings.recipeClientDailyQuota` (**new field**, default 3) |
 
-`recipeClientDailyQuota` must be wired in **five** places, not three. Two of them are easy to
+`recipeClientDailyQuota` must be wired in **four** places, not one. Two of them are easy to
 miss and fail silently:
 
 1. `AiAuthoringSettings` and `DEFAULT_AI_AUTHORING_SETTINGS` (`functions/src/ai/authoring/settings.ts`).
@@ -334,6 +334,13 @@ The output list targets only what is actually forbidden:
 Bare `dieta`, `kcal`, `calorie` and `proteine` are **allowed** in output. The phrase
 `dieta mediterranea` is explicitly allowed and must be covered by a test, since it is the
 most likely false positive.
+
+**Deliberately not carried over from §7.2:** the named-protocol terms `chetogenic*`, `keto`,
+`digiuno` and `bmi`. A step reading "perfetta per la dieta chetogenica" will pass output
+screening. This is a considered trade, not an omission — describing a recipe as suiting a
+well-known eating style is food writing, whereas *asking* for one on those terms (§7.2) is a
+request for a regime and stays blocked. Anything that crosses into prescription reaches the
+per-person and clinical rows above regardless of which protocol it names.
 
 ### 8.5 Output schema
 
@@ -390,7 +397,7 @@ status field is added.
 
 `editors/RecipeEditor.tsx` survives, adapted to §6.1 — manually authoring a generic recipe is
 legal and useful. Three concrete shape changes: `nutrition` → `nutritionPerServing`,
-`prepMinutes` becomes required (it is optional at `src/types/clientPlans.ts:115`), and the
+`prepMinutes` becomes required (it is optional at `src/types/clientPlans.ts:116`), and the
 `onSave` payload typed inline at `RecipesTab.tsx:100-109` moves with it. `MacroTargets` is
 reused for `nutritionPerServing`; without that it would be left orphaned when `DietPlan.targets`
 and `RecipeParams.targetMacros` go.
@@ -466,13 +473,13 @@ added: `/plans` is currently reachable only by typing the URL.
 - Ingredient validation rejects any digit; rejects `diabete`, `Diabète`, `DIABETICI`, `per
   diabetici`, `dimagrire`, `1500 kcal`; accepts `pollo`, `zucchine`, `olio d'oliva`.
 - A forbidden input consumes no quota (`reserveQuota` not called).
-- **Output screening does not use the input list**: a recipe whose steps say "tipico della
-  dieta mediterranea" and whose tags say "300 calorie a porzione" survives, while one saying
-  "indicato per chi soffre di diabete" or "per il tuo deficit calorico" is dropped.
+- **Output screening uses the §8.4 list, not the §7.2 one**: a recipe whose steps say "tipico
+  della dieta mediterranea" and whose tags say "300 calorie a porzione" survives, while one
+  saying "indicato per chi soffre di diabete" or "per il tuo deficit calorico" is dropped.
+  When every recipe in a batch is dropped, the call throws `generation-unusable` and releases
+  the quota.
 - The built prompt contains only enum-derived phrases and sanitized ingredients — asserted by
   the absence of any client identifier, since the callable has no `clientId` to begin with.
-- Output screening drops a recipe whose steps mention a condition; when all are dropped the
-  call throws `generation-unusable` and releases the quota.
 - Role → quota mapping: `client` resolves to `recipeClientDailyQuota`, `provider` to
   `dailyQuota`.
 
@@ -498,7 +505,7 @@ added: `/plans` is currently reachable only by typing the URL.
 
 | Risk | Mitigation |
 |---|---|
-| The denylist is a blocklist and will miss phrasings | It is the *third* line, not the first. The first is that no `clientId` exists; the second is an output schema that cannot hold a diet plan. The denylist only has to catch what those two allow through |
+| Both denylists (§7.2 input, §8.4 output) are blocklists and will miss phrasings | They are the *third* line, not the first. The first is that no `clientId` exists; the second is an output schema that cannot hold a diet plan. The lists only have to catch what those two allow through, which is why they can afford to be tuned differently from each other |
 | A trainer verbally prescribes a diet and uses recipes as cover | Out of the platform's reach. The trainer notice states the boundary in writing, on the screen, every time |
 | The model returns indicative nutrition that is wrong | Values are labelled indicative per portion and carry the disclaimer. No decision of consequence rests on them |
 | Five-locale i18n sweep across removal and addition | `completeness.test.ts` already fails on missing keys in any locale |
