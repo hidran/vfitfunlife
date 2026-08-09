@@ -1,24 +1,37 @@
 'use client';
 
+/**
+ * Manual recipe authoring — P2-6.
+ *
+ * Authoring a generic recipe by hand is legal and useful, so this editor survived the removal
+ * of the diet UI. The nutrition block is INDICATIVE PER PORTION, never a target: no field here
+ * describes a person, and none of these numbers is an objective to hit.
+ */
+
 import { useState } from 'react';
 import { Plus, Trash2, Save, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
-import type { Recipe, RecipeIngredient, MacroTargets } from '@/types/clientPlans';
+import type { NutritionPerServing, Recipe, RecipeIngredient } from '@/types/recipes';
 
 const inputClass =
-  'w-full bg-surface-input border border-hairline rounded-lg px-3 py-2 text-sm text-content placeholder-gray-500 outline-none focus:border-section-primary';
+  'w-full min-h-11 bg-surface-input border border-hairline rounded-lg px-3 py-2 text-sm text-content placeholder-gray-500 outline-none focus:border-section-primary';
 
-interface EditorRecipe {
+/**
+ * What the editor hands back. Shaped to be assignable to `createRecipe`'s payload, which is
+ * why `tags` is always present and `prepMinutes` is required — the recipe schema (spec §6.1)
+ * makes prep time mandatory.
+ */
+export interface RecipeEditorPayload {
   title: string;
   servings: number;
-  prepMinutes?: number;
+  prepMinutes: number;
   cookMinutes?: number;
   ingredients: RecipeIngredient[];
   steps: string[];
-  nutrition?: MacroTargets;
-  tags?: string[];
+  nutritionPerServing?: NutritionPerServing;
+  tags: string[];
 }
 
 function emptyIngredient(): RecipeIngredient {
@@ -28,7 +41,7 @@ function emptyIngredient(): RecipeIngredient {
 interface RecipeEditorProps {
   initial?: Recipe | null;
   saving?: boolean;
-  onSave: (recipe: EditorRecipe) => void;
+  onSave: (recipe: RecipeEditorPayload) => void;
   onCancel: () => void;
 }
 
@@ -51,16 +64,16 @@ export default function RecipeEditor({ initial, saving, onSave, onCancel }: Reci
     initial?.steps?.length ? initial.steps : ['']
   );
   const [kcal, setKcal] = useState<string>(
-    initial?.nutrition?.kcal != null ? String(initial.nutrition.kcal) : ''
+    initial?.nutritionPerServing?.kcal != null ? String(initial.nutritionPerServing.kcal) : ''
   );
   const [protein, setProtein] = useState<string>(
-    initial?.nutrition?.protein != null ? String(initial.nutrition.protein) : ''
+    initial?.nutritionPerServing?.protein != null ? String(initial.nutritionPerServing.protein) : ''
   );
   const [carbs, setCarbs] = useState<string>(
-    initial?.nutrition?.carbs != null ? String(initial.nutrition.carbs) : ''
+    initial?.nutritionPerServing?.carbs != null ? String(initial.nutritionPerServing.carbs) : ''
   );
   const [fat, setFat] = useState<string>(
-    initial?.nutrition?.fat != null ? String(initial.nutrition.fat) : ''
+    initial?.nutritionPerServing?.fat != null ? String(initial.nutritionPerServing.fat) : ''
   );
   const [tags, setTags] = useState<string>((initial?.tags ?? []).join(', '));
 
@@ -93,32 +106,36 @@ export default function RecipeEditor({ initial, saving, onSave, onCancel }: Reci
   };
 
   const servingsNum = parseInt(servings, 10);
+  const prepNum = optInt(prepMinutes);
 
   const handleSave = () => {
-    const nutrition: MacroTargets = {
-      kcal: optNum(kcal),
-      protein: optNum(protein),
-      carbs: optNum(carbs),
-      fat: optNum(fat),
-    };
-    const hasNutrition =
-      nutrition.kcal != null ||
-      nutrition.protein != null ||
-      nutrition.carbs != null ||
-      nutrition.fat != null;
+    if (prepNum == null) return;
+    // Only defined values: Firestore rejects an explicit `undefined` in a written document.
+    const nutrition: NutritionPerServing = {};
+    const kcalNum = optNum(kcal);
+    const proteinNum = optNum(protein);
+    const carbsNum = optNum(carbs);
+    const fatNum = optNum(fat);
+    if (kcalNum != null) nutrition.kcal = kcalNum;
+    if (proteinNum != null) nutrition.protein = proteinNum;
+    if (carbsNum != null) nutrition.carbs = carbsNum;
+    if (fatNum != null) nutrition.fat = fatNum;
+
+    const cookNum = optInt(cookMinutes);
     const tagList = tags
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean);
+
     onSave({
       title: title.trim(),
       servings: servingsNum,
-      prepMinutes: optInt(prepMinutes),
-      cookMinutes: optInt(cookMinutes),
+      prepMinutes: prepNum,
+      ...(cookNum != null ? { cookMinutes: cookNum } : {}),
       ingredients: ingredients.filter((ing) => ing.item.trim() || ing.quantity.trim()),
       steps: steps.filter((s) => s.trim()),
-      nutrition: hasNutrition ? nutrition : undefined,
-      tags: tagList.length ? tagList : undefined,
+      ...(Object.keys(nutrition).length ? { nutritionPerServing: nutrition } : {}),
+      tags: tagList,
     });
   };
 
@@ -149,7 +166,8 @@ export default function RecipeEditor({ initial, saving, onSave, onCancel }: Reci
             <label className="block text-sm text-gray-400 mb-1">{t('clients.recipes.prep')}</label>
             <input
               type="number"
-              min={0}
+              min={1}
+              required
               value={prepMinutes}
               onChange={(e) => setPrepMinutes(e.target.value)}
               className={inputClass}
@@ -170,7 +188,7 @@ export default function RecipeEditor({ initial, saving, onSave, onCancel }: Reci
 
       {/* Ingredients */}
       <div className="space-y-2">
-        <p className="text-sm font-semibold text-content">{t('clients.recipes.ingredients')}</p>
+        <p className="text-sm font-semibold text-content">{t('recipes.ingredients')}</p>
         {ingredients.map((ing, i) => (
           <div key={i} className="grid grid-cols-2 sm:grid-cols-12 gap-2 items-center">
             <input
@@ -189,22 +207,22 @@ export default function RecipeEditor({ initial, saving, onSave, onCancel }: Reci
             />
             <button
               onClick={() => removeIngredient(i)}
-              className="p-1.5 text-red-400 hover:text-red-300 rounded justify-self-end sm:col-span-1"
+              className="w-11 h-11 flex items-center justify-center text-red-400 hover:text-red-300 rounded justify-self-end sm:col-span-1"
               aria-label={t('clients.common.remove')}
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="w-4 h-4" aria-hidden />
             </button>
           </div>
         ))}
         <Button size="sm" variant="secondary" onClick={addIngredient}>
-          <Plus className="w-4 h-4 mr-2" />
+          <Plus className="w-4 h-4 mr-2" aria-hidden />
           {t('clients.common.addIngredient')}
         </Button>
       </div>
 
       {/* Steps */}
       <div className="space-y-2">
-        <p className="text-sm font-semibold text-content">{t('clients.recipes.steps')}</p>
+        <p className="text-sm font-semibold text-content">{t('recipes.steps')}</p>
         {steps.map((step, i) => (
           <div key={i} className="flex items-start gap-2">
             <span className="text-sm text-gray-400 pt-2.5 w-6 shrink-0 text-right">{i + 1}.</span>
@@ -216,25 +234,25 @@ export default function RecipeEditor({ initial, saving, onSave, onCancel }: Reci
             />
             <button
               onClick={() => removeStep(i)}
-              className="p-1.5 text-red-400 hover:text-red-300 rounded shrink-0 mt-1"
+              className="w-11 h-11 flex items-center justify-center text-red-400 hover:text-red-300 rounded shrink-0"
               aria-label={t('clients.common.remove')}
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="w-4 h-4" aria-hidden />
             </button>
           </div>
         ))}
         <Button size="sm" variant="secondary" onClick={addStep}>
-          <Plus className="w-4 h-4 mr-2" />
+          <Plus className="w-4 h-4 mr-2" aria-hidden />
           {t('clients.common.addStep')}
         </Button>
       </div>
 
-      {/* Nutrition */}
+      {/* Nutrition — indicative per portion. NOT targets: see the file header. */}
       <div>
-        <p className="text-sm font-semibold text-content mb-2">{t('clients.recipes.nutrition')}</p>
+        <p className="text-sm font-semibold text-content mb-2">{t('recipes.nutrition')}</p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div>
-            <label className="block text-xs text-gray-400 mb-1">{t('clients.diet.kcal')}</label>
+            <label className="block text-xs text-gray-400 mb-1">{t('recipes.kcal')}</label>
             <input
               type="number"
               min={0}
@@ -244,7 +262,7 @@ export default function RecipeEditor({ initial, saving, onSave, onCancel }: Reci
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">{t('clients.diet.protein')}</label>
+            <label className="block text-xs text-gray-400 mb-1">{t('recipes.protein')}</label>
             <input
               type="number"
               min={0}
@@ -254,7 +272,7 @@ export default function RecipeEditor({ initial, saving, onSave, onCancel }: Reci
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">{t('clients.diet.carbs')}</label>
+            <label className="block text-xs text-gray-400 mb-1">{t('recipes.carbs')}</label>
             <input
               type="number"
               min={0}
@@ -264,7 +282,7 @@ export default function RecipeEditor({ initial, saving, onSave, onCancel }: Reci
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">{t('clients.diet.fat')}</label>
+            <label className="block text-xs text-gray-400 mb-1">{t('recipes.fat')}</label>
             <input
               type="number"
               min={0}
@@ -274,6 +292,7 @@ export default function RecipeEditor({ initial, saving, onSave, onCancel }: Reci
             />
           </div>
         </div>
+        <p className="text-xs text-content-muted mt-2">{t('recipes.nutritionNote')}</p>
       </div>
 
       {/* Tags */}
@@ -289,12 +308,16 @@ export default function RecipeEditor({ initial, saving, onSave, onCancel }: Reci
       </div>
 
       <div className="flex gap-2 pt-2 border-t border-hairline">
-        <Button size="sm" onClick={handleSave} disabled={saving || !title.trim() || !(servingsNum >= 1)}>
-          <Save className="w-4 h-4 mr-2" />
+        <Button
+          size="sm"
+          onClick={handleSave}
+          disabled={saving || !title.trim() || !(servingsNum >= 1) || prepNum == null || prepNum < 1}
+        >
+          <Save className="w-4 h-4 mr-2" aria-hidden />
           {t('clients.common.save')}
         </Button>
         <Button size="sm" variant="secondary" onClick={onCancel} disabled={saving}>
-          <X className="w-4 h-4 mr-2" />
+          <X className="w-4 h-4 mr-2" aria-hidden />
           {t('clients.common.cancel')}
         </Button>
       </div>

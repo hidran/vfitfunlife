@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
 import { shareRecipe, unshareRecipe } from '@/lib/firebase/recipes';
 import type { Recipe } from '@/types/recipes';
+import { RecipeDisclaimer } from './RecipeDisclaimer';
 
 /** Structurally satisfied by `ProviderClient`. */
 export interface ShareTarget {
@@ -71,6 +72,9 @@ export function ShareRecipeModal({ recipe, clients, onClose }: ShareRecipeModalP
             <X className="w-4 h-4" aria-hidden />
           </button>
         </div>
+
+        {/* The modal covers the page, so the disclaimer has to travel with it. */}
+        <RecipeDisclaimer />
 
         {clients.length === 0 ? (
           <p className="text-sm text-content-muted">{t('recipes.shareModal.noClients')}</p>

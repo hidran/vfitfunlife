@@ -16,12 +16,13 @@ import MeetingsTab from './tabs/MeetingsTab';
 import NotesTab from './tabs/NotesTab';
 import GoalsTab from './tabs/GoalsTab';
 import TrainingTab from './tabs/TrainingTab';
-import DietTab from './tabs/DietTab';
 import RecipesTab from './tabs/RecipesTab';
 
-type TabId = 'overview' | 'meetings' | 'goals' | 'training' | 'diet' | 'recipes' | 'notes';
+// No 'diet' tab: diet plans were removed in P2-6. Only medici, biologi nutrizionisti and
+// dietisti may prescribe one, so the platform does not offer the tool.
+type TabId = 'overview' | 'meetings' | 'goals' | 'training' | 'recipes' | 'notes';
 
-const TABS: TabId[] = ['overview', 'meetings', 'goals', 'training', 'diet', 'recipes', 'notes'];
+const TABS: TabId[] = ['overview', 'meetings', 'goals', 'training', 'recipes', 'notes'];
 
 export default function ClientDetailClient() {
   const { t, locale } = useI18n();
@@ -187,7 +188,6 @@ export default function ClientDetailClient() {
         {activeTab === 'meetings' && <MeetingsTab bookingHistory={bookingHistory} />}
         {activeTab === 'goals' && <GoalsTab clientId={clientId} />}
         {activeTab === 'training' && <TrainingTab clientId={clientId} />}
-        {activeTab === 'diet' && <DietTab clientId={clientId} />}
         {activeTab === 'recipes' && <RecipesTab clientId={clientId} />}
         {activeTab === 'notes' && <NotesTab clientId={clientId} initialNotes={clientNotes} />}
       </div>

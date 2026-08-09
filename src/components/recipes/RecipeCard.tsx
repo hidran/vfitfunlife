@@ -115,7 +115,7 @@ export function RecipeCard({ recipe, onShare, onEdit, onDelete, shared }: Recipe
           {recipe.source === 'ai' ? t('recipes.aiBadge') : t('recipes.manualBadge')}
         </span>
         {shared && (
-          <span className="px-2.5 py-1 rounded-full text-xs bg-success/20 text-success inline-flex items-center gap-1">
+          <span className="px-2.5 py-1 rounded-full text-xs bg-success-DEFAULT/20 text-success-DEFAULT inline-flex items-center gap-1">
             <Users className="w-3 h-3" aria-hidden />
             {t('recipes.shared')}
           </span>

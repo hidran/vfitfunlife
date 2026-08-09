@@ -179,7 +179,7 @@ export function RecipeGenerateModal({ open, onClose, onGenerated, locale }: Reci
         </div>
 
         {/* Spec §12.1: the notice renders in the library header AND inside this modal. */}
-        <p className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-content">
+        <p className="rounded-lg border border-warning-DEFAULT/40 bg-warning-DEFAULT/10 px-3 py-2 text-xs text-content">
           {t('recipes.trainerNotice')}
         </p>
         <RecipeDisclaimer />
@@ -323,7 +323,7 @@ export function RecipeGenerateModal({ open, onClose, onGenerated, locale }: Reci
                   addIngredient();
                 }
               }}
-              className={cn(selectClass, 'flex-1 placeholder-content-muted')}
+              className={cn(selectClass, 'flex-1 placeholder:text-content-muted')}
             />
             <Button
               size="sm"
