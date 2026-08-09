@@ -79,3 +79,95 @@ describe("recipeBatchSchema", () => {
     expect(() => recipeBatchSchema.parse({ recipes: [recipe, recipe, recipe, recipe] })).toThrow();
   });
 });
+
+import {
+  validateIngredients, screenRecipe, ForbiddenInputError,
+} from "../src/recipes/screening";
+
+describe("validateIngredients (input)", () => {
+  it("accepts ordinary ingredients", () => {
+    expect(validateIngredients(["pollo", "zucchine", "olio d'oliva", "basilico"]))
+      .toEqual(["pollo", "zucchine", "olio d'oliva", "basilico"]);
+  });
+
+  it("accepts undefined and empty", () => {
+    expect(validateIngredients(undefined)).toEqual([]);
+    expect(validateIngredients([])).toEqual([]);
+  });
+
+  it("rejects ANY digit, which is what kills numeric smuggling", () => {
+    for (const bad of ["1500 kcal", "80 kg", "2000", "pollo 300g"]) {
+      expect(() => validateIngredients([bad])).toThrow(ForbiddenInputError);
+    }
+  });
+
+  it("rejects clinical and weight-loss terms, case- and accent-insensitively", () => {
+    for (const bad of [
+      "diabete", "Diabète", "DIABETICI", "per diabetici", "ipertensione",
+      "dimagrire", "perdere peso", "deficit calorico", "dieta", "colesterolo",
+      "gravidanza", "weight loss", "diabetes",
+    ]) {
+      expect(() => validateIngredients([bad])).toThrow(ForbiddenInputError);
+    }
+  });
+
+  it("rejects over-long entries and too many entries", () => {
+    expect(() => validateIngredients(["x".repeat(31)])).toThrow(ForbiddenInputError);
+    expect(() => validateIngredients(new Array(7).fill("pollo"))).toThrow(ForbiddenInputError);
+  });
+
+  it("trims and drops blanks", () => {
+    expect(validateIngredients(["  pollo  ", "", "   "])).toEqual(["pollo"]);
+  });
+});
+
+describe("screenRecipe (output)", () => {
+  const base = {
+    title: "Pollo al limone",
+    servings: 2,
+    prepMinutes: 15,
+    ingredients: [{ item: "pollo", quantity: "300 g" }, { item: "limone", quantity: "1" }],
+    steps: ["Marinare il pollo.", "Cuocere 15 minuti."],
+  };
+
+  it("keeps a normal recipe", () => {
+    expect(screenRecipe(base)).toBeNull();
+  });
+
+  it("does NOT reuse the input denylist — permitted content survives", () => {
+    // Spec §8.4: nutrition per portion is legal, and `mediterranea` is an offered cuisine.
+    expect(screenRecipe({
+      ...base,
+      steps: [...base.steps, "Un piatto tipico della dieta mediterranea."],
+      tags: ["300 calorie a porzione", "ricca di proteine"],
+    })).toBeNull();
+  });
+
+  it("allows named eating styles, deliberately", () => {
+    expect(screenRecipe({ ...base, tags: ["perfetta per la dieta chetogenica"] })).toBeNull();
+  });
+
+  it("drops a recipe naming a medical condition", () => {
+    expect(screenRecipe({ ...base, steps: [...base.steps, "Indicato per chi soffre di diabete."] }))
+      .toBe("diabet");
+  });
+
+  it("drops a recipe that prescribes to a person", () => {
+    for (const bad of [
+      "Calcolato sul tuo fabbisogno calorico.",
+      "Ideale per il tuo deficit calorico.",
+      "Parte del tuo piano alimentare settimanale.",
+      "Perfetta per dimagrire.",
+    ]) {
+      expect(screenRecipe({ ...base, steps: [...base.steps, bad] })).not.toBeNull();
+    }
+  });
+
+  it("screens the title and ingredient names too, not only the steps", () => {
+    expect(screenRecipe({ ...base, title: "Ricetta per ipertensione" })).not.toBeNull();
+    expect(screenRecipe({
+      ...base,
+      ingredients: [{ item: "integratore terapeutico", quantity: "1" }, { item: "riso", quantity: "80 g" }],
+    })).not.toBeNull();
+  });
+});
