@@ -4,6 +4,7 @@ import {
   validateIngredients, screenRecipe, ForbiddenInputError,
 } from "../src/recipes/screening";
 import { buildRecipesPrompt } from "../src/recipes/prompt";
+import { quotaForRole, partitionRecipes } from "../src/recipes/policy";
 
 /** U+0300 COMBINING GRAVE ACCENT, as an escape so it survives any reformatting. */
 const COMBINING_GRAVE = "\u0300";
@@ -266,5 +267,43 @@ describe("buildRecipesPrompt", () => {
       .split("\n").find((l) => l.includes("lactose"));
     expect(line).toContain("TASTE PREFERENCE");
     expect(line).not.toContain("intolerance");
+  });
+});
+
+describe("quotaForRole", () => {
+  const settings = { dailyQuota: 20, recipeClientDailyQuota: 3 };
+
+  it("gives trainers and staff the authoring quota", () => {
+    for (const role of ["provider", "admin", "superadmin"]) {
+      expect(quotaForRole(role, settings)).toEqual({
+        quota: 20,
+        ownerRole: role === "provider" ? "provider" : "admin",
+      });
+    }
+  });
+
+  it("gives everyone else the lower client quota", () => {
+    expect(quotaForRole("customer", settings)).toEqual({ quota: 3, ownerRole: "client" });
+  });
+});
+
+describe("partitionRecipes", () => {
+  const clean = {
+    title: "Pollo al limone", servings: 2, prepMinutes: 15,
+    ingredients: [{ item: "pollo", quantity: "300 g" }, { item: "limone", quantity: "1" }],
+    steps: ["Marinare.", "Cuocere."],
+  };
+  const dirty = { ...clean, steps: [...clean.steps, "Indicato per chi soffre di diabete."] };
+
+  it("keeps clean recipes and drops screened ones", () => {
+    const { kept, dropped } = partitionRecipes([clean, dirty]);
+    expect(kept).toHaveLength(1);
+    expect(dropped).toEqual(["diabet"]);
+  });
+
+  it("reports an entirely dropped batch, which the caller turns into generation-unusable", () => {
+    const { kept, dropped } = partitionRecipes([dirty]);
+    expect(kept).toHaveLength(0);
+    expect(dropped).toHaveLength(1);
   });
 });
