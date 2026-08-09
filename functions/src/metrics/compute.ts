@@ -124,12 +124,27 @@ export interface ComputeArgs {
   asOf: Date;
   bookings: MetricsBooking[];
   users: MetricsUser[];
+  /**
+   * uids of provider accounts that are visible (not soft-deleted, not seeded demo).
+   *
+   * activeTrainers is counted against THIS set, so the numerator and denominator of
+   * "Trainer attivi: 8/20" describe the same population. Counting distinct instructorId
+   * without it would let demo trainers into the numerator while the denominator excludes
+   * them — on the number that decides Gate 1.
+   */
+  visibleTrainerIds: Set<string>;
   timeZone?: string;
 }
 
 export function computeMetricsForDay(args: ComputeArgs): MetricsDaily {
-  const { dateKey, asOf, bookings, users } = args;
+  const { dateKey, asOf, users, visibleTrainerIds } = args;
   const tz = args.timeZone ?? "Europe/Rome";
+
+  // Gate 1 counts TRAINER sessions. Venue bookings auto-complete via
+  // processCompletedBookings, which writes a real `completed` history entry with
+  // actorUid "system" — including them would inflate the headline card with sessions no
+  // trainer performed. Venue bookings are out of scope for the pilot dashboard entirely.
+  const bookings = args.bookings.filter((b) => Boolean(b.instructorId));
 
   // Only events up to the end of this day count toward cumulative values, so recomputing
   // an old day yields the same numbers it did originally.
@@ -163,7 +178,8 @@ export function computeMetricsForDay(args: ComputeArgs): MetricsDaily {
     const recent = b.statusHistory.some(
       (h) => h.status === "accepted" && upTo(h.at) && h.at.getTime() >= activeSince.getTime(),
     );
-    if (recent) activeTrainerIds.add(b.instructorId);
+    // Same population as totalTrainers — see visibleTrainerIds above.
+    if (recent && visibleTrainerIds.has(b.instructorId)) activeTrainerIds.add(b.instructorId);
   }
 
   const visibleUsers = users.filter((u) => !u.hidden);
@@ -198,7 +214,7 @@ export function computeMetricsForDay(args: ComputeArgs): MetricsDaily {
     }
   }
 
-  const { rate: rebookingRate } = computeRebookingRate(
+  const { rate: rebookingRate, cohortSize: rebookingCohort } = computeRebookingRate(
     bookings.filter((b) => {
       const e = firstEntry(b, "completed");
       return e && upTo(e.at);
@@ -212,8 +228,15 @@ export function computeMetricsForDay(args: ComputeArgs): MetricsDaily {
   ).size;
   const clientsWithCompleted = new Set(completedUpTo.map((b) => b.userId)).size;
 
+  // Anchored to when the client actually disputed. Without this, recomputing an earlier
+  // day would stamp it with today's dispute total and historical snapshots would change
+  // on every nightly run.
   const disputes = bookings.filter(
-    (b) => b.paymentConfirmation?.clientResponse === "disputed",
+    (b) =>
+      b.paymentConfirmation?.clientResponse === "disputed" &&
+      b.paymentConfirmation.clientRespondedAt !== null &&
+      b.paymentConfirmation.clientRespondedAt !== undefined &&
+      upTo(b.paymentConfirmation.clientRespondedAt),
   ).length;
 
   // --- per trainer, trailing 30 days ---
@@ -263,6 +286,7 @@ export function computeMetricsForDay(args: ComputeArgs): MetricsDaily {
     cumulativePaymentConfirmed: paidUpTo.length,
     cumulativeGrossValue,
     rebookingRate,
+    rebookingCohort,
     medianTimeToAcceptHours: median(acceptLags),
     disputes,
     funnel: {

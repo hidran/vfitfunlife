@@ -36,11 +36,11 @@ function recentDateKeys(from: Date, days: number): string[] {
 export const aggregateMetricsDaily = onSchedule(
   { region, schedule: "30 2 * * *", timeZone: TIME_ZONE, timeoutSeconds: 540 },
   async (_event: ScheduledEvent) => {
-    const { bookings, users } = await loadInputs();
+    const { bookings, users, visibleTrainerIds } = await loadInputs();
     const keys = recentDateKeys(new Date(), RECOMPUTE_DAYS);
 
     for (const dateKey of keys) {
-      const m = await writeMetricsForDay({ dateKey, bookings, users, backfilled: false });
+      const m = await writeMetricsForDay({ dateKey, bookings, users, visibleTrainerIds, backfilled: false });
       if (m.byTrainerTruncated) {
         // Silently short would misreport who is inactive, which is the table's whole job.
         logger.warn("[metrics] byTrainer truncated — move it to a subcollection", { dateKey });
@@ -69,7 +69,7 @@ export const backfillMetricsDaily = onCall<BackfillRequest>(
     }
 
     const dryRun = request.data?.dryRun !== false;
-    const { bookings, users } = await loadInputs();
+    const { bookings, users, visibleTrainerIds } = await loadInputs();
 
     // Earliest event across all bookings, so the backfill covers real history rather than
     // an arbitrary window.
@@ -96,7 +96,7 @@ export const backfillMetricsDaily = onCall<BackfillRequest>(
     let written = 0;
     let nonEmpty = 0;
     for (const dateKey of keys) {
-      const m = await writeMetricsForDay({ dateKey, bookings, users, backfilled: true, dryRun });
+      const m = await writeMetricsForDay({ dateKey, bookings, users, visibleTrainerIds, backfilled: true, dryRun });
       written++;
       if (m.sessionsRequested || m.sessionsAccepted || m.sessionsCompleted || m.sessionsPaymentConfirmed) {
         nonEmpty++;

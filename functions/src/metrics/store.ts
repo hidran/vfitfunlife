@@ -35,7 +35,11 @@ function toDate(v: unknown): Date | null {
 
 /** Loads every booking and user once. At pilot scale this is a few hundred documents;
  *  past a few thousand it should page or read from an incremental aggregate. */
-export async function loadInputs(): Promise<{ bookings: MetricsBooking[]; users: MetricsUser[] }> {
+export async function loadInputs(): Promise<{
+  bookings: MetricsBooking[];
+  users: MetricsUser[];
+  visibleTrainerIds: Set<string>;
+}> {
   const [bookingSnap, userSnap] = await Promise.all([
     db.collection("bookings").get(),
     db.collection("users").get(),
@@ -43,7 +47,29 @@ export async function loadInputs(): Promise<{ bookings: MetricsBooking[]; users:
 
   const bookings: MetricsBooking[] = bookingSnap.docs.map((d) => {
     const b = d.data();
-    const history = Array.isArray(b.statusHistory) ? b.statusHistory : [];
+    let history = Array.isArray(b.statusHistory) ? b.statusHistory : [];
+
+    // The P0-1 migration gave each pre-migration booking a single synthetic entry dated
+    // `updatedAt`, so backfilled history would collapse into one spike on the migration
+    // date with no requested/accepted events at all. The legacy timestamp columns are
+    // still on the document, so reconstruct an approximate timeline from them.
+    const isMigrationOnly =
+      history.length > 0 &&
+      history.every((h: Record<string, unknown>) => h.actorUid === "migration");
+
+    if (isMigrationOnly) {
+      const terminal = history[0] as Record<string, unknown>;
+      const rebuilt: Array<Record<string, unknown>> = [];
+      const push = (status: string, at: unknown, actorRole: string) => {
+        if (at) rebuilt.push({ status, actorUid: "migration", actorRole, at });
+      };
+      push("requested", b.createdAt, "client");
+      push("accepted", b.confirmedAt, "system");
+      push("completed", b.completedAt, "system");
+      const covered = new Set(rebuilt.map((h) => h.status));
+      if (!covered.has(String(terminal.status))) rebuilt.push(terminal);
+      if (rebuilt.length) history = rebuilt;
+    }
     return {
       id: d.id,
       userId: b.userId,
@@ -70,6 +96,7 @@ export async function loadInputs(): Promise<{ bookings: MetricsBooking[]; users:
         {
           amount: Number(b.paymentConfirmation.amount ?? 0),
           clientResponse: b.paymentConfirmation.clientResponse ?? null,
+          clientRespondedAt: toDate(b.paymentConfirmation.clientRespondedAt),
         } :
         null,
     };
@@ -86,7 +113,14 @@ export async function loadInputs(): Promise<{ bookings: MetricsBooking[]; users:
     };
   });
 
-  return { bookings, users };
+  // activeTrainers is counted against this set so it describes the same population as
+  // totalTrainers. Without it a seeded demo trainer, excluded from the denominator, could
+  // still land in the numerator of "Trainer attivi: 8/20".
+  const visibleTrainerIds = new Set(
+    users.filter((u) => u.role === "provider" && !u.hidden).map((u) => u.uid),
+  );
+
+  return { bookings, users, visibleTrainerIds };
 }
 
 /** End of the given local day, as the "as of" instant for rolling values. */
@@ -128,6 +162,7 @@ export async function writeMetricsForDay(opts: {
   dateKey: string;
   bookings: MetricsBooking[];
   users: MetricsUser[];
+  visibleTrainerIds: Set<string>;
   backfilled: boolean;
   dryRun?: boolean;
 }): Promise<MetricsDaily> {
@@ -136,6 +171,7 @@ export async function writeMetricsForDay(opts: {
     asOf: endOfLocalDay(opts.dateKey),
     bookings: opts.bookings,
     users: opts.users,
+    visibleTrainerIds: opts.visibleTrainerIds,
     timeZone: TIME_ZONE,
   });
 

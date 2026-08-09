@@ -25,6 +25,8 @@ export interface MetricsBooking {
   paymentConfirmation?: {
     amount: number;
     clientResponse: "confirmed" | "disputed" | null;
+    /** Anchors the dispute count to a day, so historical snapshots stay stable. */
+    clientRespondedAt?: Date | null;
   } | null;
 }
 
@@ -66,6 +68,9 @@ export interface MetricsDaily {
   cumulativePaymentConfirmed: number;
   cumulativeGrossValue: number;
   rebookingRate: number | null;
+  /** The denominator. A rate without it cannot be defended in a partners' meeting, and it
+   *  distinguishes "no eligible cohort" from "a cohort of four". */
+  rebookingCohort: number;
   medianTimeToAcceptHours: number | null;
   disputes: number;
   funnel: {

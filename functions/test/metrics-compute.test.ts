@@ -31,6 +31,8 @@ function h(status: BookingStatus, at: string, actorRole: StatusActorRole = "trai
 }
 
 const noUsers: MetricsUser[] = [];
+// Every trainer used in these fixtures is a visible provider unless a test says otherwise.
+const allVisible = new Set(["trainer1", "t1"]);
 
 describe("dateKeyInZone", () => {
   it("uses the local day, not UTC — an Italian evening session stays on its own day", () => {
@@ -65,7 +67,7 @@ describe("gross value", () => {
       paymentConfirmation: { amount: 35, clientResponse: null },
       statusHistory: [h("payment_confirmed", "2026-08-09T10:00:00Z")],
     });
-    const m = computeMetricsForDay({ dateKey: DAY, asOf: endOfDay, bookings: [b], users: noUsers });
+    const m = computeMetricsForDay({ dateKey: DAY, asOf: endOfDay, bookings: [b], users: noUsers, visibleTrainerIds: allVisible });
     expect(m.grossValue).toBe(35);
     expect(m.grossValue).not.toBe(50);
   });
@@ -75,7 +77,7 @@ describe("gross value", () => {
       id: "b1", status: "payment_confirmed",
       statusHistory: [h("payment_confirmed", "2026-08-09T10:00:00Z")],
     });
-    const m = computeMetricsForDay({ dateKey: DAY, asOf: endOfDay, bookings: [b], users: noUsers });
+    const m = computeMetricsForDay({ dateKey: DAY, asOf: endOfDay, bookings: [b], users: noUsers, visibleTrainerIds: allVisible });
     expect(m.grossValue).toBe(0);
   });
 });
@@ -102,6 +104,7 @@ describe("cancellation attribution (spec §4)", () => {
     const m = computeMetricsForDay({
       dateKey: DAY, asOf: endOfDay,
       bookings: [adminCancelled, trainerCancelled], users: noUsers,
+      visibleTrainerIds: allVisible,
     });
     expect(m.trainerCancellations).toBe(1);
   });
@@ -174,12 +177,12 @@ describe("median time to accept", () => {
         h("accepted", "2026-08-09T10:00:00Z"),
       ],
     });
-    const m = computeMetricsForDay({ dateKey: DAY, asOf: endOfDay, bookings: [b], users: noUsers });
+    const m = computeMetricsForDay({ dateKey: DAY, asOf: endOfDay, bookings: [b], users: noUsers, visibleTrainerIds: allVisible });
     expect(m.medianTimeToAcceptHours).toBe(4);
   });
 
   it("is null when nothing was accepted that day", () => {
-    const m = computeMetricsForDay({ dateKey: DAY, asOf: endOfDay, bookings: [], users: noUsers });
+    const m = computeMetricsForDay({ dateKey: DAY, asOf: endOfDay, bookings: [], users: noUsers, visibleTrainerIds: allVisible });
     expect(m.medianTimeToAcceptHours).toBeNull();
   });
 });
@@ -190,7 +193,7 @@ describe("active trainers", () => {
       id: "b1", instructorId: "t1",
       statusHistory: [h("accepted", "2026-08-01T10:00:00Z")],
     });
-    const m = computeMetricsForDay({ dateKey: DAY, asOf: endOfDay, bookings: [b], users: noUsers });
+    const m = computeMetricsForDay({ dateKey: DAY, asOf: endOfDay, bookings: [b], users: noUsers, visibleTrainerIds: allVisible });
     expect(m.activeTrainers).toBe(1);
   });
 
@@ -199,7 +202,7 @@ describe("active trainers", () => {
       id: "b1", instructorId: "t1",
       statusHistory: [h("accepted", "2026-05-01T10:00:00Z")],
     });
-    const m = computeMetricsForDay({ dateKey: DAY, asOf: endOfDay, bookings: [b], users: noUsers });
+    const m = computeMetricsForDay({ dateKey: DAY, asOf: endOfDay, bookings: [b], users: noUsers, visibleTrainerIds: allVisible });
     expect(m.activeTrainers).toBe(0);
   });
 
@@ -208,7 +211,7 @@ describe("active trainers", () => {
       id: `b${i}`, instructorId: "t1",
       statusHistory: [h("accepted", "2026-08-05T10:00:00Z")],
     }));
-    const m = computeMetricsForDay({ dateKey: DAY, asOf: endOfDay, bookings: bs, users: noUsers });
+    const m = computeMetricsForDay({ dateKey: DAY, asOf: endOfDay, bookings: bs, users: noUsers, visibleTrainerIds: allVisible });
     expect(m.activeTrainers).toBe(1);
   });
 });
@@ -222,12 +225,12 @@ describe("users", () => {
   ];
 
   it("excludes hidden (demo / soft-deleted) accounts from trainer counts", () => {
-    const m = computeMetricsForDay({ dateKey: DAY, asOf: endOfDay, bookings: [], users });
+    const m = computeMetricsForDay({ dateKey: DAY, asOf: endOfDay, bookings: [], users, visibleTrainerIds: allVisible });
     expect(m.totalTrainers).toBe(1);
   });
 
   it("counts only clients created that day as new", () => {
-    const m = computeMetricsForDay({ dateKey: DAY, asOf: endOfDay, bookings: [], users });
+    const m = computeMetricsForDay({ dateKey: DAY, asOf: endOfDay, bookings: [], users, visibleTrainerIds: allVisible });
     expect(m.newClients).toBe(1);
   });
 });
@@ -242,7 +245,7 @@ describe("recomputing an earlier day", () => {
         h("payment_confirmed", "2026-08-20T10:00:00Z"), // later than the day computed
       ],
     });
-    const m = computeMetricsForDay({ dateKey: DAY, asOf: endOfDay, bookings: [b], users: noUsers });
+    const m = computeMetricsForDay({ dateKey: DAY, asOf: endOfDay, bookings: [b], users: noUsers, visibleTrainerIds: allVisible });
     expect(m.cumulativeCompleted).toBe(1);
     expect(m.cumulativePaymentConfirmed).toBe(0);
     expect(m.cumulativeGrossValue).toBe(0);
@@ -251,7 +254,7 @@ describe("recomputing an earlier day", () => {
 
 describe("empty input", () => {
   it("produces zeros and nulls, never NaN", () => {
-    const m = computeMetricsForDay({ dateKey: DAY, asOf: endOfDay, bookings: [], users: [] });
+    const m = computeMetricsForDay({ dateKey: DAY, asOf: endOfDay, bookings: [], users: [], visibleTrainerIds: new Set<string>() });
     for (const v of [
       m.sessionsRequested, m.sessionsAccepted, m.sessionsCompleted,
       m.sessionsPaymentConfirmed, m.grossValue, m.activeTrainers, m.cumulativeGrossValue,
@@ -275,7 +278,78 @@ describe("funnel", () => {
       booking({ id: "b1", userId: "c1", statusHistory: [h("requested", "2026-08-01T10:00:00Z", "client"), h("completed", "2026-08-02T10:00:00Z")] }),
       booking({ id: "b2", userId: "c2", statusHistory: [h("requested", "2026-08-01T10:00:00Z", "client")] }),
     ];
-    const m = computeMetricsForDay({ dateKey: DAY, asOf: endOfDay, bookings, users });
+    const m = computeMetricsForDay({ dateKey: DAY, asOf: endOfDay, bookings, users, visibleTrainerIds: allVisible });
     expect(m.funnel).toEqual({ registeredClients: 3, clientsWithRequest: 2, clientsWithCompleted: 1 });
+  });
+});
+
+describe("scope: trainer sessions only", () => {
+  it("excludes venue bookings, which auto-complete without a trainer", () => {
+    // processCompletedBookings writes a real `completed` entry for venue bookings, with
+    // actorUid "system". Counting them would inflate the Gate 1 headline with sessions no
+    // trainer performed.
+    const venue = booking({
+      id: "venue1", instructorId: null,
+      statusHistory: [h("completed", "2026-08-09T10:00:00Z", "system")],
+    });
+    const trainer = booking({
+      id: "t1b", instructorId: "trainer1",
+      statusHistory: [h("completed", "2026-08-09T10:00:00Z")],
+    });
+    const m = computeMetricsForDay({
+      dateKey: DAY, asOf: endOfDay, bookings: [venue, trainer],
+      users: noUsers, visibleTrainerIds: allVisible,
+    });
+    expect(m.sessionsCompleted).toBe(1);
+    expect(m.cumulativeCompleted).toBe(1);
+  });
+});
+
+describe("activeTrainers population", () => {
+  it("counts only trainers that are visible provider accounts", () => {
+    // A seeded demo trainer is excluded from totalTrainers, so letting it into
+    // activeTrainers would make "Trainer attivi: 8/20" compare two different populations.
+    const real = booking({ id: "r", instructorId: "trainer1", statusHistory: [h("accepted", "2026-08-05T10:00:00Z")] });
+    const demo = booking({ id: "d", instructorId: "provider_123_1", statusHistory: [h("accepted", "2026-08-05T10:00:00Z")] });
+    const m = computeMetricsForDay({
+      dateKey: DAY, asOf: endOfDay, bookings: [real, demo],
+      users: noUsers, visibleTrainerIds: new Set(["trainer1"]),
+    });
+    expect(m.activeTrainers).toBe(1);
+  });
+});
+
+describe("disputes are anchored to when the client responded", () => {
+  it("does not count a dispute raised after the day being computed", () => {
+    const b = booking({
+      id: "b1", status: "payment_confirmed",
+      paymentConfirmation: {
+        amount: 30, clientResponse: "disputed",
+        clientRespondedAt: new Date("2026-08-20T10:00:00Z"),
+      },
+      statusHistory: [h("payment_confirmed", "2026-08-09T10:00:00Z")],
+    });
+    const m = computeMetricsForDay({
+      dateKey: DAY, asOf: endOfDay, bookings: [b],
+      users: noUsers, visibleTrainerIds: allVisible,
+    });
+    // Otherwise every nightly rerun would restamp history with today's total.
+    expect(m.disputes).toBe(0);
+  });
+
+  it("counts one raised on or before that day", () => {
+    const b = booking({
+      id: "b1", status: "payment_confirmed",
+      paymentConfirmation: {
+        amount: 30, clientResponse: "disputed",
+        clientRespondedAt: new Date("2026-08-09T10:00:00Z"),
+      },
+      statusHistory: [h("payment_confirmed", "2026-08-09T09:00:00Z")],
+    });
+    const m = computeMetricsForDay({
+      dateKey: DAY, asOf: endOfDay, bookings: [b],
+      users: noUsers, visibleTrainerIds: allVisible,
+    });
+    expect(m.disputes).toBe(1);
   });
 });
