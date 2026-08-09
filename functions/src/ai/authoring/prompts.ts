@@ -1,4 +1,5 @@
 import type { z } from "zod";
+import { localeLanguage } from "../../lib/locale";
 import type {
   trainingParamsSchema,
   dietParamsSchema,
@@ -28,18 +29,7 @@ const DISCLAIMER =
   "Include a brief note that this plan is general fitness/wellness guidance, not medical advice, " +
   "and the client should consult a qualified professional for medical conditions.";
 
-const LOCALE_LANGUAGE: Record<string, string> = {
-  it: "Italian",
-  en: "English",
-  es: "Spanish",
-  fr: "French",
-  de: "German",
-};
-
-/** Map a locale code to a human-readable language name (falls back to the raw code). */
-export function localeLanguage(locale: string): string {
-  return LOCALE_LANGUAGE[locale] ?? locale;
-}
+export { localeLanguage };
 
 function goalsBlock(goals: ClientGoalLite[]): string {
   if (!goals.length) return "No specific goals recorded.";
