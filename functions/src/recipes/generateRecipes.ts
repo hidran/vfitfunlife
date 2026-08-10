@@ -101,7 +101,7 @@ export const generateRecipes = onCall<GenReq>(
       throw new HttpsError("internal", "Generation failed");
     }
 
-    const { kept, dropped } = partitionRecipes(batch.recipes);
+    const { kept, dropped } = partitionRecipes(batch.recipes, params.count);
 
     if (dropped.length) {
       logger.warn("[recipes] screening dropped recipes", { dropped, kept: kept.length });
@@ -123,8 +123,8 @@ export const generateRecipes = onCall<GenReq>(
       for (const recipe of kept) {
         const ref = db.collection("recipes").doc();
         writeBatch.set(ref, {
+          // Already clamped to RECIPE_LIMITS by normalizeRecipe, `tags` included.
           ...recipe,
-          tags: recipe.tags ?? [],
           params: {
             dietStyle: params.dietStyle,
             excludes: params.excludes ?? [],

@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { recipeParamsSchema, recipeBatchSchema } from "../src/recipes/schema";
+import {
+  recipeParamsSchema, recipeBatchSchema, generatedRecipeSchema, normalizeRecipe, RECIPE_LIMITS,
+} from "../src/recipes/schema";
 import {
   validateIngredients, screenRecipe, ForbiddenInputError,
 } from "../src/recipes/screening";
@@ -83,8 +85,15 @@ describe("recipeBatchSchema", () => {
     expect(parsed.recipes[0]).not.toHaveProperty("durationDays");
   });
 
-  it("rejects a batch of more than three", () => {
-    expect(() => recipeBatchSchema.parse({ recipes: [recipe, recipe, recipe, recipe] })).toThrow();
+  it("accepts an over-long batch, which partitionRecipes trims", () => {
+    // Deliberately NOT a schema maximum. Every maximum here is a way to lose a whole
+    // generation to one cosmetic violation — see RECIPE_LIMITS.
+    expect(recipeBatchSchema.parse({ recipes: [recipe, recipe, recipe, recipe] }).recipes)
+      .toHaveLength(4);
+  });
+
+  it("still rejects a batch with no recipes at all", () => {
+    expect(() => recipeBatchSchema.parse({ recipes: [] })).toThrow();
   });
 });
 
@@ -305,5 +314,89 @@ describe("partitionRecipes", () => {
     const { kept, dropped } = partitionRecipes([dirty]);
     expect(kept).toHaveLength(0);
     expect(dropped).toHaveLength(1);
+  });
+
+  it("clamps an over-long recipe instead of losing it", () => {
+    // The production failure of 2026-08-10, exactly: a correct recipe with a seventh tag.
+    // This used to throw inside generateObject and take the whole batch with it.
+    const { kept, dropped } = partitionRecipes([{
+      ...clean,
+      tags: ["pollo", "quinoa", "asparagi", "limone", "piatto unico", "veloce", "sano"],
+    }]);
+    expect(dropped).toEqual([]);
+    expect(kept[0].tags).toEqual(["pollo", "quinoa", "asparagi", "limone", "piatto unico", "veloce"]);
+  });
+
+  it("drops only the unusable recipe, never its siblings", () => {
+    const tooShort = { ...clean, steps: ["Solo un passo."] };
+    const { kept, dropped } = partitionRecipes([tooShort, clean]);
+    expect(dropped).toEqual(["malformed"]);
+    expect(kept).toHaveLength(1);
+    expect(kept[0].title).toBe("Pollo al limone");
+  });
+
+  it("drops recipes beyond the requested count rather than failing", () => {
+    const { kept, dropped } = partitionRecipes([clean, clean, clean], 2);
+    expect(kept).toHaveLength(2);
+    expect(dropped).toEqual(["excess"]);
+  });
+
+  it("screens the model's full text, not the truncated version", () => {
+    // A denied term pushed past the step-length limit must still be caught. If normalization
+    // ran before screening, this recipe would be saved with the term merely clipped off.
+    const buried = {
+      ...clean,
+      steps: [...clean.steps, `${"a".repeat(500)} indicato per chi soffre di diabete`],
+    };
+    const { kept, dropped } = partitionRecipes([buried]);
+    expect(kept).toHaveLength(0);
+    expect(dropped).toEqual(["diabet"]);
+  });
+});
+
+describe("normalizeRecipe", () => {
+  const base = {
+    title: "Pollo al limone", servings: 2, prepMinutes: 15,
+    ingredients: [{ item: "pollo", quantity: "300 g" }, { item: "limone", quantity: "1" }],
+    steps: ["Marinare.", "Cuocere."],
+  };
+
+  it("clamps counts, lengths and ranges to the stored limits", () => {
+    const out = normalizeRecipe({
+      ...base,
+      title: "x".repeat(200),
+      servings: 40,
+      prepMinutes: 900,
+      cookMinutes: 900,
+      ingredients: Array.from({ length: 30 }, () => ({ item: "i".repeat(120), quantity: "q".repeat(60) })),
+      steps: Array.from({ length: 25 }, () => "s".repeat(600)),
+      tags: ["t".repeat(50)],
+    });
+    expect(out).not.toBeNull();
+    expect(out!.title).toHaveLength(RECIPE_LIMITS.titleMax);
+    expect(out!.servings).toBe(RECIPE_LIMITS.servingsMax);
+    expect(out!.prepMinutes).toBe(RECIPE_LIMITS.prepMax);
+    expect(out!.cookMinutes).toBe(RECIPE_LIMITS.cookMax);
+    expect(out!.ingredients).toHaveLength(RECIPE_LIMITS.ingredientsMax);
+    expect(out!.ingredients[0].item).toHaveLength(RECIPE_LIMITS.itemMax);
+    expect(out!.steps).toHaveLength(RECIPE_LIMITS.stepsMax);
+    expect(out!.steps[0]).toHaveLength(RECIPE_LIMITS.stepMax);
+    expect(out!.tags[0]).toHaveLength(RECIPE_LIMITS.tagMax);
+  });
+
+  it("always returns a tags array, so the write path never has to guess", () => {
+    expect(normalizeRecipe(base)!.tags).toEqual([]);
+  });
+
+  it("returns null when a floor cannot be met by truncating", () => {
+    expect(normalizeRecipe({ ...base, title: "ab" })).toBeNull();
+    expect(normalizeRecipe({ ...base, ingredients: [{ item: "pollo", quantity: "1" }] })).toBeNull();
+    expect(normalizeRecipe({ ...base, steps: ["Uno."] })).toBeNull();
+    expect(normalizeRecipe({ ...base, steps: ["Uno.", "   "] })).toBeNull();
+  });
+
+  it("accepts a number the model wrapped in a string", () => {
+    const parsed = generatedRecipeSchema.parse({ ...base, servings: "4" });
+    expect(normalizeRecipe(parsed)!.servings).toBe(4);
   });
 });

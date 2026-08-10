@@ -173,6 +173,18 @@
         { "fieldPath": "sharedWithUserIds", "arrayConfig": "CONTAINS" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
+    },
+    // getProviderClients() in src/lib/firebase/provider.ts. This index was missing, so that
+    // query failed with FAILED_PRECONDITION for every provider and the roster silently came
+    // back empty — the store swallows the error. Found while smoke-testing the P2-6 share
+    // picker, which needs the roster to offer anyone to share with.
+    {
+      "collectionGroup": "clients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "providerId", "order": "ASCENDING" },
+        { "fieldPath": "lastVisit", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

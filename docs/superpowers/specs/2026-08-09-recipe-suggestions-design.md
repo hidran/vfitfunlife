@@ -357,29 +357,46 @@ per-person and clinical rows above regardless of which protocol it names.
 
 ### 8.5 Output schema
 
+The generation schema is **structural only** — which fields may exist, and their types:
+
 ```ts
 z.object({
   recipes: z.array(z.object({
-    title: z.string().min(3).max(120),
-    servings: z.number().int().min(1).max(8),
-    prepMinutes: z.number().int().min(1).max(180),
-    cookMinutes: z.number().int().min(0).max(240).optional(),
-    ingredients: z.array(z.object({
-      item: z.string().min(1).max(80),
-      quantity: z.string().min(1).max(40),
-    })).min(2).max(20),
-    steps: z.array(z.string().min(3).max(400)).min(2).max(15),
+    title: z.string(),
+    servings: z.coerce.number(),
+    prepMinutes: z.coerce.number(),
+    cookMinutes: z.coerce.number().optional(),
+    ingredients: z.array(z.object({ item: z.string(), quantity: z.string() })).min(1),
+    steps: z.array(z.string()).min(1),
     nutritionPerServing: z.object({
       kcal: z.number().optional(), protein: z.number().optional(),
       carbs: z.number().optional(), fat: z.number().optional(),
     }).optional(),
-    tags: z.array(z.string().max(24)).max(6).optional(),
-  })).min(1).max(3),
+    tags: z.array(z.string()).optional(),
+  })).min(1),
 })
 ```
 
 The schema cannot express a day, a week, a meal sequence, or a target for a person. A model
-instructed to produce a diet plan physically cannot return one through this interface.
+instructed to produce a diet plan physically cannot return one through this interface. That
+guarantee comes from the FIELD SET, and is unaffected by how loose the ranges are.
+
+**Why there are no maxima here.** They were here, and it was a bug. `generateObject` validates
+all-or-nothing, so a single cosmetic violation in one recipe discards the whole batch. Observed
+in production on 2026-08-10: gemini-2.5-flash returned a correct recipe with a seventh tag, the
+generation failed with `AI_TypeValidationError`, and the user saw "Generazione non riuscita".
+The model is never shown these numbers by the schema — only asked in the prompt — so violations
+are the expected case, not an edge case.
+
+Size limits are therefore enforced **after** parsing, by `normalizeRecipe` against
+`RECIPE_LIMITS` (title 120, servings 1–8, prep ≤180, cook ≤240, ingredients 2–20, steps 2–15 of
+≤400 chars, ≤6 tags of ≤24 chars). It clamps what can be clamped and returns null only when a
+FLOOR cannot be met by truncating — under two ingredients or two steps, or no usable title. A
+recipe that fails is dropped on its own; its siblings in the batch survive.
+
+Ordering is load-bearing: **screen first, normalize second**. Normalizing first would truncate
+the text screening reads, letting a denied term past the §8.4 list by sitting beyond a length
+limit. Covered by a test.
 
 ## 9. Sharing
 

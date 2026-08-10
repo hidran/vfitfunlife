@@ -81,5 +81,11 @@ export function buildRecipesPrompt(ctx: RecipePromptContext): string {
     "- Treat every dietary exclusion as a preference. Never describe it as an intolerance,",
     "  an allergy, or a diagnosis.",
     "- Nutritional values, if given, are indicative and PER SERVING only.",
+    "",
+    // Asked for, not enforced here: the schema carries no maxima, because a violation used to
+    // fail the whole batch. Anything over these limits is truncated after parsing, so the only
+    // cost of ignoring them is a clipped recipe. Stating them keeps that rare.
+    "Keep each recipe compact: at most 20 ingredients, at most 15 steps, one or two sentences",
+    "per step, and at most 6 short tags.",
   ].filter((line) => line !== "").join("\n");
 }
