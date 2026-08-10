@@ -349,9 +349,18 @@ denylists are only the third.
 
 Flow: validate params → screen `ingredientsOnHand` → check `systemSettings/aiAuthoring.enabled`
 → resolve role to quota → `reserveQuota` → build prompt → `generateObject` → screen output and
-drop offenders → batch-write survivors → `writeAuditLog` (`action: 'create'`,
-`entityType: 'recipe'`, with the kept and dropped counts). Every failure path after the
-reservation calls `releaseQuota`.
+drop offenders → normalize survivors to `RECIPE_LIMITS` → batch-write → `writeAuditLog`
+(`action: 'create'`, `entityType: 'recipe'`, with the kept and dropped counts). Every failure
+path after the reservation calls `releaseQuota`.
+
+**Size limits are enforced after parsing, never by the generation schema.** `generateObject`
+validates all-or-nothing, so any maximum in the schema is a way for one cosmetic violation to
+discard an entire batch — which is exactly what happened in production on 2026-08-10, when a
+correct recipe carrying a seventh tag failed the whole generation. The schema now constrains
+only the field set and types; `normalizeRecipe` clamps lengths, counts and ranges afterwards
+and drops a recipe individually when a floor (two ingredients, two steps, a usable title)
+cannot be met by truncating. Screening runs **before** normalization so truncation can never
+hide a denied term. Do not reintroduce `.max()` on the generation schema.
 
 - **Quota bucket:** `ai_recipes_usage`, deliberately separate from `ai_authoring_usage` so
   recipe generation cannot eat a trainer's workout-plan budget. One reservation per call.
