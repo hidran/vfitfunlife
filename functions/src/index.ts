@@ -24,4 +24,5 @@ export * from "./recipes/generateRecipes";
 export * from "./recipes/purgeLegacyNutrition";
 export * from "./providers/onServiceWrite";
 export * from "./providers/backfillProviderStatus";
+export * from "./users/migrateAudit";
 export * from "./config/pilotFlags";

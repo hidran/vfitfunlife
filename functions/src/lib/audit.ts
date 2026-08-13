@@ -1,5 +1,20 @@
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import {
+  getFirestore,
+  FieldValue,
+  type DocumentReference,
+} from "firebase-admin/firestore";
 import type { AuditAction, AuditEntityType } from "./auditEntityTypes";
+
+/**
+ * `audit_logs` is the single audit collection.
+ *
+ * A second one, camelCase `auditLogs`, used to exist for self-service profile edits with
+ * its own shape (`actor`, dotted action strings, a nested `changes` object). Two
+ * collections recording the same kind of fact meant any question about "who changed what"
+ * had to be asked twice, and only one of them was reachable from the typed payload below.
+ * It was folded into this one; see migrateAuditLogs in functions/src/users/migrateAudit.ts.
+ */
+const COLLECTION = "audit_logs";
 
 export interface ServerAuditPayload {
   actorUid: string;
@@ -11,24 +26,43 @@ export interface ServerAuditPayload {
   action: AuditAction;
   entityType: AuditEntityType;
   entityId: string;
-  before?: Record<string, unknown>;
-  after?: Record<string, unknown>;
+  before?: Record<string, unknown> | null;
+  after?: Record<string, unknown> | null;
   reason?: string;
+  // Forensic context. Only the self-service profile callables have a request to read these
+  // from; they came across with the auditLogs merge rather than being dropped.
+  ip?: string | null;
+  userAgent?: string | null;
+}
+
+/** Maps an app role onto the audit vocabulary; `customer` and anything unknown are 'client'. */
+export function toActorRole(role: unknown): ServerAuditPayload["actorRole"] {
+  return role === "superadmin" || role === "admin" || role === "provider" ?
+    role :
+    "client";
+}
+
+/** A fresh document reference in the audit collection. */
+export function auditLogDoc(): DocumentReference {
+  return getFirestore().collection(COLLECTION).doc();
+}
+
+/** The document body, so transactional callers can write the canonical shape themselves. */
+export function auditLogData(payload: ServerAuditPayload): Record<string, unknown> {
+  return { ...payload, timestamp: FieldValue.serverTimestamp() };
 }
 
 /**
- * Write an audit log entry to the `audit_logs` collection.
- * Matches the snake_case collection name used by the client-side recordAudit.
- * Errors are swallowed (logged only) so audit failures don't break business logic.
+ * Write an audit log entry.
+ *
+ * Errors are swallowed (logged only) so audit failures don't break business logic. Callers
+ * that need the entry to commit atomically with the change it describes should use
+ * `auditLogDoc()` / `auditLogData()` inside their transaction instead — swallowing is the
+ * wrong behaviour there, and losing atomicity would be a downgrade.
  */
 export async function writeAuditLog(payload: ServerAuditPayload): Promise<void> {
   try {
-    await getFirestore()
-      .collection("audit_logs")
-      .add({
-        ...payload,
-        timestamp: FieldValue.serverTimestamp(),
-      });
+    await auditLogDoc().set(auditLogData(payload));
   } catch (err) {
     console.error("[audit] server-side write failed", err);
   }

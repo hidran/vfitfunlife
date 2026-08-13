@@ -11,6 +11,13 @@ let profileModule: typeof import('../src/users/profile');
 beforeEach(async () => {
   vi.resetModules();
   profileModule = await import('../src/users/profile');
+  // These tests assert exact audit-entry counts, and nothing else clears the emulator
+  // between runs — without this the second run against a warm emulator counts the first
+  // run's documents too and fails on a number, not a behaviour.
+  for (const name of ['users', 'audit_logs']) {
+    const snap = await admin.firestore().collection(name).get();
+    await Promise.all(snap.docs.map((d) => d.ref.delete()));
+  }
 });
 
 afterEach(() => {
@@ -75,7 +82,7 @@ describe('updateNotificationSettings', () => {
     expect(after.data()?.notificationsEnabled).toBeUndefined();
   });
 
-  it('writes one auditLogs entry per successful call', async () => {
+  it('writes one audit_logs entry per successful call', async () => {
     const uid = 'user-4';
     await admin.firestore().collection('users').doc(uid).set({ uid, role: 'customer' });
     const wrapped = testEnv.wrap(profileModule.updateNotificationSettings);
@@ -84,9 +91,9 @@ describe('updateNotificationSettings', () => {
       auth: { uid, token: {} as admin.auth.DecodedIdToken },
     });
     const logs = await admin.firestore()
-      .collection('auditLogs')
-      .where('uid', '==', uid)
-      .where('action', '==', 'profile.notifications.update')
+      .collection('audit_logs')
+      .where('entityId', '==', uid)
+      .where('reason', '==', 'profile.notifications.update')
       .get();
     expect(logs.size).toBe(1);
   });
@@ -105,9 +112,9 @@ describe('updatePrivacySettings', () => {
     expect(after.data()?.privacySettings).toEqual(defaultPrivacySettings);
 
     const logs = await admin.firestore()
-      .collection('auditLogs')
-      .where('uid', '==', uid)
-      .where('action', '==', 'profile.privacy.update')
+      .collection('audit_logs')
+      .where('entityId', '==', uid)
+      .where('reason', '==', 'profile.privacy.update')
       .get();
     expect(logs.size).toBe(1);
   });

@@ -3,6 +3,15 @@ import { cleanup } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
 import { itMessages } from '@/i18n/messages/it';
 
+// The root vitest config has no `include`, so it also picks up functions/test/*.test.ts —
+// but with this setup file, not functions/test/setup.ts. Those tests drive the Admin SDK,
+// which without these two variables tries to reach REAL Firestore for a project the
+// caller has no access to, and every one of them fails on PERMISSION_DENIED. Pointing it
+// at the emulator is what makes them exercise anything.
+process.env.GCLOUD_PROJECT = process.env.GCLOUD_PROJECT || 'demo-vfit-test';
+process.env.FIRESTORE_EMULATOR_HOST =
+  process.env.FIRESTORE_EMULATOR_HOST || '127.0.0.1:8080';
+
 // Cleanup after each test
 afterEach(() => {
   cleanup();

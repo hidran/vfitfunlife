@@ -9,6 +9,7 @@ import {
   type PrivacySettings,
   type SocialLinks,
 } from "../types";
+import { auditLogDoc, auditLogData, toActorRole } from "../lib/audit";
 
 if (admin.apps.length === 0) admin.initializeApp();
 
@@ -49,16 +50,22 @@ export const updateNotificationSettings = onCall<UpdateNotificationSettingsData>
       }
       tx.update(userRef, update);
 
-      const auditRef = db().collection("auditLogs").doc();
-      tx.set(auditRef, {
-        uid,
-        actor: uid,
-        action: "profile.notifications.update",
-        changes: { before, after: parsed.data },
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      // Written inside the transaction, so the entry and the change it describes commit
+      // together or not at all. writeAuditLog would be non-transactional and swallow
+      // failures, which is the wrong trade here.
+      tx.set(auditLogDoc(), auditLogData({
+        actorUid: uid,
+        actorEmail: request.auth?.token?.email ?? "",
+        actorRole: toActorRole(snap.data()?.role),
+        action: "update",
+        entityType: "user",
+        entityId: uid,
+        before: { notificationSettings: before },
+        after: { notificationSettings: parsed.data },
+        reason: "profile.notifications.update",
         ip: request.rawRequest?.ip ?? null,
         userAgent: request.rawRequest?.headers?.["user-agent"] ?? null,
-      });
+      }));
     });
 
     return { success: true } as const;
@@ -86,14 +93,19 @@ export const updatePrivacySettings = onCall<UpdatePrivacySettingsData>(
         privacySettings: parsed.data,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
-      tx.set(db().collection("auditLogs").doc(), {
-        uid, actor: uid,
-        action: "profile.privacy.update",
-        changes: { before, after: parsed.data },
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      tx.set(auditLogDoc(), auditLogData({
+        actorUid: uid,
+        actorEmail: request.auth?.token?.email ?? "",
+        actorRole: toActorRole(snap.data()?.role),
+        action: "update",
+        entityType: "user",
+        entityId: uid,
+        before: { privacySettings: before },
+        after: { privacySettings: parsed.data },
+        reason: "profile.privacy.update",
         ip: request.rawRequest?.ip ?? null,
         userAgent: request.rawRequest?.headers?.["user-agent"] ?? null,
-      });
+      }));
     });
     return { success: true } as const;
   }
@@ -120,14 +132,19 @@ export const updateSocialLinks = onCall<UpdateSocialLinksData>(
         socialLinks: parsed.data,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
-      tx.set(db().collection("auditLogs").doc(), {
-        uid, actor: uid,
-        action: "profile.social.update",
-        changes: { before, after: parsed.data },
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      tx.set(auditLogDoc(), auditLogData({
+        actorUid: uid,
+        actorEmail: request.auth?.token?.email ?? "",
+        actorRole: toActorRole(snap.data()?.role),
+        action: "update",
+        entityType: "user",
+        entityId: uid,
+        before: { socialLinks: before },
+        after: { socialLinks: parsed.data },
+        reason: "profile.social.update",
         ip: request.rawRequest?.ip ?? null,
         userAgent: request.rawRequest?.headers?.["user-agent"] ?? null,
-      });
+      }));
     });
     return { success: true } as const;
   }
@@ -168,14 +185,19 @@ export const updateAvatar = onCall<UpdateAvatarData>(
         avatarUrl: newUrl,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
-      tx.set(db().collection("auditLogs").doc(), {
-        uid, actor: uid,
-        action: "profile.avatar.update",
-        changes: { before: previousUrl, after: newUrl },
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      tx.set(auditLogDoc(), auditLogData({
+        actorUid: uid,
+        actorEmail: request.auth?.token?.email ?? "",
+        actorRole: toActorRole(snap.data()?.role),
+        action: "update",
+        entityType: "user",
+        entityId: uid,
+        before: { avatarUrl: previousUrl },
+        after: { avatarUrl: newUrl },
+        reason: "profile.avatar.update",
         ip: request.rawRequest?.ip ?? null,
         userAgent: request.rawRequest?.headers?.["user-agent"] ?? null,
-      });
+      }));
     });
 
     // Best-effort cleanup of previous avatar

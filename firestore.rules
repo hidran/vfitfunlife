@@ -596,14 +596,11 @@ service cloud.firestore {
       allow write: if false; // Only Cloud Functions
     }
 
-    // ============================================
-    // AUDIT LOGS (Admin only)
-    // ============================================
-
-    match /auditLogs/{logId} {
-      allow read: if isAdmin();
-      allow write: if false; // Only Cloud Functions
-    }
+    // The camelCase `auditLogs` collection is gone — its contents were folded into
+    // `audit_logs` (see the rule near the end of this file) by migrateAuditLogs. Two
+    // collections recording the same fact in different shapes meant every "who changed
+    // what" question had to be asked twice. Deliberately left with no rule so any
+    // straggler write is denied rather than quietly reviving the split.
 
     // ============================================
     // SYSTEM LOGS (admin action log — append-only)
