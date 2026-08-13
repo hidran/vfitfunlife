@@ -1,30 +1,15 @@
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import type { AuditAction, AuditEntityType } from "./auditEntityTypes";
 
 export interface ServerAuditPayload {
   actorUid: string;
   actorEmail: string;
   actorRole: "admin" | "superadmin" | "provider" | "client";
-  action:
-    | "create"
-    | "update"
-    | "delete"
-    | "refund"
-    | "verify"
-    | "suspend"
-    | "activate"
-    | "role_change";
-  entityType:
-    | "user"
-    | "provider"
-    | "venue"
-    | "booking"
-    | "payment"
-    | "user_type"
-    | "migration"
-    | "ai_settings"
-    | "ai_plan"
-    | "recipe"
-    | "feature_flag";
+  // Single vocabulary, shared with src/types/audit.ts and pinned by
+  // src/types/audit.test.ts. Previously declared inline here, which is how it drifted
+  // from the client's list.
+  action: AuditAction;
+  entityType: AuditEntityType;
   entityId: string;
   before?: Record<string, unknown>;
   after?: Record<string, unknown>;

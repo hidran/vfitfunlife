@@ -498,6 +498,16 @@ service cloud.firestore {
       allow write: if isSuperAdmin();
     }
 
+    // platform/settings backs /admin/settings (commission, currency, support contacts,
+    // maintenance mode). It had NO rule at all, so deny-by-default meant the page could
+    // neither read nor save — a settings UI pointed at a document nobody could touch.
+    // Read is admin-wide because commission and currency describe how the platform bills;
+    // writing them is a financial change, so it stays superadmin.
+    match /platform/{settingId} {
+      allow read: if isAdmin();
+      allow write: if isSuperAdmin();
+    }
+
     // Shared exercise library. Readable by anyone signed in (clients see the movements in
     // their scheda); written only by the seed callable.
     match /exercises/{exerciseId} {

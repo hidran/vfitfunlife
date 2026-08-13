@@ -636,6 +636,7 @@ export const deMessages: Messages = {
   'admin.settings.demoData.title': 'Demo-Datenverwaltung',
   'admin.settings.demoData.subtitle': 'Demodaten für Tests laden oder löschen',
   'admin.settings.savedSuccess': 'Einstellungen erfolgreich gespeichert!',
+  'admin.settings.saveError': 'Einstellungen konnten nicht gespeichert werden.',
   'admin.roles.title': 'Admin-Rollen',
   'admin.roles.subtitle': 'Admin-Benutzer und ihre Berechtigungen verwalten',
   'admin.roles.addAdmin': 'Admin hinzufügen',

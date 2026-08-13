@@ -10,6 +10,7 @@ import {
   getDoc,
   doc,
   updateDoc,
+  setDoc,
   Timestamp,
   startAfter,
   QueryConstraint,
@@ -526,10 +527,17 @@ export async function getPlatformSettings(): Promise<PlatformSettings> {
 export async function updatePlatformSettings(settings: PlatformSettings): Promise<void> {
   try {
     const settingsRef = doc(db, SETTINGS_DOC);
-    await updateDoc(settingsRef, {
-      ...settings,
-      updatedAt: serverTimestamp(),
-    });
+    // setDoc/merge, not updateDoc: getPlatformSettings returns hardcoded defaults when the
+    // document is missing, so the very first save was always against a document that did
+    // not exist — and updateDoc fails outright on those rather than creating one.
+    await setDoc(
+      settingsRef,
+      {
+        ...settings,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
 
     await logAdminAction("UPDATE_SETTINGS", "Updated platform settings");
   } catch (error) {

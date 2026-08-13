@@ -11,6 +11,7 @@ import { SuperadminOnly } from "@/components/admin/SuperadminOnly";
 import { AiAssistantSettings } from "@/components/admin/settings/AiAssistantSettings";
 import { AiAuthoringSettings } from "@/components/admin/settings/AiAuthoringSettings";
 import { PilotFlagsSettings } from "@/components/admin/settings/PilotFlagsSettings";
+import { recordAudit } from "@/components/admin/auditLog";
 import { useI18n } from "@/hooks/useI18n";
 import {
   Save,
@@ -55,10 +56,21 @@ export default function SettingsPage() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      const before = platformSettings;
       await updatePlatformSettingsAction(settings);
+      // Commission and currency decide how the platform bills, so a change here is a
+      // financial one and gets the same audit trail as refunds and role changes.
+      await recordAudit(user, {
+        action: 'update',
+        entityType: 'platform_settings',
+        entityId: 'settings',
+        before: (before ?? undefined) as Record<string, unknown> | undefined,
+        after: settings as unknown as Record<string, unknown>,
+      });
       alert(t('admin.settings.savedSuccess'));
     } catch (error) {
       console.error("Failed to save settings:", error);
+      alert(t('admin.settings.saveError'));
     } finally {
       setIsSaving(false);
     }

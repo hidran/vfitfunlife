@@ -657,6 +657,7 @@ export const enMessages: Messages = {
   'admin.settings.demoData.title': 'Demo Data Management',
   'admin.settings.demoData.subtitle': 'Seed or clear demo data for testing',
   'admin.settings.savedSuccess': 'Settings saved successfully!',
+  'admin.settings.saveError': 'Could not save the settings.',
 
   // ─── Admin: Roles page ───────────────────────────────────────────────
   'admin.roles.title': 'Admin Roles',

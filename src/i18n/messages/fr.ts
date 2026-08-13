@@ -638,6 +638,7 @@ export const frMessages: Messages = {
   'admin.settings.demoData.title': 'Gestion des données de démonstration',
   'admin.settings.demoData.subtitle': 'Charger ou supprimer des données de démonstration pour les tests',
   'admin.settings.savedSuccess': 'Paramètres enregistrés avec succès !',
+  'admin.settings.saveError': 'Impossible d’enregistrer les paramètres.',
   'admin.roles.title': 'Rôles administrateurs',
   'admin.roles.subtitle': 'Gérer les utilisateurs administrateurs et leurs permissions',
   'admin.roles.addAdmin': 'Ajouter un administrateur',

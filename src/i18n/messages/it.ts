@@ -655,6 +655,7 @@ export const itMessages = {
   'admin.settings.demoData.title': 'Gestione dati demo',
   'admin.settings.demoData.subtitle': 'Popola o cancella i dati demo per i test',
   'admin.settings.savedSuccess': 'Impostazioni salvate con successo!',
+  'admin.settings.saveError': 'Salvataggio delle impostazioni non riuscito.',
 
   // ─── Admin: Roles page ───────────────────────────────────────────────
   'admin.roles.title': 'Ruoli admin',

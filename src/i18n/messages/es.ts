@@ -635,6 +635,7 @@ export const esMessages: Messages = {
   'admin.settings.demoData.title': 'Gestión de datos de demostración',
   'admin.settings.demoData.subtitle': 'Cargar o borrar datos de demostración para pruebas',
   'admin.settings.savedSuccess': '¡Configuración guardada correctamente!',
+  'admin.settings.saveError': 'No se pudieron guardar los ajustes.',
   'admin.roles.title': 'Roles de administrador',
   'admin.roles.subtitle': 'Gestionar usuarios administradores y sus permisos',
   'admin.roles.addAdmin': 'Añadir administrador',

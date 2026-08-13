@@ -7,7 +7,10 @@ let testEnv: RulesTestEnvironment;
 
 beforeAll(async () => {
   testEnv = await initializeTestEnvironment({
-    projectId: 'demo-vfit-test',
+    // Per-file project id: the emulator namespaces data by project, and every rules
+    // file calls clearFirestore() in beforeEach. Sharing one id let a file wipe
+    // another's seed data mid-test whenever vitest ran them in parallel.
+    projectId: 'demo-vfit-profile-rules',
     firestore: {
       rules: fs.readFileSync(path.resolve(__dirname, '../../firestore.rules'), 'utf8'),
       host: '127.0.0.1', port: 8080,

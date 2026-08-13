@@ -2,12 +2,11 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import type { User } from '@/types/firebase';
 
-export type AuditAction =
-  | 'create' | 'update' | 'delete'
-  | 'refund' | 'verify' | 'suspend' | 'activate' | 'role_change';
-
-export type AuditEntityType =
-  | 'user' | 'provider' | 'venue' | 'booking' | 'payment' | 'user_type' | 'service_category';
+// Single vocabulary, shared with functions/src/lib/auditEntityTypes.ts and pinned by
+// src/types/audit.test.ts. Previously declared inline here, which is how it drifted from
+// the server's list.
+export type { AuditAction, AuditEntityType } from '@/types/audit';
+import type { AuditAction, AuditEntityType } from '@/types/audit';
 
 export interface AuditPayload {
   action: AuditAction;
