@@ -16,6 +16,7 @@ import {
   getProviderTypeList,
 } from "../utils/roles";
 import { writeAuditLog } from "../lib/audit";
+import { seedProviderServicesFromTemplates } from "../providers/seedProviderServices";
 
 const db = admin.firestore();
 const region = process.env.FIREBASE_REGION || "europe-west1";
@@ -488,6 +489,12 @@ export const verifyProvider = onCall<VerifyProviderData>(
       notes: notes || null,
       timestamp: admin.firestore.FieldValue.serverTimestamp(),
     });
+
+    // On approval, give the provider a starting point instead of an empty services page.
+    // Drafts are inactive and unpriced, so nothing becomes bookable without their input.
+    if (verified) {
+      await seedProviderServicesFromTemplates(providerId, providerData?.userType as string | undefined);
+    }
 
     // Write to audit_logs collection
     await writeAuditLog({

@@ -21,6 +21,13 @@ export interface Provider {
   durationMinutes?: number; // vr session length
   partyType?: string;      // party packages, e.g. "private"
   lowestPrice?: number;    // denormalized cheapest service price (for cards)
+  /**
+   * Derived from the categories of this provider's ACTIVE services, expanded to include
+   * ancestors, by the onProviderServiceWrite trigger. Replaces `specialties` as the
+   * search key — the old one matched on Italian display names, so renaming a category
+   * orphaned every provider carrying the old string.
+   */
+  categoryIds?: string[];
   applicationStatus?: ProviderApplicationStatus;
   isActive: boolean;
   specialties: string[];
@@ -42,10 +49,21 @@ export interface InstructorService {
   durationMinutes: number;
   price: number;
   isActive: boolean;
+  /**
+   * Leaf category from the service taxonomy. Optional through phases 1-2 while the
+   * backfill runs; required from the cutover on.
+   * Spec: docs/superpowers/specs/2026-08-13-service-taxonomy-design.md
+   */
+  categoryId?: string;
+  /** The category and its ancestors, denormalized so one array-contains filters at any depth. */
+  categoryIds?: string[];
 }
 
 export interface ProviderListOptions {
   limit?: number;
+  /** @deprecated matched Italian display names; use categoryId. */
   specialty?: string;
+  /** Taxonomy id — a group matches its whole subtree via denormalized ancestry. */
+  categoryId?: string;
   onlyVerified?: boolean;
 }

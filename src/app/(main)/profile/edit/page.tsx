@@ -53,27 +53,6 @@ interface FormErrors {
   yearsOfExperience?: string;
 }
 
-const AVAILABLE_SPECIALTIES: { value: string; labelKey: MessageKey }[] = [
-  { value: 'Personal Training', labelKey: 'profile.specialty.personalTraining' },
-  { value: 'Yoga', labelKey: 'profile.specialty.yoga' },
-  { value: 'Pilates', labelKey: 'profile.specialty.pilates' },
-  { value: 'CrossFit', labelKey: 'profile.specialty.crossfit' },
-  { value: 'Nutrizione', labelKey: 'profile.specialty.nutrition' },
-  { value: 'Fisioterapia', labelKey: 'profile.specialty.physiotherapy' },
-  { value: 'Massaggio', labelKey: 'profile.specialty.massage' },
-  { value: 'Mental Coaching', labelKey: 'profile.specialty.mentalCoaching' },
-  { value: 'Group Fitness', labelKey: 'profile.specialty.groupFitness' },
-  { value: 'HIIT', labelKey: 'profile.specialty.hiit' },
-  { value: 'Strength Training', labelKey: 'profile.specialty.strengthTraining' },
-  { value: 'Cardio', labelKey: 'profile.specialty.cardio' },
-  { value: 'Danza', labelKey: 'profile.specialty.dance' },
-  { value: 'Arti Marziali', labelKey: 'profile.specialty.martialArts' },
-  { value: 'Nuoto', labelKey: 'profile.specialty.swimming' },
-  { value: 'Spinning', labelKey: 'profile.specialty.spinning' },
-  { value: 'Boxe', labelKey: 'profile.specialty.boxing' },
-  { value: 'Functional Training', labelKey: 'profile.specialty.functionalTraining' },
-];
-
 const AVAILABLE_LANGUAGES: { code: string; labelKey: MessageKey; flag: string }[] = [
   { code: 'it', labelKey: 'profile.languages.option.it', flag: '🇮🇹' },
   { code: 'en', labelKey: 'profile.languages.option.en', flag: '🇬🇧' },
@@ -324,16 +303,6 @@ export default function EditProfilePage() {
       return;
     }
     router.push('/profile/verify-phone');
-  };
-
-  const toggleSpecialty = (specialty: string) => {
-    setProfessionalData((prev) => ({
-      ...prev,
-      specialties: prev.specialties.includes(specialty)
-        ? prev.specialties.filter((s) => s !== specialty)
-        : [...prev.specialties, specialty],
-    }));
-    setHasUnsavedChanges(true);
   };
 
   const toggleLanguage = (code: string) => {
@@ -733,29 +702,6 @@ export default function EditProfilePage() {
               placeholder={t('profile.edit.licenseNumberPlaceholder')}
               leftIcon={<Shield size={18} />}
             />
-
-            {/* Specialties */}
-            <div>
-              <label className="block text-sm font-medium text-text-tertiary mb-2">
-                {t('profile.edit.specialtiesLabel')}
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {AVAILABLE_SPECIALTIES.map((specialty) => (
-                  <button
-                    key={specialty.value}
-                    onClick={() => toggleSpecialty(specialty.value)}
-                    className={cn(
-                      'px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200',
-                      professionalData.specialties.includes(specialty.value)
-                        ? 'bg-section-gradient text-white'
-                        : 'bg-background-secondary/20 text-text-secondary hover:bg-background-secondary/30'
-                    )}
-                  >
-                    {t(specialty.labelKey)}
-                  </button>
-                ))}
-              </div>
-            </div>
 
             {/* Languages */}
             <div>

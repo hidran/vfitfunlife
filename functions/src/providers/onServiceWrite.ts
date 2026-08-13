@@ -1,18 +1,27 @@
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { lowestActivePrice, type ServiceLike } from "./lowestPrice";
+import { activeCategoryIds } from "./deriveCategories";
 
 const region = "europe-west1";
 
 /**
- * Keeps the instructor document's denormalized price in sync with its services.
+ * Keeps the instructor document's denormalized fields in sync with its services.
  *
- * `lowestPrice` drives the "Da €N" card label, provider price sorting
- * (src/lib/firebase/firebookings.ts) and the AI search cards. Recomputing it here rather
- * than in the client keeps it correct for admin edits, seeds and migrations too — and the
- * Admin SDK bypasses the rule that stops a trainer writing their own root document fields.
+ * Two derived values, both computed from the same read:
  *
- * Spec: docs/superpowers/specs/2026-08-10-trainer-services-design.md §6
+ * - `lowestPrice` / `hourlyRate` drive the "Da €N" card label, provider price sorting
+ *   and the AI search cards.
+ * - `categoryIds` is the search key. It replaces `specialties`, which matched on Italian
+ *   display names — renaming a category orphaned every provider carrying the old string.
+ *   A provider stops declaring what they do and simply offers it.
+ *
+ * Recomputing here rather than in the client keeps both correct for admin edits, seeds and
+ * migrations, and the Admin SDK bypasses the rule that stops a trainer writing their own
+ * root document fields.
+ *
+ * Specs: 2026-08-10-trainer-services-design.md §6,
+ *        2026-08-13-service-taxonomy-cutover-design.md §3
  */
 export const onProviderServiceWrite = onDocumentWritten(
   { region, document: "instructors/{instructorId}/services/{serviceId}" },
@@ -20,22 +29,31 @@ export const onProviderServiceWrite = onDocumentWritten(
     const { instructorId } = event.params;
     const instructorRef = getFirestore().collection("instructors").doc(instructorId);
 
-    // Re-read the whole subcollection rather than diffing the single write: the event
-    // gives us one service, but the minimum is a property of the set.
+    // Re-read the whole subcollection rather than diffing the single write: both derived
+    // values are properties of the set, not of the document that changed.
     const snap = await instructorRef.collection("services").get();
-    const lowest = lowestActivePrice(snap.docs.map((d) => d.data() as ServiceLike));
+    const services = snap.docs.map((d) => d.data() as ServiceLike);
+
+    const lowest = lowestActivePrice(services);
+    const categoryIds = activeCategoryIds(services);
+
+    const patch: Record<string, unknown> = {
+      // Empty array rather than a deleted field: array-contains simply never matches an
+      // empty array, whereas a missing field would need every reader to handle undefined.
+      categoryIds,
+    };
 
     if (lowest === null) {
       // No sellable service left. Deleting beats writing 0 — flattenProvider treats the
-      // field as optional, so the cards fall back to their no-price rendering instead of
+      // field as optional, so cards fall back to their no-price rendering instead of
       // advertising a free session.
-      await instructorRef.set(
-        { lowestPrice: FieldValue.delete(), hourlyRate: FieldValue.delete() },
-        { merge: true },
-      );
-      return;
+      patch.lowestPrice = FieldValue.delete();
+      patch.hourlyRate = FieldValue.delete();
+    } else {
+      patch.lowestPrice = lowest;
+      patch.hourlyRate = lowest;
     }
 
-    await instructorRef.set({ lowestPrice: lowest, hourlyRate: lowest }, { merge: true });
+    await instructorRef.set(patch, { merge: true });
   },
 );

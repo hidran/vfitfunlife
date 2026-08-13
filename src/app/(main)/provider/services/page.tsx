@@ -7,6 +7,7 @@ import { Modal } from '@/components/ui/Modal';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
 import { useI18n } from '@/hooks/useI18n';
+import { useServiceCategoryGroups, useServiceCategoryMap } from '@/hooks/useServiceCategories';
 import {
   useProvider,
   useProviderServices,
@@ -25,6 +26,9 @@ const EMPTY_DRAFT: ProviderServiceInput = {
   price: 0,
   durationMinutes: 60,
   isActive: true,
+  // No default category on purpose: a silent default is how a catalogue ends up with
+  // every service tagged 'Personal Training'.
+  categoryId: '',
 };
 
 export default function ProviderServicesPage() {
@@ -37,6 +41,8 @@ export default function ProviderServicesPage() {
   const updatePhotos = useUpdateProviderPhotos(uid);
   const photos = provider?.photoUrls ?? [];
 
+  const categoryGroups = useServiceCategoryGroups();
+  const categoryMap = useServiceCategoryMap();
   const { data: services = [], isLoading } = useProviderServices(uid);
   const createService = useCreateProviderService(uid);
   const updateService = useUpdateProviderService(uid);
@@ -83,6 +89,7 @@ export default function ProviderServicesPage() {
         description: service.description ?? '',
         price: service.price,
         durationMinutes: service.durationMinutes,
+        categoryId: service.categoryId,
         isActive: false, // a copy is a draft until the trainer says otherwise
       })
     );
@@ -103,6 +110,7 @@ export default function ProviderServicesPage() {
           price: editingService.price,
           durationMinutes: editingService.durationMinutes,
           isActive: editingService.isActive,
+          categoryId: editingService.categoryId,
         },
       })
     );
@@ -228,6 +236,12 @@ export default function ProviderServicesPage() {
                     </span>
                   )}
                 </div>
+                {service.categoryId && categoryMap.get(service.categoryId) && (
+                  <p className="text-sm text-gray-400 mt-1">
+                    {categoryMap.get(service.categoryId)!.icon}{' '}
+                    {categoryMap.get(service.categoryId)!.name}
+                  </p>
+                )}
               </div>
               <div className="relative group">
                 <button className="p-2 rounded-lg hover:bg-surface-2">
@@ -322,6 +336,24 @@ export default function ProviderServicesPage() {
                 />
               </div>
 
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">{t('provider.services.edit.category')}</label>
+                <select
+                  value={editingService.categoryId ?? ''}
+                  onChange={(e) => setEditingService({ ...editingService, categoryId: e.target.value })}
+                  className="w-full bg-surface-input border border-hairline rounded-lg px-4 py-2.5 text-content outline-none focus:border-section-primary"
+                >
+                  <option value="">{t('provider.services.edit.categoryPlaceholder')}</option>
+                  {categoryGroups.map(({ group, leaves }) => (
+                    <optgroup key={group.id} label={`${group.icon} ${group.name}`}>
+                      {leaves.map((leaf) => (
+                        <option key={leaf.id} value={leaf.id}>{leaf.name}</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">{t('provider.services.edit.price')}</label>
@@ -359,7 +391,7 @@ export default function ProviderServicesPage() {
               <Button
                 onClick={handleSaveEdit}
                 isLoading={updateService.isPending}
-                disabled={!editingService.name.trim()}
+                disabled={!editingService.name.trim() || !editingService.categoryId}
                 fullWidth
               >
                 {t('provider.services.edit.save')}
@@ -400,6 +432,24 @@ export default function ProviderServicesPage() {
                 />
               </div>
 
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">{t('provider.services.edit.category')}</label>
+                <select
+                  value={draft.categoryId ?? ''}
+                  onChange={(e) => setDraft({ ...draft, categoryId: e.target.value })}
+                  className="w-full bg-surface-input border border-hairline rounded-lg px-4 py-2.5 text-content outline-none focus:border-section-primary"
+                >
+                  <option value="">{t('provider.services.edit.categoryPlaceholder')}</option>
+                  {categoryGroups.map(({ group, leaves }) => (
+                    <optgroup key={group.id} label={`${group.icon} ${group.name}`}>
+                      {leaves.map((leaf) => (
+                        <option key={leaf.id} value={leaf.id}>{leaf.name}</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">{t('provider.services.edit.price')}</label>
@@ -432,7 +482,7 @@ export default function ProviderServicesPage() {
               <Button
                 onClick={handleAddService}
                 isLoading={createService.isPending}
-                disabled={!draft.name.trim()}
+                disabled={!draft.name.trim() || !draft.categoryId}
                 fullWidth
               >
                 {t('provider.services.add.submit')}

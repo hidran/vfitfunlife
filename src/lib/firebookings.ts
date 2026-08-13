@@ -43,9 +43,13 @@ export async function searchProviders(params: SearchParams): Promise<ProviderSea
   // array-contains constraint so the limit doesn't burn through unrelated docs
   // before in-memory filtering can apply (with 300+ seeded trainers, plain
   // limit(50) starves rare categories whose docs sort late by doc id).
+  // params.category is a TAXONOMY ID, not a display name. categoryIds holds the leaf and
+  // its ancestors, so this single array-contains matches whether the user picked a group
+  // or a leaf — and renaming or translating a category no longer changes who is findable,
+  // which the old name-matching version could not survive.
   const constraints: QueryConstraint[] = [where('providerProfile.isVerified', '==', true)];
   if (params.category) {
-    constraints.push(where('providerProfile.specialties', 'array-contains', params.category));
+    constraints.push(where('categoryIds', 'array-contains', params.category));
   }
   constraints.push(limit(50));
   const providersQuery = query(collection(db, INSTRUCTORS_COLLECTION), ...constraints);
@@ -65,6 +69,7 @@ export async function searchProviders(params: SearchParams): Promise<ProviderSea
       reviewCount: profile.reviewCount || 0,
       isVerified: profile.isVerified || false,
       specialties: profile.specialties || [],
+      categoryIds: (data.categoryIds as string[]) || [],
       yearsOfExperience: profile.yearsOfExperience || 0,
       languages: profile.languages || [],
       // Denormalized cheapest service price (written by the seeder from the
@@ -93,12 +98,9 @@ export async function searchProviders(params: SearchParams): Promise<ProviderSea
     );
   }
 
-  // Apply category filter
-  if (params.category) {
-    providers = providers.filter((p) =>
-      p.specialties.some((s) => s.toLowerCase().includes(params.category!.toLowerCase()))
-    );
-  }
+  // No second in-memory category pass: the Firestore constraint above is exact. The old
+  // one re-filtered by substring against display names, which quietly re-introduced the
+  // name coupling the query had just escaped.
 
   // Apply price filter
   if (params.minPrice !== undefined) {

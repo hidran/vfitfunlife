@@ -25,4 +25,7 @@ export * from "./recipes/purgeLegacyNutrition";
 export * from "./providers/onServiceWrite";
 export * from "./providers/backfillProviderStatus";
 export * from "./users/migrateAudit";
+export * from "./categories/seedCategories";
+export * from "./categories/backfillCategories";
+export * from "./categories/mergeCategories";
 export * from "./config/pilotFlags";

@@ -3,7 +3,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import { requireSuperAdmin } from "../utils/roles";
 import { writeAuditLog } from "../lib/audit";
 import { normalizeAvailability } from "./search/normalize";
-import { defaultWeeklySchedule, userTypeForSpecialty } from "./catalog";
+import { defaultWeeklySchedule } from "./catalog";
 
 const region = process.env.FIREBASE_REGION || "europe-west1";
 const MAX_BATCH = 450;
@@ -149,16 +149,9 @@ export const migrateInstructorCatalog = onCall({ region }, async (req) => {
       }
     }
 
-    // userType (flat, ADDED for AI search): derive from first specialty if missing.
-    if (typeof data.userType !== "string" || !data.userType) {
-      const specialties: unknown = Array.isArray(data.specialties) ? data.specialties :
-        Array.isArray(pp.specialties) ? pp.specialties :
-          [];
-      const first = Array.isArray(specialties) && typeof specialties[0] === "string" ?
-        (specialties[0] as string) :
-        "";
-      if (first) patch.userType = userTypeForSpecialty(first);
-    }
+    // userType is no longer derived here. It was guessed from a specialty string to give
+    // AI search something to filter on; the service taxonomy's categoryIds does that job
+    // properly, and the guess could return profession ids with no userTypes document.
 
     // availabilitySchedule (flat canonical array, ADDED for AI search). Only
     // write when the existing array is missing/empty — never overwrite a valid

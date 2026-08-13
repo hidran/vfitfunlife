@@ -4,6 +4,7 @@ import { EntityDetailLayout, useEntityMutation } from '@/components/admin';
 import { createServiceCategory as createServiceCategoryFn } from '@/lib/firebase/admin';
 import {
   ServiceCategoryFormView,
+  toCategoryNames,
   type ServiceCategoryFormData,
 } from './ServiceCategoryFormView';
 import type { ServiceCategoryData } from '@/types/admin';
@@ -11,7 +12,9 @@ import { useI18n } from '@/hooks/useI18n';
 
 function toServiceCategoryData(form: ServiceCategoryFormData): ServiceCategoryData {
   return {
-    name: form.name,
+    names: toCategoryNames(form),
+    parentId: form.parentId ? form.parentId : null,
+    sections: form.sections,
     icon: form.icon ?? '',
     isActive: form.isActive,
     order: form.order,

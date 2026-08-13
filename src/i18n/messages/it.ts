@@ -540,6 +540,9 @@ export const itMessages = {
   'admin.serviceCategories.notFound': 'Servizio non trovato',
   'admin.serviceCategories.field.name': 'Nome',
   'admin.serviceCategories.field.icon': 'Icona (emoji)',
+  'admin.serviceCategories.field.parent': 'Categoria padre',
+  'admin.serviceCategories.field.parentNone': 'Nessuna (gruppo principale)',
+  'admin.serviceCategories.field.sections': 'Sezioni',
   'admin.serviceCategories.field.order': 'Ordine',
   'admin.serviceCategories.field.isActive': 'Attivo',
 
@@ -2030,6 +2033,8 @@ export const itMessages = {
   'provider.services.edit.title': 'Modifica servizio',
   'provider.services.edit.serviceName': 'Nome servizio',
   'provider.services.edit.description': 'Descrizione',
+  'provider.services.edit.category': 'Categoria',
+  'provider.services.edit.categoryPlaceholder': 'Scegli una categoria…',
   'provider.services.edit.price': 'Prezzo (€)',
   'provider.services.edit.duration': 'Durata (min)',
   'provider.services.edit.isActive': 'Servizio attivo',

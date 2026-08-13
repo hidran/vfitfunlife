@@ -9,7 +9,8 @@ import * as functions from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import { getFirestore, Timestamp, GeoPoint } from "firebase-admin/firestore";
 import * as ngeohash from "ngeohash";
-import { defaultWeeklySchedule, userTypeForSpecialty } from "../ai/catalog";
+import { defaultWeeklySchedule } from "../ai/catalog";
+import { userTypeForSpecialty } from "./userTypeForSpecialty";
 
 const db = getFirestore();
 

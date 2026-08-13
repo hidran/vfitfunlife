@@ -542,6 +542,9 @@ export const enMessages: Messages = {
   'admin.serviceCategories.notFound': 'Service not found',
   'admin.serviceCategories.field.name': 'Name',
   'admin.serviceCategories.field.icon': 'Icon (emoji)',
+  'admin.serviceCategories.field.parent': 'Parent category',
+  'admin.serviceCategories.field.parentNone': 'None (top-level group)',
+  'admin.serviceCategories.field.sections': 'Sections',
   'admin.serviceCategories.field.order': 'Order',
   'admin.serviceCategories.field.isActive': 'Active',
 
@@ -2030,6 +2033,8 @@ export const enMessages: Messages = {
   'provider.services.edit.title': 'Edit Service',
   'provider.services.edit.serviceName': 'Service Name',
   'provider.services.edit.description': 'Description',
+  'provider.services.edit.category': 'Category',
+  'provider.services.edit.categoryPlaceholder': 'Choose a category…',
   'provider.services.edit.price': 'Price (€)',
   'provider.services.edit.duration': 'Duration (min)',
   'provider.services.edit.isActive': 'Service is active',

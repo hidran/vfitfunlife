@@ -37,7 +37,6 @@ import {
   AvailabilityCalendar,
   EducationHistory,
   PortfolioGallery,
-  SpecialtiesSelector,
   LanguagesSelector,
   CancellationPolicyEditor,
   BecomeProviderCard,
@@ -138,49 +137,6 @@ const menuItems: ProfileMenuSection[] = [
     ],
   },
 ];
-
-// Available specialties for providers
-const AVAILABLE_SPECIALTIES = [
-  'Personal Training',
-  'Yoga',
-  'Pilates',
-  'CrossFit',
-  'Nutrizione',
-  'Fisioterapia',
-  'Massaggio',
-  'Mental Coaching',
-  'Group Fitness',
-  'HIIT',
-  'Strength Training',
-  'Cardio',
-  'Danza',
-  'Arti Marziali',
-  'Nuoto',
-  'Spinning',
-  'Boxe',
-  'Functional Training',
-];
-
-const SPECIALTY_LABEL_KEYS: Partial<Record<string, MessageKey>> = {
-  'Personal Training': 'profile.specialty.personalTraining',
-  Yoga: 'profile.specialty.yoga',
-  Pilates: 'profile.specialty.pilates',
-  CrossFit: 'profile.specialty.crossfit',
-  Nutrizione: 'profile.specialty.nutrition',
-  Fisioterapia: 'profile.specialty.physiotherapy',
-  Massaggio: 'profile.specialty.massage',
-  'Mental Coaching': 'profile.specialty.mentalCoaching',
-  'Group Fitness': 'profile.specialty.groupFitness',
-  HIIT: 'profile.specialty.hiit',
-  'Strength Training': 'profile.specialty.strengthTraining',
-  Cardio: 'profile.specialty.cardio',
-  Danza: 'profile.specialty.dance',
-  'Arti Marziali': 'profile.specialty.martialArts',
-  Nuoto: 'profile.specialty.swimming',
-  Spinning: 'profile.specialty.spinning',
-  Boxe: 'profile.specialty.boxing',
-  'Functional Training': 'profile.specialty.functionalTraining',
-};
 
 const availabilityDayKeys: MessageKey[] = [
   'profile.provider.day.sun',
@@ -600,16 +556,6 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {/* Specialties Selector */}
-            <div className="bg-background-secondary/5 rounded-xl p-4">
-              <SpecialtiesSelector
-                userId={user.id}
-                specialties={providerProfile?.specialties || []}
-                availableSpecialties={AVAILABLE_SPECIALTIES}
-                labelKeysByValue={SPECIALTY_LABEL_KEYS}
-                onUpdate={refreshUserProfile}
-              />
-            </div>
 
             {/* Languages Selector */}
             <div className="bg-background-secondary/5 rounded-xl p-4">

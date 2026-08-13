@@ -650,13 +650,13 @@ export async function createServiceCategory(data: ServiceCategoryData): Promise<
   try {
     const docRef = await addDoc(collection(db, SERVICE_CATEGORIES_COLLECTION), {
       ...data,
-      slug: data.name.toLowerCase().trim().replace(/\s+/g, "-"),
+      slug: (data.names?.it ?? "").toLowerCase().trim().replace(/\s+/g, "-"),
       order: data.order ?? 0,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
 
-    await logAdminAction("CREATE_SERVICE_CATEGORY", `Created service category: ${data.name}`);
+    await logAdminAction("CREATE_SERVICE_CATEGORY", `Created service category: ${data.names?.it ?? ""}`);
     return docRef.id;
   } catch (error) {
     console.error("Error creating service category:", error);
@@ -670,12 +670,12 @@ export async function updateServiceCategory(id: string, data: ServiceCategoryDat
     const ref = doc(db, SERVICE_CATEGORIES_COLLECTION, id);
     await updateDoc(ref, {
       ...data,
-      slug: data.name.toLowerCase().trim().replace(/\s+/g, "-"),
+      slug: (data.names?.it ?? "").toLowerCase().trim().replace(/\s+/g, "-"),
       order: data.order ?? 0,
       updatedAt: serverTimestamp(),
     });
 
-    await logAdminAction("UPDATE_SERVICE_CATEGORY", `Updated service category: ${data.name}`);
+    await logAdminAction("UPDATE_SERVICE_CATEGORY", `Updated service category: ${data.names?.it ?? ""}`);
   } catch (error) {
     console.error("Error updating service category:", error);
     throw error;

@@ -56,6 +56,7 @@ function flattenProvider(id: string, data: Record<string, unknown>): Provider {
     durationMinutes: typeof data.durationMinutes === 'number' ? (data.durationMinutes as number) : undefined,
     partyType: (data.partyType as string) ?? undefined,
     lowestPrice: typeof data.lowestPrice === 'number' ? (data.lowestPrice as number) : undefined,
+    categoryIds: (data.categoryIds as string[]) ?? undefined,
   };
 }
 
@@ -84,7 +85,14 @@ export async function fetchProviders(opts: ProviderListOptions = {}): Promise<Pr
     return snap.docs
       .map((d) => flattenProvider(d.id, d.data() as Record<string, unknown>))
       .filter((p) => !p.activityKind && p.isActive && (!opts.onlyVerified || p.isVerified))
-      .filter((p) => !opts.specialty || p.specialties.includes(opts.specialty));
+      // Category ids, not display names: `categoryIds` carries the leaf and its
+      // ancestors, so a group filter matches its whole subtree. `specialty` remains as a
+      // fallback for the window before the backfill has run everywhere.
+      .filter((p) => {
+        if (opts.categoryId) return (p.categoryIds ?? []).includes(opts.categoryId);
+        if (opts.specialty) return p.specialties.includes(opts.specialty);
+        return true;
+      });
   } catch (error) {
     console.error('[fetchProviders]', opts, error);
     return [];

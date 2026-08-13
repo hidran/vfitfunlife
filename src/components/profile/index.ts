@@ -5,7 +5,6 @@ export { CertificationUpload } from './CertificationUpload';
 export { AvailabilityCalendar } from './AvailabilityCalendar';
 export { EducationHistory } from './EducationHistory';
 export { PortfolioGallery } from './PortfolioGallery';
-export { SpecialtiesSelector } from './SpecialtiesSelector';
 export { LanguagesSelector } from './LanguagesSelector';
 export { CancellationPolicyEditor } from './CancellationPolicyEditor';
 export { BecomeProviderCard } from './BecomeProviderCard';

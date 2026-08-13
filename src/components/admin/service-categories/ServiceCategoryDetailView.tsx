@@ -14,6 +14,7 @@ import {
 } from '@/lib/firebase/admin';
 import {
   ServiceCategoryFormView,
+  toCategoryNames,
   type ServiceCategoryFormData,
 } from './ServiceCategoryFormView';
 import type { ServiceCategoryDoc, ServiceCategoryData } from '@/types/admin';
@@ -23,7 +24,9 @@ const SERVICE_CATEGORIES_COLLECTION = 'serviceCategories';
 
 function toServiceCategoryData(form: ServiceCategoryFormData): ServiceCategoryData {
   return {
-    name: form.name,
+    names: toCategoryNames(form),
+    parentId: form.parentId ? form.parentId : null,
+    sections: form.sections,
     icon: form.icon ?? '',
     isActive: form.isActive,
     order: form.order,
@@ -130,7 +133,7 @@ export function ServiceCategoryDetailView({
       <ConfirmDeleteDialog
         open={confirmOpen}
         entityLabel={t('admin.serviceCategories.entityLabel')}
-        entityName={sc.name}
+        entityName={sc.names?.it ?? sc.name ?? sc.id}
         onClose={() => setConfirmOpen(false)}
         onConfirm={(reason) => deleteMut.mutateAsync({ reason })}
       />

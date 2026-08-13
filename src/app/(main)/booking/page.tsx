@@ -27,13 +27,16 @@ import type { ProviderSearchResult, SearchParams } from '@/types/booking';
 import { useNearMe } from '@/hooks/useNearMe';
 import { RadiusFilter } from '@/components/map/RadiusFilter';
 import { annotateAndSortByDistance, filterByRadius } from '@/lib/geo';
-import { useServiceCategories } from '@/hooks/useServiceCategories';
+import { useServiceCategoryGroups } from '@/hooks/useServiceCategories';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
 
 export default function BookingPage() {
   const { t, locale } = useI18n();
-  const serviceCategories = useServiceCategories();
+  // Groups, not the full catalogue: 29 chips is an unusable row, 8 is a browse bar. A
+  // group chip still matches every provider beneath it, because categoryIds carries the
+  // leaf AND its ancestors.
+  const categoryGroups = useServiceCategoryGroups();
   const router = useRouter();
   const {
     searchResults,
@@ -148,13 +151,16 @@ export default function BookingPage() {
             >
               {t('booking.category.all')}
             </button>
-            {serviceCategories.map((cat) => (
+            {categoryGroups.map(({ group: cat }) => (
               <button
                 key={cat.id}
-                onClick={() => setSearchFilters({ category: cat.name })}
+                // The id, not the name: categoryIds carries ancestry, so selecting a
+                // group matches its whole subtree, and renaming a category in
+                // /admin/services no longer changes who is findable.
+                onClick={() => setSearchFilters({ category: cat.id })}
                 className={cn(
                   'flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5',
-                  searchFilters.category === cat.name
+                  searchFilters.category === cat.id
                     ? 'bg-[var(--section-primary)] text-white'
                     : 'bg-surface-elevated text-text-secondary hover:text-content'
                 )}

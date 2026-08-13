@@ -158,18 +158,27 @@ export interface UserTypeData {
 // Service Category (admin-configurable catalog of services a provider can offer)
 export interface ServiceCategoryDoc {
   id: string;
-  name: string;
-  slug: string;
+  /** @deprecated pre-taxonomy flat label; `names` is the source of truth. */
+  name?: string;
+  /** Per-locale labels — the catalogue is admin-authored, so i18n keys cannot be used. */
+  names?: Record<string, string>;
+  /** null for a top-level group. Only leaves may be assigned to a service. */
+  parentId?: string | null;
+  /** 'fit' | 'fun' | 'life'; a category may belong to several. */
+  sections?: string[];
+  slug?: string;
   icon: string;
   isActive: boolean;
   order: number;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
 }
 
 // Service Category Data for create/update
 export interface ServiceCategoryData {
-  name: string;
+  names: Record<string, string>;
+  parentId: string | null;
+  sections: string[];
   icon: string;
   isActive: boolean;
   order?: number;
