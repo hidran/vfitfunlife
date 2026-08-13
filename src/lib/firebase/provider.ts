@@ -38,7 +38,6 @@ import {
   ProviderClient,
   ClientBookingHistory,
   ClientNote,
-  ProviderService,
   BookingFilters,
   ProviderBooking,
   AvailabilitySettings,
@@ -51,7 +50,6 @@ import { Booking, BookingStatus, User } from "@/types/firebase";
 
 const PROVIDER_COLLECTION = "providers";
 const BOOKINGS_COLLECTION = "bookings";
-const SERVICES_COLLECTION = "services";
 const CLIENTS_COLLECTION = "clients";
 const EARNINGS_COLLECTION = "earnings";
 const NOTIFICATIONS_COLLECTION = "notifications";
@@ -605,103 +603,6 @@ export async function addClientNote(clientId: string, noteContent: string): Prom
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
-}
-
-// Get Provider Services
-export async function getProviderServices(): Promise<ProviderService[]> {
-  const providerId = await getCurrentProviderId();
-  
-  const servicesQuery = query(
-    collection(db, SERVICES_COLLECTION),
-    where("providerId", "==", providerId),
-    orderBy("createdAt", "desc")
-  );
-
-  const servicesSnap = await getDocs(servicesQuery);
-  const services: ProviderService[] = [];
-
-  servicesSnap.forEach(doc => {
-    const data = doc.data();
-    services.push({
-      id: doc.id,
-      ...data,
-      createdAt: data.createdAt?.toDate(),
-      updatedAt: data.updatedAt?.toDate(),
-    } as ProviderService);
-  });
-
-  return services;
-}
-
-// Update Service
-export async function updateService(serviceId: string, data: Partial<ProviderService>): Promise<void> {
-  const providerId = await getCurrentProviderId();
-  
-  const serviceRef = doc(db, SERVICES_COLLECTION, serviceId);
-  const serviceSnap = await getDoc(serviceRef);
-  
-  if (!serviceSnap.exists()) {
-    throw new Error("Service not found");
-  }
-
-  if (serviceSnap.data().providerId !== providerId) {
-    throw new Error("Not authorized to update this service");
-  }
-
-  await updateDoc(serviceRef, {
-    ...data,
-    updatedAt: serverTimestamp(),
-  });
-}
-
-// Create Service
-export async function createService(
-  data: Omit<ProviderService, 'id' | 'createdAt' | 'updatedAt' | 'bookingCount' | 'revenue'>
-): Promise<string> {
-  const providerId = await getCurrentProviderId();
-  
-  const servicesRef = collection(db, SERVICES_COLLECTION);
-  const docRef = await addDoc(servicesRef, {
-    ...data,
-    providerId,
-    bookingCount: 0,
-    revenue: 0,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
-
-  return docRef.id;
-}
-
-// Delete Service
-export async function deleteService(serviceId: string): Promise<void> {
-  const providerId = await getCurrentProviderId();
-  
-  const serviceRef = doc(db, SERVICES_COLLECTION, serviceId);
-  const serviceSnap = await getDoc(serviceRef);
-  
-  if (!serviceSnap.exists()) {
-    throw new Error("Service not found");
-  }
-
-  if (serviceSnap.data().providerId !== providerId) {
-    throw new Error("Not authorized to delete this service");
-  }
-
-  // Check for upcoming bookings
-  const upcomingBookingsQuery = query(
-    collection(db, BOOKINGS_COLLECTION),
-    where("serviceId", "==", serviceId),
-    where("status", "in", ["pending", "confirmed"]),
-    where("scheduledAt", ">=", Timestamp.fromDate(new Date()))
-  );
-
-  const upcomingBookingsSnap = await getDocs(upcomingBookingsQuery);
-  if (!upcomingBookingsSnap.empty) {
-    throw new Error("Cannot delete service with upcoming bookings");
-  }
-
-  await deleteDoc(serviceRef);
 }
 
 // Request Withdrawal

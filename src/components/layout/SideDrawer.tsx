@@ -4,6 +4,7 @@ import { useEffect, useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Bell,
+  Briefcase,
   Calendar,
   ChefHat,
   CircleDollarSign,
@@ -30,6 +31,7 @@ import { useSection, type Section } from '@/contexts/SectionContext';
 import { cn, formatPrice } from '@/lib/utils';
 import { Avatar } from '@/components/ui/Avatar';
 import { useAuthStore } from '@/stores/authStore';
+import { canAccessProviderArea } from '@/lib/providerStatus';
 import { useShallow } from 'zustand/react/shallow';
 import type { MessageKey } from '@/i18n/messages';
 
@@ -115,6 +117,9 @@ export function SideDrawer({
   const isLoading = useAuthStore((state) => state.isLoading);
   const role = useAuthStore((state) => state.user?.role);
   const isStaff = role === 'admin' || role === 'superadmin';
+  // Mirrors the guard on /provider/layout.tsx, so the button never leads to a redirect.
+  const providerStatus = useAuthStore((state) => state.user?.providerStatus);
+  const canAccessProvider = canAccessProviderArea(providerStatus ?? 'none');
 
   useEffect(() => {
     if (!isOpen) {
@@ -284,6 +289,22 @@ export function SideDrawer({
                   <ShieldCheck className="h-4 w-4 text-white" />
                 </div>
                 <span className="flex-1 text-sm font-semibold text-white">{t('drawer.item.admin')}</span>
+              </button>
+            )}
+
+            {/* A trainer's way into their own area from anywhere in the app. The professional
+                mode pill above is decorative, so without this the drawer showed providers a
+                switch that did nothing and no link to what it implied. */}
+            {canAccessProvider && (
+              <button
+                type="button"
+                onClick={() => handleNavigate('/provider/dashboard')}
+                className="mb-4 flex w-full items-center gap-3 rounded-xl bg-gradient-to-r from-[#00C9FF] to-[#8A4FFF] px-3 py-3 text-left shadow-sm transition-opacity hover:opacity-90"
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">
+                  <Briefcase className="h-4 w-4 text-white" />
+                </div>
+                <span className="flex-1 text-sm font-semibold text-white">{t('drawer.item.providerArea')}</span>
               </button>
             )}
 

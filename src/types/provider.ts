@@ -1,5 +1,5 @@
 import { Timestamp } from "firebase/firestore";
-import { Booking, BookingStatus, PaymentStatus, ServicePricing, User } from "./firebase";
+import { Booking, BookingStatus, PaymentStatus, User } from "./firebase";
 
 // Dashboard Stats
 export interface DashboardStats {
@@ -133,20 +133,6 @@ export interface ClientNote {
   createdAt: Timestamp;
   updatedAt: Timestamp;
   createdBy: string;
-}
-
-// Service Management Types
-export interface ProviderService extends ServicePricing {
-  categoryId: string;
-  categoryName: string;
-  coverImage?: string;
-  requirements?: string;
-  preparationInstructions?: string;
-  cancellationPolicy?: string;
-  bookingCount: number;
-  revenue: number;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
 }
 
 // Booking Filters

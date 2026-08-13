@@ -89,7 +89,6 @@ export interface PlatformSettings {
   currency: string;
   supportEmail: string;
   supportPhone?: string;
-  featureFlags: Record<string, boolean>;
   emailTemplates?: EmailTemplate[];
   notificationSettings?: AdminNotificationSettings;
   maintenanceMode?: boolean;

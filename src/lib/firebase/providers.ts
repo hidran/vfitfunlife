@@ -1,5 +1,7 @@
 import {
+  addDoc,
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -117,6 +119,57 @@ export async function fetchProviderServices(providerId: string): Promise<Instruc
     console.error('[fetchProviderServices]', providerId, error);
     return [];
   }
+}
+
+export type ProviderServiceInput = Omit<InstructorService, 'id'>;
+
+/**
+ * Firestore rejects `undefined` field values outright, and `description` is optional —
+ * an empty edit form would otherwise fail the whole write.
+ */
+function stripUndefined<T extends Record<string, unknown>>(data: T): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(data).filter(([, v]) => v !== undefined)
+  ) as Partial<T>;
+}
+
+/**
+ * Service CRUD writes `instructors/{providerId}/services`, the collection the client
+ * booking flow reads. The document carries no providerId — the path is the relationship.
+ *
+ * Unlike the fetchers above, these deliberately let errors propagate: a silent failure
+ * here is what made the old page look like it was saving when it was not.
+ *
+ * `lowestPrice` on the instructor document is maintained by the onProviderServiceWrite
+ * trigger, not from here — see functions/src/providers/onServiceWrite.ts.
+ */
+export async function createProviderService(
+  providerId: string,
+  data: ProviderServiceInput
+): Promise<string> {
+  const ref = await addDoc(
+    collection(db, 'instructors', providerId, 'services'),
+    stripUndefined({ ...data })
+  );
+  return ref.id;
+}
+
+export async function updateProviderService(
+  providerId: string,
+  serviceId: string,
+  data: Partial<ProviderServiceInput>
+): Promise<void> {
+  await updateDoc(
+    doc(db, 'instructors', providerId, 'services', serviceId),
+    stripUndefined({ ...data })
+  );
+}
+
+export async function deleteProviderService(
+  providerId: string,
+  serviceId: string
+): Promise<void> {
+  await deleteDoc(doc(db, 'instructors', providerId, 'services', serviceId));
 }
 
 export async function fetchProviderApplications(): Promise<Provider[]> {

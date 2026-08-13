@@ -23,7 +23,8 @@ export interface ServerAuditPayload {
     | "migration"
     | "ai_settings"
     | "ai_plan"
-    | "recipe";
+    | "recipe"
+    | "feature_flag";
   entityId: string;
   before?: Record<string, unknown>;
   after?: Record<string, unknown>;

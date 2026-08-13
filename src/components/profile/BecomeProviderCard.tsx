@@ -26,12 +26,10 @@ export function BecomeProviderCard() {
       prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]
     );
 
-  // Only customers can apply to become a provider. Admins, superadmins, and
-  // existing providers don't see the CTA. (Applicants keep role 'customer' —
-  // only providerStatus changes — so their pending/verified/rejected states
-  // still render correctly.)
-  if (role !== 'customer') return null;
-
+  // The verified card is a way IN to the provider area, not an application CTA, so it is
+  // checked before the role guard below. Guarding first hid it from anyone whose role had
+  // been promoted to 'provider' — which is to say, from every trainer who needed it. That
+  // left /profile with no route to /provider/* at all.
   if (variant === 'verified') {
     return (
       <Link
@@ -46,6 +44,11 @@ export function BecomeProviderCard() {
       </Link>
     );
   }
+
+  // Only customers can apply to become a provider. Admins and superadmins don't see the
+  // CTA. (Applicants keep role 'customer' — only providerStatus changes — so their
+  // pending/rejected states still render correctly.)
+  if (role !== 'customer') return null;
 
   if (variant === 'pending') {
     return (

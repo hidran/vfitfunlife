@@ -22,3 +22,6 @@ export * from "./ai/authoring/generateWorkoutPlan";
 export * from "./exercises/seed";
 export * from "./recipes/generateRecipes";
 export * from "./recipes/purgeLegacyNutrition";
+export * from "./providers/onServiceWrite";
+export * from "./providers/backfillProviderStatus";
+export * from "./config/pilotFlags";

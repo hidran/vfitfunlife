@@ -60,11 +60,14 @@ function getInstance(): RemoteConfig | null {
   try {
     const rc = getRemoteConfig(getApp());
     rc.defaultConfig = REMOTE_DEFAULTS;
-    // Long enough not to hammer the service, short enough that flipping a flag in the
-    // console takes effect within the hour without shipping a release. Zero in dev so a
-    // change is testable immediately.
+    // Five minutes, not an hour: a superadmin can now flip these from /admin/settings, and
+    // an hour between pressing Save and anything happening reads as a broken switch.
+    // Fetches are cheap and SDK-cached. Zero in dev so a change is testable immediately.
+    //
+    // Note this bounds NEW page loads only — usePilotFlags resolves once per load and
+    // caches in a module variable, so an already-open app updates on reload.
     rc.settings.minimumFetchIntervalMillis =
-      process.env.NODE_ENV === 'production' ? 60 * 60 * 1000 : 0;
+      process.env.NODE_ENV === 'production' ? 5 * 60 * 1000 : 0;
     instance = rc;
     return rc;
   } catch {

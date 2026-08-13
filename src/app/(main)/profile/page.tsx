@@ -34,7 +34,6 @@ import {
   SocialLinksEditor, 
   NotificationSettings,
   CertificationUpload,
-  ServicePricingCard,
   AvailabilityCalendar,
   EducationHistory,
   PortfolioGallery,
@@ -45,7 +44,7 @@ import {
 } from '@/components/profile';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { isProvider, updateProviderProfile } from '@/lib/firebase/auth';
-import { ServicePricing, AvailabilitySchedule, ProviderProfile } from '@/types/firebase';
+import { AvailabilitySchedule, ProviderProfile } from '@/types/firebase';
 import { formatPrice } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
 import type { MessageKey } from '@/i18n/messages';
@@ -285,10 +284,6 @@ export default function ProfilePage() {
     }
   };
 
-  const handleUpdateServices = async (services: ServicePricing[]) => {
-    await handleUpdateProviderProfile({ servicePricing: services });
-  };
-
   const handleUpdateAvailability = async (schedule: AvailabilitySchedule) => {
     await handleUpdateProviderProfile({ availabilitySchedule: schedule });
   };
@@ -444,7 +439,10 @@ export default function ProfilePage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => router.push(`/provider/${user?.id}`)}
+                  // /provider/{id} is not a route and cannot be one under output:'export'.
+                  // /book?providerId= is the real client-facing page — so this doubles as a
+                  // preview of what clients see, services included.
+                  onClick={() => router.push(`/book?providerId=${user?.id}`)}
                 >
                   <ExternalLink size={14} className="mr-1" />
                   {t('profile.action.publicProfile')}
@@ -716,31 +714,25 @@ export default function ProfilePage() {
               />
             </div>
 
-            {/* Service Pricing */}
-            <div className="bg-background-secondary/5 rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-4">
+            {/* Services & pricing.
+                This used to be an inline editor writing providerProfile.servicePricing on
+                the user document — a third service store, read by nothing. The booking
+                flow reads instructors/{uid}/services, so anything saved here was invisible
+                to clients. It now links to the one page that writes the real collection. */}
+            <button
+              type="button"
+              onClick={() => router.push('/provider/services')}
+              className="w-full bg-background-secondary/5 rounded-xl p-4 text-left hover:bg-background-secondary/10 transition-colors"
+            >
+              <div className="flex items-center gap-2">
                 <DollarSign className="text-section-primary" size={20} />
-                <h3 className="text-sm font-medium text-text-tertiary">{t('profile.provider.servicesAndPricing')}</h3>
+                <div className="flex-1">
+                  <h3 className="text-sm font-medium text-text-tertiary">{t('profile.provider.servicesAndPricing')}</h3>
+                  <p className="text-sm text-text-secondary mt-0.5">{t('profile.provider.manageServicesHint')}</p>
+                </div>
+                <ChevronRight className="text-text-tertiary" size={18} />
               </div>
-              <ServicePricingCard
-                services={providerProfile?.servicePricing || []}
-                onAdd={(service) => {
-                  const newServices = [...(providerProfile?.servicePricing || []), { ...service, id: Date.now().toString() }];
-                  handleUpdateServices(newServices);
-                }}
-                onUpdate={(id, service) => {
-                  const updatedServices = (providerProfile?.servicePricing || []).map((s) =>
-                    s.id === id ? { ...service, id } : s
-                  );
-                  handleUpdateServices(updatedServices);
-                }}
-                onDelete={(id) => {
-                  const filteredServices = (providerProfile?.servicePricing || []).filter((s) => s.id !== id);
-                  handleUpdateServices(filteredServices);
-                }}
-                isEditable={true}
-              />
-            </div>
+            </button>
 
             {/* License Number */}
             {providerProfile?.licenseNumber && (

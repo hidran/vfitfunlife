@@ -1,118 +1,127 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { Plus, Edit, Copy, Trash2, MoreVertical, Check, X, Clock, DollarSign, Users } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, Edit, Copy, Trash2, MoreVertical, Check, X, Clock, DollarSign, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useProviderStore } from '@/stores/providerStore';
-import { ProviderService } from '@/types/provider';
 import { Modal } from '@/components/ui/Modal';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
 import { useI18n } from '@/hooks/useI18n';
-import { fetchProviderServices } from '@/lib/firebase/providers';
-import { useProvider } from '@/hooks/useProviders';
+import {
+  useProvider,
+  useProviderServices,
+  useCreateProviderService,
+  useUpdateProviderService,
+  useDeleteProviderService,
+} from '@/hooks/useProviders';
 import { useUpdateProviderPhotos } from '@/hooks/usePhotoUpload';
 import { PhotoUploader } from '@/components/gallery/PhotoUploader';
+import type { InstructorService } from '@/types/instructor';
+import type { ProviderServiceInput } from '@/lib/firebase/providers';
+
+const EMPTY_DRAFT: ProviderServiceInput = {
+  name: '',
+  description: '',
+  price: 0,
+  durationMinutes: 60,
+  isActive: true,
+};
 
 export default function ProviderServicesPage() {
   const { t } = useI18n();
-  const { services, isLoadingServices, fetchServices, updateService, deleteService } = useProviderStore();
-  const [displayServices, setDisplayServices] = useState<ProviderService[]>([]);
-  const nextServiceIdRef = useRef(1);
   const firebaseUser = useAuthStore((s) => s.firebaseUser);
-  const [activeTab, setActiveTab] = useState<'services' | 'gallery'>('services');
   const uid = firebaseUser?.uid;
+
+  const [activeTab, setActiveTab] = useState<'services' | 'gallery'>('services');
   const { data: provider } = useProvider(uid);
   const updatePhotos = useUpdateProviderPhotos(uid);
   const photos = provider?.photoUrls ?? [];
 
-  useEffect(() => {
-    if (!firebaseUser?.uid) return;
-    void fetchProviderServices(firebaseUser.uid).then((firestoreServices) => {
-      setDisplayServices(firestoreServices as unknown as ProviderService[]);
-      nextServiceIdRef.current = firestoreServices.length + 1;
-    });
-  }, [firebaseUser?.uid]);
-  const [editingService, setEditingService] = useState<ProviderService | null>(null);
+  const { data: services = [], isLoading } = useProviderServices(uid);
+  const createService = useCreateProviderService(uid);
+  const updateService = useUpdateProviderService(uid);
+  const deleteService = useDeleteProviderService(uid);
+
+  const [editingService, setEditingService] = useState<InstructorService | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newService, setNewService] = useState<Partial<ProviderService>>({
-    serviceName: '',
-    description: '',
-    price: 0,
-    durationMinutes: 60,
-    isActive: true,
-  });
+  const [draft, setDraft] = useState<ProviderServiceInput>(EMPTY_DRAFT);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchServices();
-  }, [fetchServices]);
+  // One shared busy flag: the whole card grid is driven by a single query, so any in-flight
+  // mutation makes every row's state provisional until it settles.
+  const isBusy = createService.isPending || updateService.isPending || deleteService.isPending;
 
-  const createServiceId = () => {
-    const id = `new-${nextServiceIdRef.current}`;
-    nextServiceIdRef.current += 1;
-    return id;
+  /**
+   * Mutations are awaited rather than fired: the old page's handlers were synchronous and
+   * that is precisely why nothing persisted. A rejection has to reach the user, because the
+   * list re-renders from the server and would otherwise just silently snap back.
+   */
+  const run = async (action: () => Promise<unknown>) => {
+    setError(null);
+    try {
+      await action();
+      return true;
+    } catch (err) {
+      console.error('[provider/services]', err);
+      setError(t('provider.services.error.save'));
+      return false;
+    }
   };
 
-  const handleToggleActive = (service: ProviderService) => {
-    const updated = displayServices.map(s =>
-      s.id === service.id ? { ...s, isActive: !s.isActive } : s
+  const handleToggleActive = (service: InstructorService) =>
+    void run(() =>
+      updateService.mutateAsync({
+        serviceId: service.id,
+        data: { isActive: !service.isActive },
+      })
     );
-    setDisplayServices(updated);
-  };
 
-  const handleDuplicate = (service: ProviderService) => {
-    const duplicate: ProviderService = {
-      ...service,
-      id: createServiceId(),
-      serviceName: `${service.serviceName} (Copy)`,
-      bookingCount: 0,
-      revenue: 0,
-      createdAt: new Date() as any,
-      updatedAt: new Date() as any,
-    };
-    setDisplayServices([...displayServices, duplicate]);
-  };
+  const handleDuplicate = (service: InstructorService) =>
+    void run(() =>
+      createService.mutateAsync({
+        name: t('provider.services.duplicate.name', { name: service.name }),
+        description: service.description ?? '',
+        price: service.price,
+        durationMinutes: service.durationMinutes,
+        isActive: false, // a copy is a draft until the trainer says otherwise
+      })
+    );
 
   const handleDelete = (serviceId: string) => {
-    if (confirm(t('provider.services.confirm.delete'))) {
-      setDisplayServices(displayServices.filter(s => s.id !== serviceId));
-    }
+    if (!confirm(t('provider.services.confirm.delete'))) return;
+    void run(() => deleteService.mutateAsync(serviceId));
   };
 
-  const handleSaveEdit = () => {
-    if (editingService) {
-      const updated = displayServices.map(s =>
-        s.id === editingService.id ? editingService : s
-      );
-      setDisplayServices(updated);
-      setEditingService(null);
-    }
+  const handleSaveEdit = async () => {
+    if (!editingService) return;
+    const ok = await run(() =>
+      updateService.mutateAsync({
+        serviceId: editingService.id,
+        data: {
+          name: editingService.name,
+          description: editingService.description ?? '',
+          price: editingService.price,
+          durationMinutes: editingService.durationMinutes,
+          isActive: editingService.isActive,
+        },
+      })
+    );
+    if (ok) setEditingService(null);
   };
 
-  const handleAddService = () => {
-    const service: ProviderService = {
-      id: createServiceId(),
-      serviceName: newService.serviceName || 'New Service',
-      description: newService.description || '',
-      price: newService.price || 0,
-      durationMinutes: newService.durationMinutes || 60,
-      isActive: true,
-      categoryId: 'fitness',
-      categoryName: 'Fitness',
-      bookingCount: 0,
-      revenue: 0,
-      createdAt: new Date() as any,
-      updatedAt: new Date() as any,
-    };
-    setDisplayServices([...displayServices, service]);
-    setShowAddModal(false);
-    setNewService({
-      serviceName: '',
-      description: '',
-      price: 0,
-      durationMinutes: 60,
-      isActive: true,
-    });
+  const handleAddService = async () => {
+    const ok = await run(() =>
+      createService.mutateAsync({
+        ...draft,
+        name: draft.name.trim(),
+        price: Number.isFinite(draft.price) ? draft.price : 0,
+        durationMinutes: Number.isFinite(draft.durationMinutes) ? draft.durationMinutes : 60,
+      })
+    );
+    if (ok) {
+      setShowAddModal(false);
+      setDraft(EMPTY_DRAFT);
+    }
   };
 
   return (
@@ -125,7 +134,7 @@ export default function ProviderServicesPage() {
             {t('provider.services.subtitle')}
           </p>
         </div>
-        <Button onClick={() => setShowAddModal(true)}>
+        <Button onClick={() => setShowAddModal(true)} disabled={!uid}>
           <Plus className="w-4 h-4 mr-2" />
           {t('provider.services.btn.addService')}
         </Button>
@@ -177,27 +186,48 @@ export default function ProviderServicesPage() {
 
       {activeTab === 'services' && <>
 
-      {/* Services Grid */}
+      {error && (
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">
+          {error}
+        </div>
+      )}
+
+      {isLoading ? (
+        <p className="text-sm text-text-secondary">{t('common.loading')}</p>
+      ) : services.length === 0 ? (
+        /* The state the reporting trainer was stuck in: a bare grid gave no hint that
+           adding a service was even possible. */
+        <div className="rounded-xl border border-hairline bg-surface-elevated p-8 text-center">
+          <Briefcase className="w-10 h-10 mx-auto text-gray-500 mb-3" />
+          <h3 className="font-semibold text-content">{t('provider.services.empty.title')}</h3>
+          <p className="text-sm text-gray-400 mt-1 mb-4">{t('provider.services.empty.body')}</p>
+          <Button onClick={() => setShowAddModal(true)} disabled={!uid}>
+            <Plus className="w-4 h-4 mr-2" />
+            {t('provider.services.btn.addService')}
+          </Button>
+        </div>
+      ) : (
+      /* Services Grid */
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {displayServices.map((service) => (
+        {services.map((service) => (
           <div
             key={service.id}
             className={cn(
               'bg-surface-elevated rounded-xl border p-5 transition-all',
-              service.isActive ? 'border-hairline' : 'border-hairline opacity-70'
+              service.isActive ? 'border-hairline' : 'border-hairline opacity-70',
+              isBusy && 'pointer-events-none opacity-60'
             )}
           >
             <div className="flex items-start justify-between mb-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-content">{service.serviceName}</h3>
+                  <h3 className="font-semibold text-content">{service.name}</h3>
                   {!service.isActive && (
                     <span className="px-2 py-0.5 bg-gray-500/20 text-gray-400 text-xs rounded-full">
                       {t('provider.services.card.inactive')}
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-gray-400 mt-1">{service.categoryName}</p>
               </div>
               <div className="relative group">
                 <button className="p-2 rounded-lg hover:bg-surface-2">
@@ -228,24 +258,24 @@ export default function ProviderServicesPage() {
                       <><Check className="w-4 h-4" /> {t('provider.services.menu.activate')}</>
                     )}
                   </button>
-                  {service.bookingCount === 0 && (
-                    <button
-                      onClick={() => handleDelete(service.id)}
-                      className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-2"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      {t('provider.services.menu.delete')}
-                    </button>
-                  )}
+                  <button
+                    onClick={() => handleDelete(service.id)}
+                    className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    {t('provider.services.menu.delete')}
+                  </button>
                 </div>
               </div>
             </div>
 
-            <p className="text-sm text-gray-300 mb-4 line-clamp-2">
-              {service.description}
-            </p>
+            {service.description && (
+              <p className="text-sm text-gray-300 mb-4 line-clamp-2">
+                {service.description}
+              </p>
+            )}
 
-            <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="bg-surface-input rounded-lg p-3">
                 <div className="flex items-center gap-1 text-gray-400 text-xs mb-1">
                   <DollarSign className="w-3 h-3" />
@@ -261,19 +291,10 @@ export default function ProviderServicesPage() {
                 <p className="text-lg font-semibold text-content">{service.durationMinutes} min</p>
               </div>
             </div>
-
-            <div className="flex items-center justify-between text-sm text-gray-400 pt-4 border-t border-hairline">
-              <div className="flex items-center gap-1">
-                <Users className="w-4 h-4" />
-                {t('provider.services.card.bookings', { count: service.bookingCount })}
-              </div>
-              <div>
-                {t('provider.services.card.earned', { amount: `€${service.revenue}` })}
-              </div>
-            </div>
           </div>
         ))}
       </div>
+      )}
 
       {/* Edit Modal */}
       {editingService && (
@@ -286,8 +307,8 @@ export default function ProviderServicesPage() {
                 <label className="block text-sm text-gray-400 mb-2">{t('provider.services.edit.serviceName')}</label>
                 <input
                   type="text"
-                  value={editingService.serviceName}
-                  onChange={(e) => setEditingService({ ...editingService, serviceName: e.target.value })}
+                  value={editingService.name}
+                  onChange={(e) => setEditingService({ ...editingService, name: e.target.value })}
                   className="w-full bg-surface-input border border-hairline rounded-lg px-4 py-2.5 text-content outline-none focus:border-section-primary"
                 />
               </div>
@@ -295,7 +316,7 @@ export default function ProviderServicesPage() {
               <div>
                 <label className="block text-sm text-gray-400 mb-2">{t('provider.services.edit.description')}</label>
                 <textarea
-                  value={editingService.description}
+                  value={editingService.description ?? ''}
                   onChange={(e) => setEditingService({ ...editingService, description: e.target.value })}
                   className="w-full bg-surface-input border border-hairline rounded-lg px-4 py-2.5 text-content outline-none focus:border-section-primary min-h-[80px]"
                 />
@@ -307,7 +328,7 @@ export default function ProviderServicesPage() {
                   <input
                     type="number"
                     value={editingService.price}
-                    onChange={(e) => setEditingService({ ...editingService, price: parseFloat(e.target.value) })}
+                    onChange={(e) => setEditingService({ ...editingService, price: parseFloat(e.target.value) || 0 })}
                     className="w-full bg-surface-input border border-hairline rounded-lg px-4 py-2.5 text-content outline-none focus:border-section-primary"
                   />
                 </div>
@@ -316,7 +337,7 @@ export default function ProviderServicesPage() {
                   <input
                     type="number"
                     value={editingService.durationMinutes}
-                    onChange={(e) => setEditingService({ ...editingService, durationMinutes: parseInt(e.target.value) })}
+                    onChange={(e) => setEditingService({ ...editingService, durationMinutes: parseInt(e.target.value) || 0 })}
                     className="w-full bg-surface-input border border-hairline rounded-lg px-4 py-2.5 text-content outline-none focus:border-section-primary"
                   />
                 </div>
@@ -335,7 +356,12 @@ export default function ProviderServicesPage() {
             </div>
 
             <div className="flex gap-3 mt-6">
-              <Button onClick={handleSaveEdit} fullWidth>
+              <Button
+                onClick={handleSaveEdit}
+                isLoading={updateService.isPending}
+                disabled={!editingService.name.trim()}
+                fullWidth
+              >
                 {t('provider.services.edit.save')}
               </Button>
               <Button variant="secondary" onClick={() => setEditingService(null)}>
@@ -357,8 +383,8 @@ export default function ProviderServicesPage() {
                 <label className="block text-sm text-gray-400 mb-2">{t('provider.services.edit.serviceName')}</label>
                 <input
                   type="text"
-                  value={newService.serviceName}
-                  onChange={(e) => setNewService({ ...newService, serviceName: e.target.value })}
+                  value={draft.name}
+                  onChange={(e) => setDraft({ ...draft, name: e.target.value })}
                   className="w-full bg-surface-input border border-hairline rounded-lg px-4 py-2.5 text-content outline-none focus:border-section-primary"
                   placeholder={t('provider.services.add.serviceNamePlaceholder')}
                 />
@@ -367,8 +393,8 @@ export default function ProviderServicesPage() {
               <div>
                 <label className="block text-sm text-gray-400 mb-2">{t('provider.services.edit.description')}</label>
                 <textarea
-                  value={newService.description}
-                  onChange={(e) => setNewService({ ...newService, description: e.target.value })}
+                  value={draft.description ?? ''}
+                  onChange={(e) => setDraft({ ...draft, description: e.target.value })}
                   className="w-full bg-surface-input border border-hairline rounded-lg px-4 py-2.5 text-content outline-none focus:border-section-primary min-h-[80px]"
                   placeholder={t('provider.services.add.descriptionPlaceholder')}
                 />
@@ -379,8 +405,8 @@ export default function ProviderServicesPage() {
                   <label className="block text-sm text-gray-400 mb-2">{t('provider.services.edit.price')}</label>
                   <input
                     type="number"
-                    value={newService.price}
-                    onChange={(e) => setNewService({ ...newService, price: parseFloat(e.target.value) })}
+                    value={draft.price}
+                    onChange={(e) => setDraft({ ...draft, price: parseFloat(e.target.value) || 0 })}
                     className="w-full bg-surface-input border border-hairline rounded-lg px-4 py-2.5 text-content outline-none focus:border-section-primary"
                     placeholder="0.00"
                   />
@@ -388,8 +414,8 @@ export default function ProviderServicesPage() {
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">{t('provider.services.edit.duration')}</label>
                   <select
-                    value={newService.durationMinutes}
-                    onChange={(e) => setNewService({ ...newService, durationMinutes: parseInt(e.target.value) })}
+                    value={draft.durationMinutes}
+                    onChange={(e) => setDraft({ ...draft, durationMinutes: parseInt(e.target.value) })}
                     className="w-full bg-surface-input border border-hairline rounded-lg px-4 py-2.5 text-content outline-none focus:border-section-primary"
                   >
                     <option value={30}>30 min</option>
@@ -405,7 +431,8 @@ export default function ProviderServicesPage() {
             <div className="flex gap-3 mt-6">
               <Button
                 onClick={handleAddService}
-                disabled={!newService.serviceName}
+                isLoading={createService.isPending}
+                disabled={!draft.name.trim()}
                 fullWidth
               >
                 {t('provider.services.add.submit')}

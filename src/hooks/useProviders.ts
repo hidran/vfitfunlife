@@ -1,8 +1,12 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  createProviderService,
+  deleteProviderService,
   fetchProvider,
   fetchProviders,
   fetchProviderServices,
+  updateProviderService,
+  type ProviderServiceInput,
 } from '@/lib/firebase/providers';
 import type { ProviderListOptions } from '@/types/instructor';
 
@@ -31,5 +35,52 @@ export function useProviderServices(providerId: string | undefined) {
     queryFn: () => fetchProviderServices(providerId as string),
     enabled: !!providerId && providerId !== 'placeholder',
     staleTime: STALE_5_MIN,
+  });
+}
+
+/**
+ * All three mutations invalidate the provider document as well as the service list:
+ * a price change re-derives `lowestPrice` server-side, and that drives the "Da €N"
+ * label and price sorting on every card.
+ */
+function useInvalidateProviderServices(providerId: string | undefined) {
+  const qc = useQueryClient();
+  return () => {
+    void qc.invalidateQueries({ queryKey: ['provider-services', providerId] });
+    void qc.invalidateQueries({ queryKey: ['provider', providerId] });
+    void qc.invalidateQueries({ queryKey: ['providers'] });
+  };
+}
+
+export function useCreateProviderService(providerId: string | undefined) {
+  const invalidate = useInvalidateProviderServices(providerId);
+  return useMutation({
+    mutationFn: async (data: ProviderServiceInput) => {
+      if (!providerId) throw new Error('providerId required');
+      return createProviderService(providerId, data);
+    },
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateProviderService(providerId: string | undefined) {
+  const invalidate = useInvalidateProviderServices(providerId);
+  return useMutation({
+    mutationFn: async (vars: { serviceId: string; data: Partial<ProviderServiceInput> }) => {
+      if (!providerId) throw new Error('providerId required');
+      await updateProviderService(providerId, vars.serviceId, vars.data);
+    },
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteProviderService(providerId: string | undefined) {
+  const invalidate = useInvalidateProviderServices(providerId);
+  return useMutation({
+    mutationFn: async (serviceId: string) => {
+      if (!providerId) throw new Error('providerId required');
+      await deleteProviderService(providerId, serviceId);
+    },
+    onSuccess: invalidate,
   });
 }

@@ -233,7 +233,9 @@ export default function ProviderBookingPage() {
               className="space-y-4"
             >
               <h3 className="font-semibold text-white mb-4">{t('booking.services.selectService')}</h3>
-              {services.map((service) => (
+              {/* A deactivated service must not be bookable, or the provider-side toggle
+                  is decorative. */}
+              {services.filter((s) => s.isActive !== false).map((service) => (
                 <ServiceCard
                   key={service.id}
                   service={{ ...service, description: service.description ?? '' }}

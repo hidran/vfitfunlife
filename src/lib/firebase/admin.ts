@@ -515,7 +515,6 @@ export async function getPlatformSettings(): Promise<PlatformSettings> {
       cancellationPolicy: "24 hours",
       currency: "EUR",
       supportEmail: "support@vfit.com",
-      featureFlags: {},
     };
   } catch (error) {
     console.error("Error fetching platform settings:", error);

@@ -10,6 +10,7 @@ import { SeedDataPanel } from "@/components/admin";
 import { SuperadminOnly } from "@/components/admin/SuperadminOnly";
 import { AiAssistantSettings } from "@/components/admin/settings/AiAssistantSettings";
 import { AiAuthoringSettings } from "@/components/admin/settings/AiAuthoringSettings";
+import { PilotFlagsSettings } from "@/components/admin/settings/PilotFlagsSettings";
 import { useI18n } from "@/hooks/useI18n";
 import {
   Save,
@@ -17,7 +18,6 @@ import {
   Mail,
   CreditCard,
   Bell,
-  ToggleLeft,
   AlertTriangle,
   Database,
 } from "lucide-react";
@@ -35,13 +35,6 @@ export default function SettingsPage() {
     currency: "EUR",
     supportEmail: "support@vfit.com",
     supportPhone: "",
-    featureFlags: {
-      enableHomeService: true,
-      enableVirtualBookings: true,
-      enableVIP: true,
-      enableReferrals: true,
-      enableChallenges: true,
-    },
   });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -69,16 +62,6 @@ export default function SettingsPage() {
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const handleFeatureToggle = (key: string) => {
-    setSettings((prev) => ({
-      ...prev,
-      featureFlags: {
-        ...prev.featureFlags,
-        [key]: !prev.featureFlags[key],
-      },
-    }));
   };
 
   return (
@@ -246,48 +229,10 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Feature Flags */}
-        <div className="bg-surface rounded-2xl border border-hairline p-6 lg:col-span-2">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-[#7B61FF]/20 flex items-center justify-center">
-              <ToggleLeft className="w-5 h-5 text-[#7B61FF]" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-content">{t('admin.settings.featureFlags.title')}</h3>
-              <p className="text-sm text-content-muted">{t('admin.settings.featureFlags.subtitle')}</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Object.entries(settings.featureFlags).map(([key, enabled]) => (
-              <div
-                key={key}
-                className="flex items-center justify-between p-4 bg-surface-elevated rounded-xl"
-              >
-                <div>
-                  <p className="font-medium text-content">
-                    {key.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase())}
-                  </p>
-                  <p className="text-xs text-content-muted">
-                    {enabled ? t('admin.settings.featureFlags.enabled') : t('admin.settings.featureFlags.disabled')}
-                  </p>
-                </div>
-                <button
-                  onClick={() => handleFeatureToggle(key)}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${
-                    enabled ? "bg-[#10B981]" : "bg-white/20"
-                  }`}
-                >
-                  <span
-                    className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
-                      enabled ? "left-7" : "left-1"
-                    }`}
-                  />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
+        {/* Pilot flags (Remote Config) */}
+        <SuperadminOnly>
+          <PilotFlagsSettings />
+        </SuperadminOnly>
 
         {/* Maintenance Mode */}
         <div className="bg-[#EF4444]/10 border border-[#EF4444]/30 rounded-2xl p-6 lg:col-span-2">

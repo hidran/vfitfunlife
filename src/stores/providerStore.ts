@@ -15,10 +15,6 @@ import {
   getProviderClients,
   getClientDetails,
   addClientNote,
-  getProviderServices,
-  updateService,
-  createService,
-  deleteService,
   requestWithdrawal,
   getProviderNotifications,
   markNotificationAsRead,
@@ -31,7 +27,6 @@ import {
   ProviderClient,
   ClientBookingHistory,
   ClientNote,
-  ProviderService,
   BookingFilters,
   ProviderBooking,
   ProviderNotification,
@@ -50,7 +45,6 @@ interface ProviderState {
   currentClient: ProviderClient | null;
   clientBookingHistory: ClientBookingHistory[];
   clientNotes: ClientNote[];
-  services: ProviderService[];
   notifications: ProviderNotification[];
   activities: ActivityItem[];
   availability: AvailabilitySettings | null;
@@ -61,7 +55,6 @@ interface ProviderState {
   isLoadingSchedule: boolean;
   isLoadingEarnings: boolean;
   isLoadingClients: boolean;
-  isLoadingServices: boolean;
 
   // Error states
   error: string | null;
@@ -99,12 +92,6 @@ interface ProviderState {
   fetchClientDetails: (clientId: string) => Promise<void>;
   addClientNote: (clientId: string, note: string) => Promise<void>;
 
-  // Actions - Services
-  fetchServices: () => Promise<void>;
-  updateService: (serviceId: string, data: Partial<ProviderService>) => Promise<void>;
-  createService: (data: Omit<ProviderService, 'id' | 'createdAt' | 'updatedAt' | 'bookingCount' | 'revenue'>) => Promise<string>;
-  deleteService: (serviceId: string) => Promise<void>;
-
   // Actions - Notifications
   fetchNotifications: () => Promise<void>;
   markNotificationAsRead: (notificationId: string) => Promise<void>;
@@ -128,7 +115,6 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
   currentClient: null,
   clientBookingHistory: [],
   clientNotes: [],
-  services: [],
   notifications: [],
   activities: [],
   availability: null,
@@ -138,7 +124,6 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
   isLoadingSchedule: false,
   isLoadingEarnings: false,
   isLoadingClients: false,
-  isLoadingServices: false,
 
   error: null,
   bookingError: null,
@@ -329,49 +314,6 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
       await get().fetchClientDetails(clientId);
     } catch (error: any) {
       set({ error: error.message || 'Failed to add note' });
-    }
-  },
-
-  // Services
-  fetchServices: async () => {
-    set({ isLoadingServices: true, error: null });
-    try {
-      const services = await getProviderServices();
-      set({ services, isLoadingServices: false });
-    } catch (error: any) {
-      set({ error: error.message || 'Failed to fetch services', isLoadingServices: false });
-    }
-  },
-
-  updateService: async (serviceId: string, data: Partial<ProviderService>) => {
-    try {
-      await updateService(serviceId, data);
-      // Refresh services
-      await get().fetchServices();
-    } catch (error: any) {
-      set({ error: error.message || 'Failed to update service' });
-    }
-  },
-
-  createService: async (data: Omit<ProviderService, 'id' | 'createdAt' | 'updatedAt' | 'bookingCount' | 'revenue'>) => {
-    try {
-      const serviceId = await createService(data);
-      // Refresh services
-      await get().fetchServices();
-      return serviceId;
-    } catch (error: any) {
-      set({ error: error.message || 'Failed to create service' });
-      throw error;
-    }
-  },
-
-  deleteService: async (serviceId: string) => {
-    try {
-      await deleteService(serviceId);
-      // Refresh services
-      await get().fetchServices();
-    } catch (error: any) {
-      set({ error: error.message || 'Failed to delete service' });
     }
   },
 
