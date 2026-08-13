@@ -73,6 +73,8 @@ export const backfillServiceCategories = onCall<{ apply?: boolean }>(
 
     let providersScanned = 0;
     let providersMapped = 0;
+    let skippedActivities = 0;
+    let skippedEmpty = 0;
     let servicesScanned = 0;
     let servicesMapped = 0;
     const unmapped: Unmapped[] = [];
@@ -91,6 +93,15 @@ export const backfillServiceCategories = onCall<{ apply?: boolean }>(
       const data = providerDoc.data() as Record<string, unknown>;
       const profile = (data.providerProfile ?? {}) as Record<string, unknown>;
       const name = (data.fullName as string) ?? (data.name as string) ?? providerDoc.id;
+
+      // VFun activity docs (events, parties, VR) live in `instructors` with an
+      // `activityKind` field. They are not searchable providers — fetchProviders filters
+      // them out and migrateInstructorCatalog skips them — so they are out of scope, not
+      // unmapped. Counting them as failures would bury the entries that need a decision.
+      if (data.activityKind) {
+        skippedActivities++;
+        continue;
+      }
 
       const specialties = [
         ...((data.specialties as string[]) ?? []),
@@ -153,12 +164,16 @@ export const backfillServiceCategories = onCall<{ apply?: boolean }>(
         );
         ops++;
         if (ops >= MAX_BATCH) await flush();
-      } else if (servicesSnap.empty && specialties.length > 0) {
+      } else if (specialties.length > 0) {
         unmapped.push({
           providerId: providerDoc.id,
           providerName: name,
           specialties,
         });
+      } else {
+        // No services and no specialties: nothing to map FROM. Counted, not listed —
+        // there is no decision for a human to make about an empty provider.
+        skippedEmpty++;
       }
     }
     await flush();
@@ -169,6 +184,8 @@ export const backfillServiceCategories = onCall<{ apply?: boolean }>(
       providersMapped,
       servicesScanned,
       servicesMapped,
+      skippedActivities,
+      skippedEmpty,
       unmappedCount: unmapped.length,
       // Capped: this is a callable response, and an unbounded list of every service in a
       // large catalogue would blow the payload limit. The count above is exact.

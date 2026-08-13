@@ -198,17 +198,11 @@
         { "fieldPath": "providerProfile.isVerified", "order": "ASCENDING" },
         { "fieldPath": "categoryIds", "arrayConfig": "CONTAINS" }
       ]
-    },
-    // mergeServiceCategories walks every service assigned to the losing category, across
-    // all providers — a collection-group query, which needs its own index.
-    {
-      "collectionGroup": "services",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [
-        { "fieldPath": "categoryId", "order": "ASCENDING" },
-        { "fieldPath": "__name__", "order": "ASCENDING" }
-      ]
     }
+    // mergeServiceCategories runs a collection-group query on services.categoryId. That
+    // needs NO composite entry — Firestore maintains single-field indexes at collection
+    // GROUP scope automatically, and declaring one here is rejected outright as
+    // unnecessary.
   ],
   "fieldOverrides": []
 }

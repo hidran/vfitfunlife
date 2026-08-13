@@ -63,7 +63,8 @@ export const mergeServiceCategories = onCall<MergeData>(
     if (!children.empty) {
       throw new HttpsError(
         "failed-precondition",
-        `${sourceId} still has ${children.size} child categor${children.size === 1 ? "y" : "ies"}. Reparent them first.`,
+        `${sourceId} still has ${children.size} child ` +
+          `categor${children.size === 1 ? "y" : "ies"}. Reparent them first.`,
       );
     }
 
