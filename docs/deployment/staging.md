@@ -50,44 +50,83 @@ config was compiled in last.
   Analytics property would corrupt the numbers
 - `.env.staging` added to `.gitignore`
 
-## One-time setup (needs a human)
+## What is provisioned
 
-These cannot be done from the CLI or an API:
+| Piece | State |
+|---|---|
+| Firestore | `europe-west1`, rules + indexes deployed |
+| Functions | 88 deployed, identical set to production |
+| Hosting | https://vfit-app-staging.web.app |
+| Auth | Email/Password enabled |
+| Remote Config | pilot flags published (version 1) |
+| Secrets | all 8 exist, as **placeholders** |
+| Storage | **not provisioned** — see below |
+| Data | 320 instructors, 964 services, 120 venues, 91 exercises, 29 categories, 10 user types |
 
-1. **Link a billing account (Blaze).** Required for Cloud Functions, and it turns out also
-   for creating the Firestore database via API.
-   https://console.firebase.google.com/project/vfit-app-staging/usage/details
-2. **Enable Auth providers** to match production: Email/Password, Google, Apple, Phone.
+### Accounts
+
+| Email | Password | Role |
+|---|---|---|
+| `admin@vfit.com` | `StagingAdmin!2026` | superadmin |
+| `demo.trainer@vitfitdemo.dev` | `VfitDemo!2026` | provider (verified) |
+
+Staging-only credentials. They share emails with production accounts but are separate
+users in a separate Identity Platform tenant, with different passwords.
+
+## Still needs a human
+
+1. **Storage.** The `.firebasestorage.app` bucket domain is Google-owned, so neither the
+   CLI nor the API can create it — `gcloud storage buckets create` fails with "Another user
+   owns the domain". One click:
+   https://console.firebase.google.com/project/vfit-app-staging/storage
+   Then `firebase deploy -P staging --only storage` to push the rules. Until then, avatar
+   and gallery uploads will fail on staging.
+2. **Stripe test keys.** Every secret below is a placeholder, so payment calls fail with a
+   Stripe auth error — deliberately, rather than risking a live charge:
+   ```bash
+   firebase functions:secrets:set STRIPE_SECRET_KEY     -P staging   # sk_test_...
+   firebase functions:secrets:set STRIPE_WEBHOOK_SECRET -P staging   # whsec_...
+   ```
+   Also set `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...` in `.env.staging`.
+   Redeploy functions afterwards so they pick up the new versions.
+3. **Google / Apple / Phone sign-in**, if you need them. Email/Password is enabled and is
+   what the seeded accounts use.
    https://console.firebase.google.com/project/vfit-app-staging/authentication/providers
-3. **Stripe test keys.** Put `pk_test_...` in `.env.staging`, and set the server side as
-   function secrets (below). Never the live keys — staging would create real charges.
+4. **AI and email keys**, if you want those features working. `RESEND_API_KEY`,
+   `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_GENAI_API_KEY`, `OPENAI_COMPAT_API_KEY`
+   and `OPENAI_COMPAT_BASE_URL` are placeholders. `email.ts` already logs and skips when the
+   key is unset, so nothing crashes — staging simply sends no mail, which is usually what
+   you want.
 
-## After billing is on
+## Re-seeding
 
 ```bash
-# Firestore + Storage + rules + indexes
-firebase deploy -P staging --only firestore,storage
-
-# Functions (~90). First deploy enables the required APIs and takes a while.
-npm run deploy:staging:functions
-
-# Server secrets — TEST values
-firebase functions:secrets:set STRIPE_SECRET_KEY    -P staging
-firebase functions:secrets:set STRIPE_WEBHOOK_SECRET -P staging
-
-# Seed. Order matters: categories and user types before providers.
-#   seedServiceCategories → seedUserTypes → seedDemoData → seedExerciseLibrary
-# All are superadmin-only callables; see scripts/ for the invocation helpers.
+# from scratch, in this order — categories and user types before providers
+seedServiceCategories → seedUserTypes → seedExerciseLibrary → seedDemoData
+→ backfillServiceCategories {"apply":true}
 ```
 
-`clearAllData` resets staging without touching the catalogue, so it can be wiped and
-re-seeded freely. That is the point of the environment.
+All are superadmin-only callables at
+`https://europe-west1-vfit-app-staging.cloudfunctions.net/<name>`, called with a Firebase
+ID token for `admin@vfit.com`. `clearAllData` wipes demo content so the environment can be
+rebuilt freely — that is the point of it.
+
+The demo seeder predates the service taxonomy, so its services carry no `categoryId`.
+Run `backfillServiceCategories` after seeding or category search returns nothing.
 
 ## Gotchas found while building this
 
-- **Firestore location is permanent.** Staging matches production's `nam5`, even though
-  functions run in `europe-west1` and every call therefore crosses the Atlantic. Staging
-  mirrors that on purpose; fixing it in production would need a data migration.
+- **Firestore location is permanent, and staging deliberately does NOT match production.**
+  Production is in `nam5` (US) while its functions run in `europe-west1`, so every
+  function-to-Firestore call crosses the Atlantic. Staging is in `europe-west1`, co-located
+  with its functions. Staging is therefore faster than production by design — worth
+  remembering before reading anything into a latency measurement taken here. Fixing
+  production would require a data migration.
+- **The Firestore create API lies about "Database already exists"** when the project has no
+  database at all; `firebase firestore:databases:create` works and reports the truth.
+- **Deploying 88 functions at once exceeds the per-minute mutation quota.** Four trigger
+  functions failed on the first pass and succeeded on an immediate retry. Not a real
+  failure — just re-run the deploy.
 - **New gen-2 callables 401 for several minutes** after first deploy, from both the
   `cloudfunctions.net` and `run.app` URLs, despite correct `allUsers`/`run.invoker` IAM. It
   clears on its own — don't go debugging permissions that aren't broken.
