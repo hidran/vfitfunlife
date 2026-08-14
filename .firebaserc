@@ -2,7 +2,7 @@
   "projects": {
     "default": "vfit-funlife",
     "staging": "vfit-app-staging",
-    "production": "vfit-app-prod"
+    "production": "vfit-funlife"
   },
   "targets": {},
   "etags": {}

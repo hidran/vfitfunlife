@@ -17,9 +17,9 @@
     "test:coverage": "vitest --coverage",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "deploy:functions": "firebase deploy --only functions",
-    "deploy:rules": "firebase deploy --only firestore:rules",
-    "deploy:hosting": "firebase deploy --only hosting",
+    "deploy:functions": "firebase deploy -P production --only functions",
+    "deploy:rules": "firebase deploy -P production --only firestore:rules,storage",
+    "deploy:hosting": "npm run build && firebase deploy -P production --only hosting",
     "seed:users": "npx ts-node --transpile-only scripts/seed-users.ts",
     "seed:demo": "node scripts/seed-demo-data.js",
     "seed:demo:clear": "node scripts/seed-demo-data.js --clear",
@@ -32,7 +32,12 @@
     "mobile:open:ios": "cap open ios",
     "mobile:open:android": "cap open android",
     "mobile:run:ios": "cap run ios",
-    "mobile:run:android": "cap run android"
+    "mobile:run:android": "cap run android",
+    "build:staging": "dotenv -e .env.staging -- next build",
+    "dev:staging": "dotenv -e .env.staging -- next dev",
+    "deploy:staging": "npm run build:staging && firebase deploy -P staging --only hosting,firestore,storage",
+    "deploy:staging:functions": "firebase deploy -P staging --only functions",
+    "deploy:prod": "npm run build && firebase deploy -P production --only hosting,firestore,storage"
   },
   "dependencies": {
     "@capacitor-firebase/authentication": "^8.2.0",
@@ -95,6 +100,7 @@
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3",
     "vite-tsconfig-paths": "^6.0.5",
-    "vitest": "^4.0.18"
+    "vitest": "^4.0.18",
+    "dotenv-cli": "^8.0.0"
   }
 }

@@ -21,6 +21,7 @@ functions/lib/
 .env.test.local
 .env.production.local
 .env*.local
+.env.staging
 
 # Debug logs
 npm-debug.log*
