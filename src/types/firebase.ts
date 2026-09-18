@@ -141,6 +141,21 @@ export interface User {
   pointsBalance: number;
   walletBalance: number;
 
+  // Gamification (Season 0) — XP measures progression; points/VToken is reward currency
+  xp: number;
+  level: number;
+  xpToNextLevel: number;
+  dayStreak: number;
+  lastCheckInAt: Timestamp | null;
+  // One-time reward claim guards
+  hasClaimedProfileComplete: boolean;
+  hasClaimedInterests: boolean;
+  hasClaimedZone: boolean;
+  hasClaimedFamily: boolean;
+  // Season 0 profile fields (optional until set)
+  interests: string[];
+  homeCity: string | null;
+
   // Preferences
   preferredLanguage: AppLocale;
   preferredSection: Section;
@@ -155,7 +170,11 @@ export interface User {
   referralCode: string;
   referredBy: string | null;
   referralCount: number;
-  
+
+  // Family (Season 0)
+  familyId: string | null;
+  familyRole: 'creator' | 'member' | null;
+
   // Profile
   bio: string | null;
   phoneVerified: boolean;

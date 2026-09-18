@@ -14,6 +14,9 @@ export * from "./userTypes";
 // Export profile functions
 export * from "./profile";
 
+// Export gamification functions
+export * from "./gamification";
+
 // Export admin-only mutation functions (superadmin-gated)
 export * from "./adminMutations";
 
@@ -92,6 +95,10 @@ export const updateProfile = onCall<UserUpdateData>(
       "preferredLanguage",
       "preferredSection",
       "avatarUrl",
+      // Season 0 gamification fields (client-writable, validated below)
+      "interests",
+      "homeCity",
+      "phone",
     ];
 
     // Additional fields providers can update (in their main profile, not providerProfile)
