@@ -19,7 +19,7 @@
     "test:e2e:ui": "playwright test --ui",
     "deploy:functions": "firebase deploy -P production --only functions",
     "deploy:rules": "firebase deploy -P production --only firestore:rules,storage",
-    "deploy:hosting": "npm run build && firebase deploy -P production --only hosting",
+    "deploy:hosting": "npm run build:prod && firebase deploy -P production --only hosting",
     "seed:users": "npx ts-node --transpile-only scripts/seed-users.ts",
     "seed:demo": "node scripts/seed-demo-data.js",
     "seed:demo:clear": "node scripts/seed-demo-data.js --clear",
@@ -33,11 +33,12 @@
     "mobile:open:android": "cap open android",
     "mobile:run:ios": "cap run ios",
     "mobile:run:android": "cap run android",
+    "build:prod": "dotenv -e .env -- next build",
     "build:staging": "dotenv -e .env.staging -- next build",
     "dev:staging": "dotenv -e .env.staging -- next dev",
     "deploy:staging": "npm run build:staging && firebase deploy -P staging --only hosting,firestore,storage",
     "deploy:staging:functions": "firebase deploy -P staging --only functions",
-    "deploy:prod": "npm run build && firebase deploy -P production --only hosting,firestore,storage"
+    "deploy:prod": "npm run build:prod && firebase deploy -P production --only hosting,firestore,storage"
   },
   "dependencies": {
     "@capacitor-firebase/authentication": "^8.2.0",

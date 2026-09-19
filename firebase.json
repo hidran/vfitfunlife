@@ -22,6 +22,7 @@
     }
   ],
   "hosting": {
+    "predeploy": "node \"$PROJECT_DIR/scripts/assert-build-project.mjs\" \"$GCLOUD_PROJECT\"",
     "public": "out",
     "ignore": [
       "firebase.json",

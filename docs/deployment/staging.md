@@ -20,7 +20,7 @@ Stripe secret you want to keep live-key-free. Only a second project isolates all
 | Project | `vfit-funlife` | `vfit-app-staging` |
 | Alias | `production` | `staging` |
 | Env file | `.env` | `.env.staging` |
-| Build | `npm run build` | `npm run build:staging` |
+| Build | `npm run build:prod` | `npm run build:staging` |
 | Deploy | `npm run deploy:prod` | `npm run deploy:staging` |
 | Stripe | live keys | **test keys only** |
 | Data | real users | synthetic, from the seeders |
@@ -31,7 +31,7 @@ existed. It now points at `vfit-funlife`.
 ## Every deploy script names its target
 
 ```json
-"deploy:prod":             "npm run build && firebase deploy -P production --only hosting,firestore,storage",
+"deploy:prod":             "npm run build:prod && firebase deploy -P production --only hosting,firestore,storage",
 "deploy:staging":          "npm run build:staging && firebase deploy -P staging --only hosting,firestore,storage",
 "deploy:staging:functions":"firebase deploy -P staging --only functions",
 "deploy:functions":        "firebase deploy -P production --only functions"
@@ -42,6 +42,22 @@ selected, so running `deploy:hosting` after a staging session would push to stag
 staging bundle to prod. Each script also rebuilds, because `NEXT_PUBLIC_*` config is baked
 into the bundle at build time: deploying `out/` without rebuilding ships whichever project's
 config was compiled in last.
+
+## Production builds load `.env` explicitly
+
+A plain `next build` lets `.env.local` override `.env`. With `.env.local` pointed at staging
+for local development, `npm run build` compiles the **staging** config — and on 2026-09-19
+that bundle went live on `vfit-funlife.web.app`. The site talked to the staging backend, and
+Google sign-in failed with `auth/unauthorized-domain` because staging does not authorize
+`vfit-funlife.web.app`.
+
+`build:prod` is `dotenv -e .env -- next build`. Next.js never overrides a variable that is
+already in `process.env`, so `.env` wins no matter what `.env.local` contains — the same
+mechanism `build:staging` uses.
+
+The hosting `predeploy` hook runs `scripts/assert-build-project.mjs "$GCLOUD_PROJECT"`. It
+scans `out/_next/static` for the inlined `projectId` and cancels the deploy unless it
+matches the target project. That covers every path, including a bare `firebase deploy`.
 
 ## One-time setup (done)
 
