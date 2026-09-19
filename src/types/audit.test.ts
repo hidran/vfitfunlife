@@ -32,4 +32,8 @@ describe('audit vocabulary', () => {
     expect(new Set(AUDIT_ENTITY_TYPES).size).toBe(AUDIT_ENTITY_TYPES.length);
     expect(new Set(AUDIT_ACTIONS).size).toBe(AUDIT_ACTIONS.length);
   });
+
+  it('knows admin_job, the bulk-delete job entity', () => {
+    expect(AUDIT_ENTITY_TYPES).toContain('admin_job');
+  });
 });

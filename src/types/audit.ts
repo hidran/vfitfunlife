@@ -38,6 +38,7 @@ export const AUDIT_ENTITY_TYPES = [
   'recipe',
   'feature_flag',
   'platform_settings',
+  'admin_job',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
