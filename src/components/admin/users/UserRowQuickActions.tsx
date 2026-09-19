@@ -38,7 +38,6 @@ export function UserRowQuickActions({ user, onDone }: Props) {
     suspendUserAction,
     activateUserAction,
     updateUserRoleAction,
-    fetchUsers,
   } = useAdminStore();
 
   useEffect(() => {
@@ -111,7 +110,6 @@ export function UserRowQuickActions({ user, onDone }: Props) {
       setOpen(false);
       setConfirmDelete(false);
       onDone?.();
-      fetchUsers({});
     },
   });
 

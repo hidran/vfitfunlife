@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { useAdminStore } from '@/stores/adminStore';
 import { useI18n } from '@/hooks/useI18n';
 import { formatDate, toDate } from '@/lib/utils';
+import { usersListHref } from '@/lib/admin/usersListQuery';
 import type { User, UserRole } from '@/types/firebase';
 import { type UserFormData } from './UserFormView';
 import { UserTabBar, UserTabContent, type UserTab } from './UserTabsContent';
@@ -35,6 +36,9 @@ export function UserDetailView({ userId }: Props) {
   const [editing, setEditing] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<UserTab>('overview');
+  // Back to the list as it was filtered, not the bare list. This view only renders client-side
+  // (it hangs off ?id=), so reading sessionStorage in the initializer is safe.
+  const [listHref] = useState(usersListHref);
 
   useEffect(() => {
     let cancelled = false;
@@ -96,7 +100,7 @@ export function UserDetailView({ userId }: Props) {
       reason,
     }),
     invalidateKeys: [['users']],
-    onSuccess: () => router.push('/admin/users/'),
+    onSuccess: () => router.push(usersListHref()),
   });
 
   const handleRoleChange = async (newRole: UserRole) => {
@@ -154,7 +158,7 @@ export function UserDetailView({ userId }: Props) {
       <EntityDetailLayout
         title={user.fullName}
         subtitle={user.email ?? user.phone ?? ''}
-        backHref="/admin/users/"
+        backHref={listHref}
         isEditing={editing}
         isSaving={updateMut.isPending}
         onEdit={() => setEditing(true)}

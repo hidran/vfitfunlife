@@ -189,19 +189,27 @@ export async function getUsers(
       constraints.push(where("role", "==", filters.role));
     }
 
-    // Note: For status filter, we would need a status field on users
-    // For now, we'll filter client-side
-
     constraints.push(orderBy("createdAt", "desc"));
 
     const q = query(collection(db, USERS_COLLECTION), ...constraints);
     const snapshot = await getDocs(q);
 
-    let users = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      uid: doc.id,
-      ...convertTimestamps(doc.data()),
-    })) as AdminUser[];
+    // Bulk delete is a soft delete, so without this a deleted user stayed in the list,
+    // still badged "active".
+    let users = snapshot.docs
+      .filter((doc) => !isHiddenAccount(doc.id, doc.data()))
+      .map((doc) => ({
+        id: doc.id,
+        uid: doc.id,
+        ...convertTimestamps(doc.data()),
+      })) as AdminUser[];
+
+    // Client-side: most user docs have no isSuspended field, so `where` would miss them.
+    if (filters.status === "active") {
+      users = users.filter((u) => u.isSuspended !== true);
+    } else if (filters.status === "suspended") {
+      users = users.filter((u) => u.isSuspended === true);
+    }
 
     // Client-side filtering for search
     if (filters.search) {

@@ -75,6 +75,8 @@ interface AdminState {
 
   // Pagination
   usersTotal: number;
+  /** The filters of the last users fetch, reused by refetches that pass none. */
+  usersFilters: UserFilters;
   providersTotal: number;
   bookingsTotal: number;
   logsTotal: number;
@@ -137,6 +139,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   error: null,
 
   usersTotal: 0,
+  usersFilters: {},
   providersTotal: 0,
   bookingsTotal: 0,
   logsTotal: 0,
@@ -154,9 +157,12 @@ export const useAdminStore = create<AdminState>((set, get) => ({
 
   // Fetch users
   fetchUsers: async (filters?: UserFilters) => {
-    set({ isLoadingUsers: true, error: null });
+    // A refetch after a mutation passes no filters; reusing the last ones keeps the list
+    // the admin was looking at instead of silently resetting it under a filled search box.
+    const effective = filters ?? get().usersFilters;
+    set({ isLoadingUsers: true, error: null, usersFilters: effective });
     try {
-      const result = await getUsers(filters || {});
+      const result = await getUsers(effective);
       set({ 
         users: result.users, 
         usersTotal: result.total,

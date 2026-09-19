@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAdminStore } from "@/stores/adminStore";
 import { useAuthStore } from "@/stores/authStore";
 import {
@@ -20,6 +20,12 @@ import { AdminUser, UserFilters } from "@/types/admin";
 import { Column } from "@/components/admin/DataTable";
 import { formatDate, toDate } from "@/lib/utils";
 import { useI18n } from "@/hooks/useI18n";
+import {
+  DEFAULT_USER_FILTERS,
+  USERS_LIST_QUERY_KEY,
+  filtersFromParams,
+  queryFromFilters,
+} from "@/lib/admin/usersListQuery";
 import {
   User,
   UserPlus,
@@ -46,18 +52,26 @@ export function UsersListView() {
   } = useAdminStore();
   const authUser = useAuthStore((s) => s.user);
 
-  const [filters, setFilters] = useState<UserFilters>({
-    role: "all",
-    status: "all",
-    search: "",
-    page: 1,
-    limit: 20,
-  });
+  const searchParams = useSearchParams();
+  // Seeded from the URL so a reload, or coming back from a user's page, keeps the filters.
+  const [filters, setFilters] = useState<UserFilters>(() => filtersFromParams(searchParams));
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   useEffect(() => {
     fetchUsers(filters);
   }, [filters, fetchUsers]);
+
+  // replaceState rather than router.replace: Next syncs useSearchParams from it without a
+  // navigation, so typing in the search box does not trigger one per keystroke.
+  useEffect(() => {
+    const query = queryFromFilters(filters);
+    window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
+    try {
+      sessionStorage.setItem(USERS_LIST_QUERY_KEY, query);
+    } catch {
+      // Storage unavailable: the URL still carries the filters.
+    }
+  }, [filters]);
 
   // Clear error when unmounting
   useEffect(() => {
@@ -81,13 +95,7 @@ export function UsersListView() {
   };
 
   const handleClearFilters = () => {
-    setFilters({
-      role: "all",
-      status: "all",
-      search: "",
-      page: 1,
-      limit: 20,
-    });
+    setFilters(DEFAULT_USER_FILTERS);
     setSelectedIds([]);
   };
 
