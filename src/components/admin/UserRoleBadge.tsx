@@ -42,7 +42,7 @@ export function UserRoleBadge({ role, size = "md", className }: UserRoleBadgePro
 }
 
 interface StatusBadgeProps {
-  status: "active" | "suspended" | "pending" | "verified" | "rejected" | "completed" | "cancelled" | "confirmed" | "failed";
+  status: "active" | "suspended" | "pending" | "verified" | "rejected" | "completed" | "cancelled" | "confirmed" | "failed" | "deleted" | "demo";
   size?: "sm" | "md";
   className?: string;
 }
@@ -57,9 +57,11 @@ const statusColors: Record<string, string> = {
   cancelled: "bg-[#EF4444]/20 text-[#EF4444] border-[#EF4444]/30",
   confirmed: "bg-[#00C9FF]/20 text-[#00C9FF] border-[#00C9FF]/30",
   failed: "bg-[#EF4444]/20 text-[#EF4444] border-[#EF4444]/30",
+  deleted: "bg-white/10 text-content-muted border-white/20",
+  demo: "bg-[#7B61FF]/20 text-[#7B61FF] border-[#7B61FF]/30",
 };
 
-type KnownStatus = 'active' | 'suspended' | 'pending' | 'verified' | 'rejected' | 'completed' | 'cancelled' | 'confirmed' | 'failed';
+type KnownStatus = 'active' | 'suspended' | 'pending' | 'verified' | 'rejected' | 'completed' | 'cancelled' | 'confirmed' | 'failed' | 'deleted' | 'demo';
 const statusLabelKeys: Record<KnownStatus, string> = {
   active: 'admin.status.active',
   suspended: 'admin.status.suspended',
@@ -70,6 +72,8 @@ const statusLabelKeys: Record<KnownStatus, string> = {
   cancelled: 'admin.status.cancelled',
   confirmed: 'admin.status.confirmed',
   failed: 'admin.status.failed',
+  deleted: 'admin.status.deleted',
+  demo: 'admin.status.demo',
 };
 
 export function StatusBadge({ status, size = "md", className }: StatusBadgeProps) {

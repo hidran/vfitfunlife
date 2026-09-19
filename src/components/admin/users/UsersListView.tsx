@@ -44,6 +44,23 @@ import {
   X,
 } from "lucide-react";
 
+const DEMO_EMAIL_DOMAIN = "@demo.vfit";
+
+/**
+ * Which extra status badge a hidden (soft-deleted or seeded demo) account gets in the
+ * users table — distinct from `isHiddenAccount` in lib/firebase/admin.ts, which only needs
+ * to decide whether an account is hidden at all, not which kind it is.
+ */
+function hiddenAccountKind(user: AdminUser): "deleted" | "demo" | null {
+  const raw = user as unknown as { isDeleted?: boolean; deletedAt?: unknown };
+  if (raw.isDeleted === true || raw.deletedAt) return "deleted";
+  const email = typeof user.email === "string" ? user.email.toLowerCase() : "";
+  if (email.endsWith(DEMO_EMAIL_DOMAIN) || user.id.startsWith("provider_") || user.id.startsWith("customer_")) {
+    return "demo";
+  }
+  return null;
+}
+
 export function UsersListView() {
   const { t } = useI18n();
   const router = useRouter();
@@ -68,28 +85,35 @@ export function UsersListView() {
   const [jobId, setJobId] = useState<string | null>(null);
   const [job, setJob] = useState<BulkDeleteJobView | null>(null);
   const [bulkDeleteError, setBulkDeleteError] = useState<string | null>(null);
+  // The id of the job whose watch last failed — compared against the current jobId rather
+  // than reset explicitly, so starting or picking up a different job clears it for free.
+  const [jobWatchErrorId, setJobWatchErrorId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchUsers(filters);
   }, [filters, fetchUsers]);
 
-  // A reload mid-job brings the banner back.
+  // A reload mid-job brings the banner back. `prev ?? id` so this never clobbers a job the
+  // admin has already started in this tab while the lookup was in flight.
   useEffect(() => {
     if (!authUser?.id || authUser.role !== 'superadmin') return;
     let cancelled = false;
     findRunningBulkDelete(authUser.id)
-      .then((id) => { if (!cancelled && id) setJobId(id); })
+      .then((id) => { if (!cancelled && id) setJobId((prev) => prev ?? id); })
       .catch((err) => console.error('Could not look up running bulk delete:', err));
     return () => { cancelled = true; };
   }, [authUser?.id, authUser?.role]);
 
   useEffect(() => {
     if (!jobId) return;
-    return watchBulkDeleteJob(jobId, setJob);
+    // The job keeps running server-side even if the listener itself fails (permissions,
+    // offline) — record which job that was rather than treating the job as stopped.
+    return watchBulkDeleteJob(jobId, setJob, () => setJobWatchErrorId(jobId));
   }, [jobId]);
 
-  // Refresh the list once, when the job finishes.
-  const jobFinished = job?.status === 'completed' || job?.status === 'completed_with_errors';
+  // Refresh the list once, when the job finishes (including the terminal 'failed' status).
+  const jobFinished =
+    job?.status === 'completed' || job?.status === 'completed_with_errors' || job?.status === 'failed';
   useEffect(() => {
     if (jobFinished) fetchUsers(filters);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -112,20 +136,27 @@ export function UsersListView() {
     return () => clearError();
   }, [clearError]);
 
+  // Selection is cleared on every filter/search/page change: it otherwise survives across
+  // them, so a hard delete could reach users that were never on screen (e.g. tick 2 under
+  // "Tutti", switch to "Demo & eliminati", tick 5 more → 7 deleted).
   const handleSearchChange = (search: string) => {
     setFilters((prev) => ({ ...prev, search, page: 1 }));
+    setSelectedIds([]);
   };
 
   const handleRoleChange = (role: string) => {
     setFilters((prev) => ({ ...prev, role: role as UserFilters["role"], page: 1 }));
+    setSelectedIds([]);
   };
 
   const handleStatusChange = (status: string) => {
     setFilters((prev) => ({ ...prev, status: status as UserFilters["status"], page: 1 }));
+    setSelectedIds([]);
   };
 
   const handlePageChange = (page: number) => {
     setFilters((prev) => ({ ...prev, page }));
+    setSelectedIds([]);
   };
 
   const handleClearFilters = () => {
@@ -199,9 +230,15 @@ export function UsersListView() {
     {
       key: "status",
       header: t('admin.users.col.status'),
-      cell: (user) => (
-        <StatusBadge status={user.isSuspended ? "suspended" : "active"} size="sm" />
-      ),
+      cell: (user) => {
+        const hidden = hiddenAccountKind(user);
+        return (
+          <StatusBadge
+            status={hidden ?? (user.isSuspended ? "suspended" : "active")}
+            size="sm"
+          />
+        );
+      },
       sortable: true,
       width: "w-24",
     },
@@ -277,7 +314,7 @@ export function UsersListView() {
 
       {/* Error Display */}
       {error && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-center justify-between">
+        <div role="alert" className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
             <div>
@@ -286,8 +323,10 @@ export function UsersListView() {
             </div>
           </div>
           <button
+            type="button"
             onClick={clearError}
-            className="text-red-300/70 hover:text-red-200 transition-colors"
+            aria-label={t('common.close')}
+            className="touch-target flex items-center justify-center text-red-300/70 hover:text-red-200 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -295,7 +334,7 @@ export function UsersListView() {
       )}
 
       {bulkDeleteError && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-center justify-between">
+        <div role="alert" className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
             <div>
@@ -304,8 +343,10 @@ export function UsersListView() {
             </div>
           </div>
           <button
+            type="button"
             onClick={() => setBulkDeleteError(null)}
-            className="text-red-300/70 hover:text-red-200 transition-colors"
+            aria-label={t('common.close')}
+            className="touch-target flex items-center justify-center text-red-300/70 hover:text-red-200 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -355,9 +396,26 @@ export function UsersListView() {
         />
       )}
 
+      {jobId && jobWatchErrorId === jobId && (
+        <div role="alert" className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+            <p className="text-red-200 font-medium">{t('admin.users.bulkDeleteJob.watchError')}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setJobWatchErrorId(null)}
+            aria-label={t('common.close')}
+            className="touch-target flex items-center justify-center text-red-300/70 hover:text-red-200 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      )}
+
       {/* Bulk Actions */}
       {selectedIds.length > 0 && (
-        <div className="flex items-center gap-3 p-3 bg-[#00C9FF]/10 border border-[#00C9FF]/30 rounded-xl">
+        <div className="flex flex-wrap items-center gap-3 p-3 bg-[#00C9FF]/10 border border-[#00C9FF]/30 rounded-xl">
           <span className="text-sm text-content">
             {t('admin.users.selected', { count: String(selectedIds.length) })}
           </span>
@@ -455,11 +513,21 @@ export function UsersListView() {
           try {
             const id = await startBulkDelete([...selectedIds], reason);
             setSelectedIds([]);
+            // Clear the previous job's view before pointing at the new id, so the
+            // refresh-on-finish effect and the dismiss button never act on stale state.
+            setJob(null);
             setJobId(id);
             setBulkDeleteError(null);
           } catch (err) {
             console.error('Bulk delete could not start:', err);
-            setBulkDeleteError(err instanceof Error ? err.message : String(err));
+            const code = (err as { code?: string } | null | undefined)?.code;
+            setBulkDeleteError(
+              code === 'functions/failed-precondition'
+                ? t('admin.users.bulkDeleteJob.alreadyRunning')
+                : err instanceof Error
+                  ? err.message
+                  : String(err)
+            );
           }
         }}
       />

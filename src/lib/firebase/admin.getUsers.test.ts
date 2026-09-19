@@ -59,11 +59,21 @@ describe('getUsers', () => {
       snapshotOf({
         alive: { fullName: 'Anna', email: 'anna@example.com' },
         gone: { fullName: 'Gone', email: 'gone@example.com', isDeleted: true },
-        customer_1_0: { fullName: 'Seed', email: 'seed@demo.vfit' },
+        // deletedAt alone (no isDeleted flag) must hide it too.
+        goneToo: { fullName: 'Gone Too', email: 'gonetoo@example.com', deletedAt: {} },
+        // Hidden by email domain — id deliberately doesn't hint at "provider"/"customer".
+        demoSeed: { fullName: 'Seed', email: 'seed@demo.vfit' },
+        // Hidden by id prefix alone — a normal-looking email must not save it.
+        provider_42: { fullName: 'Provider Seed', email: 'provider42@example.com' },
       })
     );
 
-    expect((await getUsers({ status: 'hidden' })).users.map((u) => u.id)).toEqual(['gone', 'customer_1_0']);
+    expect((await getUsers({ status: 'hidden' })).users.map((u) => u.id)).toEqual([
+      'gone',
+      'goneToo',
+      'demoSeed',
+      'provider_42',
+    ]);
     expect((await getUsers({ status: 'all' })).users.map((u) => u.id)).toEqual(['alive']);
   });
 });
