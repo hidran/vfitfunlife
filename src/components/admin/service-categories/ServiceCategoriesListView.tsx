@@ -11,6 +11,7 @@ import { formatDate, toDate } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
 import { Spinner } from '@/components/ui/Spinner';
 import { Plus } from 'lucide-react';
+import { resolveCategoryName } from '@/lib/firebase/serviceCategories';
 
 interface ServiceCategoryRow {
   id: string;
@@ -25,7 +26,7 @@ interface ServiceCategoryRow {
 const SERVICE_CATEGORIES_COLLECTION = 'serviceCategories';
 
 export function ServiceCategoriesListView() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const router = useRouter();
   const [searchValue, setSearchValue] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -44,7 +45,9 @@ export function ServiceCategoriesListView() {
           const data = d.data() as Record<string, unknown>;
           return {
             id: d.id,
-            name: (data.name as string) ?? '',
+            // Reading `name` alone left the 23 seeded categories, which carry only the
+            // per-locale `names` map, rendering as a bare emoji.
+            name: resolveCategoryName(d.id, data, locale),
             slug: (data.slug as string) ?? '',
             icon: (data.icon as string) ?? '',
             isActive: (data.isActive as boolean) ?? false,
@@ -72,7 +75,7 @@ export function ServiceCategoriesListView() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [locale]);
 
   const columns: Column<ServiceCategoryRow>[] = [
     {
@@ -84,8 +87,10 @@ export function ServiceCategoriesListView() {
             {sc.icon}
           </div>
           <div>
-            <p className="font-medium text-content">{`${sc.icon} ${sc.name}`}</p>
-            <p className="text-xs text-content-muted">{sc.slug}</p>
+            <p className="font-medium text-content">{sc.name}</p>
+            {/* The id, not the slug: it is what services and providers reference, and
+                only categories saved from this screen have a slug at all. */}
+            <p className="text-xs text-content-muted">{sc.id}</p>
           </div>
         </div>
       ),

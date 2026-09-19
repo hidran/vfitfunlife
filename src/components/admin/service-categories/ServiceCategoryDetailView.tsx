@@ -19,6 +19,7 @@ import {
 } from './ServiceCategoryFormView';
 import type { ServiceCategoryDoc, ServiceCategoryData } from '@/types/admin';
 import { useI18n } from '@/hooks/useI18n';
+import { resolveCategoryName } from '@/lib/firebase/serviceCategories';
 
 const SERVICE_CATEGORIES_COLLECTION = 'serviceCategories';
 
@@ -39,7 +40,7 @@ export function ServiceCategoryDetailView({
   serviceCategoryId: string;
 }) {
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [sc, setSc] = useState<ServiceCategoryDoc | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -110,8 +111,8 @@ export function ServiceCategoryDetailView({
   return (
     <>
       <EntityDetailLayout
-        title={`${sc.icon} ${sc.name}`}
-        subtitle={sc.slug ?? ''}
+        title={`${sc.icon} ${resolveCategoryName(sc.id, sc, locale)}`}
+        subtitle={sc.id}
         backHref="/admin/services/"
         isEditing={editing}
         isSaving={updateMut.isPending}

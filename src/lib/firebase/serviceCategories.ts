@@ -5,6 +5,18 @@ import { localizedName, type ServiceCategory, type ServiceCategoryDoc } from '@/
 import type { AppLocale } from '@/types/locale';
 import type { Section } from '@/contexts/SectionContext';
 
+/**
+ * A category's label in `locale`. `names` is the source of truth; `name` is the
+ * pre-taxonomy flat string, which only the six documents older than the tree still carry.
+ */
+export function resolveCategoryName(
+  id: string,
+  data: { names?: Partial<Record<AppLocale, string>>; name?: string },
+  locale: AppLocale
+): string {
+  return data.names ? localizedName(id, data.names, locale) : (data.name ?? id);
+}
+
 function toResolved(
   id: string,
   data: Partial<ServiceCategoryDoc> & { name?: string },
@@ -13,9 +25,7 @@ function toResolved(
   return {
     id,
     parentId: data.parentId ?? null,
-    // `data.name` is the pre-taxonomy flat string. Reading it keeps the catalogue
-    // rendering during the window between deploying this and seeding the tree.
-    name: data.names ? localizedName(id, data.names, locale) : (data.name ?? id),
+    name: resolveCategoryName(id, data, locale),
     icon: data.icon ?? '',
     sections: (data.sections as Section[]) ?? ['fit'],
     order: typeof data.order === 'number' ? data.order : 0,
