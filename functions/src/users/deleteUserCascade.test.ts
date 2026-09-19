@@ -22,13 +22,17 @@ describe("ownedStoragePrefixes", () => {
 });
 
 describe("deleteUserCascade", () => {
-  it("deletes Auth first, then Firestore docs, then provider applications, then Storage", async () => {
+  it("deletes Auth, then instructors, provider applications and Storage, and users/{uid} LAST", async () => {
+    // users/{uid} must be the last thing removed: while it's still there, the user stays
+    // listed in /admin/users and a partial failure can be found and retried (single delete
+    // or a new bulk job) instead of vanishing with its instructor profile/avatars orphaned.
     const { deps, calls } = fakeDeps();
     await deleteUserCascade("u1", deps);
     expect(calls[0]).toBe("auth:u1");
-    expect(calls.slice(1, 3)).toEqual(["fs:users/u1", "fs:instructors/u1"]);
-    expect(calls[3]).toBe("apps:u1");
-    expect(calls.slice(4)).toEqual(ownedStoragePrefixes("u1").map((p) => `st:${p}`));
+    expect(calls[1]).toBe("fs:instructors/u1");
+    expect(calls[2]).toBe("apps:u1");
+    expect(calls.slice(3, calls.length - 1)).toEqual(ownedStoragePrefixes("u1").map((p) => `st:${p}`));
+    expect(calls.at(-1)).toBe("fs:users/u1");
   });
 
   it("deletes providerApplications for the uid", async () => {

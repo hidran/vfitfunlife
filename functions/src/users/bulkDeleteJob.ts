@@ -1,4 +1,5 @@
 import type { ServerAuditPayload } from "../lib/audit";
+import { truncateError } from "../lib/errors";
 
 export type SkipReason = "self" | "not_found" | "superadmin";
 
@@ -43,20 +44,60 @@ export interface ProcessOptions {
   finalAttempt?: boolean;
 }
 
-export const MAX_ERROR_LENGTH = 300;
 export const GIVE_UP_ERROR = "gave up after 3 attempts";
 const SAVE_INTERVAL_MS = 1000;
 
+/**
+ * Per-user audit ids live under a `_u_` segment so a uid literally spelled "queued" or
+ * "summary" can never collide with the job-level `bulk_<job>_queued` / `bulk_<job>_summary`
+ * ids — a collision would make writeAuditLogOnce see ALREADY_EXISTS and silently skip the
+ * real per-user audit while the cascade still ran.
+ */
 function auditId(jobId: string, uid: string): string {
-  return `bulk_${jobId}_${uid}`;
+  return `bulk_${jobId}_u_${uid}`;
 }
 
-function summaryAuditId(jobId: string): string {
+export function summaryAuditId(jobId: string): string {
   return `bulk_${jobId}_summary`;
 }
 
-/** A uid needs (re)processing: it has never been attempted, or its last attempt failed. */
-export function isPending(outcome: UserOutcome | undefined): boolean {
+/** The one place the summary audit's payload shape is built — the trigger's give-up/failure paths reuse it. */
+export function buildSummaryAuditPayload(job: BulkDeleteJob, summary: JobSummary): ServerAuditPayload {
+  return {
+    actorUid: job.actorUid,
+    actorEmail: job.actorEmail,
+    actorRole: "superadmin",
+    action: "update",
+    entityType: "admin_job",
+    entityId: job.id,
+    after: { type: "bulk_delete_users", total: job.uids.length, ...summary },
+    reason: job.reason,
+  };
+}
+
+/**
+ * Whether a job attempt is "finishing" — the one place this is decided, since bulkDelete.ts's
+ * decideAfterRun needs the exact same boolean to choose between throwing (retry) and writing
+ * the terminal status (finish).
+ */
+export function isFinishing(input: { finalAttempt: boolean; failed: number }): boolean {
+  return input.finalAttempt || input.failed === 0;
+}
+
+/** An outcome the uid itself actually owns — never Object.prototype's inherited members. */
+function getOutcome(outcomes: Record<string, UserOutcome>, uid: string): UserOutcome | undefined {
+  return Object.hasOwn(outcomes, uid) ? outcomes[uid] : undefined;
+}
+
+/**
+ * A uid needs (re)processing: it has never been attempted, or its last attempt failed.
+ *
+ * Reads via Object.hasOwn, not a bare `outcomes[uid]` truthiness check — a uid literally
+ * named "constructor" (or "toString", "hasOwnProperty", …) would otherwise read an inherited
+ * Object.prototype value, look like it already has a (non-failed) outcome, and never run.
+ */
+export function isPending(outcomes: Record<string, UserOutcome>, uid: string): boolean {
+  const outcome = getOutcome(outcomes, uid);
   return !outcome || outcome.status === "failed";
 }
 
@@ -66,7 +107,7 @@ export async function processBulkDeleteJob(
   opts: ProcessOptions = {},
 ): Promise<JobSummary> {
   const outcomes: Record<string, UserOutcome> = { ...job.results };
-  const pending = job.uids.filter((uid) => isPending(outcomes[uid]));
+  const pending = job.uids.filter((uid) => isPending(outcomes, uid));
   const buffer = createOutcomeBuffer(deps);
 
   try {
@@ -83,30 +124,28 @@ export async function processBulkDeleteJob(
   }
 
   const summary = summarize(job.uids, outcomes);
-  const finishing = (opts.finalAttempt ?? false) || summary.failed === 0;
-  if (finishing) {
-    await deps.auditOnce(summaryAuditId(job.id), {
-      actorUid: job.actorUid,
-      actorEmail: job.actorEmail,
-      actorRole: "superadmin",
-      action: "update",
-      entityType: "admin_job",
-      entityId: job.id,
-      after: { type: "bulk_delete_users", total: job.uids.length, ...summary },
-      reason: job.reason,
-    });
+  if (isFinishing({ finalAttempt: opts.finalAttempt ?? false, failed: summary.failed })) {
+    await deps.auditOnce(summaryAuditId(job.id), buildSummaryAuditPayload(job, summary));
   }
   return summary;
 }
 
 /**
  * Retries are exhausted: every still-pending uid becomes a terminal failure. Pure — no I/O —
- * so the caller (the trigger, on its give-up path) does the actual persisting.
+ * so the caller (the trigger, on its give-up/final-failure paths) does the actual persisting.
+ *
+ * A uid that already failed keeps its previous error, prefixed with the give-up message —
+ * losing the last real error behind a generic "gave up" would erase the one clue about what
+ * was actually wrong. A uid that was never even attempted gets the bare message.
  */
 export function giveUpOnPending(job: BulkDeleteJob): { outcomes: Record<string, UserOutcome>; summary: JobSummary } {
   const outcomes: Record<string, UserOutcome> = { ...job.results };
   for (const uid of job.uids) {
-    if (isPending(outcomes[uid])) outcomes[uid] = { status: "failed", error: GIVE_UP_ERROR };
+    const existing = getOutcome(outcomes, uid);
+    if (isPending(outcomes, uid)) {
+      const error = existing?.status === "failed" ? truncateError(`${GIVE_UP_ERROR}: ${existing.error}`) : GIVE_UP_ERROR;
+      outcomes[uid] = { status: "failed", error };
+    }
   }
   return { outcomes, summary: summarize(job.uids, outcomes) };
 }
@@ -149,7 +188,7 @@ async function deleteOne(uid: string, job: BulkDeleteJob, deps: JobDeps): Promis
 function summarize(uids: string[], outcomes: Record<string, UserOutcome>): JobSummary {
   const summary: JobSummary = { deleted: 0, skipped: 0, failed: 0, failures: [], skippedDetail: [] };
   for (const uid of uids) {
-    const o = outcomes[uid];
+    const o = getOutcome(outcomes, uid);
     if (o?.status === "deleted") summary.deleted++;
     else if (o?.status === "skipped") {
       summary.skipped++;
@@ -198,7 +237,15 @@ function createOutcomeBuffer(deps: JobDeps) {
     const batch = pending;
     pending = {};
     lastFlush = now();
-    await deps.saveOutcomes(batch);
+    try {
+      await deps.saveOutcomes(batch);
+    } catch (err) {
+      // Don't lose this batch: put it back so the next flush attempt (including the
+      // mandatory final one) retries it. Anything staged since this flush started wins over
+      // what's being restored, since it's newer.
+      pending = { ...batch, ...pending };
+      throw err;
+    }
   }
 
   return {
@@ -216,21 +263,3 @@ function createOutcomeBuffer(deps: JobDeps) {
   };
 }
 
-/** Caps a recorded error at MAX_ERROR_LENGTH; prefers "<code>: <message>" when the error has a code. */
-export function truncateError(err: unknown): string {
-  const message = errorMessage(err);
-  return message.length > MAX_ERROR_LENGTH ? `${message.slice(0, MAX_ERROR_LENGTH - 1)}…` : message;
-}
-
-function errorMessage(err: unknown): string {
-  if (!err || typeof err !== "object") return String(err);
-  const e = err as { code?: unknown; message?: unknown; stack?: unknown };
-  let message = typeof e.message === "string" ? e.message : String(err);
-  // A Firestore BulkWriter failure's own message is just "... failed with: " — the real
-  // cause is only in the stack trace, as a "Caused by" line.
-  if (message.endsWith("failed with: ") && typeof e.stack === "string") {
-    const causedBy = e.stack.split("\n").find((line) => line.trim().startsWith("Caused by"));
-    if (causedBy) message = causedBy.trim();
-  }
-  return e.code !== undefined ? `${String(e.code)}: ${message}` : message;
-}
