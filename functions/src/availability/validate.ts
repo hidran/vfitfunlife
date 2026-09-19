@@ -1,5 +1,29 @@
 import { HttpsError } from "firebase-functions/v2/https";
-import { isDateKey } from "./slots";
+import {
+  isDateKey,
+  isTimeKey,
+  toMinutes,
+  type BookingRules,
+  type DateOverride,
+  type TimeWindow,
+  type WeeklyWindow,
+} from "./slots";
+
+export const MAX_WINDOWS_PER_DAY = 10;
+/** One batch: the instructor doc plus every override write must stay under Firestore's 500. */
+export const MAX_OVERRIDE_WRITES = 400;
+const MAX_REASON = 200;
+
+export interface OverrideUpsert extends DateOverride {
+  date: string;
+}
+
+export interface AvailabilityUpdate {
+  schedule: WeeklyWindow[];
+  bookingRules: BookingRules;
+  upserts: OverrideUpsert[];
+  deletes: string[];
+}
 
 type Obj = Record<string, unknown>;
 
@@ -10,6 +34,105 @@ function bad(message: string): never {
 function asObject(v: unknown, what: string): Obj {
   if (!v || typeof v !== "object" || Array.isArray(v)) bad(`${what} must be an object`);
   return v as Obj;
+}
+
+function intIn(v: unknown, min: number, max: number, what: string): number {
+  if (typeof v !== "number" || !Number.isInteger(v) || v < min || v > max) {
+    bad(`${what} must be an integer from ${min} to ${max}`);
+  }
+  return v;
+}
+
+function timeWindow(v: unknown, what: string): TimeWindow {
+  const w = asObject(v, what);
+  if (!isTimeKey(w.start) || !isTimeKey(w.end)) bad(`${what}: times must be HH:mm`);
+  if (toMinutes(w.start) >= toMinutes(w.end)) bad(`${what}: start must be before end`);
+  return { start: w.start, end: w.end };
+}
+
+function assertNoOverlap(windows: TimeWindow[], what: string): void {
+  const sorted = [...windows].sort((a, b) => toMinutes(a.start) - toMinutes(b.start));
+  for (let i = 1; i < sorted.length; i++) {
+    if (toMinutes(sorted[i].start) < toMinutes(sorted[i - 1].end)) bad(`${what}: windows overlap`);
+  }
+}
+
+function validateSchedule(v: unknown): WeeklyWindow[] {
+  if (!Array.isArray(v)) bad("schedule must be an array");
+  const schedule = v.map((raw, i): WeeklyWindow => {
+    const e = asObject(raw, `schedule[${i}]`);
+    const dayOfWeek = intIn(e.dayOfWeek, 0, 6, `schedule[${i}].dayOfWeek`);
+    const w = timeWindow({ start: e.startTime, end: e.endTime }, `schedule[${i}]`);
+    if (e.isAvailable !== undefined && typeof e.isAvailable !== "boolean") {
+      bad(`schedule[${i}].isAvailable must be a boolean`);
+    }
+    return { dayOfWeek, startTime: w.start, endTime: w.end, isAvailable: e.isAvailable !== false };
+  });
+  for (let day = 0; day <= 6; day++) {
+    const open = schedule
+      .filter((s) => s.dayOfWeek === day && s.isAvailable)
+      .map((s) => ({ start: s.startTime, end: s.endTime }));
+    if (open.length > MAX_WINDOWS_PER_DAY) bad(`day ${day}: at most ${MAX_WINDOWS_PER_DAY} windows`);
+    assertNoOverlap(open, `day ${day}`);
+  }
+  return schedule;
+}
+
+function validateRules(v: unknown): BookingRules {
+  const r = asObject(v, "bookingRules");
+  return {
+    bufferMinutes: intIn(r.bufferMinutes, 0, 120, "bookingRules.bufferMinutes"),
+    minAdvanceNoticeHours: intIn(r.minAdvanceNoticeHours, 0, 168, "bookingRules.minAdvanceNoticeHours"),
+    maxBookingsPerDay: intIn(r.maxBookingsPerDay, 1, 50, "bookingRules.maxBookingsPerDay"),
+  };
+}
+
+function validateUpsert(v: unknown, i: number): OverrideUpsert {
+  const what = `overrides.upsert[${i}]`;
+  const o = asObject(v, what);
+  if (!isDateKey(o.date)) bad(`${what}.date must be YYYY-MM-DD`);
+  if (typeof o.isAvailable !== "boolean") bad(`${what}.isAvailable must be a boolean`);
+  const rawWindows = o.windows ?? [];
+  if (!Array.isArray(rawWindows) || rawWindows.length > MAX_WINDOWS_PER_DAY) {
+    bad(`${what}.windows must be an array of at most ${MAX_WINDOWS_PER_DAY}`);
+  }
+  const windows = o.isAvailable ? rawWindows.map((w, j) => timeWindow(w, `${what}.windows[${j}]`)) : [];
+  assertNoOverlap(windows, what);
+  const out: OverrideUpsert = { date: o.date, isAvailable: o.isAvailable, windows };
+  if (o.reason !== undefined && o.reason !== null) {
+    if (typeof o.reason !== "string") bad(`${what}.reason must be a string`);
+    const reason = o.reason.trim().slice(0, MAX_REASON);
+    if (reason) out.reason = reason;
+  }
+  return out;
+}
+
+/** Everything updateMyAvailability writes, checked once, before any write. */
+export function validateAvailabilityUpdate(data: unknown): AvailabilityUpdate {
+  const d = asObject(data, "payload");
+  const schedule = validateSchedule(d.schedule);
+  const bookingRules = validateRules(d.bookingRules);
+
+  const overrides = asObject(d.overrides ?? { upsert: [], delete: [] }, "overrides");
+  const rawUpserts = overrides.upsert ?? [];
+  const rawDeletes = overrides.delete ?? [];
+  if (!Array.isArray(rawUpserts) || !Array.isArray(rawDeletes)) {
+    bad("overrides.upsert and overrides.delete must be arrays");
+  }
+  if (rawUpserts.length + rawDeletes.length > MAX_OVERRIDE_WRITES) {
+    bad(`at most ${MAX_OVERRIDE_WRITES} date exceptions per save`);
+  }
+  const upserts = rawUpserts.map(validateUpsert);
+  const deletes = rawDeletes.map((date, i) => {
+    if (!isDateKey(date)) bad(`overrides.delete[${i}] must be YYYY-MM-DD`);
+    return date;
+  });
+
+  const upsertDates = new Set(upserts.map((u) => u.date));
+  if (upsertDates.size !== upserts.length) bad("a date appears twice in overrides.upsert");
+  if (deletes.some((date) => upsertDates.has(date))) bad("a date is both upserted and deleted");
+
+  return { schedule, bookingRules, upserts, deletes: [...new Set(deletes)] };
 }
 
 function docId(v: unknown, what: string): string {
@@ -24,4 +147,13 @@ export function validateSlotsRequest(data: unknown): { instructorId: string; ser
   const serviceId = docId(d.serviceId, "serviceId");
   if (!isDateKey(d.date)) bad("date must be YYYY-MM-DD");
   return { instructorId, serviceId, date: d.date };
+}
+
+/** Same gate as the /provider area: an approved or pending provider, or staff. */
+export function canManageOwnAvailability(user: Record<string, unknown> | undefined): boolean {
+  if (!user || user.isDeleted === true) return false;
+  return user.providerStatus === "verified" ||
+    user.providerStatus === "pending" ||
+    user.role === "admin" ||
+    user.role === "superadmin";
 }
