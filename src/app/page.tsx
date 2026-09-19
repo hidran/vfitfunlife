@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { SplashScreen } from '@/components/screens/SplashScreen';
 import { useAuthStore } from '@/stores/authStore';
 import { useI18n } from '@/hooks/useI18n';
+import { postAuthRoute } from '@/lib/auth/postAuthRoute';
 
 export default function HomePage() {
   const router = useRouter();
@@ -63,7 +64,7 @@ export default function HomePage() {
           await router.replace('/auth/register');
         } else {
           // Fully authenticated user
-          await router.replace('/home');
+          await router.replace(postAuthRoute(user));
         }
       } catch (error) {
         console.error('[HomePage] Redirect failed:', error);

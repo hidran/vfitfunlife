@@ -9,6 +9,8 @@ import { Geolocation } from '@capacitor/geolocation';
 import { useI18n } from '@/hooks/useI18n';
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import type { MessageKey } from '@/i18n/messages';
+import { useAuthStore } from '@/stores/authStore';
+import { postAuthRoute } from '@/lib/auth/postAuthRoute';
 
 interface Permission {
   id: 'location' | 'notifications';
@@ -113,12 +115,11 @@ export default function PermissionsPage() {
     };
     localStorage.setItem('permissions', JSON.stringify(permissionsState));
 
-    // Navigate to home
-    router.push('/home');
+    router.push(postAuthRoute(useAuthStore.getState().user));
   };
 
   const handleSkip = () => {
-    router.push('/home');
+    router.push(postAuthRoute(useAuthStore.getState().user));
   };
 
   return (

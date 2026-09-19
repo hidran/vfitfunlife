@@ -825,6 +825,8 @@ export const frMessages: Messages = {
   'locale.de': 'Allemand',
 
   'header.goToProfile': 'Aller au profil',
+
+  'header.providerDashboard': 'Tableau de bord professionnel',
   'header.profileAvatarAlt': 'Profil',
   'header.appSections': "Sections de l'application",
   'header.notifications': 'Notifications',

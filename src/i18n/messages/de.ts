@@ -823,6 +823,8 @@ export const deMessages: Messages = {
   'locale.de': 'Deutsch',
 
   'header.goToProfile': 'Zum Profil',
+
+  'header.providerDashboard': 'Anbieter-Dashboard',
   'header.profileAvatarAlt': 'Profil',
   'header.appSections': 'App-Bereiche',
   'header.notifications': 'Benachrichtigungen',

@@ -51,7 +51,7 @@ const mockVerifyPhoneOtp = vi.fn();
 
 type MockAuthState = {
   firebaseUser: { uid: string; email: string } | null;
-  user: { id: string; fullName: string } | null;
+  user: { id: string; fullName: string; role?: string; providerStatus?: string } | null;
   isLoading: boolean;
   isInitialized: boolean;
   error: string | null;
@@ -115,6 +115,17 @@ describe('LoginPage Google Sign-in', () => {
 
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith('/home');
+    });
+  });
+
+  it('redirects a provider to their dashboard', async () => {
+    mockAuthState.firebaseUser = { uid: '123', email: 'trainer@example.com' };
+    mockAuthState.user = { id: '123', fullName: 'Trainer', role: 'provider', providerStatus: 'verified' };
+
+    render(<LoginPage />);
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith('/provider/dashboard');
     });
   });
 

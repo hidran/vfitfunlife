@@ -1,11 +1,14 @@
 'use client';
 
 import { useSection } from '@/contexts/SectionContext';
-import { Bell, Dumbbell, Home, Menu, PartyPopper, Sparkles, User } from 'lucide-react';
+import { Bell, Briefcase, Dumbbell, Home, Menu, PartyPopper, Sparkles, User } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useI18n } from '@/hooks/useI18n';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/stores/authStore';
+import { canAccessProviderArea } from '@/lib/providerStatus';
+import { PROVIDER_HOME } from '@/lib/auth/postAuthRoute';
 
 const sectionBranding = {
   fit: {
@@ -48,6 +51,9 @@ export function Header({ onMenuClick, notificationCount = 0, userAvatarUrl }: He
   const { t } = useI18n();
   const brand = sectionBranding[section];
   const showHomeShortcut = section === 'fun';
+  // One tap to the provider dashboard from anywhere; the drawer entry is two taps deep.
+  const providerStatus = useAuthStore((state) => state.user?.providerStatus);
+  const showProviderShortcut = canAccessProviderArea(providerStatus);
 
   return (
     <header
@@ -85,6 +91,21 @@ export function Header({ onMenuClick, notificationCount = 0, userAvatarUrl }: He
                 aria-label={t('common.home')}
               >
                 <Home className="h-4 w-4" />
+              </Link>
+            )}
+
+            {showProviderShortcut && (
+              <Link
+                href={PROVIDER_HOME}
+                className={cn(
+                  'touch-target rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--section-primary)] focus-visible:ring-offset-2',
+                  brand.iconBg,
+                  brand.iconColor,
+                  brand.ringOffset
+                )}
+                aria-label={t('header.providerDashboard')}
+              >
+                <Briefcase className="h-5 w-5" />
               </Link>
             )}
           </div>

@@ -842,6 +842,8 @@ export const itMessages = {
   'locale.de': 'Deutsch',
 
   'header.goToProfile': 'Vai al profilo',
+
+  'header.providerDashboard': 'Dashboard professionista',
   'header.profileAvatarAlt': 'Profilo',
   'header.appSections': 'Sezioni app',
   'header.notifications': 'Notifiche',

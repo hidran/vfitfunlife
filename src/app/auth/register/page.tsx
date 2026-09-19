@@ -17,6 +17,7 @@ import { submitProviderApplication } from '@/lib/firebase/providerApplication';
 import { ProviderOptInField } from '@/components/auth/ProviderOptInField';
 import { validatePasswordStrength } from '@/lib/auth/passwordPolicy';
 import { PasswordRequirements } from '@/components/auth/PasswordRequirements';
+import { postAuthRoute } from '@/lib/auth/postAuthRoute';
 
 const SECTIONS = [
   { id: 'fit' as const, label: 'VFit', color: 'from-vfit-primary to-vfit-secondary' },
@@ -91,8 +92,7 @@ export default function RegisterPage() {
       // Refresh user profile in store
       await refreshUserProfile();
 
-      // Navigate to home
-      router.push('/home');
+      router.push(postAuthRoute(useAuthStore.getState().user));
     } catch (err) {
       console.error('Registration error:', err);
       setError(t('auth.register.error.generic'));

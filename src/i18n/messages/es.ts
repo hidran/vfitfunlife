@@ -819,6 +819,8 @@ export const esMessages: Messages = {
   'locale.de': 'Alemán',
 
   'header.goToProfile': 'Ir al perfil',
+
+  'header.providerDashboard': 'Panel del profesional',
   'header.profileAvatarAlt': 'Perfil',
   'header.appSections': 'Secciones de la app',
   'header.notifications': 'Notificaciones',

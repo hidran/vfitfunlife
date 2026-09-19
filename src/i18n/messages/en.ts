@@ -843,6 +843,8 @@ export const enMessages: Messages = {
   'locale.de': 'German',
 
   'header.goToProfile': 'Go to profile',
+
+  'header.providerDashboard': 'Provider dashboard',
   'header.profileAvatarAlt': 'Profile',
   'header.appSections': 'App sections',
   'header.notifications': 'Notifications',

@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { isNativePlatform } from '@/lib/capacitor';
 import { useI18n } from '@/hooks/useI18n';
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
+import { postAuthRoute } from '@/lib/auth/postAuthRoute';
 
 type LoginMethod = 'phone' | 'email' | null;
 
@@ -95,8 +96,7 @@ export default function LoginPage() {
     if (!isInitialized) return;
 
     if (user) {
-      const isStaff = user.role === 'admin' || user.role === 'superadmin';
-      router.replace(isStaff ? '/admin' : '/home');
+      router.replace(postAuthRoute(user));
     } else if (firebaseUser && !user && !isLoading) {
       // Only treat as "needs registration" once the profile load has finished.
       // While isLoading is true the profile may still be fetching (post sign-in),
