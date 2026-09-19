@@ -5,7 +5,8 @@ import { recordAudit, type AuditPayload } from './auditLog';
 
 interface Options<TInput, TResult> {
   mutate: (input: TInput) => Promise<TResult>;
-  audit: (input: TInput, result: TResult) => AuditPayload;
+  /** Omit when the server already audits the operation, so it is not recorded twice. */
+  audit?: (input: TInput, result: TResult) => AuditPayload;
   invalidateKeys?: QueryKey[];
   onSuccess?: (result: TResult, input: TInput) => void;
 }
@@ -16,7 +17,7 @@ export function useEntityMutation<TInput, TResult = void>(opts: Options<TInput, 
   return useMutation({
     mutationFn: opts.mutate,
     onSuccess: async (result, input) => {
-      await recordAudit(actor, opts.audit(input, result));
+      if (opts.audit) await recordAudit(actor, opts.audit(input, result));
       opts.invalidateKeys?.forEach((k) => qc.invalidateQueries({ queryKey: k }));
       opts.onSuccess?.(result, input);
     },

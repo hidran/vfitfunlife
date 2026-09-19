@@ -198,6 +198,17 @@
         { "fieldPath": "providerProfile.isVerified", "order": "ASCENDING" },
         { "fieldPath": "categoryIds", "arrayConfig": "CONTAINS" }
       ]
+    },
+    // findRunningBulkDelete in src/lib/firebase/bulkDelete.ts: the caller's latest
+    // unfinished bulk-delete job, so a reload mid-job brings the progress banner back.
+    {
+      "collectionGroup": "adminJobs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "actorUid", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
     }
     // mergeServiceCategories runs a collection-group query on services.categoryId. That
     // needs NO composite entry — Firestore maintains single-field indexes at collection

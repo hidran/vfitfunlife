@@ -102,7 +102,7 @@ interface AdminState {
   updateUserTypeAction: (id: string, data: UserTypeData) => Promise<void>;
   deleteUserTypeAction: (id: string) => Promise<void>;
   createAnnouncementAction: (data: AnnouncementData) => Promise<void>;
-  bulkUpdateUsersAction: (userIds: string[], action: "activate" | "suspend" | "delete") => Promise<BulkActionResult>;
+  bulkUpdateUsersAction: (userIds: string[], action: "activate" | "suspend") => Promise<BulkActionResult>;
   bulkUpdateUserRoleAction: (userIds: string[], role: UserRole) => Promise<BulkActionResult>;
   exportDataAction: (collection: string, options: { format: "csv" | "excel"; filters?: Record<string, any> }) => Promise<string>;
   fetchTransactions: (filters?: { dateFrom?: Date; dateTo?: Date; status?: string }) => Promise<void>;
@@ -415,7 +415,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   // Bulk update users
   bulkUpdateUsersAction: async (
     userIds: string[],
-    action: "activate" | "suspend" | "delete"
+    action: "activate" | "suspend"
   ): Promise<BulkActionResult> => {
     set({ error: null });
     try {

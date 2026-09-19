@@ -98,13 +98,6 @@ export function UserRowQuickActions({ user, onDone }: Props) {
       const fn = httpsCallable(functions, 'adminDeleteUser');
       await fn({ uid: user.id, reason });
     },
-    audit: ({ reason }) => ({
-      action: 'delete',
-      entityType: 'user',
-      entityId: user.id,
-      before: user as unknown as Record<string, unknown>,
-      reason,
-    }),
     invalidateKeys: [['users']],
     onSuccess: () => {
       setOpen(false);

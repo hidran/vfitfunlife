@@ -11,10 +11,12 @@ import {
   UserRoleBadge,
   StatusBadge,
   SuperadminOnly,
+  ConfirmDeleteDialog,
   recordAudit,
 } from "@/components/admin";
 import { UserRoleSelect } from "./UserRoleSelect";
 import { UserRowQuickActions } from "./UserRowQuickActions";
+import { BulkDeleteJobBanner } from "./BulkDeleteJobBanner";
 import { Button } from "@/components/ui/button";
 import { AdminUser, UserFilters } from "@/types/admin";
 import { Column } from "@/components/admin/DataTable";
@@ -26,6 +28,12 @@ import {
   filtersFromParams,
   queryFromFilters,
 } from "@/lib/admin/usersListQuery";
+import {
+  startBulkDelete,
+  watchBulkDeleteJob,
+  findRunningBulkDelete,
+  type BulkDeleteJobView,
+} from "@/lib/firebase/bulkDelete";
 import {
   User,
   UserPlus,
@@ -56,10 +64,36 @@ export function UsersListView() {
   // Seeded from the URL so a reload, or coming back from a user's page, keeps the filters.
   const [filters, setFilters] = useState<UserFilters>(() => filtersFromParams(searchParams));
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [job, setJob] = useState<BulkDeleteJobView | null>(null);
+  const [bulkDeleteError, setBulkDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchUsers(filters);
   }, [filters, fetchUsers]);
+
+  // A reload mid-job brings the banner back.
+  useEffect(() => {
+    if (!authUser?.id || authUser.role !== 'superadmin') return;
+    let cancelled = false;
+    findRunningBulkDelete(authUser.id)
+      .then((id) => { if (!cancelled && id) setJobId(id); })
+      .catch((err) => console.error('Could not look up running bulk delete:', err));
+    return () => { cancelled = true; };
+  }, [authUser?.id, authUser?.role]);
+
+  useEffect(() => {
+    if (!jobId) return;
+    return watchBulkDeleteJob(jobId, setJob);
+  }, [jobId]);
+
+  // Refresh the list once, when the job finishes.
+  const jobFinished = job?.status === 'completed' || job?.status === 'completed_with_errors';
+  useEffect(() => {
+    if (jobFinished) fetchUsers(filters);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobFinished]);
 
   // replaceState rather than router.replace: Next syncs useSearchParams from it without a
   // navigation, so typing in the search box does not trigger one per keystroke.
@@ -111,7 +145,7 @@ export function UsersListView() {
     }
   };
 
-  const handleBulkAction = async (action: "activate" | "suspend" | "delete") => {
+  const handleBulkAction = async (action: "activate" | "suspend") => {
     if (selectedIds.length === 0) return;
 
     const confirmed = confirm(
@@ -260,6 +294,24 @@ export function UsersListView() {
         </div>
       )}
 
+      {bulkDeleteError && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+            <div>
+              <p className="text-red-200 font-medium">{t('admin.users.bulkDeleteJob.startError')}</p>
+              <p className="text-red-300/70 text-sm">{bulkDeleteError}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setBulkDeleteError(null)}
+            className="text-red-300/70 hover:text-red-200 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      )}
+
       {/* Filters */}
       <FilterBar
         searchPlaceholder={t('admin.users.search')}
@@ -295,6 +347,13 @@ export function UsersListView() {
         onExport={handleExport}
         onClearFilters={handleClearFilters}
       />
+
+      {job && (
+        <BulkDeleteJobBanner
+          job={job}
+          onDismiss={() => { setJob(null); setJobId(null); }}
+        />
+      )}
 
       {/* Bulk Actions */}
       {selectedIds.length > 0 && (
@@ -355,7 +414,7 @@ export function UsersListView() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => handleBulkAction("delete")}
+              onClick={() => setConfirmBulkDelete(true)}
               className="text-[#EF4444] hover:text-[#EF4444] hover:bg-[#EF4444]/10"
             >
               <Trash2 className="w-4 h-4 mr-1" />
@@ -383,6 +442,26 @@ export function UsersListView() {
           onPageChange: handlePageChange,
         }}
         emptyMessage={t('admin.users.empty')}
+      />
+
+      <ConfirmDeleteDialog
+        open={confirmBulkDelete}
+        entityLabel={t('admin.users.bulkDeleteEntity')}
+        entityName={String(selectedIds.length)}
+        onClose={() => setConfirmBulkDelete(false)}
+        onConfirm={async (reason) => {
+          // ConfirmDeleteDialog has no catch of its own: a throw here would be an unhandled
+          // rejection with no message on screen. Report it in the page instead.
+          try {
+            const id = await startBulkDelete([...selectedIds], reason);
+            setSelectedIds([]);
+            setJobId(id);
+            setBulkDeleteError(null);
+          } catch (err) {
+            console.error('Bulk delete could not start:', err);
+            setBulkDeleteError(err instanceof Error ? err.message : String(err));
+          }
+        }}
       />
     </div>
   );

@@ -92,13 +92,6 @@ export function UserDetailView({ userId }: Props) {
       const fn = httpsCallable(functions, 'adminDeleteUser');
       await fn({ uid: userId, reason });
     },
-    audit: ({ reason }) => ({
-      action: 'delete',
-      entityType: 'user',
-      entityId: userId,
-      before: (user ?? undefined) as Record<string, unknown> | undefined,
-      reason,
-    }),
     invalidateKeys: [['users']],
     onSuccess: () => router.push(usersListHref()),
   });

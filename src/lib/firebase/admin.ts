@@ -726,7 +726,7 @@ export async function createAnnouncement(data: AnnouncementData): Promise<void> 
 // Bulk update users
 export async function bulkUpdateUsers(
   userIds: string[],
-  action: "activate" | "suspend" | "delete"
+  action: "activate" | "suspend"
 ): Promise<BulkActionResult> {
   const result: BulkActionResult = {
     success: true,
@@ -742,13 +742,7 @@ export async function bulkUpdateUsers(
       try {
         const userRef = doc(db, USERS_COLLECTION, userId);
 
-        if (action === "delete") {
-          // Soft delete
-          batch.update(userRef, {
-            isDeleted: true,
-            deletedAt: serverTimestamp(),
-          });
-        } else if (action === "suspend") {
+        if (action === "suspend") {
           batch.update(userRef, {
             isSuspended: true,
             suspendedAt: serverTimestamp(),
