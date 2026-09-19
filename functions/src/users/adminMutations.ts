@@ -2,10 +2,18 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import { writeAuditLog } from "../lib/audit";
 import { adminCascadeDeps, deleteUserCascade } from "./deleteUserCascade";
+import { truncateError } from "./bulkDeleteJob";
 
 interface AdminDeleteUserData {
   uid: string;
   reason: string;
+}
+
+/** 1s, then 2s: up to 3 total attempts. The cascade is idempotent, so a retry is safe. */
+const RETRY_DELAYS_MS = [1000, 2000];
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -44,8 +52,35 @@ export const adminDeleteUser = onCall<AdminDeleteUserData>(
     const before = targetSnap.data();
 
     // Same definition of "delete" as the bulk job: Auth, the user's subcollections, their
-    // provider record and their files — not just the top-level document.
-    await deleteUserCascade(uid, adminCascadeDeps());
+    // provider record and their files — not just the top-level document. The cascade is
+    // idempotent, so a transient failure gets a couple of quick retries before giving up.
+    let lastError: unknown;
+    let succeeded = false;
+    for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+      try {
+        await deleteUserCascade(uid, adminCascadeDeps());
+        succeeded = true;
+        break;
+      } catch (err) {
+        lastError = err;
+        if (attempt < RETRY_DELAYS_MS.length) await delay(RETRY_DELAYS_MS[attempt]);
+      }
+    }
+
+    if (!succeeded) {
+      await writeAuditLog({
+        actorUid: callerUid,
+        actorEmail: caller?.email ?? "",
+        actorRole: "superadmin",
+        action: "delete",
+        entityType: "user",
+        entityId: uid,
+        before,
+        after: { partial: true, error: truncateError(lastError) },
+        reason,
+      });
+      throw new HttpsError("internal", "Could not fully delete the user; see audit_logs for what happened so far");
+    }
 
     await writeAuditLog({
       actorUid: callerUid,
