@@ -66,6 +66,8 @@ export const frMessages: Messages = {
   'admin.applications.empty': 'Aucune candidature en attente.',
   'admin.applications.verify': 'Vérifier',
   'admin.applications.reject': 'Rejeter',
+  'admin.applications.superadminOnly': 'Seul un superadmin peut vérifier ou refuser les candidatures.',
+  'admin.applications.error': 'Impossible d\'enregistrer la décision. Réessayez.',
 
   // ─── Admin: SeedDataPanel ─────────────────────────────────────────────
   'admin.seed.title': 'Gestion des données de démo',
@@ -1234,6 +1236,12 @@ export const frMessages: Messages = {
   'profile.edit.cancellationPolicyLabel': "Politique d'annulation",
   'profile.edit.cancellationPolicyPlaceholder': "Décrivez votre politique d'annulation...",
   'profile.edit.managePortfolioAndServices': 'Gérer portfolio et services',
+  'profile.edit.categories.label': 'Catégories de service',
+  'profile.edit.categories.pendingHint': 'Les catégories pour lesquelles vous postulez. Vous pouvez les modifier jusqu\'à l\'examen de votre candidature.',
+  'profile.edit.categories.verifiedHint': 'Vos catégories proviennent des services que vous proposez. Activez un service pour apparaître dans sa catégorie.',
+  'profile.edit.categories.none': 'Vous n\'avez encore aucun service.',
+  'profile.edit.categories.draft': 'brouillon',
+  'profile.edit.categories.errorMinOne': 'Sélectionnez au moins une catégorie',
   'profile.edit.validation.fullNameRequired': 'Le nom complet est obligatoire',
   'profile.edit.validation.fullNameMinLength':
     'Le nom complet doit contenir au moins 2 caractères',

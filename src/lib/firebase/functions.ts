@@ -522,3 +522,22 @@ export async function updateAiAuthoringSettings(patch: Partial<AiAuthoringSettin
   );
   await fn(patch);
 }
+
+// --- Provider applications ---
+
+/**
+ * Superadmin approves or rejects a self-registered provider application. Approval also
+ * promotes the applicant to role 'provider' and seeds a draft service per requested
+ * category (functions/src/providers/decideProviderApplication.ts).
+ */
+export async function decideProviderApplication(data: {
+  providerId: string;
+  decision: "verified" | "rejected";
+  notes?: string;
+}): Promise<{ success: boolean; draftServicesSeeded: number }> {
+  const fn = httpsCallable<typeof data, { success: boolean; draftServicesSeeded: number }>(
+    functions,
+    "decideProviderApplication",
+  );
+  return (await fn(data)).data;
+}

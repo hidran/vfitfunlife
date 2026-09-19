@@ -66,6 +66,8 @@ export const enMessages: Messages = {
   'admin.applications.empty': 'No pending applications.',
   'admin.applications.verify': 'Verify',
   'admin.applications.reject': 'Reject',
+  'admin.applications.superadminOnly': 'Only a superadmin can verify or reject applications.',
+  'admin.applications.error': 'Could not save the decision. Try again.',
 
   // ─── Admin: SeedDataPanel ─────────────────────────────────────────────
   'admin.seed.title': 'Demo Data Management',
@@ -1390,6 +1392,12 @@ export const enMessages: Messages = {
   'profile.edit.cancellationPolicyLabel': 'Cancellation policy',
   'profile.edit.cancellationPolicyPlaceholder': 'Describe your cancellation policy...',
   'profile.edit.managePortfolioAndServices': 'Manage portfolio and services',
+  'profile.edit.categories.label': 'Service categories',
+  'profile.edit.categories.pendingHint': 'The categories you are applying for. You can change them until your application is reviewed.',
+  'profile.edit.categories.verifiedHint': 'Your categories come from the services you offer. Activate a service to appear in its category.',
+  'profile.edit.categories.none': 'You have no services yet.',
+  'profile.edit.categories.draft': 'draft',
+  'profile.edit.categories.errorMinOne': 'Select at least one category',
   'profile.edit.validation.fullNameRequired': 'Full name is required',
   'profile.edit.validation.fullNameMinLength': 'Full name must be at least 2 characters',
   'profile.edit.validation.phoneInvalid': 'Invalid phone number',

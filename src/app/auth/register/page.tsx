@@ -47,7 +47,7 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [wantsProvider, setWantsProvider] = useState(false);
-  const [providerCategories, setProviderCategories] = useState<string[]>([]);
+  const [providerCategoryIds, setProviderCategoryIds] = useState<string[]>([]);
 
   const handleSocialSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,7 +68,7 @@ export default function RegisterPage() {
       return;
     }
 
-    if (wantsProvider && providerCategories.length === 0) {
+    if (wantsProvider && providerCategoryIds.length === 0) {
       setError(t('provider.optIn.errorNoCategory'));
       return;
     }
@@ -85,7 +85,7 @@ export default function RegisterPage() {
       });
 
       if (wantsProvider) {
-        await submitProviderApplication(firebaseUser.uid, { fullName: fullName.trim(), categories: providerCategories });
+        await submitProviderApplication(firebaseUser.uid, { fullName: fullName.trim(), categoryIds: providerCategoryIds });
       }
 
       // Refresh user profile in store
@@ -132,7 +132,7 @@ export default function RegisterPage() {
       return;
     }
 
-    if (wantsProvider && providerCategories.length === 0) {
+    if (wantsProvider && providerCategoryIds.length === 0) {
       setError(t('provider.optIn.errorNoCategory'));
       return;
     }
@@ -141,14 +141,17 @@ export default function RegisterPage() {
 
     try {
       // Register with email/password
-      await registerWithEmail(email.trim(), password, fullName.trim(), locale);
+      await registerWithEmail(email.trim(), password, fullName.trim(), locale, {
+        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
+        preferredSection,
+      });
 
       if (wantsProvider) {
         const uid = useAuthStore.getState().firebaseUser?.uid;
         if (!uid) {
           throw new Error('Registration user is not available');
         }
-        await submitProviderApplication(uid, { fullName: fullName.trim(), categories: providerCategories });
+        await submitProviderApplication(uid, { fullName: fullName.trim(), categoryIds: providerCategoryIds });
         // Keep the in-memory profile in sync so the professional state is
         // visible immediately after permissions/home navigation.
         await refreshUserProfile();
@@ -434,12 +437,13 @@ export default function RegisterPage() {
 
             {/* Date of Birth */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-text-secondary">
+              <label htmlFor="register-date-of-birth" className="text-sm font-medium text-text-secondary">
                 {t('auth.register.field.dateOfBirthOptional')}
               </label>
               <div className="relative">
                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-tertiary" />
                 <Input
+                  id="register-date-of-birth"
                   type="date"
                   value={dateOfBirth}
                   onChange={(e) => setDateOfBirth(e.target.value)}
@@ -480,8 +484,8 @@ export default function RegisterPage() {
             <ProviderOptInField
               enabled={wantsProvider}
               onToggle={setWantsProvider}
-              categories={providerCategories}
-              onChangeCategories={setProviderCategories}
+              categoryIds={providerCategoryIds}
+              onChangeCategoryIds={setProviderCategoryIds}
             />
 
             {/* Terms & Privacy */}
@@ -640,8 +644,8 @@ export default function RegisterPage() {
           <ProviderOptInField
             enabled={wantsProvider}
             onToggle={setWantsProvider}
-            categories={providerCategories}
-            onChangeCategories={setProviderCategories}
+            categoryIds={providerCategoryIds}
+            onChangeCategoryIds={setProviderCategoryIds}
           />
 
           {/* Terms & Privacy */}

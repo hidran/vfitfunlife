@@ -24,6 +24,8 @@ export * from "./recipes/generateRecipes";
 export * from "./recipes/purgeLegacyNutrition";
 export * from "./providers/onServiceWrite";
 export * from "./providers/backfillProviderStatus";
+export * from "./providers/decideProviderApplication";
+export * from "./providers/backfillSelfRegisteredProviders";
 export * from "./users/migrateAudit";
 export * from "./categories/seedCategories";
 export * from "./categories/backfillCategories";

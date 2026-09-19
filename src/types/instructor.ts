@@ -28,6 +28,11 @@ export interface Provider {
    * orphaned every provider carrying the old string.
    */
   categoryIds?: string[];
+  /**
+   * Leaf category ids an applicant asked to offer at signup, for the admin to review. On
+   * approval each becomes an inactive draft service; `categoryIds` follows once active.
+   */
+  requestedCategoryIds?: string[];
   applicationStatus?: ProviderApplicationStatus;
   isActive: boolean;
   specialties: string[];

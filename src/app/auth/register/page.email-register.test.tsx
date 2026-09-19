@@ -13,9 +13,10 @@ vi.mock('next/navigation', () => ({
 // Mock useAuthStore
 const mockRegisterWithEmail = vi.fn();
 const mockClearError = vi.fn();
+const mockSubmitProviderApplication = vi.fn();
 
-vi.mock('@/stores/authStore', () => ({
-  useAuthStore: (selector?: (state: unknown) => unknown) => {
+vi.mock('@/stores/authStore', () => {
+  const useAuthStore = (selector?: (state: unknown) => unknown) => {
     const state = {
       firebaseUser: null,
       refreshUserProfile: vi.fn(),
@@ -25,7 +26,14 @@ vi.mock('@/stores/authStore', () => ({
       isLoading: false,
     };
     return selector ? selector(state) : state;
-  },
+  };
+  // The page reads the freshly-created user imperatively after registerWithEmail.
+  useAuthStore.getState = () => ({ firebaseUser: { uid: 'new-uid' }, error: null });
+  return { useAuthStore };
+});
+
+vi.mock('@/lib/firebase/providerApplication', () => ({
+  submitProviderApplication: (...args: unknown[]) => mockSubmitProviderApplication(...args),
 }));
 
 describe('RegisterPage Email Registration', () => {
@@ -110,6 +118,11 @@ describe('RegisterPage Email Registration', () => {
       target: { value: 'StrongPassword123!' },
     });
 
+    fireEvent.change(screen.getByLabelText(/Data di nascita/i), {
+      target: { value: '1990-05-12' },
+    });
+    fireEvent.click(screen.getByText('VLife'));
+
     // Accept terms
     fireEvent.click(screen.getByLabelText(/Termini/i));
 
@@ -121,7 +134,8 @@ describe('RegisterPage Email Registration', () => {
         'test@example.com',
         'StrongPassword123!',
         'Test User',
-        'it'
+        'it',
+        { dateOfBirth: new Date('1990-05-12'), preferredSection: 'life' }
       );
     });
   });
@@ -150,6 +164,38 @@ describe('RegisterPage Email Registration', () => {
       expect(screen.getByText('Seleziona il tipo di servizio che offri.')).toBeInTheDocument();
     });
     expect(mockRegisterWithEmail).not.toHaveBeenCalled();
+  });
+
+  it('submits the picked categories as taxonomy ids, not display names', async () => {
+    mockRegisterWithEmail.mockResolvedValueOnce(undefined);
+    mockSubmitProviderApplication.mockResolvedValueOnce(undefined);
+
+    render(<RegisterPage />);
+
+    fireEvent.click(screen.getByText('Email e Password'));
+    fireEvent.change(screen.getByLabelText(/Nome completo/i), {
+      target: { value: 'Professional User' },
+    });
+    fireEvent.change(screen.getByLabelText(/^Email/i), {
+      target: { value: 'professional@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText(/^Password/i), {
+      target: { value: 'StrongPassword123!' },
+    });
+    fireEvent.change(screen.getByLabelText(/Conferma Password/i), {
+      target: { value: 'StrongPassword123!' },
+    });
+    fireEvent.click(screen.getByRole('checkbox', { name: /professionista/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Personal Training/i }));
+    fireEvent.click(screen.getByLabelText(/Termini/i));
+    fireEvent.click(screen.getByRole('button', { name: /Crea account/i }));
+
+    await waitFor(() => {
+      expect(mockSubmitProviderApplication).toHaveBeenCalledWith('new-uid', {
+        fullName: 'Professional User',
+        categoryIds: ['personal_training'],
+      });
+    });
   });
 
   it('requires all mandatory fields', async () => {

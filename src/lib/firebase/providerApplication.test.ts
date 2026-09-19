@@ -4,15 +4,12 @@ vi.mock('./config', () => ({ db: {} }));
 vi.mock('firebase/firestore', () => ({
   doc: vi.fn((_db: unknown, col: string, id: string) => ({ col, id })),
   writeBatch: vi.fn(),
+  updateDoc: vi.fn(),
   serverTimestamp: vi.fn(() => 'TS'),
 }));
 
-import { writeBatch } from 'firebase/firestore';
-import {
-  submitProviderApplication,
-  updateProviderApplicationCategories,
-  setProviderApplicationStatus,
-} from './providerApplication';
+import { writeBatch, updateDoc } from 'firebase/firestore';
+import { submitProviderApplication, updateRequestedCategories } from './providerApplication';
 
 function makeBatch() {
   return { set: vi.fn(), update: vi.fn(), commit: vi.fn().mockResolvedValue(undefined) };
@@ -21,78 +18,47 @@ function makeBatch() {
 beforeEach(() => vi.clearAllMocks());
 
 describe('submitProviderApplication', () => {
-  it('creates a pending unverified instructor doc and sets user providerStatus=pending', async () => {
+  it('stores the requested category ids on a pending unverified instructor doc', async () => {
     const batch = makeBatch();
     vi.mocked(writeBatch).mockReturnValue(batch as never);
 
-    await submitProviderApplication('u1', { fullName: 'Mia Rossi', categories: ['Yoga', 'Pilates'] });
+    await submitProviderApplication('u1', { fullName: 'Mia Rossi', categoryIds: ['yoga', 'pilates'] });
 
     expect(batch.set).toHaveBeenCalledWith(
       { col: 'instructors', id: 'u1' },
       expect.objectContaining({
         uid: 'u1',
         applicationStatus: 'pending',
-        providerProfile: expect.objectContaining({ isVerified: false, specialties: ['Yoga', 'Pilates'] }),
+        requestedCategoryIds: ['yoga', 'pilates'],
+        providerProfile: expect.objectContaining({ isVerified: false }),
       }),
       { merge: true }
     );
     expect(batch.update).toHaveBeenCalledWith(
       { col: 'users', id: 'u1' },
-      expect.objectContaining({ providerStatus: 'pending' })
+      { providerStatus: 'pending', updatedAt: 'TS' }
     );
     expect(batch.commit).toHaveBeenCalled();
   });
-});
 
-describe('updateProviderApplicationCategories', () => {
-  it('mirrors category changes to the instructor and user profiles', async () => {
+  it('no longer writes display names into the legacy specialties field', async () => {
     const batch = makeBatch();
     vi.mocked(writeBatch).mockReturnValue(batch as never);
 
-    await updateProviderApplicationCategories('u1', ['Yoga', 'Pilates']);
+    await submitProviderApplication('u1', { fullName: 'Mia Rossi', categoryIds: ['yoga'] });
 
-    expect(batch.update).toHaveBeenCalledWith(
-      { col: 'instructors', id: 'u1' },
-      expect.objectContaining({ 'providerProfile.specialties': ['Yoga', 'Pilates'] })
-    );
-    expect(batch.update).toHaveBeenCalledWith(
-      { col: 'users', id: 'u1' },
-      expect.objectContaining({ 'providerProfile.specialties': ['Yoga', 'Pilates'] })
-    );
-    expect(batch.commit).toHaveBeenCalled();
+    const instructorDoc = batch.set.mock.calls[0][1] as { providerProfile: Record<string, unknown> };
+    expect(instructorDoc.providerProfile).not.toHaveProperty('specialties');
   });
 });
 
-describe('setProviderApplicationStatus', () => {
-  it('verifying sets isVerified true + both statuses verified', async () => {
-    const batch = makeBatch();
-    vi.mocked(writeBatch).mockReturnValue(batch as never);
+describe('updateRequestedCategories', () => {
+  it('updates the requested category ids on the instructor doc', async () => {
+    await updateRequestedCategories('u1', ['boxing']);
 
-    await setProviderApplicationStatus('u1', 'verified');
-
-    expect(batch.update).toHaveBeenCalledWith(
+    expect(updateDoc).toHaveBeenCalledWith(
       { col: 'instructors', id: 'u1' },
-      expect.objectContaining({ applicationStatus: 'verified', 'providerProfile.isVerified': true })
-    );
-    expect(batch.update).toHaveBeenCalledWith(
-      { col: 'users', id: 'u1' },
-      expect.objectContaining({ providerStatus: 'verified' })
-    );
-  });
-
-  it('rejecting sets rejected and leaves isVerified false', async () => {
-    const batch = makeBatch();
-    vi.mocked(writeBatch).mockReturnValue(batch as never);
-
-    await setProviderApplicationStatus('u1', 'rejected');
-
-    expect(batch.update).toHaveBeenCalledWith(
-      { col: 'instructors', id: 'u1' },
-      expect.objectContaining({ applicationStatus: 'rejected', 'providerProfile.isVerified': false })
-    );
-    expect(batch.update).toHaveBeenCalledWith(
-      { col: 'users', id: 'u1' },
-      expect.objectContaining({ providerStatus: 'rejected' })
+      { requestedCategoryIds: ['boxing'], updatedAt: 'TS' }
     );
   });
 });

@@ -3,12 +3,11 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Briefcase, Clock, CheckCircle, XCircle } from 'lucide-react';
-import { useServiceCategories } from '@/hooks/useServiceCategories';
 import { providerCardState } from '@/lib/providerStatus';
 import { useProviderStatus, useSubmitProviderApplication } from '@/hooks/useProviderApplication';
 import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { CategoryLeafPicker } from '@/components/provider/CategoryLeafPicker';
 import { useI18n } from '@/hooks/useI18n';
 
 export function BecomeProviderCard() {
@@ -17,14 +16,8 @@ export function BecomeProviderCard() {
   const status = useProviderStatus();
   const variant = providerCardState(status);
   const submit = useSubmitProviderApplication();
-  const categories = useServiceCategories();
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
-
-  const toggle = (name: string) =>
-    setSelected((prev) =>
-      prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]
-    );
 
   // The verified card is a way IN to the provider area, not an application CTA, so it is
   // checked before the role guard below. Guarding first hid it from anyone whose role had
@@ -46,7 +39,7 @@ export function BecomeProviderCard() {
   }
 
   // Only customers can apply to become a provider. Admins and superadmins don't see the
-  // CTA. (Applicants keep role 'customer' — only providerStatus changes — so their
+  // CTA. (Applicants keep role 'customer' until approval promotes them, so their
   // pending/rejected states still render correctly.)
   if (role !== 'customer') return null;
 
@@ -89,23 +82,7 @@ export function BecomeProviderCard() {
       {open && (
         <div className="mt-4">
           <p className="text-sm text-content-muted mb-2">{t('provider.optIn.pickServices')}</p>
-          <div className="flex flex-wrap gap-2">
-            {categories.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => toggle(c.name)}
-                className={cn(
-                  'px-3 py-2 rounded-lg text-sm border transition-colors',
-                  selected.includes(c.name)
-                    ? 'border-vfit-primary bg-vfit-primary/10 text-white'
-                    : 'border-hairline text-content-muted hover:bg-surface-2'
-                )}
-              >
-                <span className="mr-1">{c.icon}</span>{c.name}
-              </button>
-            ))}
-          </div>
+          <CategoryLeafPicker value={selected} onChange={setSelected} />
           {submit.isError && (
             <p className="text-sm text-[#EF4444] mt-2">{t('provider.card.error')}</p>
           )}

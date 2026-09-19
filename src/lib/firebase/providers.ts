@@ -57,6 +57,7 @@ function flattenProvider(id: string, data: Record<string, unknown>): Provider {
     partyType: (data.partyType as string) ?? undefined,
     lowestPrice: typeof data.lowestPrice === 'number' ? (data.lowestPrice as number) : undefined,
     categoryIds: (data.categoryIds as string[]) ?? undefined,
+    requestedCategoryIds: (data.requestedCategoryIds as string[]) ?? undefined,
   };
 }
 

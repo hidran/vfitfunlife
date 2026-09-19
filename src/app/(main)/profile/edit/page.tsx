@@ -41,9 +41,12 @@ import { SocialLinksForm } from '@/components/profile/SocialLinksForm';
 import { NotificationSettingsForm } from '@/components/profile/NotificationSettingsForm';
 import { PrivacySettingsForm } from '@/components/profile/PrivacySettingsForm';
 import { defaultNotificationSettings, defaultPrivacySettings } from '@/types/profile';
-import { useServiceCategories } from '@/hooks/useServiceCategories';
+import { useServiceCategoryMap } from '@/hooks/useServiceCategories';
 import { useProviderStatus } from '@/hooks/useProviderApplication';
-import { updateProviderApplicationCategories } from '@/lib/firebase/providerApplication';
+import { useProvider, useProviderServices } from '@/hooks/useProviders';
+import { updateRequestedCategories } from '@/lib/firebase/providerApplication';
+import { canAccessProviderArea } from '@/lib/providerStatus';
+import { CategoryLeafPicker } from '@/components/provider/CategoryLeafPicker';
 
 // Form validation
 interface FormErrors {
@@ -54,7 +57,7 @@ interface FormErrors {
   professionalBio?: string;
   licenseNumber?: string;
   yearsOfExperience?: string;
-  specialties?: string;
+  categories?: string;
 }
 
 const AVAILABLE_LANGUAGES: { code: string; labelKey: MessageKey; flag: string }[] = [
@@ -108,7 +111,7 @@ export default function EditProfilePage() {
   const { t } = useI18n();
   const { user, firebaseUser, refreshUserProfile, isLoading } = useAuthStore();
   const providerStatus = useProviderStatus();
-  const serviceCategories = useServiceCategories();
+  const categoryMap = useServiceCategoryMap();
   const [isSaving, setIsSaving] = useState(false);
   const [isProviderUser, setIsProviderUser] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
@@ -116,7 +119,16 @@ export default function EditProfilePage() {
   const [activeTab, setActiveTab] = useState<TabType>('personal');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
-  const canEditProfessional = isProviderUser || providerStatus === 'pending';
+  // providerStatus is the source of truth for provider-ness: a self-registered provider
+  // approved before role promotion existed still had role 'customer', and gating on role
+  // alone hid this whole tab from them the moment they were verified.
+  const canEditProfessional = isProviderUser || canAccessProviderArea(providerStatus);
+  const isPendingApplicant = providerStatus === 'pending';
+  const { data: instructor } = useProvider(canEditProfessional ? user?.id : undefined);
+  const { data: services = [] } = useProviderServices(
+    canEditProfessional && !isPendingApplicant ? user?.id : undefined
+  );
+  const [requestedCategoryIds, setRequestedCategoryIds] = useState<string[]>([]);
 
   // Personal Info State
   const [formData, setFormData] = useState({
@@ -139,7 +151,6 @@ export default function EditProfilePage() {
   // Professional Info State
   const [professionalData, setProfessionalData] = useState({
     professionalBio: '',
-    specialties: [] as string[],
     yearsOfExperience: 0,
     languages: [] as string[],
     licenseNumber: '',
@@ -166,7 +177,6 @@ export default function EditProfilePage() {
       if (user.providerProfile) {
         setProfessionalData({
           professionalBio: user.providerProfile.professionalBio || '',
-          specialties: user.providerProfile.specialties || [],
           yearsOfExperience: user.providerProfile.yearsOfExperience || 0,
           languages: user.providerProfile.languages || [],
           licenseNumber: user.providerProfile.licenseNumber || '',
@@ -175,6 +185,10 @@ export default function EditProfilePage() {
       }
     }
   }, [user]);
+
+  useEffect(() => {
+    setRequestedCategoryIds(instructor?.requestedCategoryIds ?? []);
+  }, [instructor?.requestedCategoryIds]);
 
   // Check if user is a provider
   useEffect(() => {
@@ -229,8 +243,8 @@ export default function EditProfilePage() {
       newErrors.professionalBio = t('profile.edit.validation.professionalBioMax');
     }
 
-    if (canEditProfessional && professionalData.specialties.length === 0) {
-      newErrors.specialties = t('profile.specialties.error.minOne');
+    if (isPendingApplicant && requestedCategoryIds.length === 0) {
+      newErrors.categories = t('profile.edit.categories.errorMinOne');
     }
 
     setErrors(newErrors);
@@ -276,7 +290,9 @@ export default function EditProfilePage() {
             cancellationPolicy: professionalData.cancellationPolicy || null,
           });
         }
-        await updateProviderApplicationCategories(user.id, professionalData.specialties);
+        if (isPendingApplicant) {
+          await updateRequestedCategories(user.id, requestedCategoryIds);
+        }
       }
 
       await refreshUserProfile();
@@ -445,7 +461,7 @@ export default function EditProfilePage() {
         </div>
       )}
 
-      <div className="p-4 pb-32">
+      <div className="p-4 pb-52">
         {/* Photo Upload */}
         <div className="flex justify-center mb-6">
           <ProfilePhotoUploader
@@ -684,46 +700,56 @@ export default function EditProfilePage() {
               </p>
             </div>
 
-            {/* Service categories / specialties */}
+            {/* Service categories */}
             <div>
               <label className="block text-sm font-medium text-text-tertiary mb-2">
-                {t('profile.edit.specialtiesLabel')}
+                {t('profile.edit.categories.label')}
               </label>
-              <p className="text-xs text-text-tertiary mb-3">
-                {t('profile.specialties.emptyHint')}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {serviceCategories.map((category) => {
-                  const selected = professionalData.specialties.includes(category.name);
-                  return (
-                    <button
-                      key={category.id}
-                      type="button"
-                      onClick={() => {
-                        setProfessionalData((prev) => ({
-                          ...prev,
-                          specialties: selected
-                            ? prev.specialties.filter((name) => name !== category.name)
-                            : [...prev.specialties, category.name],
-                        }));
-                        setHasUnsavedChanges(true);
-                        setErrors((prev) => ({ ...prev, specialties: undefined }));
-                      }}
-                      className={cn(
-                        'rounded-lg border px-3 py-2 text-sm transition-colors',
-                        selected
-                          ? 'border-vfit-primary bg-vfit-primary/10 text-white'
-                          : 'border-hairline text-content-muted hover:bg-surface-2'
-                      )}
-                    >
-                      <span className="mr-1">{category.icon}</span>
-                      {category.name}
-                    </button>
-                  );
-                })}
-              </div>
-              {errors.specialties && (
-                <p className="mt-2 text-sm text-error">{errors.specialties}</p>
+              {isPendingApplicant ? (
+                <>
+                  <p className="text-xs text-text-tertiary mb-3">{t('profile.edit.categories.pendingHint')}</p>
+                  <CategoryLeafPicker
+                    value={requestedCategoryIds}
+                    onChange={(ids) => {
+                      setRequestedCategoryIds(ids);
+                      setHasUnsavedChanges(true);
+                      setErrors((prev) => ({ ...prev, categories: undefined }));
+                    }}
+                  />
+                </>
+              ) : (
+                <>
+                  <p className="text-xs text-text-tertiary mb-3">{t('profile.edit.categories.verifiedHint')}</p>
+                  {services.length === 0 ? (
+                    <p className="text-sm text-content-muted mb-3">{t('profile.edit.categories.none')}</p>
+                  ) : (
+                    <ul className="flex flex-wrap gap-2 mb-3">
+                      {services.map((service) => {
+                        const category = service.categoryId ? categoryMap.get(service.categoryId) : undefined;
+                        return (
+                          <li
+                            key={service.id}
+                            className="rounded-lg border border-hairline px-3 py-2 text-sm text-content"
+                          >
+                            {category && <span className="mr-1" aria-hidden>{category.icon}</span>}
+                            {category?.name ?? service.name}
+                            {!service.isActive && (
+                              <span className="ml-2 rounded bg-surface-2 px-1.5 py-0.5 text-xs text-content-muted">
+                                {t('profile.edit.categories.draft')}
+                              </span>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                  <Button variant="outline" fullWidth onClick={() => router.push('/provider/services')}>
+                    {t('profile.edit.managePortfolioAndServices')}
+                  </Button>
+                </>
+              )}
+              {errors.categories && (
+                <p className="mt-2 text-sm text-error">{errors.categories}</p>
               )}
             </div>
 
@@ -805,16 +831,6 @@ export default function EditProfilePage() {
               </p>
             </div>
 
-            {/* Provider Actions */}
-            <div className="pt-4 border-t border-hairline">
-              <Button
-                variant="outline"
-                fullWidth
-                onClick={() => router.push('/profile')}
-              >
-                {t('profile.edit.managePortfolioAndServices')}
-              </Button>
-            </div>
           </div>
         )}
 
@@ -843,8 +859,10 @@ export default function EditProfilePage() {
         )}
       </div>
 
-      {/* Floating Save Button */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background-dark via-background-dark to-transparent">
+      {/* Floating Save Button — sits above the fixed TabBar (h-16 + safe area); at bottom-0 the
+          TabBar covered it and swallowed taps, so profile edits could not be saved. pr-20 leaves
+          room for the floating assistant button, which is fixed at the same height. */}
+      <div className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] left-0 right-0 z-40 p-4 pr-20 bg-gradient-to-t from-background-dark via-background-dark to-transparent">
         <Button
           variant="primary"
           size="lg"

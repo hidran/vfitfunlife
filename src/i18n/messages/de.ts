@@ -66,6 +66,8 @@ export const deMessages: Messages = {
   'admin.applications.empty': 'Keine ausstehenden Bewerbungen.',
   'admin.applications.verify': 'Verifizieren',
   'admin.applications.reject': 'Ablehnen',
+  'admin.applications.superadminOnly': 'Nur ein Superadmin kann Bewerbungen prüfen oder ablehnen.',
+  'admin.applications.error': 'Die Entscheidung konnte nicht gespeichert werden. Bitte erneut versuchen.',
 
   // ─── Admin: SeedDataPanel ─────────────────────────────────────────────
   'admin.seed.title': 'Demo-Datenverwaltung',
@@ -1232,6 +1234,12 @@ export const deMessages: Messages = {
   'profile.edit.cancellationPolicyLabel': 'Stornierungsrichtlinie',
   'profile.edit.cancellationPolicyPlaceholder': 'Beschreibe deine Stornierungsrichtlinie...',
   'profile.edit.managePortfolioAndServices': 'Portfolio und Services verwalten',
+  'profile.edit.categories.label': 'Leistungskategorien',
+  'profile.edit.categories.pendingHint': 'Die Kategorien, für die du dich bewirbst. Du kannst sie ändern, bis deine Bewerbung geprüft wurde.',
+  'profile.edit.categories.verifiedHint': 'Deine Kategorien ergeben sich aus den Leistungen, die du anbietest. Aktiviere eine Leistung, um in ihrer Kategorie zu erscheinen.',
+  'profile.edit.categories.none': 'Du hast noch keine Leistungen.',
+  'profile.edit.categories.draft': 'Entwurf',
+  'profile.edit.categories.errorMinOne': 'Wähle mindestens eine Kategorie',
   'profile.edit.validation.fullNameRequired': 'Vollständiger Name ist erforderlich',
   'profile.edit.validation.fullNameMinLength':
     'Der vollständige Name muss mindestens 2 Zeichen haben',

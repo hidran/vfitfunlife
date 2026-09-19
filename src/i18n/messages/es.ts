@@ -66,6 +66,8 @@ export const esMessages: Messages = {
   'admin.applications.empty': 'No hay solicitudes pendientes.',
   'admin.applications.verify': 'Verificar',
   'admin.applications.reject': 'Rechazar',
+  'admin.applications.superadminOnly': 'Solo un superadmin puede verificar o rechazar solicitudes.',
+  'admin.applications.error': 'No se pudo guardar la decisión. Inténtalo de nuevo.',
 
   // ─── Admin: SeedDataPanel ─────────────────────────────────────────────
   'admin.seed.title': 'Gestión de datos demo',
@@ -1227,6 +1229,12 @@ export const esMessages: Messages = {
   'profile.edit.cancellationPolicyLabel': 'Politica de cancelacion',
   'profile.edit.cancellationPolicyPlaceholder': 'Describe tu politica de cancelacion...',
   'profile.edit.managePortfolioAndServices': 'Gestionar portfolio y servicios',
+  'profile.edit.categories.label': 'Categorías de servicio',
+  'profile.edit.categories.pendingHint': 'Las categorías a las que te postulas. Puedes cambiarlas hasta que se revise tu solicitud.',
+  'profile.edit.categories.verifiedHint': 'Tus categorías provienen de los servicios que ofreces. Activa un servicio para aparecer en su categoría.',
+  'profile.edit.categories.none': 'Todavía no tienes servicios.',
+  'profile.edit.categories.draft': 'borrador',
+  'profile.edit.categories.errorMinOne': 'Selecciona al menos una categoría',
   'profile.edit.validation.fullNameRequired': 'El nombre completo es obligatorio',
   'profile.edit.validation.fullNameMinLength': 'El nombre completo debe tener al menos 2 caracteres',
   'profile.edit.validation.phoneInvalid': 'Numero de telefono no valido',
