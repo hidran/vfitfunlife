@@ -227,6 +227,7 @@ export const frMessages: Messages = {
   'admin.users.filter.allStatus': 'Tous les statuts',
   'admin.users.filter.active': 'Actifs',
   'admin.users.filter.suspended': 'Suspendus',
+  'admin.users.filter.hidden': 'Démo et supprimés',
   'admin.users.search': 'Rechercher des utilisateurs par nom, e-mail ou téléphone...',
   'admin.users.selected': '{{count}} utilisateur(s) sélectionné(s)',
   'admin.users.bulkActivate': 'Activer',

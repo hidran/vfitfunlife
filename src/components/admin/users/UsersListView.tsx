@@ -286,6 +286,7 @@ export function UsersListView() {
               { value: "all", label: t('admin.users.filter.allStatus') },
               { value: "active", label: t('admin.users.filter.active') },
               { value: "suspended", label: t('admin.users.filter.suspended') },
+              { value: "hidden", label: t('admin.users.filter.hidden') },
             ],
             value: filters.status || "all",
             onChange: handleStatusChange,

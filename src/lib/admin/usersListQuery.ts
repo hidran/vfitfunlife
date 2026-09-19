@@ -9,7 +9,7 @@ export const DEFAULT_USER_FILTERS: UserFilters = {
 };
 
 const ROLES = ['all', 'superadmin', 'admin', 'provider', 'customer'] as const;
-const STATUSES = ['all', 'active', 'suspended'] as const;
+const STATUSES = ['all', 'active', 'suspended', 'hidden'] as const;
 
 /** sessionStorage key holding the list's last query, so leaving a user's page returns to it. */
 export const USERS_LIST_QUERY_KEY = 'admin.users.listQuery';

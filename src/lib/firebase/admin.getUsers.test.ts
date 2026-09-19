@@ -53,4 +53,17 @@ describe('getUsers', () => {
     expect((await getUsers({ status: 'suspended' })).users.map((u) => u.id)).toEqual(['banned']);
     expect((await getUsers({ status: 'active' })).users.map((u) => u.id)).toEqual(['alive']);
   });
+
+  it('shows only hidden accounts (soft-deleted or seeded demo) under the hidden status', async () => {
+    vi.mocked(getDocs).mockResolvedValue(
+      snapshotOf({
+        alive: { fullName: 'Anna', email: 'anna@example.com' },
+        gone: { fullName: 'Gone', email: 'gone@example.com', isDeleted: true },
+        customer_1_0: { fullName: 'Seed', email: 'seed@demo.vfit' },
+      })
+    );
+
+    expect((await getUsers({ status: 'hidden' })).users.map((u) => u.id)).toEqual(['gone', 'customer_1_0']);
+    expect((await getUsers({ status: 'all' })).users.map((u) => u.id)).toEqual(['alive']);
+  });
 });

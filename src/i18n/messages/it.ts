@@ -222,6 +222,7 @@ export const itMessages = {
   'admin.users.filter.allStatus': 'Tutti gli stati',
   'admin.users.filter.active': 'Attivi',
   'admin.users.filter.suspended': 'Sospesi',
+  'admin.users.filter.hidden': 'Demo ed eliminati',
   'admin.users.search': 'Cerca utenti per nome, email o telefono...',
   'admin.users.selected': '{{count}} utente/i selezionati',
   'admin.users.bulkActivate': 'Attiva',

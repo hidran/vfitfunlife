@@ -18,4 +18,9 @@ describe('users list query', () => {
 
     expect(filters).toEqual(DEFAULT_USER_FILTERS);
   });
+
+  it('round-trips the hidden status', () => {
+    const filters = { ...DEFAULT_USER_FILTERS, status: 'hidden' as const };
+    expect(filtersFromParams(new URLSearchParams(queryFromFilters(filters)))).toEqual(filters);
+  });
 });

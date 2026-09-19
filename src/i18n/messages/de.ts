@@ -225,6 +225,7 @@ export const deMessages: Messages = {
   'admin.users.filter.allStatus': 'Alle Status',
   'admin.users.filter.active': 'Aktiv',
   'admin.users.filter.suspended': 'Gesperrt',
+  'admin.users.filter.hidden': 'Demo & gelöscht',
   'admin.users.search': 'Benutzer nach Name, E-Mail oder Telefon suchen...',
   'admin.users.selected': '{{count}} Benutzer ausgewählt',
   'admin.users.bulkActivate': 'Aktivieren',

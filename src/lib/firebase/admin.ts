@@ -194,10 +194,10 @@ export async function getUsers(
     const q = query(collection(db, USERS_COLLECTION), ...constraints);
     const snapshot = await getDocs(q);
 
-    // Bulk delete is a soft delete, so without this a deleted user stayed in the list,
-    // still badged "active".
+    // "hidden" is the only way to reach these accounts — which the bulk delete needs.
+    const wantHidden = filters.status === "hidden";
     let users = snapshot.docs
-      .filter((doc) => !isHiddenAccount(doc.id, doc.data()))
+      .filter((doc) => isHiddenAccount(doc.id, doc.data()) === wantHidden)
       .map((doc) => ({
         id: doc.id,
         uid: doc.id,

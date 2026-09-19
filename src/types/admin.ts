@@ -37,7 +37,8 @@ export interface ActivityItem {
 // User Filters
 export interface UserFilters {
   role?: UserRole | "all";
-  status?: "active" | "suspended" | "all";
+  /** hidden = soft-deleted or seeded demo accounts, excluded from every other status. */
+  status?: "active" | "suspended" | "hidden" | "all";
   search?: string;
   dateFrom?: Date;
   dateTo?: Date;

@@ -224,6 +224,7 @@ export const enMessages: Messages = {
   'admin.users.filter.allStatus': 'All Status',
   'admin.users.filter.active': 'Active',
   'admin.users.filter.suspended': 'Suspended',
+  'admin.users.filter.hidden': 'Demo & deleted',
   'admin.users.search': 'Search users by name, email, or phone...',
   'admin.users.selected': '{{count}} user(s) selected',
   'admin.users.bulkActivate': 'Activate',
