@@ -26,6 +26,7 @@ export * from "./providers/onServiceWrite";
 export * from "./providers/backfillProviderStatus";
 export * from "./providers/decideProviderApplication";
 export * from "./providers/backfillSelfRegisteredProviders";
+export * from "./availability";
 export * from "./users/migrateAudit";
 export * from "./categories/seedCategories";
 export * from "./categories/backfillCategories";
