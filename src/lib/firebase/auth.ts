@@ -579,11 +579,15 @@ export async function updateProviderProfile(
 
   const userData = userDoc.data();
   const currentProviderProfile = userData.providerProfile || {};
+  // Firestore rejects `undefined` anywhere in a map, and Partial<> lets callers pass it.
+  const changes = Object.fromEntries(
+    Object.entries(data).filter(([, value]) => value !== undefined)
+  );
 
   await updateDoc(userRef, {
     providerProfile: {
       ...currentProviderProfile,
-      ...data,
+      ...changes,
     },
     updatedAt: serverTimestamp(),
   });

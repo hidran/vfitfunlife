@@ -283,7 +283,7 @@ export default function EditProfilePage() {
       if (canEditProfessional) {
         if (isProviderUser) {
           await updateProviderProfile(user.id, {
-            professionalBio: professionalData.professionalBio || undefined,
+            professionalBio: professionalData.professionalBio,
             yearsOfExperience: professionalData.yearsOfExperience,
             languages: professionalData.languages,
             licenseNumber: professionalData.licenseNumber || null,
