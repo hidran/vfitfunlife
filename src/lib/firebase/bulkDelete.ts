@@ -32,7 +32,7 @@ export function toJobView(id: string, data: Record<string, unknown>): BulkDelete
     deleted: count('deleted'),
     skipped: count('skipped'),
     failed: count('failed'),
-    error: data.error as string | undefined,
+    ...(typeof data.error === 'string' ? { error: data.error } : {}),
   };
 }
 

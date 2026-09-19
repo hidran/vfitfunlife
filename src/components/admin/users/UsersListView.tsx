@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAdminStore } from "@/stores/adminStore";
@@ -34,6 +34,7 @@ import {
   findRunningBulkDelete,
   type BulkDeleteJobView,
 } from "@/lib/firebase/bulkDelete";
+import { hiddenAccountKind } from "@/lib/firebase/admin";
 import {
   User,
   UserPlus,
@@ -43,23 +44,6 @@ import {
   AlertCircle,
   X,
 } from "lucide-react";
-
-const DEMO_EMAIL_DOMAIN = "@demo.vfit";
-
-/**
- * Which extra status badge a hidden (soft-deleted or seeded demo) account gets in the
- * users table — distinct from `isHiddenAccount` in lib/firebase/admin.ts, which only needs
- * to decide whether an account is hidden at all, not which kind it is.
- */
-function hiddenAccountKind(user: AdminUser): "deleted" | "demo" | null {
-  const raw = user as unknown as { isDeleted?: boolean; deletedAt?: unknown };
-  if (raw.isDeleted === true || raw.deletedAt) return "deleted";
-  const email = typeof user.email === "string" ? user.email.toLowerCase() : "";
-  if (email.endsWith(DEMO_EMAIL_DOMAIN) || user.id.startsWith("provider_") || user.id.startsWith("customer_")) {
-    return "demo";
-  }
-  return null;
-}
 
 export function UsersListView() {
   const { t } = useI18n();
@@ -89,6 +73,16 @@ export function UsersListView() {
   // than reset explicitly, so starting or picking up a different job clears it for free.
   const [jobWatchErrorId, setJobWatchErrorId] = useState<string | null>(null);
 
+  // Same pattern: `job` can briefly belong to a stale jobId (an in-flight snapshot from the
+  // job just dismissed/replaced arriving after state moved on) — compare rather than reset.
+  const currentJob = job && job.id === jobId ? job : null;
+
+  // Selection can otherwise include ids that are no longer part of the current page/filter
+  // (e.g. a list refresh triggered by something other than a filter change) — this is what
+  // every bulk-delete-affecting read below uses instead of the raw `selectedIds`.
+  const usersById = useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
+  const visibleSelectedIds = selectedIds.filter((id) => usersById.has(id));
+
   useEffect(() => {
     fetchUsers(filters);
   }, [filters, fetchUsers]);
@@ -113,7 +107,9 @@ export function UsersListView() {
 
   // Refresh the list once, when the job finishes (including the terminal 'failed' status).
   const jobFinished =
-    job?.status === 'completed' || job?.status === 'completed_with_errors' || job?.status === 'failed';
+    currentJob?.status === 'completed' ||
+    currentJob?.status === 'completed_with_errors' ||
+    currentJob?.status === 'failed';
   useEffect(() => {
     if (jobFinished) fetchUsers(filters);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -231,7 +227,7 @@ export function UsersListView() {
       key: "status",
       header: t('admin.users.col.status'),
       cell: (user) => {
-        const hidden = hiddenAccountKind(user);
+        const hidden = hiddenAccountKind(user.id, user);
         return (
           <StatusBadge
             status={hidden ?? (user.isSuspended ? "suspended" : "active")}
@@ -389,9 +385,9 @@ export function UsersListView() {
         onClearFilters={handleClearFilters}
       />
 
-      {job && (
+      {currentJob && (
         <BulkDeleteJobBanner
-          job={job}
+          job={currentJob}
           onDismiss={() => { setJob(null); setJobId(null); }}
         />
       )}
@@ -414,10 +410,10 @@ export function UsersListView() {
       )}
 
       {/* Bulk Actions */}
-      {selectedIds.length > 0 && (
+      {visibleSelectedIds.length > 0 && (
         <div className="flex flex-wrap items-center gap-3 p-3 bg-[#00C9FF]/10 border border-[#00C9FF]/30 rounded-xl">
           <span className="text-sm text-content">
-            {t('admin.users.selected', { count: String(selectedIds.length) })}
+            {t('admin.users.selected', { count: String(visibleSelectedIds.length) })}
           </span>
           <div className="flex-1" />
           <Button
@@ -505,13 +501,13 @@ export function UsersListView() {
       <ConfirmDeleteDialog
         open={confirmBulkDelete}
         entityLabel={t('admin.users.bulkDeleteEntity')}
-        entityName={String(selectedIds.length)}
+        entityName={String(visibleSelectedIds.length)}
         onClose={() => setConfirmBulkDelete(false)}
         onConfirm={async (reason) => {
           // ConfirmDeleteDialog has no catch of its own: a throw here would be an unhandled
           // rejection with no message on screen. Report it in the page instead.
           try {
-            const id = await startBulkDelete([...selectedIds], reason);
+            const id = await startBulkDelete([...visibleSelectedIds], reason);
             setSelectedIds([]);
             // Clear the previous job's view before pointing at the new id, so the
             // refresh-on-finish effect and the dismiss button never act on stale state.
@@ -521,13 +517,19 @@ export function UsersListView() {
           } catch (err) {
             console.error('Bulk delete could not start:', err);
             const code = (err as { code?: string } | null | undefined)?.code;
-            setBulkDeleteError(
-              code === 'functions/failed-precondition'
-                ? t('admin.users.bulkDeleteJob.alreadyRunning')
-                : err instanceof Error
-                  ? err.message
-                  : String(err)
-            );
+            if (code === 'functions/failed-precondition') {
+              // One job per actor: the callable refused because one is already running.
+              // Look it up so the existing job's banner comes back instead of leaving the
+              // admin with only an error and no visibility into its progress.
+              setBulkDeleteError(t('admin.users.bulkDeleteJob.alreadyRunning'));
+              if (authUser?.id) {
+                findRunningBulkDelete(authUser.id)
+                  .then((runningId) => { if (runningId) setJobId((prev) => prev ?? runningId); })
+                  .catch((e) => console.error('Could not look up the already-running bulk delete:', e));
+              }
+            } else {
+              setBulkDeleteError(err instanceof Error ? err.message : String(err));
+            }
           }
         }}
       />

@@ -50,7 +50,13 @@ export function ConfirmDeleteDialog({ open, entityLabel, entityName, onClose, on
             <AlertTriangle className="h-5 w-5 text-red-400" />
             {t('admin.delete.title', { entity: entityLabel })}
           </h2>
-          <button type="button" onClick={handleClose} aria-label={t('common.close')} className="text-content-muted hover:text-content">
+          <button
+            type="button"
+            onClick={handleClose}
+            disabled={busy}
+            aria-label={t('common.close')}
+            className="touch-target flex items-center justify-center text-content-muted hover:text-content disabled:opacity-50"
+          >
             <X className="h-5 w-5" />
           </button>
         </div>

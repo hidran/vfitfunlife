@@ -13,7 +13,8 @@ vi.mock('firebase/firestore', () => ({
   getDocs: vi.fn(),
 }));
 
-import { toJobView } from './bulkDelete';
+import { onSnapshot } from 'firebase/firestore';
+import { toJobView, watchBulkDeleteJob } from './bulkDelete';
 
 describe('toJobView', () => {
   it('zeros every count when results is missing', () => {
@@ -60,5 +61,22 @@ describe('toJobView', () => {
     const view = toJobView('j3', { status: 'failed', total: 3, error: 'internal: boom' });
     expect(view.status).toBe('failed');
     expect(view.error).toBe('internal: boom');
+  });
+
+  it('ignores a non-string error field rather than surfacing something unreadable', () => {
+    const view = toJobView('j4', { status: 'running', error: { message: 'nope' } });
+    expect(view.error).toBeUndefined();
+  });
+});
+
+describe('watchBulkDeleteJob', () => {
+  it('passes onError through to onSnapshot, so a listener failure never looks like the job stopped', () => {
+    const onChange = vi.fn();
+    const onError = vi.fn();
+    vi.mocked(onSnapshot).mockReturnValue(vi.fn());
+
+    watchBulkDeleteJob('job1', onChange, onError);
+
+    expect(onSnapshot).toHaveBeenCalledWith(undefined, expect.any(Function), onError);
   });
 });

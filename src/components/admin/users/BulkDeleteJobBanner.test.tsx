@@ -45,4 +45,22 @@ describe('BulkDeleteJobBanner', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Chiudi' }));
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });
+
+  it('never shows a job error unless the status is the terminal failed', () => {
+    render(
+      <BulkDeleteJobBanner
+        job={{ id: 'j', status: 'completed_with_errors', total: 3, deleted: 2, skipped: 0, failed: 1, error: 'should not render' }}
+        onDismiss={vi.fn()}
+      />
+    );
+    expect(screen.queryByText('should not render')).toBeNull();
+  });
+
+  it('keeps the spinner neutral while running, even once some users have already failed', () => {
+    const { container } = render(
+      <BulkDeleteJobBanner job={{ id: 'j', status: 'running', total: 10, deleted: 2, skipped: 0, failed: 3 }} onDismiss={vi.fn()} />
+    );
+    const icon = container.querySelector('svg');
+    expect(icon?.getAttribute('class')).not.toContain('F59E0B');
+  });
 });

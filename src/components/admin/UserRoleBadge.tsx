@@ -57,7 +57,7 @@ const statusColors: Record<string, string> = {
   cancelled: "bg-[#EF4444]/20 text-[#EF4444] border-[#EF4444]/30",
   confirmed: "bg-[#00C9FF]/20 text-[#00C9FF] border-[#00C9FF]/30",
   failed: "bg-[#EF4444]/20 text-[#EF4444] border-[#EF4444]/30",
-  deleted: "bg-white/10 text-content-muted border-white/20",
+  deleted: "bg-surface-2 border-hairline text-content-muted",
   demo: "bg-[#7B61FF]/20 text-[#7B61FF] border-[#7B61FF]/30",
 };
 

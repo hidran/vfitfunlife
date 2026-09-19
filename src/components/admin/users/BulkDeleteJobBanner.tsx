@@ -14,7 +14,10 @@ export function BulkDeleteJobBanner({ job, onDismiss }: Props) {
   const isFailed = job.status === 'failed';
   const finished = isFailed || job.status === 'completed' || job.status === 'completed_with_errors';
   const processed = job.deleted + job.skipped + job.failed;
-  const hasFailures = isFailed || job.failed > 0;
+  // Only color the icon for failures once the job is actually finished — turning the
+  // spinner amber mid-run, because some users have already failed while others are still
+  // processing, would look alarming for a job that's still working through its list.
+  const hasFailures = finished && (isFailed || job.failed > 0);
   const Icon = !finished ? Loader2 : hasFailures ? AlertTriangle : CheckCircle;
   const heading = !finished
     ? t('admin.users.bulkDeleteJob.running')
