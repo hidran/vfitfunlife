@@ -75,7 +75,11 @@ export default function MainAppLayout({ children }: MainAppLayoutProps) {
       userEmail={user.email || firebaseUser.email || undefined}
       pointsBalance={user.pointsBalance || 0}
       walletBalance={user.walletBalance || 0}
-      isProfessionalMode={user.role === 'provider'}
+      isProfessionalMode={
+        user.role === 'provider' ||
+        user.providerStatus === 'pending' ||
+        user.providerStatus === 'verified'
+      }
     >
       {children}
     </MainLayout>

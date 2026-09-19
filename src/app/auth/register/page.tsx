@@ -145,16 +145,20 @@ export default function RegisterPage() {
 
       if (wantsProvider) {
         const uid = useAuthStore.getState().firebaseUser?.uid;
-        if (uid) {
-          await submitProviderApplication(uid, { fullName: fullName.trim(), categories: providerCategories });
+        if (!uid) {
+          throw new Error('Registration user is not available');
         }
+        await submitProviderApplication(uid, { fullName: fullName.trim(), categories: providerCategories });
+        // Keep the in-memory profile in sync so the professional state is
+        // visible immediately after permissions/home navigation.
+        await refreshUserProfile();
       }
 
       // Navigate to permissions or home
       router.push('/auth/permissions');
     } catch (err: any) {
       console.error('Registration error:', err);
-      setError(storeError || t('auth.register.error.generic'));
+      setError(useAuthStore.getState().error || t('auth.register.error.generic'));
     } finally {
       setIsLoading(false);
     }
@@ -340,12 +344,13 @@ export default function RegisterPage() {
 
             {/* Full Name */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-text-secondary">
+              <label htmlFor="register-full-name" className="text-sm font-medium text-text-secondary">
                 {t('auth.register.field.fullName')}
               </label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-tertiary" />
                 <Input
+                  id="register-full-name"
                   type="text"
                   placeholder={t('auth.register.placeholder.fullName')}
                   value={fullName}
@@ -359,12 +364,13 @@ export default function RegisterPage() {
 
             {/* Email */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-text-secondary">
+              <label htmlFor="register-email" className="text-sm font-medium text-text-secondary">
                 {t('auth.register.field.emailRequired')}
               </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-tertiary" />
                 <Input
+                  id="register-email"
                   type="email"
                   placeholder={t('auth.common.emailPlaceholder')}
                   value={email}
@@ -378,12 +384,13 @@ export default function RegisterPage() {
 
             {/* Password */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-text-secondary">
+              <label htmlFor="register-password" className="text-sm font-medium text-text-secondary">
                 {t('auth.register.field.password')}
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-tertiary" />
                 <Input
+                  id="register-password"
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
                   value={password}
@@ -406,12 +413,13 @@ export default function RegisterPage() {
 
             {/* Confirm Password */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-text-secondary">
+              <label htmlFor="register-confirm-password" className="text-sm font-medium text-text-secondary">
                 {t('auth.register.field.confirmPassword')}
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-tertiary" />
                 <Input
+                  id="register-confirm-password"
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
                   value={confirmPassword}

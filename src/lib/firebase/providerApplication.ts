@@ -38,7 +38,11 @@ export async function submitProviderApplication(
     },
     { merge: true }
   );
-  batch.update(userRef, { providerStatus: 'pending', updatedAt: serverTimestamp() });
+  batch.update(userRef, {
+      providerStatus: 'pending',
+      'providerProfile.specialties': opts.categories,
+      updatedAt: serverTimestamp(),
+    });
 
   await batch.commit();
 }
@@ -48,6 +52,23 @@ export async function submitProviderApplication(
  * and providerProfile.isVerified together with users/{uid}.providerStatus, in one batch.
  * Throws on Firestore failure; callers (TanStack mutation / form handler) surface the error.
  */
+/** Update categories for a pending or verified provider in both mirrored documents. */
+export async function updateProviderApplicationCategories(
+  uid: string,
+  categories: string[]
+): Promise<void> {
+  const batch = writeBatch(db);
+  batch.update(doc(db, 'instructors', uid), {
+    'providerProfile.specialties': categories,
+    updatedAt: serverTimestamp(),
+  });
+  batch.update(doc(db, 'users', uid), {
+    'providerProfile.specialties': categories,
+    updatedAt: serverTimestamp(),
+  });
+  await batch.commit();
+}
+
 export async function setProviderApplicationStatus(
   uid: string,
   status: Exclude<ProviderApplicationStatus, 'pending'>

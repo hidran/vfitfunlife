@@ -40,6 +40,10 @@ import {
   LanguagesSelector,
   CancellationPolicyEditor,
   BecomeProviderCard,
+  ProfileGamificationCard,
+  ProfileStatsCard,
+  StreakCard,
+  FamilyCard,
 } from '@/components/profile';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { isProvider, updateProviderProfile } from '@/lib/firebase/auth';
@@ -225,7 +229,8 @@ export default function ProfilePage() {
   const phoneVerified = user?.phoneVerified || false;
   const bio = user?.bio;
   const role = user?.role || 'customer';
-  const isProfessionalMode = role === 'provider' || isProviderUser;
+  const hasProfessionalStatus = user?.providerStatus === 'pending' || user?.providerStatus === 'verified';
+  const isProfessionalMode = role === 'provider' || isProviderUser || hasProfessionalStatus;
 
   // Provider profile data
   const providerProfile = user?.providerProfile;
@@ -307,6 +312,11 @@ export default function ProfilePage() {
                 {isProviderUser && (
                   <span className="rounded-full bg-section-gradient px-2 py-0.5 text-xs font-medium text-white">
                     {t('profile.badge.provider')}
+                  </span>
+                )}
+                {user?.providerStatus === 'pending' && (
+                  <span className="rounded-full bg-warning-DEFAULT/20 px-2 py-0.5 text-xs font-medium text-warning-DEFAULT">
+                    {t('provider.card.pending.title')}
                   </span>
                 )}
               </div>
@@ -488,6 +498,18 @@ export default function ProfilePage() {
           </div>
           <ChevronRight className="w-5 h-5 text-vip-gold" />
         </button>
+
+        {/* Gamification: XP card + stats card (E1) */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <ProfileGamificationCard />
+          <ProfileStatsCard />
+        </div>
+
+        {/* Streak card (E2) */}
+        <StreakCard className="mb-4" />
+
+        {/* Family card (E4) */}
+        <FamilyCard className="mb-4" />
 
         {/* Referral Banner */}
         <button

@@ -222,6 +222,12 @@ export async function addWalletFunds(data: {
 }
 
 // User functions
+export async function seedDefaultSeason0Progress(): Promise<{ seeded: boolean; xp: number; level: number; xpToNextLevel: number; dayStreak: number }> {
+  const fn = httpsCallable<void, { seeded: boolean; xp: number; level: number; xpToNextLevel: number; dayStreak: number }>(functions, 'seedDefaultSeason0Progress');
+  const result = await fn();
+  return result.data;
+}
+
 export async function applyReferralCode(data: {
   referralCode: string;
 }): Promise<ReferralResult> {
@@ -294,6 +300,119 @@ export async function submitReview(data: {
 }): Promise<ReviewResult> {
   const fn = httpsCallable<typeof data, ReviewResult>(functions, "submitReview");
   const result = await fn(data);
+  return result.data;
+}
+
+// Gamification — Season 0
+// ────────────────────────────────────────────────────────────────────────
+
+export interface CheckInResult {
+  checkedIn: boolean;
+  reason?: string;
+  dayStreak: number;
+  xpAwarded?: number;
+  pointsAwarded?: number;
+  isMilestone?: boolean;
+  xp: number;
+  level: number;
+  xpToNextLevel: number;
+  lastCheckInAt: string;
+}
+
+export async function checkIn(): Promise<CheckInResult> {
+  const fn = httpsCallable<void, CheckInResult>(functions, "checkIn");
+  const result = await fn();
+  return result.data;
+}
+
+export interface Season0ClaimResult {
+  claimed: boolean;
+  xp: number;
+  points: number;
+  pointsBalance: number;
+}
+
+export async function claimProfileCompleteReward(): Promise<Season0ClaimResult> {
+  const fn = httpsCallable<void, Season0ClaimResult>(functions, "claimProfileCompleteReward");
+  const result = await fn();
+  return result.data;
+}
+
+export async function claimInterestsReward(data: { interestsCount?: number }): Promise<Season0ClaimResult> {
+  const fn = httpsCallable<typeof data, Season0ClaimResult>(functions, "claimInterestsReward");
+  const result = await fn(data);
+  return result.data;
+}
+
+export async function claimZoneReward(): Promise<Season0ClaimResult> {
+  const fn = httpsCallable<void, Season0ClaimResult>(functions, "claimZoneReward");
+  const result = await fn();
+  return result.data;
+}
+
+export async function claimFamilyReward(): Promise<Season0ClaimResult> {
+  const fn = httpsCallable<void, Season0ClaimResult>(functions, "claimFamilyReward");
+  const result = await fn();
+  return result.data;
+}
+
+export interface FamilyResult {
+  familyId: string;
+  inviteCode: string | null;
+  name: string;
+  memberCount: number;
+  role: "creator" | "member";
+  xpAwarded?: number;
+  pointsAwarded?: number;
+  xp?: number;
+  level?: number;
+  xpToNextLevel?: number;
+}
+
+export interface FamilyLeaveResult {
+  success: boolean;
+  familyId: string;
+  memberCount: number;
+}
+
+export interface FamilyQueryResult {
+  family: {
+    id: string;
+    name: string;
+    inviteCode: string | null;
+    memberCount: number;
+    createdBy: string;
+    creatorName: string;
+    creatorAvatar: string | null;
+    createdAt: string | null;
+    settings: {
+      allowTransfers: boolean;
+      maxMembers: number;
+    } | null;
+  } | null;
+}
+
+export async function createFamily(data: { name: string }): Promise<FamilyResult> {
+  const fn = httpsCallable<typeof data, FamilyResult>(functions, "createFamily");
+  const result = await fn(data);
+  return result.data;
+}
+
+export async function joinFamily(data: { inviteCode?: string; familyId?: string }): Promise<FamilyResult> {
+  const fn = httpsCallable<typeof data, FamilyResult>(functions, "joinFamily");
+  const result = await fn(data);
+  return result.data;
+}
+
+export async function leaveFamily(): Promise<FamilyLeaveResult> {
+  const fn = httpsCallable<void, FamilyLeaveResult>(functions, "leaveFamily");
+  const result = await fn();
+  return result.data;
+}
+
+export async function getMyFamily(): Promise<FamilyQueryResult> {
+  const fn = httpsCallable<void, FamilyQueryResult>(functions, "getMyFamily");
+  const result = await fn();
   return result.data;
 }
 

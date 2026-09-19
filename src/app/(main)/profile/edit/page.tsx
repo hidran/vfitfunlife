@@ -41,6 +41,9 @@ import { SocialLinksForm } from '@/components/profile/SocialLinksForm';
 import { NotificationSettingsForm } from '@/components/profile/NotificationSettingsForm';
 import { PrivacySettingsForm } from '@/components/profile/PrivacySettingsForm';
 import { defaultNotificationSettings, defaultPrivacySettings } from '@/types/profile';
+import { useServiceCategories } from '@/hooks/useServiceCategories';
+import { useProviderStatus } from '@/hooks/useProviderApplication';
+import { updateProviderApplicationCategories } from '@/lib/firebase/providerApplication';
 
 // Form validation
 interface FormErrors {
@@ -51,6 +54,7 @@ interface FormErrors {
   professionalBio?: string;
   licenseNumber?: string;
   yearsOfExperience?: string;
+  specialties?: string;
 }
 
 const AVAILABLE_LANGUAGES: { code: string; labelKey: MessageKey; flag: string }[] = [
@@ -103,6 +107,8 @@ export default function EditProfilePage() {
   const router = useRouter();
   const { t } = useI18n();
   const { user, firebaseUser, refreshUserProfile, isLoading } = useAuthStore();
+  const providerStatus = useProviderStatus();
+  const serviceCategories = useServiceCategories();
   const [isSaving, setIsSaving] = useState(false);
   const [isProviderUser, setIsProviderUser] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
@@ -110,6 +116,7 @@ export default function EditProfilePage() {
   const [activeTab, setActiveTab] = useState<TabType>('personal');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
+  const canEditProfessional = isProviderUser || providerStatus === 'pending';
 
   // Personal Info State
   const [formData, setFormData] = useState({
@@ -222,6 +229,10 @@ export default function EditProfilePage() {
       newErrors.professionalBio = t('profile.edit.validation.professionalBioMax');
     }
 
+    if (canEditProfessional && professionalData.specialties.length === 0) {
+      newErrors.specialties = t('profile.specialties.error.minOne');
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -253,16 +264,19 @@ export default function EditProfilePage() {
       // Update social links
       await updateSocialLinks(user.id, socialLinks);
 
-      // Update professional info if provider
-      if (isProviderUser) {
-        await updateProviderProfile(user.id, {
-          professionalBio: professionalData.professionalBio || undefined,
-          specialties: professionalData.specialties,
-          yearsOfExperience: professionalData.yearsOfExperience,
-          languages: professionalData.languages,
-          licenseNumber: professionalData.licenseNumber || null,
-          cancellationPolicy: professionalData.cancellationPolicy || null,
-        });
+      // Update professional info for verified providers. Pending applicants can
+      // edit categories too, but cannot edit provider-only profile fields yet.
+      if (canEditProfessional) {
+        if (isProviderUser) {
+          await updateProviderProfile(user.id, {
+            professionalBio: professionalData.professionalBio || undefined,
+            yearsOfExperience: professionalData.yearsOfExperience,
+            languages: professionalData.languages,
+            licenseNumber: professionalData.licenseNumber || null,
+            cancellationPolicy: professionalData.cancellationPolicy || null,
+          });
+        }
+        await updateProviderApplicationCategories(user.id, professionalData.specialties);
       }
 
       await refreshUserProfile();
@@ -340,7 +354,7 @@ export default function EditProfilePage() {
 
   const tabs: { key: TabType; labelKey: MessageKey; icon: React.ElementType }[] = [
     { key: 'personal', labelKey: 'profile.edit.tab.personal', icon: User },
-    ...(isProviderUser
+    ...(canEditProfessional
       ? [{ key: 'professional' as TabType, labelKey: 'profile.edit.tab.professional' as MessageKey, icon: Briefcase }]
       : []),
   ];
@@ -647,7 +661,7 @@ export default function EditProfilePage() {
         )}
 
         {/* Professional Tab */}
-        {activeTab === 'professional' && isProviderUser && (
+        {activeTab === 'professional' && canEditProfessional && (
           <div className="space-y-6">
             {/* Professional Bio */}
             <div>
@@ -668,6 +682,49 @@ export default function EditProfilePage() {
               <p className="text-xs text-text-tertiary mt-1 text-right">
                 {professionalData.professionalBio.length}/1000
               </p>
+            </div>
+
+            {/* Service categories / specialties */}
+            <div>
+              <label className="block text-sm font-medium text-text-tertiary mb-2">
+                {t('profile.edit.specialtiesLabel')}
+              </label>
+              <p className="text-xs text-text-tertiary mb-3">
+                {t('profile.specialties.emptyHint')}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {serviceCategories.map((category) => {
+                  const selected = professionalData.specialties.includes(category.name);
+                  return (
+                    <button
+                      key={category.id}
+                      type="button"
+                      onClick={() => {
+                        setProfessionalData((prev) => ({
+                          ...prev,
+                          specialties: selected
+                            ? prev.specialties.filter((name) => name !== category.name)
+                            : [...prev.specialties, category.name],
+                        }));
+                        setHasUnsavedChanges(true);
+                        setErrors((prev) => ({ ...prev, specialties: undefined }));
+                      }}
+                      className={cn(
+                        'rounded-lg border px-3 py-2 text-sm transition-colors',
+                        selected
+                          ? 'border-vfit-primary bg-vfit-primary/10 text-white'
+                          : 'border-hairline text-content-muted hover:bg-surface-2'
+                      )}
+                    >
+                      <span className="mr-1">{category.icon}</span>
+                      {category.name}
+                    </button>
+                  );
+                })}
+              </div>
+              {errors.specialties && (
+                <p className="mt-2 text-sm text-error">{errors.specialties}</p>
+              )}
             </div>
 
             {/* Years of Experience */}

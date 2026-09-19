@@ -8,7 +8,11 @@ vi.mock('firebase/firestore', () => ({
 }));
 
 import { writeBatch } from 'firebase/firestore';
-import { submitProviderApplication, setProviderApplicationStatus } from './providerApplication';
+import {
+  submitProviderApplication,
+  updateProviderApplicationCategories,
+  setProviderApplicationStatus,
+} from './providerApplication';
 
 function makeBatch() {
   return { set: vi.fn(), update: vi.fn(), commit: vi.fn().mockResolvedValue(undefined) };
@@ -35,6 +39,25 @@ describe('submitProviderApplication', () => {
     expect(batch.update).toHaveBeenCalledWith(
       { col: 'users', id: 'u1' },
       expect.objectContaining({ providerStatus: 'pending' })
+    );
+    expect(batch.commit).toHaveBeenCalled();
+  });
+});
+
+describe('updateProviderApplicationCategories', () => {
+  it('mirrors category changes to the instructor and user profiles', async () => {
+    const batch = makeBatch();
+    vi.mocked(writeBatch).mockReturnValue(batch as never);
+
+    await updateProviderApplicationCategories('u1', ['Yoga', 'Pilates']);
+
+    expect(batch.update).toHaveBeenCalledWith(
+      { col: 'instructors', id: 'u1' },
+      expect.objectContaining({ 'providerProfile.specialties': ['Yoga', 'Pilates'] })
+    );
+    expect(batch.update).toHaveBeenCalledWith(
+      { col: 'users', id: 'u1' },
+      expect.objectContaining({ 'providerProfile.specialties': ['Yoga', 'Pilates'] })
     );
     expect(batch.commit).toHaveBeenCalled();
   });

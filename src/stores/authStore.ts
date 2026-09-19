@@ -523,11 +523,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         preferredLanguage,
       });
 
-      set({ 
-        firebaseUser, 
-        isLoading: false, 
-        isInitialized: true 
-      });
+      // Publish the auth user only after the profile exists. The registration
+      // page immediately navigates to permissions, so load the profile before
+      // /home's protected layout can see firebaseUser without user.
+      set({ firebaseUser, isLoading: true });
+      const user = await get().loadUserData(firebaseUser.uid);
+      if (!user) {
+        throw new Error('Registration profile could not be loaded');
+      }
     } catch (error: any) {
       console.error('Email registration error:', error);
       let errorMessage = 'Failed to create account';
@@ -555,6 +558,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         error: errorMessage,
         isLoading: false
       });
+      // The registration page must not navigate as if signup succeeded when
+      // profile creation failed after Firebase Auth succeeded.
+      throw error;
     }
   },
 

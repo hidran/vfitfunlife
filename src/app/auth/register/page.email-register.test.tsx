@@ -52,6 +52,7 @@ describe('RegisterPage Email Registration', () => {
     expect(screen.getByLabelText(/^Email/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^Password/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Conferma Password/i)).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /professionista/i })).not.toBeChecked();
   });
 
   it('shows error when passwords do not match', async () => {
@@ -68,14 +69,14 @@ describe('RegisterPage Email Registration', () => {
       target: { value: 'test@example.com' },
     });
     fireEvent.change(screen.getByLabelText(/^Password/i), {
-      target: { value: 'password123' },
+      target: { value: 'StrongPassword123!' },
     });
     fireEvent.change(screen.getByLabelText(/Conferma Password/i), {
-      target: { value: 'different123' },
+      target: { value: 'DifferentPassword123!' },
     });
 
     // Accept terms
-    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.click(screen.getByLabelText(/Termini/i));
 
     // Submit
     fireEvent.click(screen.getByRole('button', { name: /Crea Account/i }));
@@ -103,14 +104,14 @@ describe('RegisterPage Email Registration', () => {
       target: { value: 'test@example.com' },
     });
     fireEvent.change(screen.getByLabelText(/^Password/i), {
-      target: { value: 'password123' },
+      target: { value: 'StrongPassword123!' },
     });
     fireEvent.change(screen.getByLabelText(/Conferma Password/i), {
-      target: { value: 'password123' },
+      target: { value: 'StrongPassword123!' },
     });
 
     // Accept terms
-    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.click(screen.getByLabelText(/Termini/i));
 
     // Submit
     fireEvent.click(screen.getByRole('button', { name: /Crea Account/i }));
@@ -118,10 +119,37 @@ describe('RegisterPage Email Registration', () => {
     await waitFor(() => {
       expect(mockRegisterWithEmail).toHaveBeenCalledWith(
         'test@example.com',
-        'password123',
-        'Test User'
+        'StrongPassword123!',
+        'Test User',
+        'it'
       );
     });
+  });
+
+  it('requires a category when professional opt-in is selected', async () => {
+    render(<RegisterPage />);
+
+    fireEvent.click(screen.getByText('Email e Password'));
+    fireEvent.change(screen.getByLabelText(/Nome completo/i), {
+      target: { value: 'Professional User' },
+    });
+    fireEvent.change(screen.getByLabelText(/^Email/i), {
+      target: { value: 'professional@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText(/^Password/i), {
+      target: { value: 'StrongPassword123!' },
+    });
+    fireEvent.change(screen.getByLabelText(/Conferma Password/i), {
+      target: { value: 'StrongPassword123!' },
+    });
+    fireEvent.click(screen.getByRole('checkbox', { name: /professionista/i }));
+    fireEvent.click(screen.getByLabelText(/Termini/i));
+    fireEvent.click(screen.getByRole('button', { name: /Crea account/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Seleziona il tipo di servizio che offri.')).toBeInTheDocument();
+    });
+    expect(mockRegisterWithEmail).not.toHaveBeenCalled();
   });
 
   it('requires all mandatory fields', async () => {
@@ -131,10 +159,10 @@ describe('RegisterPage Email Registration', () => {
     fireEvent.click(screen.getByText('Email e Password'));
 
     // Accept terms only
-    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.click(screen.getByLabelText(/Termini/i));
 
-    // Try submit with empty fields
-    fireEvent.click(screen.getByRole('button', { name: /Crea Account/i }));
+    // Try submit with empty fields (bypass native required-field validation)
+    fireEvent.submit(document.querySelector('form')!);
 
     await waitFor(() => {
       expect(screen.getByText(/Il nome completo è obbligatorio/i)).toBeInTheDocument();
@@ -157,14 +185,14 @@ describe('RegisterPage Email Registration', () => {
       target: { value: 'test@example.com' },
     });
     fireEvent.change(screen.getByLabelText(/^Password/i), {
-      target: { value: 'password123' },
+      target: { value: 'StrongPassword123!' },
     });
     fireEvent.change(screen.getByLabelText(/Conferma Password/i), {
-      target: { value: 'password123' },
+      target: { value: 'StrongPassword123!' },
     });
 
-    // Submit without accepting terms
-    fireEvent.click(screen.getByRole('button', { name: /Crea Account/i }));
+    // Submit without accepting terms (bypass native required-field validation)
+    fireEvent.submit(document.querySelector('form')!);
 
     await waitFor(() => {
       expect(screen.getByText(/Devi accettare i Termini/i)).toBeInTheDocument();
@@ -180,13 +208,13 @@ describe('RegisterPage Email Registration', () => {
     fireEvent.click(screen.getByText('Email e Password'));
 
     // Default is VFit
-    expect(screen.getByText('VFit').parentElement).toHaveClass('scale-105');
+    expect(screen.getByRole('button', { name: 'VFit' })).toHaveClass('scale-105');
 
     // Click VFun
     fireEvent.click(screen.getByText('VFun'));
 
     // VFun should be selected
-    expect(screen.getByText('VFun').parentElement).toHaveClass('scale-105');
+    expect(screen.getByRole('button', { name: 'VFun' })).toHaveClass('scale-105');
   });
 
   it('shows password strength hint', () => {
@@ -195,7 +223,7 @@ describe('RegisterPage Email Registration', () => {
     // Navigate to email registration
     fireEvent.click(screen.getByText('Email e Password'));
 
-    expect(screen.getByText(/Minimo 6 caratteri/i)).toBeInTheDocument();
+    expect(screen.getByText(/Almeno 12 caratteri/i)).toBeInTheDocument();
   });
 
   it('toggles password visibility', () => {

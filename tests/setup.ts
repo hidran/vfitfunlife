@@ -37,6 +37,14 @@ vi.mock('@capacitor/core', () => ({
 vi.mock('@/hooks/useI18n', () => ({
   useI18n: () => ({
     locale: 'it',
+    locales: ['it', 'en', 'es', 'fr', 'de'],
+    localeLabels: {
+      it: 'Italiano',
+      en: 'English',
+      es: 'Español',
+      fr: 'Français',
+      de: 'Deutsch',
+    },
     setLocale: vi.fn(),
     t: (key: string, params?: Record<string, string | number>) => {
       const raw = (itMessages as Record<string, string>)[key] ?? key;
@@ -48,6 +56,14 @@ vi.mock('@/hooks/useI18n', () => ({
       );
     },
   }),
+}));
+
+// Registration tests render the provider opt-in field without the app-level
+// QueryClientProvider; keep this shared fixture deterministic and network-free.
+vi.mock('@/hooks/useServiceCategories', () => ({
+  useServiceCategories: () => [
+    { id: 'trainer', name: 'Personal Trainer', icon: '🏋️' },
+  ],
 }));
 
 // Mock localStorage
