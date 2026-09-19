@@ -21,6 +21,8 @@ import {
   createBooking as createBookingFn,
   cancelBooking as cancelBookingFn,
 } from './firebase/functions';
+import { fetchProviderSlots } from './firebase/availability';
+import { localDateKey } from './availability/dates';
 import type {
   Booking,
   BookingData,
@@ -34,7 +36,6 @@ import type {
 
 const BOOKINGS_COLLECTION = 'bookings';
 const INSTRUCTORS_COLLECTION = 'instructors';
-const AVAILABILITY_COLLECTION = 'availability';
 
 // Search providers based on filters. Reads the public /instructors mirror
 // (allowed under firestore.rules for unauthenticated and authenticated users).
@@ -142,40 +143,24 @@ export async function searchProviders(params: SearchParams): Promise<ProviderSea
   return providers;
 }
 
-// Get provider availability for a specific date
+/**
+ * The times a client can book with `providerId` for `serviceId` on the picker day `date`.
+ *
+ * Asks the getProviderSlots callable, which applies the provider's weekly hours, date
+ * exceptions, notice, buffer and daily cap against their real bookings. It replaced a read of
+ * per-date docs that nothing wrote, so every provider looked free 09:00–18:30 every day.
+ */
 export async function getProviderAvailability(
   providerId: string,
+  serviceId: string,
   date: Date
 ): Promise<TimeSlot[]> {
-  const dateStr = date.toISOString().split('T')[0];
-  
-  const availabilityDoc = await getDoc(
-    doc(db, INSTRUCTORS_COLLECTION, providerId, AVAILABILITY_COLLECTION, dateStr)
-  );
-
-  if (!availabilityDoc.exists()) {
-    // Return default empty slots if no availability set
-    return generateDefaultTimeSlots();
-  }
-
-  const data = availabilityDoc.data();
-  return (data.slots || []).map((slot: any) => ({
-    time: slot.start,
-    isAvailable: !slot.isBooked && slot.isAvailable !== false,
-    isBooked: slot.isBooked || false,
-  }));
-}
-
-// Generate default time slots (9 AM to 6 PM, 30 min intervals)
-function generateDefaultTimeSlots(): TimeSlot[] {
-  const slots: TimeSlot[] = [];
-  for (let hour = 9; hour <= 18; hour++) {
-    slots.push(
-      { time: `${hour.toString().padStart(2, '0')}:00`, isAvailable: true, isBooked: false },
-      { time: `${hour.toString().padStart(2, '0')}:30`, isAvailable: true, isBooked: false }
-    );
-  }
-  return slots;
+  const slots = await fetchProviderSlots({
+    instructorId: providerId,
+    serviceId,
+    date: localDateKey(date),
+  });
+  return slots.map((s) => ({ time: s.time, startsAt: s.startsAt, isAvailable: true, isBooked: false }));
 }
 
 /**

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   ChevronLeft,
   Star,
@@ -16,6 +17,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useBookingStore } from '@/stores/bookingStore';
+import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/Spinner';
 import { Badge } from '@/components/ui/Badge';
@@ -41,22 +43,41 @@ export default function ProviderBookingPage() {
     selectedTime,
     availability,
     isLoadingAvailability,
+    availabilityError,
     selectService,
     selectDateTime,
     fetchAvailability,
   } = useBookingStore();
+
+  const firebaseUser = useAuthStore((s) => s.firebaseUser);
+  const authReady = useAuthStore((s) => s.isInitialized);
 
   const { data: provider, isLoading: providerLoading } = useProvider(providerId);
   const { data: services = [] } = useProviderServices(providerId);
   const { data: reviews = [] } = useInstructorReviews(providerId);
   const [activeTab, setActiveTab] = useState<'services' | 'reviews' | 'about'>('services');
 
-  // Fetch availability when date changes
+  // Slots depend on the service (its duration) as well as the date, and only signed-in users
+  // may ask for them.
   useEffect(() => {
-    if (provider && selectedDate) {
-      fetchAvailability(provider.id, selectedDate);
+    if (provider && selectedService && selectedDate && firebaseUser) {
+      fetchAvailability(provider.id, selectedService.id, selectedDate);
     }
-  }, [provider, selectedDate, fetchAvailability]);
+  }, [provider, selectedService, selectedDate, firebaseUser, fetchAvailability]);
+
+  const slotsNotice = (authReady && !firebaseUser) || availabilityError === 'signin' ? (
+    <>
+      <p>{t('booking.availability.signInToSee')}</p>
+      <Link
+        href="/auth/login"
+        className="mt-3 inline-flex min-h-[44px] items-center rounded-xl bg-[var(--section-primary)] px-5 font-semibold text-white"
+      >
+        {t('booking.availability.signIn')}
+      </Link>
+    </>
+  ) : availabilityError === 'failed' ? (
+    <p>{t('booking.availability.loadError')}</p>
+  ) : null;
 
   const handleServiceSelect = (service: Service) => {
     selectService(service.id === selectedService?.id ? null : service);
@@ -258,6 +279,7 @@ export default function ProviderBookingPage() {
                     onSelectDate={handleDateSelect}
                     onSelectTime={handleTimeSelect}
                     isLoading={isLoadingAvailability}
+                    slotsNotice={slotsNotice}
                   />
                 </motion.div>
               )}

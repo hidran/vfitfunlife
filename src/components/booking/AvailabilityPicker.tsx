@@ -19,6 +19,8 @@ interface AvailabilityPickerProps {
   maxDate?: Date;
   timezone?: string;
   className?: string;
+  /** Shown instead of the time slots, e.g. "sign in to see times" or a load failure. */
+  slotsNotice?: React.ReactNode;
 }
 
 export function AvailabilityPicker({
@@ -32,6 +34,7 @@ export function AvailabilityPicker({
   maxDate,
   timezone = 'Europe/Rome',
   className,
+  slotsNotice,
 }: AvailabilityPickerProps) {
   const { t, locale } = useI18n();
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -269,7 +272,9 @@ export function AvailabilityPicker({
             </span>
           </div>
 
-          {isLoading ? (
+          {slotsNotice ? (
+            <div className="py-8 text-center text-text-secondary">{slotsNotice}</div>
+          ) : isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Spinner size="md" />
             </div>

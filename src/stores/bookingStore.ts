@@ -33,6 +33,8 @@ interface BookingState {
   selectedTime: string | null;
   availability: TimeSlot[];
   isLoadingAvailability: boolean;
+  /** Why `availability` is empty when it is not simply a full day. */
+  availabilityError: 'signin' | 'failed' | null;
 
   // Current booking
   currentBooking: Booking | null;
@@ -52,7 +54,7 @@ interface BookingState {
   selectProvider: (provider: ProviderSearchResult | null) => void;
   selectService: (service: Service | null) => void;
   selectDateTime: (date: Date, time: string | null) => Promise<void>;
-  fetchAvailability: (providerId: string, date: Date) => Promise<void>;
+  fetchAvailability: (providerId: string, serviceId: string, date: Date) => Promise<void>;
   clearSelection: () => void;
 
   createBooking: (data: BookingData) => Promise<Booking>;
@@ -70,6 +72,8 @@ interface BookingState {
   updateBookingInList: (booking: Booking) => void;
 }
 
+let latestAvailabilityRequest = 0;
+
 export const useBookingStore = create<BookingState>((set, get) => ({
   // Initial state
   searchResults: [],
@@ -83,6 +87,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
   selectedTime: null,
   availability: [],
   isLoadingAvailability: false,
+  availabilityError: null,
 
   currentBooking: null,
   userBookings: [],
@@ -124,6 +129,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
       selectedDate: null,
       selectedTime: null,
       availability: [],
+      availabilityError: null,
     });
   },
 
@@ -133,6 +139,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
       selectedDate: null,
       selectedTime: null,
       availability: [],
+      availabilityError: null,
     });
   },
 
@@ -140,13 +147,29 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     set({ selectedDate: date, selectedTime: time });
   },
 
-  fetchAvailability: async (providerId: string, date: Date) => {
-    set({ isLoadingAvailability: true });
+  fetchAvailability: async (providerId: string, serviceId: string, date: Date) => {
+    // Tapping through dates quickly must not let a slow, older answer overwrite a newer one.
+    const request = ++latestAvailabilityRequest;
+    set({ isLoadingAvailability: true, availabilityError: null });
     try {
-      const slots = await getProviderAvailability(providerId, date);
-      set({ availability: slots, isLoadingAvailability: false });
+      const slots = await getProviderAvailability(providerId, serviceId, date);
+      if (request !== latestAvailabilityRequest) return;
+      // A chosen time that is no longer offered (just taken, say) is no longer chosen.
+      const { selectedTime } = get();
+      const stillOffered = !selectedTime || slots.some((s) => s.time === selectedTime);
+      set({
+        availability: slots,
+        isLoadingAvailability: false,
+        ...(stillOffered ? {} : { selectedTime: null }),
+      });
     } catch (error) {
-      set({ availability: [], isLoadingAvailability: false });
+      if (request !== latestAvailabilityRequest) return;
+      const code = (error as { code?: string } | null)?.code;
+      set({
+        availability: [],
+        isLoadingAvailability: false,
+        availabilityError: code === 'functions/unauthenticated' ? 'signin' : 'failed',
+      });
     }
   },
 

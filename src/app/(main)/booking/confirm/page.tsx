@@ -37,6 +37,7 @@ export default function BookingConfirmPage() {
     selectedService,
     selectedDate,
     selectedTime,
+    availability,
     appliedPromo,
     isApplyingPromo,
     createBooking,
@@ -95,9 +96,13 @@ export default function BookingConfirmPage() {
     setError(null);
 
     try {
-      const [hours, minutes] = selectedTime.split(':').map(Number);
-      const scheduledAt = new Date(selectedDate);
-      scheduledAt.setHours(hours, minutes, 0, 0);
+      // The slot's own instant: its time is Italian time, whatever the device's zone is.
+      const startsAt = availability.find((s) => s.time === selectedTime)?.startsAt;
+      const scheduledAt = startsAt ? new Date(startsAt) : new Date(selectedDate);
+      if (!startsAt) {
+        const [hours, minutes] = selectedTime.split(':').map(Number);
+        scheduledAt.setHours(hours, minutes, 0, 0);
+      }
 
       const bookingData = {
         providerId: selectedProvider.id,

@@ -123,6 +123,8 @@ export interface TimeSlot {
   time: string;
   isAvailable: boolean;
   isBooked: boolean;
+  /** The slot's instant (ISO), from getProviderSlots. createBooking's scheduledAt is this. */
+  startsAt?: string;
 }
 
 export interface SearchParams {

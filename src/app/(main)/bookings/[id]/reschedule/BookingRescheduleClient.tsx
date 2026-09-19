@@ -62,9 +62,9 @@ export default function BookingRescheduleClient() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isReschedulable || !booking.providerId || !selectedDate) return;
-    void fetchAvailability(booking.providerId, selectedDate);
-  }, [booking.providerId, fetchAvailability, isReschedulable, selectedDate]);
+    if (!isReschedulable || !booking.providerId || !booking.serviceId || !selectedDate) return;
+    void fetchAvailability(booking.providerId, booking.serviceId, selectedDate);
+  }, [booking.providerId, booking.serviceId, fetchAvailability, isReschedulable, selectedDate]);
 
   const hasChanged = useMemo(() => {
     if (!selectedDate || !selectedTime) return false;
