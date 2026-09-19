@@ -8,6 +8,47 @@ function getDb() {
 }
 
 /**
+ * Level and remaining XP for a total. Mirror of computeLevel / xpToNextLevel
+ * in src/lib/gamification.ts (functions can't import from src/).
+ */
+export function levelFromXp(xp: number): { level: number; xpToNextLevel: number } {
+  const level = xp < 400 ? 1 : Math.floor(Math.sqrt(xp / 100));
+  const xpForLevel = (l: number) => (l <= 1 ? 0 : 100 * l * l);
+  return { level, xpToNextLevel: Math.max(0, xpForLevel(level + 1) - xp) };
+}
+
+const SEASON0_DEFAULTS: Record<string, unknown> = {
+  dayStreak: 0,
+  lastCheckInAt: null,
+  hasClaimedProfileComplete: false,
+  hasClaimedInterests: false,
+  hasClaimedZone: false,
+  hasClaimedFamily: false,
+  interests: [],
+  homeCity: null,
+  familyId: null,
+  familyRole: null,
+};
+
+/**
+ * The Season 0 fields a user doc lacks, with their defaults. Only absent fields
+ * are returned — existing progress (XP, streak, claims, family) is never reset.
+ * `null` counts as present.
+ */
+export function missingSeason0Fields(data: Record<string, unknown>): Record<string, unknown> {
+  const patch: Record<string, unknown> = {};
+  const xp = typeof data.xp === "number" ? data.xp : 0;
+  if (data.xp === undefined) patch.xp = 0;
+  const derived = levelFromXp(xp);
+  if (data.level === undefined) patch.level = derived.level;
+  if (data.xpToNextLevel === undefined) patch.xpToNextLevel = derived.xpToNextLevel;
+  for (const [field, value] of Object.entries(SEASON0_DEFAULTS)) {
+    if (data[field] === undefined) patch[field] = Array.isArray(value) ? [] : value;
+  }
+  return patch;
+}
+
+/**
  * Apply an XP delta to a user document and write the denormalized level +
  * xpToNextLevel. Server-side only — never called from client code directly.
  *
@@ -32,15 +73,7 @@ export async function awardXp(
   const currentXp = typeof data.xp === "number" ? data.xp : 0;
   const newXp = Math.max(0, currentXp + Math.max(0, delta));
 
-  // Mirror of computeLevel / xpToNextLevel from src/lib/gamification.ts.
-  const level =
-    newXp < 400 ?
-      1 :
-      Math.floor(Math.sqrt(newXp / 100));
-  const xpForLevel = (l: number) =>
-    l <= 1 ? 0 : 100 * l * l;
-  const nextThreshold = xpForLevel(level + 1);
-  const xpToNextLevel = Math.max(0, nextThreshold - newXp);
+  const { level, xpToNextLevel } = levelFromXp(newXp);
 
   await userRef.update({
     xp: newXp,
@@ -67,7 +100,8 @@ export async function awardXp(
  *
  * Called by the client after login when the user doc was created before this
  * feature shipped (missing xp/level/xpToNextLevel/dayStreak fields). Safe to
- * call idempotently — if the fields already exist, it's a no-op.
+ * call on every profile load: it fills in only the fields that are absent, so
+ * a doc that already has some progress keeps it.
  *
  * Only the caller's own user doc can be seeded.
  */
@@ -89,23 +123,9 @@ export const seedDefaultSeason0Progress = onCall(
 
     const data = userSnap.data() ?? {};
 
-    // Determine whether any gamification field is missing or at default.
-    const needsSeed =
-      data.xp === undefined ||
-      data.level === undefined ||
-      data.xpToNextLevel === undefined ||
-      data.dayStreak === undefined ||
-      data.hasClaimedProfileComplete === undefined ||
-      data.hasClaimedInterests === undefined ||
-      data.hasClaimedZone === undefined ||
-      data.hasClaimedFamily === undefined ||
-      data.interests === undefined ||
-      data.homeCity === undefined ||
-      data.familyId === undefined ||
-      data.familyRole === undefined;
+    const patch = missingSeason0Fields(data);
 
-    if (!needsSeed) {
-      // Already seeded — return current state.
+    if (Object.keys(patch).length === 0) {
       return {
         seeded: false,
         xp: data.xp ?? 0,
@@ -115,30 +135,15 @@ export const seedDefaultSeason0Progress = onCall(
       };
     }
 
-    const seedData: Record<string, unknown> = {
-      xp: 0,
-      level: 1,
-      xpToNextLevel: 400,
-      dayStreak: 0,
-      lastCheckInAt: null,
-      hasClaimedProfileComplete: false,
-      hasClaimedInterests: false,
-      hasClaimedZone: false,
-      hasClaimedFamily: false,
-      interests: [],
-      homeCity: null,
-      familyId: null,
-      familyRole: null,
-    };
-
-    await userRef.update(seedData);
+    await userRef.update(patch);
+    const seeded = { ...data, ...patch };
 
     return {
       seeded: true,
-      xp: 0,
-      level: 1,
-      xpToNextLevel: 400,
-      dayStreak: 0,
+      xp: seeded.xp,
+      level: seeded.level,
+      xpToNextLevel: seeded.xpToNextLevel,
+      dayStreak: seeded.dayStreak,
     };
   },
 );

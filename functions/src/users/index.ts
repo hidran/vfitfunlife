@@ -153,7 +153,8 @@ export const getUserStats = onCall(
     }
 
     const callerId = request.auth.uid;
-    const targetUserId = (request.data as { userId?: string }).userId || callerId;
+    // The client calls this with no payload, so request.data is null.
+    const targetUserId = (request.data as { userId?: string } | null)?.userId || callerId;
 
     // Check permissions
     const callerInfo = await getUserRoleInfo(callerId);
