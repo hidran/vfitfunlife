@@ -20,6 +20,15 @@ export function ConfirmDeleteDialog({ open, entityLabel, entityName, onClose, on
   if (!open) return null;
   const matches = typed === entityName && reason.trim().length > 0;
 
+  // Without this, Cancel / the header close button left `typed`/`reason` in state, so
+  // reopening the dialog for the same entityName (e.g. a page-sized selection count) could
+  // come back pre-armed with the confirm button already enabled.
+  function handleClose() {
+    setTyped('');
+    setReason('');
+    onClose();
+  }
+
   async function handleConfirm() {
     if (!matches) return;
     setBusy(true);
@@ -41,7 +50,7 @@ export function ConfirmDeleteDialog({ open, entityLabel, entityName, onClose, on
             <AlertTriangle className="h-5 w-5 text-red-400" />
             {t('admin.delete.title', { entity: entityLabel })}
           </h2>
-          <button onClick={onClose} aria-label={t('common.close')} className="text-content-muted hover:text-content">
+          <button type="button" onClick={handleClose} aria-label={t('common.close')} className="text-content-muted hover:text-content">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -64,7 +73,7 @@ export function ConfirmDeleteDialog({ open, entityLabel, entityName, onClose, on
           />
         </label>
         <div className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={onClose} disabled={busy}>{t('common.cancel')}</Button>
+          <Button variant="ghost" onClick={handleClose} disabled={busy}>{t('common.cancel')}</Button>
           <Button
             variant="primary"
             onClick={handleConfirm}
