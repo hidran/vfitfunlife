@@ -83,7 +83,7 @@ export function Header({ onMenuClick, notificationCount = 0, userAvatarUrl }: He
               <Link
                 href="/home"
                 className={cn(
-                  'touch-target rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--section-primary)] focus-visible:ring-offset-2',
+                  'touch-target flex items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--section-primary)] focus-visible:ring-offset-2',
                   brand.iconBg,
                   brand.iconColor,
                   brand.ringOffset
@@ -98,7 +98,7 @@ export function Header({ onMenuClick, notificationCount = 0, userAvatarUrl }: He
               <Link
                 href={PROVIDER_HOME}
                 className={cn(
-                  'touch-target rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--section-primary)] focus-visible:ring-offset-2',
+                  'touch-target flex items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--section-primary)] focus-visible:ring-offset-2',
                   brand.iconBg,
                   brand.iconColor,
                   brand.ringOffset
