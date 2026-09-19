@@ -222,7 +222,6 @@ export default function ProfilePage() {
   // Get user display info
   const displayName = user?.fullName || firebaseUser?.displayName || t('profile.defaultUser');
   const contactInfo = user?.phone || user?.email || firebaseUser?.phoneNumber || firebaseUser?.email || '';
-  const pointsBalance = user?.pointsBalance || 0;
   const walletBalance = user?.walletBalance || 0;
   const isVip = user?.isVip || false;
   const emailVerified = firebaseUser?.emailVerified || user?.emailVerified || false;
@@ -418,39 +417,26 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-3 gap-3 mt-4 mb-6">
-          <div className="relative overflow-hidden rounded-2xl border border-hairline bg-gradient-to-br from-[#1f332b] to-[#15241e] p-4">
-            <div className="absolute -top-6 -right-6 h-14 w-14 rounded-full bg-vlife-primary/20 blur-xl" />
-            <div className="mb-1 flex items-center gap-1 text-vlife-primary">
-              <Star size={14} />
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">
-                {t('profile.stats.points')}
-              </p>
-            </div>
-            <p className="text-xl font-bold text-text-inverse">{pointsBalance.toLocaleString()}</p>
-          </div>
-
-          <div className="relative overflow-hidden rounded-2xl border border-hairline bg-gradient-to-br from-[#30261c] to-[#211b14] p-4">
-            <div className="absolute -top-6 -right-6 h-14 w-14 rounded-full bg-warning-DEFAULT/20 blur-xl" />
+        {/* Balance cards. Points live in ProfileGamificationCard, next to XP. */}
+        <div className="grid grid-cols-2 gap-3 mt-4 mb-6">
+          <div className="relative min-w-0 overflow-hidden rounded-2xl border border-hairline bg-surface bg-gradient-to-br from-warning-DEFAULT/15 to-transparent p-4">
             <div className="mb-1 flex items-center gap-1 text-warning-DEFAULT">
-              <CreditCard size={14} />
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">
+              <CreditCard size={14} aria-hidden />
+              <p className="truncate text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
                 {t('profile.stats.balance')}
               </p>
             </div>
-            <p className="text-xl font-bold text-text-inverse">{formatPrice(walletBalance)}</p>
+            <p className="truncate text-xl font-bold tabular-nums text-text-inverse">{formatPrice(walletBalance)}</p>
           </div>
 
-          <div className="relative overflow-hidden rounded-2xl border border-hairline bg-gradient-to-br from-[#2b1f37] to-[#1b1524] p-4">
-            <div className="absolute -top-6 -right-6 h-14 w-14 rounded-full bg-vfun-primary/20 blur-xl" />
+          <div className="relative min-w-0 overflow-hidden rounded-2xl border border-hairline bg-surface bg-gradient-to-br from-vfun-primary/15 to-transparent p-4">
             <div className="mb-1 flex items-center gap-1 text-vfun-primary">
-              <Award size={14} />
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">
+              <Award size={14} aria-hidden />
+              <p className="truncate text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
                 {isProviderUser ? t('profile.stats.earnings') : t('profile.stats.reviews')}
               </p>
             </div>
-            <p className="text-xl font-bold text-text-inverse">
+            <p className="truncate text-xl font-bold tabular-nums text-text-inverse">
               {isProviderUser ? formatPrice(stats.totalEarnings) : providerProfile?.reviewCount || 0}
             </p>
           </div>
@@ -499,8 +485,8 @@ export default function ProfilePage() {
           <ChevronRight className="w-5 h-5 text-vip-gold" />
         </button>
 
-        {/* Gamification: XP card + stats card (E1) */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
+        {/* Gamification (Season 0): stacked on phones, side by side from md */}
+        <div className="mb-4 grid gap-3 md:grid-cols-2">
           <ProfileGamificationCard />
           <ProfileStatsCard />
         </div>

@@ -1858,25 +1858,16 @@ export const deMessages: Messages = {
 
   // ─── Profile: gamification (Season 0) ───────────────────────────────
   'profile.gamification.levelLabel': 'Stufe {{level}}',
-  'profile.gamification.notStarted': 'Noch nicht gestartet',
-  'profile.gamification.dayStreak': 'Tage',
-  'profile.gamification.xpLabel': '{{xp}} XP',
   'profile.gamification.toNextLevel': 'Zum nächsten Level: {{needed}} XP',
   'profile.gamification.season0': 'Saison 0',
-  'profile.gamification.xp': 'XP',
-  'profile.gamification.level': 'Stufe',
-  'profile.gamification.points': 'Punkte',
-  'profile.gamification.totalPointsSubtitle': 'Gesamt',
-  'profile.gamification.referrals': 'Weiterempfehlungen',
 
   // ─── Profile: Gamification stats panel (S1.3) ──────────────────────
   'profile.gamification.statsTitle': 'Dein Fortschritt',
   'profile.gamification.statsSubtitle': 'Entdecke deine Saison-0-Reise',
-  'profile.gamification.stats.xp': 'XP gesamt',
-  'profile.gamification.stats.level': 'Stufe',
   'profile.gamification.stats.bookings': 'Buchungen',
   'profile.gamification.stats.challenges': 'Herausforderungen',
   'profile.gamification.stats.referralsCount': 'Aktive Empfehlungen',
+  'profile.gamification.stats.pointsEarned': 'Verdiente Punkte',
   'profile.gamification.progressHint': 'Fast für das nächste Level!',
 
   // ─── Profile: Streak card (E2) ──────────────────────────────────────
@@ -1893,6 +1884,8 @@ export const deMessages: Messages = {
   'profile.streak.dayPlural': 'Tage',
   'profile.streak.milestoneEarned': 'Erreicht!',
   'profile.streak.milestoneNotEarned': 'Noch zu erreichen',
+  'profile.streak.milestoneDays': '{{days}}T',
+  'profile.streak.rewardEarned': '+{{xp}} XP · +{{points}} Punkte',
 
   // ─── Profile: Family card (E4) ──────────────────────────────────────
   'profile.family.title': 'Deine Familie',

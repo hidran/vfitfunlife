@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Users, Copy, X, ChevronRight, Home } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { Users, Copy, Check, X, LogIn, Home, Loader2 } from 'lucide-react';
+import { useAuthStore } from '@/stores/authStore';
 import { useUserGamification } from '@/hooks/useUserGamification';
 import { useI18n } from '@/hooks/useI18n';
 import {
@@ -11,387 +13,304 @@ import {
   getMyFamily,
 } from '@/lib/firebase/functions';
 import { cn } from '@/lib/utils';
-import type { MessageKey } from '@/i18n/messages';
 import { Button } from '@/components/ui/button';
 
-type FamilyAction = 'idle' | 'loading' | 'created' | 'joined' | 'left' | 'error';
+type Panel = 'none' | 'create' | 'join' | 'leave';
 
-interface FamilyData {
-  id: string;
-  name: string;
-  inviteCode: string | null;
-  memberCount: number;
-  createdBy: string;
-  creatorName: string;
-  creatorAvatar: string | null;
-  createdAt: string | null;
-  settings: {
-    allowTransfers: boolean;
-    maxMembers: number;
-  } | null;
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
 }
 
-function CopyButton({ text, labelCopied, labelCopy }: { text: string; labelCopied: string; labelCopy: string }) {
+function CopyButton({ text }: { text: string }) {
+  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
-  const [label, setLabel] = useState(labelCopy);
 
   const handleCopy = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
-      setLabel(labelCopied);
-      setTimeout(() => {
-        setCopied(false);
-        setLabel(labelCopy);
-      }, 2000);
+      setTimeout(() => setCopied(false), 2000);
     } catch {
-      // clipboard API not available — no-op
+      // clipboard API not available — the code is on screen to copy by hand
     }
-  }, [text, labelCopied, labelCopy]);
+  }, [text]);
 
   return (
     <button
       type="button"
       onClick={handleCopy}
-      className="inline-flex items-center gap-1 text-xs text-text-secondary hover:text-text-inverse transition-colors"
+      className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg px-3 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-2 hover:text-text-inverse"
     >
-      <Copy size={12} />
-      {label}
+      {copied ? <Check size={14} aria-hidden /> : <Copy size={14} aria-hidden />}
+      {copied ? t('profile.family.inviteCodeCopied') : t('profile.family.copyInviteCode')}
     </button>
   );
 }
 
+function PanelHeader({ title, onClose }: { title: string; onClose: () => void }) {
+  const { t } = useI18n();
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <p className="text-sm font-medium text-text-inverse">{title}</p>
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label={t('common.cancel')}
+        className="-mr-2 flex h-11 w-11 items-center justify-center rounded-lg text-text-tertiary transition-colors hover:text-text-inverse"
+      >
+        <X size={16} aria-hidden />
+      </button>
+    </div>
+  );
+}
+
+const inputClass =
+  'w-full min-h-11 rounded-lg border border-hairline bg-surface-input px-3 py-2 text-base text-text-inverse placeholder:text-text-tertiary outline-none focus:border-vfit-primary/50';
+
 export function FamilyCard({ className }: { className?: string }) {
   const { t } = useI18n();
+  const { user } = useAuthStore();
   const gamification = useUserGamification();
 
-  const [actionState, setActionState] = useState<FamilyAction>('idle');
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [family, setFamily] = useState<FamilyData | null>(null);
+  const familyId = user?.familyId ?? null;
+  const isCreator = user?.familyRole === 'creator';
+  const familyQuery = useQuery({
+    queryKey: ['myFamily', familyId],
+    queryFn: getMyFamily,
+    enabled: !!familyId,
+  });
+  const family = familyId ? familyQuery.data?.family ?? null : null;
 
-  const [showCreate, setShowCreate] = useState(false);
-  const [showJoin, setShowJoin] = useState(false);
-  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [panel, setPanel] = useState<Panel>('none');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [justCreated, setJustCreated] = useState(false);
   const [createName, setCreateName] = useState('');
   const [joinCode, setJoinCode] = useState('');
 
-  const loadFamily = useCallback(async () => {
-    try {
-      const result = await getMyFamily();
-      setFamily(result.family);
-    } catch {
-      setFamily(null);
-    }
-  }, []);
-
-  const handleCreate = useCallback(async () => {
-    if (!createName.trim()) return;
-    setActionState('loading');
+  const openPanel = (next: Panel) => {
+    setPanel(next);
     setErrorMsg(null);
-    try {
-      const result = await createFamily({ name: createName.trim() });
-      setFamily({
-        id: result.familyId,
-        name: result.name,
-        inviteCode: result.inviteCode,
-        memberCount: result.memberCount,
-        createdBy: '',
-        creatorName: '',
-        creatorAvatar: null,
-        createdAt: null,
-        settings: { allowTransfers: true, maxMembers: 8 },
-      });
-      setShowCreate(false);
-      setCreateName('');
-      setActionState('created');
-      await gamification.reload();
-      await loadFamily();
-    } catch (err: unknown) {
-      const message =
-        err && typeof err === 'object' && 'message' in err
-          ? String((err as { message?: unknown }).message)
-          : 'Creazione famiglia fallita';
-      setErrorMsg(message);
-      setActionState('error');
-    }
-  }, [createName, gamification, loadFamily]);
+  };
 
-  const handleJoin = useCallback(async () => {
-    if (!joinCode.trim()) return;
-    setActionState('loading');
-    setErrorMsg(null);
-    try {
-      await joinFamily({ inviteCode: joinCode.trim() });
-      setShowJoin(false);
-      setJoinCode('');
-      setActionState('joined');
-      await gamification.reload();
-      await loadFamily();
-    } catch (err: unknown) {
-      const message =
-        err && typeof err === 'object' && 'message' in err
-          ? String((err as { message?: unknown }).message)
-          : 'Invito non valido';
-      setErrorMsg(message);
-      setActionState('error');
-    }
-  }, [joinCode, gamification, loadFamily]);
+  // Each action changes users/{uid}.familyId; reload() re-reads the user doc,
+  // which re-keys the family query above.
+  const run = useCallback(
+    async (action: () => Promise<unknown>, after?: () => void) => {
+      setIsSubmitting(true);
+      setErrorMsg(null);
+      try {
+        await action();
+        after?.();
+        setPanel('none');
+        await gamification.reload();
+      } catch (err: unknown) {
+        setErrorMsg(errorMessage(err));
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [gamification],
+  );
 
-  const handleLeave = useCallback(async () => {
-    setActionState('loading');
-    setErrorMsg(null);
-    try {
-      await leaveFamily();
-      setFamily(null);
-      setShowLeaveConfirm(false);
-      setActionState('left');
-      await gamification.reload();
-    } catch (err: unknown) {
-      const message =
-        err && typeof err === 'object' && 'message' in err
-          ? String((err as { message?: unknown }).message)
-          : 'Impossibile uscire dalla famiglia';
-      setErrorMsg(message);
-      setActionState('error');
-    }
-  }, [gamification]);
-
-  // Initial load after hook is seeded.
-  const needsFamilyLoad =
-    gamification.isSeeded && family === null && actionState === 'idle' && !showCreate && !showJoin && !showLeaveConfirm;
-  if (needsFamilyLoad) {
-    // Defer one render cycle to let the hook settle.
-    return (
-      <div className={cn('rounded-2xl border border-hairline bg-surface-2/60 p-4', className)}>
-        <div className="flex items-center gap-2 text-text-tertiary">
-          <Home size={16} className="animate-pulse" />
-          <span className="text-xs">{t('common.loading')}</span>
-        </div>
-      </div>
+  const handleCreate = () =>
+    run(
+      () => createFamily({ name: createName.trim() }),
+      () => {
+        setCreateName('');
+        setJustCreated(true);
+      },
     );
-  }
+  const handleJoin = () =>
+    run(() => joinFamily({ inviteCode: joinCode.trim().toUpperCase() }), () => setJoinCode(''));
+  const handleLeave = () => run(() => leaveFamily(), () => setJustCreated(false));
 
-  const hasFamily = family !== null;
+  const isLoadingFamily = !!familyId && familyQuery.isLoading;
 
   return (
-    <div
+    <section
+      aria-labelledby="family-card-title"
       className={cn(
-        'rounded-2xl border border-hairline bg-gradient-to-br from-[#15241e] to-[#0f1a15] p-4',
+        'rounded-2xl border border-hairline bg-surface bg-gradient-to-br from-success-DEFAULT/10 to-transparent p-4',
         className,
       )}
     >
-      {/* Header */}
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <div className="rounded-full bg-gradient-to-br from-success-DEFAULT/30 to-success-DEFAULT/10 p-2">
-            <Users size={18} className="text-success-DEFAULT" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-text-inverse">
-              {t('profile.family.title')}
-            </p>
-            <p className="text-[10px] text-text-tertiary">
-              {t('profile.family.subtitle')}
-            </p>
-          </div>
+      <div className="flex items-start gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-success-DEFAULT/15" aria-hidden>
+          <Users size={18} className="text-success-DEFAULT" />
+        </span>
+        <div className="min-w-0">
+          <h2 id="family-card-title" className="text-sm font-semibold text-text-inverse">
+            {t('profile.family.title')}
+          </h2>
+          <p className="text-xs text-text-tertiary">{t('profile.family.subtitle')}</p>
         </div>
       </div>
 
-      {/* Family card or empty state */}
-      {hasFamily ? (
-        <div className="space-y-3">
-          <div
-            className={cn(
-              'flex items-center justify-between rounded-xl border border-hairline bg-surface-2/40 p-3',
-              actionState === 'created' && 'border-success-DEFAULT/40',
-              actionState === 'joined' && 'border-info-DEFAULT/40',
-              actionState === 'left' && 'border-warning-DEFAULT/40',
-            )}
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-success-DEFAULT/20 to-success-DEFAULT/5 text-success-DEFAULT font-bold text-sm">
+      <div className="mt-3">
+        {isLoadingFamily ? (
+          <div className="flex items-center gap-2 py-2 text-xs text-text-tertiary">
+            <Loader2 size={14} className="animate-spin" aria-hidden />
+            {t('common.loading')}
+          </div>
+        ) : family ? (
+          <div className="space-y-2">
+            <div
+              className={cn(
+                'flex items-center gap-3 rounded-xl border border-hairline bg-surface-2 p-3',
+                justCreated && 'border-success-DEFAULT/40',
+              )}
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-success-DEFAULT/15 text-sm font-bold text-success-DEFAULT" aria-hidden>
                 {family.name.charAt(0).toUpperCase()}
-              </div>
-              <div className="min-w-0">
+              </span>
+              <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-text-inverse">{family.name}</p>
-                <p className="text-[10px] text-text-tertiary">
-                  {family.memberCount} {t('profile.family.memberCount')} · {t('profile.family.roleMember')}
+                <p className="text-xs text-text-tertiary">
+                  {family.memberCount} {t('profile.family.memberCount')} ·{' '}
+                  {isCreator ? t('profile.family.roleCreator') : t('profile.family.roleMember')}
                 </p>
               </div>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              {family.inviteCode && (
-                <CopyButton
-                  text={family.inviteCode}
-                  labelCopied={t('profile.family.inviteCodeCopied')}
-                  labelCopy={t('profile.family.copyInviteCode')}
-                />
-              )}
-              {actionState === 'created' && (
-                <span className="rounded-full bg-success-DEFAULT/20 px-2 py-0.5 text-[10px] font-medium text-success-DEFAULT">
+              {justCreated && (
+                <span className="shrink-0 whitespace-nowrap rounded-full bg-success-DEFAULT/20 px-2 py-0.5 text-[11px] font-semibold text-success-DEFAULT">
                   +300 XP
                 </span>
               )}
             </div>
-          </div>
 
-          <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="flex-1 justify-start gap-1 text-xs"
-              onClick={() => setShowLeaveConfirm(true)}
-            >
-              <X size={14} />
-              {t('profile.family.leaveButton')}
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          <p className="text-xs text-text-tertiary">{t('profile.family.emptyHint')}</p>
-          <div className="flex gap-2">
-            <Button
-              variant="primary"
-              size="sm"
-              className="flex-1 justify-center gap-1 text-xs"
-              onClick={() => setShowCreate(true)}
-            >
-              <Home size={14} />
-              {t('profile.family.createButton')}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1 justify-center gap-1 text-xs"
-              onClick={() => setShowJoin(true)}
-            >
-              <ChevronRight size={14} className="rotate-90" />
-              {t('profile.family.joinButton')}
-            </Button>
-          </div>
-        </div>
-      )}
+            {family.inviteCode && (
+              <div className="flex items-center justify-between gap-2 rounded-xl bg-surface-2 py-1 pl-3 pr-1">
+                <div className="min-w-0">
+                  <p className="text-[11px] text-text-tertiary">{t('profile.family.inviteCodeLabel')}</p>
+                  <p className="truncate font-mono text-sm font-semibold tracking-widest text-text-inverse">
+                    {family.inviteCode}
+                  </p>
+                </div>
+                <CopyButton text={family.inviteCode} />
+              </div>
+            )}
 
-      {/* Create modal */}
-      {showCreate && (
-        <div className="mt-3 rounded-xl border border-hairline bg-surface-2/80 p-3 space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-text-inverse">{t('profile.family.createButton')}</p>
-            <button
-              type="button"
-              onClick={() => setShowCreate(false)}
-              className="text-text-tertiary hover:text-text-inverse transition-colors"
-            >
-              <X size={16} />
-            </button>
+            {/* The creator can't leave until ownership transfer exists (P1). */}
+            {!isCreator && panel !== 'leave' && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-center gap-1.5 text-xs text-text-secondary"
+                onClick={() => openPanel('leave')}
+              >
+                <X size={14} aria-hidden />
+                {t('profile.family.leaveButton')}
+              </Button>
+            )}
           </div>
-          <input
-            type="text"
-            value={createName}
-            onChange={(e) => setCreateName(e.target.value)}
-            placeholder={t('profile.family.createNamePlaceholder')}
-            maxLength={60}
-            className="w-full rounded-lg border border-hairline bg-surface-2/60 px-3 py-2 text-sm text-text-inverse placeholder:text-text-tertiary outline-none focus:border-vfit-primary/50"
-          />
-          {errorMsg && (
-            <p className="text-xs text-error-DEFAULT">{errorMsg}</p>
-          )}
-          <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="flex-1 justify-center text-xs"
-              onClick={() => setShowCreate(false)}
-            >
-              {t('common.cancel')}
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              className="flex-1 justify-center text-xs"
-              disabled={!createName.trim() || actionState === 'loading'}
-              onClick={handleCreate}
-            >
-              {actionState === 'loading' ? t('common.loading') : t('profile.family.createButton')}
-            </Button>
-          </div>
+        ) : (
+          panel === 'none' && (
+            <div className="space-y-3">
+              <p className="text-xs text-text-secondary">{t('profile.family.emptyHint')}</p>
+              <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-2">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  className="justify-center gap-1.5 whitespace-nowrap px-3 text-xs"
+                  onClick={() => openPanel('create')}
+                >
+                  <Home size={14} aria-hidden />
+                  {t('profile.family.createButton')}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="justify-center gap-1.5 whitespace-nowrap px-3 text-xs"
+                  onClick={() => openPanel('join')}
+                >
+                  <LogIn size={14} aria-hidden />
+                  {t('profile.family.joinButton')}
+                </Button>
+              </div>
+            </div>
+          )
+        )}
+      </div>
+
+      {panel === 'create' && (
+        <div className="mt-3 space-y-3 rounded-xl border border-hairline bg-surface-2 p-3">
+          <PanelHeader title={t('profile.family.createButton')} onClose={() => openPanel('none')} />
+          <label className="block">
+            <span className="sr-only">{t('profile.family.createNameLabel')}</span>
+            <input
+              type="text"
+              value={createName}
+              onChange={(e) => setCreateName(e.target.value)}
+              placeholder={t('profile.family.createNamePlaceholder')}
+              maxLength={60}
+              className={inputClass}
+            />
+          </label>
+          {errorMsg && <p role="alert" className="text-xs text-error-DEFAULT">{errorMsg}</p>}
+          <Button
+            variant="primary"
+            size="sm"
+            className="w-full justify-center text-sm"
+            disabled={!createName.trim() || isSubmitting}
+            isLoading={isSubmitting}
+            onClick={handleCreate}
+          >
+            {t('profile.family.createButton')}
+          </Button>
         </div>
       )}
 
-      {/* Join modal */}
-      {showJoin && (
-        <div className="mt-3 rounded-xl border border-hairline bg-surface-2/80 p-3 space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-text-inverse">{t('profile.family.joinButton')}</p>
-            <button
-              type="button"
-              onClick={() => setShowJoin(false)}
-              className="text-text-tertiary hover:text-text-inverse transition-colors"
-            >
-              <X size={16} />
-            </button>
-          </div>
-          <input
-            type="text"
-            value={joinCode}
-            onChange={(e) => setJoinCode(e.target.value)}
-            placeholder={t('profile.family.joinCodePlaceholder')}
-            className="w-full rounded-lg border border-hairline bg-surface-2/60 px-3 py-2 text-sm text-text-inverse placeholder:text-text-tertiary uppercase outline-none focus:border-vfit-primary/50 tracking-widest"
-          />
-          {errorMsg && (
-            <p className="text-xs text-error-DEFAULT">{errorMsg}</p>
-          )}
-          <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="flex-1 justify-center text-xs"
-              onClick={() => setShowJoin(false)}
-            >
-              {t('common.cancel')}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1 justify-center text-xs"
-              disabled={!joinCode.trim() || actionState === 'loading'}
-              onClick={handleJoin}
-            >
-              {actionState === 'loading' ? t('common.loading') : t('profile.family.joinSubmitButton')}
-            </Button>
-          </div>
+      {panel === 'join' && (
+        <div className="mt-3 space-y-3 rounded-xl border border-hairline bg-surface-2 p-3">
+          <PanelHeader title={t('profile.family.joinButton')} onClose={() => openPanel('none')} />
+          <label className="block">
+            <span className="sr-only">{t('profile.family.joinCodeLabel')}</span>
+            <input
+              type="text"
+              value={joinCode}
+              onChange={(e) => setJoinCode(e.target.value)}
+              placeholder={t('profile.family.joinCodePlaceholder')}
+              autoCapitalize="characters"
+              autoComplete="off"
+              className={cn(inputClass, 'font-mono uppercase tracking-widest placeholder:font-sans placeholder:normal-case placeholder:tracking-normal')}
+            />
+          </label>
+          {errorMsg && <p role="alert" className="text-xs text-error-DEFAULT">{errorMsg}</p>}
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-center text-sm"
+            disabled={!joinCode.trim() || isSubmitting}
+            isLoading={isSubmitting}
+            onClick={handleJoin}
+          >
+            {t('profile.family.joinSubmitButton')}
+          </Button>
         </div>
       )}
 
-      {/* Leave confirm modal */}
-      {showLeaveConfirm && (
-        <div className="mt-3 rounded-xl border border-error-DEFAULT/30 bg-error-DEFAULT/10 p-3 space-y-3">
-          <p className="text-sm font-medium text-error-DEFAULT">
-            {t('profile.family.leaveConfirmTitle')}
-          </p>
+      {panel === 'leave' && (
+        <div className="mt-3 space-y-3 rounded-xl border border-error-DEFAULT/30 bg-error-DEFAULT/10 p-3">
+          <p className="text-sm font-medium text-error-DEFAULT">{t('profile.family.leaveConfirmTitle')}</p>
           <p className="text-xs text-text-secondary">{t('profile.family.leaveConfirmMessage')}</p>
-          <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="flex-1 justify-center text-xs"
-              onClick={() => setShowLeaveConfirm(false)}
-            >
+          {errorMsg && <p role="alert" className="text-xs text-error-DEFAULT">{errorMsg}</p>}
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="ghost" size="sm" className="justify-center text-xs" onClick={() => openPanel('none')}>
               {t('profile.family.leaveConfirmCancel')}
             </Button>
             <Button
-              variant="primary"
+              variant="ghost"
               size="sm"
-              className="flex-1 justify-center text-xs bg-error-DEFAULT text-white hover:bg-error-DEFAULT/90"
-              disabled={actionState === 'loading'}
+              className="justify-center bg-error-DEFAULT text-xs text-white hover:bg-error-DEFAULT/90"
+              disabled={isSubmitting}
+              isLoading={isSubmitting}
               onClick={handleLeave}
             >
-              {actionState === 'loading' ? t('common.loading') : t('profile.family.leaveConfirmConfirm')}
+              {t('profile.family.leaveConfirmConfirm')}
             </Button>
           </div>
         </div>
       )}
-    </div>
+    </section>
   );
 }

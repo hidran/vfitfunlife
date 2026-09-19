@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* `light:` utilities for accents that need a darker shade on the light theme
+   (gold/orange text is unreadable on white). */
+@custom-variant light (&:where([data-theme='light'], [data-theme='light'] *));
+
 :root {
   /* Section-based theming - defaults to VFit */
   --section-primary: var(--color-vfit-primary);

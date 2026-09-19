@@ -203,6 +203,24 @@ export const SEASON0_REWARDS = {
   friendActive: { xp: 300, points: 300 },
 } as const;
 
+/** Streak days that pay a milestone bonus, ascending. */
+export const STREAK_MILESTONES = [7, 14, 30, 60, 90] as const;
+
+export type CheckInStatus = 'never' | 'today' | 'yesterday' | 'interrupted';
+
+/**
+ * Where the user stands relative to their last check-in, in local calendar days
+ * (what the user reads as "today"/"yesterday", not a rolling 24h window).
+ */
+export function checkInStatus(lastCheckInAt: Date | null, now: Date): CheckInStatus {
+  if (!lastCheckInAt) return 'never';
+  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const daysAgo = Math.round((startOfDay(now) - startOfDay(lastCheckInAt)) / 86_400_000);
+  if (daysAgo <= 0) return 'today';
+  if (daysAgo === 1) return 'yesterday';
+  return 'interrupted';
+}
+
 /**
  * Check-in reward for the current streak day.
  * Returns { xp, points, isMilestone } where isMilestone is true on days 7/14/30/60/90.
@@ -212,8 +230,7 @@ export function checkInReward(dayStreak: number): {
   points: number;
   isMilestone: boolean;
 } {
-  const milestones = new Set([7, 14, 30, 60, 90]);
-  const isMilestone = milestones.has(dayStreak);
+  const isMilestone = (STREAK_MILESTONES as readonly number[]).includes(dayStreak);
 
   let xp: number;
   let points: number;

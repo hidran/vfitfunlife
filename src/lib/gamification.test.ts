@@ -16,6 +16,8 @@ import {
   DEFAULT_GAMIFICATION,
   SEASON0_REWARDS,
   checkInReward,
+  checkInStatus,
+  STREAK_MILESTONES,
 } from './gamification';
 
 describe('xpForBooking', () => {
@@ -296,5 +298,36 @@ describe('checkInReward', () => {
     // 0 is not a milestone; falls into day 1 branch since === 1 is false and <= 6 is false → day 7+ branch
     // Actually 0 is <= 6, but !== 1, so day 2-6 branch → 20/10. Let's verify.
     expect(result).toEqual({ xp: 20, points: 10, isMilestone: false });
+  });
+});
+
+describe('checkInStatus', () => {
+  const now = new Date(2026, 8, 19, 10, 0); // 19 Sep 2026, 10:00 local
+
+  it('is "never" without a previous check-in', () => {
+    expect(checkInStatus(null, now)).toBe('never');
+  });
+
+  it('is "today" for an earlier check-in on the same calendar day', () => {
+    expect(checkInStatus(new Date(2026, 8, 19, 0, 5), now)).toBe('today');
+  });
+
+  it('is "yesterday" for a check-in on the previous calendar day, even more than 24h ago', () => {
+    const late = new Date(2026, 8, 20, 23, 30);
+    expect(checkInStatus(new Date(2026, 8, 19, 0, 5), late)).toBe('yesterday');
+  });
+
+  it('is "interrupted" once a whole calendar day was skipped', () => {
+    expect(checkInStatus(new Date(2026, 8, 17, 23, 59), now)).toBe('interrupted');
+  });
+
+  it('handles month boundaries', () => {
+    expect(checkInStatus(new Date(2026, 7, 31, 22, 0), new Date(2026, 8, 1, 7, 0))).toBe('yesterday');
+  });
+});
+
+describe('STREAK_MILESTONES', () => {
+  it('lists the milestone days in ascending order', () => {
+    expect(STREAK_MILESTONES).toEqual([7, 14, 30, 60, 90]);
   });
 });

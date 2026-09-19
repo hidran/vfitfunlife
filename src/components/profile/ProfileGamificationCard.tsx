@@ -1,190 +1,101 @@
 'use client';
 
-import { Award, Flame, Target, Star, Gift, CheckCircle, Loader2 } from 'lucide-react';
+import { Award, Flame, Gift, Loader2 } from 'lucide-react';
 import { useUserGamification } from '@/hooks/useUserGamification';
 import { useI18n } from '@/hooks/useI18n';
+import { checkInStatus } from '@/lib/gamification';
 import { cn } from '@/lib/utils';
-import type { MessageKey } from '@/i18n/messages';
 
-interface ProgressBarProps {
-  progress: number; // 0–100
-  className?: string;
-}
-
-function ProgressBar({ progress, className }: ProgressBarProps) {
-  return (
-    <div
-      className={cn(
-        'h-2 w-full overflow-hidden rounded-full bg-surface-3',
-        className,
-      )}
-    >
-      <div
-        className="h-full rounded-full bg-gradient-to-r from-vfit-primary to-vlife-primary transition-all duration-500"
-        style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
-      />
-    </div>
-  );
-}
-
-interface LevelBadgeProps {
-  level: number;
-  className?: string;
-}
-
-function LevelBadge({ level, className }: LevelBadgeProps) {
+function LevelBadge({ level }: { level: number }) {
   const { t } = useI18n();
   return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-vip-gold/20 to-vip-gold/5 px-2.5 py-0.5 text-xs font-bold text-vip-gold',
-        className,
-      )}
-    >
-      <Award size={12} />
+    <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-vip-gold/15 px-2.5 py-1 text-xs font-bold text-vip-gold light:bg-amber-100 light:text-amber-700">
+      <Award size={12} aria-hidden />
       {t('profile.gamification.levelLabel', { level })}
     </span>
   );
 }
 
-interface StreakChipProps {
-  streak: number;
-  className?: string;
-}
-
-function StreakChip({ streak, className }: StreakChipProps) {
+function StreakChip({ streak }: { streak: number }) {
   const { t } = useI18n();
-  if (streak === 0) {
-    return (
-      <span
-        className={cn(
-          'inline-flex items-center gap-1 rounded-full border border-hairline bg-surface-2 px-2.5 py-0.5 text-xs text-text-tertiary',
-          className,
-        )}
-      >
-        <Flame size={12} className="opacity-40" />
-        {t('profile.gamification.notStarted')}
-      </span>
-    );
-  }
   return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-orange-500/20 to-orange-400/10 border border-orange-500/30 px-2.5 py-0.5 text-xs font-semibold text-orange-400',
-        className,
-      )}
-    >
-      <Flame size={12} />
-      {streak} {t('profile.gamification.dayStreak')}
+    <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-orange-500/30 bg-orange-500/15 px-2.5 py-1 text-xs font-semibold text-orange-400 light:text-orange-700">
+      <Flame size={12} aria-hidden />
+      {streak} {streak === 1 ? t('profile.streak.daySingular') : t('profile.streak.dayPlural')}
     </span>
   );
 }
 
-interface GamificationStatProps {
-  icon: typeof Award;
-  labelKey: MessageKey;
-  value: string | number;
-  accentClass?: string;
-  subtitleKey?: MessageKey;
-}
-
-function GamificationStat({
-  icon: Icon,
-  labelKey,
-  value,
-  accentClass = 'text-vfit-primary',
-  subtitleKey,
-}: GamificationStatProps) {
-  const { t } = useI18n();
-  return (
-    <div className="flex flex-col items-center gap-0.5">
-      <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">
-        <Icon size={12} className={accentClass} />
-        {t(labelKey)}
-      </div>
-      <div className="text-xl font-bold text-text-inverse">{value}</div>
-      {subtitleKey && (
-        <div className="text-[9px] text-text-tertiary">{t(subtitleKey)}</div>
-      )}
-    </div>
-  );
-}
-
-interface ProfileGamificationCardProps {
-  className?: string;
-}
-
-export function ProfileGamificationCard({
-  className,
-}: ProfileGamificationCardProps) {
+/**
+ * Season 0 status hero: level, XP toward the next level and the points
+ * (reward currency) balance. Mobile-first: a single column that never needs
+ * more than ~280px.
+ */
+export function ProfileGamificationCard({ className }: { className?: string }) {
   const { t } = useI18n();
   const gamification = useUserGamification();
+  const progress = Math.min(100, Math.max(0, gamification.progress));
+  // A streak whose last check-in is older than yesterday is already broken.
+  const status = checkInStatus(gamification.lastCheckInAt, new Date());
+  const activeStreak = status === 'today' || status === 'yesterday' ? gamification.dayStreak : 0;
 
   return (
-    <div
+    <section
+      aria-label={t('profile.gamification.levelLabel', { level: gamification.level })}
       className={cn(
-        'rounded-2xl border border-hairline bg-gradient-to-br from-[#1a1a2e] to-[#16213e] p-4',
+        'rounded-2xl border border-hairline bg-surface bg-gradient-to-br from-vfit-primary/15 via-transparent to-vfun-primary/10 p-4',
         className,
       )}
     >
-      {/* Header: Level + Streak */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <LevelBadge level={gamification.level} />
-          <StreakChip streak={gamification.dayStreak} />
-        </div>
-        {gamification.isLoading ? (
-          <Loader2 size={16} className="text-text-tertiary animate-spin" />
-        ) : (
-          <span className="text-[9px] uppercase tracking-[0.14em] text-text-tertiary">
-            {t('profile.gamification.season0')}
-          </span>
-        )}
+      <div className="flex flex-wrap items-center gap-2">
+        <LevelBadge level={gamification.level} />
+        {activeStreak > 0 && <StreakChip streak={activeStreak} />}
+        <span className="ml-auto whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
+          {gamification.isLoading ? (
+            <Loader2 size={14} className="animate-spin" aria-label={t('common.loading')} />
+          ) : (
+            t('profile.gamification.season0')
+          )}
+        </span>
       </div>
 
-      {/* XP Bar */}
-      <div className="mb-2">
-        <div className="flex items-center justify-between text-xs mb-1">
-          <span className="text-text-tertiary">
-            {t('profile.gamification.xpLabel', { xp: gamification.xp })}
-          </span>
-          <span className="text-text-secondary font-medium">
-            {t('profile.gamification.toNextLevel', {
-              needed: gamification.xpToNextLevel,
-            })}
-          </span>
+      <div className="mt-4 flex items-end justify-between gap-4">
+        <p className="min-w-0 text-3xl font-bold leading-none tabular-nums text-text-inverse">
+          {gamification.xp.toLocaleString()}
+          <span className="ml-1 text-sm font-semibold text-text-tertiary">XP</span>
+        </p>
+        <div className="shrink-0 text-right">
+          <p className="flex items-center justify-end gap-1 text-[11px] font-medium text-text-tertiary">
+            <Gift size={12} className="text-vlife-primary light:text-emerald-600" aria-hidden />
+            {t('profile.stats.points')}
+          </p>
+          <p className="text-lg font-bold leading-tight tabular-nums text-text-inverse">
+            {gamification.pointsBalance.toLocaleString()}
+          </p>
         </div>
-        <ProgressBar progress={gamification.progress} />
       </div>
 
-      {/* Quick stats grid */}
-      <div className="grid grid-cols-4 gap-2 mt-3 pt-3 border-t border-hairline">
-        <GamificationStat
-          icon={Target}
-          labelKey="profile.gamification.xp"
-          value={gamification.xp}
-          accentClass="text-vlife-primary"
-        />
-        <GamificationStat
-          icon={Star}
-          labelKey="profile.gamification.level"
-          value={gamification.level}
-          accentClass="text-vip-gold"
-        />
-        <GamificationStat
-          icon={Gift}
-          labelKey="profile.gamification.points"
-          value={gamification.totalPointsEarned}
-          accentClass="text-warning-DEFAULT"
-          subtitleKey="profile.gamification.totalPointsSubtitle"
-        />
-        <GamificationStat
-          icon={CheckCircle}
-          labelKey="profile.gamification.referrals"
-          value={gamification.referralCount}
-          accentClass="text-info-DEFAULT"
+      <div
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={progress}
+        aria-label={t('profile.gamification.toNextLevel', { needed: gamification.xpToNextLevel })}
+        className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-surface-sunken"
+      >
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-vfit-primary to-vlife-primary transition-all duration-500"
+          style={{ width: `${progress}%` }}
         />
       </div>
-    </div>
+      <p className="mt-2 text-xs text-text-secondary">
+        {t('profile.gamification.toNextLevel', { needed: gamification.xpToNextLevel })}
+      </p>
+      {progress >= 90 && progress < 100 && (
+        <p className="mt-1 text-xs font-medium text-orange-400 light:text-orange-700">
+          {t('profile.gamification.progressHint')}
+        </p>
+      )}
+    </section>
   );
 }

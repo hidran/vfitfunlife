@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/authStore';
 import {
   getUserStats,
@@ -10,7 +11,6 @@ import {
   progressToNextLevel,
   SEASON0_REWARDS,
 } from '@/lib/gamification';
-import type { AppLocale } from '@/types/locale';
 
 export interface UserGamification {
   /** Total XP earned (0 = not started). */
@@ -23,6 +23,10 @@ export interface UserGamification {
   progress: number;
   /** Consecutive daily check-in streak. 0 = never checked in. */
   dayStreak: number;
+  /** When the user last checked in, or null if never. */
+  lastCheckInAt: Date | null;
+  /** Current reward-currency balance (points / VToken). */
+  pointsBalance: number;
   /** Whether the user has claimed the profile-complete reward. */
   hasClaimedProfileComplete: boolean;
   /** Whether the user has claimed the interests reward. */
@@ -39,102 +43,94 @@ export interface UserGamification {
   referralCount: number;
   /** Completed bookings count (from getUserStats). */
   completedBookings: number;
-  /** Whether gamification fields have been seeded on the server. */
-  isSeeded: boolean;
+  /** Whether the server stats have loaded at least once. */
+  isLoaded: boolean;
   /** Whether we are currently loading/seeding. */
   isLoading: boolean;
-  /** Error message if a claim failed. */
+  /** Error message if loading failed. */
   error: string | null;
-  /** Load the current gamification state from the server. */
-  load: () => Promise<Awaited<ReturnType<typeof getUserStats>> | null | undefined>;
-  /** Reload the current gamification state after a user action. */
+  /** Re-read the user doc and server stats after a user action (check-in, claim, family). */
   reload: () => Promise<void>;
 }
 
+/** Firestore Timestamp, a Date, or an ISO string → Date. */
+function toDate(value: unknown): Date | null {
+  if (!value) return null;
+  if (value instanceof Date) return value;
+  if (typeof value === 'string') return new Date(value);
+  if (typeof (value as { toDate?: unknown }).toDate === 'function') {
+    return (value as { toDate: () => Date }).toDate();
+  }
+  return null;
+}
+
+const gamificationKey = (userId: string | undefined) => ['userGamification', userId] as const;
+
 /**
- * Hook that loads the current user's gamification state from the auth store
- * and the getUserStats callable, and seeds missing fields if needed.
+ * The current user's gamification state: XP/level/streak straight from the user
+ * doc, plus aggregate stats from the getUserStats callable.
  *
- * Call once on the profile page (or anywhere gamification is displayed).
+ * Several profile cards call this at once; the query key makes them share a
+ * single seed + stats round-trip instead of one each.
  */
 export function useUserGamification(): UserGamification {
-  const { user, isLoading: authLoading } = useAuthStore();
-  const [isSeeded, setIsSeeded] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [stats, setStats] = useState<Awaited<ReturnType<typeof getUserStats>> | null>(null);
+  const { user, isLoading: authLoading, refreshUserProfile } = useAuthStore();
+  const queryClient = useQueryClient();
+  const userId = user?.id;
 
-  // Derived from user doc fields (when present).
+  const statsQuery = useQuery({
+    queryKey: gamificationKey(userId),
+    queryFn: async () => {
+      // Backfill gamification fields on user docs created before Season 0.
+      // Best-effort: the cards already default missing fields, so a failed
+      // backfill must not also hide the stats.
+      await seedDefaultSeason0Progress().catch((err: unknown) => {
+        console.warn('[gamification] seedDefaultSeason0Progress failed', err);
+      });
+      return getUserStats();
+    },
+    enabled: !authLoading && !!userId,
+    staleTime: 60 * 1000,
+    retry: 1,
+  });
+  const stats = statsQuery.data;
+
   const xp = user?.xp ?? 0;
-  const level = user?.level ?? 1;
-  const xpToNext = user?.xpToNextLevel ?? xpToNextLevelFn(xp);
-  const dayStreak = user?.dayStreak ?? 0;
-  const hasClaimedProfileComplete = user?.hasClaimedProfileComplete ?? false;
-  const hasClaimedInterests = user?.hasClaimedInterests ?? false;
-  const hasClaimedZone = user?.hasClaimedZone ?? false;
-  const hasClaimedFamily = user?.hasClaimedFamily ?? false;
-
   const progress = computeLevel(xp) === 1 && xp === 0 ? 0 : progressToNextLevel(xp);
 
-  // Load stats from the server (getUserStats callable) and seed if needed.
-  const load = useCallback(async () => {
-    if (authLoading || !user?.id) return;
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // First ensure gamification fields exist on the server doc.
-      const seedResult = await seedDefaultSeason0Progress();
-      setIsSeeded(seedResult.seeded === true);
-
-      // Then load stats. If the seed just ran, the user doc now has the fields
-      // but getUserStats reads from subcollections — still safe to call.
-      const stats = await getUserStats();
-      setStats(stats);
-      return stats;
-    } catch (err: unknown) {
-      const message = err && typeof err === 'object' && 'message' in err
-        ? String((err as { message?: unknown }).message)
-        : 'Impossibile caricare i dati di gioco';
-      setError(message);
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user?.id, authLoading]);
-
-  // Expose a re-load trigger for consumers.
-  // Manual reload always attempts the server call regardless of auth loading state
-  // (clients call it after known state changes, e.g. completing onboarding).
   const reload = useCallback(async () => {
-    setError(null);
-    if (authLoading || !user?.id) {
-      // Can't load yet — but don't silently swallow; leave error for the caller.
-      return;
-    }
-    await load();
-  }, [authLoading, user?.id, load]);
+    if (!userId) return;
+    await Promise.all([
+      refreshUserProfile(),
+      queryClient.invalidateQueries({ queryKey: gamificationKey(userId) }),
+    ]);
+  }, [userId, refreshUserProfile, queryClient]);
+
+  const error = statsQuery.error
+    ? statsQuery.error instanceof Error
+      ? statsQuery.error.message
+      : String(statsQuery.error)
+    : null;
 
   return {
     xp,
-    level,
-    xpToNextLevel: xpToNext,
+    level: user?.level ?? 1,
+    xpToNextLevel: user?.xpToNextLevel ?? xpToNextLevelFn(xp),
     progress,
-    dayStreak,
-    hasClaimedProfileComplete,
-    hasClaimedInterests,
-    hasClaimedZone,
-    hasClaimedFamily,
+    dayStreak: user?.dayStreak ?? 0,
+    lastCheckInAt: toDate(user?.lastCheckInAt),
+    pointsBalance: user?.pointsBalance ?? 0,
+    hasClaimedProfileComplete: user?.hasClaimedProfileComplete ?? false,
+    hasClaimedInterests: user?.hasClaimedInterests ?? false,
+    hasClaimedZone: user?.hasClaimedZone ?? false,
+    hasClaimedFamily: user?.hasClaimedFamily ?? false,
     totalPointsEarned: stats?.totalPointsEarned ?? 0,
     activeChallenges: stats?.activeChallenges ?? 0,
     referralCount: user?.referralCount ?? stats?.referralCount ?? 0,
     completedBookings: stats?.completedBookings ?? 0,
-    isSeeded,
-    isLoading: isLoading || authLoading,
+    isLoaded: statsQuery.isSuccess,
+    isLoading: authLoading || statsQuery.isLoading,
     error,
-    // Expose load/reload for manual triggering (e.g., after a claim).
-    load,
     reload,
   };
 }
