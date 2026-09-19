@@ -1,7 +1,13 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import { getFirestore, FieldValue, FieldPath, Timestamp, type DocumentReference } from "firebase-admin/firestore";
-import { auditLogData, auditLogDocWithId, writeAuditLogOnce, auditLogExists, type ServerAuditPayload } from "../lib/audit";
+import {
+  auditLogData,
+  auditLogDocWithId,
+  writeAuditLogOnce,
+  auditLogExists,
+  type ServerAuditPayload,
+} from "../lib/audit";
 import { truncateError } from "../lib/errors";
 import { adminCascadeDeps, deleteUserCascade } from "./deleteUserCascade";
 import {
@@ -51,7 +57,11 @@ export function validateBulkDeleteInput(data: unknown): { uids: string[]; reason
   return { uids, reason };
 }
 
-/** After a processing attempt: keep retrying, or the job is done (successfully or not). Thin wrapper over the one shared `isFinishing` predicate (also used inside processBulkDeleteJob) so the two never drift. */
+/**
+ * After a processing attempt: keep retrying, or the job is done (successfully or not). Thin
+ * wrapper over the one shared `isFinishing` predicate (also used inside processBulkDeleteJob)
+ * so the two never drift.
+ */
 export function decideAfterRun(input: { finalAttempt: boolean; summary: { failed: number } }): "retry" | "finish" {
   return isFinishing({ finalAttempt: input.finalAttempt, failed: input.summary.failed }) ? "finish" : "retry";
 }
@@ -156,9 +166,15 @@ export interface AttemptInput {
 }
 
 export interface AttemptDeps {
-  /** Applies a patch of semantic fields; the real implementation adds updatedAt (and finishedAt when `finished` is set) itself. */
+  /**
+   * Applies a patch of semantic fields; the real implementation adds updatedAt (and finishedAt
+   * when `finished` is set) itself.
+   */
   update: (patch: Record<string, unknown> & { finished?: boolean }) => Promise<void>;
-  /** Re-reads just the results map — used when finalizing after an unexpected failure, since saveOutcomes may have persisted progress this attempt's in-memory job object doesn't reflect. */
+  /**
+   * Re-reads just the results map — used when finalizing after an unexpected failure, since
+   * saveOutcomes may have persisted progress this attempt's in-memory job object doesn't reflect.
+   */
   readResults: () => Promise<Record<string, UserOutcome>>;
   auditOnce: (id: string, payload: ServerAuditPayload) => Promise<void>;
   process: (job: BulkDeleteJob, opts: ProcessOptions) => Promise<JobSummary>;

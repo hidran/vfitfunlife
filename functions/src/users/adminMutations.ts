@@ -91,9 +91,9 @@ export const adminDeleteUser = onCall<AdminDeleteUserData>(
       }
       throw new HttpsError(
         "internal",
-        auditRecorded
-          ? "Could not fully delete the user; see audit_logs for what happened so far"
-          : "Could not fully delete the user, and the failure could not even be recorded",
+        auditRecorded ?
+          "Could not fully delete the user; see audit_logs for what happened so far" :
+          "Could not fully delete the user, and the failure could not even be recorded",
       );
     }
 

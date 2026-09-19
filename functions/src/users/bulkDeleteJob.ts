@@ -22,7 +22,10 @@ export interface JobDeps {
   cascade: (uid: string) => Promise<unknown>;
   /** Writes the pre-delete (or summary) audit exactly once per id; a repeat call is a no-op. */
   auditOnce: (id: string, payload: ServerAuditPayload) => Promise<void>;
-  /** Whether an audit entry already exists at this id — how a resumed uid is told apart from a genuinely missing one. */
+  /**
+   * Whether an audit entry already exists at this id — how a resumed uid is told apart from a
+   * genuinely missing one.
+   */
   auditExists: (id: string) => Promise<boolean>;
   /** Persists a batch of {uid: outcome} progress updates. Called at most once a second. */
   saveOutcomes: (batch: Record<string, UserOutcome>) => Promise<void>;
@@ -143,7 +146,9 @@ export function giveUpOnPending(job: BulkDeleteJob): { outcomes: Record<string, 
   for (const uid of job.uids) {
     const existing = getOutcome(outcomes, uid);
     if (isPending(outcomes, uid)) {
-      const error = existing?.status === "failed" ? truncateError(`${GIVE_UP_ERROR}: ${existing.error}`) : GIVE_UP_ERROR;
+      const error = existing?.status === "failed" ?
+        truncateError(`${GIVE_UP_ERROR}: ${existing.error}`) :
+        GIVE_UP_ERROR;
       outcomes[uid] = { status: "failed", error };
     }
   }
