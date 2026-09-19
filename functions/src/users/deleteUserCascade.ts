@@ -20,43 +20,37 @@ export function ownedStoragePrefixes(uid: string): string[] {
 
 export interface CascadeDeps {
   recursiveDelete: (docPath: string) => Promise<void>;
-  docExists: (docPath: string) => Promise<boolean>;
+  /** Removes any providerApplications docs with userId == uid — personal data, not a legal record. */
+  deleteProviderApplications: (uid: string) => Promise<void>;
   deleteStoragePrefix: (prefix: string) => Promise<void>;
   deleteAuthUser: (uid: string) => Promise<void>;
-}
-
-export interface CascadeResult {
-  /** false when there was no Auth account — seeded demo users never had one. */
-  authDeleted: boolean;
-  hadInstructor: boolean;
 }
 
 /**
  * Auth goes first: if a later step fails, the person can no longer sign in and a retry
  * finishes the job. The other order would leave a live login with no profile, which the app
  * routes to /auth/register — the account would quietly come back.
+ *
+ * Every step here is safe to run again: recursiveDelete and the storage/provider-application
+ * deletes are no-ops on data that is already gone, so a retried or resumed call finishes
+ * whatever an earlier, interrupted attempt started.
  */
-export async function deleteUserCascade(uid: string, deps: CascadeDeps): Promise<CascadeResult> {
+export async function deleteUserCascade(uid: string, deps: CascadeDeps): Promise<void> {
   if (!uid || uid.includes("/")) throw new Error(`Invalid uid: "${uid}"`);
 
-  let authDeleted = true;
   try {
     await deps.deleteAuthUser(uid);
   } catch (err) {
     if ((err as { code?: string }).code !== "auth/user-not-found") throw err;
-    authDeleted = false;
   }
 
   await deps.recursiveDelete(`users/${uid}`);
-  const hadInstructor = await deps.docExists(`instructors/${uid}`);
-  // Unconditional: recursiveDelete also clears subcollections left under a missing parent.
   await deps.recursiveDelete(`instructors/${uid}`);
+  await deps.deleteProviderApplications(uid);
 
   for (const prefix of ownedStoragePrefixes(uid)) {
     await deps.deleteStoragePrefix(prefix);
   }
-
-  return { authDeleted, hadInstructor };
 }
 
 /** The real dependencies, backed by the Admin SDK. */
@@ -64,7 +58,13 @@ export function adminCascadeDeps(): CascadeDeps {
   const db = getFirestore();
   return {
     recursiveDelete: (path) => db.recursiveDelete(db.doc(path)),
-    docExists: async (path) => (await db.doc(path).get()).exists,
+    deleteProviderApplications: async (uid) => {
+      const snap = await db.collection("providerApplications").where("userId", "==", uid).get();
+      if (snap.empty) return;
+      const batch = db.batch();
+      snap.docs.forEach((doc) => batch.delete(doc.ref));
+      await batch.commit();
+    },
     deleteStoragePrefix: async (prefix) => {
       await getStorage().bucket().deleteFiles({ prefix });
     },

@@ -47,6 +47,11 @@ export function auditLogDoc(): DocumentReference {
   return getFirestore().collection(COLLECTION).doc();
 }
 
+/** A document reference in the audit collection at a caller-chosen, deterministic id. */
+export function auditLogDocWithId(id: string): DocumentReference {
+  return getFirestore().collection(COLLECTION).doc(id);
+}
+
 /** The document body, so transactional callers can write the canonical shape themselves. */
 export function auditLogData(payload: ServerAuditPayload): Record<string, unknown> {
   return { ...payload, timestamp: FieldValue.serverTimestamp() };
@@ -65,5 +70,40 @@ export async function writeAuditLog(payload: ServerAuditPayload): Promise<void> 
     await auditLogDoc().set(auditLogData(payload));
   } catch (err) {
     console.error("[audit] server-side write failed", err);
+  }
+}
+
+/** gRPC status code 6: ALREADY_EXISTS. */
+const ALREADY_EXISTS = 6;
+
+function isAlreadyExists(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    "code" in err &&
+    (err as { code?: unknown }).code === ALREADY_EXISTS
+  );
+}
+
+/** Whether an audit entry already exists at `id` — used to detect a resumed, mid-delete uid. */
+export async function auditLogExists(id: string): Promise<boolean> {
+  const snap = await getFirestore().collection(COLLECTION).doc(id).get();
+  return snap.exists;
+}
+
+/**
+ * Write an audit log entry exactly once, keyed by a caller-supplied deterministic id.
+ *
+ * Unlike `writeAuditLog`, errors are NOT swallowed: a caller that needs to know whether the
+ * step this entry records actually happened (the bulk-delete job, in particular) relies on
+ * either a clean resolution or a thrown error — never a silently-lost write. A second call
+ * with the same id (a retried attempt) is a no-op, not a duplicate entry or an error.
+ */
+export async function writeAuditLogOnce(id: string, payload: ServerAuditPayload): Promise<void> {
+  try {
+    await getFirestore().collection(COLLECTION).doc(id).create(auditLogData(payload));
+  } catch (err) {
+    if (isAlreadyExists(err)) return;
+    throw err;
   }
 }

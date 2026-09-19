@@ -5,7 +5,7 @@ function fakeDeps(overrides: Partial<CascadeDeps> = {}) {
   const calls: string[] = [];
   const deps: CascadeDeps = {
     recursiveDelete: vi.fn(async (p: string) => { calls.push(`fs:${p}`); }),
-    docExists: vi.fn(async () => true),
+    deleteProviderApplications: vi.fn(async (uid: string) => { calls.push(`apps:${uid}`); }),
     deleteStoragePrefix: vi.fn(async (p: string) => { calls.push(`st:${p}`); }),
     deleteAuthUser: vi.fn(async (uid: string) => { calls.push(`auth:${uid}`); }),
     ...overrides,
@@ -13,20 +13,35 @@ function fakeDeps(overrides: Partial<CascadeDeps> = {}) {
   return { deps, calls };
 }
 
+describe("ownedStoragePrefixes", () => {
+  it("is scoped to the uid's own folder in every prefix", () => {
+    for (const prefix of ownedStoragePrefixes("u1")) {
+      expect(prefix).toMatch(/\/u1\/$/);
+    }
+  });
+});
+
 describe("deleteUserCascade", () => {
-  it("deletes the Auth account first, then Firestore, then Storage", async () => {
+  it("deletes Auth first, then Firestore docs, then provider applications, then Storage", async () => {
     const { deps, calls } = fakeDeps();
     await deleteUserCascade("u1", deps);
     expect(calls[0]).toBe("auth:u1");
     expect(calls.slice(1, 3)).toEqual(["fs:users/u1", "fs:instructors/u1"]);
-    expect(calls.slice(3)).toEqual(ownedStoragePrefixes("u1").map((p) => `st:${p}`));
+    expect(calls[3]).toBe("apps:u1");
+    expect(calls.slice(4)).toEqual(ownedStoragePrefixes("u1").map((p) => `st:${p}`));
+  });
+
+  it("deletes providerApplications for the uid", async () => {
+    const { deps } = fakeDeps();
+    await deleteUserCascade("u1", deps);
+    expect(deps.deleteProviderApplications).toHaveBeenCalledWith("u1");
   });
 
   it("treats a missing Auth account as already gone", async () => {
     const { deps } = fakeDeps({
       deleteAuthUser: vi.fn(async () => { throw Object.assign(new Error("gone"), { code: "auth/user-not-found" }); }),
     });
-    await expect(deleteUserCascade("customer_1_0", deps)).resolves.toEqual({ authDeleted: false, hadInstructor: true });
+    await expect(deleteUserCascade("customer_1_0", deps)).resolves.toBeUndefined();
     expect(deps.recursiveDelete).toHaveBeenCalledWith("users/customer_1_0");
   });
 
@@ -34,11 +49,8 @@ describe("deleteUserCascade", () => {
     const { deps } = fakeDeps({ deleteAuthUser: vi.fn(async () => { throw new Error("quota"); }) });
     await expect(deleteUserCascade("u1", deps)).rejects.toThrow("quota");
     expect(deps.recursiveDelete).not.toHaveBeenCalled();
-  });
-
-  it("reports whether the user had a provider record", async () => {
-    const { deps } = fakeDeps({ docExists: vi.fn(async () => false) });
-    await expect(deleteUserCascade("u1", deps)).resolves.toEqual({ authDeleted: true, hadInstructor: false });
+    expect(deps.deleteProviderApplications).not.toHaveBeenCalled();
+    expect(deps.deleteStoragePrefix).not.toHaveBeenCalled();
   });
 
   it("refuses a uid that would escape its document path", async () => {
