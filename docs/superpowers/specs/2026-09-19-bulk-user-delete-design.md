@@ -45,28 +45,53 @@ own audit id, not one from an earlier job. `users/{uid}`'s own `recursiveDelete`
 partway through and leave the doc gone before the rest finishes — that's what the
 audit-existence resume path (see Audit, below) is for.
 
-`adminDeleteUser` (single) and the bulk job both call it. Single delete (`timeoutSeconds: 300`)
-retries the cascade up to 3 times (1s, then 2s backoff) before giving up, logging each failed
-attempt with the uid and attempt number. A final failure is audited via `writeAuditLogOnce` at
-a fresh id (`single_{uid}_{Date.now()}`, so a failed audit write is never silently lost the way
-`writeAuditLog` would lose it) — `after: { partial: true, error }` — and the callable fails
-with `HttpsError('internal', …)`; if the audit write itself also failed, that failure is logged
-and the error message says so instead of pointing the admin at `audit_logs` for a record that
-was never written.
+`adminDeleteUser` (single) and the bulk job both call it. It also shares the bulk job's uid
+shape check (`isValidUid` in `functions/src/lib/uid.ts`: non-empty, ≤128 chars, no `/`, not
+`.`/`..`, not `/^__.*__$/`).
+
+Single delete (`timeoutSeconds: 300`) is audit-first, mirroring the bulk job: before the
+retry loop, it writes `writeAuditLogOnce(single_{uid}_{Date.now()}, { action: 'delete', … })`
+and confirms it succeeded — if that write itself fails, the callable throws
+`HttpsError('internal', …)` and deletes nothing. Only then does the (up to 3 attempts, 1s
+then 2s backoff) cascade run, logging each failed attempt with the uid and attempt number. A
+final cascade failure gets a second, separate audit entry at `{auditId}_partial` (also
+`writeAuditLogOnce`) with `after: { partial: true, error }`; if THAT write also fails, the
+callable's error message says so instead of pointing the admin at `audit_logs` for a record
+that was never written. The old order — Auth deleted first inside the cascade, one
+`writeAuditLog` at the very end — meant a timeout or crash mid-cascade could leave a
+locked-out, partly deleted user with no audit at all.
+
+`onProviderServiceWrite` (`functions/src/providers/onServiceWrite.ts`) must not resurrect a
+deleted provider. Deleting a provider's `instructors/{uid}` recursively deletes its
+`services/*` subcollection first, and each of those deletes fires this trigger. It used to
+`instructorRef.set(patch, { merge: true })`, which happily recreates the (just-deleted)
+parent as a ghost `{ categoryIds: [] }` doc seconds after the cascade removed it — observed on
+the staging deploy. It now uses `instructorRef.update(patch)` and treats gRPC NOT_FOUND (code
+5) as "parent gone, nothing to sync" (returns quietly; any other error still propagates). No
+legitimate write path adds a service before its parent `instructors/{uid}` doc exists (the
+client's `submitProviderApplication` creates it; `decideProviderApplication` and
+`backfillSelfRegisteredProviders` add services via `batch.update(instructorRef, …)` alongside
+the service writes in the same atomic batch, so a missing parent fails the whole batch rather
+than partially succeeding), so this is safe.
 
 ### Background job
 
 - `adminBulkDeleteUsers` callable — superadmin only; `{ uids: string[1..500], reason }`
-  (reason required, trimmed, non-empty; each uid ≤128 chars, not `.`/`..`, not
-  `/^__.*__$/` — all three could otherwise make the FieldPath progress update fail on every
-  attempt). Refuses with `failed-precondition` if the caller already has a job with status
-  `queued` or `running` **and** its `updatedAt` is within the last 30 minutes — one bulk
-  delete in flight per actor at a time, so retries from two overlapping jobs never interleave,
-  but a job whose trigger never ran (or whose event was lost) can never lock a superadmin out
-  permanently. Otherwise creates `adminJobs/{jobId}` (`{ type: 'bulk_delete_users', status:
-  'queued', uids, reason, actorUid, actorEmail, total, attempts: 0, done: 0, failed: 0,
-  skipped: 0, results: {}, createdAt, updatedAt }`) and the "job queued" audit entry in one
-  batch, then returns `{ jobId }` at once.
+  (reason required, trimmed, non-empty; every uid validated by the shared `isValidUid`).
+  `decideExistingJobAction` (pure, tested standalone) decides what to do about the caller's
+  latest `queued`/`running` job, if any: `proceed` (none exists), `block`
+  (`failed-precondition` — one bulk delete in flight per actor at a time, so retries from two
+  overlapping jobs never interleave), or `abandon` (it's stale — `updatedAt` over 30 minutes
+  old, so its trigger never ran or the event was lost). An `abandon` doesn't just get ignored:
+  in the **same batch** that creates the new job, the stale job is marked
+  `{ status: 'failed', error: 'abandoned: no progress for 30 minutes', updatedAt,
+  finishedAt }` plus an audit entry (`bulk_{staleId}_abandoned`) — so a late trigger delivery
+  for it hits `runAdminJobAttempt`'s terminal check and stops immediately instead of
+  potentially running concurrently with the new job. Otherwise (or after queuing the
+  abandonment) the same batch creates `adminJobs/{jobId}` (`{ type: 'bulk_delete_users',
+  status: 'queued', uids, reason, actorUid, actorEmail, total, attempts: 0, done: 0,
+  failed: 0, skipped: 0, results: {}, createdAt, updatedAt }`) and its own "job queued" audit
+  entry, then returns `{ jobId }` at once.
 - `onAdminJobCreated` — `onDocumentCreated('adminJobs/{jobId}')`, 540 s, 512 MiB,
   `retry: true`. Each invocation: reads the live doc (a retry redelivers the creation-time
   snapshot, not current progress) **first**, returns immediately if the job is already
@@ -123,33 +148,46 @@ was never written.
 
 New entity type `admin_job` in both vocabulary halves (`functions/src/lib/auditEntityTypes.ts`,
 `src/types/audit.ts`; parity test). Entries, each at a deterministic id so a retried step is a
-no-op instead of a duplicate: job queued (`create`/`admin_job`, id `bulk_{jobId}_queued`), one
-per deleted user (`delete`/`user`, id `bulk_{jobId}_u_{uid}` — the `_u_` segment exists so a
-uid literally spelled `"queued"` or `"summary"` can't collide with the job-level ids below;
-**written before that user's cascade runs** — the id's existence is exactly how a resumed run
-tells "already being deleted" apart from "never existed"), job finished (`update`/`admin_job`,
-id `bulk_{jobId}_summary`, counts + failures; built once, by `buildSummaryAuditPayload`, shared
-by the normal finishing path and both give-up paths). `writeAuditLogOnce` uses Firestore
-`create()` and treats `ALREADY_EXISTS` as success; unlike the general-purpose `writeAuditLog`,
-it does not swallow other errors — a failed audit write must fail the user's outcome, not
-silently proceed to delete data with no record of it. Failures also go to Cloud Logging. The
-client-side duplicate audit on single delete (row + detail) is removed — the server entry is
-the record.
+no-op instead of a duplicate: job queued (`create`/`admin_job`, id `bulk_{jobId}_queued`), a
+stale job abandoned (`update`/`admin_job`, id `bulk_{staleId}_abandoned`), one per deleted
+user (`delete`/`user`, id `bulk_{jobId}_u_{uid}` — the `_u_` segment exists so a uid literally
+spelled `"queued"` or `"summary"` can't collide with the job-level ids; **written before that
+user's cascade runs** — the id's existence is exactly how a resumed run tells "already being
+deleted" apart from "never existed"), job finished (`update`/`admin_job`, id
+`bulk_{jobId}_summary`, counts + failures; built once, by `buildSummaryAuditPayload`, shared
+by the normal finishing path and both give-up paths). Single delete uses the parallel
+`single_{uid}_{Date.now()}` / `single_{uid}_{Date.now()}_partial` ids. `writeAuditLogOnce`
+uses Firestore `create()` and treats `ALREADY_EXISTS` as success; unlike the general-purpose
+`writeAuditLog`, it does not swallow other errors — a failed audit write must fail the
+operation, not silently proceed to delete data with no record of it. Failures also go to
+Cloud Logging. The client-side duplicate audit on single delete (row + detail) is removed —
+the server entry is the record.
 
 ### Rules
 
 `adminJobs/{jobId}`: read if superadmin; no client writes. `audit_logs/{logId}` create is
-`isAdmin() && !logId.matches('bulk_.*')` — the `bulk_*` id space is reserved for the server; a
-client pre-creating one would make the real `writeAuditLogOnce` call silently no-op on
+`isAdmin() && !logId.matches('(bulk|single)_.*')` — that id space is reserved for the server;
+a client pre-creating one would make the real `writeAuditLogOnce` call silently no-op on
 `ALREADY_EXISTS` while the cascade still ran, deleting a user with no audit entry to show for
 it.
 
 ### Client
 
 - Status filter gains `hidden` ("Demo & eliminati"): `getUsers` returns only
-  `isHiddenAccount` users for it and excludes them otherwise.
+  `isHiddenAccount` users for it and excludes them otherwise. Its row mapping spreads the
+  document data BEFORE `id`/`uid: doc.id` — the doc id must always win over a same-named
+  field stored inside the document, or a row's checkbox/quick actions could act on a
+  different account than the one displayed.
 - Bulk "Elimina" opens `ConfirmDeleteDialog` (reason required) and calls
-  `adminBulkDeleteUsers`; the `delete` branch of `bulkUpdateUsers` is removed.
+  `adminBulkDeleteUsers`; the `delete` branch of `bulkUpdateUsers` is removed. Bulk
+  activate/suspend and the bulk role change all act on `visibleSelectedIds` (selection
+  filtered to ids still present in the current `users` page), exactly like bulk delete
+  already did — a stale selection (surviving a list refresh that isn't one of the explicit
+  filter-change handlers) must never reach an id no longer on screen.
+- Single delete (`UserRowQuickActions`, `UserDetailView`) calls `adminDeleteUser` with an
+  explicit client `timeout: 300_000` to match the server's own `timeoutSeconds: 300` — the
+  SDK's ~70s default would otherwise abort (and report failure for) a delete still running
+  server-side.
 - `BulkDeleteJobBanner` subscribes to `adminJobs/{jobId}`: "12 / 36 eliminati, 1 errore";
   on reload it finds the actor's latest unfinished job; refetches the list when it ends.
 
@@ -160,12 +198,16 @@ Unit: job processor (skip rules, audit-before-cascade, resume via audit existenc
 finishing, buffered/throttled progress writes recovering a failed flush's batch instead of
 losing it, a pool that stops starting new work after a failure but lets in-flight work finish,
 error-string truncation including the two-"Caused by"-lines case, prototype-safe `"constructor"`
-uid handling), the pure `isFinishing`/`decideAfterRun`/`giveUpOnPending`/`isStaleJob` decision
-helpers, `runAdminJobAttempt` (the trigger's control flow extracted and dependency-injected:
-terminal early return, give-up-on-entry, normal finish, final-attempt failure), callable
-validation (including the uid shape checks), cascade call order — `users/{uid}` last —
-and `providerApplications` cleanup with injected deps, `writeAuditLogOnce`/`auditLogExists`
-against a mocked Firestore, audit vocabulary parity, `getUsers` hidden filter, `usersListQuery`
-round-trip with `hidden`. Staging: three throwaway users (one provider with an instructors doc
-and a subcollection doc), bulk-delete from the UI, confirm data, Auth and audit entries.
+uid handling), the pure `isFinishing`/`decideAfterRun`/`giveUpOnPending`/`isStaleJob`/
+`decideExistingJobAction`/`isValidUid` decision helpers, `runAdminJobAttempt` (the trigger's
+control flow extracted and dependency-injected: terminal early return, give-up-on-entry,
+normal finish, final-attempt failure), callable validation (including the shared uid shape
+check), cascade call order — `users/{uid}` last — and `providerApplications` cleanup with
+injected deps, `writeAuditLogOnce`/`auditLogExists` against a mocked Firestore,
+`syncInstructorFromServices` (the `onProviderServiceWrite` trigger body, extracted and
+dependency-injected: computed patch, NOT_FOUND swallowed, any other error rethrown), audit
+vocabulary parity, `getUsers` hidden filter and doc-id-wins-over-stored-field precedence,
+`usersListQuery` round-trip with `hidden`, `UsersListView` bulk delete acting on exactly the
+visible selection. Staging: three throwaway users (one provider with an instructors doc and a
+subcollection doc), bulk-delete from the UI, confirm data, Auth and audit entries.
 Production: deploy only; the superadmin runs the purge.
