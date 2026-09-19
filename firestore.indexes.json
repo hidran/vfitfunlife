@@ -199,8 +199,11 @@
         { "fieldPath": "categoryIds", "arrayConfig": "CONTAINS" }
       ]
     },
-    // findRunningBulkDelete in src/lib/firebase/bulkDelete.ts: the caller's latest
-    // unfinished bulk-delete job, so a reload mid-job brings the progress banner back.
+    // Serves two queries on the same shape: findRunningBulkDelete in
+    // src/lib/firebase/bulkDelete.ts (the caller's latest unfinished bulk-delete job, so a
+    // reload mid-job brings the progress banner back) and adminBulkDeleteUsers's
+    // one-job-per-actor guard in functions/src/users/bulkDelete.ts (refuses a second bulk
+    // delete while one is already queued/running for the same actor).
     {
       "collectionGroup": "adminJobs",
       "queryScope": "COLLECTION",

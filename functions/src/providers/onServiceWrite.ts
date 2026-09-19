@@ -5,6 +5,66 @@ import { activeCategoryIds } from "./deriveCategories";
 
 const region = "europe-west1";
 
+/** gRPC status code 5: NOT_FOUND. */
+const NOT_FOUND = 5;
+
+/** Whether an error is Firestore's NOT_FOUND — e.g. `update()` on a document that doesn't exist. */
+export function isParentNotFound(err: unknown): boolean {
+  return typeof err === "object" && err !== null && "code" in err && (err as { code?: unknown }).code === NOT_FOUND;
+}
+
+export interface SyncInstructorDeps {
+  getServices: () => Promise<ServiceLike[]>;
+  updateInstructor: (patch: Record<string, unknown>) => Promise<unknown>;
+}
+
+/**
+ * Recomputes and writes an instructor's denormalized service-derived fields.
+ *
+ * Split out from the trigger so it's testable without firebase-admin or an emulator — the
+ * trigger itself is then only Firestore plumbing (see below).
+ *
+ * Uses `updateInstructor` (an `update()`, never `set()`/merge) deliberately: this runs for
+ * every service write, including the ones `deleteUserCascade`'s `recursiveDelete` fires while
+ * deleting `instructors/{uid}/services/*` on the way to deleting `instructors/{uid}` itself.
+ * `set(..., { merge: true })` would recreate `instructors/{uid}` as a ghost document
+ * (`{ categoryIds: [] }`) moments after the cascade deleted it. `update()` fails instead when
+ * the parent is gone — NOT_FOUND (gRPC code 5) just means there is nothing left to sync, so
+ * it's swallowed; any other error still propagates.
+ */
+export async function syncInstructorFromServices(deps: SyncInstructorDeps): Promise<void> {
+  // Re-read the whole subcollection rather than diffing the single write: both derived
+  // values are properties of the set, not of the document that changed.
+  const services = await deps.getServices();
+
+  const lowest = lowestActivePrice(services);
+  const categoryIds = activeCategoryIds(services);
+
+  const patch: Record<string, unknown> = {
+    // Empty array rather than a deleted field: array-contains simply never matches an
+    // empty array, whereas a missing field would need every reader to handle undefined.
+    categoryIds,
+  };
+
+  if (lowest === null) {
+    // No sellable service left. Deleting beats writing 0 — flattenProvider treats the
+    // field as optional, so cards fall back to their no-price rendering instead of
+    // advertising a free session.
+    patch.lowestPrice = FieldValue.delete();
+    patch.hourlyRate = FieldValue.delete();
+  } else {
+    patch.lowestPrice = lowest;
+    patch.hourlyRate = lowest;
+  }
+
+  try {
+    await deps.updateInstructor(patch);
+  } catch (err) {
+    if (isParentNotFound(err)) return;
+    throw err;
+  }
+}
+
 /**
  * Keeps the instructor document's denormalized fields in sync with its services.
  *
@@ -29,31 +89,12 @@ export const onProviderServiceWrite = onDocumentWritten(
     const { instructorId } = event.params;
     const instructorRef = getFirestore().collection("instructors").doc(instructorId);
 
-    // Re-read the whole subcollection rather than diffing the single write: both derived
-    // values are properties of the set, not of the document that changed.
-    const snap = await instructorRef.collection("services").get();
-    const services = snap.docs.map((d) => d.data() as ServiceLike);
-
-    const lowest = lowestActivePrice(services);
-    const categoryIds = activeCategoryIds(services);
-
-    const patch: Record<string, unknown> = {
-      // Empty array rather than a deleted field: array-contains simply never matches an
-      // empty array, whereas a missing field would need every reader to handle undefined.
-      categoryIds,
-    };
-
-    if (lowest === null) {
-      // No sellable service left. Deleting beats writing 0 — flattenProvider treats the
-      // field as optional, so cards fall back to their no-price rendering instead of
-      // advertising a free session.
-      patch.lowestPrice = FieldValue.delete();
-      patch.hourlyRate = FieldValue.delete();
-    } else {
-      patch.lowestPrice = lowest;
-      patch.hourlyRate = lowest;
-    }
-
-    await instructorRef.set(patch, { merge: true });
+    await syncInstructorFromServices({
+      getServices: async () => {
+        const snap = await instructorRef.collection("services").get();
+        return snap.docs.map((d) => d.data() as ServiceLike);
+      },
+      updateInstructor: (patch) => instructorRef.update(patch),
+    });
   },
 );

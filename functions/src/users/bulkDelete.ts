@@ -9,6 +9,7 @@ import {
   type ServerAuditPayload,
 } from "../lib/audit";
 import { truncateError } from "../lib/errors";
+import { isValidUid } from "../lib/uid";
 import { adminCascadeDeps, deleteUserCascade } from "./deleteUserCascade";
 import {
   processBulkDeleteJob,
@@ -29,23 +30,13 @@ export const MAX_ATTEMPTS = 3;
 /** A queued/running job idle longer than this is presumed dead (trigger never ran, or the event was lost). */
 export const STALE_JOB_MS = 30 * 60 * 1000;
 const JOBS = "adminJobs";
-const MAX_UID_LENGTH = 128;
-const RESERVED_UID_PATTERN = /^__.*__$/;
 
 export function validateBulkDeleteInput(data: unknown): { uids: string[]; reason: string } {
   const d = (data ?? {}) as { uids?: unknown; reason?: unknown };
   if (!Array.isArray(d.uids) || d.uids.length === 0) {
     throw new HttpsError("invalid-argument", "uids required");
   }
-  if (d.uids.some((u) => typeof u !== "string" || u === "" || u.includes("/"))) {
-    throw new HttpsError("invalid-argument", "every uid must be a non-empty string without '/'");
-  }
-  if (
-    d.uids.some((u) => {
-      const s = u as string;
-      return s.length > MAX_UID_LENGTH || s === "." || s === ".." || RESERVED_UID_PATTERN.test(s);
-    })
-  ) {
+  if (d.uids.some((u) => !isValidUid(u))) {
     throw new HttpsError("invalid-argument", "every uid must be a valid Firestore document id");
   }
   const uids = [...new Set(d.uids as string[])];
@@ -75,6 +66,27 @@ export function isStaleJob(updatedAtMillis: number, nowMillis: number = Date.now
   return nowMillis - updatedAtMillis > STALE_JOB_MS;
 }
 
+export type ExistingJobAction = "proceed" | "block" | "abandon";
+
+/**
+ * What to do about an existing queued/running job for this actor, if any: proceed (there is
+ * none), block (one is genuinely still active), or abandon it (it's stale — its trigger
+ * never ran, or the event was lost — and must be marked terminal instead of blocking a new
+ * one forever). Pure, so the one-job-per-actor guard's actual decision is unit-tested
+ * without a real Firestore doc.
+ */
+export function decideExistingJobAction(
+  existing: { updatedAtMillis: number | null } | null,
+  nowMillis: number = Date.now(),
+): ExistingJobAction {
+  if (!existing) return "proceed";
+  // No updatedAt at all is anomalous, not evidence of staleness — block, the safer default.
+  if (existing.updatedAtMillis === null) return "block";
+  return isStaleJob(existing.updatedAtMillis, nowMillis) ? "abandon" : "block";
+}
+
+const ABANDONED_ERROR = "abandoned: no progress for 30 minutes";
+
 /** Superadmin-only: queue a bulk delete and return at once. The work runs in onAdminJobCreated. */
 export const adminBulkDeleteUsers = onCall({ region }, async (req) => {
   const callerUid = req.auth?.uid;
@@ -85,29 +97,55 @@ export const adminBulkDeleteUsers = onCall({ region }, async (req) => {
   if (caller?.role !== "superadmin") throw new HttpsError("permission-denied", "Superadmin required");
 
   const { uids, reason } = validateBulkDeleteInput(req.data);
+  const actorEmail = (caller?.email as string | undefined) ?? req.auth?.token?.email ?? "";
+
+  const batch = db.batch();
 
   // One job at a time per actor: a second bulk delete before the first finishes would
   // interleave two sets of retries against the same adminJobs doc semantics. A stale entry
   // (its trigger never ran, or the event was lost) doesn't count — it would otherwise lock
-  // the superadmin out of bulk delete forever.
-  const existing = await db
+  // the superadmin out of bulk delete forever, so it's marked terminal (in this same batch)
+  // instead of just being ignored: a late trigger delivery for it then finds a terminal
+  // status and stops immediately.
+  const existingSnap = await db
     .collection(JOBS)
     .where("actorUid", "==", callerUid)
     .where("status", "in", ["queued", "running"])
     .orderBy("createdAt", "desc")
     .limit(1)
     .get();
-  if (!existing.empty) {
-    const updatedAt = existing.docs[0].data().updatedAt as Timestamp | undefined;
-    // No updatedAt at all is anomalous, not evidence of staleness — block, the safer default.
-    const stale = updatedAt ? isStaleJob(updatedAt.toMillis(), Date.now()) : false;
-    if (!stale) throw new HttpsError("failed-precondition", "You already have a bulk delete running");
+  const existingDoc = existingSnap.empty ? null : existingSnap.docs[0];
+  const existingUpdatedAt = existingDoc?.data().updatedAt as Timestamp | undefined;
+  const action = decideExistingJobAction(
+    existingDoc ? { updatedAtMillis: existingUpdatedAt ? existingUpdatedAt.toMillis() : null } : null,
+  );
+
+  if (action === "block") {
+    throw new HttpsError("failed-precondition", "You already have a bulk delete running");
+  }
+  if (action === "abandon" && existingDoc) {
+    batch.update(existingDoc.ref, {
+      status: "failed",
+      error: ABANDONED_ERROR,
+      updatedAt: FieldValue.serverTimestamp(),
+      finishedAt: FieldValue.serverTimestamp(),
+    });
+    batch.set(
+      auditLogDocWithId(`bulk_${existingDoc.id}_abandoned`),
+      auditLogData({
+        actorUid: callerUid,
+        actorEmail,
+        actorRole: "superadmin",
+        action: "update",
+        entityType: "admin_job",
+        entityId: existingDoc.id,
+        after: { status: "failed", error: ABANDONED_ERROR },
+        reason: "superseded by a new bulk delete after 30 minutes with no progress",
+      }),
+    );
   }
 
-  const actorEmail = (caller?.email as string | undefined) ?? req.auth?.token?.email ?? "";
   const ref = db.collection(JOBS).doc();
-
-  const batch = db.batch();
   batch.set(ref, {
     type: "bulk_delete_users",
     status: "queued",

@@ -812,10 +812,11 @@ service cloud.firestore {
 
     match /audit_logs/{logId} {
       allow read:   if isAdmin();
-      // bulk_* ids are reserved for the server (writeAuditLogOnce, keyed by job/uid): a
-      // client pre-creating one would make the real write silently no-op on ALREADY_EXISTS,
-      // deleting the user with no audit entry to show for it.
-      allow create: if isAdmin() && !logId.matches('bulk_.*');
+      // bulk_*/single_* ids are reserved for the server (writeAuditLogOnce, keyed by
+      // job/uid or uid/timestamp): a client pre-creating one would make the real write
+      // silently no-op on ALREADY_EXISTS, deleting the user with no audit entry to show
+      // for it.
+      allow create: if isAdmin() && !logId.matches('(bulk|single)_.*');
       allow update: if false;
       allow delete: if false;
     }

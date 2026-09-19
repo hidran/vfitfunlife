@@ -1,7 +1,8 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
-import { writeAuditLog, writeAuditLogOnce } from "../lib/audit";
+import { writeAuditLogOnce } from "../lib/audit";
 import { truncateError } from "../lib/errors";
+import { isValidUid } from "../lib/uid";
 import { adminCascadeDeps, deleteUserCascade } from "./deleteUserCascade";
 
 interface AdminDeleteUserData {
@@ -18,7 +19,12 @@ function delay(ms: number): Promise<void> {
 
 /**
  * Superadmin-only: hard-delete a user via deleteUserCascade.
- * Writes an audit_logs entry capturing the previous user doc.
+ *
+ * Audit-first, mirroring the bulk job: the delete's audit entry is written and confirmed
+ * BEFORE the cascade runs, not after. The old order (Auth deleted first inside the cascade,
+ * then a single audit write at the very end) meant a timeout or crash mid-cascade left a
+ * user locked out and partly deleted with NO record at all of what happened. If the
+ * pre-delete audit write itself fails, nothing is deleted.
  */
 export const adminDeleteUser = onCall<AdminDeleteUserData>(
   { region: "europe-west1", timeoutSeconds: 300 },
@@ -38,7 +44,7 @@ export const adminDeleteUser = onCall<AdminDeleteUserData>(
     }
 
     const { uid, reason } = req.data;
-    if (!uid || !reason) {
+    if (!isValidUid(uid) || !reason) {
       throw new HttpsError("invalid-argument", "uid and reason required");
     }
     if (uid === callerUid) {
@@ -50,6 +56,28 @@ export const adminDeleteUser = onCall<AdminDeleteUserData>(
       throw new HttpsError("not-found", "User not found");
     }
     const before = targetSnap.data();
+
+    const actorUid = callerUid;
+    const actorEmail = (caller?.email as string | undefined) ?? "";
+    // Deterministic, not writeAuditLog: a retry of this callable is a no-op here rather than
+    // a duplicate, and — more importantly — a failure to write it must stop the delete
+    // outright rather than silently proceeding to delete data with no record of it.
+    const auditId = `single_${uid}_${Date.now()}`;
+    try {
+      await writeAuditLogOnce(auditId, {
+        actorUid,
+        actorEmail,
+        actorRole: "superadmin",
+        action: "delete",
+        entityType: "user",
+        entityId: uid,
+        before,
+        reason,
+      });
+    } catch (auditErr) {
+      console.error(`[adminDeleteUser] ${uid} pre-delete audit could not be written; deleting nothing`, auditErr);
+      throw new HttpsError("internal", "Could not record the delete, so nothing was deleted");
+    }
 
     // Same definition of "delete" as the bulk job: Auth, the user's subcollections, their
     // provider record and their files — not just the top-level document. The cascade is
@@ -69,14 +97,11 @@ export const adminDeleteUser = onCall<AdminDeleteUserData>(
     }
 
     if (!succeeded) {
-      // A deterministic id, not writeAuditLog: if this write itself fails we need to know —
-      // silently swallowing it here would leave a partially-deleted user with NO record at
-      // all of what happened, which is worse than a duplicate on a retry of this callable.
       let auditRecorded = true;
       try {
-        await writeAuditLogOnce(`single_${uid}_${Date.now()}`, {
-          actorUid: callerUid,
-          actorEmail: caller?.email ?? "",
+        await writeAuditLogOnce(`${auditId}_partial`, {
+          actorUid,
+          actorEmail,
           actorRole: "superadmin",
           action: "delete",
           entityType: "user",
@@ -96,17 +121,6 @@ export const adminDeleteUser = onCall<AdminDeleteUserData>(
           "Could not fully delete the user, and the failure could not even be recorded",
       );
     }
-
-    await writeAuditLog({
-      actorUid: callerUid,
-      actorEmail: caller?.email ?? "",
-      actorRole: "superadmin",
-      action: "delete",
-      entityType: "user",
-      entityId: uid,
-      before,
-      reason,
-    });
 
     return { ok: true };
   },

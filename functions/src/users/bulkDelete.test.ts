@@ -6,6 +6,7 @@ import {
   decideAfterRun,
   runAdminJobAttempt,
   isStaleJob,
+  decideExistingJobAction,
   STALE_JOB_MS,
   type AttemptInput,
   type AttemptDeps,
@@ -88,6 +89,26 @@ describe("isStaleJob", () => {
   it("is not yet stale exactly at the boundary", () => {
     const now = Date.now();
     expect(isStaleJob(now - STALE_JOB_MS, now)).toBe(false);
+  });
+});
+
+describe("decideExistingJobAction", () => {
+  it("proceeds when there is no existing queued/running job", () => {
+    expect(decideExistingJobAction(null)).toBe("proceed");
+  });
+
+  it("blocks when an existing job is still within the staleness window", () => {
+    const now = Date.now();
+    expect(decideExistingJobAction({ updatedAtMillis: now - 10 * 60 * 1000 }, now)).toBe("block");
+  });
+
+  it("abandons a stale existing job instead of blocking forever", () => {
+    const now = Date.now();
+    expect(decideExistingJobAction({ updatedAtMillis: now - 31 * 60 * 1000 }, now)).toBe("abandon");
+  });
+
+  it("blocks (the safer default) when the existing job has no updatedAt at all", () => {
+    expect(decideExistingJobAction({ updatedAtMillis: null })).toBe("block");
   });
 });
 
