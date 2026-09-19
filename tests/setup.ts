@@ -61,8 +61,9 @@ vi.mock('@/hooks/useI18n', () => ({
 // Registration tests render the provider opt-in field without the app-level
 // QueryClientProvider; keep this shared fixture deterministic and network-free.
 vi.mock('@/hooks/useServiceCategories', () => {
-  const group = { id: 'strength_conditioning', parentId: null, name: 'Forza e Condizionamento', icon: '💪' };
-  const leaf = { id: 'personal_training', parentId: 'strength_conditioning', name: 'Personal Training', icon: '🏋️' };
+  type Category = { id: string; parentId: string | null; name: string; icon: string };
+  const group: Category = { id: 'strength_conditioning', parentId: null, name: 'Forza e Condizionamento', icon: '💪' };
+  const leaf: Category = { id: 'personal_training', parentId: 'strength_conditioning', name: 'Personal Training', icon: '🏋️' };
   return {
     useServiceCategories: () => [group, leaf],
     useServiceCategoryLeaves: () => [leaf],
