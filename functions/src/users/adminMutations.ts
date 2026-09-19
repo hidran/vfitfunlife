@@ -1,8 +1,8 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
-import { writeAuditLog } from "../lib/audit";
+import { writeAuditLog, writeAuditLogOnce } from "../lib/audit";
+import { truncateError } from "../lib/errors";
 import { adminCascadeDeps, deleteUserCascade } from "./deleteUserCascade";
-import { truncateError } from "./bulkDeleteJob";
 
 interface AdminDeleteUserData {
   uid: string;
@@ -21,7 +21,7 @@ function delay(ms: number): Promise<void> {
  * Writes an audit_logs entry capturing the previous user doc.
  */
 export const adminDeleteUser = onCall<AdminDeleteUserData>(
-  { region: "europe-west1" },
+  { region: "europe-west1", timeoutSeconds: 300 },
   async (req) => {
     const callerUid = req.auth?.uid;
     if (!callerUid) {
@@ -63,23 +63,38 @@ export const adminDeleteUser = onCall<AdminDeleteUserData>(
         break;
       } catch (err) {
         lastError = err;
+        console.error(`[adminDeleteUser] ${uid} attempt ${attempt + 1} failed`, err);
         if (attempt < RETRY_DELAYS_MS.length) await delay(RETRY_DELAYS_MS[attempt]);
       }
     }
 
     if (!succeeded) {
-      await writeAuditLog({
-        actorUid: callerUid,
-        actorEmail: caller?.email ?? "",
-        actorRole: "superadmin",
-        action: "delete",
-        entityType: "user",
-        entityId: uid,
-        before,
-        after: { partial: true, error: truncateError(lastError) },
-        reason,
-      });
-      throw new HttpsError("internal", "Could not fully delete the user; see audit_logs for what happened so far");
+      // A deterministic id, not writeAuditLog: if this write itself fails we need to know —
+      // silently swallowing it here would leave a partially-deleted user with NO record at
+      // all of what happened, which is worse than a duplicate on a retry of this callable.
+      let auditRecorded = true;
+      try {
+        await writeAuditLogOnce(`single_${uid}_${Date.now()}`, {
+          actorUid: callerUid,
+          actorEmail: caller?.email ?? "",
+          actorRole: "superadmin",
+          action: "delete",
+          entityType: "user",
+          entityId: uid,
+          before,
+          after: { partial: true, error: truncateError(lastError) },
+          reason,
+        });
+      } catch (auditErr) {
+        auditRecorded = false;
+        console.error(`[adminDeleteUser] ${uid} failed AND its failure audit could not be written`, auditErr);
+      }
+      throw new HttpsError(
+        "internal",
+        auditRecorded
+          ? "Could not fully delete the user; see audit_logs for what happened so far"
+          : "Could not fully delete the user, and the failure could not even be recorded",
+      );
     }
 
     await writeAuditLog({
