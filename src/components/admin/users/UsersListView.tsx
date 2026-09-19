@@ -173,15 +173,15 @@ export function UsersListView() {
   };
 
   const handleBulkAction = async (action: "activate" | "suspend") => {
-    if (selectedIds.length === 0) return;
+    if (visibleSelectedIds.length === 0) return;
 
     const confirmed = confirm(
-      t('admin.users.bulkConfirm', { action, count: String(selectedIds.length) })
+      t('admin.users.bulkConfirm', { action, count: String(visibleSelectedIds.length) })
     );
     if (!confirmed) return;
 
     try {
-      await bulkUpdateUsersAction(selectedIds, action);
+      await bulkUpdateUsersAction(visibleSelectedIds, action);
       setSelectedIds([]);
     } catch (error) {
       console.error(`Bulk ${action} failed:`, error);
@@ -440,11 +440,11 @@ export function UsersListView() {
                 const ok = window.confirm(
                   t('admin.users.bulkRoleConfirm', {
                     role,
-                    count: String(selectedIds.length),
+                    count: String(visibleSelectedIds.length),
                   })
                 );
                 if (!ok) return;
-                const ids = [...selectedIds];
+                const ids = [...visibleSelectedIds];
                 try {
                   await bulkUpdateUserRoleAction(ids, role);
                   // Write one audit log per affected user

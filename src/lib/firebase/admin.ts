@@ -205,9 +205,12 @@ export async function getUsers(
     let users = snapshot.docs
       .filter((doc) => isHiddenAccount(doc.id, doc.data()) === wantHidden)
       .map((doc) => ({
+        // Spread first, doc id last: a stray `id`/`uid` field stored in the document data
+        // must never win over the document's own id — otherwise the row's checkbox and
+        // quick actions could silently act on a different account than the one displayed.
+        ...convertTimestamps(doc.data()),
         id: doc.id,
         uid: doc.id,
-        ...convertTimestamps(doc.data()),
       })) as AdminUser[];
 
     // Client-side: most user docs have no isSuspended field, so `where` would miss them.

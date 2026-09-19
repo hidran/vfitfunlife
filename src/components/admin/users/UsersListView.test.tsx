@@ -66,17 +66,28 @@ import { UsersListView } from './UsersListView';
 /** Each row's quick-actions menu uses useEntityMutation, which needs a query client. */
 function renderView() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={client}>
-      <UsersListView />
-    </QueryClientProvider>
-  );
+  return {
+    ...render(
+      <QueryClientProvider client={client}>
+        <UsersListView />
+      </QueryClientProvider>
+    ),
+    client,
+  };
 }
 
 /** The row's selection checkbox has no accessible name — it's an icon-only toggle. */
 function tickFirstRow() {
   const checkbox = document.querySelector('tbody tr td button');
   if (!checkbox) throw new Error('No selectable row found');
+  fireEvent.click(checkbox);
+}
+
+/** Each row renders exactly two buttons: the selection checkbox, then the quick-actions toggle. */
+function tickRow(index: number) {
+  const buttons = document.querySelectorAll('tbody tr td button');
+  const checkbox = buttons[index * 2];
+  if (!checkbox) throw new Error(`No selectable row at index ${index}`);
   fireEvent.click(checkbox);
 }
 
@@ -124,6 +135,40 @@ describe('UsersListView', () => {
     expect(
       await screen.findByText("Hai già un'eliminazione in corso: attendi che finisca")
     ).toBeInTheDocument();
+  });
+
+  it('bulk delete acts only on the visible selection, dropping a selected id no longer on the page', async () => {
+    const twoUsers: AdminUser[] = [
+      ...mockUsers,
+      { ...mockUsers[0], id: 'u2', uid: 'u2', fullName: 'Bruno Utente' } as AdminUser,
+    ];
+    mockAdminState.users = twoUsers;
+    mockAdminState.usersTotal = twoUsers.length;
+    const { rerender, client } = renderView();
+
+    tickRow(0);
+    tickRow(1);
+    expect(screen.getByText('2 utente/i selezionati')).toBeInTheDocument();
+
+    // Simulate a list refresh that drops u2 from the page without going through one of the
+    // filter-change handlers that explicitly clear the selection — the selection itself
+    // (component state) still names both ids.
+    mockAdminState.users = mockUsers;
+    mockAdminState.usersTotal = mockUsers.length;
+    rerender(
+      <QueryClientProvider client={client}>
+        <UsersListView />
+      </QueryClientProvider>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Elimina' }));
+    fireEvent.change(screen.getByLabelText(/Digita/i), { target: { value: '1' } });
+    fireEvent.change(screen.getByLabelText('Motivo'), { target: { value: 'pulizia test' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Elimina definitivamente' }));
+
+    await waitFor(() =>
+      expect(mockBulkDelete.startBulkDelete).toHaveBeenCalledWith(['u1'], 'pulizia test')
+    );
   });
 
   it('surfaces a watch failure without treating the job as stopped', async () => {

@@ -79,4 +79,20 @@ describe('getUsers', () => {
     ]);
     expect((await getUsers({ status: 'all' })).users.map((u) => u.id)).toEqual(['alive']);
   });
+
+  it("uses the doc id for id/uid even when the stored data carries a different id/uid field", async () => {
+    // A stray `id`/`uid` field inside the document data must never win over the doc's own
+    // id — otherwise the row's checkbox/quick actions could act on a different account than
+    // the one displayed.
+    vi.mocked(getDocs).mockResolvedValue(
+      snapshotOf({
+        real: { fullName: 'Real Doc', email: 'real@example.com', id: 'other', uid: 'other' },
+      })
+    );
+
+    const { users } = await getUsers({});
+    expect(users).toHaveLength(1);
+    expect(users[0].id).toBe('real');
+    expect(users[0].uid).toBe('real');
+  });
 });

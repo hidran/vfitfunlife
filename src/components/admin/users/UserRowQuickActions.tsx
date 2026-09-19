@@ -95,7 +95,9 @@ export function UserRowQuickActions({ user, onDone }: Props) {
 
   const deleteMut = useEntityMutation<{ reason: string }, void>({
     mutate: async ({ reason }) => {
-      const fn = httpsCallable(functions, 'adminDeleteUser');
+      // Matches the server's own timeoutSeconds: 300 — the default 70s client timeout would
+      // otherwise abort (and report failure for) a delete that's still running server-side.
+      const fn = httpsCallable(functions, 'adminDeleteUser', { timeout: 300_000 });
       await fn({ uid: user.id, reason });
     },
     invalidateKeys: [['users']],
