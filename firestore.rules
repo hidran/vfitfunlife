@@ -799,6 +799,13 @@ service cloud.firestore {
       allow delete: if isSuperAdmin();
     }
 
+    // Background admin jobs (bulk user delete). Written only by Cloud Functions; the
+    // superadmin reads one to follow its progress.
+    match /adminJobs/{jobId} {
+      allow read: if isSuperAdmin();
+      allow write: if false;
+    }
+
     // ============================================
     // AUDIT LOGS (snake_case — admin/superadmin write-once)
     // ============================================
