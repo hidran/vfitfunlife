@@ -91,29 +91,33 @@ export const backfillProviderStatus = onCall({ region }, async (req) => {
 
     const instructorRef = db.collection("instructors").doc(uid);
     const instructorSnap = await instructorRef.get();
-    if (!instructorSnap.exists) {
+    const instructorData = instructorSnap.data() as Record<string, unknown> | undefined;
+    // The service subcollection rule compares instructors/{uid}.uid to auth.uid. Repair
+    // legacy documents as well as completely missing documents; an existing document with
+    // a missing/stale uid is just as unable to accept provider-owned service writes.
+    if (!instructorSnap.exists || instructorData?.uid !== uid) {
       const fullName = (data.fullName as string) ?? "Provider";
       batch.set(
         instructorRef,
         {
           uid, // the field firestore.rules compares against request.auth.uid
-          name: fullName,
-          fullName,
-          avatarUrl: (data.avatarUrl as string) ?? null,
-          isActive: true,
-          applicationStatus: "verified",
-          specialties: (profile.specialties as string[]) ?? [],
-          languages: (profile.languages as string[]) ?? [],
-          ratingAvg: (profile.rating as number) ?? 0,
-          reviewCount: (profile.reviewCount as number) ?? 0,
-          providerProfile: {
+          name: (instructorData?.name as string) ?? fullName,
+          fullName: (instructorData?.fullName as string) ?? fullName,
+          avatarUrl: (instructorData?.avatarUrl as string) ?? (data.avatarUrl as string) ?? null,
+          isActive: instructorData?.isActive ?? true,
+          applicationStatus: instructorData?.applicationStatus ?? "verified",
+          specialties: (instructorData?.specialties as string[]) ?? (profile.specialties as string[]) ?? [],
+          languages: (instructorData?.languages as string[]) ?? (profile.languages as string[]) ?? [],
+          ratingAvg: (instructorData?.ratingAvg as number) ?? (profile.rating as number) ?? 0,
+          reviewCount: (instructorData?.reviewCount as number) ?? (profile.reviewCount as number) ?? 0,
+          providerProfile: instructorData?.providerProfile ?? {
             isVerified: true,
             bio: (profile.professionalBio as string) ?? "",
             specialties: (profile.specialties as string[]) ?? [],
             rating: (profile.rating as number) ?? 0,
             reviewCount: (profile.reviewCount as number) ?? 0,
           },
-          createdAt: FieldValue.serverTimestamp(),
+          ...(instructorSnap.exists ? {} : { createdAt: FieldValue.serverTimestamp() }),
           updatedAt: FieldValue.serverTimestamp(),
         },
         { merge: true },

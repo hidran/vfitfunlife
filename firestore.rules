@@ -332,8 +332,13 @@ service cloud.firestore {
 
       match /services/{serviceId} {
         allow read: if true;
+        // The service path already scopes the write to the authenticated uid. Use the
+        // canonical users role for ownership instead of requiring a legacy instructor
+        // document to contain a matching uid field; older verified providers may have an
+        // instructor doc with a missing/stale uid and were consequently unable to add
+        // services at all.
         allow write: if isAdmin() ||
-          (isAuthenticated() && get(/databases/$(database)/documents/instructors/$(instructorId)).data.uid == request.auth.uid);
+          (isAuthenticated() && request.auth.uid == instructorId && isProvider());
       }
 
       match /availability/{dateId} {

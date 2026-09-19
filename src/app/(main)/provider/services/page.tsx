@@ -247,7 +247,7 @@ export default function ProviderServicesPage() {
                 <button className="p-2 rounded-lg hover:bg-surface-2">
                   <MoreVertical className="w-4 h-4 text-gray-400" />
                 </button>
-                <div className="absolute right-0 mt-1 w-48 bg-surface-input rounded-lg border border-hairline shadow-xl opacity-0 group-hover:opacity-100 invisible group-hover:visible transition-all z-10 py-1">
+                <div className="absolute right-0 mt-1 w-48 bg-surface-input rounded-lg border border-hairline shadow-xl opacity-100 visible sm:opacity-0 sm:invisible sm:group-hover:opacity-100 sm:group-hover:visible transition-all z-10 py-1">
                   <button
                     onClick={() => setEditingService(service)}
                     className="w-full px-4 py-2 text-left text-sm text-content hover:bg-surface-2 flex items-center gap-2"
