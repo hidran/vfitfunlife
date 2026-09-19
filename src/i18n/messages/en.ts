@@ -2139,6 +2139,11 @@ export const enMessages: Messages = {
 
   'provider.availability.title': 'Availability',
   'provider.availability.subtitle': 'Set your working hours and manage when clients can book appointments',
+  'provider.availability.saved': 'Availability saved',
+  'provider.availability.error.load': 'Could not load your availability.',
+  'provider.availability.error.save': 'Saving failed. Please try again.',
+  'provider.availability.error.invalid': 'Check your hours: each time range must start before it ends and must not overlap another on the same day.',
+  'provider.availability.error.noProfile': 'Your professional profile is not active yet, so you cannot set hours.',
 
   'provider.schedule.title': 'Schedule',
   'provider.schedule.subtitle': 'Manage your appointments and availability',
@@ -2194,6 +2199,7 @@ export const enMessages: Messages = {
   'provider.availabilityEditor.slots': '{{count}} slots',
   'provider.availabilityEditor.slotTo': 'to',
   'provider.availabilityEditor.addSlot': 'Add Slot',
+  'provider.availabilityEditor.removeSlot': 'Remove Slot',
   'provider.availabilityEditor.copyToAll': 'Copy to all days',
   'provider.availabilityEditor.override.addLabel': 'Add Date Override',
   'provider.availabilityEditor.override.add': 'Add',
@@ -2213,6 +2219,7 @@ export const enMessages: Messages = {
   'provider.availabilityEditor.settings.sameDay': 'Same day',
   'provider.availabilityEditor.settings.maxBookings': 'Max Bookings per Day',
   'provider.availabilityEditor.settings.timezone': 'Timezone',
+  'provider.availabilityEditor.settings.timezoneNote': 'All times are Italian time (Europe/Rome).',
   'provider.availabilityEditor.save': 'Save Availability Settings',
 
   // Calendar component

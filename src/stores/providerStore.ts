@@ -4,7 +4,6 @@ import {
   getProviderDashboardStats,
   getProviderBookings,
   getProviderSchedule,
-  updateAvailability,
   confirmBooking,
   declineBooking,
   completeBooking,
@@ -34,6 +33,8 @@ import {
   ActivityItem,
 } from '@/types/provider';
 import { useAuthStore } from '@/stores/authStore';
+import { fetchMyAvailability, saveMyAvailability } from '@/lib/firebase/availability';
+import { savedOverrides, toSettings, toUpdate, type OverrideDoc } from '@/lib/availability/adapter';
 
 interface ProviderState {
   // Data
@@ -48,6 +49,11 @@ interface ProviderState {
   notifications: ProviderNotification[];
   activities: ActivityItem[];
   availability: AvailabilitySettings | null;
+  /** Bumped on every load. AvailabilityEditor copies its props once, so it is keyed on this. */
+  availabilityVersion: number;
+  availabilityLoadError: string | null;
+  /** The date exceptions as last loaded or saved — what the next save diffs against. */
+  loadedOverrides: OverrideDoc[];
 
   // Loading states
   isLoading: boolean;
@@ -118,6 +124,9 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
   notifications: [],
   activities: [],
   availability: null,
+  availabilityVersion: 0,
+  availabilityLoadError: null,
+  loadedOverrides: [],
 
   isLoading: false,
   isLoadingBookings: false,
@@ -222,39 +231,36 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
 
   // Availability
   fetchAvailability: async () => {
-    set({ isLoading: true, error: null });
+    const uid = useAuthStore.getState().user?.id;
+    if (!uid) return;
+    set({ isLoading: true, availability: null, availabilityLoadError: null });
     try {
-      // This would fetch from Firebase
-      // For now, return default availability
-      const defaultAvailability: AvailabilitySettings = {
-        weeklySchedule: {
-          monday: { isAvailable: true, slots: [{ start: '09:00', end: '17:00' }] },
-          tuesday: { isAvailable: true, slots: [{ start: '09:00', end: '17:00' }] },
-          wednesday: { isAvailable: true, slots: [{ start: '09:00', end: '17:00' }] },
-          thursday: { isAvailable: true, slots: [{ start: '09:00', end: '17:00' }] },
-          friday: { isAvailable: true, slots: [{ start: '09:00', end: '17:00' }] },
-          saturday: { isAvailable: false, slots: [] },
-          sunday: { isAvailable: false, slots: [] },
-        },
-        dateOverrides: [],
-        bufferMinutes: 15,
-        minAdvanceNoticeHours: 24,
-        maxBookingsPerDay: 8,
-        timezone: 'Europe/Rome',
-      };
-      set({ availability: defaultAvailability, isLoading: false });
+      const stored = await fetchMyAvailability(uid);
+      const { settings } = toSettings(stored);
+      set((state) => ({
+        availability: settings,
+        availabilityVersion: state.availabilityVersion + 1,
+        loadedOverrides: stored.overrides,
+        isLoading: false,
+      }));
     } catch (error: any) {
-      set({ error: error.message || 'Failed to fetch availability', isLoading: false });
+      set({ availabilityLoadError: error.message || 'Failed to fetch availability', isLoading: false });
     }
   },
 
+  /** Saves through updateMyAvailability. Rethrows so the page can say why a save failed. */
   updateAvailability: async (settings: AvailabilitySettings) => {
-    set({ isLoading: true, error: null });
+    set({ isLoading: true });
     try {
-      await updateAvailability(settings);
-      set({ availability: settings, isLoading: false });
-    } catch (error: any) {
-      set({ error: error.message || 'Failed to update availability', isLoading: false });
+      await saveMyAvailability(toUpdate(settings, get().loadedOverrides));
+      set({
+        availability: settings,
+        loadedOverrides: savedOverrides(settings),
+        isLoading: false,
+      });
+    } catch (error) {
+      set({ isLoading: false });
+      throw error;
     }
   },
 

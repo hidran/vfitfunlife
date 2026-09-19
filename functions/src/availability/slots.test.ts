@@ -5,6 +5,7 @@ import {
   romeInstant,
   isDateKey,
   DEFAULT_BOOKING_RULES,
+  DEFAULT_WEEKLY_HOURS,
   type SlotQuery,
   type WeeklyWindow,
 } from "./slots";
@@ -128,5 +129,14 @@ describe("date helpers", () => {
 
   it("has the documented defaults", () => {
     expect(DEFAULT_BOOKING_RULES).toEqual({ bufferMinutes: 15, minAdvanceNoticeHours: 24, maxBookingsPerDay: 8 });
+  });
+
+  it("gives every provider Mon–Fri 09:00–17:00 by default", () => {
+    expect(DEFAULT_WEEKLY_HOURS).toEqual([1, 2, 3, 4, 5].map((dayOfWeek) => ({
+      dayOfWeek,
+      startTime: "09:00",
+      endTime: "17:00",
+      isAvailable: true,
+    })));
   });
 });

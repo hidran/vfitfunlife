@@ -95,10 +95,11 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
   };
 
   const addDateOverride = () => {
-    if (!newOverrideDate) return;
-    
+    // One exception per date: the server stores them keyed by date.
+    if (!newOverrideDate || localSettings.dateOverrides.some((o) => o.date === newOverrideDate)) return;
+
     const newOverride: DateOverride = {
-      id: `override-${Date.now()}`,
+      id: `override-${newOverrideDate}`,
       date: newOverrideDate,
       isAvailable: false,
       slots: [],
@@ -124,6 +125,15 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
       ...prev,
       dateOverrides: prev.dateOverrides.map(o =>
         o.id === id ? { ...o, ...updates } : o
+      ),
+    }));
+  };
+
+  const updateOverrideSlots = (id: string, update: (slots: TimeRange[]) => TimeRange[]) => {
+    setLocalSettings(prev => ({
+      ...prev,
+      dateOverrides: prev.dateOverrides.map(o =>
+        o.id === id ? { ...o, slots: update(o.slots) } : o
       ),
     }));
   };
@@ -252,8 +262,10 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                         </div>
                         
                         <button
+                          type="button"
                           onClick={() => removeTimeSlot(key, index)}
-                          className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                          aria-label={t('provider.availabilityEditor.removeSlot')}
+                          className="touch-target flex items-center justify-center text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -323,7 +335,8 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <p className="font-medium text-white">
-                        {new Date(override.date).toLocaleDateString(toLocaleTag(locale), {
+                        {/* Noon, not midnight: a bare YYYY-MM-DD parses as UTC and can show the day before. */}
+                        {new Date(`${override.date}T12:00:00`).toLocaleDateString(toLocaleTag(locale), {
                           weekday: 'long',
                           year: 'numeric',
                           month: 'long',
@@ -345,7 +358,10 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                           <input
                             type="radio"
                             checked={override.isAvailable}
-                            onChange={() => updateDateOverride(override.id, { isAvailable: true })}
+                            onChange={() => updateDateOverride(override.id, {
+                              isAvailable: true,
+                              slots: override.slots.length > 0 ? override.slots : [{ start: '09:00', end: '17:00' }],
+                            })}
                             className="w-4 h-4 text-section-primary focus:ring-section-primary"
                           />
                           <span className="text-sm text-gray-400">{t('provider.availabilityEditor.override.customHours')}</span>
@@ -358,7 +374,9 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                             <div key={index} className="flex items-center gap-2">
                               <select
                                 value={slot.start}
-                                className="bg-surface-elevated rounded px-2 py-1 text-sm text-white outline-none"
+                                onChange={(e) => updateOverrideSlots(override.id, (slots) =>
+                                  slots.map((s, i) => (i === index ? { ...s, start: e.target.value } : s)))}
+                                className="min-h-[44px] bg-surface-elevated rounded px-2 py-1 text-sm text-white outline-none"
                               >
                                 {TIME_OPTIONS.map(time => (
                                   <option key={time} value={time}>{time}</option>
@@ -367,15 +385,29 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                               <span className="text-gray-500">{t('provider.availabilityEditor.slotTo')}</span>
                               <select
                                 value={slot.end}
-                                className="bg-surface-elevated rounded px-2 py-1 text-sm text-white outline-none"
+                                onChange={(e) => updateOverrideSlots(override.id, (slots) =>
+                                  slots.map((s, i) => (i === index ? { ...s, end: e.target.value } : s)))}
+                                className="min-h-[44px] bg-surface-elevated rounded px-2 py-1 text-sm text-white outline-none"
                               >
                                 {TIME_OPTIONS.map(time => (
                                   <option key={time} value={time}>{time}</option>
                                 ))}
                               </select>
+                              <button
+                                type="button"
+                                onClick={() => updateOverrideSlots(override.id, (slots) => slots.filter((_, i) => i !== index))}
+                                aria-label={t('provider.availabilityEditor.removeSlot')}
+                                className="touch-target flex items-center justify-center text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
                             </div>
                           ))}
-                          <Button variant="secondary" size="sm">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => updateOverrideSlots(override.id, (slots) => [...slots, { start: '09:00', end: '17:00' }])}
+                          >
                             <Plus className="w-3 h-3 mr-1" />
                             {t('provider.availabilityEditor.addSlot')}
                           </Button>
@@ -455,19 +487,9 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
           </div>
           
           <div>
-            <label className="block text-sm text-gray-400 mb-2">{t('provider.availabilityEditor.settings.timezone')}</label>
-            <select
-              value={localSettings.timezone}
-              onChange={(e) => setLocalSettings(prev => ({ ...prev, timezone: e.target.value }))}
-              className="w-full bg-surface-input border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-section-primary"
-            >
-              <option value="Europe/Rome">Europe/Rome (CET/CEST)</option>
-              <option value="Europe/London">Europe/London (GMT/BST)</option>
-              <option value="America/New_York">America/New_York (ET)</option>
-              <option value="America/Los_Angeles">America/Los_Angeles (PT)</option>
-              <option value="Asia/Dubai">Asia/Dubai (GST)</option>
-              <option value="Asia/Tokyo">Asia/Tokyo (JST)</option>
-            </select>
+            <p className="block text-sm text-gray-400 mb-2">{t('provider.availabilityEditor.settings.timezone')}</p>
+            {/* Every provider is in Italy; the server computes all slots in Europe/Rome. */}
+            <p className="py-2.5 text-sm text-white">{t('provider.availabilityEditor.settings.timezoneNote')}</p>
           </div>
         </div>
       </div>

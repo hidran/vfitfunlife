@@ -10,7 +10,6 @@ export {
   getProviderDashboardStats,
   getProviderBookings,
   getProviderSchedule,
-  updateAvailability,
   confirmBooking as confirmProviderBooking,
   declineBooking as declineProviderBooking,
   completeBooking as completeProviderBooking,

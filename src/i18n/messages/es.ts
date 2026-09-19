@@ -2115,6 +2115,11 @@ export const esMessages: Messages = {
 
   'provider.availability.title': 'Disponibilidad',
   'provider.availability.subtitle': 'Establece tu horario de trabajo y gestiona cuándo los clientes pueden reservar citas',
+  'provider.availability.saved': 'Disponibilidad guardada',
+  'provider.availability.error.load': 'No se pudo cargar tu disponibilidad.',
+  'provider.availability.error.save': 'No se pudo guardar. Inténtalo de nuevo.',
+  'provider.availability.error.invalid': 'Revisa el horario: cada franja debe empezar antes de terminar y no solaparse con otra del mismo día.',
+  'provider.availability.error.noProfile': 'Tu perfil profesional aún no está activo, así que no puedes configurar horarios.',
 
   'provider.schedule.title': 'Agenda',
   'provider.schedule.subtitle': 'Gestiona tus citas y disponibilidad',
@@ -2170,6 +2175,7 @@ export const esMessages: Messages = {
   'provider.availabilityEditor.slots': '{{count}} franjas',
   'provider.availabilityEditor.slotTo': 'a',
   'provider.availabilityEditor.addSlot': 'Añadir franja',
+  'provider.availabilityEditor.removeSlot': 'Eliminar franja',
   'provider.availabilityEditor.copyToAll': 'Copiar a todos los días',
   'provider.availabilityEditor.override.addLabel': 'Añadir excepción de fecha',
   'provider.availabilityEditor.override.add': 'Añadir',
@@ -2189,6 +2195,7 @@ export const esMessages: Messages = {
   'provider.availabilityEditor.settings.sameDay': 'Mismo día',
   'provider.availabilityEditor.settings.maxBookings': 'Máx. reservas por día',
   'provider.availabilityEditor.settings.timezone': 'Zona horaria',
+  'provider.availabilityEditor.settings.timezoneNote': 'Todos los horarios están en hora italiana (Europe/Rome).',
   'provider.availabilityEditor.save': 'Guardar configuración de disponibilidad',
 
   // Calendar component

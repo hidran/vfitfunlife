@@ -2122,6 +2122,11 @@ export const deMessages: Messages = {
 
   'provider.availability.title': 'Verfügbarkeit',
   'provider.availability.subtitle': 'Legen Sie Ihre Arbeitszeiten fest und verwalten Sie, wann Kunden Termine buchen können',
+  'provider.availability.saved': 'Verfügbarkeit gespeichert',
+  'provider.availability.error.load': 'Ihre Verfügbarkeit konnte nicht geladen werden.',
+  'provider.availability.error.save': 'Speichern fehlgeschlagen. Bitte versuchen Sie es erneut.',
+  'provider.availability.error.invalid': 'Prüfen Sie Ihre Zeiten: Jeder Zeitraum muss vor seinem Ende beginnen und darf sich nicht mit einem anderen am selben Tag überschneiden.',
+  'provider.availability.error.noProfile': 'Ihr Anbieterprofil ist noch nicht aktiv, daher können Sie keine Zeiten festlegen.',
 
   'provider.schedule.title': 'Terminplan',
   'provider.schedule.subtitle': 'Verwalten Sie Ihre Termine und Verfügbarkeit',
@@ -2177,6 +2182,7 @@ export const deMessages: Messages = {
   'provider.availabilityEditor.slots': '{{count}} Slots',
   'provider.availabilityEditor.slotTo': 'bis',
   'provider.availabilityEditor.addSlot': 'Slot hinzufügen',
+  'provider.availabilityEditor.removeSlot': 'Slot entfernen',
   'provider.availabilityEditor.copyToAll': 'Auf alle Tage kopieren',
   'provider.availabilityEditor.override.addLabel': 'Datumsausnahme hinzufügen',
   'provider.availabilityEditor.override.add': 'Hinzufügen',
@@ -2196,6 +2202,7 @@ export const deMessages: Messages = {
   'provider.availabilityEditor.settings.sameDay': 'Gleicher Tag',
   'provider.availabilityEditor.settings.maxBookings': 'Max. Buchungen pro Tag',
   'provider.availabilityEditor.settings.timezone': 'Zeitzone',
+  'provider.availabilityEditor.settings.timezoneNote': 'Alle Zeiten sind italienische Zeit (Europe/Rome).',
   'provider.availabilityEditor.save': 'Verfügbarkeitseinstellungen speichern',
 
   // Calendar component

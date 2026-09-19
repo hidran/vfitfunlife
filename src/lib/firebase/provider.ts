@@ -40,7 +40,6 @@ import {
   ClientNote,
   BookingFilters,
   ProviderBooking,
-  AvailabilitySettings,
   ProviderNotification,
   Transaction,
   WithdrawalRequest,
@@ -340,17 +339,6 @@ export async function getProviderSchedule(startDate: Date, endDate: Date): Promi
   });
 
   return events.sort((a, b) => a.start.getTime() - b.start.getTime());
-}
-
-// Update Availability
-export async function updateAvailability(settings: AvailabilitySettings): Promise<void> {
-  const providerId = await getCurrentProviderId();
-  
-  const providerRef = doc(db, PROVIDER_COLLECTION, providerId);
-  await updateDoc(providerRef, {
-    availability: settings,
-    updatedAt: serverTimestamp(),
-  });
 }
 
 /**

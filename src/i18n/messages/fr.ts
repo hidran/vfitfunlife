@@ -2124,6 +2124,11 @@ export const frMessages: Messages = {
 
   'provider.availability.title': 'Disponibilités',
   'provider.availability.subtitle': 'Définissez vos horaires de travail et gérez quand les clients peuvent prendre rendez-vous',
+  'provider.availability.saved': 'Disponibilités enregistrées',
+  'provider.availability.error.load': 'Impossible de charger vos disponibilités.',
+  'provider.availability.error.save': "L'enregistrement a échoué. Veuillez réessayer.",
+  'provider.availability.error.invalid': 'Vérifiez vos horaires : chaque créneau doit commencer avant de finir et ne pas chevaucher un autre le même jour.',
+  'provider.availability.error.noProfile': "Votre profil professionnel n'est pas encore actif : vous ne pouvez donc pas définir d'horaires.",
 
   'provider.schedule.title': 'Planning',
   'provider.schedule.subtitle': 'Gérez vos rendez-vous et vos disponibilités',
@@ -2179,6 +2184,7 @@ export const frMessages: Messages = {
   'provider.availabilityEditor.slots': '{{count}} créneaux',
   'provider.availabilityEditor.slotTo': 'à',
   'provider.availabilityEditor.addSlot': 'Ajouter un créneau',
+  'provider.availabilityEditor.removeSlot': 'Supprimer le créneau',
   'provider.availabilityEditor.copyToAll': 'Copier sur tous les jours',
   'provider.availabilityEditor.override.addLabel': 'Ajouter une exception de date',
   'provider.availabilityEditor.override.add': 'Ajouter',
@@ -2198,6 +2204,7 @@ export const frMessages: Messages = {
   'provider.availabilityEditor.settings.sameDay': 'Même jour',
   'provider.availabilityEditor.settings.maxBookings': 'Max. réservations par jour',
   'provider.availabilityEditor.settings.timezone': 'Fuseau horaire',
+  'provider.availabilityEditor.settings.timezoneNote': "Tous les horaires sont à l'heure italienne (Europe/Rome).",
   'provider.availabilityEditor.save': 'Enregistrer les disponibilités',
 
   // Calendar component

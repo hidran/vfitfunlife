@@ -1,38 +1,41 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { AlertCircle, CheckCircle } from 'lucide-react';
 import { AvailabilityEditor } from '@/components/provider/AvailabilityEditor';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/Spinner';
 import { useProviderStore } from '@/stores/providerStore';
 import { useI18n } from '@/hooks/useI18n';
-import { AvailabilitySettings } from '@/types/provider';
-
-const DEFAULT_AVAILABILITY: AvailabilitySettings = {
-  weeklySchedule: {
-    monday: { isAvailable: true, slots: [{ start: '09:00', end: '17:00' }] },
-    tuesday: { isAvailable: true, slots: [{ start: '09:00', end: '17:00' }] },
-    wednesday: { isAvailable: true, slots: [{ start: '09:00', end: '17:00' }] },
-    thursday: { isAvailable: true, slots: [{ start: '09:00', end: '17:00' }] },
-    friday: { isAvailable: true, slots: [{ start: '09:00', end: '17:00' }] },
-    saturday: { isAvailable: false, slots: [] },
-    sunday: { isAvailable: false, slots: [] },
-  },
-  dateOverrides: [],
-  bufferMinutes: 15,
-  minAdvanceNoticeHours: 24,
-  maxBookingsPerDay: 8,
-  timezone: 'Europe/Rome',
-};
+import { availabilitySaveErrorKey } from '@/lib/availability/errors';
+import type { MessageKey } from '@/i18n/messages';
+import type { AvailabilitySettings } from '@/types/provider';
 
 export default function ProviderAvailabilityPage() {
   const { t } = useI18n();
-  const { availability, isLoading, fetchAvailability, updateAvailability } = useProviderStore();
+  const {
+    availability,
+    availabilityVersion,
+    availabilityLoadError,
+    isLoading,
+    fetchAvailability,
+    updateAvailability,
+  } = useProviderStore();
+  const [saveResult, setSaveResult] = useState<{ ok: true } | { ok: false; key: MessageKey } | null>(null);
 
   useEffect(() => {
     fetchAvailability();
   }, [fetchAvailability]);
 
   const handleSave = async (settings: AvailabilitySettings) => {
-    await updateAvailability(settings);
+    setSaveResult(null);
+    try {
+      await updateAvailability(settings);
+      setSaveResult({ ok: true });
+    } catch (err) {
+      console.error('Saving availability failed:', err);
+      setSaveResult({ ok: false, key: availabilitySaveErrorKey(err) });
+    }
   };
 
   return (
@@ -45,12 +48,38 @@ export default function ProviderAvailabilityPage() {
         </p>
       </div>
 
-      {/* Availability Editor */}
-      <AvailabilityEditor
-        settings={availability || DEFAULT_AVAILABILITY}
-        onSave={handleSave}
-        loading={isLoading}
-      />
+      {saveResult?.ok === true && (
+        <div role="status" className="flex items-center gap-3 rounded-xl border border-success/30 bg-success/15 p-4 text-sm text-success">
+          <CheckCircle className="h-5 w-5 flex-shrink-0" />
+          {t('provider.availability.saved')}
+        </div>
+      )}
+      {saveResult?.ok === false && (
+        <div role="alert" className="flex items-center gap-3 rounded-xl border border-error/40 bg-error/15 p-4 text-sm text-error">
+          <AlertCircle className="h-5 w-5 flex-shrink-0" />
+          {t(saveResult.key)}
+        </div>
+      )}
+
+      {availability ? (
+        <AvailabilityEditor
+          key={availabilityVersion}
+          settings={availability}
+          onSave={handleSave}
+          loading={isLoading}
+        />
+      ) : availabilityLoadError ? (
+        <div role="alert" className="rounded-xl border border-error/40 bg-error/15 p-4 text-sm text-error">
+          <p>{t('provider.availability.error.load')}</p>
+          <Button variant="secondary" size="sm" className="mt-3 min-h-[44px]" onClick={() => fetchAvailability()}>
+            {t('common.retry')}
+          </Button>
+        </div>
+      ) : (
+        <div className="flex justify-center py-12">
+          <Spinner size="md" />
+        </div>
+      )}
     </div>
   );
 }

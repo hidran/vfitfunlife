@@ -2139,6 +2139,11 @@ export const itMessages = {
 
   'provider.availability.title': 'Disponibilità',
   'provider.availability.subtitle': 'Imposta gli orari di lavoro e gestisci quando i clienti possono prenotare appuntamenti',
+  'provider.availability.saved': 'Disponibilità salvata',
+  'provider.availability.error.load': 'Impossibile caricare la tua disponibilità.',
+  'provider.availability.error.save': 'Salvataggio non riuscito. Riprova.',
+  'provider.availability.error.invalid': 'Controlla gli orari: ogni fascia deve iniziare prima di finire e non sovrapporsi alle altre dello stesso giorno.',
+  'provider.availability.error.noProfile': 'Il tuo profilo professionale non è ancora attivo, quindi non puoi impostare orari.',
 
   'provider.schedule.title': 'Agenda',
   'provider.schedule.subtitle': 'Gestisci appuntamenti e disponibilità',
@@ -2194,6 +2199,7 @@ export const itMessages = {
   'provider.availabilityEditor.slots': '{{count}} fasce',
   'provider.availabilityEditor.slotTo': 'a',
   'provider.availabilityEditor.addSlot': 'Aggiungi fascia',
+  'provider.availabilityEditor.removeSlot': 'Rimuovi fascia',
   'provider.availabilityEditor.copyToAll': 'Copia a tutti i giorni',
   'provider.availabilityEditor.override.addLabel': 'Aggiungi eccezione data',
   'provider.availabilityEditor.override.add': 'Aggiungi',
@@ -2213,6 +2219,7 @@ export const itMessages = {
   'provider.availabilityEditor.settings.sameDay': 'Stesso giorno',
   'provider.availabilityEditor.settings.maxBookings': 'Max prenotazioni al giorno',
   'provider.availabilityEditor.settings.timezone': 'Fuso orario',
+  'provider.availabilityEditor.settings.timezoneNote': 'Tutti gli orari sono nel fuso orario italiano (Europe/Rome).',
   'provider.availabilityEditor.save': 'Salva impostazioni disponibilità',
 
   // Calendar component

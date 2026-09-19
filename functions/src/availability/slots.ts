@@ -30,6 +30,20 @@ export const DEFAULT_BOOKING_RULES: BookingRules = {
   maxBookingsPerDay: 8,
 };
 
+/**
+ * Every provider starts bookable: Mon–Fri 09:00–17:00, one window per day. Written as real
+ * data by provider approval and by the historical-schedule migration (not generated here at
+ * read time), so a provider with no hours has deliberately switched every day off. This is
+ * the single source of truth for that default; mirror it, don't recompute it, if another
+ * layer ever needs the same shape.
+ */
+export const DEFAULT_WEEKLY_HOURS: WeeklyWindow[] = [1, 2, 3, 4, 5].map((dayOfWeek) => ({
+  dayOfWeek,
+  startTime: "09:00",
+  endTime: "17:00",
+  isAvailable: true,
+}));
+
 export interface BusyInterval {
   start: Date;
   end: Date;
