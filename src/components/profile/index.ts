@@ -8,3 +8,7 @@ export { PortfolioGallery } from './PortfolioGallery';
 export { LanguagesSelector } from './LanguagesSelector';
 export { CancellationPolicyEditor } from './CancellationPolicyEditor';
 export { BecomeProviderCard } from './BecomeProviderCard';
+export { ProfileGamificationCard } from './ProfileGamificationCard';
+export { ProfileStatsCard } from './ProfileStatsCard';
+export { StreakCard } from './StreakCard';
+export { FamilyCard } from './FamilyCard';

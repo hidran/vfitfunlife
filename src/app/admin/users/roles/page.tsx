@@ -18,10 +18,13 @@ import {
   Mail,
 } from "lucide-react";
 
-interface AdminUser extends User {
+type AdminUser = Pick<
+  User,
+  "id" | "uid" | "email" | "fullName" | "avatarUrl" | "role" | "lastLoginAt"
+> & {
   addedBy?: string;
   addedAt?: Date;
-}
+};
 
 export default function UserRolesPage() {
   const { t } = useI18n();
@@ -34,47 +37,9 @@ export default function UserRolesPage() {
       id: "1",
       uid: "1",
       email: "super@example.com",
-      phone: "+39 123 4567890",
       fullName: "Super Admin",
       avatarUrl: null,
-      dateOfBirth: null,
       role: "superadmin",
-      isVip: false,
-      vipExpiresAt: null,
-      vipPlanId: null,
-      stripeCustomerId: null,
-      stripeSubscriptionId: null,
-      pointsBalance: 0,
-      walletBalance: 0,
-      preferredLanguage: "it",
-      preferredSection: "fit",
-      notificationsEnabled: true,
-      fcmTokens: [],
-      referralCode: "",
-      referredBy: null,
-      referralCount: 0,
-      bio: null,
-      phoneVerified: true,
-      emailVerified: true,
-      socialLinks: null,
-      providerProfile: null,
-      notificationSettings: {
-        email: true,
-        push: true,
-        sms: false,
-        marketing: false,
-        bookingReminders: true,
-        promotions: false,
-        newMessages: true,
-      },
-      privacySettings: {
-        profileVisible: false,
-        bookingsVisible: false,
-        showEmail: false,
-        showPhone: false,
-      },
-      createdAt: { toDate: () => new Date("2024-01-01") } as any,
-      updatedAt: { toDate: () => new Date("2024-01-01") } as any,
       lastLoginAt: { toDate: () => new Date() } as any,
       addedBy: "System",
       addedAt: new Date("2024-01-01"),
