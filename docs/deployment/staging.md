@@ -53,7 +53,8 @@ Google sign-in failed with `auth/unauthorized-domain` because staging does not a
 
 `build:prod` is `dotenv -e .env -- next build`. Next.js never overrides a variable that is
 already in `process.env`, so `.env` wins no matter what `.env.local` contains — the same
-mechanism `build:staging` uses.
+mechanism `build:staging` uses. `mobile:build` runs `build:prod` too, so native builds
+cannot pick up staging config either.
 
 The hosting `predeploy` hook runs `scripts/assert-build-project.mjs "$GCLOUD_PROJECT"`. It
 scans `out/_next/static` for the inlined `projectId` and cancels the deploy unless it
@@ -73,7 +74,7 @@ matches the target project. That covers every path, including a bare `firebase d
 | Firestore | `europe-west1`, rules + indexes deployed |
 | Functions | 88 deployed, identical set to production |
 | Hosting | https://vfit-app-staging.web.app |
-| Auth | Email/Password enabled |
+| Auth | Email/Password + Google enabled; `localhost` authorized for local dev |
 | Remote Config | pilot flags published (version 1) |
 | Secrets | all 8 exist, as **placeholders** |
 | Storage | **not provisioned** — see below |
@@ -105,8 +106,11 @@ users in a separate Identity Platform tenant, with different passwords.
    ```
    Also set `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...` in `.env.staging`.
    Redeploy functions afterwards so they pick up the new versions.
-3. **Google / Apple / Phone sign-in**, if you need them. Email/Password is enabled and is
-   what the seeded accounts use.
+3. **Apple / Phone sign-in**, if you need them. Email/Password and Google are enabled;
+   the seeded accounts use Email/Password. Google was enabled on 2026-09-19 with a one-off
+   `firebase deploy -P vfit-app-staging --only auth --config <file>` whose only content is
+   an `auth.providers.googleSignIn` block. It is kept out of the shared `firebase.json` so a
+   bare prod deploy never re-provisions production's Google client.
    https://console.firebase.google.com/project/vfit-app-staging/authentication/providers
 4. **AI and email keys**, if you want those features working. `RESEND_API_KEY`,
    `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_GENAI_API_KEY`, `OPENAI_COMPAT_API_KEY`

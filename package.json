@@ -24,7 +24,7 @@
     "seed:demo": "node scripts/seed-demo-data.js",
     "seed:demo:clear": "node scripts/seed-demo-data.js --clear",
     "seed:quick": "node scripts/seed-quick.js",
-    "mobile:build": "next build",
+    "mobile:build": "npm run build:prod",
     "mobile:sync": "cap sync",
     "mobile:copy": "cap copy",
     "mobile:ios": "npm run mobile:build && cap sync ios",
