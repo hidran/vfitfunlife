@@ -15,14 +15,15 @@ export const TIME_ZONE = "Europe/Rome";
 const DEMO_EMAIL_DOMAIN = "@demo.vfit";
 
 /**
- * Mirrors `isHiddenAccount` in src/lib/firebase/admin.ts: soft-deleted and seeded demo
- * accounts must not inflate trainer or client counts on a dashboard partners read.
+ * Mirrors `hiddenAccountKind`/`isHiddenAccount` in src/lib/firebase/admin.ts: soft-deleted
+ * and seeded demo accounts (provider_* and customer_* ids, or an @demo.vfit email) must not
+ * inflate trainer or client counts on a dashboard partners read.
  */
 function isHidden(id: string, data: FirebaseFirestore.DocumentData): boolean {
   if (data.isDeleted === true || data.deletedAt) return true;
   const email = typeof data.email === "string" ? data.email.toLowerCase() : "";
   if (email.endsWith(DEMO_EMAIL_DOMAIN)) return true;
-  if (id.startsWith("provider_")) return true;
+  if (id.startsWith("provider_") || id.startsWith("customer_")) return true;
   return false;
 }
 

@@ -65,6 +65,8 @@ describe('getUsers', () => {
         demoSeed: { fullName: 'Seed', email: 'seed@demo.vfit' },
         // Hidden by id prefix alone — a normal-looking email must not save it.
         provider_42: { fullName: 'Provider Seed', email: 'provider42@example.com' },
+        // customer_* ids are also seeded demo accounts, same as provider_*.
+        customer_7: { fullName: 'Customer Seed', email: 'customer7@example.com' },
       })
     );
 
@@ -73,6 +75,7 @@ describe('getUsers', () => {
       'goneToo',
       'demoSeed',
       'provider_42',
+      'customer_7',
     ]);
     expect((await getUsers({ status: 'all' })).users.map((u) => u.id)).toEqual(['alive']);
   });

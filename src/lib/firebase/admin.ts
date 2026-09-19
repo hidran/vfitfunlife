@@ -71,24 +71,30 @@ const convertTimestamps = (data: any): any => {
   return data;
 };
 
-// Seeded demo provider accounts use the @demo.vfit email domain and/or a
-// `provider_<timestamp>_<n>` document id rather than a real Firebase Auth uid.
+// Seeded demo accounts use the @demo.vfit email domain and/or a `provider_<timestamp>_<n>`
+// / `customer_<timestamp>_<n>` document id rather than a real Firebase Auth uid — no real
+// uid ever starts with either prefix.
 const DEMO_EMAIL_DOMAIN = "@demo.vfit";
 
 /**
- * True when a user/provider document is a soft-deleted account (isDeleted /
- * deletedAt) or a seeded demo account, and should be hidden from admin lists.
- * Applied client-side because a Firestore `!=` filter on isDeleted would also
- * exclude the (vast majority of) real docs that simply lack the field.
+ * Why a user/provider document is hidden from admin lists, or null when it isn't:
+ * 'deleted' for a soft-deleted account (isDeleted / deletedAt), 'demo' for a seeded demo
+ * account. 'deleted' takes precedence — a soft-deleted seed account is still shown as
+ * deleted, not demo. Exported so callers that need to distinguish the two (e.g. the users
+ * table's status badge) share this one rule with the list filter instead of redefining it.
+ * Applied client-side because a Firestore `!=` filter on isDeleted would also exclude the
+ * (vast majority of) real docs that simply lack the field.
  */
-const isHiddenAccount = (id: string, data: any): boolean => {
-  if (!data) return false;
-  if (data.isDeleted === true || data.deletedAt) return true;
+export function hiddenAccountKind(id: string, data: any): "deleted" | "demo" | null {
+  if (!data) return null;
+  if (data.isDeleted === true || data.deletedAt) return "deleted";
   const email = typeof data.email === "string" ? data.email.toLowerCase() : "";
-  if (email.endsWith(DEMO_EMAIL_DOMAIN)) return true;
-  if (typeof id === "string" && id.startsWith("provider_")) return true;
-  return false;
-};
+  const isSeedId = typeof id === "string" && (id.startsWith("provider_") || id.startsWith("customer_"));
+  if (email.endsWith(DEMO_EMAIL_DOMAIN) || isSeedId) return "demo";
+  return null;
+}
+
+const isHiddenAccount = (id: string, data: any): boolean => hiddenAccountKind(id, data) !== null;
 
 // Get admin dashboard stats
 export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {

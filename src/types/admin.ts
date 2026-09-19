@@ -246,6 +246,9 @@ export interface AdminUser extends User {
   loginCount: number;
   actionsCount: number;
   isSuspended?: boolean;
+  /** Soft-delete marker — see `hiddenAccountKind` in lib/firebase/admin.ts. */
+  isDeleted?: boolean;
+  deletedAt?: Date | null;
 }
 
 // Provider Extended for Admin
