@@ -16,7 +16,10 @@ import {
   signInWithEmail,
   resetPassword,
   initializeUserProfile,
+  sendVerificationEmail,
+  syncEmailVerification,
 } from '@/lib/firebase/auth';
+import { needsVerificationSync } from '@/lib/emailVerification';
 import { RecaptchaVerifier } from 'firebase/auth';
 import { isNativePlatform } from '@/lib/capacitor';
 import type { AppLocale } from '@/types/locale';
@@ -61,6 +64,13 @@ interface AuthState {
   setUser: (user: User | null) => void;
   loadUserData: (uid: string) => Promise<User | null>;
   refreshUserProfile: () => Promise<void>;
+  /** Re-send the verification email to the signed-in email/password user. */
+  resendVerificationEmail: () => Promise<void>;
+  /**
+   * Reload the Auth user and bring users/{uid}.emailVerified in line with it
+   * (auto-verifying Google/Apple sign-ins). Resolves to the verified state.
+   */
+  checkEmailVerification: () => Promise<boolean>;
 }
 
 // Track if we've already handled the redirect in this session
@@ -68,6 +78,10 @@ let redirectHandled = false;
 
 // Track the last processed URL to handle HMR and redirects
 let lastProcessedUrl: string | null = null;
+
+// Users whose verification state was already synced automatically this session,
+// so a sign-in the server refuses to verify isn't re-synced on every profile load.
+const verificationAutoSynced = new Set<string>();
 
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -287,6 +301,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isLoading: false,
         isInitialized: true,
       });
+
+      // Google/Apple sign-ins, and email accounts verified since the last load,
+      // get users/{uid}.emailVerified set server-side. Fire and forget.
+      if (
+        currentFirebaseUser.email &&
+        !verificationAutoSynced.has(uid) &&
+        needsVerificationSync(
+          { ...currentFirebaseUser, providerData: currentFirebaseUser.providerData ?? [] },
+          user.emailVerified,
+        )
+      ) {
+        verificationAutoSynced.add(uid);
+        get().checkEmailVerification().catch((err) => {
+          console.warn('[Auth] Email verification sync failed:', err);
+        });
+      }
       return user;
     } catch (error) {
       console.error('[Auth] Error loading user data:', error);
@@ -544,6 +574,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (!user) {
         throw new Error('Registration profile could not be loaded');
       }
+
+      // The account exists at this point, so a failed send must not fail the
+      // registration; the verification banner offers a resend.
+      try {
+        await sendVerificationEmail(firebaseUser, preferredLanguage);
+      } catch (sendError) {
+        console.warn('[Auth] Verification email not sent:', sendError);
+      }
     } catch (error: any) {
       console.error('Email registration error:', error);
       let errorMessage = 'Failed to create account';
@@ -607,4 +645,34 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   // Set user manually (for registration flow)
   setUser: (user: User | null) => set({ user }),
+
+  resendVerificationEmail: async () => {
+    const current = auth.currentUser;
+    if (!current) throw new Error('Not signed in');
+    await sendVerificationEmail(current, get().user?.preferredLanguage);
+  },
+
+  checkEmailVerification: async () => {
+    const current = auth.currentUser;
+    const { user } = get();
+    if (!current || !user) return false;
+
+    // Pick up a verification link opened in another tab or the mail app.
+    await current.reload();
+    if (!needsVerificationSync(current, user.emailVerified)) {
+      return current.emailVerified || user.emailVerified === true;
+    }
+
+    const { emailVerified } = await syncEmailVerification();
+    if (emailVerified) {
+      // The server may have just set emailVerified on the Auth record
+      // (Google/Apple); reload so the SDK user and its token reflect it.
+      await current.reload();
+      set((state) => ({
+        firebaseUser: current,
+        user: state.user ? { ...state.user, emailVerified: true } : state.user,
+      }));
+    }
+    return emailVerified;
+  },
 }));

@@ -25,7 +25,6 @@ import { Spinner } from '@/components/ui/Spinner';
 import { ProfilePhotoUploader } from '@/components/profile';
 import {
   updateUserProfile,
-  verifyEmail,
   updateProviderProfile,
   isProvider,
   updateSocialLinks,
@@ -109,7 +108,8 @@ type TabType = 'personal' | 'professional';
 export default function EditProfilePage() {
   const router = useRouter();
   const { t } = useI18n();
-  const { user, firebaseUser, refreshUserProfile, isLoading } = useAuthStore();
+  const { user, firebaseUser, refreshUserProfile, isLoading, resendVerificationEmail } = useAuthStore();
+  const emailVerified = !!(firebaseUser?.emailVerified || user?.emailVerified);
   const providerStatus = useProviderStatus();
   const categoryMap = useServiceCategoryMap();
   const [isSaving, setIsSaving] = useState(false);
@@ -316,9 +316,9 @@ export default function EditProfilePage() {
   };
 
   const handleSendVerificationEmail = async () => {
-    if (firebaseUser && !firebaseUser.emailVerified) {
+    if (firebaseUser && !emailVerified) {
       try {
-        await verifyEmail(firebaseUser);
+        await resendVerificationEmail();
         alert(t('profile.edit.alert.verificationEmailSent'));
       } catch (error) {
         console.error('Error sending verification email:', error);
@@ -618,13 +618,13 @@ export default function EditProfilePage() {
                   <div>
                     <p className="text-sm font-medium text-text-inverse">{t('profile.edit.emailVerificationTitle')}</p>
                     <p className="text-xs text-text-tertiary">
-                      {firebaseUser?.emailVerified
+                      {emailVerified
                         ? t('profile.verification.emailVerifiedTitle')
                         : t('profile.verification.emailUnverifiedTitle')}
                     </p>
                   </div>
                 </div>
-                {firebaseUser?.emailVerified ? (
+                {emailVerified ? (
                   <span className="flex items-center gap-1 text-xs text-success-DEFAULT">
                     <Shield size={14} />
                     {t('profile.edit.verification.verified')}

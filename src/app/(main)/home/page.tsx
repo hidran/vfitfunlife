@@ -822,7 +822,12 @@ export default function HomePage() {
         transition: 'transform 0.3s',
       }}
     >
+      {/* The transformed <main> makes this "fixed" box sit just above the page
+          content, so hide it (and let clicks through) unless a pull is under way —
+          otherwise it covers whatever renders above the page, e.g. the email
+          verification banner. */}
       <div
+        aria-hidden={!isRefreshing && pullPosition <= 0}
         style={{
           position: 'fixed',
           top: '-60px',
@@ -832,6 +837,8 @@ export default function HomePage() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          pointerEvents: 'none',
+          visibility: isRefreshing || pullPosition > 0 ? 'visible' : 'hidden',
         }}
       >
         {isRefreshing ? (

@@ -415,10 +415,22 @@ export async function resetPassword(email: string): Promise<void> {
 }
 
 /**
- * Send email verification
+ * Send the address-verification email, written in the user's language
+ * (Firebase localises its templates from auth.languageCode).
  */
-export async function verifyEmail(user: User): Promise<void> {
+export async function sendVerificationEmail(user: User, locale?: AppLocale): Promise<void> {
+  if (locale) auth.languageCode = locale;
   await sendEmailVerification(user);
+}
+
+/**
+ * Copy Auth's verified state onto users/{uid}.emailVerified; the server also
+ * marks Google/Apple sign-ins verified. Returns the resulting state.
+ */
+export async function syncEmailVerification(): Promise<{ emailVerified: boolean }> {
+  const sync = httpsCallable<void, { emailVerified: boolean }>(functions, "syncEmailVerification");
+  const result = await sync();
+  return result.data;
 }
 
 /**

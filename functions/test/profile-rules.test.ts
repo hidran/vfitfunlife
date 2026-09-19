@@ -23,6 +23,19 @@ afterAll(async () => { await testEnv.cleanup(); });
 beforeEach(async () => { await testEnv.clearFirestore(); });
 
 describe('users/{uid} self-update — profile fields', () => {
+  it('owner cannot mark their own email verified', async () => {
+    const uid = 'owner-unverified';
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await ctx.firestore().collection('users').doc(uid).set({
+        uid, role: 'customer', email: 'a@b.c', emailVerified: false,
+      });
+    });
+    const ctx = testEnv.authenticatedContext(uid);
+    await assertFails(
+      ctx.firestore().collection('users').doc(uid).update({ emailVerified: true })
+    );
+  });
+
   it('owner can update socialLinks', async () => {
     const uid = 'owner-1';
     await testEnv.withSecurityRulesDisabled(async (ctx) => {

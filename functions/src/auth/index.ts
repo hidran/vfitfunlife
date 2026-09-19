@@ -2,6 +2,9 @@ import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import * as admin from "firebase-admin";
 import { generateReferralCode } from "../utils/helpers";
+import { resolveEmailVerified } from "./emailVerification";
+
+export { syncEmailVerification } from "./emailVerification";
 
 const db = admin.firestore();
 const region = process.env.FIREBASE_REGION || "europe-west1";
@@ -36,6 +39,8 @@ export const initializeUserProfile = onCall(
     }
 
     const referralCode = generateReferralCode(userId);
+    // Google/Apple sign-ins arrive verified; email/password accounts don't.
+    const emailVerified = await resolveEmailVerified(userRecord);
 
     const userData = {
       uid: userId,
@@ -59,6 +64,7 @@ export const initializeUserProfile = onCall(
       // Status flags
       isActive: true,
       isVerified: false,
+      emailVerified,
 
       // VIP Status
       isVip: false,

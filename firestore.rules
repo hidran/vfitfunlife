@@ -118,7 +118,9 @@ service cloud.firestore {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
         'fullName', 'email', 'phone', 'bio', 'dateOfBirth', 'preferredLanguage',
         'preferredSection', 'avatarUrl', 'notificationsEnabled', 'fcmTokens',
-        'updatedAt', 'lastLoginAt', 'phoneVerified', 'emailVerified',
+        // emailVerified is server-owned (syncEmailVerification); a client must not
+        // be able to mark its own address verified.
+        'updatedAt', 'lastLoginAt', 'phoneVerified',
         'socialLinks', 'notificationSettings', 'privacySettings', 'providerProfile', 'providerStatus',
         'theme'
       ]);

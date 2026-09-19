@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const mockRegisterWithEmail = vi.fn();
 const mockCompleteRegistration = vi.fn();
 const mockGetUserData = vi.fn();
+const mockSendVerificationEmail = vi.fn();
 
 vi.mock('firebase/auth', () => ({
   onAuthStateChanged: vi.fn(),
@@ -25,6 +26,8 @@ vi.mock('@/lib/firebase/auth', () => ({
   isProfileComplete: vi.fn(),
   initRecaptcha: vi.fn(),
   handleAuthRedirect: vi.fn(),
+  sendVerificationEmail: (...args: unknown[]) => mockSendVerificationEmail(...args),
+  syncEmailVerification: vi.fn(),
 }));
 
 describe('authStore.registerWithEmail', () => {
@@ -33,6 +36,28 @@ describe('authStore.registerWithEmail', () => {
     mockRegisterWithEmail.mockResolvedValue({ uid: 'u1' });
     mockCompleteRegistration.mockResolvedValue(undefined);
     mockGetUserData.mockResolvedValue({ id: 'u1', uid: 'u1', fullName: 'Mia Rossi' });
+    mockSendVerificationEmail.mockResolvedValue(undefined);
+  });
+
+  it('sends the verification email in the chosen language after the account is created', async () => {
+    const { useAuthStore } = await import('./authStore');
+
+    await useAuthStore.getState().registerWithEmail('mia@example.com', 'StrongPassword123!', 'Mia Rossi', 'de');
+
+    expect(mockSendVerificationEmail).toHaveBeenCalledWith({ uid: 'u1' }, 'de');
+    expect(mockSendVerificationEmail.mock.invocationCallOrder[0]).toBeGreaterThan(
+      mockCompleteRegistration.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('still completes registration when the verification email cannot be sent', async () => {
+    const { useAuthStore } = await import('./authStore');
+    mockSendVerificationEmail.mockRejectedValue(Object.assign(new Error('quota'), { code: 'auth/too-many-requests' }));
+
+    await expect(
+      useAuthStore.getState().registerWithEmail('mia@example.com', 'StrongPassword123!', 'Mia Rossi', 'it'),
+    ).resolves.toBeUndefined();
+    expect(useAuthStore.getState().user?.uid).toBe('u1');
   });
 
   it('persists the date of birth and preferred section entered on the form', async () => {

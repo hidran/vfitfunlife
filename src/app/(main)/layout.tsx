@@ -7,6 +7,7 @@ import { useNotificationStore } from '@/stores/notificationStore';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useI18n } from '@/hooks/useI18n';
 import type { ReactNode } from 'react';
+import { EmailVerificationBanner } from '@/components/auth/EmailVerificationBanner';
 
 interface MainAppLayoutProps {
   children: ReactNode;
@@ -81,6 +82,7 @@ export default function MainAppLayout({ children }: MainAppLayoutProps) {
         user.providerStatus === 'verified'
       }
     >
+      <EmailVerificationBanner />
       {children}
     </MainLayout>
   );
