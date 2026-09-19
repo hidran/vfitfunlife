@@ -24,7 +24,9 @@ Availability does not work anywhere in the booking path.
 ## Decisions (user, 2026-09-19)
 
 - Booking **enforces** availability on the server.
-- A provider with **no hours is not bookable** until they set them.
+- ~~A provider with no hours is not bookable until they set them.~~ Superseded the same day:
+  **every provider has default hours, Monday–Friday 09:00–17:00**, stored as real data; providers
+  switch off what they don't want. A provider who switches everything off is not bookable.
 
 ## Design
 
@@ -32,7 +34,9 @@ Availability does not work anywhere in the booking path.
 
 - `availabilitySchedule: { dayOfWeek: 0–6 (0 = Sunday), startTime: 'HH:mm', endTime: 'HH:mm',
   isAvailable: boolean }[]` — the existing canonical array (AI search already reads it via
-  `normalizeAvailability`). Several windows per day allowed. Empty or missing ⇒ not bookable.
+  `normalizeAvailability`). Several windows per day allowed. Empty ⇒ not bookable (the provider switched everything
+  off). `DEFAULT_WEEKLY_HOURS` = Mon–Fri 09:00–17:00, one definition on the server, written when
+  a provider is approved (if they have no hours) and by the migration for existing providers.
 - `bookingRules: { bufferMinutes, minAdvanceNoticeHours, maxBookingsPerDay }` — defaults
   15 / 24 / 8 when absent.
 - Date exceptions: `instructors/{uid}/availability/{YYYY-MM-DD}` —
@@ -83,18 +87,22 @@ the DST changeover days in Europe/Rome.
   has at least one available window, normalize it to the array and write it to
   `instructors/{uid}.availabilitySchedule` (the provider chose it; it wins over the seeded
   default), then remove the users-side field. Everyone else keeps what they have (seeded
-  catalogue providers stay bookable Mon–Fri 09–12/14–18; recent sign-ups stay unbookable
-  until they set hours). Report counts.
+  catalogue providers stay bookable Mon–Fri 09–12/14–18), and any provider whose
+  `instructors/{uid}` still has no `availabilitySchedule` gets `DEFAULT_WEEKLY_HOURS`. Report
+  counts.
+- Approval (`decideProviderApplication`, and `backfillSelfRegisteredProviders`) writes
+  `DEFAULT_WEEKLY_HOURS` when the instructor has no `availabilitySchedule`.
 
 ### Client
 
 - `/provider/availability`: loads the real data (instructor doc + override docs for the next
   12 months), maps it into the existing `AvailabilityEditor`'s `AvailabilitySettings` shape and
-  back via a pure adapter, saves through `updateMyAvailability`. With no hours set it opens
-  pre-filled Mon–Fri 09:00–18:00 as an **unsaved** draft, with a notice that nothing counts
-  until saved.
-- `/provider/dashboard`: a banner "Imposta i tuoi orari per ricevere prenotazioni" linking to
-  the availability page when `availabilitySchedule` is empty.
+  back via a pure adapter, saves through `updateMyAvailability`. It shows exactly what is saved
+  (an empty schedule shows every day off).
+- `/provider/dashboard`: until the provider has saved their hours once (`availabilityUpdatedAt`
+  missing), a banner "Sei prenotabile lun–ven 9:00–17:00 — controlla i tuoi orari" linking to
+  the availability page; if the schedule is empty, "Hai disattivato tutti gli orari: non puoi
+  ricevere prenotazioni" instead.
 - Booking time picker: `bookingStore.fetchAvailability` calls `getProviderSlots` (needs the
   selected service); shows only returned slots; a `slot_unavailable` rejection from
   `createBooking` shows a localized "that time was just taken, pick another" and refetches.

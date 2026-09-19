@@ -3257,6 +3257,36 @@ git commit -m "feat(availability): backfillAvailability migration; catalogue mig
 
 ---
 
+### Addendum (2026-09-19, product change): default hours Mon–Fri 09:00–17:00
+
+The user replaced "no hours ⇒ not bookable" with "every provider has default hours Mon–Fri
+09:00–17:00; they switch off what they don't want". This overrides the tasks below where they
+conflict:
+
+- **Task 5** (already told to the implementer): no unsaved-draft pre-fill; the page shows what is
+  saved. `DEFAULT_WEEKLY_HOURS` (canonical array, Mon–Fri 09:00–17:00) is defined once in the
+  functions availability module from Task 1.
+- **Task 7** dashboard banner: show "Sei prenotabile lun–ven 9:00–17:00 — controlla i tuoi
+  orari" (link to /provider/availability) while `instructors/{uid}.availabilityUpdatedAt` is
+  missing; show "Hai disattivato tutti gli orari: non puoi ricevere prenotazioni" when the saved
+  schedule is empty; nothing otherwise. i18n in all five locales.
+- **Task 9** migration: after the users-side profile-hours step, every `instructors/{uid}` of a
+  real provider (users doc with providerStatus verified or pending, not soft-deleted) with a
+  missing or empty `availabilitySchedule` gets `DEFAULT_WEEKLY_HOURS`; count it separately in the
+  dry-run report. Do NOT stamp `availabilityUpdatedAt` (so the review banner shows).
+  Deviation 8 is reversed in spirit: `defaultWeeklySchedule()` in `functions/src/ai/catalog.ts`
+  returns `DEFAULT_WEEKLY_HOURS` (one definition); the catalogue migration may keep filling it.
+- **New step (with Task 9)**: `decideProviderApplication` (on approve) and
+  `backfillSelfRegisteredProviders` write `DEFAULT_WEEKLY_HOURS` to `instructors/{uid}` when it
+  has no `availabilitySchedule`, in the same batch they already write. Unit-test the pure
+  "needs default hours" decision.
+- **New step**: update `docs/database-schema.md` and `docs/backend/cloud-functions.md` for
+  the default schedule, `bookingRules`, `availabilityUpdatedAt`, the override doc shape,
+  `bookingDays`, and the callables `getProviderSlots`, `updateMyAvailability`,
+  `backfillAvailability`; stop the demo seeder writing
+  `users/{uid}.providerProfile.availabilitySchedule`.
+- **Task 10**: no notification step — nobody becomes unbookable.
+
 ### Task 10: Staging, then production (controller, not a subagent)
 
 Callables are exercised from the signed-in page with Playwright `browser_evaluate`. This installs `window.__call(name, data)` using the page's own Firebase session (set `PROJECT` to `vfit-app-staging` or `vfit-funlife`); the callable protocol answers `{ result }` or `{ error: { status, message } }`:
