@@ -1,6 +1,7 @@
 import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import { getUserRoleInfo } from "../utils/roles";
+import { awardXp } from "./gamification";
 
 const db = admin.firestore();
 const region = process.env.FIREBASE_REGION || "europe-west1";
@@ -16,6 +17,15 @@ export * from "./profile";
 
 // Export gamification functions
 export * from "./gamification";
+
+// Export check-in callable
+export * from "./checkin";
+
+// Export Season 0 onboarding reward callables
+export * from "./season0Rewards";
+
+// Export family callables
+export * from "./family";
 
 // Export admin-only mutation functions (superadmin-gated)
 export * from "./adminMutations";
@@ -451,29 +461,49 @@ export const submitReview = onCall<ReviewData>(
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    // Award points for review
-    const reviewPoints = 50;
+    // Award XP + points for review (vision doc §4: +10 XP, +10 points).
+    const reviewXp = 10;
+    const reviewPoints = 10;
+
     batch.update(db.collection("users").doc(userId), {
       pointsBalance: admin.firestore.FieldValue.increment(reviewPoints),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
+
+    // XP is awarded outside the batch via awardXp (which also writes the xpTransactions ledger).
+    // We capture the updated points balance after the batch commits for the transaction record.
+    await batch.commit();
+
+    let pointsBalanceAfter: number;
+    try {
+      const afterSnap = await db.collection("users").doc(userId).get();
+      pointsBalanceAfter = (afterSnap.data()?.pointsBalance || 0) + reviewPoints;
+    } catch {
+      pointsBalanceAfter = (userData?.pointsBalance || 0) + reviewPoints;
+    }
 
     const pointsTransactionRef = db
       .collection("users")
       .doc(userId)
       .collection("pointsTransactions")
       .doc();
-    batch.set(pointsTransactionRef, {
+    await pointsTransactionRef.set({
       points: reviewPoints,
       type: "earned",
       source: "review",
       sourceId: venueReviewRef.id,
       description: "Punti per recensione",
-      balanceAfter: (userData?.pointsBalance || 0) + reviewPoints,
+      balanceAfter: pointsBalanceAfter,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    await batch.commit();
+    // Award XP (server-side, idempotent-per-call).
+    try {
+      await awardXp(userId, reviewXp, "review", `Recensione ID ${venueReviewRef.id}`);
+    } catch (xpErr) {
+      // XP award is best-effort ancillary to the review write; log but don't fail the review.
+      console.error("Failed to award review XP", xpErr);
+    }
 
     // Update venue rating (async)
     updateVenueRating(booking.venueId);
