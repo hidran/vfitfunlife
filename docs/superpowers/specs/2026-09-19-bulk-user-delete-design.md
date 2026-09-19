@@ -49,8 +49,9 @@ on other people's documents — financial and legal records.
   - otherwise snapshot the doc, `deleteUserCascade`, audit `delete`/`user` with the snapshot
     as `before`, the reason, and the job id in `reason`
   - a thrown error is recorded as `failed` with its message; the job continues
-  Progress (`done`/`failed`/`skipped`/`results.<uid>`) is written after each user. Ends with
-  `completed` or `completed_with_errors` and a summary audit entry listing every failure.
+  Progress is `results.<uid>`, written after each user (the banner counts from it); the
+  `done`/`failed`/`skipped` totals are written once, when the job ends with `completed` or
+  `completed_with_errors` and a summary audit entry listing every failure.
 
 ### Audit
 
