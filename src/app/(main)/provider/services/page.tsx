@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, Edit, Copy, Trash2, MoreVertical, Check, X, Clock, DollarSign, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/Modal';
@@ -52,6 +52,28 @@ export default function ProviderServicesPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [draft, setDraft] = useState<ProviderServiceInput>(EMPTY_DRAFT);
   const [error, setError] = useState<string | null>(null);
+  // Tap-to-open action menu (hover menus never open on touch screens).
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!openMenuId) return;
+    const close = (event: PointerEvent) => {
+      if (!(event.target as Element).closest(`[data-service-menu="${openMenuId}"]`)) setOpenMenuId(null);
+    };
+    const onKey = (event: KeyboardEvent) => event.key === 'Escape' && setOpenMenuId(null);
+    document.addEventListener('pointerdown', close);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', close);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [openMenuId]);
+
+  /** Run a menu action and close the menu. */
+  const fromMenu = (action: () => void) => () => {
+    setOpenMenuId(null);
+    action();
+  };
 
   // One shared busy flag: the whole card grid is driven by a single query, so any in-flight
   // mutation makes every row's state provisional until it settles.
@@ -243,28 +265,39 @@ export default function ProviderServicesPage() {
                   </p>
                 )}
               </div>
-              <div className="relative group">
-                <button className="p-2 rounded-lg hover:bg-surface-2">
-                  <MoreVertical className="w-4 h-4 text-gray-400" />
+              <div className="relative" data-service-menu={service.id}>
+                <button
+                  type="button"
+                  aria-haspopup="menu"
+                  aria-expanded={openMenuId === service.id}
+                  aria-label={t('provider.services.menu.open')}
+                  onClick={() => setOpenMenuId((id) => (id === service.id ? null : service.id))}
+                  className="-mr-2 -mt-2 flex h-11 w-11 items-center justify-center rounded-lg hover:bg-surface-2"
+                >
+                  <MoreVertical className="w-4 h-4 text-gray-400" aria-hidden />
                 </button>
-                <div className="absolute right-0 mt-1 w-48 bg-surface-input rounded-lg border border-hairline shadow-xl opacity-100 visible sm:opacity-0 sm:invisible sm:group-hover:opacity-100 sm:group-hover:visible transition-all z-10 py-1">
+                {openMenuId === service.id && (
+                <div role="menu" className="absolute right-0 mt-1 w-48 bg-surface-input rounded-lg border border-hairline shadow-xl z-10 py-1">
                   <button
-                    onClick={() => setEditingService(service)}
-                    className="w-full px-4 py-2 text-left text-sm text-content hover:bg-surface-2 flex items-center gap-2"
+                    role="menuitem"
+                    onClick={fromMenu(() => setEditingService(service))}
+                    className="w-full min-h-11 px-4 py-2 text-left text-sm text-content hover:bg-surface-2 flex items-center gap-2"
                   >
                     <Edit className="w-4 h-4" />
                     {t('provider.services.menu.edit')}
                   </button>
                   <button
-                    onClick={() => handleDuplicate(service)}
-                    className="w-full px-4 py-2 text-left text-sm text-content hover:bg-surface-2 flex items-center gap-2"
+                    role="menuitem"
+                    onClick={fromMenu(() => handleDuplicate(service))}
+                    className="w-full min-h-11 px-4 py-2 text-left text-sm text-content hover:bg-surface-2 flex items-center gap-2"
                   >
                     <Copy className="w-4 h-4" />
                     {t('provider.services.menu.duplicate')}
                   </button>
                   <button
-                    onClick={() => handleToggleActive(service)}
-                    className="w-full px-4 py-2 text-left text-sm text-content hover:bg-surface-2 flex items-center gap-2"
+                    role="menuitem"
+                    onClick={fromMenu(() => handleToggleActive(service))}
+                    className="w-full min-h-11 px-4 py-2 text-left text-sm text-content hover:bg-surface-2 flex items-center gap-2"
                   >
                     {service.isActive ? (
                       <><X className="w-4 h-4" /> {t('provider.services.menu.deactivate')}</>
@@ -273,13 +306,15 @@ export default function ProviderServicesPage() {
                     )}
                   </button>
                   <button
-                    onClick={() => handleDelete(service.id)}
-                    className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-2"
+                    role="menuitem"
+                    onClick={fromMenu(() => handleDelete(service.id))}
+                    className="w-full min-h-11 px-4 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-2"
                   >
                     <Trash2 className="w-4 h-4" />
                     {t('provider.services.menu.delete')}
                   </button>
                 </div>
+                )}
               </div>
             </div>
 

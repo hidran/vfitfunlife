@@ -2096,6 +2096,7 @@ export const enMessages: Messages = {
   'provider.services.card.inactive': 'Inactive',
   'provider.services.card.price': 'Price',
   'provider.services.card.duration': 'Duration',
+  'provider.services.menu.open': 'Service actions',
   'provider.services.menu.edit': 'Edit',
   'provider.services.menu.duplicate': 'Duplicate',
   'provider.services.menu.deactivate': 'Deactivate',

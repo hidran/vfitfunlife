@@ -2096,6 +2096,7 @@ export const itMessages = {
   'provider.services.card.inactive': 'Non attivo',
   'provider.services.card.price': 'Prezzo',
   'provider.services.card.duration': 'Durata',
+  'provider.services.menu.open': 'Azioni servizio',
   'provider.services.menu.edit': 'Modifica',
   'provider.services.menu.duplicate': 'Duplica',
   'provider.services.menu.deactivate': 'Disattiva',

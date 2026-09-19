@@ -2079,6 +2079,7 @@ export const deMessages: Messages = {
   'provider.services.card.inactive': 'Inaktiv',
   'provider.services.card.price': 'Preis',
   'provider.services.card.duration': 'Dauer',
+  'provider.services.menu.open': 'Service-Aktionen',
   'provider.services.menu.edit': 'Bearbeiten',
   'provider.services.menu.duplicate': 'Duplizieren',
   'provider.services.menu.deactivate': 'Deaktivieren',

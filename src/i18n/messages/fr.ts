@@ -2081,6 +2081,7 @@ export const frMessages: Messages = {
   'provider.services.card.inactive': 'Inactif',
   'provider.services.card.price': 'Prix',
   'provider.services.card.duration': 'Durée',
+  'provider.services.menu.open': 'Actions du service',
   'provider.services.menu.edit': 'Modifier',
   'provider.services.menu.duplicate': 'Dupliquer',
   'provider.services.menu.deactivate': 'Désactiver',

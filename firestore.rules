@@ -57,6 +57,16 @@ service cloud.firestore {
     }
 
     /**
+     * A provider a superadmin has approved. Anyone can create their own users doc
+     * with role 'provider', so role alone proves nothing; providerStatus 'verified'
+     * is only ever set server-side (clients may only self-set 'none'/'pending').
+     */
+    function isVerifiedProvider() {
+      return isProvider() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('providerStatus', 'none') == 'verified';
+    }
+
+    /**
      * Check if the authenticated user is a customer
      */
     function isCustomer() {
@@ -334,13 +344,12 @@ service cloud.firestore {
 
       match /services/{serviceId} {
         allow read: if true;
-        // The service path already scopes the write to the authenticated uid. Use the
-        // canonical users role for ownership instead of requiring a legacy instructor
-        // document to contain a matching uid field; older verified providers may have an
-        // instructor doc with a missing/stale uid and were consequently unable to add
-        // services at all.
+        // The service path already scopes the write to the authenticated uid, so
+        // ownership doesn't depend on a legacy instructor doc carrying a matching uid
+        // (older verified providers have a missing/stale one). The caller must be an
+        // approved provider, not merely one who gave themselves role 'provider'.
         allow write: if isAdmin() ||
-          (isAuthenticated() && request.auth.uid == instructorId && isProvider());
+          (request.auth != null && request.auth.uid == instructorId && isVerifiedProvider());
       }
 
       match /availability/{dateId} {

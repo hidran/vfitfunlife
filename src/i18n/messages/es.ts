@@ -2072,6 +2072,7 @@ export const esMessages: Messages = {
   'provider.services.card.inactive': 'Inactivo',
   'provider.services.card.price': 'Precio',
   'provider.services.card.duration': 'Duración',
+  'provider.services.menu.open': 'Acciones del servicio',
   'provider.services.menu.edit': 'Editar',
   'provider.services.menu.duplicate': 'Duplicar',
   'provider.services.menu.deactivate': 'Desactivar',
