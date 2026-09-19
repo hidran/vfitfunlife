@@ -1,7 +1,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
-import { getAuth } from "firebase-admin/auth";
 import { writeAuditLog } from "../lib/audit";
+import { adminCascadeDeps, deleteUserCascade } from "./deleteUserCascade";
 
 interface AdminDeleteUserData {
   uid: string;
@@ -9,7 +9,7 @@ interface AdminDeleteUserData {
 }
 
 /**
- * Superadmin-only: hard-delete a user document and its Firebase Auth record.
+ * Superadmin-only: hard-delete a user via deleteUserCascade.
  * Writes an audit_logs entry capturing the previous user doc.
  */
 export const adminDeleteUser = onCall<AdminDeleteUserData>(
@@ -43,16 +43,9 @@ export const adminDeleteUser = onCall<AdminDeleteUserData>(
     }
     const before = targetSnap.data();
 
-    await getFirestore().collection("users").doc(uid).delete();
-
-    try {
-      await getAuth().deleteUser(uid);
-    } catch (e) {
-      console.warn(
-        "[adminDeleteUser] auth deletion failed (ok if user already gone)",
-        e,
-      );
-    }
+    // Same definition of "delete" as the bulk job: Auth, the user's subcollections, their
+    // provider record and their files — not just the top-level document.
+    await deleteUserCascade(uid, adminCascadeDeps());
 
     await writeAuditLog({
       actorUid: callerUid,

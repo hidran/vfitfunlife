@@ -29,6 +29,7 @@ export * from "./family";
 
 // Export admin-only mutation functions (superadmin-gated)
 export * from "./adminMutations";
+export * from "./bulkDelete";
 
 interface UserUpdateData {
   fullName?: string;
