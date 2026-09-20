@@ -61,4 +61,25 @@ describe('bookingStore.fetchAvailability', () => {
     await useBookingStore.getState().fetchAvailability('p1', 's1', DAY);
     expect(useBookingStore.getState().availabilityError).toBe('failed');
   });
+
+  it('distinguishes a permanent permission refusal and a not-found from a generic failure', async () => {
+    vi.mocked(getProviderAvailability).mockRejectedValue(Object.assign(new Error('x'), { code: 'functions/permission-denied' }));
+    await useBookingStore.getState().fetchAvailability('p1', 's1', DAY);
+    expect(useBookingStore.getState().availabilityError).toBe('permission');
+
+    vi.mocked(getProviderAvailability).mockRejectedValue(Object.assign(new Error('service_not_found'), { code: 'functions/not-found' }));
+    await useBookingStore.getState().fetchAvailability('p1', 's1', DAY);
+    expect(useBookingStore.getState().availabilityError).toBe('notFound');
+
+    vi.mocked(getProviderAvailability).mockRejectedValue(Object.assign(new Error('instructor_not_found'), { code: 'functions/not-found' }));
+    await useBookingStore.getState().fetchAvailability('p1', 's1', DAY);
+    expect(useBookingStore.getState().availabilityError).toBe('notFound');
+  });
+
+  it('drops a chosen time when the refetch itself fails, not just when the slot list comes back without it', async () => {
+    useBookingStore.setState({ selectedTime: '09:00' });
+    vi.mocked(getProviderAvailability).mockRejectedValue(new Error('offline'));
+    await useBookingStore.getState().fetchAvailability('p1', 's1', DAY);
+    expect(useBookingStore.getState().selectedTime).toBeNull();
+  });
 });

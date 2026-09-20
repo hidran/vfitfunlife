@@ -34,7 +34,7 @@ interface BookingState {
   availability: TimeSlot[];
   isLoadingAvailability: boolean;
   /** Why `availability` is empty when it is not simply a full day. */
-  availabilityError: 'signin' | 'failed' | null;
+  availabilityError: 'signin' | 'permission' | 'notFound' | 'failed' | null;
 
   // Current booking
   currentBooking: Booking | null;
@@ -168,7 +168,14 @@ export const useBookingStore = create<BookingState>((set, get) => ({
       set({
         availability: [],
         isLoadingAvailability: false,
-        availabilityError: code === 'functions/unauthenticated' ? 'signin' : 'failed',
+        // A stale selected time from a slot list that never arrived would otherwise sail
+        // through to the confirm page, which would then have to guess an instant for it.
+        selectedTime: null,
+        availabilityError:
+          code === 'functions/unauthenticated' ? 'signin' :
+          code === 'functions/permission-denied' ? 'permission' : // permanent: don't invite a retry
+          code === 'functions/not-found' ? 'notFound' : // service_not_found / instructor_not_found
+          'failed',
       });
     }
   },

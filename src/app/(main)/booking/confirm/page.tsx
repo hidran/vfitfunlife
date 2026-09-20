@@ -94,19 +94,23 @@ export default function BookingConfirmPage() {
       return;
     }
 
+    // The slot's own instant: its time is Italian time, whatever the device's zone is. Refuse
+    // to guess a device-local instant when it's missing (a failed or stale availability
+    // fetch can leave selectedTime set with nothing in `availability` to back it up) — that
+    // could book a different time than the one shown, or one the provider is not free at.
+    const startsAt = availability.find((s) => s.time === selectedTime)?.startsAt;
+    if (!startsAt) {
+      setSlotTaken(true);
+      setError(t('booking.availability.slotTaken'));
+      return;
+    }
+
     setIsCreating(true);
     setError(null);
     setSlotTaken(false);
 
     try {
-      // The slot's own instant: its time is Italian time, whatever the device's zone is.
-      const startsAt = availability.find((s) => s.time === selectedTime)?.startsAt;
-      const scheduledAt = startsAt ? new Date(startsAt) : new Date(selectedDate);
-      if (!startsAt) {
-        const [hours, minutes] = selectedTime.split(':').map(Number);
-        scheduledAt.setHours(hours, minutes, 0, 0);
-      }
-
+      const scheduledAt = new Date(startsAt);
       const bookingData = {
         providerId: selectedProvider.id,
         serviceId: selectedService.id,

@@ -143,8 +143,25 @@ function toWeek(schedule: WeeklyWindow[]): WeeklySchedule {
   return week;
 }
 
+function intIn(v: unknown, min: number, max: number, fallback: number): number {
+  return typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max ? v : fallback;
+}
+
+/**
+ * Mirrors functions/src/availability/dayContext.ts's resolveRules (ranges: bufferMinutes
+ * 0-120, minAdvanceNoticeHours 0-168, maxBookingsPerDay 1-50). A save's own strict validator
+ * (functions/src/availability/validate.ts) refuses an out-of-range value outright, so
+ * spreading a stored value that is already out of range straight into the editor would
+ * permanently block the next save with no way to fix it from the UI — falling back to the
+ * default here, same as a missing value, keeps the page saveable.
+ */
 function toRules(raw: Partial<BookingRules> | null): BookingRules {
-  return { ...DEFAULT_BOOKING_RULES, ...(raw ?? {}) };
+  const r = raw ?? {};
+  return {
+    bufferMinutes: intIn(r.bufferMinutes, 0, 120, DEFAULT_BOOKING_RULES.bufferMinutes),
+    minAdvanceNoticeHours: intIn(r.minAdvanceNoticeHours, 0, 168, DEFAULT_BOOKING_RULES.minAdvanceNoticeHours),
+    maxBookingsPerDay: intIn(r.maxBookingsPerDay, 1, 50, DEFAULT_BOOKING_RULES.maxBookingsPerDay),
+  };
 }
 
 /**

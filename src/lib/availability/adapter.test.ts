@@ -47,6 +47,24 @@ describe('toSettings (stored → editor)', () => {
     }
   });
 
+  it('falls back to the default for a stored rule that is out of range, instead of permanently blocking the next save', () => {
+    const { settings } = toSettings({
+      schedule: [],
+      bookingRules: { bufferMinutes: 999, minAdvanceNoticeHours: -5, maxBookingsPerDay: 0 },
+      overrides: [],
+    });
+    expect(settings).toMatchObject({ bufferMinutes: 15, minAdvanceNoticeHours: 24, maxBookingsPerDay: 8 });
+  });
+
+  it('keeps a stored rule that is a valid boundary value (0 buffer is legitimate, not "missing")', () => {
+    const { settings } = toSettings({
+      schedule: [],
+      bookingRules: { bufferMinutes: 0, minAdvanceNoticeHours: 0, maxBookingsPerDay: 1 },
+      overrides: [],
+    });
+    expect(settings).toMatchObject({ bufferMinutes: 0, minAdvanceNoticeHours: 0, maxBookingsPerDay: 1 });
+  });
+
   it('lists date exceptions in date order with stable ids', () => {
     const custom: OverrideDoc = { date: '2026-12-24', isAvailable: true, windows: [{ start: '09:00', end: '12:00' }] };
     const { settings } = toSettings({ schedule: [], bookingRules: null, overrides: [XMAS, custom] });

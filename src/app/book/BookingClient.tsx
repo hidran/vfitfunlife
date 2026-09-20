@@ -75,6 +75,10 @@ export default function ProviderBookingPage() {
         {t('booking.availability.signIn')}
       </Link>
     </>
+  ) : availabilityError === 'permission' ? (
+    <p>{t('booking.availability.permissionError')}</p>
+  ) : availabilityError === 'notFound' ? (
+    <p>{t('booking.availability.notFoundError')}</p>
   ) : availabilityError === 'failed' ? (
     <p>{t('booking.availability.loadError')}</p>
   ) : null;
