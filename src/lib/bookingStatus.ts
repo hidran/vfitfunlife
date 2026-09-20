@@ -73,6 +73,38 @@ export function canReschedule(status: BookingStatus, isPast: boolean): boolean {
   return status === 'accepted' && !isPast;
 }
 
+/**
+ * Statuses written before BOOKING_STATUSES existed. Old documents still carry them, and the
+ * server's slot engine still honours them, so any query that asks "is this booking on the
+ * calendar" has to include them or it silently loses the provider's oldest bookings.
+ */
+export const LEGACY_BOOKING_STATUSES = ['pending', 'confirmed', 'in_progress'] as const;
+
+/**
+ * A session the provider has agreed to: on the calendar, not merely requested.
+ *
+ * These sets exist because the provider dashboard queried Firestore for `confirmed` and
+ * `in_progress` long after those were replaced by `accepted` and `payment_confirmed` — so
+ * every counter on it read zero while the bookings were right there.
+ */
+export const BOOKED_STATUSES: string[] = ['accepted', 'payment_confirmed', 'completed', ...LEGACY_BOOKING_STATUSES.filter((s) => s !== 'pending')];
+
+/** Everything that occupies a slot in a period, including a request awaiting an answer. */
+export const CALENDAR_STATUSES: string[] = ['requested', ...BOOKED_STATUSES, 'pending'];
+
+/** The session happened. `payment_confirmed` is a completed session whose payment landed. */
+export const DELIVERED_STATUSES: string[] = ['completed', 'payment_confirmed'];
+
+/** Every way a booking can end, for a completion rate. */
+export const OUTCOME_STATUSES: string[] = [
+  ...DELIVERED_STATUSES,
+  'cancelled_by_client',
+  'cancelled_by_trainer',
+  'no_show',
+  // Pre-migration cancellations were a single status with no actor.
+  'cancelled',
+];
+
 export function canReview(status: BookingStatus, hasReviewed: boolean): boolean {
   return isDelivered(status) && !hasReviewed;
 }

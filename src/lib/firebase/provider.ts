@@ -46,6 +46,12 @@ import {
   PaymentMethod,
 } from "@/types/provider";
 import { Booking, BookingStatus, User } from "@/types/firebase";
+import {
+  BOOKED_STATUSES,
+  CALENDAR_STATUSES,
+  DELIVERED_STATUSES,
+  OUTCOME_STATUSES,
+} from "@/lib/bookingStatus";
 
 const PROVIDER_COLLECTION = "providers";
 const BOOKINGS_COLLECTION = "bookings";
@@ -106,7 +112,7 @@ export async function getProviderDashboardStats(): Promise<DashboardStats> {
     where("instructorId", "==", providerId),
     where("scheduledAt", ">=", todayTimestamp),
     where("scheduledAt", "<", tomorrowTimestamp),
-    where("status", "in", ["confirmed", "in_progress", "completed"])
+    where("status", "in", BOOKED_STATUSES)
   );
 
   const todayBookingsSnap = await getDocs(todayBookingsQuery);
@@ -123,7 +129,7 @@ export async function getProviderDashboardStats(): Promise<DashboardStats> {
     where("instructorId", "==", providerId),
     where("scheduledAt", ">=", Timestamp.fromDate(weekStart)),
     where("scheduledAt", "<", Timestamp.fromDate(weekEnd)),
-    where("status", "in", ["pending", "confirmed", "in_progress", "completed"])
+    where("status", "in", CALENDAR_STATUSES)
   );
 
   const weekBookingsSnap = await getDocs(weekBookingsQuery);
@@ -138,7 +144,7 @@ export async function getProviderDashboardStats(): Promise<DashboardStats> {
     where("instructorId", "==", providerId),
     where("scheduledAt", ">=", Timestamp.fromDate(monthStart)),
     where("scheduledAt", "<=", Timestamp.fromDate(monthEnd)),
-    where("status", "==", "completed")
+    where("status", "in", DELIVERED_STATUSES)
   );
 
   const monthEarningsSnap = await getDocs(monthEarningsQuery);
@@ -166,7 +172,7 @@ export async function getProviderDashboardStats(): Promise<DashboardStats> {
     collection(db, BOOKINGS_COLLECTION),
     where("instructorId", "==", providerId),
     where("scheduledAt", ">=", Timestamp.fromDate(last30Days)),
-    where("status", "in", ["completed", "cancelled", "no_show"])
+    where("status", "in", OUTCOME_STATUSES)
   );
 
   const recentBookingsSnap = await getDocs(recentBookingsQuery);
@@ -176,7 +182,7 @@ export async function getProviderDashboardStats(): Promise<DashboardStats> {
   recentBookingsSnap.forEach(doc => {
     const booking = doc.data();
     totalCount++;
-    if (booking.status === "completed") {
+    if (DELIVERED_STATUSES.includes(booking.status)) {
       completedCount++;
     }
   });
@@ -217,7 +223,7 @@ function generateChartData(bookingsSnap: any): { date: string; bookings: number;
     const date = booking.scheduledAt.toDate().toISOString().split('T')[0];
     if (data[date]) {
       data[date].bookings++;
-      if (booking.status === "completed") {
+      if (DELIVERED_STATUSES.includes(booking.status)) {
         data[date].earnings += booking.finalPrice || 0;
       }
     }
