@@ -11,6 +11,16 @@ import { getFirestore, Timestamp, GeoPoint } from "firebase-admin/firestore";
 import * as ngeohash from "ngeohash";
 import { defaultWeeklySchedule } from "../ai/catalog";
 import { userTypeForSpecialty } from "./userTypeForSpecialty";
+import { activeCategoryIds } from "../providers/deriveCategories";
+import {
+  assertDemoSpecialtiesResolve,
+  buildProviderServices,
+  DEMO_SPECIALTIES,
+  FITNESS_SPECIALTIES,
+  WELLNESS_SPECIALTIES,
+  type SpecialtyServiceDef,
+} from "./demoProviderServices";
+import { resolveSeedParts, type DemoSeedPart } from "./seedParts";
 
 const db = getFirestore();
 
@@ -24,14 +34,6 @@ const LAST_NAMES = [
   "Rossi", "Bianchi", "Ferrari", "Romano", "Galli", "Costa",
   "Fontana", "Conti", "Esposito", "Ricci", "Marino", "Greco",
   "Bruno", "Moretti", "Marchetti", "Rinaldi",
-];
-const FITNESS_SPECIALTIES = [
-  "Personal Training", "Yoga", "Pilates", "HIIT", "CrossFit",
-  "Functional Training", "Strength Training", "Cardio", "Boxe", "Nutrizione",
-];
-const WELLNESS_SPECIALTIES = [
-  "Massaggio", "Fisioterapia", "Osteopatia", "Mental Coaching",
-  "Psicologia", "Nutrizione", "Yoga Therapy",
 ];
 const GYM_NAMES = [
   "Carosello Fitness", "Urban Core Gym", "Village Fit Club",
@@ -1059,7 +1061,7 @@ export async function generateDemoData(): Promise<SeedingResult[]> {
   ];
 
   // Per-specialty service name library (name + description pairs)
-  const SPECIALTY_SERVICES: Record<string, { name: string; description: string }[]> = {
+  const SPECIALTY_SERVICES: Record<string, SpecialtyServiceDef[]> = {
     "Personal Training": [
       { name: "Sessione 1-to-1", description: "Sessione personalizzata con piano di allenamento dedicato." },
       { name: "Pacchetto 10 sessioni", description: "Dieci incontri con progressione monitorata." },
@@ -1159,7 +1161,7 @@ export async function generateDemoData(): Promise<SeedingResult[]> {
   };
 
   // Fallback service template for any specialty not found
-  const defaultServices = (specialty: string) => [
+  const defaultServices = (specialty: string): SpecialtyServiceDef[] => [
     { name: `Sessione ${specialty}`, description: `Sessione personalizzata di ${specialty}.` },
     { name: `Pacchetto 5 sessioni ${specialty}`, description: "Cinque incontri con progressione monitorata." },
     { name: `Consulenza ${specialty}`, description: "Consulenza iniziale e definizione degli obiettivi." },
@@ -1210,20 +1212,34 @@ export async function generateDemoData(): Promise<SeedingResult[]> {
     }
   };
 
+  const queueDelete = async (ref: FirebaseFirestore.DocumentReference) => {
+    batch.delete(ref);
+    opCount++;
+    if (opCount >= MAX_BATCH_OPS) {
+      await batch.commit();
+      batch = db.batch();
+      opCount = 0;
+    }
+  };
+
   // ── 1. Instructors ────────────────────────────────────────────────────────
 
+  // Resolved before the try block, and therefore before a single write: a specialty with
+  // no leaf category would otherwise produce uncategorised services that no category
+  // browse can ever surface, and nothing downstream would complain.
+  assertDemoSpecialtiesResolve();
+
   try {
-    const allSpecialties = [...new Set([...FITNESS_SPECIALTIES, ...WELLNESS_SPECIALTIES])];
     const wellnessSet = new Set(WELLNESS_SPECIALTIES);
 
     let instructorCount = 0;
     let instructorServiceCount = 0;
+    let staleServiceCount = 0;
     const now = Timestamp.now();
 
-    for (const specialty of allSpecialties) {
+    for (const specialty of DEMO_SPECIALTIES) {
       const specialtySlug = toSlug(specialty);
       const pool = wellnessSet.has(specialty) ? WELLNESS_SPECIALTIES : FITNESS_SPECIALTIES;
-      const serviceDefs = SPECIALTY_SERVICES[specialty] ?? defaultServices(specialty);
 
       for (let i = 1; i <= 20; i++) {
         const pad = String(i).padStart(2, "0");
@@ -1240,17 +1256,17 @@ export async function generateDemoData(): Promise<SeedingResult[]> {
 
         const languages = Math.random() < 0.7 ? ["Italiano"] : ["Italiano", "English"];
 
-        // Pre-build services so the instructor's hourlyRate can derive from
-        // the cheapest service price.
-        const serviceCount = randomInt(2, 4);
-        const shuffled = [...serviceDefs].sort(() => 0.5 - Math.random()).slice(0, serviceCount);
-        const services = shuffled.map((svc, si) => ({
-          svcId: `svc-${si + 1}`,
-          name: svc.name,
-          description: svc.description,
-          durationMinutes: randomItem([30, 45, 60, 90]),
-          price: Math.round(randomInt(30, 120) / 5) * 5,
-        }));
+        const providerSpecialties = [specialty, ...secondaries];
+
+        // Services spread across ALL of the provider's specialties, so a trainer listed as
+        // "Boxe, Yoga" is actually findable under both — drawing only from the primary is
+        // what left every seeded provider in a single category. Pre-built because the
+        // instructor's hourlyRate and categoryIds both derive from them.
+        const services = buildProviderServices({
+          specialties: providerSpecialties,
+          library: SPECIALTY_SERVICES,
+          fallback: defaultServices,
+        });
         const hourlyRate = services.length ?
           Math.min(...services.map((s) => s.price)) :
           Math.round(randomInt(30, 120) / 5) * 5;
@@ -1259,7 +1275,6 @@ export async function generateDemoData(): Promise<SeedingResult[]> {
 
         const rating = randomFloat(4.2, 5.0, 1);
         const reviewCount = randomInt(15, 320);
-        const allSpecialties = [specialty, ...secondaries];
 
         // Canonical shape: nested `providerProfile` is the verification source of
         // truth (required by the /instructors public-read rule + flattenProvider).
@@ -1271,7 +1286,11 @@ export async function generateDemoData(): Promise<SeedingResult[]> {
           avatarUrl: null,
           userType: userTypeForSpecialty(specialty),
           city,
-          specialties: allSpecialties,
+          specialties: providerSpecialties,
+          // Written here rather than left to onProviderServiceWrite: the trigger would
+          // recompute it eventually, but a ~1000-service seed means ~1000 invocations each
+          // re-reading a subcollection. The seed is correct on its own.
+          categoryIds: activeCategoryIds(services),
           languages,
           ratingAvg: rating,
           reviewCount,
@@ -1285,7 +1304,7 @@ export async function generateDemoData(): Promise<SeedingResult[]> {
             isVerified: true,
             rating,
             reviewCount,
-            specialties: allSpecialties,
+            specialties: providerSpecialties,
             languages,
             yearsOfExperience: randomInt(2, 15),
           },
@@ -1297,22 +1316,39 @@ export async function generateDemoData(): Promise<SeedingResult[]> {
         instructorCount++;
 
         // Services subcollection
+        const writtenSvcIds = new Set<string>();
         for (const svc of services) {
           const svcData: Record<string, unknown> = {
             name: svc.name,
             description: svc.description,
+            // A leaf id from the taxonomy. Without it activeCategoryIds returns [] and the
+            // provider is browsable under nothing at all.
+            categoryId: svc.categoryId,
             durationMinutes: svc.durationMinutes,
             price: svc.price,
             isActive: true,
           };
           await queueWrite(ref.collection("services").doc(svc.svcId), svcData);
+          writtenSvcIds.add(svc.svcId);
           instructorServiceCount++;
+        }
+
+        // The seed writes with merge and a fixed id per slot, so a run that produces fewer
+        // services than the last one leaves the surplus behind — with its old name and its
+        // old category, which keeps polluting categoryIds. Demo trainers own their whole
+        // services subcollection, so anything this run did not write is stale by definition.
+        // listDocuments over get: we only need the refs.
+        for (const staleRef of await ref.collection("services").listDocuments()) {
+          if (writtenSvcIds.has(staleRef.id)) continue;
+          await queueDelete(staleRef);
+          staleServiceCount++;
         }
       }
     }
 
     results.push({ success: true, collection: "instructors (demo)", count: instructorCount });
     results.push({ success: true, collection: "instructor services (demo)", count: instructorServiceCount });
+    results.push({ success: true, collection: "instructor services removed (stale)", count: staleServiceCount });
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Unknown error";
     results.push({ success: false, collection: "instructors (demo)", count: 0, error: msg });
@@ -1821,11 +1857,13 @@ export async function generateDemoContent(): Promise<SeedingResult[]> {
       { userName: "Marco P.", rating: 5, text: "Risultati visibili dopo poche settimane." },
       { userName: "Elena R.", rating: 4, text: "Sessioni intense ma personalizzate." },
     ];
+    // Only demo-trainer ids: "provider-1" was in this list and has no instructor document,
+    // so every run created a phantom parent under /instructors that showed up in listings.
     const targetInstructors = [
-      "provider-1",
-      "demo-trainer-yoga-01",
       "demo-trainer-personal-training-01",
+      "demo-trainer-yoga-01",
       "demo-trainer-pilates-01",
+      "demo-trainer-boxe-01",
     ];
     const batch = db.batch();
     let count = 0;
@@ -1857,14 +1895,48 @@ export async function generateDemoContent(): Promise<SeedingResult[]> {
   return results;
 }
 
+/**
+ * Reads the seeded instructor a demo client belongs to, so the client's bookings name a
+ * real trainer and a real service instead of inventing both.
+ *
+ * Falls back to the id and a generic service when the instructor is missing — running
+ * `clients` without `core` should degrade, not throw.
+ */
+async function demoProviderContext(providerId: string): Promise<{
+  name: string;
+  services: { id: string; name: string; price: number; durationMinutes: number }[];
+}> {
+  const [snap, servicesSnap] = await Promise.all([
+    db.collection("instructors").doc(providerId).get(),
+    db.collection("instructors").doc(providerId).collection("services").get(),
+  ]);
+  const services = servicesSnap.docs.map((d) => {
+    const data = d.data();
+    return {
+      id: d.id,
+      name: typeof data.name === "string" ? data.name : "Sessione",
+      price: typeof data.price === "number" ? data.price : 60,
+      durationMinutes: typeof data.durationMinutes === "number" ? data.durationMinutes : 60,
+    };
+  });
+  return {
+    name: (snap.data()?.fullName as string) ?? providerId,
+    services: services.length ?
+      services :
+      [{ id: "svc-1", name: "Personal Training 1-to-1", price: 60, durationMinutes: 60 }],
+  };
+}
+
 export async function generateDemoClients(): Promise<SeedingResult[]> {
   const results: SeedingResult[] = [];
   const now = Timestamp.now();
-  const PROVIDER_ID = "provider-1";
 
   const CLIENTS = [
     {
       id: "demo-client-1",
+      // Spread over four seeded trainers rather than piling onto "provider-1", which was
+      // never a document. Each id is one generateDemoData writes.
+      providerId: "demo-trainer-personal-training-01",
       userId: "demo-user-1",
       name: "Marco Bianchi",
       email: "marco.bianchi@example.com",
@@ -1879,6 +1951,7 @@ export async function generateDemoClients(): Promise<SeedingResult[]> {
     },
     {
       id: "demo-client-2",
+      providerId: "demo-trainer-strength-training-01",
       userId: "demo-user-2",
       name: "Anna Esposito",
       email: "anna.esposito@example.com",
@@ -1893,6 +1966,7 @@ export async function generateDemoClients(): Promise<SeedingResult[]> {
     },
     {
       id: "demo-client-3",
+      providerId: "demo-trainer-hiit-01",
       userId: "demo-user-3",
       name: "Sofia Greco",
       email: "sofia.greco@example.com",
@@ -1907,6 +1981,7 @@ export async function generateDemoClients(): Promise<SeedingResult[]> {
     },
     {
       id: "demo-client-4",
+      providerId: "demo-trainer-personal-training-02",
       userId: "demo-user-4",
       name: "Davide Conti",
       email: "davide.conti@example.com",
@@ -1932,7 +2007,6 @@ export async function generateDemoClients(): Promise<SeedingResult[]> {
         db.collection("clients").doc(c.id),
         {
           ...rest,
-          providerId: PROVIDER_ID,
           lastVisit: Timestamp.fromMillis(nowMs - lastVisitDaysAgo * dayMs),
           firstVisit: Timestamp.fromMillis(nowMs - firstVisitDaysAgo * dayMs),
           createdAt: now,
@@ -1952,55 +2026,119 @@ export async function generateDemoClients(): Promise<SeedingResult[]> {
     });
   }
 
-  // Write a small booking history per client. Mix of completed/upcoming/cancelled.
+  // Write a small booking history per client, against the CURRENT booking model.
+  //
+  // The statuses here come from BOOKING_STATUSES (functions/src/bookings/types.ts). The
+  // previous version wrote "confirmed"/"pending", which the migration retired: the web
+  // app's status map has no entry for them, so those cards render blank.
   try {
-    const SERVICE_TEMPLATES = [
-      { id: "svc-1", name: "Personal Training 1-to-1", price: 60, durationMinutes: 60 },
-      { id: "svc-2", name: "Consulenza Nutrizionale", price: 45, durationMinutes: 45 },
+    // scheduled-day offset -> status, chosen so the provider area has something in every
+    // view: history, a paid one, a cancellation, an upcoming slot and a pending request.
+    const TIMELINE: { offsetDays: number; status: string }[] = [
+      { offsetDays: -30, status: "completed" },
+      { offsetDays: -14, status: "payment_confirmed" },
+      { offsetDays: -7, status: "cancelled_by_client" },
+      { offsetDays: 3, status: "accepted" },
+      { offsetDays: 10, status: "requested" },
     ];
     const batch = db.batch();
     const dayMs = 24 * 60 * 60 * 1000;
     const nowMs = now.toMillis();
     let bookingsCount = 0;
+
+    const providerIds = [...new Set(CLIENTS.map((c) => c.providerId))];
+    const contexts = new Map(
+      await Promise.all(
+        providerIds.map(async (id) => [id, await demoProviderContext(id)] as const)
+      )
+    );
+
     for (const c of CLIENTS) {
-      // 4 bookings per client: 2 past (completed), 1 recent (completed), 1 upcoming
-      const offsets = [-30, -14, -7, 7];
-      for (let i = 0; i < offsets.length; i++) {
-        const svc = SERVICE_TEMPLATES[i % SERVICE_TEMPLATES.length];
-        const scheduled = Timestamp.fromMillis(nowMs + offsets[i] * dayMs);
-        const status = offsets[i] > 0 ? "confirmed" : "completed";
+      const provider = contexts.get(c.providerId);
+      if (!provider) continue;
+      for (let i = 0; i < TIMELINE.length; i++) {
+        const { offsetDays, status } = TIMELINE[i];
+        const svc = provider.services[i % provider.services.length];
+        const scheduled = Timestamp.fromMillis(nowMs + offsetDays * dayMs);
+        const paid = status === "completed" || status === "payment_confirmed";
+        const cancelled = status === "cancelled_by_client";
         const bookingId = `demo-booking-${c.id}-${i + 1}`;
         batch.set(
           db.collection("bookings").doc(bookingId),
           {
             id: bookingId,
             userId: c.userId,
-            providerId: PROVIDER_ID,
+            userName: c.name,
+            userPhone: c.phone,
+            userEmail: c.email,
+            // `instructorId`, not `providerId`: that is the field every provider-area
+            // query filters on, and the old field name matched nothing.
+            instructorId: c.providerId,
+            instructorName: provider.name,
+            // null, as createBooking writes for a trainer session: there is no venue.
+            venueId: null,
+            venueName: null,
+            venueAddress: null,
             serviceId: svc.id,
             serviceName: svc.name,
-            providerName: "Marco Rossi",
-            providerAvatar: null,
+            bookingType: "home_service",
+            serviceAddress: {
+              street: "Via Roma 12",
+              city: "Milano",
+              postalCode: "20121",
+              location: new GeoPoint(45.4642, 9.19),
+            },
             scheduledAt: scheduled,
             scheduledEndAt: Timestamp.fromMillis(
               scheduled.toMillis() + svc.durationMinutes * 60 * 1000
             ),
-            duration: svc.durationMinutes,
-            locationType: "in_person",
-            location: null,
-            servicePrice: svc.price,
-            platformFee: svc.price * 0.05,
+            durationMinutes: svc.durationMinutes,
+            status,
+            originalPrice: svc.price,
             discountAmount: 0,
+            homeServiceFee: 0,
+            finalPrice: svc.price,
+            depositAmount: 0,
+            depositPaid: false,
+            pointsEarned: paid ? Math.floor(svc.price) : 0,
             pointsUsed: 0,
             pointsValue: 0,
-            totalPrice: svc.price * 1.05,
-            finalPrice: svc.price,
-            status,
-            paymentStatus: status === "completed" ? "paid" : "pending",
-            paymentMethod: "card",
+            promotionId: null,
+            promotionCode: null,
+            paymentStatus: paid ? "paid" : "pending",
+            paymentMethod: paid ? "cash" : null,
+            stripePaymentIntentId: null,
             userNotes: null,
+            internalNotes: null,
+            cancelledAt: cancelled ? Timestamp.fromMillis(nowMs - 8 * dayMs) : null,
+            cancelledBy: cancelled ? "user" : null,
+            cancellationReason: cancelled ? "Imprevisto personale" : null,
+            refundAmount: null,
+            // One entry, attributed to "system": these transitions never happened, and
+            // pretending a client or trainer made them would poison the audit trail.
+            statusHistory: [
+              { status, actorUid: "seed", actorRole: "system", at: now, note: "demo seed" },
+            ],
+            lateCancellation: false,
+            // The trainer records payment off-platform; only the paid-and-acknowledged
+            // state carries a confirmation, matching confirmPayment's own write.
+            paymentConfirmation: status === "payment_confirmed" ?
+              {
+                method: "cash",
+                amount: svc.price,
+                confirmedByTrainerAt: now,
+                clientResponse: "confirmed",
+                clientRespondedAt: now,
+                autoConfirmed: false,
+              } :
+              null,
+            completionReminderSentAt: null,
             hasReviewed: false,
+            reviewId: null,
             createdAt: now,
             updatedAt: now,
+            confirmedAt: status === "requested" ? null : now,
+            completedAt: paid ? scheduled : null,
           },
           { merge: true }
         );
@@ -2264,7 +2402,19 @@ export async function generateDemoProviderCoords(): Promise<SeedingResult[]> {
       const jLng = ((((seed >> 10) % 1000) / 1000) - 0.5) * 0.04;
       const lat = base.lat + jLat;
       const lng = base.lng + jLng;
-      batch.set(docSnap.ref, { lat, lng }, { merge: true });
+      // serviceAreaCenter/geohash move with lat/lng. The browse cards read the flat pair
+      // and the geo search reads the geohash; leaving them on the city centre while the
+      // pin jitters away puts a provider in two places at once.
+      batch.set(
+        docSnap.ref,
+        {
+          lat,
+          lng,
+          serviceAreaCenter: new GeoPoint(lat, lng),
+          serviceAreaGeohash: ngeohash.encode(lat, lng),
+        },
+        { merge: true }
+      );
       opCount++;
       total++;
       if (opCount >= 400) {
@@ -2633,11 +2783,23 @@ export const seedQuickData = functions.onRequest(
   }
 );
 
+/** Each part's generator. The names and their order live in ./seedParts. */
+const DEMO_SEED_RUNNERS: Record<DemoSeedPart, () => Promise<SeedingResult[]>> = {
+  core: generateDemoData,
+  content: generateDemoContent,
+  clients: generateDemoClients,
+  photos: generateDemoPhotos,
+  avatars: generateDemoAvatars,
+  prices: generateDemoProviderPrices,
+  coords: generateDemoProviderCoords,
+};
+
 /**
  * HTTP endpoint to seed demo-ready data for presentations.
  * POST /seedDemoData
- * Generates ~340 trainers (20 per specialty) + 120 venues across 12 Italian cities,
- * each with services and courses subcollections.
+ * Body: { parts?: ("core"|"content"|"clients"|"photos"|"avatars"|"prices"|"coords")[] }
+ * With no body, every part runs. `core` generates 320 trainers (20 per specialty) + 120
+ * venues across 12 Italian cities, each with services and courses subcollections.
  * Idempotent (merge: true with deterministic IDs).
  * Requires: Authentication + Admin role
  */
@@ -2678,21 +2840,49 @@ export const seedDemoData = functions.onRequest(
         return;
       }
 
-      console.log(`Starting demo data seed by user ${decodedToken.uid}`);
+      const resolved = resolveSeedParts((request.body ?? {}).parts);
+      if ("error" in resolved) {
+        response.status(400).json({ error: resolved.error });
+        return;
+      }
+      const parts = resolved.parts;
 
-      const results = await generateDemoData();
+      console.log(`Starting demo data seed by user ${decodedToken.uid}: ${parts.join(", ")}`);
+
+      const results: SeedingResult[] = [];
+      const byPart: Record<string, SeedingResult[]> = {};
+      for (const part of parts) {
+        // A generator that blows up should not cost the caller the parts that already ran,
+        // so each one is reported rather than aborting the request.
+        try {
+          const partResults = await DEMO_SEED_RUNNERS[part]();
+          byPart[part] = partResults;
+          results.push(...partResults);
+        } catch (error) {
+          const failure: SeedingResult = {
+            success: false,
+            collection: part,
+            count: 0,
+            error: error instanceof Error ? error.message : "Unknown error",
+          };
+          byPart[part] = [failure];
+          results.push(failure);
+        }
+      }
 
       const totalCount = results.reduce((sum, r) => sum + r.count, 0);
       const successCount = results.filter((r) => r.success).length;
 
       response.json({
-        success: true,
+        success: results.every((r) => r.success),
+        parts,
         summary: {
           totalCollections: results.length,
           successful: successCount,
           failed: results.length - successCount,
           totalRecords: totalCount,
         },
+        byPart,
         details: results,
         seededBy: decodedToken.uid,
         timestamp: new Date().toISOString(),
