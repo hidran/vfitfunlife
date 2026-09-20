@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   freeSlots,
+  decideBookingStart,
   romeDayBounds,
   romeInstant,
   isDateKey,
@@ -110,6 +111,27 @@ describe("freeSlots", () => {
     const schedule = [{ dayOfWeek: 0, startTime: "01:00", endTime: "03:00" }];
     expect(freeSlots(q({ schedule, date: "2026-10-25", durationMinutes: 120 })))
       .toEqual(["01:00", "01:30"]);
+  });
+});
+
+describe("decideBookingStart", () => {
+  const { date: _date, ...base } = q();
+
+  it("accepts a free start", () => {
+    expect(decideBookingStart(base, at("10:00"))).toEqual({ ok: true, date: MONDAY, time: "10:00" });
+  });
+
+  it("rejects a start outside the provider's hours", () => {
+    expect(decideBookingStart(base, at("18:00")).ok).toBe(false);
+  });
+
+  it("rejects a start that is already taken", () => {
+    const busy = [{ start: at("10:00"), end: at("11:00") }];
+    expect(decideBookingStart({ ...base, busy }, at("10:00")).ok).toBe(false);
+  });
+
+  it("rejects an instant between two grid points", () => {
+    expect(decideBookingStart(base, new Date(at("10:00").getTime() + 60_000)).ok).toBe(false);
   });
 });
 

@@ -2362,6 +2362,8 @@ export const esMessages: Messages = {
   'booking.availability.signInToSee': 'Inicia sesión para ver los horarios disponibles.',
   'booking.availability.signIn': 'Iniciar sesión',
   'booking.availability.loadError': 'No se pudieron cargar los horarios. Inténtalo de nuevo.',
+  'booking.availability.slotTaken': 'Ese horario acaba de reservarse. Elige otro.',
+  'booking.availability.pickAnother': 'Elegir otro horario',
   'booking.availability.morning': 'Mañana',
   'booking.availability.afternoon': 'Tarde',
   'booking.availability.evening': 'Noche',

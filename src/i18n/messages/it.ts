@@ -2386,6 +2386,8 @@ export const itMessages = {
   'booking.availability.signInToSee': 'Accedi per vedere gli orari disponibili.',
   'booking.availability.signIn': 'Accedi',
   'booking.availability.loadError': 'Impossibile caricare gli orari. Riprova.',
+  'booking.availability.slotTaken': "Quell'orario è appena stato prenotato. Scegline un altro.",
+  'booking.availability.pickAnother': 'Scegli un altro orario',
   'booking.availability.morning': 'Mattina',
   'booking.availability.afternoon': 'Pomeriggio',
   'booking.availability.evening': 'Sera',

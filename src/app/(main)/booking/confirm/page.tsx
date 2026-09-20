@@ -27,6 +27,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { Avatar } from '@/components/ui/Avatar';
 import { PriceBreakdown, PaymentMethodSelector } from '@/components/booking';
 import type { PaymentMethod } from '@/types/booking';
+import { isSlotUnavailableError } from '@/lib/availability/errors';
 
 export default function BookingConfirmPage() {
   const router = useRouter();
@@ -50,6 +51,7 @@ export default function BookingConfirmPage() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [slotTaken, setSlotTaken] = useState(false);
   const [pointsToUse, setPointsToUse] = useState(0);
 
   // Redirect if no selection
@@ -94,6 +96,7 @@ export default function BookingConfirmPage() {
 
     setIsCreating(true);
     setError(null);
+    setSlotTaken(false);
 
     try {
       // The slot's own instant: its time is Italian time, whatever the device's zone is.
@@ -119,7 +122,13 @@ export default function BookingConfirmPage() {
       const booking = await createBooking(bookingData);
       router.push(`/bookings/detail?id=${booking.id}&confirmed=true`);
     } catch (err: any) {
-      setError(err.message || t('bookings.confirm.bookingError'));
+      if (isSlotUnavailableError(err)) {
+        // Someone else got there first (or the provider changed their hours).
+        setSlotTaken(true);
+        setError(t('booking.availability.slotTaken'));
+      } else {
+        setError(err.message || t('bookings.confirm.bookingError'));
+      }
       setIsCreating(false);
     }
   };
@@ -345,7 +354,18 @@ export default function BookingConfirmPage() {
             className="bg-error/10 border border-error/20 rounded-xl p-3 flex items-center gap-2"
           >
             <AlertCircle className="w-5 h-5 text-error flex-shrink-0" />
-            <p className="text-sm text-error">{error}</p>
+            <p className="flex-1 text-sm text-error">{error}</p>
+            {slotTaken && (
+              <Button
+                variant="secondary"
+                size="sm"
+                className="min-h-[44px] flex-shrink-0"
+                // Back to the picker: it refetches the day, and the taken time drops out.
+                onClick={() => router.replace(`/book?providerId=${selectedProvider.id}`)}
+              >
+                {t('booking.availability.pickAnother')}
+              </Button>
+            )}
           </motion.div>
         )}
       </div>

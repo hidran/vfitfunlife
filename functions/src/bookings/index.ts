@@ -6,6 +6,9 @@ import { getUserRoleInfo, requirePermission, checkIsAdmin } from "../utils/roles
 import { writeAuditLog } from "../lib/audit";
 import { BOOKING_STATUSES, type BookingStatus, type StatusActorRole } from "./types";
 import { isLateCancellation } from "./transitions";
+import { dayContextFrom } from "../availability/dayContext";
+import { bookingDayRef, readDayDocs } from "../availability/dayReads";
+import { decideBookingStart, romeDateOf } from "../availability/slots";
 
 const db = admin.firestore();
 const region = process.env.FIREBASE_REGION || "europe-west1";
@@ -276,7 +279,13 @@ export const createBooking = onCall<BookingData>(
 
     // 3. Prepare Booking Data
     const scheduledDate = new Date(scheduledAt);
+    if (Number.isNaN(scheduledDate.getTime())) {
+      throw new HttpsError("invalid-argument", "scheduledAt must be an ISO date-time");
+    }
     const scheduledEndDate = addMinutes(scheduledDate, service.durationMinutes);
+    // Trainer sessions must start on one of the provider's free slots. Venue bookings have
+    // no provider schedule behind them and are not checked.
+    const trainerId = !venueId && instructorId ? instructorId : null;
 
     const bookingRef = db.collection("bookings").doc();
     const bookingData = {
@@ -348,8 +357,28 @@ export const createBooking = onCall<BookingData>(
       completedAt: null,
     };
 
-    // 4. Execute Transaction (Create Booking + Update Points + Update Promo)
+    // 4. Execute Transaction (Check Availability + Create Booking + Update Points + Update Promo)
     await db.runTransaction(async (transaction) => {
+      if (trainerId) {
+        // Reads come first in a transaction. readDayDocs also reads the provider-day lock and
+        // the set() below writes it, so concurrent requests for this provider and day queue
+        // up: the second one re-reads the bookings and sees the first.
+        const day = romeDateOf(scheduledDate);
+        const docs = await readDayDocs(db, trainerId, day, transaction);
+        const decision = decideBookingStart(
+          { ...dayContextFrom(docs), durationMinutes: service.durationMinutes, now: new Date() },
+          scheduledDate,
+        );
+        if (!decision.ok) {
+          throw new HttpsError("failed-precondition", "slot_unavailable");
+        }
+        transaction.set(
+          bookingDayRef(db, trainerId, day),
+          { lastBookingId: bookingRef.id, updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+          { merge: true },
+        );
+      }
+
       transaction.set(bookingRef, bookingData);
 
       // Deduct points if used

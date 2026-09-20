@@ -2386,6 +2386,8 @@ export const enMessages: Messages = {
   'booking.availability.signInToSee': 'Sign in to see available times.',
   'booking.availability.signIn': 'Sign in',
   'booking.availability.loadError': 'Could not load times. Please try again.',
+  'booking.availability.slotTaken': 'That time was just taken. Please pick another.',
+  'booking.availability.pickAnother': 'Pick another time',
   'booking.availability.morning': 'Morning',
   'booking.availability.afternoon': 'Afternoon',
   'booking.availability.evening': 'Evening',

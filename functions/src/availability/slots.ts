@@ -162,3 +162,17 @@ export function freeSlots(q: SlotQuery): string[] {
   }
   return [...out].sort();
 }
+
+/**
+ * createBooking's check: is `scheduledAt` exactly one of the day's free starts?
+ * An instant between two grid points, or a wall time the day does not have, is not.
+ */
+export function decideBookingStart(
+  q: Omit<SlotQuery, "date">,
+  scheduledAt: Date,
+): { ok: boolean; date: string; time: string } {
+  const date = romeDateOf(scheduledAt);
+  const time = romeTimeOf(scheduledAt);
+  const exact = romeInstant(date, time).getTime() === scheduledAt.getTime();
+  return { ok: exact && freeSlots({ ...q, date }).includes(time), date, time };
+}

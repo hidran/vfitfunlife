@@ -16,3 +16,9 @@ export function availabilitySaveErrorKey(err: unknown): MessageKey {
   if (code === 'functions/failed-precondition') return 'provider.availability.error.noProfile';
   return 'provider.availability.error.save';
 }
+
+/** createBooking's refusal of a start that is outside the provider's hours or already taken. */
+export function isSlotUnavailableError(err: unknown): boolean {
+  const { code, message } = callableError(err);
+  return code === 'functions/failed-precondition' && message === 'slot_unavailable';
+}

@@ -2371,6 +2371,8 @@ export const frMessages: Messages = {
   'booking.availability.signInToSee': 'Connectez-vous pour voir les créneaux disponibles.',
   'booking.availability.signIn': 'Se connecter',
   'booking.availability.loadError': 'Impossible de charger les créneaux. Veuillez réessayer.',
+  'booking.availability.slotTaken': "Ce créneau vient d'être réservé. Choisissez-en un autre.",
+  'booking.availability.pickAnother': 'Choisir un autre créneau',
   'booking.availability.morning': 'Matin',
   'booking.availability.afternoon': 'Après-midi',
   'booking.availability.evening': 'Soirée',

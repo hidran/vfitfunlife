@@ -2369,6 +2369,8 @@ export const deMessages: Messages = {
   'booking.availability.signInToSee': 'Melde dich an, um verfügbare Zeiten zu sehen.',
   'booking.availability.signIn': 'Anmelden',
   'booking.availability.loadError': 'Zeiten konnten nicht geladen werden. Bitte versuche es erneut.',
+  'booking.availability.slotTaken': 'Dieser Termin wurde gerade vergeben. Bitte wähle einen anderen.',
+  'booking.availability.pickAnother': 'Andere Zeit wählen',
   'booking.availability.morning': 'Morgen',
   'booking.availability.afternoon': 'Nachmittag',
   'booking.availability.evening': 'Abend',
