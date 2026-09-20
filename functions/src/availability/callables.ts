@@ -3,7 +3,12 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { dayContextFrom } from "./dayContext";
 import { readDayDocs } from "./dayReads";
 import { freeSlots, romeInstant } from "./slots";
-import { canManageOwnAvailability, validateAvailabilityUpdate, validateSlotsRequest } from "./validate";
+import {
+  canManageOwnAvailability,
+  validateAvailabilityUpdate,
+  validateServiceDuration,
+  validateSlotsRequest,
+} from "./validate";
 
 const region = process.env.FIREBASE_REGION || "europe-west1";
 
@@ -29,7 +34,7 @@ export const getProviderSlots = onCall({ region }, async (req) => {
 
   const slots = freeSlots({
     ...dayContextFrom(docs),
-    durationMinutes: Number(service.durationMinutes),
+    durationMinutes: validateServiceDuration(service.durationMinutes),
     date,
     now: new Date(),
   });

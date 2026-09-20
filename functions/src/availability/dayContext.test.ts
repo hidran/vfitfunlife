@@ -54,6 +54,22 @@ describe("busyFrom", () => {
     const [b] = busyFrom([{ status: "accepted", scheduledAt: ts("2026-09-21T08:00:00Z"), durationMinutes: 45 }]);
     expect(b.end.toISOString()).toBe("2026-09-21T08:45:00.000Z");
   });
+
+  it("also holds the slot for legacy pre-migration statuses (a safety net for documents the status backfill may have missed)", () => {
+    const busy = busyFrom([
+      { status: "pending", scheduledAt: ts("2026-09-21T08:00:00Z"), scheduledEndAt: ts("2026-09-21T09:00:00Z") },
+      { status: "confirmed", scheduledAt: ts("2026-09-21T10:00:00Z"), scheduledEndAt: ts("2026-09-21T11:00:00Z") },
+      { status: "in_progress", scheduledAt: ts("2026-09-21T12:00:00Z"), scheduledEndAt: ts("2026-09-21T13:00:00Z") },
+      { status: "cancelled", scheduledAt: ts("2026-09-21T14:00:00Z"), scheduledEndAt: ts("2026-09-21T15:00:00Z") },
+      { status: "no_show", scheduledAt: ts("2026-09-21T16:00:00Z") },
+      { status: "completed", scheduledAt: ts("2026-09-21T17:00:00Z") },
+    ]);
+    expect(busy.map((b) => b.start.toISOString())).toEqual([
+      "2026-09-21T08:00:00.000Z",
+      "2026-09-21T10:00:00.000Z",
+      "2026-09-21T12:00:00.000Z",
+    ]);
+  });
 });
 
 describe("dayContextFrom", () => {

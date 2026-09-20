@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   canManageOwnAvailability,
   validateAvailabilityUpdate,
+  validateServiceDuration,
   validateSlotsRequest,
   MAX_OVERRIDE_WRITES,
 } from "./validate";
@@ -113,6 +114,24 @@ describe("validateSlotsRequest", () => {
       .toThrow(/serviceId/);
     expect(() => validateSlotsRequest({ instructorId: "i1", serviceId: "s1", date: "21/09/2026" }))
       .toThrow(/date/);
+  });
+});
+
+describe("validateServiceDuration", () => {
+  it("accepts a positive duration within a day", () => {
+    expect(validateServiceDuration(60)).toBe(60);
+    expect(validateServiceDuration(600)).toBe(600);
+  });
+
+  it("rejects a missing, non-numeric, non-positive or absurd duration", () => {
+    const err = /service_missing_duration/;
+    expect(() => validateServiceDuration(undefined)).toThrow(err);
+    expect(() => validateServiceDuration(null)).toThrow(err);
+    expect(() => validateServiceDuration("60")).toThrow(err);
+    expect(() => validateServiceDuration(NaN)).toThrow(err);
+    expect(() => validateServiceDuration(0)).toThrow(err);
+    expect(() => validateServiceDuration(-30)).toThrow(err);
+    expect(() => validateServiceDuration(601)).toThrow(err);
   });
 });
 

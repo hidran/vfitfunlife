@@ -1,5 +1,5 @@
 import { normalizeAvailability } from "../ai/search/normalize";
-import type { BookingStatus } from "../bookings/types";
+import type { LegacyBookingStatus } from "../bookings/types";
 import {
   DEFAULT_BOOKING_RULES,
   isTimeKey,
@@ -10,8 +10,24 @@ import {
   type TimeWindow,
 } from "./slots";
 
-/** A booking in one of these holds its time. Every other status frees it. */
-export const ACTIVE_BOOKING_STATUSES: readonly BookingStatus[] = ["requested", "accepted", "payment_confirmed"];
+/**
+ * Legacy pre-migration statuses that still mean "holds its time" (BOOKING_STATUSES replaced
+ * these; see LegacyBookingStatus). A safety net for documents the status backfill may have
+ * missed — without this, such a booking would not block its slot and could be double-booked.
+ */
+export const LEGACY_ACTIVE_BOOKING_STATUSES: readonly LegacyBookingStatus[] = ["pending", "confirmed", "in_progress"];
+
+/**
+ * A booking in one of these holds its time. Every other status frees it. Shared by
+ * getProviderSlots and createBooking (both read through dayContextFrom below) so the two can
+ * never disagree about which bookings are active.
+ */
+export const ACTIVE_BOOKING_STATUSES: readonly string[] = [
+  "requested",
+  "accepted",
+  "payment_confirmed",
+  ...LEGACY_ACTIVE_BOOKING_STATUSES,
+];
 
 type Doc = Record<string, unknown>;
 type TimestampLike = { toDate: () => Date };
@@ -56,7 +72,7 @@ export function parseOverride(raw: Doc | undefined): DateOverride | null {
 export function busyFrom(bookings: Doc[]): BusyInterval[] {
   const out: BusyInterval[] = [];
   for (const b of bookings) {
-    if (!ACTIVE_BOOKING_STATUSES.includes(b.status as BookingStatus)) continue;
+    if (typeof b.status !== "string" || !ACTIVE_BOOKING_STATUSES.includes(b.status)) continue;
     if (!isTimestampLike(b.scheduledAt)) continue;
     const start = b.scheduledAt.toDate();
     const minutes = Number(b.durationMinutes ?? b.duration ?? 60) || 60;

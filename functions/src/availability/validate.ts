@@ -149,6 +149,18 @@ export function validateSlotsRequest(data: unknown): { instructorId: string; ser
   return { instructorId, serviceId, date: d.date };
 }
 
+/**
+ * A service's durationMinutes, checked before it drives the slot grid. A missing or invalid
+ * value would otherwise make freeSlots silently return no slots (NaN comparisons are always
+ * false) — the customer would see "no times available" instead of the real problem.
+ */
+export function validateServiceDuration(v: unknown): number {
+  if (typeof v !== "number" || !Number.isFinite(v) || v <= 0 || v > 600) {
+    throw new HttpsError("failed-precondition", "service_missing_duration");
+  }
+  return v;
+}
+
 /** Same gate as the /provider area: an approved or pending provider, or staff. */
 export function canManageOwnAvailability(user: Record<string, unknown> | undefined): boolean {
   if (!user || user.isDeleted === true) return false;
