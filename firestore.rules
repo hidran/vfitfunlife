@@ -352,10 +352,16 @@ service cloud.firestore {
           (request.auth != null && request.auth.uid == instructorId && isVerifiedProvider());
       }
 
+      // Date exceptions to the weekly hours. Public: anyone may see when a provider is off.
+      // Written only by the updateMyAvailability callable, which validates them.
       match /availability/{dateId} {
         allow read: if true;
-        allow write: if isAdmin() ||
-          (isAuthenticated() && get(/databases/$(database)/documents/instructors/$(instructorId)).data.uid == request.auth.uid);
+        allow write: if false;
+      }
+
+      // Provider-day locks taken by createBooking's availability check. Server-only.
+      match /bookingDays/{date} {
+        allow read, write: if false;
       }
     }
 
