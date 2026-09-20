@@ -25,6 +25,20 @@ export async function fetchMyWeeklySchedule(uid: string): Promise<WeeklyWindow[]
   return scheduleFromDoc(snap.data()) ?? [];
 }
 
+export interface AvailabilityStatus {
+  schedule: WeeklyWindow[] | null;
+  /** Whether the provider has ever saved on /provider/availability (availabilityUpdatedAt). */
+  reviewed: boolean;
+}
+
+/** What the dashboard banner needs — null when the provider has no instructor profile. */
+export async function fetchMyAvailabilityStatus(uid: string): Promise<AvailabilityStatus | null> {
+  const snap = await getDoc(doc(db, 'instructors', uid));
+  if (!snap.exists()) return null;
+  const data = snap.data();
+  return { schedule: scheduleFromDoc(data) ?? [], reviewed: Boolean(data?.availabilityUpdatedAt) };
+}
+
 /** Everything the availability page edits: weekly hours, rules, and the next 12 months of exceptions. */
 export async function fetchMyAvailability(uid: string): Promise<StoredAvailability> {
   const today = romeDateKey(new Date());

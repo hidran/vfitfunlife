@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   Calendar,
   Users,
@@ -13,8 +14,12 @@ import {
   Bell,
 } from 'lucide-react';
 import { StatCard } from '@/components/provider/StatCard';
+import { NoHoursBanner } from '@/components/provider/NoHoursBanner';
 import { Button } from '@/components/ui/button';
 import { useProviderStore } from '@/stores/providerStore';
+import { useAuthStore } from '@/stores/authStore';
+import { fetchMyAvailabilityStatus } from '@/lib/firebase/availability';
+import { dashboardBannerKind } from '@/lib/availability/adapter';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
 import Link from 'next/link';
@@ -36,6 +41,18 @@ export default function ProviderDashboardPage() {
     fetchBookings({ status: 'all' });
     fetchActivities(5);
   }, [fetchDashboardStats, fetchBookings, fetchActivities]);
+
+  // Whether to nudge the provider about their bookable hours: they have never reviewed the
+  // default Mon–Fri 09:00–17:00 hours, or they have switched every day off. staleTime 0 so the
+  // banner goes away as soon as they come back from saving.
+  const uid = useAuthStore((s) => s.user?.id);
+  const { data: availabilityStatus } = useQuery({
+    queryKey: ['my-availability-status', uid],
+    queryFn: () => fetchMyAvailabilityStatus(uid as string),
+    enabled: !!uid,
+    staleTime: 0,
+  });
+  const bannerKind = availabilityStatus ? dashboardBannerKind(availabilityStatus) : null;
 
   // Use real data from Firestore
   const stats = dashboardStats || {
@@ -91,6 +108,8 @@ export default function ProviderDashboardPage() {
           </Link>
         </div>
       </div>
+
+      {bannerKind && <NoHoursBanner kind={bannerKind} />}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

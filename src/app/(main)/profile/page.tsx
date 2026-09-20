@@ -34,7 +34,6 @@ import {
   SocialLinksEditor, 
   NotificationSettings,
   CertificationUpload,
-  AvailabilityCalendar,
   EducationHistory,
   PortfolioGallery,
   LanguagesSelector,
@@ -46,8 +45,7 @@ import {
   FamilyCard,
 } from '@/components/profile';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
-import { isProvider, updateProviderProfile } from '@/lib/firebase/auth';
-import { AvailabilitySchedule, ProviderProfile } from '@/types/firebase';
+import { isProvider } from '@/lib/firebase/auth';
 import { formatPrice } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
 import type { MessageKey } from '@/i18n/messages';
@@ -142,16 +140,6 @@ const menuItems: ProfileMenuSection[] = [
   },
 ];
 
-const availabilityDayKeys: MessageKey[] = [
-  'profile.provider.day.sun',
-  'profile.provider.day.mon',
-  'profile.provider.day.tue',
-  'profile.provider.day.wed',
-  'profile.provider.day.thu',
-  'profile.provider.day.fri',
-  'profile.provider.day.sat',
-];
-
 export default function ProfilePage() {
   const router = useRouter();
   const { t } = useI18n();
@@ -233,47 +221,6 @@ export default function ProfilePage() {
 
   // Provider profile data
   const providerProfile = user?.providerProfile;
-
-  const handleUpdateProviderProfile = async (data: Partial<ProviderProfile>) => {
-    if (!user?.id) return;
-    try {
-      await updateProviderProfile(user.id, data);
-      await refreshUserProfile();
-    } catch (error) {
-      console.error('Error updating provider profile:', error);
-    }
-  };
-
-  const handleUpdateAvailability = async (schedule: AvailabilitySchedule) => {
-    await handleUpdateProviderProfile({ availabilitySchedule: schedule });
-  };
-
-  // Generate next 7 days availability preview
-  const getAvailabilityPreview = () => {
-    if (!providerProfile?.availabilitySchedule) return [];
-    
-    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const today = new Date();
-    const preview = [];
-    
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-      const dayName = days[date.getDay()] as keyof AvailabilitySchedule;
-      const daySchedule = providerProfile.availabilitySchedule[dayName];
-      
-      preview.push({
-        date,
-        dayName: days[date.getDay()],
-        isAvailable: daySchedule?.isAvailable || false,
-        slots: daySchedule?.slots || [],
-      });
-    }
-    
-    return preview;
-  };
-
-  const availabilityPreview = getAvailabilityPreview();
 
   if (isLoading || isCheckingProvider) {
     return (
@@ -618,55 +565,24 @@ export default function ProfilePage() {
               />
             </div>
 
-            {/* Availability Preview */}
-            <div className="bg-background-secondary/5 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Calendar className="text-section-primary" size={20} />
-                  <h3 className="text-sm font-medium text-text-tertiary">
-                    {t('profile.provider.availabilityNext7Days')}
-                  </h3>
+            {/* Weekly hours. This used to be an editor writing providerProfile.availabilitySchedule
+                on the user document, plus a 7-day preview of it. Booking never read that field,
+                so hours set here did nothing. It now links to the page that writes the
+                schedule booking enforces (instructors/{uid}.availabilitySchedule). */}
+            <button
+              type="button"
+              onClick={() => router.push('/provider/availability')}
+              className="w-full bg-background-secondary/5 rounded-xl p-4 text-left hover:bg-background-secondary/10 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Calendar className="text-section-primary" size={20} />
+                <div className="flex-1">
+                  <h3 className="text-sm font-medium text-text-tertiary">{t('profile.provider.availabilityLink')}</h3>
+                  <p className="text-sm text-text-secondary mt-0.5">{t('profile.provider.availabilityHint')}</p>
                 </div>
+                <ChevronRight className="text-text-tertiary" size={18} />
               </div>
-              
-              {/* Next 7 Days Preview */}
-              <div className="grid grid-cols-7 gap-1 mb-4">
-                {availabilityPreview.map((day, index) => {
-                  return (
-                    <div
-                      key={index}
-                      className={cn(
-                        'text-center p-2 rounded-lg',
-                        day.isAvailable
-                          ? 'bg-success-DEFAULT/10 border border-success-DEFAULT/30'
-                          : 'bg-background-secondary/5 border border-hairline'
-                      )}
-                    >
-                      <p className={cn(
-                        'text-[10px] uppercase',
-                        day.isAvailable ? 'text-success-DEFAULT' : 'text-text-tertiary'
-                      )}>
-                        {t(availabilityDayKeys[day.date.getDay()])}
-                      </p>
-                      <p className="text-sm font-semibold text-text-inverse">
-                        {day.date.getDate()}
-                      </p>
-                      {day.isAvailable && day.slots.length > 0 && (
-                        <p className="text-[8px] text-text-tertiary mt-0.5">
-                          {t('profile.provider.slots', { count: day.slots.length })}
-                        </p>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              <AvailabilityCalendar
-                schedule={providerProfile?.availabilitySchedule || null}
-                onUpdate={handleUpdateAvailability}
-                isEditable={true}
-              />
-            </div>
+            </button>
 
             {/* Services & pricing.
                 This used to be an inline editor writing providerProfile.servicePricing on

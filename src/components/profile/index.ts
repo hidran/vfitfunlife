@@ -2,7 +2,6 @@ export { ProfilePhotoUploader } from './ProfilePhotoUploader';
 export { SocialLinksEditor } from './SocialLinksEditor';
 export { NotificationSettings } from './NotificationSettings';
 export { CertificationUpload } from './CertificationUpload';
-export { AvailabilityCalendar } from './AvailabilityCalendar';
 export { EducationHistory } from './EducationHistory';
 export { PortfolioGallery } from './PortfolioGallery';
 export { LanguagesSelector } from './LanguagesSelector';

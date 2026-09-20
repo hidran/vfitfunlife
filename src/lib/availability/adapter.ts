@@ -100,6 +100,25 @@ export function hasBookableHours(schedule: WeeklyWindow[] | null | undefined): b
   return (schedule ?? []).some((w) => w.isAvailable !== false);
 }
 
+export type DashboardBannerKind = 'review' | 'allOff' | null;
+
+/**
+ * What the provider dashboard tells the provider about their bookable hours. Every provider
+ * starts on the default Mon–Fri 09:00–17:00 (approval / the migration write it; see
+ * functions/src/availability/slots.ts DEFAULT_WEEKLY_HOURS) without having reviewed it
+ * themselves, so `reviewed` (instructors/{uid}.availabilityUpdatedAt) tracks whether they have
+ * ever saved on /provider/availability. A provider with no bookable hours cannot receive
+ * bookings at all, which is the more urgent thing to say — that check wins even before review.
+ */
+export function dashboardBannerKind(status: {
+  reviewed: boolean;
+  schedule: WeeklyWindow[] | null;
+}): DashboardBannerKind {
+  if (!hasBookableHours(status.schedule)) return 'allOff';
+  if (!status.reviewed) return 'review';
+  return null;
+}
+
 function emptyWeek(): WeeklySchedule {
   return Object.fromEntries(DAYS.map((d) => [d, { isAvailable: false, slots: [] }])) as unknown as WeeklySchedule;
 }

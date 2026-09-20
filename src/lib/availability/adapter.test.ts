@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  dashboardBannerKind,
   hasBookableHours,
   overrideFromDoc,
   savedOverrides,
@@ -111,5 +112,21 @@ describe('hasBookableHours', () => {
     expect(hasBookableHours([])).toBe(false);
     expect(hasBookableHours([mon('09:00', '12:00', false)])).toBe(false);
     expect(hasBookableHours([mon('09:00', '12:00')])).toBe(true);
+  });
+});
+
+describe('dashboardBannerKind', () => {
+  it('tells the provider to review the default hours before they have ever saved', () => {
+    expect(dashboardBannerKind({ reviewed: false, schedule: [mon('09:00', '17:00')] })).toBe('review');
+  });
+
+  it('warns when every day is switched off, even if never reviewed', () => {
+    expect(dashboardBannerKind({ reviewed: false, schedule: [] })).toBe('allOff');
+    expect(dashboardBannerKind({ reviewed: true, schedule: [] })).toBe('allOff');
+    expect(dashboardBannerKind({ reviewed: true, schedule: null })).toBe('allOff');
+  });
+
+  it('shows nothing once the provider has reviewed real hours', () => {
+    expect(dashboardBannerKind({ reviewed: true, schedule: [mon('09:00', '17:00')] })).toBeNull();
   });
 });
