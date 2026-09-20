@@ -389,6 +389,7 @@ export const enMessages: Messages = {
 
   // ─── Admin: Verifications page ───────────────────────────────────────
   'admin.verificationsPage.title': 'Provider Verifications',
+  'admin.verificationsPage.actionFailed': 'Action failed: only a superadmin can verify or reject a provider.',
   'admin.verificationsPage.subtitle': 'Review and approve provider applications',
   'admin.verificationsPage.pendingBadge': '{{count}} pending',
   'admin.verificationsPage.stat.pending': 'Pending',

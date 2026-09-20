@@ -20,7 +20,7 @@ import {
 } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { auth, db, functions } from "./config";
-import { cancelBooking as cancelBookingFn } from "./functions";
+import { cancelBooking as cancelBookingFn, decideProviderApplication } from "./functions";
 import {
   AdminDashboardStats,
   UserFilters,
@@ -380,45 +380,37 @@ export async function getPendingVerifications(): Promise<AdminProvider[]> {
   }
 }
 
-// Verify provider
+/**
+ * Approve a provider.
+ *
+ * Delegates to the decideProviderApplication callable — the single owner of this
+ * transition. This used to write `providerProfile.isVerified` from the browser and nothing
+ * else, which is not what makes someone a provider: `users/{uid}.providerStatus` stayed
+ * 'pending', so the approved provider went on seeing "application under review" and stayed
+ * locked out of /provider/*, while the row vanished from the verification queue as if the
+ * approval had worked. The callable also promotes the role, creates the instructors
+ * catalogue entry, gives them default hours and seeds a draft service per requested
+ * category, and writes the audit entry in the same batch.
+ *
+ * `data` is kept for the call sites that pass verification notes; the timestamps and the
+ * acting admin are recorded server-side.
+ */
 export async function verifyProvider(
   providerId: string,
   data: VerificationData
 ): Promise<void> {
-  try {
-    // Fall back to the acting admin's uid; never write undefined (Firestore rejects it).
-    const verifiedBy = data.verifiedBy ?? auth.currentUser?.uid ?? null;
-    const providerRef = doc(db, USERS_COLLECTION, providerId);
-    await updateDoc(providerRef, {
-      "providerProfile.isVerified": true,
-      "providerProfile.verifiedAt": serverTimestamp(),
-      "providerProfile.verifiedBy": verifiedBy,
-      updatedAt: serverTimestamp(),
-    });
-
-    await logAdminAction("VERIFY_PROVIDER", `Verified provider ${providerId}`);
-  } catch (error) {
-    console.error("Error verifying provider:", error);
-    throw error;
-  }
+  await decideProviderApplication({
+    providerId,
+    decision: "verified",
+    ...(data.notes ? { notes: data.notes } : {}),
+  });
+  await logAdminAction("VERIFY_PROVIDER", `Verified provider ${providerId}`);
 }
 
-// Reject provider
+/** Reject a provider, through the same callable that owns approval. */
 export async function rejectProvider(providerId: string, reason: string): Promise<void> {
-  try {
-    const providerRef = doc(db, USERS_COLLECTION, providerId);
-    await updateDoc(providerRef, {
-      "providerProfile.verificationRejected": true,
-      "providerProfile.rejectionReason": reason,
-      "providerProfile.rejectedAt": serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-
-    await logAdminAction("REJECT_PROVIDER", `Rejected provider ${providerId}. Reason: ${reason}`);
-  } catch (error) {
-    console.error("Error rejecting provider:", error);
-    throw error;
-  }
+  await decideProviderApplication({ providerId, decision: "rejected", notes: reason });
+  await logAdminAction("REJECT_PROVIDER", `Rejected provider ${providerId}. Reason: ${reason}`);
 }
 
 // Get bookings with filters

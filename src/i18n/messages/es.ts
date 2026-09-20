@@ -381,6 +381,7 @@ export const esMessages: Messages = {
   'admin.providerDetail.bookingsPlaceholder': 'Las reservas del proveedor se mostrarán aquí',
   'admin.providerDetail.reviewsPlaceholder': 'Las reseñas del proveedor se mostrarán aquí',
   'admin.verificationsPage.title': 'Verificaciones de proveedores',
+  'admin.verificationsPage.actionFailed': 'Acción fallida: solo un superadministrador puede verificar o rechazar a un proveedor.',
   'admin.verificationsPage.subtitle': 'Revisar y aprobar solicitudes de proveedores',
   'admin.verificationsPage.pendingBadge': '{{count}} pendientes',
   'admin.verificationsPage.stat.pending': 'Pendientes',

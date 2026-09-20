@@ -49,8 +49,8 @@ export const decideProviderApplication = onCall<DecideProviderApplicationData>(
     const userRef = db.collection("users").doc(providerId);
     const instructorRef = db.collection("instructors").doc(providerId);
     const [userSnap, instructorSnap] = await Promise.all([userRef.get(), instructorRef.get()]);
-    if (!userSnap.exists || !instructorSnap.exists) {
-      throw new HttpsError("not-found", "Application not found");
+    if (!userSnap.exists) {
+      throw new HttpsError("not-found", "Provider not found");
     }
 
     const user = userSnap.data() ?? {};
@@ -61,10 +61,6 @@ export const decideProviderApplication = onCall<DecideProviderApplicationData>(
     // verification fields, etc.) — belt and suspenders against a crafted pending application.
     if (isProtectedSuperadmin(user)) {
       throw new HttpsError("permission-denied", "Cannot modify a protected superadmin account");
-    }
-
-    if (instructor.applicationStatus !== "pending") {
-      throw new HttpsError("failed-precondition", "Application is not pending");
     }
 
     const now = FieldValue.serverTimestamp();
@@ -98,6 +94,17 @@ export const decideProviderApplication = onCall<DecideProviderApplicationData>(
       "providerProfile.isVerified": verified,
       "updatedAt": now,
     };
+    if (!instructorSnap.exists) {
+      // A provider created from the admin panel (or one predating the catalogue) has no
+      // instructors document at all, and that document is what makes them bookable and
+      // searchable. Approving used to be impossible for them through this callable and a
+      // no-op through the admin panel's own write — so create the entry here rather than
+      // refusing a decision the admin is entitled to make.
+      instructorPatch.uid = providerId;
+      instructorPatch.fullName = user.fullName ?? null;
+      instructorPatch.isActive = true;
+      instructorPatch.createdAt = now;
+    }
     if (verified && needsDefaultHours(instructor)) {
       instructorPatch.availabilitySchedule = DEFAULT_WEEKLY_HOURS;
     }

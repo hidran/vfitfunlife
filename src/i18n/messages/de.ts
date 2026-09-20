@@ -382,6 +382,7 @@ export const deMessages: Messages = {
   'admin.providerDetail.bookingsPlaceholder': 'Anbieterbuchungen werden hier angezeigt',
   'admin.providerDetail.reviewsPlaceholder': 'Anbieterbewertungen werden hier angezeigt',
   'admin.verificationsPage.title': 'Anbieter-Verifizierungen',
+  'admin.verificationsPage.actionFailed': 'Aktion fehlgeschlagen: Nur ein Superadmin kann einen Anbieter verifizieren oder ablehnen.',
   'admin.verificationsPage.subtitle': 'Anbieteranträge prüfen und genehmigen',
   'admin.verificationsPage.pendingBadge': '{{count}} ausstehend',
   'admin.verificationsPage.stat.pending': 'Ausstehend',

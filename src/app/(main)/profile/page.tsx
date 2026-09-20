@@ -186,6 +186,14 @@ export default function ProfilePage() {
     totalEarnings: 0,
   });
 
+  // A pending applicant is the one user whose cached profile goes stale under them: the
+  // decision is taken elsewhere, by someone else, and the store only reloads the user
+  // document on an auth state change. Without this, an approved provider goes on being told
+  // their application is under review until they sign out and back in.
+  useEffect(() => {
+    if (user?.providerStatus === 'pending') void refreshUserProfile();
+  }, [user?.providerStatus, refreshUserProfile]);
+
   // Check if user is a provider
   useEffect(() => {
     const checkProvider = async () => {

@@ -384,6 +384,7 @@ export const frMessages: Messages = {
   'admin.providerDetail.bookingsPlaceholder': 'Les réservations du prestataire s\'afficheront ici',
   'admin.providerDetail.reviewsPlaceholder': 'Les avis du prestataire s\'afficheront ici',
   'admin.verificationsPage.title': 'Vérifications des prestataires',
+  'admin.verificationsPage.actionFailed': 'Échec de l\'opération : seul un superadmin peut vérifier ou refuser un prestataire.',
   'admin.verificationsPage.subtitle': 'Examiner et approuver les candidatures des prestataires',
   'admin.verificationsPage.pendingBadge': '{{count}} en attente',
   'admin.verificationsPage.stat.pending': 'En attente',

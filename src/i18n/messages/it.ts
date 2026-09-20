@@ -387,6 +387,7 @@ export const itMessages = {
 
   // ─── Admin: Verifications page ───────────────────────────────────────
   'admin.verificationsPage.title': 'Verifiche provider',
+  'admin.verificationsPage.actionFailed': 'Operazione non riuscita: solo un superadmin può verificare o rifiutare un provider.',
   'admin.verificationsPage.subtitle': 'Revisiona e approva le richieste dei provider',
   'admin.verificationsPage.pendingBadge': '{{count}} in attesa',
   'admin.verificationsPage.stat.pending': 'In attesa',

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Timestamp } from "firebase/firestore";
 import { useAdminStore } from "@/stores/adminStore";
@@ -22,12 +22,16 @@ export default function ProviderVerificationsPage() {
     verifyProviderAction,
     rejectProviderAction,
   } = useAdminStore();
+  // Approving is superadmin-only and now goes through a callable that can refuse. Swallowing
+  // that into the console told the admin the same story as success — the row simply stayed.
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPendingVerifications();
   }, [fetchPendingVerifications]);
 
   const handleApprove = async (providerId: string) => {
+    setActionError(null);
     try {
       await verifyProviderAction(providerId, {
         status: "verified",
@@ -35,14 +39,17 @@ export default function ProviderVerificationsPage() {
       });
     } catch (error) {
       console.error("Failed to approve provider:", error);
+      setActionError(t('admin.verificationsPage.actionFailed'));
     }
   };
 
   const handleReject = async (providerId: string, reason: string) => {
+    setActionError(null);
     try {
       await rejectProviderAction(providerId, reason);
     } catch (error) {
       console.error("Failed to reject provider:", error);
+      setActionError(t('admin.verificationsPage.actionFailed'));
     }
   };
 
@@ -59,6 +66,12 @@ export default function ProviderVerificationsPage() {
           {t('admin.verificationsPage.back')}
         </Button>
       </div>
+
+      {actionError && (
+        <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-400">
+          {actionError}
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

@@ -151,6 +151,10 @@ export function ProviderDetailView({ providerId }: Props) {
       });
       setProvider({
         ...provider,
+        // providerStatus is what the provider's own app reads; showing only the nested
+        // verification flag here is how this screen used to look approved while they were
+        // still stuck on "pending".
+        providerStatus: 'verified',
         providerProfile: provider.providerProfile
           ? { ...provider.providerProfile, isVerified: true }
           : provider.providerProfile,
