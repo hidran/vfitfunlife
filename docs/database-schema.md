@@ -419,6 +419,20 @@ interface Booking {
     note?: string;
   }>;
 
+  // Every time the session was moved — append-only, written only by the rescheduleBooking
+  // callable (firestore.rules denies client writes of scheduledAt, and the browser cannot be
+  // trusted to build a Europe/Rome instant). Absent on a booking that has never moved.
+  //
+  // `at` is a concrete Timestamp, not a server sentinel: arrayUnion rejects those. It is
+  // therefore the server's clock at the moment of the write, not the commit time.
+  rescheduleHistory?: Array<{
+    from: Timestamp;                 // the start it had
+    to: Timestamp;                   // the start it was given
+    actorUid: string;
+    actorRole: 'client' | 'trainer' | 'staff';
+    at: Timestamp;
+  }>;
+
   // Manual payment confirmation. Payments happen off-platform, directly to the trainer;
   // the platform only records them. Stripe split payments are Phase 2.
   paymentConfirmation?: {

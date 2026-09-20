@@ -13,16 +13,18 @@
 
 import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
-import { ACTIVE_BOOKING_STATUSES, dayContextFrom } from "../availability/dayContext";
+import { ACTIVE_BOOKING_STATUSES, bookingDurationMinutes, dayContextFrom } from "../availability/dayContext";
 import { bookingDayRef, readDayDocs } from "../availability/dayReads";
 import { decideBookingStart, romeDateOf } from "../availability/slots";
 import { MAX_DOC_ID_LENGTH } from "../availability/validate";
+import { writeAuditLog } from "../lib/audit";
 import { EMAIL_SECRETS } from "../lib/email";
+import { getUserRoleInfo } from "../utils/roles";
 import { notifyTransition } from "./notify";
 
 const region = process.env.FIREBASE_REGION || "europe-west1";
 
-export type RescheduleRefusal = "not_reschedulable" | "past_booking" | "permission_denied";
+export type RescheduleRefusal = "not_reschedulable" | "past_booking" | "permission_denied" | "same_slot";
 
 /** Who moved it — recorded on the booking and used to pick who gets told. */
 export type RescheduleActorRole = "client" | "trainer" | "staff";
@@ -44,6 +46,15 @@ interface Caller {
   uid: string;
   isStaff: boolean;
 }
+
+/**
+ * A pass carries what the caller would otherwise re-derive (and previously asserted with a
+ * cast): the booking's trainer and its current start are both things the guard had to read
+ * and narrow anyway.
+ */
+export type RescheduleVerdict =
+  | { ok: true; actorRole: RescheduleActorRole; instructorId: string; previousStart: Date }
+  | { ok: false; reason: RescheduleRefusal };
 
 /**
  * The statuses a booking can still be moved from: ACTIVE_BOOKING_STATUSES (the ones that hold
@@ -86,44 +97,57 @@ export function counterpartUids(booking: BookingLike, actorRole: RescheduleActor
 }
 
 /**
- * May this caller move this booking at all? Pure — no Firestore, no clock of its own — so
- * every refusal is unit-testable and the callable only has to map reasons onto error codes.
+ * May this caller move this booking to this instant? Pure — no Firestore, no clock of its
+ * own — so every refusal is unit-testable and the callable only maps reasons onto codes.
  *
  * Permission is settled first: someone with no claim on the booking learns nothing about its
  * state. `scheduledAt` is the booking's *current* start; a session that has already begun is
- * history, and moving it would rewrite the past rather than change a plan.
+ * history, and moving it would rewrite the past rather than change a plan. Only a trainer's
+ * day has a schedule to validate a start against, so a venue or class booking is refused
+ * here rather than moved unchecked.
  */
 export function checkReschedulable(
   booking: BookingLike,
   caller: Caller,
+  startsAt: Date,
   now: Date,
-): { ok: true } | { ok: false; reason: RescheduleRefusal } {
-  if (!rescheduleActorRole(booking, caller)) return { ok: false, reason: "permission_denied" };
+): RescheduleVerdict {
+  const actorRole = rescheduleActorRole(booking, caller);
+  if (!actorRole) return { ok: false, reason: "permission_denied" };
 
   if (typeof booking.status !== "string" || !RESCHEDULABLE_STATUSES.includes(booking.status)) {
     return { ok: false, reason: "not_reschedulable" };
   }
 
-  const start = toDate(booking.scheduledAt);
+  const previousStart = toDate(booking.scheduledAt);
   // Nothing readable to compare against: refuse rather than assume the session is still ahead.
-  if (!start) return { ok: false, reason: "not_reschedulable" };
-  if (start.getTime() <= now.getTime()) return { ok: false, reason: "past_booking" };
+  if (!previousStart) return { ok: false, reason: "not_reschedulable" };
+  if (previousStart.getTime() <= now.getTime()) return { ok: false, reason: "past_booking" };
 
-  return { ok: true };
+  if (typeof booking.instructorId !== "string" || !booking.instructorId) {
+    return { ok: false, reason: "not_reschedulable" };
+  }
+
+  // Moving a booking to the instant it already has is not a move. Without this a double
+  // submit always validates — the booking is excluded from its own day, so its current start
+  // is necessarily free — and would append another history entry and tell the counterpart
+  // their session had moved when nothing did.
+  if (startsAt.getTime() === previousStart.getTime()) return { ok: false, reason: "same_slot" };
+
+  return { ok: true, actorRole, instructorId: booking.instructorId, previousStart };
 }
 
 /**
  * How long the session runs and therefore when it ends, taken from the booking and never from
- * the request — the client may not stretch a session by rescheduling it. A non-numeric stored
- * duration falls back to 60 rather than propagating NaN into `scheduledEndAt`, which would
- * make the booking invisible to every later overlap check.
+ * the request — the client may not stretch a session by rescheduling it. The length comes
+ * from the same resolver the slot engine uses, so the footprint that is validated is the
+ * footprint that is written.
  */
 export function rescheduledWindow(
   booking: { durationMinutes?: unknown; duration?: unknown },
   start: Date,
 ): { durationMinutes: number; end: Date } {
-  const stored = booking.durationMinutes ?? booking.duration;
-  const durationMinutes = typeof stored === "number" && Number.isFinite(stored) && stored > 0 ? stored : 60;
+  const durationMinutes = bookingDurationMinutes(booking);
   return { durationMinutes, end: new Date(start.getTime() + durationMinutes * 60_000) };
 }
 
@@ -157,6 +181,12 @@ export function validateRescheduleRequest(
   return { bookingId, startsAt };
 }
 
+/** Maps a guard refusal onto the wire: only one of them is about who is asking. */
+function refuse(reason: RescheduleRefusal): never {
+  if (reason === "permission_denied") throw new HttpsError("permission-denied", reason);
+  throw new HttpsError("failed-precondition", reason);
+}
+
 /**
  * Moves one booking to `startsAt`, which must be a free start on the trainer's own schedule.
  *
@@ -172,42 +202,41 @@ export const rescheduleBooking = onCall<RescheduleRequest>(
 
     const db = getFirestore();
     const bookingRef = db.collection("bookings").doc(bookingId);
-    const [bookingSnap, callerSnap] = await Promise.all([
-      bookingRef.get(),
-      db.collection("users").doc(callerUid).get(),
-    ]);
-    if (!bookingSnap.exists) throw new HttpsError("not-found", "booking_not_found");
-    const booking = bookingSnap.data() as Record<string, unknown>;
 
-    const callerRole = callerSnap.data()?.role;
-    const caller: Caller = { uid: callerUid, isStaff: callerRole === "admin" || callerRole === "superadmin" };
+    // Who the caller is does not depend on the booking, so it is settled once rather than on
+    // every transaction attempt. A deactivated account keeps its role claims but may not act.
+    const roleInfo = await getUserRoleInfo(callerUid);
+    if (roleInfo?.isActive === false) throw new HttpsError("permission-denied", "account_deactivated");
+    const isStaff = roleInfo?.role === "admin" || roleInfo?.role === "superadmin";
+    const caller: Caller = { uid: callerUid, isStaff };
 
-    const verdict = checkReschedulable(booking, caller, new Date());
-    if (!verdict.ok) {
-      if (verdict.reason === "permission_denied") throw new HttpsError("permission-denied", verdict.reason);
-      throw new HttpsError("failed-precondition", verdict.reason);
-    }
-    const actorRole = rescheduleActorRole(booking, caller) as RescheduleActorRole;
+    const moved = await db.runTransaction(async (tx) => {
+      // The booking is the transaction's first read and everything below is derived from it
+      // on every attempt. The provider-day lock exists precisely to make contending attempts
+      // re-run, so a snapshot taken before the transaction is the one guaranteed to be stale:
+      // a booking cancelled, completed or already moved to another day while this attempt was
+      // queued would otherwise be validated — and its old day locked — against a state it no
+      // longer has.
+      const snap = await tx.get(bookingRef);
+      if (!snap.exists) throw new HttpsError("not-found", "booking_not_found");
+      const booking = snap.data() as Record<string, unknown>;
 
-    // Only a trainer's day has a schedule to validate a start against. A venue or class
-    // booking has no provider availability behind it, so this callable cannot vouch for a new
-    // time on one — it refuses instead of moving it unchecked.
-    const instructorId = typeof booking.instructorId === "string" ? booking.instructorId : null;
-    if (!instructorId) throw new HttpsError("failed-precondition", "not_reschedulable");
+      const verdict = checkReschedulable(booking, caller, startsAt, new Date());
+      if (!verdict.ok) refuse(verdict.reason);
+      const { actorRole, instructorId, previousStart } = verdict;
 
-    const { durationMinutes, end } = rescheduledWindow(booking, startsAt);
-    // checkReschedulable already proved this start parses.
-    const previousStart = toDate(booking.scheduledAt) as Date;
-    const newDay = romeDateOf(startsAt);
-    const oldDay = romeDateOf(previousStart);
-
-    await db.runTransaction(async (tx) => {
-      // Reads before writes. readDayDocs also reads the new day's lock and the set() below
-      // writes it, so concurrent requests for this provider and day queue up: the second one
-      // re-reads the bookings and sees the first one's move.
-      const docs = await readDayDocs(db, instructorId, newDay, tx);
+      const { durationMinutes, end } = rescheduledWindow(booking, startsAt);
+      const newDay = romeDateOf(startsAt);
+      const oldDay = romeDateOf(previousStart);
       const oldDayRef = oldDay === newDay ? null : bookingDayRef(db, instructorId, oldDay);
-      if (oldDayRef) await tx.get(oldDayRef);
+
+      // Reads before writes, and both day locks in ascending date order (readDayDocs takes
+      // the new day's). Two moves crossing the same pair of days in opposite directions would
+      // otherwise each hold the lock the other is waiting for, and surface as an opaque
+      // `aborted` after the retries run out.
+      if (oldDayRef && oldDay < newDay) await tx.get(oldDayRef);
+      const docs = await readDayDocs(db, instructorId, newDay, tx);
+      if (oldDayRef && oldDay > newDay) await tx.get(oldDayRef);
 
       const decision = decideBookingStart(
         // This booking is excluded: it must not block the slot it is leaving, and it must not
@@ -220,6 +249,10 @@ export const rescheduleBooking = onCall<RescheduleRequest>(
       tx.update(bookingRef, {
         scheduledAt: Timestamp.fromDate(startsAt),
         scheduledEndAt: Timestamp.fromDate(end),
+        // Written back resolved, so a stored length can never disagree with
+        // scheduledEndAt - scheduledAt: busyFrom prefers the end instant, and a document
+        // keeping "90" behind a 60-minute end would hand out an hour someone is training in.
+        durationMinutes,
         updatedAt: FieldValue.serverTimestamp(),
         rescheduleHistory: FieldValue.arrayUnion({
           from: Timestamp.fromDate(previousStart),
@@ -233,19 +266,45 @@ export const rescheduleBooking = onCall<RescheduleRequest>(
 
       const lock = { lastBookingId: bookingId, updatedAt: FieldValue.serverTimestamp() };
       tx.set(bookingDayRef(db, instructorId, newDay), lock, { merge: true });
-      // The day it leaves is touched too: whoever holds that day's lock must be serialised
-      // against this move, or they would keep treating the freed slot as taken.
+      // The day it leaves is touched too, so a request holding that day is serialised against
+      // this move instead of going on to offer the freed slot as taken.
       if (oldDayRef) tx.set(oldDayRef, lock, { merge: true });
+
+      return {
+        actorRole,
+        previousStart,
+        end,
+        serviceName: typeof booking.serviceName === "string" ? booking.serviceName : undefined,
+        counterparts: counterpartUids(booking, actorRole),
+      };
     });
 
     // allSettled, not all: a booking that has already moved must never fail on a notification.
-    await Promise.allSettled(counterpartUids(booking, actorRole).map((uid) => notifyTransition({
+    await Promise.allSettled(moved.counterparts.map((uid) => notifyTransition({
       recipientUid: uid,
       event: "rescheduled",
       bookingId,
-      context: { serviceName: typeof booking.serviceName === "string" ? booking.serviceName : undefined },
+      context: { serviceName: moved.serviceName },
     })));
 
-    return { bookingId, startsAt: startsAt.toISOString(), scheduledEndAt: end.toISOString() };
+    // Staff moving someone else's session is a delicate operation, and every other admin
+    // mutation in this project lands in audit_logs. The booking keeps its own
+    // rescheduleHistory; this is so "what did that operator do" can be answered in one place.
+    if (moved.actorRole === "staff") {
+      const operator = (await db.collection("users").doc(callerUid).get()).data();
+      await writeAuditLog({
+        actorUid: callerUid,
+        actorEmail: operator?.email ?? "",
+        actorRole: operator?.role === "superadmin" ? "superadmin" : "admin",
+        action: "update",
+        entityType: "booking",
+        entityId: bookingId,
+        // ISO strings rather than Timestamps: the audit reader renders values as they come.
+        before: { scheduledAt: moved.previousStart.toISOString() },
+        after: { scheduledAt: startsAt.toISOString() },
+      });
+    }
+
+    return { bookingId, startsAt: startsAt.toISOString(), scheduledEndAt: moved.end.toISOString() };
   },
 );

@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { bookingsStartingOn, busyFrom, dayContextFrom, parseOverride, parseSchedule, resolveRules } from "./dayContext";
+import {
+  bookingDurationMinutes,
+  bookingsStartingOn,
+  busyFrom,
+  dayContextFrom,
+  parseOverride,
+  parseSchedule,
+  resolveRules,
+} from "./dayContext";
 
 const ts = (iso: string) => ({ toDate: () => new Date(iso) });
 
@@ -85,6 +93,26 @@ describe("busyFrom", () => {
       "2026-09-21T10:00:00.000Z",
       "2026-09-21T12:00:00.000Z",
     ]);
+  });
+});
+
+describe("bookingDurationMinutes", () => {
+  it("prefers durationMinutes, falls back to the legacy duration, then to an hour", () => {
+    expect(bookingDurationMinutes({ durationMinutes: 45, duration: 90 })).toBe(45);
+    expect(bookingDurationMinutes({ duration: 90 })).toBe(90);
+    expect(bookingDurationMinutes({})).toBe(60);
+  });
+
+  it("coerces a stored numeric string, so the slot engine and the writer read it the same way", () => {
+    expect(bookingDurationMinutes({ durationMinutes: "90" })).toBe(90);
+  });
+
+  it("falls back rather than returning a length that ends the session before it starts", () => {
+    expect(bookingDurationMinutes({ durationMinutes: 0 })).toBe(60);
+    expect(bookingDurationMinutes({ durationMinutes: -30 })).toBe(60);
+    expect(bookingDurationMinutes({ durationMinutes: NaN })).toBe(60);
+    expect(bookingDurationMinutes({ durationMinutes: "un'ora" })).toBe(60);
+    expect(bookingDurationMinutes({ durationMinutes: null, duration: null })).toBe(60);
   });
 });
 

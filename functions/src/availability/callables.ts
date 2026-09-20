@@ -1,5 +1,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { getFirestore, FieldValue, type Firestore } from "firebase-admin/firestore";
+import { getUserRoleInfo } from "../utils/roles";
 import { dayContextFrom } from "./dayContext";
 import { readDayDocs } from "./dayReads";
 import { freeSlots } from "./slots";
@@ -14,6 +15,22 @@ import {
 const region = process.env.FIREBASE_REGION || "europe-west1";
 
 /**
+ * Whether this caller may point getProviderSlots at that booking.
+ *
+ * Excluding a booking changes the answer, so without this, diffing the slot list with and
+ * without an id tells anyone whether a given booking sits on a given trainer's day and at
+ * what time — for a document firestore.rules would not let them read. A booking that does not
+ * exist is refused exactly like one that belongs to someone else, so the refusal itself never
+ * says which ids are real.
+ */
+async function canExcludeBooking(db: Firestore, uid: string, bookingId: string): Promise<boolean> {
+  const booking = (await db.collection("bookings").doc(bookingId).get()).data();
+  if (booking && (booking.userId === uid || booking.instructorId === uid)) return true;
+  const roleInfo = await getUserRoleInfo(uid);
+  return roleInfo?.role === "admin" || roleInfo?.role === "superadmin";
+}
+
+/**
  * Signed-in users: the free start times for one provider, service and date.
  *
  * Runs server-side because it has to see the provider's other bookings, which clients may
@@ -25,6 +42,10 @@ export const getProviderSlots = onCall({ region }, async (req) => {
   const { instructorId, serviceId, date, excludeBookingId } = validateSlotsRequest(req.data);
 
   const db = getFirestore();
+  if (excludeBookingId) {
+    const mayExclude = await canExcludeBooking(db, req.auth.uid, excludeBookingId);
+    if (!mayExclude) throw new HttpsError("permission-denied", "not_your_booking");
+  }
   const serviceSnap = await db.collection("instructors").doc(instructorId)
     .collection("services").doc(serviceId).get();
   const service = serviceSnap.data();

@@ -101,6 +101,21 @@ function isActiveBooking(b: Doc): boolean {
   return typeof b.status === "string" && ACTIVE_BOOKING_STATUSES.includes(b.status);
 }
 
+/** A booking with no usable length still occupies an hour rather than nothing. */
+export const DEFAULT_BOOKING_DURATION_MINUTES = 60;
+
+/**
+ * How long a booking runs. One resolver for the whole system: what the slot engine treats as
+ * a booking's footprint and what rescheduleBooking writes back must never disagree, or a
+ * session validated as an hour ends up sitting on top of a 90-minute one. Numeric strings are
+ * coerced because older documents store them that way; 0, a negative and NaN fall back rather
+ * than producing an interval that ends before it starts.
+ */
+export function bookingDurationMinutes(booking: { durationMinutes?: unknown; duration?: unknown }): number {
+  const minutes = Number(booking.durationMinutes ?? booking.duration);
+  return Number.isFinite(minutes) && minutes > 0 ? minutes : DEFAULT_BOOKING_DURATION_MINUTES;
+}
+
 /**
  * Active bookings as busy intervals, for the buffer/overlap check. A missing end falls back
  * to start + duration. `bookings` may span more than `date` itself (dayReads reads from 24h
@@ -114,10 +129,9 @@ export function busyFrom(bookings: Doc[], excludeBookingId?: string): BusyInterv
     if (!isActiveBooking(b)) continue;
     if (!isTimestampLike(b.scheduledAt)) continue;
     const start = b.scheduledAt.toDate();
-    const minutes = Number(b.durationMinutes ?? b.duration ?? 60) || 60;
     const end = isTimestampLike(b.scheduledEndAt) ?
       b.scheduledEndAt.toDate() :
-      new Date(start.getTime() + minutes * 60_000);
+      new Date(start.getTime() + bookingDurationMinutes(b) * 60_000);
     out.push({ start, end });
   }
   return out;
