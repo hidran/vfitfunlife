@@ -14,6 +14,7 @@ import {
 } from '@/components/admin';
 import { Button } from '@/components/ui/button';
 import { useAdminStore } from '@/stores/adminStore';
+import { useAuthStore } from '@/stores/authStore';
 import { useI18n } from '@/hooks/useI18n';
 import { formatDate, toDate } from '@/lib/utils';
 import { usersListHref } from '@/lib/admin/usersListQuery';
@@ -30,6 +31,7 @@ export function UserDetailView({ userId }: Props) {
   const router = useRouter();
   const { t } = useI18n();
   const { updateUserRoleAction, suspendUserAction, activateUserAction } = useAdminStore();
+  const myUid = useAuthStore((s) => s.user?.uid);
 
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -151,6 +153,9 @@ export function UserDetailView({ userId }: Props) {
   // docs/backend/roles-and-permissions.md) — the server refuses these writes outright, so
   // suspend/activate/delete are replaced with a short explanation instead.
   const isProtected = user.role === 'superadmin';
+  // Ordinary fields of a superadmin's doc stay editable by its own owner — and by nobody
+  // else, so an admin is not offered an Edit button that would only fail on save.
+  const canEdit = !isProtected || user.id === myUid;
 
   return (
     <>
@@ -160,7 +165,7 @@ export function UserDetailView({ userId }: Props) {
         backHref={listHref}
         isEditing={editing}
         isSaving={updateMut.isPending}
-        onEdit={() => setEditing(true)}
+        onEdit={canEdit ? () => setEditing(true) : undefined}
         onCancelEdit={() => setEditing(false)}
         onSave={() =>
           (document.getElementById('user-form') as HTMLFormElement | null)?.requestSubmit()

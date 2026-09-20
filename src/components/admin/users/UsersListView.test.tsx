@@ -171,6 +171,41 @@ describe('UsersListView', () => {
     );
   });
 
+  it('offers no row actions on a superadmin, only the protected note', () => {
+    mockAdminState.users = [
+      { ...mockUsers[0], id: 'sa1', uid: 'sa1', fullName: 'Capo', role: 'superadmin' } as AdminUser,
+    ];
+    mockAdminState.usersTotal = 1;
+    renderView();
+
+    const [, menuToggle] = document.querySelectorAll('tbody tr td button');
+    fireEvent.click(menuToggle);
+
+    expect(screen.getByText('Account superadmin protetto: non modificabile da qui.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Sospendi' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Elimina' })).toBeNull();
+    expect(screen.queryByRole('combobox', { name: /ruolo/i })).toBeNull();
+  });
+
+  it('disables the bulk actions when the selection includes a superadmin', () => {
+    const withSuperadmin: AdminUser[] = [
+      ...mockUsers,
+      { ...mockUsers[0], id: 'sa1', uid: 'sa1', fullName: 'Capo', role: 'superadmin' } as AdminUser,
+    ];
+    mockAdminState.users = withSuperadmin;
+    mockAdminState.usersTotal = withSuperadmin.length;
+    renderView();
+
+    tickRow(0);
+    expect(screen.getByRole('button', { name: 'Elimina' })).toBeEnabled();
+
+    tickRow(1);
+    expect(screen.getByText('Account superadmin protetto: non modificabile da qui.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Elimina' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Sospendi' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Attiva' })).toBeDisabled();
+  });
+
   it('surfaces a watch failure without treating the job as stopped', async () => {
     mockBulkDelete.findRunningBulkDelete.mockResolvedValue('job1');
     renderView();
