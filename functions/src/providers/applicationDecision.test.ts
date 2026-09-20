@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   draftServicesForCategories,
+  needsDefaultHours,
   resolveLegacySpecialties,
   providerRolePatch,
 } from "./applicationDecision";
@@ -55,6 +56,25 @@ describe("resolveLegacySpecialties", () => {
 
   it("dedupes names that resolve to the same leaf", () => {
     expect(resolveLegacySpecialties(["hiit", "HIIT"]).leafIds).toEqual(["hiit"]);
+  });
+});
+
+describe("needsDefaultHours", () => {
+  it("is true for a provider with no schedule at all", () => {
+    expect(needsDefaultHours(undefined)).toBe(true);
+    expect(needsDefaultHours({})).toBe(true);
+    expect(needsDefaultHours({ availabilitySchedule: [] })).toBe(true);
+    expect(needsDefaultHours({ availabilitySchedule: null })).toBe(true);
+  });
+
+  it("is false once the provider has any real hours, however they got there", () => {
+    expect(needsDefaultHours({
+      availabilitySchedule: [{ dayOfWeek: 1, startTime: "09:00", endTime: "17:00", isAvailable: true }],
+    })).toBe(false);
+    // Legacy weekday-map shape (normalizeAvailability understands both).
+    expect(needsDefaultHours({
+      availabilitySchedule: { monday: { isAvailable: true, slots: [{ start: "09:00", end: "12:00" }] } },
+    })).toBe(false);
   });
 });
 

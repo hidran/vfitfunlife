@@ -1,4 +1,5 @@
 import { SERVICE_CATEGORY_TREE, buildLabelIndex, foldLabel, withAncestors } from "../categories/tree";
+import { normalizeAvailability } from "../ai/search/normalize";
 
 /**
  * Pure pieces of approving a self-registered provider, kept free of firebase-admin so they
@@ -75,6 +76,16 @@ export function resolveLegacySpecialties(names: string[]): { leafIds: string[]; 
     }
   }
   return { leafIds, unmapped };
+}
+
+/**
+ * Every real provider gets bookable hours from day one: Mon–Fri 09:00–17:00
+ * (DEFAULT_WEEKLY_HOURS in functions/src/availability/slots.ts) until they visit
+ * /provider/availability themselves. True only when the instructor doc has no usable
+ * schedule at all — never overwrites hours the provider (or an earlier run) already set.
+ */
+export function needsDefaultHours(instructor: Record<string, unknown> | undefined): boolean {
+  return normalizeAvailability(instructor?.availabilitySchedule).length === 0;
 }
 
 /**

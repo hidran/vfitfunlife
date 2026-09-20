@@ -321,6 +321,41 @@ All seed endpoints are HTTP (not callable) and require a Bearer ID token in the 
 - **Auth:** Admin or superadmin.
 - **Purpose:** Move a booking to any valid status, stamp `statusUpdatedBy/At`, and notify the user.
 
+### Availability (`../../functions/src/availability/`)
+
+One schedule per provider — `instructors/{uid}.availabilitySchedule` (weekly hours) plus
+`bookingRules` — and per-date exception docs at `instructors/{uid}/availability/{date}`. A
+pure, Europe/Rome-aware slot engine (`slots.ts`) is shared by `getProviderSlots` (the booking
+picker) and by `createBooking`, which enforces it inside a transaction that also takes a
+provider-day lock at `instructors/{uid}/bookingDays/{date}` (server-only; no client access).
+
+Every provider starts on the default weekly hours, Mon–Fri 09:00–17:00
+(`DEFAULT_WEEKLY_HOURS`, defined once in `slots.ts`) — not "unbookable until they set hours".
+`decideProviderApplication` (on approval) and the one-time `backfillAvailability` /
+`backfillSelfRegisteredProviders` migrations write it onto `instructors/{uid}` when there is no
+schedule yet; `availabilityUpdatedAt` is deliberately left unset until the provider saves on
+`/provider/availability` themselves, which is what tells the dashboard whether to show the
+"review your default hours" banner or leave the provider alone.
+
+#### `getProviderSlots`
+- **Type:** Callable
+- **Auth:** Signed-in users only (a signed-out visitor sees a sign-in prompt on `/book` instead).
+- **Parameters:** `{ instructorId: string, serviceId: string, date: string }` — `date` is `"YYYY-MM-DD"`, an Europe/Rome calendar day.
+- **Returns:** `{ slots: { time: string, startsAt: string }[] }` — `time` is `"HH:mm"` Rome wall-clock; `startsAt` is that slot's real instant (ISO), which the client sends back as `createBooking`'s `scheduledAt`.
+- **Purpose:** The free start times for one provider, service and day: the session must fit inside a bookable window, respect `bookingRules` (buffer, minimum advance notice, max bookings/day), and not overlap another active booking. Only checks instructor (trainer) services — venue bookings have no provider schedule.
+
+#### `updateMyAvailability`
+- **Type:** Callable
+- **Auth:** The provider themselves (verified or pending `providerStatus`, or staff) — refuses `failed-precondition/no_instructor_profile` if they have no `instructors/{uid}` document (never creates a bare one).
+- **Parameters:** `{ schedule: WeeklyWindow[], bookingRules: BookingRules, overrides: { upsert: OverrideDoc[], delete: string[] } }` — validated as a whole before any write (see `validate.ts` for the exact ranges: buffer 0–120min, notice 0–168h, max/day 1–50, ≤10 windows/day, ≤400 override writes/save).
+- **Returns:** `{ windows: number, overridesWritten: number, overridesDeleted: number }`
+- **Purpose:** The only writer of `instructors/{uid}.availabilitySchedule`, `.bookingRules`, `.availabilityUpdatedAt` and the per-date `availability/{date}` override docs (client writes to those are denied by `firestore.rules`).
+
+#### `backfillAvailability`
+- **Type:** Callable, dry-run by default (`{ dryRun?: boolean }`, defaults `true`)
+- **Auth:** Superadmin only.
+- **Purpose:** One-time migration. Moves the weekly hours the old profile editor wrote (`users/{uid}.providerProfile.availabilitySchedule`, a weekday map nothing ever booked against) onto `instructors/{uid}.availabilitySchedule`, then removes the users-side field. Never overwrites hours a provider has since saved on `/provider/availability` (`availabilityUpdatedAt` present). Afterward, every real provider (`providerStatus` verified or pending, not soft-deleted) still without a bookable schedule gets `DEFAULT_WEEKLY_HOURS` — counted separately as `defaultedHours` — without stamping `availabilityUpdatedAt`. Idempotent; writes an `audit_log` entry (`entityType: "migration"`, `entityId: "availability_backfill"`) when run for real.
+
 ---
 
 ## Recipes (`../../functions/src/recipes/`)

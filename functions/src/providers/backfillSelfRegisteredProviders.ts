@@ -4,9 +4,11 @@ import { requireSuperAdmin, getDefaultPermissionsForRole } from "../utils/roles"
 import { writeAuditLog } from "../lib/audit";
 import {
   draftServicesForCategories,
+  needsDefaultHours,
   providerRolePatch,
   resolveLegacySpecialties,
 } from "./applicationDecision";
+import { DEFAULT_WEEKLY_HOURS } from "../availability/slots";
 
 const region = process.env.FIREBASE_REGION || "europe-west1";
 
@@ -17,6 +19,7 @@ interface ProviderReport {
   unmapped: string[];
   rolePromoted: boolean;
   draftServicesSeeded: number;
+  defaultHoursApplied: boolean;
   skipped?: string;
 }
 
@@ -68,6 +71,7 @@ export const backfillSelfRegisteredProviders = onCall<{ dryRun?: boolean }>({ re
       unmapped: [],
       rolePromoted: false,
       draftServicesSeeded: 0,
+      defaultHoursApplied: false,
     };
     reports.push(report);
 
@@ -96,11 +100,20 @@ export const backfillSelfRegisteredProviders = onCall<{ dryRun?: boolean }>({ re
     const batch = db.batch();
     let writes = 0;
 
+    // Collected into one patch: a batch cannot write to the same document twice, and this
+    // provider's requestedCategoryIds and default hours both live on instructorRef.
+    const instructorPatch: Record<string, unknown> = {};
     if (existing.length === 0 && report.requestedCategoryIds.length > 0) {
-      batch.update(instructorRef, {
-        requestedCategoryIds: report.requestedCategoryIds,
-        updatedAt: FieldValue.serverTimestamp(),
-      });
+      instructorPatch.requestedCategoryIds = report.requestedCategoryIds;
+    }
+    // Same "real provider, no hours yet" rule as backfillAvailability: pending or verified,
+    // not soft-deleted (checked above). availabilityUpdatedAt is deliberately not stamped.
+    if (needsDefaultHours(instructor)) {
+      instructorPatch.availabilitySchedule = DEFAULT_WEEKLY_HOURS;
+      report.defaultHoursApplied = true;
+    }
+    if (Object.keys(instructorPatch).length > 0) {
+      batch.set(instructorRef, { ...instructorPatch, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
       writes++;
     }
 
@@ -133,6 +146,7 @@ export const backfillSelfRegisteredProviders = onCall<{ dryRun?: boolean }>({ re
     candidates: reports.length,
     rolesPromoted: reports.filter((r) => r.rolePromoted).length,
     draftServicesSeeded: reports.reduce((n, r) => n + r.draftServicesSeeded, 0),
+    defaultHoursApplied: reports.filter((r) => r.defaultHoursApplied).length,
     skipped: reports.filter((r) => r.skipped).length,
   };
 

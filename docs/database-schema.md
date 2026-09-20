@@ -258,22 +258,59 @@ interface Instructor {
   isFeatured: boolean;
   isActive: boolean;
   acceptingNewClients: boolean;
-  
+
+  // Booking availability (functions/src/availability/slots.ts is the single source of truth
+  // for this shape). Missing or empty means every day is switched off deliberately — it does
+  // NOT mean "never set up": every provider starts on the default schedule below, written by
+  // decideProviderApplication (on approval) and by the one-time backfillAvailability /
+  // backfillSelfRegisteredProviders migrations. Written only by the updateMyAvailability
+  // callable (client writes to this field are denied by firestore.rules); read by
+  // getProviderSlots and by createBooking's transactional availability check.
+  availabilitySchedule: {
+    dayOfWeek: number;            // 0 = Sunday … 6 = Saturday
+    startTime: string;            // "HH:mm", Europe/Rome wall-clock
+    endTime: string;              // "HH:mm", Europe/Rome wall-clock
+    isAvailable: boolean;
+  }[];                            // Default (DEFAULT_WEEKLY_HOURS): Mon–Fri 09:00–17:00
+
+  bookingRules: {
+    bufferMinutes: number;        // 0–120, default 15 — kept clear on both sides of a booking
+    minAdvanceNoticeHours: number; // 0–168, default 24
+    maxBookingsPerDay: number;    // 1–50, default 8
+  };
+
+  // Set only once the provider has saved on /provider/availability themselves. Missing means
+  // they are still on the unreviewed default schedule above — the signal the provider
+  // dashboard uses to show the "review your hours" banner (dashboardBannerKind in
+  // src/lib/availability/adapter.ts) rather than "you have no hours".
+  availabilityUpdatedAt: Timestamp | null;
+
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
 
 // /instructors/{instructorId}/availability/{dateId}
-// dateId format: "2024-01-15"
-interface InstructorAvailability {
-  date: Timestamp;
-  slots: {
-    start: string;                // "09:00"
-    end: string;                  // "10:00"
-    isBooked: boolean;
-    bookingId: string | null;
+// dateId format: "2026-01-15" (Europe/Rome calendar day, matches the doc id). A date
+// exception to the weekly hours above — a day off, or that day's own custom hours. Public
+// read (clients need to know a provider is off); written only by updateMyAvailability
+// (client writes denied by firestore.rules).
+interface InstructorAvailabilityOverride {
+  date: string;                   // "YYYY-MM-DD", same as the doc id
+  isAvailable: boolean;           // false = closed all day
+  windows: {                      // custom hours for the day; [] when isAvailable is false
+    start: string;                // "HH:mm"
+    end: string;                  // "HH:mm"
   }[];
-  isAvailable: boolean;           // Quick flag for entire day
+  reason?: string;                // e.g. "Ferie" — optional, shown to the provider only
+  updatedAt: Timestamp;
+}
+
+// /instructors/{instructorId}/bookingDays/{dateId}
+// Server-only lock createBooking reads and writes inside its transaction so two concurrent
+// requests for the same provider and day never both succeed for the same slot. No client
+// read or write (firestore.rules denies both).
+interface BookingDayLock {
+  lastBookingId: string;
   updatedAt: Timestamp;
 }
 ```

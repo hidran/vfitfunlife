@@ -2,7 +2,8 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { requireSuperAdmin, getDefaultPermissionsForRole } from "../utils/roles";
 import { auditLogData, auditLogDoc } from "../lib/audit";
-import { draftServicesForCategories, providerRolePatch } from "./applicationDecision";
+import { draftServicesForCategories, needsDefaultHours, providerRolePatch } from "./applicationDecision";
+import { DEFAULT_WEEKLY_HOURS } from "../availability/slots";
 
 const region = process.env.FIREBASE_REGION || "europe-west1";
 
@@ -79,11 +80,19 @@ export const decideProviderApplication = onCall<DecideProviderApplicationData>(
       "updatedAt": now,
       ...(rolePatch ?? {}),
     });
-    batch.update(instructorRef, {
+    // Approval also makes them bookable immediately: default Mon-Fri 09:00-17:00 hours if
+    // they have none yet (never overwrites hours already set — e.g. a re-approval, or hours
+    // saved between application and decision). availabilityUpdatedAt is deliberately not
+    // stamped, so the dashboard still nudges the provider to review the default.
+    const instructorPatch: Record<string, unknown> = {
       "applicationStatus": decision,
       "providerProfile.isVerified": verified,
       "updatedAt": now,
-    });
+    };
+    if (verified && needsDefaultHours(instructor)) {
+      instructorPatch.availabilitySchedule = DEFAULT_WEEKLY_HOURS;
+    }
+    batch.set(instructorRef, instructorPatch, { merge: true });
 
     let seeded = 0;
     if (verified) {

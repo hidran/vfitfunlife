@@ -202,27 +202,10 @@ async function seedProviders(count: number): Promise<SeedingResult> {
               isActive: Math.random() > 0.3,
             },
           ].filter(() => Math.random() > 0.2),
-          availabilitySchedule: {
-            monday: {
-              isAvailable: true,
-              slots: [{ start: "09:00", end: "12:00" }, { start: "14:00", end: "18:00" }],
-            },
-            tuesday: {
-              isAvailable: true,
-              slots: [{ start: "09:00", end: "12:00" }, { start: "14:00", end: "18:00" }],
-            },
-            wednesday: {
-              isAvailable: true,
-              slots: [{ start: "09:00", end: "12:00" }, { start: "14:00", end: "18:00" }],
-            },
-            thursday: {
-              isAvailable: true,
-              slots: [{ start: "09:00", end: "12:00" }, { start: "14:00", end: "18:00" }],
-            },
-            friday: { isAvailable: true, slots: [{ start: "09:00", end: "12:00" }, { start: "14:00", end: "17:00" }] },
-            saturday: { isAvailable: Math.random() > 0.5, slots: [{ start: "09:00", end: "13:00" }] },
-            sunday: { isAvailable: false, slots: [] },
-          },
+          // No availabilitySchedule here: that field on users/{uid}.providerProfile was the
+          // pre-migration shape nothing booked against (see backfillAvailability). Real hours
+          // live on instructors/{uid}.availabilitySchedule; seedSampleInstructors and
+          // generateDemoData write that with defaultWeeklySchedule().
           certifications: isVerified ? [
             {
               id: `cert_${providerId}_1`,
