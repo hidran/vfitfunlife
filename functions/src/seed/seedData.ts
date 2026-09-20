@@ -2222,6 +2222,17 @@ function pickPhotos(id: string, pool: string[], count: number): string[] {
   return result;
 }
 
+/**
+ * True for a document this seeder owns outright.
+ *
+ * The photo/avatar/coord generators sweep the WHOLE of /instructors and /venues, which on
+ * staging includes real providers who uploaded their own picture and set their own service
+ * area. They overwrite a demo document freely and only fill a gap on anyone else.
+ */
+function isSeedOwned(id: string): boolean {
+  return id.startsWith("demo-") || id.startsWith("fun-");
+}
+
 export async function generateDemoPhotos(): Promise<SeedingResult[]> {
   const results: SeedingResult[] = [];
 
@@ -2231,7 +2242,10 @@ export async function generateDemoPhotos(): Promise<SeedingResult[]> {
     const batch = db.batch();
     let count = 0;
     for (const docSnap of venuesSnap.docs) {
-      const type = docSnap.data().type as string | undefined;
+      const data = docSnap.data();
+      const existing = data.photoUrls;
+      if (!isSeedOwned(docSnap.id) && Array.isArray(existing) && existing.length > 0) continue;
+      const type = data.type as string | undefined;
       let pool = GYM_PHOTOS;
       if (type === "spa") pool = SPA_PHOTOS;
       else if (type === "beauty_salon") pool = BEAUTY_PHOTOS;
@@ -2258,6 +2272,8 @@ export async function generateDemoPhotos(): Promise<SeedingResult[]> {
     let opCount = 0;
     let total = 0;
     for (const docSnap of instructorsSnap.docs) {
+      const existing = docSnap.data().photoUrls;
+      if (!isSeedOwned(docSnap.id) && Array.isArray(existing) && existing.length > 0) continue;
       const photoUrls = pickPhotos(docSnap.id, TRAINER_PHOTOS, 4);
       batch.set(docSnap.ref, { photoUrls }, { merge: true });
       opCount++;
@@ -2317,7 +2333,9 @@ export async function generateDemoAvatars(): Promise<SeedingResult[]> {
     let opCount = 0;
     let total = 0;
     for (const docSnap of snap.docs) {
-      const fullName = (docSnap.data().fullName as string) ?? "";
+      const data = docSnap.data();
+      if (!isSeedOwned(docSnap.id) && typeof data.avatarUrl === "string" && data.avatarUrl) continue;
+      const fullName = (data.fullName as string) ?? "";
       const avatarUrl = pickAvatarUrl(docSnap.id, fullName);
       batch.set(docSnap.ref, { avatarUrl }, { merge: true });
       opCount++;
@@ -2393,7 +2411,10 @@ export async function generateDemoProviderCoords(): Promise<SeedingResult[]> {
     let opCount = 0;
     let total = 0;
     for (const docSnap of snap.docs) {
-      const city = (docSnap.data().city as string) ?? "Milano";
+      const data = docSnap.data();
+      // A real provider's own service area is not ours to jitter.
+      if (!isSeedOwned(docSnap.id) && typeof data.lat === "number") continue;
+      const city = (data.city as string) ?? "Milano";
       const base = cityCoords(city);
       let seed = 0;
       const id = docSnap.id;
