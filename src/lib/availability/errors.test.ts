@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { availabilitySaveErrorKey, isSlotUnavailableError } from './errors';
+import { availabilitySaveErrorKey, dayOfWeekFromError, isSlotUnavailableError } from './errors';
 
 const callableError = (code: string, message: string) => Object.assign(new Error(message), { code });
 
@@ -10,6 +10,20 @@ describe('availabilitySaveErrorKey', () => {
     expect(availabilitySaveErrorKey(callableError('functions/failed-precondition', 'no_instructor_profile')))
       .toBe('provider.availability.error.noProfile');
     expect(availabilitySaveErrorKey(new Error('offline'))).toBe('provider.availability.error.save');
+  });
+});
+
+describe('dayOfWeekFromError', () => {
+  it('reads the day out of validate.ts\'s day-specific messages', () => {
+    expect(dayOfWeekFromError(callableError('functions/invalid-argument', 'day 3: windows overlap'))).toBe(3);
+    expect(dayOfWeekFromError(callableError('functions/invalid-argument', 'day 0: at most 10 windows'))).toBe(0);
+  });
+
+  it('is null for a message with no day, or any other failure', () => {
+    expect(dayOfWeekFromError(callableError('functions/invalid-argument', 'schedule[2]: start must be before end')))
+      .toBeNull();
+    expect(dayOfWeekFromError(callableError('functions/failed-precondition', 'no_instructor_profile'))).toBeNull();
+    expect(dayOfWeekFromError(null)).toBeNull();
   });
 });
 

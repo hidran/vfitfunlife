@@ -118,3 +118,19 @@ adapter both ways, `updateMyAvailability` validation, `createBooking` availabili
 trainer, confirm a customer sees only those slots, book one, confirm the slot disappears for
 another customer, and that a direct `createBooking` for an outside-hours or taken slot is
 rejected. Production: deploy, run the migration dry-run, report, then apply on the user's go.
+
+## Known gaps
+
+- **Reschedule.** `BookingRescheduleClient.tsx` shows the real, server-computed slot picker
+  (`AvailabilityPicker`), which now reads as a legitimate booking flow, but committing a
+  reschedule (`bookingStore.rescheduleBooking` → `firebookings.rescheduleBooking`) still
+  merges the picker's selection into a device-local `Date` and writes `bookings/{id}`
+  directly. `firestore.rules` denies that write (the owner may only update
+  `userNotes`/`updatedAt`), and even if it were allowed, it would bypass `createBooking`'s
+  availability enforcement entirely — a reschedule could land outside the provider's hours or
+  on top of another booking. Building a server-validated reschedule callable (reusing the
+  slot engine and the provider-day lock, the same way `createBooking` does) is a separate
+  change. Until then, the action is disabled everywhere it is offered (`BookingCard`, the
+  client and provider booking-detail screens) and replaced with a "temporarily unavailable —
+  contact your trainer" note; the page and store code are left in place (they compile) but
+  unreachable from the UI. See `RESCHEDULE_TEMPORARILY_DISABLED` in `src/lib/bookingStatus.ts`.

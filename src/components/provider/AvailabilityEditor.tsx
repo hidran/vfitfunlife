@@ -21,6 +21,56 @@ const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   const minute = i % 2 === 0 ? '00' : '30';
   return `${hour.toString().padStart(2, '0')}:${minute}`;
 });
+const MAX_TIME_OPTION = TIME_OPTIONS[TIME_OPTIONS.length - 1]; // '23:30'
+const MIN_BOOKINGS_PER_DAY = 1;
+const MAX_BOOKINGS_PER_DAY = 50; // mirrors functions/src/availability/validate.ts
+
+function toMinutes(time: string): number {
+  const [h, m] = time.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function fromMinutes(total: number): string {
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+/**
+ * A sensible default for a new window: right after the previous one ends, one hour long
+ * (clamped to the last selectable time). Always appending 09:00–17:00 duplicated the default
+ * schedule's own window, which the server then refused as an overlap with a confusing
+ * "windows overlap" message instead of a clear "add a real second window" affordance.
+ */
+export function nextSlotDefault(existingSlots: TimeRange[]): TimeRange {
+  if (existingSlots.length === 0) return { start: '09:00', end: '17:00' };
+  const start = existingSlots[existingSlots.length - 1].end;
+  const end = fromMinutes(Math.min(toMinutes(start) + 60, toMinutes(MAX_TIME_OPTION)));
+  return { start, end: end > start ? end : MAX_TIME_OPTION };
+}
+
+/**
+ * Days whose windows the server would refuse: an end at or before its start, or two windows
+ * overlapping. Mirrors validate.ts's own checks so the editor can catch it before a round
+ * trip produces a misleading error, and can point at exactly which day is wrong.
+ */
+export function problemDays(weeklySchedule: AvailabilitySettings['weeklySchedule']): Set<DayOfWeek> {
+  const bad = new Set<DayOfWeek>();
+  for (const day of DAY_KEYS) {
+    const { isAvailable, slots } = weeklySchedule[day];
+    if (!isAvailable || slots.length === 0) continue;
+    const sorted = [...slots].sort((a, b) => a.start.localeCompare(b.start));
+    for (let i = 0; i < sorted.length; i++) {
+      const invalid = sorted[i].start >= sorted[i].end;
+      const overlapsPrevious = i > 0 && sorted[i].start < sorted[i - 1].end;
+      if (invalid || overlapsPrevious) {
+        bad.add(day);
+        break;
+      }
+    }
+  }
+  return bad;
+}
 
 export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEditorProps) {
   const { t, locale } = useI18n();
@@ -37,6 +87,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
   ];
   const [activeTab, setActiveTab] = useState<'weekly' | 'overrides'>('weekly');
   const [expandedDay, setExpandedDay] = useState<DayOfWeek | null>(null);
+  const badDays = problemDays(localSettings.weeklySchedule);
   const [newOverrideDate, setNewOverrideDate] = useState('');
 
   const updateDayAvailability = (day: DayOfWeek, updates: Partial<DayAvailability>) => {
@@ -54,9 +105,8 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
 
   const addTimeSlot = (day: DayOfWeek) => {
     const currentSlots = localSettings.weeklySchedule[day].slots;
-    const newSlot: TimeRange = { start: '09:00', end: '17:00' };
     updateDayAvailability(day, {
-      slots: [...currentSlots, newSlot],
+      slots: [...currentSlots, nextSlotDefault(currentSlots)],
     });
   };
 
@@ -183,77 +233,89 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
           {DAYS.map(({ key, label }) => {
             const daySchedule = localSettings.weeklySchedule[key];
             const isExpanded = expandedDay === key;
+            const hasProblem = badDays.has(key);
 
             return (
               <div
                 key={key}
                 className={cn(
                   'bg-surface-input rounded-lg border transition-all',
-                  isExpanded ? 'border-section-primary/50' : 'border-white/5'
+                  hasProblem ? 'border-error/60' : isExpanded ? 'border-section-primary/50' : 'border-white/5'
                 )}
               >
-                <div
-                  className="flex items-center justify-between p-4 cursor-pointer"
-                  onClick={() => setExpandedDay(isExpanded ? null : key)}
-                >
-                  <div className="flex items-center gap-4">
-                    <input
-                      type="checkbox"
-                      checked={daySchedule.isAvailable}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        updateDayAvailability(key, { isAvailable: e.target.checked });
-                      }}
-                      className="w-5 h-5 rounded border-white/20 bg-transparent text-section-primary focus:ring-section-primary"
-                    />
+                <div className="flex items-center gap-3 p-2">
+                  <input
+                    type="checkbox"
+                    checked={daySchedule.isAvailable}
+                    onChange={(e) => updateDayAvailability(key, { isAvailable: e.target.checked })}
+                    aria-label={label}
+                    className="ml-2 h-5 w-5 flex-shrink-0 rounded border-white/20 bg-transparent text-section-primary focus:ring-section-primary"
+                  />
+                  {/* A real button (not a clickable div) so the row is keyboard-operable; the
+                      checkbox stays a sibling since interactive content can't nest in a button. */}
+                  <button
+                    type="button"
+                    onClick={() => setExpandedDay(isExpanded ? null : key)}
+                    aria-expanded={isExpanded}
+                    className="flex min-h-[44px] flex-1 items-center justify-between rounded-lg py-2 pr-2 text-left"
+                  >
                     <span className={cn(
-                      'font-medium',
+                      'flex items-center gap-2 font-medium',
                       daySchedule.isAvailable ? 'text-white' : 'text-gray-500'
                     )}>
                       {label}
+                      {hasProblem && <AlertCircle className="h-4 w-4 flex-shrink-0 text-error" aria-hidden="true" />}
                     </span>
-                  </div>
-                  
-                  <div className="flex items-center gap-3">
-                    {daySchedule.isAvailable && daySchedule.slots.length > 0 && (
-                      <span className="text-sm text-gray-400">
-                        {daySchedule.slots.length > 1
-                          ? t('provider.availabilityEditor.slots', { count: daySchedule.slots.length })
-                          : t('provider.availabilityEditor.slot', { count: daySchedule.slots.length })}
-                      </span>
-                    )}
-                    <ChevronDown
-                      className={cn(
-                        'w-5 h-5 text-gray-400 transition-transform',
-                        isExpanded && 'rotate-180'
+
+                    <div className="flex items-center gap-3">
+                      {daySchedule.isAvailable && daySchedule.slots.length > 0 && (
+                        <span className="text-sm text-gray-400">
+                          {daySchedule.slots.length > 1
+                            ? t('provider.availabilityEditor.slots', { count: daySchedule.slots.length })
+                            : t('provider.availabilityEditor.slot', { count: daySchedule.slots.length })}
+                        </span>
                       )}
-                    />
-                  </div>
+                      <ChevronDown
+                        className={cn(
+                          'w-5 h-5 text-gray-400 transition-transform',
+                          isExpanded && 'rotate-180'
+                        )}
+                      />
+                    </div>
+                  </button>
                 </div>
+
+                {hasProblem && (
+                  <p role="alert" className="px-4 pb-2 text-xs text-error">
+                    {t('provider.availabilityEditor.dayProblem')}
+                  </p>
+                )}
 
                 {isExpanded && daySchedule.isAvailable && (
                   <div className="px-4 pb-4 space-y-3">
                     {daySchedule.slots.map((slot, index) => (
                       <div key={index} className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 bg-surface-elevated rounded-lg px-3 py-2">
+                        <div className="flex min-h-[44px] items-center gap-2 bg-surface-elevated rounded-lg px-3 py-2">
                           <select
                             value={slot.start}
                             onChange={(e) => updateTimeSlot(key, index, 'start', e.target.value)}
-                            className="bg-transparent text-white text-sm outline-none"
+                            aria-label={t('provider.availabilityEditor.startTime')}
+                            className="min-h-[44px] bg-transparent text-white text-sm outline-none"
                           >
                             {TIME_OPTIONS.map(time => (
                               <option key={time} value={time}>{time}</option>
                             ))}
                           </select>
                         </div>
-                        
+
                         <span className="text-gray-500">{t('provider.availabilityEditor.slotTo')}</span>
 
-                        <div className="flex items-center gap-2 bg-surface-elevated rounded-lg px-3 py-2">
+                        <div className="flex min-h-[44px] items-center gap-2 bg-surface-elevated rounded-lg px-3 py-2">
                           <select
                             value={slot.end}
                             onChange={(e) => updateTimeSlot(key, index, 'end', e.target.value)}
-                            className="bg-transparent text-white text-sm outline-none"
+                            aria-label={t('provider.availabilityEditor.endTime')}
+                            className="min-h-[44px] bg-transparent text-white text-sm outline-none"
                           >
                             {TIME_OPTIONS.map(time => (
                               <option key={time} value={time}>{time}</option>
@@ -376,6 +438,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                                 value={slot.start}
                                 onChange={(e) => updateOverrideSlots(override.id, (slots) =>
                                   slots.map((s, i) => (i === index ? { ...s, start: e.target.value } : s)))}
+                                aria-label={t('provider.availabilityEditor.startTime')}
                                 className="min-h-[44px] bg-surface-elevated rounded px-2 py-1 text-sm text-white outline-none"
                               >
                                 {TIME_OPTIONS.map(time => (
@@ -387,6 +450,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                                 value={slot.end}
                                 onChange={(e) => updateOverrideSlots(override.id, (slots) =>
                                   slots.map((s, i) => (i === index ? { ...s, end: e.target.value } : s)))}
+                                aria-label={t('provider.availabilityEditor.endTime')}
                                 className="min-h-[44px] bg-surface-elevated rounded px-2 py-1 text-sm text-white outline-none"
                               >
                                 {TIME_OPTIONS.map(time => (
@@ -424,8 +488,10 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                     </div>
                     
                     <button
+                      type="button"
                       onClick={() => removeDateOverride(override.id)}
-                      className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                      aria-label={t('provider.availabilityEditor.override.remove')}
+                      className="touch-target flex items-center justify-center text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -478,10 +544,16 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
             <label className="block text-sm text-gray-400 mb-2">{t('provider.availabilityEditor.settings.maxBookings')}</label>
             <input
               type="number"
-              min={1}
-              max={50}
+              min={MIN_BOOKINGS_PER_DAY}
+              max={MAX_BOOKINGS_PER_DAY}
               value={localSettings.maxBookingsPerDay}
-              onChange={(e) => setLocalSettings(prev => ({ ...prev, maxBookingsPerDay: parseInt(e.target.value) || 1 }))}
+              onChange={(e) => {
+                // The min/max attributes are only a spinner hint — typing "999" is not
+                // blocked by the browser, and the server refuses it outright.
+                const parsed = parseInt(e.target.value, 10) || MIN_BOOKINGS_PER_DAY;
+                const clamped = Math.min(MAX_BOOKINGS_PER_DAY, Math.max(MIN_BOOKINGS_PER_DAY, parsed));
+                setLocalSettings(prev => ({ ...prev, maxBookingsPerDay: clamped }));
+              }}
               className="w-full bg-surface-input border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-section-primary"
             />
           </div>
@@ -496,9 +568,16 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
 
       {/* Save Button */}
       <div className="border-t border-white/5 p-6">
+        {badDays.size > 0 && (
+          <p role="alert" className="mb-3 flex items-center gap-2 text-sm text-error">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            {t('provider.availabilityEditor.fixBeforeSaving')}
+          </p>
+        )}
         <Button
           onClick={handleSave}
           isLoading={loading}
+          disabled={badDays.size > 0}
           fullWidth
         >
           {t('provider.availabilityEditor.save')}

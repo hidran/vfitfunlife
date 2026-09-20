@@ -23,6 +23,7 @@ import {
   canClientCancel,
   canReschedule as canRescheduleBooking,
   canReview as canReviewBooking,
+  wouldBeReschedulable,
 } from '@/lib/bookingStatus';
 import type { Booking } from '@/types/booking';
 
@@ -56,6 +57,7 @@ export function BookingCard({
   const isPast = scheduledAt < new Date();
   const canCancel = canClientCancel(booking.status);
   const canReschedule = canRescheduleBooking(booking.status, isPast);
+  const rescheduleUnavailable = !canReschedule && wouldBeReschedulable(booking.status, isPast);
   const canReview = canReviewBooking(booking.status, booking.hasReviewed);
 
   if (compact) {
@@ -220,6 +222,12 @@ export function BookingCard({
             <RotateCcw className="w-4 h-4" />
             {t('booking.card.reschedule')}
           </button>
+        )}
+
+        {rescheduleUnavailable && (
+          <p className="flex-1 py-2.5 text-center text-xs text-text-tertiary">
+            {t('booking.card.rescheduleUnavailable')}
+          </p>
         )}
 
         {canCancel && (

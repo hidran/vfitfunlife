@@ -17,6 +17,18 @@ export function availabilitySaveErrorKey(err: unknown): MessageKey {
   return 'provider.availability.error.save';
 }
 
+/**
+ * Which weekday (0 = Sunday … 6 = Saturday, matching WeeklyWindow.dayOfWeek) an
+ * updateMyAvailability rejection is about, when the server's message says — the overlap and
+ * "too many windows" checks in functions/src/availability/validate.ts report a day this way;
+ * a malformed window's own message does not name one. Null falls back to the generic message.
+ */
+export function dayOfWeekFromError(err: unknown): number | null {
+  const { message } = callableError(err);
+  const m = /^day (\d+):/.exec(message);
+  return m ? Number(m[1]) : null;
+}
+
 /** createBooking's refusal of a start that is outside the provider's hours or already taken. */
 export function isSlotUnavailableError(err: unknown): boolean {
   const { code, message } = callableError(err);

@@ -60,7 +60,25 @@ export function canClientCancel(status: BookingStatus): boolean {
   return isActive(status);
 }
 
+/**
+ * Server-side reschedule enforcement doesn't exist yet: the client used to merge the picker's
+ * selection into a device-local Date and write bookings/{id} directly, which firestore.rules
+ * denies (the owner may only update userNotes/updatedAt) and which createBooking's
+ * availability enforcement would refuse anyway if it ever got through. See "Known gaps" in
+ * docs/superpowers/specs/2026-09-19-provider-availability-design.md. Until a
+ * validated reschedule callable exists, the action is disabled everywhere it is offered
+ * (BookingCard, the client and provider booking-detail screens) and replaced with a note.
+ */
+export const RESCHEDULE_TEMPORARILY_DISABLED = true;
+
+/** Whether this booking would otherwise offer a reschedule action, ignoring the flag above —
+ * used to decide whether to show the "temporarily unavailable" note in its place. */
 export function canReschedule(status: BookingStatus, isPast: boolean): boolean {
+  return status === 'accepted' && !isPast && !RESCHEDULE_TEMPORARILY_DISABLED;
+}
+
+/** The raw eligibility check, regardless of the feature flag — for the disabled-state note. */
+export function wouldBeReschedulable(status: BookingStatus, isPast: boolean): boolean {
   return status === 'accepted' && !isPast;
 }
 

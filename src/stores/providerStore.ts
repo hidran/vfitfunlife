@@ -232,7 +232,13 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
   // Availability
   fetchAvailability: async () => {
     const uid = useAuthStore.getState().user?.id;
-    if (!uid) return;
+    if (!uid) {
+      // The provider layout mounts its children (and this effect) before auth restores on a
+      // hard reload or deep link. A bare return here left the page spinning forever, waiting
+      // for a fetch that was never retried once the uid became available.
+      set({ isLoading: false, availability: null, availabilityLoadError: 'not_signed_in' });
+      return;
+    }
     set({ isLoading: true, availability: null, availabilityLoadError: null });
     try {
       const stored = await fetchMyAvailability(uid);
