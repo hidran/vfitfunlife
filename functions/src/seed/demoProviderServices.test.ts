@@ -53,9 +53,20 @@ describe("categoryIdForSpecialty", () => {
   });
 
   it("covers both pools, with Nutrizione shared between them", () => {
-    expect(DEMO_SPECIALTIES).toHaveLength(16);
-    expect(FITNESS_SPECIALTIES.length + WELLNESS_SPECIALTIES.length).toBe(17);
+    // The union drops the duplicate; "Nutrizione" is in both pools by design.
+    expect(DEMO_SPECIALTIES).toHaveLength(
+      new Set([...FITNESS_SPECIALTIES, ...WELLNESS_SPECIALTIES]).size,
+    );
+    expect(FITNESS_SPECIALTIES.length + WELLNESS_SPECIALTIES.length).toBe(DEMO_SPECIALTIES.length + 1);
     expect(categoryIdForSpecialty("Nutrizione")).toBe("nutrition");
+  });
+
+  it("reaches every leaf of the taxonomy, so no category browses to an empty page", () => {
+    const leaves = Object.entries(SERVICE_CATEGORY_TREE)
+      .filter(([, doc]) => doc.parentId !== null)
+      .map(([id]) => id);
+    const covered = new Set(DEMO_SPECIALTIES.map(categoryIdForSpecialty));
+    expect([...leaves].filter((id) => !covered.has(id))).toEqual([]);
   });
 
   it("maps the labels that are not their own id", () => {
@@ -75,7 +86,7 @@ describe("categoryIdForSpecialty", () => {
   });
 
   it("resolves the whole set up front, so a bad label fails before any write", () => {
-    expect(specialtyCategoryIds(DEMO_SPECIALTIES).size).toBe(16);
+    expect(specialtyCategoryIds(DEMO_SPECIALTIES).size).toBe(DEMO_SPECIALTIES.length);
     expect(() => specialtyCategoryIds([...DEMO_SPECIALTIES, "Kitesurf"])).toThrow();
   });
 });

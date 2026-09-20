@@ -1116,6 +1116,45 @@ export async function generateDemoData(): Promise<SeedingResult[]> {
       { name: "Pacchetto 8 lezioni boxe", description: "Ciclo intensivo con progressione tecnica." },
       { name: "Sparring & Strategia", description: "Sessione avanzata con analisi tattica." },
     ],
+    "Spinning": [
+      { name: "Spinning indoor 1-to-1", description: "Sessione su bike con profilo di potenza personalizzato." },
+      { name: "Pacchetto 8 sessioni bike", description: "Ciclo indoor con progressione su soglia e cadenza." },
+      { name: "Endurance ride", description: "Uscita lunga indoor per costruire base aerobica." },
+      { name: "Interval ride", description: "Ripetute su bike per alzare la soglia anaerobica." },
+    ],
+    "Nuoto": [
+      {
+        name: "Lezione di nuoto individuale",
+        description: "Tecnica di nuotata corretta in vasca, un allievo per volta.",
+      },
+      { name: "Pacchetto 6 lezioni", description: "Sei lezioni con video analisi della bracciata." },
+      { name: "Preparazione triathlon", description: "Frazione nuoto: tecnica, ritmo gara e partenze." },
+      { name: "Acquaticita per adulti", description: "Percorso per chi parte da zero o teme l'acqua alta." },
+    ],
+    "Arti Marziali": [
+      {
+        name: "Lezione privata di arti marziali",
+        description: "Fondamentali, forme e applicazioni con maestro dedicato.",
+      },
+      { name: "Difesa personale", description: "Tecniche essenziali di difesa personale, situazioni reali." },
+      { name: "Pacchetto 8 lezioni", description: "Ciclo tecnico con progressione di cintura." },
+      { name: "Grappling e clinch", description: "Lavoro a corta distanza: proiezioni, controllo, uscite." },
+    ],
+    "Danza": [
+      {
+        name: "Lezione di danza individuale",
+        description: "Tecnica e coreografia su misura, dal classico al moderno.",
+      },
+      { name: "Pacchetto 8 lezioni", description: "Percorso coreografico con saggio finale." },
+      { name: "Coreografia per eventi", description: "Preparazione di una coreografia per matrimonio o spettacolo." },
+      { name: "Danza e postura", description: "Sbarra a terra e allineamento per chi balla." },
+    ],
+    "Group Fitness": [
+      { name: "Lezione di gruppo", description: "Classe a corpo libero con musica, tutti i livelli." },
+      { name: "Total body", description: "Circuito completo di tonificazione in gruppo." },
+      { name: "Pacchetto 10 lezioni", description: "Dieci classi di gruppo a prezzo agevolato." },
+      { name: "Small group training", description: "Allenamento in mini-gruppo, massimo quattro persone." },
+    ],
     "Nutrizione": [
       { name: "Consulenza nutrizionale", description: "Analisi delle abitudini alimentari e piano personalizzato." },
       { name: "Piano alimentare mensile", description: "Piano settimanale con follow-up bisettimanale." },

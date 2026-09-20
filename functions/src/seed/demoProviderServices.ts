@@ -18,6 +18,9 @@ import { buildLabelIndex, foldLabel, SERVICE_CATEGORY_TREE } from "../categories
 export const FITNESS_SPECIALTIES = [
   "Personal Training", "Yoga", "Pilates", "HIIT", "CrossFit",
   "Functional Training", "Strength Training", "Cardio", "Boxe", "Nutrizione",
+  // Added so every leaf of the taxonomy has demo providers: without these five,
+  // spinning / swimming / martial_arts / dance / group_fitness browse to an empty page.
+  "Spinning", "Nuoto", "Arti Marziali", "Danza", "Group Fitness",
 ];
 
 export const WELLNESS_SPECIALTIES = [
