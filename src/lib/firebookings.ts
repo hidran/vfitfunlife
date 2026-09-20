@@ -15,7 +15,8 @@ import {
   writeBatch,
   type QueryConstraint,
 } from 'firebase/firestore';
-import { db } from './firebase/config';
+import { httpsCallable } from 'firebase/functions';
+import { db, functions } from './firebase/config';
 import { isCancelled, isDelivered } from './bookingStatus';
 import {
   createBooking as createBookingFn,
@@ -153,12 +154,17 @@ export async function searchProviders(params: SearchParams): Promise<ProviderSea
 export async function getProviderAvailability(
   providerId: string,
   serviceId: string,
-  date: Date
+  date: Date,
+  /** Set when rescheduling, so the booking being moved doesn't hide its own current slot. */
+  excludeBookingId?: string
 ): Promise<TimeSlot[]> {
   const slots = await fetchProviderSlots({
     instructorId: providerId,
     serviceId,
     date: localDateKey(date),
+    // Spread rather than pass undefined: the callable encoder turns an undefined field into
+    // an explicit null in the payload.
+    ...(excludeBookingId ? { excludeBookingId } : {}),
   });
   return slots.map((s) => ({ time: s.time, startsAt: s.startsAt, isAvailable: true, isBooked: false }));
 }
@@ -258,32 +264,31 @@ export async function cancelBooking(
   await cancelBookingFn({ bookingId, reason });
 }
 
-// Reschedule a booking
-export async function rescheduleBooking(
-  bookingId: string,
-  newDate: Date,
-  newTime: string
-): Promise<void> {
-  const [hours, minutes] = newTime.split(':').map(Number);
-  const scheduledAt = new Date(newDate);
-  scheduledAt.setHours(hours, minutes, 0, 0);
+export interface RescheduleResult {
+  bookingId: string;
+  /** The instant the booking now starts at, echoed back by the server. */
+  startsAt: string;
+  scheduledEndAt: string;
+}
 
-  const bookingRef = doc(db, BOOKINGS_COLLECTION, bookingId);
-  const booking = await getDoc(bookingRef);
-  
-  if (!booking.exists()) {
-    throw new Error('Booking not found');
-  }
-
-  const bookingData = booking.data() as Booking;
-  const duration = bookingData.duration;
-  const scheduledEndAt = new Date(scheduledAt.getTime() + duration * 60000);
-
-  await updateDoc(bookingRef, {
-    scheduledAt: Timestamp.fromDate(scheduledAt),
-    scheduledEndAt: Timestamp.fromDate(scheduledEndAt),
-    updatedAt: serverTimestamp(),
-  });
+/**
+ * Move a booking to another slot.
+ *
+ * Delegates to the `rescheduleBooking` callable. This used to merge the picker's "HH:mm" into
+ * a device-local Date and updateDoc the booking straight from the browser — which firestore.rules
+ * denies outright (the owner may only touch userNotes/updatedAt), and which nobody validated
+ * against the provider's hours or against the bookings already on the day.
+ *
+ * `startsAt` must be a slot's own instant, straight from getProviderSlots. A time the browser
+ * assembled from a date plus "HH:mm" is an Italian time read in the device's zone, so it lands
+ * on the wrong instant for anyone outside Europe/Rome.
+ */
+export async function rescheduleBooking(bookingId: string, startsAt: string): Promise<RescheduleResult> {
+  const fn = httpsCallable<{ bookingId: string; startsAt: string }, RescheduleResult>(
+    functions,
+    'rescheduleBooking'
+  );
+  return (await fn({ bookingId, startsAt })).data;
 }
 
 // Apply promotion code
@@ -351,20 +356,6 @@ export function canCancelBooking(booking: Booking): boolean {
   }
   
   return true;
-}
-
-// Check if booking can be rescheduled
-export function canRescheduleBooking(booking: Booking): boolean {
-  if (isCancelled(booking.status) || isDelivered(booking.status)) {
-    return false;
-  }
-  
-  const now = new Date();
-  const scheduledAt = booking.scheduledAt.toDate();
-  const hoursUntilBooking = (scheduledAt.getTime() - now.getTime()) / (1000 * 60 * 60);
-  
-  // Can reschedule if at least 4 hours before booking
-  return hoursUntilBooking >= 4;
 }
 
 // Validate booking time (can't book in the past, must be X hours in advance)

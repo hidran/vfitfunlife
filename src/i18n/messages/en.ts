@@ -2387,7 +2387,6 @@ export const enMessages: Messages = {
   'booking.card.total': 'Total',
   'booking.card.leaveReview': 'Leave a review',
   'booking.card.reschedule': 'Reschedule',
-  'booking.card.rescheduleUnavailable': 'Rescheduling is temporarily unavailable: contact your trainer.',
   'booking.card.details': 'Details',
   'booking.card.cancelAriaLabel': 'Cancel booking',
 
@@ -2497,7 +2496,7 @@ export const enMessages: Messages = {
   'bookings.detail.cancelModal.body': 'Are you sure you want to cancel this booking? Free cancellation is available up to 24 hours before.',
   'bookings.detail.cancelModal.keep': 'Keep',
 
-  // bookings/[id]/reschedule/BookingRescheduleClient.tsx
+  // bookings/reschedule/BookingRescheduleClient.tsx
   'bookings.reschedule.title': 'Reschedule booking',
   'bookings.reschedule.notAllowed.title': 'Booking cannot be rescheduled',
   'bookings.reschedule.notAllowed.subtitle': 'The current status does not allow date or time changes.',
@@ -2508,6 +2507,8 @@ export const enMessages: Messages = {
   'bookings.reschedule.newSlot': 'Selected new slot',
   'bookings.reschedule.selectHint': 'Select an available date and time.',
   'bookings.reschedule.error': 'Unable to reschedule the booking. Please try again shortly.',
+  'bookings.reschedule.error.slotUnavailable': 'That time is no longer available. Pick another one from the free slots.',
+  'bookings.reschedule.error.notAllowed': 'This booking can no longer be rescheduled. Contact your trainer.',
   'bookings.reschedule.confirm': 'Confirm reschedule',
 
   // bookings/[id]/review/BookingReviewClient.tsx

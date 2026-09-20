@@ -40,7 +40,6 @@ import {
   canClientCancel,
   canReschedule as canRescheduleBooking,
   canReview as canReviewBooking,
-  wouldBeReschedulable,
 } from '@/lib/bookingStatus';
 import type { Booking, BookingStatus } from '@/types/booking';
 
@@ -224,7 +223,6 @@ export default function BookingDetailPage() {
   // Derived from the shared helpers so these gates cannot drift from the status machine.
   const canCancel = canClientCancel(booking.status) && !isPast;
   const canReschedule = canRescheduleBooking(booking.status, isPast);
-  const rescheduleUnavailable = !canReschedule && wouldBeReschedulable(booking.status, isPast);
   const canReview = canReviewBooking(booking.status, booking.hasReviewed);
 
   return (
@@ -536,18 +534,12 @@ export default function BookingDetailPage() {
           {canReschedule && (
             <Button
               variant="secondary"
-              onClick={() => router.push(`/bookings/${bookingId}/reschedule`)}
+              onClick={() => router.push(`/bookings/reschedule/?id=${bookingId}`)}
               className="w-full"
             >
               <RotateCcw className="w-5 h-5 mr-2" />
               {t('booking.card.reschedule')}
             </Button>
-          )}
-
-          {rescheduleUnavailable && (
-            <div className="w-full rounded-xl border border-hairline bg-surface-2 p-3 text-center text-sm text-text-tertiary">
-              {t('booking.card.rescheduleUnavailable')}
-            </div>
           )}
 
           {canCancel && (

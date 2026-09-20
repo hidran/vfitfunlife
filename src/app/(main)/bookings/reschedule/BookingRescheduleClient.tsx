@@ -1,28 +1,32 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Calendar, CheckCircle2, Clock, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useBookingStore } from '@/stores/bookingStore';
+import { useAuthStore } from '@/stores/authStore';
 import { buildFallbackBooking, getBookingSectionMeta } from '@/lib/bookingUtils';
+import { canReschedule } from '@/lib/bookingStatus';
+import { rescheduleErrorKey } from '@/lib/availability/errors';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
 import { AvailabilityPicker } from '@/components/booking';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/Avatar';
 
-function mergeDateAndTime(date: Date, time: string) {
-  const [hours, minutes] = time.split(':').map(Number);
-  const next = new Date(date);
-  next.setHours(hours, minutes, 0, 0);
-  return next;
-}
-
 export default function BookingRescheduleClient() {
-  const params = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t, locale } = useI18n();
+
+  // Served from /bookings/reschedule/?id=... . useSearchParams can hydrate empty on the first
+  // paint under output:'export', and this route has no [id] segment to fall back to, so read
+  // the raw URL as the last resort.
+  const bookingId =
+    searchParams.get('id') ??
+    (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('id') : null) ??
+    '';
 
   function formatTime(date: Date) {
     return date.toLocaleTimeString(toLocaleTag(locale), {
@@ -31,7 +35,6 @@ export default function BookingRescheduleClient() {
       hour12: false,
     });
   }
-  const bookingId = params.id;
 
   const {
     userBookings,
@@ -39,8 +42,22 @@ export default function BookingRescheduleClient() {
     availability,
     isLoadingAvailability,
     fetchAvailability,
+    fetchBooking,
     rescheduleBooking,
   } = useBookingStore();
+  const { user } = useAuthStore();
+
+  const isKnown =
+    userBookings.some((entry) => entry.id === bookingId) || currentBooking?.id === bookingId;
+
+  useEffect(() => {
+    // Both entry points can land here with an empty client store: a deep link from a push, and
+    // the trainer's own booking screen, which fills a different store entirely. Keyed on `user`
+    // because a cold load restores the Firebase session asynchronously, and the read is denied
+    // to nobody-in-particular.
+    if (!bookingId || !user || isKnown) return;
+    void fetchBooking(bookingId);
+  }, [bookingId, fetchBooking, isKnown, user]);
 
   const booking = useMemo(() => {
     return (
@@ -50,10 +67,17 @@ export default function BookingRescheduleClient() {
     );
   }, [bookingId, currentBooking, userBookings]);
 
+  // `instructorId` is the canonical trainer link on a booking document; `providerId` only
+  // survives on pre-P0-1 ones. Reading providerId alone left the picker with nothing to ask about.
+  const instructorId = booking.instructorId || booking.providerId || '';
+  // Same story for the trainer's name: booking documents denormalize `instructorName`.
+  const instructorName = booking.providerName || booking.instructorName || '';
   const sectionMeta = getBookingSectionMeta(booking.serviceName);
   const currentDate = booking.scheduledAt.toDate();
   const currentTime = formatTime(currentDate);
-  const isReschedulable = booking.status === 'accepted' || booking.status === 'requested';
+  // The same gate the entry points use, so a booking can never be offered here and refused
+  // on arrival. The server checks it again, and owns the verdict.
+  const isReschedulable = Boolean(bookingId) && canReschedule(booking.status, currentDate < new Date());
 
   const [selectedDate, setSelectedDate] = useState<Date | null>(currentDate);
   const [selectedTime, setSelectedTime] = useState<string | null>(currentTime);
@@ -62,9 +86,11 @@ export default function BookingRescheduleClient() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isReschedulable || !booking.providerId || !booking.serviceId || !selectedDate) return;
-    void fetchAvailability(booking.providerId, booking.serviceId, selectedDate);
-  }, [booking.providerId, booking.serviceId, fetchAvailability, isReschedulable, selectedDate]);
+    if (!isReschedulable || !instructorId || !booking.serviceId || !selectedDate) return;
+    // Excluding this booking is what lets its own current time still show as free, instead of
+    // the booking blocking the slot it is sitting in.
+    void fetchAvailability(instructorId, booking.serviceId, selectedDate, booking.id);
+  }, [booking.id, booking.serviceId, fetchAvailability, instructorId, isReschedulable, selectedDate]);
 
   const hasChanged = useMemo(() => {
     if (!selectedDate || !selectedTime) return false;
@@ -76,17 +102,30 @@ export default function BookingRescheduleClient() {
   const handleConfirm = async () => {
     if (!selectedDate || !selectedTime || !isReschedulable) return;
 
+    // The slot's own instant: its time is Italian time whatever the device's zone is. Refuse to
+    // assemble one from the picked day plus "HH:mm" — that would move the booking to a different
+    // moment than the one on screen for anyone outside Europe/Rome.
+    const startsAt = availability.find((s) => s.time === selectedTime)?.startsAt;
+    if (!startsAt) {
+      setError(t('bookings.reschedule.error.slotUnavailable'));
+      return;
+    }
+
     setError(null);
     setIsSubmitting(true);
     try {
-      const nextDate = mergeDateAndTime(selectedDate, selectedTime);
-      await rescheduleBooking(booking.id, nextDate, selectedTime);
+      await rescheduleBooking(booking.id, startsAt);
       setIsComplete(true);
       setTimeout(() => {
         router.replace(`/bookings/detail?id=${booking.id}&rescheduled=true`);
       }, 1000);
-    } catch {
-      setError(t('bookings.reschedule.error'));
+    } catch (err) {
+      const key = rescheduleErrorKey(err);
+      setError(t(key));
+      if (key === 'bookings.reschedule.error.slotUnavailable' && instructorId && booking.serviceId) {
+        // Someone took it while this screen was open: show the day as it is now.
+        void fetchAvailability(instructorId, booking.serviceId, selectedDate, booking.id);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -98,7 +137,8 @@ export default function BookingRescheduleClient() {
         <div className="flex items-center gap-3 p-4">
           <button
             onClick={() => router.back()}
-            className="rounded-full p-2 transition-colors hover:bg-surface-2"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-surface-2"
+            aria-label={t('bookings.reschedule.backToDetails')}
           >
             <ArrowLeft className="h-5 w-5 text-content" />
           </button>
@@ -117,9 +157,9 @@ export default function BookingRescheduleClient() {
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <Avatar src={booking.providerAvatar} alt={booking.providerName} size="lg" />
+            <Avatar src={booking.providerAvatar} alt={instructorName} size="lg" />
             <div>
-              <p className="font-semibold text-content">{booking.providerName}</p>
+              <p className="font-semibold text-content">{instructorName}</p>
               <p className="text-sm text-text-secondary">{booking.serviceName}</p>
             </div>
           </div>
@@ -131,7 +171,12 @@ export default function BookingRescheduleClient() {
             <p className="mt-1 text-sm text-warning/90">
               {t('bookings.reschedule.notAllowed.subtitle')}
             </p>
-            <Button className="mt-4" onClick={() => router.replace(`/bookings/detail?id=${booking.id}`)}>
+            <Button
+              className="mt-4"
+              onClick={() =>
+                router.replace(bookingId ? `/bookings/detail?id=${bookingId}` : '/bookings')
+              }
+            >
               {t('bookings.reschedule.backToDetails')}
             </Button>
           </div>

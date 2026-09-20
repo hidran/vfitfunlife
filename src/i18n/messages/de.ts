@@ -2370,7 +2370,6 @@ export const deMessages: Messages = {
   'booking.card.total': 'Gesamt',
   'booking.card.leaveReview': 'Bewertung abgeben',
   'booking.card.reschedule': 'Umbuchen',
-  'booking.card.rescheduleUnavailable': 'Umbuchen ist vorübergehend nicht möglich: Bitte kontaktiere deinen Trainer.',
   'booking.card.details': 'Details',
   'booking.card.cancelAriaLabel': 'Buchung stornieren',
 
@@ -2480,7 +2479,7 @@ export const deMessages: Messages = {
   'bookings.detail.cancelModal.body': 'Möchten Sie diese Buchung wirklich stornieren? Kostenlose Stornierung ist bis 24 Stunden vorher möglich.',
   'bookings.detail.cancelModal.keep': 'Behalten',
 
-  // bookings/[id]/reschedule/BookingRescheduleClient.tsx
+  // bookings/reschedule/BookingRescheduleClient.tsx
   'bookings.reschedule.title': 'Buchung umbuchen',
   'bookings.reschedule.notAllowed.title': 'Buchung kann nicht umgebucht werden',
   'bookings.reschedule.notAllowed.subtitle': 'Der aktuelle Status erlaubt keine Datum- oder Uhrzeitänderungen.',
@@ -2491,6 +2490,8 @@ export const deMessages: Messages = {
   'bookings.reschedule.newSlot': 'Neuer ausgewählter Termin',
   'bookings.reschedule.selectHint': 'Wählen Sie ein verfügbares Datum und eine Uhrzeit.',
   'bookings.reschedule.error': 'Die Buchung konnte nicht umgebucht werden. Bitte versuchen Sie es erneut.',
+  'bookings.reschedule.error.slotUnavailable': 'Dieser Termin ist nicht mehr verfügbar. Bitte wähle einen anderen freien Termin.',
+  'bookings.reschedule.error.notAllowed': 'Diese Buchung kann nicht mehr umgebucht werden. Bitte kontaktiere deinen Trainer.',
   'bookings.reschedule.confirm': 'Umbuchung bestätigen',
 
   // bookings/[id]/review/BookingReviewClient.tsx

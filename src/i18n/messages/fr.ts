@@ -2372,7 +2372,6 @@ export const frMessages: Messages = {
   'booking.card.total': 'Total',
   'booking.card.leaveReview': 'Laisser un avis',
   'booking.card.reschedule': 'Reprogrammer',
-  'booking.card.rescheduleUnavailable': "La reprogrammation est temporairement indisponible : contactez votre coach.",
   'booking.card.details': 'Détails',
   'booking.card.cancelAriaLabel': 'Annuler la réservation',
 
@@ -2482,7 +2481,7 @@ export const frMessages: Messages = {
   'bookings.detail.cancelModal.body': "Êtes-vous sûr de vouloir annuler cette réservation ? L'annulation gratuite est disponible jusqu'à 24 heures avant.",
   'bookings.detail.cancelModal.keep': 'Conserver',
 
-  // bookings/[id]/reschedule/BookingRescheduleClient.tsx
+  // bookings/reschedule/BookingRescheduleClient.tsx
   'bookings.reschedule.title': 'Reprogrammer la réservation',
   'bookings.reschedule.notAllowed.title': 'La réservation ne peut pas être reprogrammée',
   'bookings.reschedule.notAllowed.subtitle': "L'état actuel ne permet pas de modifier la date ou l'heure.",
@@ -2493,6 +2492,8 @@ export const frMessages: Messages = {
   'bookings.reschedule.newSlot': 'Nouveau créneau sélectionné',
   'bookings.reschedule.selectHint': 'Sélectionnez une date et une heure disponibles.',
   'bookings.reschedule.error': 'Impossible de reprogrammer la réservation. Veuillez réessayer.',
+  'bookings.reschedule.error.slotUnavailable': "Ce créneau n'est plus disponible. Choisissez-en un autre parmi les créneaux libres.",
+  'bookings.reschedule.error.notAllowed': 'Cette réservation ne peut plus être reprogrammée. Contactez votre coach.',
   'bookings.reschedule.confirm': 'Confirmer la reprogrammation',
 
   // bookings/[id]/review/BookingReviewClient.tsx

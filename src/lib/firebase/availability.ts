@@ -76,6 +76,11 @@ export async function fetchProviderSlots(input: {
   instructorId: string;
   serviceId: string;
   date: string;
+  /**
+   * The booking being rescheduled. The server lets it stop blocking its own slot, so the time
+   * the client is currently holding still shows up as free on the reschedule picker.
+   */
+  excludeBookingId?: string;
 }): Promise<ProviderSlot[]> {
   const fn = httpsCallable<typeof input, { slots: ProviderSlot[] }>(functions, 'getProviderSlots');
   return (await fn(input)).data.slots;

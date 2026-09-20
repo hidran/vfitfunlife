@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { availabilitySaveErrorKey, dayOfWeekFromError, isSlotUnavailableError } from './errors';
+import { availabilitySaveErrorKey, dayOfWeekFromError, isSlotUnavailableError, rescheduleErrorKey } from './errors';
 
 const callableError = (code: string, message: string) => Object.assign(new Error(message), { code });
 
@@ -36,5 +36,27 @@ describe('isSlotUnavailableError', () => {
     expect(isSlotUnavailableError(callableError('functions/failed-precondition', 'something else'))).toBe(false);
     expect(isSlotUnavailableError(callableError('functions/internal', 'slot_unavailable'))).toBe(false);
     expect(isSlotUnavailableError(null)).toBe(false);
+  });
+});
+
+describe('rescheduleErrorKey', () => {
+  it('singles out the slot someone else took, which is worth another try', () => {
+    expect(rescheduleErrorKey(callableError('functions/failed-precondition', 'slot_unavailable')))
+      .toBe('bookings.reschedule.error.slotUnavailable');
+  });
+
+  it('reads every dead end as "no longer reschedulable"', () => {
+    expect(rescheduleErrorKey(callableError('functions/failed-precondition', 'not_reschedulable')))
+      .toBe('bookings.reschedule.error.notAllowed');
+    expect(rescheduleErrorKey(callableError('functions/failed-precondition', 'past_booking')))
+      .toBe('bookings.reschedule.error.notAllowed');
+    expect(rescheduleErrorKey(callableError('functions/permission-denied', 'not_your_booking')))
+      .toBe('bookings.reschedule.error.notAllowed');
+  });
+
+  it('leaves anything else on the generic message', () => {
+    expect(rescheduleErrorKey(callableError('functions/not-found', 'booking_not_found')))
+      .toBe('bookings.reschedule.error');
+    expect(rescheduleErrorKey(new Error('offline'))).toBe('bookings.reschedule.error');
   });
 });

@@ -89,7 +89,7 @@ export default function BookingsPage() {
   };
 
   const handleReschedule = (id: string) => {
-    router.push(`/bookings/${id}/reschedule`);
+    router.push(`/bookings/reschedule/?id=${id}`);
   };
 
   const handleReview = (id: string) => {

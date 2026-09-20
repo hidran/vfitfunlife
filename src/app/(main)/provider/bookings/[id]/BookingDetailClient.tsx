@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -38,6 +38,7 @@ import { toLocaleTag } from '@/types/locale';
 export default function BookingDetailClient() {
   const { t, locale } = useI18n();
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const searchParams = useSearchParams();
   // See /provider/bookings/detail — the path param is always 'placeholder' in the export.
   // Static export can hydrate useSearchParams empty on first paint, and this route has
@@ -77,7 +78,6 @@ export default function BookingDetailClient() {
 
   const [showNotes, setShowNotes] = useState(false);
   const [privateNotes, setPrivateNotes] = useState('');
-  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
 
 
   if (!booking && isLoadingBookings) {
@@ -223,7 +223,7 @@ export default function BookingDetailClient() {
               )}
               <Button
                 variant="secondary"
-                onClick={() => setShowRescheduleModal(true)}
+                onClick={() => router.push(`/bookings/reschedule/?id=${booking.id}`)}
               >
                 <RefreshCw className="w-4 h-4 mr-2" />
                 {t('provider.bookingDetail.reschedule')}

@@ -27,7 +27,8 @@ describe('bookingStore.fetchAvailability', () => {
     vi.mocked(getProviderAvailability).mockResolvedValue([slot('09:00'), slot('10:00')]);
     await useBookingStore.getState().fetchAvailability('p1', 's1', DAY);
 
-    expect(getProviderAvailability).toHaveBeenCalledWith('p1', 's1', DAY);
+    // No booking to exclude here — that argument only carries weight on the reschedule screen.
+    expect(getProviderAvailability).toHaveBeenCalledWith('p1', 's1', DAY, undefined);
     expect(useBookingStore.getState().availability.map((s) => s.time)).toEqual(['09:00', '10:00']);
   });
 

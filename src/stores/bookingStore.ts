@@ -54,14 +54,20 @@ interface BookingState {
   selectProvider: (provider: ProviderSearchResult | null) => void;
   selectService: (service: Service | null) => void;
   selectDateTime: (date: Date, time: string | null) => Promise<void>;
-  fetchAvailability: (providerId: string, serviceId: string, date: Date) => Promise<void>;
+  fetchAvailability: (
+    providerId: string,
+    serviceId: string,
+    date: Date,
+    excludeBookingId?: string,
+  ) => Promise<void>;
   clearSelection: () => void;
 
   createBooking: (data: BookingData) => Promise<Booking>;
   fetchUserBookings: (userId: string, filters?: BookingFilters) => Promise<void>;
   fetchBooking: (bookingId: string) => Promise<Booking | null>;
   cancelBooking: (id: string, reason?: string) => Promise<void>;
-  rescheduleBooking: (id: string, newDate: Date, newTime: string) => Promise<void>;
+  /** `startsAt` is a getProviderSlots slot's own ISO instant, never one assembled locally. */
+  rescheduleBooking: (id: string, startsAt: string) => Promise<void>;
   applyPromoCode: (code: string, bookingId?: string) => Promise<void>;
   clearPromoCode: () => void;
   getBooking: (bookingId: string) => Promise<Booking | null>;
@@ -73,6 +79,11 @@ interface BookingState {
 }
 
 let latestAvailabilityRequest = 0;
+
+/** Bookings in the store carry Firestore Timestamps; a local patch only needs toDate(). */
+function toTimestampLike(date: Date): Booking['scheduledAt'] {
+  return { toDate: () => date } as unknown as Booking['scheduledAt'];
+}
 
 export const useBookingStore = create<BookingState>((set, get) => ({
   // Initial state
@@ -147,12 +158,17 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     set({ selectedDate: date, selectedTime: time });
   },
 
-  fetchAvailability: async (providerId: string, serviceId: string, date: Date) => {
+  fetchAvailability: async (
+    providerId: string,
+    serviceId: string,
+    date: Date,
+    excludeBookingId?: string,
+  ) => {
     // Tapping through dates quickly must not let a slow, older answer overwrite a newer one.
     const request = ++latestAvailabilityRequest;
     set({ isLoadingAvailability: true, availabilityError: null });
     try {
-      const slots = await getProviderAvailability(providerId, serviceId, date);
+      const slots = await getProviderAvailability(providerId, serviceId, date, excludeBookingId);
       if (request !== latestAvailabilityRequest) return;
       // A chosen time that is no longer offered (just taken, say) is no longer chosen.
       const { selectedTime } = get();
@@ -249,22 +265,26 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     });
   },
 
-  rescheduleBooking: async (id: string, newDate: Date, newTime: string) => {
-    await rescheduleBookingApi(id, newDate, newTime);
-    
-    // Update local state
-    set((state) => {
-      const updatedBookings = state.userBookings.map((b) =>
-        b.id === id
-          ? {
-              ...b,
-              scheduledAt: { toDate: () => newDate } as any,
-            }
-          : b
-      );
-      
-      return { userBookings: updatedBookings };
-    });
+  rescheduleBooking: async (id: string, startsAt: string) => {
+    // The caller reads startsAt off the slot it is moving to. An empty one means it found no
+    // such slot, and sending the call anyway would hand the server a time nobody offered.
+    if (!startsAt) throw new Error('rescheduleBooking needs the slot instant it is moving to');
+
+    const moved = await rescheduleBookingApi(id, startsAt);
+    // Take the server's own answer, not the request: it owns the duration the end is derived
+    // from. The detail screen reads these from the store rather than refetching.
+    const scheduledAt = toTimestampLike(new Date(moved.startsAt));
+    const scheduledEndAt = toTimestampLike(new Date(moved.scheduledEndAt));
+
+    set((state) => ({
+      userBookings: state.userBookings.map((b) =>
+        b.id === id ? { ...b, scheduledAt, scheduledEndAt } : b
+      ),
+      currentBooking:
+        state.currentBooking?.id === id
+          ? { ...state.currentBooking, scheduledAt, scheduledEndAt }
+          : state.currentBooking,
+    }));
   },
 
   applyPromoCode: async (code: string, bookingId?: string) => {

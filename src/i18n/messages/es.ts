@@ -2363,7 +2363,6 @@ export const esMessages: Messages = {
   'booking.card.total': 'Total',
   'booking.card.leaveReview': 'Dejar reseña',
   'booking.card.reschedule': 'Reprogramar',
-  'booking.card.rescheduleUnavailable': 'La reprogramación no está disponible por ahora: contacta a tu entrenador.',
   'booking.card.details': 'Detalles',
   'booking.card.cancelAriaLabel': 'Cancelar reserva',
 
@@ -2473,7 +2472,7 @@ export const esMessages: Messages = {
   'bookings.detail.cancelModal.body': '¿Estás seguro de que deseas cancelar esta reserva? La cancelación gratuita está disponible hasta 24 horas antes.',
   'bookings.detail.cancelModal.keep': 'Mantener',
 
-  // bookings/[id]/reschedule/BookingRescheduleClient.tsx
+  // bookings/reschedule/BookingRescheduleClient.tsx
   'bookings.reschedule.title': 'Reprogramar reserva',
   'bookings.reschedule.notAllowed.title': 'La reserva no se puede reprogramar',
   'bookings.reschedule.notAllowed.subtitle': 'El estado actual no permite cambios de fecha u hora.',
@@ -2484,6 +2483,8 @@ export const esMessages: Messages = {
   'bookings.reschedule.newSlot': 'Nuevo horario seleccionado',
   'bookings.reschedule.selectHint': 'Selecciona una fecha y hora disponibles.',
   'bookings.reschedule.error': 'No se puede reprogramar la reserva. Inténtalo de nuevo en breve.',
+  'bookings.reschedule.error.slotUnavailable': 'Ese horario ya no está disponible. Elige otro entre los libres.',
+  'bookings.reschedule.error.notAllowed': 'Esta reserva ya no se puede reprogramar. Contacta a tu entrenador.',
   'bookings.reschedule.confirm': 'Confirmar reprogramación',
 
   // bookings/[id]/review/BookingReviewClient.tsx

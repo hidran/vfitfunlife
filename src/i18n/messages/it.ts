@@ -2387,7 +2387,6 @@ export const itMessages = {
   'booking.card.total': 'Totale',
   'booking.card.leaveReview': 'Lascia recensione',
   'booking.card.reschedule': 'Riprogramma',
-  'booking.card.rescheduleUnavailable': 'Riprogrammazione temporaneamente non disponibile: contatta il tuo trainer.',
   'booking.card.details': 'Dettagli',
   'booking.card.cancelAriaLabel': 'Annulla prenotazione',
 
@@ -2497,7 +2496,7 @@ export const itMessages = {
   'bookings.detail.cancelModal.body': 'Sei sicuro di voler annullare questa prenotazione? La cancellazione gratuita è disponibile fino a 24 ore prima.',
   'bookings.detail.cancelModal.keep': 'Mantieni',
 
-  // bookings/[id]/reschedule/BookingRescheduleClient.tsx
+  // bookings/reschedule/BookingRescheduleClient.tsx
   'bookings.reschedule.title': 'Riprogramma prenotazione',
   'bookings.reschedule.notAllowed.title': 'Prenotazione non riprogrammabile',
   'bookings.reschedule.notAllowed.subtitle': 'Lo stato corrente non consente modifiche di data o orario.',
@@ -2508,6 +2507,8 @@ export const itMessages = {
   'bookings.reschedule.newSlot': 'Nuovo slot selezionato',
   'bookings.reschedule.selectHint': 'Seleziona data e orario disponibili.',
   'bookings.reschedule.error': 'Impossibile riprogrammare la prenotazione. Riprova tra poco.',
+  'bookings.reschedule.error.slotUnavailable': "Quell'orario non è più disponibile. Scegline un altro tra quelli liberi.",
+  'bookings.reschedule.error.notAllowed': 'Questa prenotazione non può più essere riprogrammata. Contatta il tuo trainer.',
   'bookings.reschedule.confirm': 'Conferma riprogrammazione',
 
   // bookings/[id]/review/BookingReviewClient.tsx
