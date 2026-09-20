@@ -26,7 +26,7 @@ vi.mock('./firebase/availability', () => ({ fetchProviderSlots: vi.fn() }));
 
 import { getDocs } from 'firebase/firestore';
 import { fetchProviderSlots } from './firebase/availability';
-import { getProviderAvailability, searchProviders } from './firebookings';
+import { bookingFromDoc, getProviderAvailability, searchProviders } from './firebookings';
 
 const mockGetDocs = vi.mocked(getDocs);
 beforeEach(() => vi.clearAllMocks());
@@ -58,5 +58,30 @@ describe('getProviderAvailability', () => {
       { time: '09:00', startsAt: '2026-09-21T07:00:00.000Z', isAvailable: true, isBooked: false },
       { time: '09:30', startsAt: '2026-09-21T07:30:00.000Z', isAvailable: true, isBooked: false },
     ]);
+  });
+});
+
+describe('bookingFromDoc', () => {
+  it('reads the length and price the server actually writes', () => {
+    const booking = bookingFromDoc('b1', { durationMinutes: 90, finalPrice: 55, serviceName: 'PT 1:1' });
+
+    expect(booking.id).toBe('b1');
+    expect(booking.duration).toBe(90);
+    expect(booking.totalPrice).toBe(55);
+    expect(booking.serviceName).toBe('PT 1:1');
+  });
+
+  it('keeps the legacy names when a document still carries them', () => {
+    const booking = bookingFromDoc('b2', { duration: 45, totalPrice: 30, durationMinutes: 90, finalPrice: 55 });
+
+    expect(booking.duration).toBe(45);
+    expect(booking.totalPrice).toBe(30);
+  });
+
+  it('falls back rather than rendering undefined or NaN', () => {
+    const booking = bookingFromDoc('b3', {});
+
+    expect(booking.duration).toBe(60);
+    expect(booking.totalPrice).toBe(0);
   });
 });

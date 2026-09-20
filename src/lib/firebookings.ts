@@ -208,6 +208,25 @@ function toBookingType(locationType: LocationType): 'in_venue' | 'home_service' 
   }
 }
 
+/**
+ * A booking document as the screens expect it.
+ *
+ * The server writes `durationMinutes` and `finalPrice` (createBooking, the slot engine and
+ * the payment flow all speak those names); `src/types/booking.ts` still carries the older
+ * `duration` / `totalPrice` the UI was built against. Reading a real document straight into
+ * `Booking` therefore rendered "undefined min" and "NaN €" on the detail screen. Reconcile
+ * the two shapes once, here, rather than in every component that shows a price or a length.
+ */
+export function bookingFromDoc(id: string, data: Record<string, unknown>): Booking {
+  const raw = data as Partial<Booking> & { durationMinutes?: number; finalPrice?: number };
+  return {
+    ...(data as object),
+    id,
+    duration: raw.duration ?? raw.durationMinutes ?? 60,
+    totalPrice: raw.totalPrice ?? raw.finalPrice ?? 0,
+  } as Booking;
+}
+
 // Get user's bookings
 export async function getUserBookings(
   userId: string,
@@ -238,7 +257,7 @@ export async function getUserBookings(
   }
 
   const snapshot = await getDocs(bookingsQuery);
-  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Booking);
+  return snapshot.docs.map((doc) => bookingFromDoc(doc.id, doc.data()));
 }
 
 // Get a single booking
@@ -247,7 +266,7 @@ export async function getBooking(bookingId: string): Promise<Booking | null> {
   if (!bookingDoc.exists()) {
     return null;
   }
-  return { id: bookingDoc.id, ...bookingDoc.data() } as Booking;
+  return bookingFromDoc(bookingDoc.id, bookingDoc.data());
 }
 
 // Cancel a booking
