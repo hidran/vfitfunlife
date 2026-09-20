@@ -254,6 +254,7 @@ export const enMessages: Messages = {
   'admin.users.field.email': 'Email',
   'admin.users.field.phone': 'Phone',
   'admin.users.field.bio': 'Bio',
+  'admin.users.superadminProtected': 'Protected superadmin account: cannot be changed here.',
 
   // ─── Admin: User Detail ──────────────────────────────────────────────
   'admin.userDetail.notFound': 'User not found',

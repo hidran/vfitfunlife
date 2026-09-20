@@ -1,5 +1,6 @@
 import type { ServerAuditPayload } from "../lib/audit";
 import { truncateError } from "../lib/errors";
+import { isProtectedSuperadmin } from "../lib/superadmins";
 
 export type SkipReason = "self" | "not_found" | "superadmin";
 
@@ -167,8 +168,9 @@ async function deleteOne(uid: string, job: BulkDeleteJob, deps: JobDeps): Promis
       await deps.cascade(uid);
       return { status: "deleted" };
     }
-    // Deleting another superadmin is a single, deliberate act, never a side effect of a selection.
-    if (before.role === "superadmin") return { status: "skipped", reason: "superadmin" };
+    // A protected superadmin can never be deleted through the app, single or bulk — mirrors
+    // adminDeleteUser's own check (functions/src/users/adminMutations.ts).
+    if (isProtectedSuperadmin(before)) return { status: "skipped", reason: "superadmin" };
 
     // Audit before cascade: if the process dies between these two lines, the audit already
     // proves the delete was started, and the resume branch above finishes it next time.

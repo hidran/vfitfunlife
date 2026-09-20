@@ -257,6 +257,7 @@ export const frMessages: Messages = {
   'admin.users.field.email': 'Email',
   'admin.users.field.phone': 'Téléphone',
   'admin.users.field.bio': 'Bio',
+  'admin.users.superadminProtected': 'Compte superadmin protégé : non modifiable ici.',
   'admin.userDetail.notFound': 'Utilisateur introuvable',
   'admin.userDetail.backToUsers': 'Retour aux utilisateurs',
   'admin.userDetail.resetPassword': 'Réinitialiser le mot de passe',

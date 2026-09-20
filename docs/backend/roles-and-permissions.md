@@ -48,6 +48,29 @@ VFit uses a role-based access control (RBAC) system with four main roles. Each r
 ### Description
 The highest level of access in the system. Superadmins have unrestricted access to all features, settings, and data.
 
+### Who can be a superadmin (locked)
+
+Only two accounts may ever hold `role: 'superadmin'`: **hidran@gmail.com** and **admin@vfit.com**.
+The allowlist lives in `functions/src/lib/superadmins.ts` (`PROTECTED_SUPERADMIN_UIDS`) and is
+mirrored — rules cannot import code — in `firestore.rules` (`isAllowedSuperadminUid`). Keep both
+lists in sync if the accounts ever change.
+
+A superadmin account is **immutable and undeletable through the app**:
+
+| Attempt | Result |
+|---|---|
+| Promote any other account to superadmin | Refused (rules + `setUserRole`) |
+| Change a superadmin's role or permissions | Refused, including by the other superadmin |
+| Suspend / deactivate a superadmin | Refused (`setUserActiveStatus`, rules) |
+| Delete a superadmin (single or bulk) | Refused (`adminDeleteUser`, bulk job skips with reason `superadmin`) |
+| Overwrite a superadmin via `createProviderProfile` or `decideProviderApplication` | Refused |
+| A superadmin editing their own name, language, avatar… | Allowed |
+
+The admin UI hides these controls for a superadmin row and shows
+`admin.users.superadminProtected` instead; the server refuses the writes regardless. Changing a
+superadmin therefore requires the Firebase console or a deliberate server-side script, never the app.
+Coverage: `functions/test/superadmin-rules.test.ts` and `functions/src/lib/superadmins.test.ts`.
+
 ### Permissions
 
 | Category | Permission | Description |

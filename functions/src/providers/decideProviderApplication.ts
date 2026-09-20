@@ -4,6 +4,7 @@ import { requireSuperAdmin, getDefaultPermissionsForRole } from "../utils/roles"
 import { auditLogData, auditLogDoc } from "../lib/audit";
 import { draftServicesForCategories, needsDefaultHours, providerRolePatch } from "./applicationDecision";
 import { DEFAULT_WEEKLY_HOURS } from "../availability/slots";
+import { isProtectedSuperadmin } from "../lib/superadmins";
 
 const region = process.env.FIREBASE_REGION || "europe-west1";
 
@@ -54,6 +55,14 @@ export const decideProviderApplication = onCall<DecideProviderApplicationData>(
 
     const user = userSnap.data() ?? {};
     const instructor = instructorSnap.data() ?? {};
+
+    // providerRolePatch already refuses to touch an existing admin/superadmin's role, but a
+    // protected superadmin's doc must not be written by this callable at all (providerStatus,
+    // verification fields, etc.) — belt and suspenders against a crafted pending application.
+    if (isProtectedSuperadmin(user)) {
+      throw new HttpsError("permission-denied", "Cannot modify a protected superadmin account");
+    }
+
     if (instructor.applicationStatus !== "pending") {
       throw new HttpsError("failed-precondition", "Application is not pending");
     }

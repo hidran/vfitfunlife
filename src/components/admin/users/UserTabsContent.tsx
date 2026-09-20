@@ -133,16 +133,21 @@ export function UserTabContent({
             </div>
             <div className="flex justify-between py-2 border-b border-hairline">
               <span className="text-content-muted">{t('admin.userDetail.field.role')}</span>
-              <select
-                value={user.role}
-                onChange={(e) => onRoleChange(e.target.value as UserRole)}
-                className="bg-surface-elevated border border-hairline rounded-lg px-3 py-1 text-sm text-content"
-              >
-                <option value="customer">{t('admin.userDetail.field.roleCustomer')}</option>
-                <option value="provider">{t('admin.userDetail.field.roleProvider')}</option>
-                <option value="admin">{t('admin.userDetail.field.roleAdmin')}</option>
-                <option value="superadmin">{t('admin.userDetail.field.roleSuperadmin')}</option>
-              </select>
+              {user.role === 'superadmin' ? (
+                <span className="text-sm text-content-muted">
+                  {t('admin.userDetail.field.roleSuperadmin')} · {t('admin.users.superadminProtected')}
+                </span>
+              ) : (
+                <select
+                  value={user.role}
+                  onChange={(e) => onRoleChange(e.target.value as UserRole)}
+                  className="bg-surface-elevated border border-hairline rounded-lg px-3 py-1 text-sm text-content"
+                >
+                  <option value="customer">{t('admin.userDetail.field.roleCustomer')}</option>
+                  <option value="provider">{t('admin.userDetail.field.roleProvider')}</option>
+                  <option value="admin">{t('admin.userDetail.field.roleAdmin')}</option>
+                </select>
+              )}
             </div>
           </div>
         </div>

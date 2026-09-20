@@ -143,6 +143,40 @@ service cloud.firestore {
       return request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'permissions', 'userType']);
     }
 
+    /**
+     * The only two accounts allowed to hold role 'superadmin'. Rules cannot import code, so
+     * this list is hardcoded here — it MUST be kept in sync with PROTECTED_SUPERADMIN_UIDS in
+     * functions/src/lib/superadmins.ts (hidran@gmail.com, admin@vfit.com).
+     */
+    function isAllowedSuperadminUid(uid) {
+      return uid in ['7MK6TgATIbhl3BkUksLNdGi7cMg1', 'KTNK3mIMHqg8JNOQiVyKioulORs1'];
+    }
+
+    /**
+     * A write's resulting role is either not 'superadmin', or belongs to one of the two
+     * allowed accounts. Nobody can promote any other uid to superadmin through the app.
+     */
+    function isValidSuperadminTarget(userId) {
+      return request.resource.data.get('role', '') != 'superadmin' || isAllowedSuperadminUid(userId);
+    }
+
+    /**
+     * True when the EXISTING document is a superadmin's — i.e. immutable through the app
+     * except by its own owner editing their own ordinary profile fields.
+     */
+    function isExistingSuperadmin() {
+      return resource.data.get('role', '') == 'superadmin';
+    }
+
+    /**
+     * Fields a superadmin's own doc may never be changed to, by anyone including its owner:
+     * role, permissions and every suspend/soft-delete flag.
+     */
+    function touchesProtectedSuperadminFields() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(['role', 'permissions', 'isSuspended', 'suspendedAt', 'isDeleted', 'deletedAt']);
+    }
+
     // ============================================
     // USERS COLLECTION
     // ============================================
@@ -153,31 +187,43 @@ service cloud.firestore {
                     isAdmin() || 
                     (isProvider() && resource.data.role == 'provider' && resource.data.userType != null);
 
-      // Create rules - superadmin can create any user, new users can create their own profile
-      allow create: if isSuperAdmin() || 
-                       (isOwner(userId) &&
-                        request.resource.data.role in ['customer', 'provider'] &&
-                        request.resource.data.get('providerStatus', 'none') in ['none', 'pending'] &&
-                        isValidUserCreate());
-
-      // Update rules
-      allow update: if (
-        // Users can update their own basic profile
-        (isOwner(userId) && isValidUserUpdate() && !isValidRoleUpdate() &&
-         (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['providerStatus']) ||
-          request.resource.data.providerStatus in ['none', 'pending']))
-      ) || (
-        // Superadmin can update anything
-        isSuperAdmin()
-      ) || (
-        // Admin can update non-superadmin users and cannot change roles
-        isAdmin() && 
-        resource.data.role != 'superadmin' &&
-        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'permissions'])
+      // Create rules - superadmin can create any user, new users can create their own profile.
+      // Either way, a doc can only be created with role 'superadmin' for one of the two
+      // allowed uids (isValidSuperadminTarget) — nobody can mint a new superadmin account.
+      allow create: if isValidSuperadminTarget(userId) && (
+        isSuperAdmin() ||
+        (isOwner(userId) &&
+         request.resource.data.role in ['customer', 'provider'] &&
+         request.resource.data.get('providerStatus', 'none') in ['none', 'pending'] &&
+         isValidUserCreate())
       );
 
-      // Delete rules - superadmin only
-      allow delete: if isSuperAdmin();
+      // Update rules.
+      // A superadmin's own doc is a special case, checked first: only its owner may write it,
+      // and never role, permissions, or any suspend/soft-delete flag — not by an admin, and
+      // not by the other superadmin. Everything else keeps the existing behavior, with the
+      // same "never mint a superadmin" guard as create.
+      allow update: if isExistingSuperadmin()
+        ? (isOwner(userId) && !touchesProtectedSuperadminFields())
+        : (isValidSuperadminTarget(userId) && (
+            (
+              // Users can update their own basic profile
+              (isOwner(userId) && isValidUserUpdate() && !isValidRoleUpdate() &&
+               (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['providerStatus']) ||
+                request.resource.data.providerStatus in ['none', 'pending']))
+            ) || (
+              // Superadmin can update anything else
+              isSuperAdmin()
+            ) || (
+              // Admin can update non-superadmin users and cannot change roles
+              isAdmin() &&
+              resource.data.role != 'superadmin' &&
+              !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'permissions'])
+            )
+          ));
+
+      // Delete rules - superadmin only, and a superadmin account can never be deleted.
+      allow delete: if isSuperAdmin() && resource.data.get('role', '') != 'superadmin';
 
       // User subcollections
       match /addresses/{addressId} {

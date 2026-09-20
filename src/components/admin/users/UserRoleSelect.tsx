@@ -8,18 +8,22 @@ interface Props {
   value?: UserRole;
   onChange: (role: UserRole) => void;
   className?: string;
+  disabled?: boolean;
 }
 
-export function UserRoleSelect({ value, onChange, className }: Props) {
+export function UserRoleSelect({ value, onChange, className, disabled }: Props) {
   const { t } = useI18n();
   const myRole = useAuthStore((s) => s.user?.role);
-  // Only superadmin can grant admin/superadmin
+  // Only superadmin can grant admin. 'superadmin' itself is never offered here — the app
+  // never lets anyone promote an account to superadmin; only the two designated accounts
+  // may hold that role, enforced server-side (see docs/backend/roles-and-permissions.md).
   const showElevated = myRole === 'superadmin';
   return (
     <select
       value={value ?? ''}
       onChange={(e) => onChange(e.target.value as UserRole)}
       onClick={(e) => e.stopPropagation()}
+      disabled={disabled}
       className={
         className ??
         'rounded-lg border border-white/20 bg-surface-2 px-3 py-1.5 text-sm text-content'
@@ -32,11 +36,6 @@ export function UserRoleSelect({ value, onChange, className }: Props) {
       <option value="provider">{t('admin.userDetail.field.roleProvider')}</option>
       {showElevated && (
         <option value="admin">{t('admin.userDetail.field.roleAdmin')}</option>
-      )}
-      {showElevated && (
-        <option value="superadmin">
-          {t('admin.userDetail.field.roleSuperadmin')}
-        </option>
       )}
     </select>
   );

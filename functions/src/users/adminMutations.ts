@@ -3,6 +3,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import { writeAuditLogOnce } from "../lib/audit";
 import { truncateError } from "../lib/errors";
 import { isValidUid } from "../lib/uid";
+import { isProtectedSuperadmin } from "../lib/superadmins";
 import { adminCascadeDeps, deleteUserCascade } from "./deleteUserCascade";
 
 interface AdminDeleteUserData {
@@ -56,6 +57,12 @@ export const adminDeleteUser = onCall<AdminDeleteUserData>(
       throw new HttpsError("not-found", "User not found");
     }
     const before = targetSnap.data();
+
+    // A protected superadmin can never be deleted through the app, by anyone — mirrors the
+    // bulk job's own skip (functions/src/users/bulkDeleteJob.ts).
+    if (isProtectedSuperadmin(before)) {
+      throw new HttpsError("failed-precondition", "Cannot delete a protected superadmin account");
+    }
 
     const actorUid = callerUid;
     const actorEmail = (caller?.email as string | undefined) ?? "";

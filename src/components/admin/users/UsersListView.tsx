@@ -82,6 +82,13 @@ export function UsersListView() {
   // every bulk-delete-affecting read below uses instead of the raw `selectedIds`.
   const usersById = useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
   const visibleSelectedIds = selectedIds.filter((id) => usersById.has(id));
+  // A superadmin account is immutable through the app (see
+  // docs/backend/roles-and-permissions.md) — the server refuses these writes outright, so
+  // the bulk activate/suspend/role/delete controls are disabled rather than let a selection
+  // that includes one fail server-side with no visible reason.
+  const hasProtectedSelection = visibleSelectedIds.some(
+    (id) => usersById.get(id)?.role === 'superadmin'
+  );
 
   useEffect(() => {
     fetchUsers(filters);
@@ -415,10 +422,16 @@ export function UsersListView() {
           <span className="text-sm text-content">
             {t('admin.users.selected', { count: String(visibleSelectedIds.length) })}
           </span>
+          {hasProtectedSelection && (
+            <span className="text-sm text-content-muted">
+              {t('admin.users.superadminProtected')}
+            </span>
+          )}
           <div className="flex-1" />
           <Button
             variant="ghost"
             size="sm"
+            disabled={hasProtectedSelection}
             onClick={() => handleBulkAction("activate")}
             className="text-[#10B981] hover:text-[#10B981] hover:bg-[#10B981]/10"
           >
@@ -428,6 +441,7 @@ export function UsersListView() {
           <Button
             variant="ghost"
             size="sm"
+            disabled={hasProtectedSelection}
             onClick={() => handleBulkAction("suspend")}
             className="text-[#F59E0B] hover:text-[#F59E0B] hover:bg-[#F59E0B]/10"
           >
@@ -436,6 +450,7 @@ export function UsersListView() {
           </Button>
           <SuperadminOnly>
             <UserRoleSelect
+              disabled={hasProtectedSelection}
               onChange={async (role) => {
                 const ok = window.confirm(
                   t('admin.users.bulkRoleConfirm', {
@@ -468,6 +483,7 @@ export function UsersListView() {
             <Button
               variant="ghost"
               size="sm"
+              disabled={hasProtectedSelection}
               onClick={() => setConfirmBulkDelete(true)}
               className="text-[#EF4444] hover:text-[#EF4444] hover:bg-[#EF4444]/10"
             >

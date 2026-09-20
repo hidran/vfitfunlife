@@ -147,6 +147,10 @@ export function UserDetailView({ userId }: Props) {
   }
 
   const isSuspended = (user as User & { isSuspended?: boolean }).isSuspended;
+  // A superadmin account is immutable through the app (see
+  // docs/backend/roles-and-permissions.md) — the server refuses these writes outright, so
+  // suspend/activate/delete are replaced with a short explanation instead.
+  const isProtected = user.role === 'superadmin';
 
   return (
     <>
@@ -161,7 +165,7 @@ export function UserDetailView({ userId }: Props) {
         onSave={() =>
           (document.getElementById('user-form') as HTMLFormElement | null)?.requestSubmit()
         }
-        onDelete={() => setConfirmOpen(true)}
+        onDelete={isProtected ? undefined : () => setConfirmOpen(true)}
       >
         {/* Status badges + secondary actions */}
         <div className="flex flex-wrap items-center gap-2">
@@ -177,7 +181,11 @@ export function UserDetailView({ userId }: Props) {
             <Lock className="w-4 h-4" />
             {t('admin.userDetail.resetPassword')}
           </Button>
-          {isSuspended ? (
+          {isProtected ? (
+            <span className="text-sm text-content-muted">
+              {t('admin.users.superadminProtected')}
+            </span>
+          ) : isSuspended ? (
             <Button
               variant="primary"
               size="sm"

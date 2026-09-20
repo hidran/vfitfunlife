@@ -254,6 +254,7 @@ export const esMessages: Messages = {
   'admin.users.field.email': 'Correo',
   'admin.users.field.phone': 'Teléfono',
   'admin.users.field.bio': 'Bio',
+  'admin.users.superadminProtected': 'Cuenta de superadmin protegida: no se puede modificar aquí.',
   'admin.userDetail.notFound': 'Usuario no encontrado',
   'admin.userDetail.backToUsers': 'Volver a usuarios',
   'admin.userDetail.resetPassword': 'Restablecer contraseña',

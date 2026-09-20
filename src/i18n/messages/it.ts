@@ -252,6 +252,7 @@ export const itMessages = {
   'admin.users.field.email': 'Email',
   'admin.users.field.phone': 'Telefono',
   'admin.users.field.bio': 'Bio',
+  'admin.users.superadminProtected': 'Account superadmin protetto: non modificabile da qui.',
 
   // ─── Admin: User Detail ──────────────────────────────────────────────
   'admin.userDetail.notFound': 'Utente non trovato',

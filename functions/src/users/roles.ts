@@ -17,6 +17,7 @@ import {
 } from "../utils/roles";
 import { writeAuditLog } from "../lib/audit";
 import { seedProviderServicesFromTemplates } from "../providers/seedProviderServices";
+import { mayHoldSuperadmin, isProtectedSuperadmin } from "../lib/superadmins";
 
 const db = admin.firestore();
 const region = process.env.FIREBASE_REGION || "europe-west1";
@@ -114,6 +115,20 @@ export const setUserRole = onCall<SetUserRoleData>(
     const targetUserDoc = await db.collection("users").doc(userId).get();
     if (!targetUserDoc.exists) {
       throw new HttpsError("not-found", "Target user not found");
+    }
+    const targetUserData = targetUserDoc.data();
+
+    // A protected superadmin's role can never be changed through the app — not by an
+    // admin, and not by the other superadmin. This also blocks a superadmin "changing"
+    // their own role back to superadmin through this callable: the only role mutation
+    // path is here, and it must stay off-limits for these two accounts entirely.
+    if (isProtectedSuperadmin(targetUserData)) {
+      throw new HttpsError("permission-denied", "Superadmin accounts cannot be modified");
+    }
+
+    // Only the two designated accounts may ever hold role 'superadmin'.
+    if (role === "superadmin" && !mayHoldSuperadmin(userId)) {
+      throw new HttpsError("permission-denied", "Only the designated superadmin accounts may hold that role");
     }
 
     // Calculate permissions based on role
@@ -292,6 +307,15 @@ export const createProviderProfile = onCall<CreateProviderProfileData>(
     }
 
     const userId = userRecord.uid;
+
+    // getUserByEmail above can resolve to an EXISTING Auth account — including, if a
+    // protected superadmin's own email is passed in, their own uid. The `.set()` below
+    // fully overwrites that uid's user doc with a fresh provider profile, so this must be
+    // refused before it ever gets there.
+    const existingTargetDoc = await db.collection("users").doc(userId).get();
+    if (isProtectedSuperadmin(existingTargetDoc.data())) {
+      throw new HttpsError("permission-denied", "Cannot overwrite a protected superadmin account");
+    }
 
     // Prepare provider profile with defaults
     const completeProviderProfile: ProviderProfile = {
@@ -711,9 +735,10 @@ export const setUserActiveStatus = onCall(
 
     const targetUserData = targetUserDoc.data();
 
-    // Non-superadmin cannot modify superadmin accounts
-    if (targetUserData?.role === "superadmin" && callerInfo.role !== "superadmin") {
-      throw new HttpsError("permission-denied", "Cannot modify superadmin accounts");
+    // A protected superadmin's status can never be changed through the app — not by an
+    // admin, and not by the other superadmin.
+    if (isProtectedSuperadmin(targetUserData)) {
+      throw new HttpsError("permission-denied", "Superadmin accounts cannot be modified");
     }
 
     // Cannot deactivate yourself

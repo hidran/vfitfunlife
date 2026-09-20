@@ -255,6 +255,7 @@ export const deMessages: Messages = {
   'admin.users.field.email': 'E-Mail',
   'admin.users.field.phone': 'Telefon',
   'admin.users.field.bio': 'Bio',
+  'admin.users.superadminProtected': 'Geschützter Superadmin-Account: kann hier nicht geändert werden.',
   'admin.userDetail.notFound': 'Benutzer nicht gefunden',
   'admin.userDetail.backToUsers': 'Zurück zu Benutzern',
   'admin.userDetail.resetPassword': 'Passwort zurücksetzen',
