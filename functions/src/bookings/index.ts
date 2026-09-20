@@ -298,10 +298,12 @@ export const createBooking = onCall<BookingData>(
       serviceId,
       instructorId: instructorId || null,
 
-      // Denormalized data
-      userName: userData.fullName,
-      userPhone: userData.phone,
-      userEmail: userData.email,
+      // Denormalized data. `?? null` because Firestore rejects undefined outright: a
+      // customer who never added a phone (or signed up with a provider that gave no email)
+      // could not book at all — the write failed with an opaque INTERNAL.
+      userName: userData.fullName ?? null,
+      userPhone: userData.phone ?? null,
+      userEmail: userData.email ?? null,
       venueName: venue?.name ?? null,
       venueAddress: venue?.address ?? null,
       serviceName: service.name,
