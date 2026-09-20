@@ -17,6 +17,7 @@ export type BookingMessageEvent =
   | "declined"
   | "cancelled_by_client"
   | "cancelled_by_trainer"
+  | "rescheduled"
   | "completed"
   | "payment_confirmed"
   | "payment_client_confirmed"
@@ -65,6 +66,10 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
       title: "Prenotazione cancellata",
       body: `La prenotazione per ${svc(c, "la sessione")} è stata cancellata dal trainer.`,
     }),
+    rescheduled: (c) => ({
+      title: "Prenotazione spostata",
+      body: `La sessione di ${svc(c, "allenamento")} è stata spostata. Trovi il nuovo orario nell'app.`,
+    }),
     completed: (c) => ({
       title: "Sessione completata",
       body: `La sessione di ${svc(c, "allenamento")} è stata segnata come svolta.`,
@@ -103,6 +108,10 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
     cancelled_by_trainer: (c) => ({
       title: "Booking cancelled",
       body: `The booking for ${svc(c, "the session")} was cancelled by the trainer.`,
+    }),
+    rescheduled: (c) => ({
+      title: "Booking moved",
+      body: `Your ${svc(c, "training")} session has been moved. The new time is in the app.`,
     }),
     completed: (c) => ({
       title: "Session completed",
@@ -143,6 +152,10 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
       title: "Reserva cancelada",
       body: `La reserva de ${svc(c, "la sesión")} ha sido cancelada por el entrenador.`,
     }),
+    rescheduled: (c) => ({
+      title: "Reserva cambiada",
+      body: `La sesión de ${svc(c, "entrenamiento")} se ha cambiado de hora. Tienes el nuevo horario en la app.`,
+    }),
     completed: (c) => ({
       title: "Sesión completada",
       body: `La sesión de ${svc(c, "entrenamiento")} se ha marcado como realizada.`,
@@ -182,6 +195,10 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
       title: "Réservation annulée",
       body: `La réservation pour ${svc(c, "la séance")} a été annulée par le coach.`,
     }),
+    rescheduled: (c) => ({
+      title: "Réservation déplacée",
+      body: `La séance de ${svc(c, "training")} a été déplacée. Le nouvel horaire est dans l'app.`,
+    }),
     completed: (c) => ({
       title: "Séance terminée",
       body: `La séance de ${svc(c, "training")} a été marquée comme effectuée.`,
@@ -220,6 +237,10 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
     cancelled_by_trainer: (c) => ({
       title: "Buchung storniert",
       body: `Die Buchung für ${svc(c, "die Einheit")} wurde vom Trainer storniert.`,
+    }),
+    rescheduled: (c) => ({
+      title: "Buchung verschoben",
+      body: `Die ${svc(c, "Trainings")}-Einheit wurde verschoben. Die neue Uhrzeit steht in der App.`,
     }),
     completed: (c) => ({
       title: "Einheit abgeschlossen",

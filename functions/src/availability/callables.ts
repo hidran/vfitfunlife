@@ -22,7 +22,7 @@ const region = process.env.FIREBASE_REGION || "europe-west1";
  */
 export const getProviderSlots = onCall({ region }, async (req) => {
   if (!req.auth) throw new HttpsError("unauthenticated", "Sign in required");
-  const { instructorId, serviceId, date } = validateSlotsRequest(req.data);
+  const { instructorId, serviceId, date, excludeBookingId } = validateSlotsRequest(req.data);
 
   const db = getFirestore();
   const serviceSnap = await db.collection("instructors").doc(instructorId)
@@ -35,7 +35,9 @@ export const getProviderSlots = onCall({ region }, async (req) => {
   if (!isBookableInstructor(docs.instructor)) throw new HttpsError("failed-precondition", "instructor_not_bookable");
 
   const slots = freeSlots({
-    ...dayContextFrom(docs, date),
+    // The booking being rescheduled must not hide the slot it currently occupies from its
+    // own picker; rescheduleBooking re-checks the chosen start with the same exclusion.
+    ...dayContextFrom(docs, date, excludeBookingId),
     durationMinutes: validateServiceDuration(service.durationMinutes),
     date,
     now: new Date(),

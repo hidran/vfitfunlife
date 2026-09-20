@@ -19,6 +19,8 @@ const MAX_REASON = 200;
 export const MAX_SCHEDULE_ENTRIES = 70;
 /** getProviderSlots: how far ahead a client may ask for a day's slots. */
 export const MAX_SLOT_DATE_LOOKAHEAD_DAYS = 180;
+/** Comfortably above Firestore's 20-character auto-ids; a longer value is not an id. */
+export const MAX_DOC_ID_LENGTH = 128;
 
 export interface OverrideUpsert extends DateOverride {
   date: string;
@@ -143,15 +145,22 @@ export function validateAvailabilityUpdate(data: unknown): AvailabilityUpdate {
 }
 
 function docId(v: unknown, what: string): string {
-  if (typeof v !== "string" || v === "" || v.includes("/")) bad(`${what} must be a document id`);
+  if (typeof v !== "string" || v === "" || v.includes("/") || v.length > MAX_DOC_ID_LENGTH) {
+    bad(`${what} must be a document id`);
+  }
   return v;
 }
 
-/** getProviderSlots input. `now` is injectable for tests; defaults to the real clock. */
+/**
+ * getProviderSlots input. `now` is injectable for tests; defaults to the real clock.
+ *
+ * `excludeBookingId` is optional and only ever a document id: the booking the caller is moving,
+ * which must show up as free rather than as taken by itself.
+ */
 export function validateSlotsRequest(
   data: unknown,
   now: Date = new Date(),
-): { instructorId: string; serviceId: string; date: string } {
+): { instructorId: string; serviceId: string; date: string; excludeBookingId?: string } {
   const d = asObject(data, "payload");
   const instructorId = docId(d.instructorId, "instructorId");
   const serviceId = docId(d.serviceId, "serviceId");
@@ -160,7 +169,12 @@ export function validateSlotsRequest(
   if (daysAhead > MAX_SLOT_DATE_LOOKAHEAD_DAYS) {
     bad(`date must be within ${MAX_SLOT_DATE_LOOKAHEAD_DAYS} days`);
   }
-  return { instructorId, serviceId, date: d.date };
+  const out: { instructorId: string; serviceId: string; date: string; excludeBookingId?: string } =
+    { instructorId, serviceId, date: d.date };
+  if (d.excludeBookingId !== undefined && d.excludeBookingId !== null) {
+    out.excludeBookingId = docId(d.excludeBookingId, "excludeBookingId");
+  }
+  return out;
 }
 
 /**

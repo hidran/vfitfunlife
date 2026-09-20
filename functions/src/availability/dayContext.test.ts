@@ -138,3 +138,33 @@ describe("dayContextFrom", () => {
     expect(ctx.bookingsToday).toBe(0);
   });
 });
+
+describe("excluding one booking from its own day", () => {
+  // The booking being moved must not block itself, or it could never change time within its day.
+  const bookings = [
+    { id: "b1", status: "accepted", scheduledAt: ts("2026-09-21T08:00:00Z"), durationMinutes: 60 },
+    { id: "b2", status: "accepted", scheduledAt: ts("2026-09-21T10:00:00Z"), durationMinutes: 60 },
+  ];
+
+  it("drops the excluded booking from busy but keeps the others", () => {
+    expect(busyFrom(bookings, "b1").map((b) => b.start.toISOString()))
+      .toEqual(["2026-09-21T10:00:00.000Z"]);
+  });
+
+  it("stops the excluded booking counting toward the per-day cap", () => {
+    expect(bookingsStartingOn(bookings, "2026-09-21")).toBe(2);
+    expect(bookingsStartingOn(bookings, "2026-09-21", "b1")).toBe(1);
+  });
+
+  it("changes nothing for an id that matches no booking, or no id at all", () => {
+    expect(busyFrom(bookings, "nope")).toHaveLength(2);
+    expect(busyFrom(bookings)).toHaveLength(2);
+    expect(bookingsStartingOn(bookings, "2026-09-21", "nope")).toBe(2);
+  });
+
+  it("threads the exclusion through dayContextFrom", () => {
+    const ctx = dayContextFrom({ instructor: undefined, override: undefined, bookings }, "2026-09-21", "b1");
+    expect(ctx.busy).toHaveLength(1);
+    expect(ctx.bookingsToday).toBe(1);
+  });
+});

@@ -35,11 +35,20 @@ export const ACTIVE_BOOKING_STATUSES: readonly string[] = [
 type Doc = Record<string, unknown>;
 type TimestampLike = { toDate: () => Date };
 
-/** The raw documents one provider-day needs. */
+/** The raw documents one provider-day needs. Each booking carries its `id` (see readDayDocs). */
 export interface DayDocs {
   instructor: Doc | undefined;
   override: Doc | undefined;
   bookings: Doc[];
+}
+
+/**
+ * Whether this is the booking being moved. A reschedule has to ignore the booking's own
+ * current time, or it would block the very slot it is trying to leave and count twice against
+ * maxBookingsPerDay — a session could then never move within the day it already occupies.
+ */
+function isExcluded(b: Doc, excludeBookingId: string | undefined): boolean {
+  return excludeBookingId !== undefined && b.id === excludeBookingId;
 }
 
 function isTimestampLike(v: unknown): v is TimestampLike {
@@ -98,9 +107,10 @@ function isActiveBooking(b: Doc): boolean {
  * before the day begins) — a booking from the previous day that runs past midnight still
  * blocks a slot here even though it does not count toward `date`'s own cap (bookingsStartingOn).
  */
-export function busyFrom(bookings: Doc[]): BusyInterval[] {
+export function busyFrom(bookings: Doc[], excludeBookingId?: string): BusyInterval[] {
   const out: BusyInterval[] = [];
   for (const b of bookings) {
+    if (isExcluded(b, excludeBookingId)) continue;
     if (!isActiveBooking(b)) continue;
     if (!isTimestampLike(b.scheduledAt)) continue;
     const start = b.scheduledAt.toDate();
@@ -118,24 +128,30 @@ export function busyFrom(bookings: Doc[]): BusyInterval[] {
  * maxBookingsPerDay cap. Distinct from `busyFrom(bookings).length`: a booking that spilled
  * over from the previous day is busy (it blocks a slot) but was not one of today's bookings.
  */
-export function bookingsStartingOn(bookings: Doc[], date: string): number {
+export function bookingsStartingOn(bookings: Doc[], date: string, excludeBookingId?: string): number {
   let n = 0;
   for (const b of bookings) {
+    if (isExcluded(b, excludeBookingId)) continue;
     if (isActiveBooking(b) && isTimestampLike(b.scheduledAt) && romeDateOf(b.scheduledAt.toDate()) === date) n++;
   }
   return n;
 }
 
-/** Everything freeSlots needs except the duration and the clock. */
+/**
+ * Everything freeSlots needs except the duration and the clock. `excludeBookingId` leaves one
+ * booking out of both `busy` and the day's count — what rescheduleBooking, and the slot picker
+ * in front of it, need so a session can be moved within the day it already occupies.
+ */
 export function dayContextFrom(
   docs: DayDocs,
   date: string,
+  excludeBookingId?: string,
 ): Pick<SlotQuery, "schedule" | "override" | "rules" | "busy" | "bookingsToday"> {
   return {
     schedule: parseSchedule(docs.instructor?.availabilitySchedule),
     override: parseOverride(docs.override),
     rules: resolveRules(docs.instructor?.bookingRules),
-    busy: busyFrom(docs.bookings),
-    bookingsToday: bookingsStartingOn(docs.bookings, date),
+    busy: busyFrom(docs.bookings, excludeBookingId),
+    bookingsToday: bookingsStartingOn(docs.bookings, date, excludeBookingId),
   };
 }

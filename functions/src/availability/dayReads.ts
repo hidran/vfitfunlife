@@ -34,8 +34,9 @@ export function bookingReadWindow(date: string): { start: Date; end: Date } {
  * The documents one provider-day needs: the instructor (weekly hours, booking rules), that
  * date's override and the bookings that could affect that day (every status — dayContextFrom
  * keeps the active ones, so no status index is needed; every start from 24h before the day to
- * its end, so a booking spilling over from the previous day is not missed). Pass `tx` to read
- * inside a transaction; that also reads the provider-day lock.
+ * its end, so a booking spilling over from the previous day is not missed). Each booking
+ * carries its own document id, so a caller moving one booking can tell it apart from the rest
+ * and leave it out. Pass `tx` to read inside a transaction; that also reads the provider-day lock.
  */
 export async function readDayDocs(
   db: Firestore,
@@ -65,6 +66,8 @@ export async function readDayDocs(
   return {
     instructor: instructor.data(),
     override: override.data(),
-    bookings: bookings.docs.map((d) => d.data()),
+    // `id` last, not first: seeded bookings also store an `id` *field*, and if that ever
+    // drifted from the document id an exclusion would silently skip the wrong booking.
+    bookings: bookings.docs.map((d) => ({ ...d.data(), id: d.id })),
   };
 }

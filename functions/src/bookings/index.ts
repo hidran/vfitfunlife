@@ -856,5 +856,6 @@ export const updateBookingStatus = onCall<UpdateBookingStatusData>(
 // New P0-1 modules. This barrel is the single owner — functions/src/index.ts already
 // does `export * from "./bookings"`, so nothing is added there (avoids duplicate stars).
 export * from "./transitionCallables";
+export * from "./reschedule";
 export * from "./payments";
 export * from "./migrate";

@@ -131,6 +131,21 @@ describe("validateSlotsRequest", () => {
     expect(() => validateSlotsRequest({ instructorId: "i1", serviceId: "s1", date: "2027-01-01" }, now))
       .toThrow(/within/);
   });
+
+  it("accepts an excludeBookingId and passes it through", () => {
+    expect(validateSlotsRequest({ instructorId: "i1", serviceId: "s1", date: "2026-09-21", excludeBookingId: "b1" }))
+      .toEqual({ instructorId: "i1", serviceId: "s1", date: "2026-09-21", excludeBookingId: "b1" });
+  });
+
+  it("omits an absent excludeBookingId and rejects a malformed one", () => {
+    expect(validateSlotsRequest({ instructorId: "i1", serviceId: "s1", date: "2026-09-21" }).excludeBookingId)
+      .toBeUndefined();
+    const base = { instructorId: "i1", serviceId: "s1", date: "2026-09-21" };
+    expect(() => validateSlotsRequest({ ...base, excludeBookingId: "" })).toThrow(/excludeBookingId/);
+    expect(() => validateSlotsRequest({ ...base, excludeBookingId: "a/b" })).toThrow(/excludeBookingId/);
+    expect(() => validateSlotsRequest({ ...base, excludeBookingId: 7 })).toThrow(/excludeBookingId/);
+    expect(() => validateSlotsRequest({ ...base, excludeBookingId: "x".repeat(129) })).toThrow(/excludeBookingId/);
+  });
 });
 
 describe("validateServiceDuration", () => {
