@@ -2,9 +2,10 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { dayContextFrom } from "./dayContext";
 import { readDayDocs } from "./dayReads";
-import { freeSlots, romeInstant } from "./slots";
+import { freeSlots } from "./slots";
 import {
   canManageOwnAvailability,
+  isBookableInstructor,
   validateAvailabilityUpdate,
   validateServiceDuration,
   validateSlotsRequest,
@@ -31,14 +32,15 @@ export const getProviderSlots = onCall({ region }, async (req) => {
 
   const docs = await readDayDocs(db, instructorId, date);
   if (!docs.instructor) throw new HttpsError("not-found", "instructor_not_found");
+  if (!isBookableInstructor(docs.instructor)) throw new HttpsError("failed-precondition", "instructor_not_bookable");
 
   const slots = freeSlots({
-    ...dayContextFrom(docs),
+    ...dayContextFrom(docs, date),
     durationMinutes: validateServiceDuration(service.durationMinutes),
     date,
     now: new Date(),
   });
-  return { slots: slots.map((time) => ({ time, startsAt: romeInstant(date, time).toISOString() })) };
+  return { slots: slots.map((s) => ({ time: s.time, startsAt: s.startsAt.toISOString() })) };
 });
 
 /**
@@ -73,12 +75,16 @@ export const updateMyAvailability = onCall({ region }, async (req) => {
     availabilityUpdatedAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   });
-  for (const { date, ...override } of update.upserts) {
+  for (const { date, reason, ...override } of update.upserts) {
+    // merge: true so a save never drops unknown fields (e.g. createdAt) on this doc; reason
+    // is written explicitly (a real value or an explicit delete) so a cleared reason doesn't
+    // get silently kept by the merge.
     batch.set(instructorRef.collection("availability").doc(date), {
       ...override,
       date,
+      reason: reason ?? FieldValue.delete(),
       updatedAt: FieldValue.serverTimestamp(),
-    });
+    }, { merge: true });
   }
   for (const date of update.deletes) {
     batch.delete(instructorRef.collection("availability").doc(date));

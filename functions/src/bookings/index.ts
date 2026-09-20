@@ -9,6 +9,7 @@ import { isLateCancellation } from "./transitions";
 import { dayContextFrom } from "../availability/dayContext";
 import { bookingDayRef, readDayDocs } from "../availability/dayReads";
 import { decideBookingStart, romeDateOf } from "../availability/slots";
+import { validateServiceDuration } from "../availability/validate";
 
 const db = admin.firestore();
 const region = process.env.FIREBASE_REGION || "europe-west1";
@@ -282,7 +283,10 @@ export const createBooking = onCall<BookingData>(
     if (Number.isNaN(scheduledDate.getTime())) {
       throw new HttpsError("invalid-argument", "scheduledAt must be an ISO date-time");
     }
-    const scheduledEndDate = addMinutes(scheduledDate, service.durationMinutes);
+    // A missing/invalid duration would otherwise surface as a confusing "slot_unavailable"
+    // (trainer sessions) or a NaN scheduledEndAt (venue bookings) — report the real problem.
+    const durationMinutes = validateServiceDuration(service.durationMinutes);
+    const scheduledEndDate = addMinutes(scheduledDate, durationMinutes);
     // Trainer sessions must start on one of the provider's free slots. Venue bookings have
     // no provider schedule behind them and are not checked.
     const trainerId = !venueId && instructorId ? instructorId : null;
@@ -310,7 +314,7 @@ export const createBooking = onCall<BookingData>(
       // Schedule
       scheduledAt: admin.firestore.Timestamp.fromDate(scheduledDate),
       scheduledEndAt: admin.firestore.Timestamp.fromDate(scheduledEndDate),
-      durationMinutes: service.durationMinutes,
+      durationMinutes,
 
       // Status
       status: "requested" as BookingStatus,
@@ -366,7 +370,7 @@ export const createBooking = onCall<BookingData>(
         const day = romeDateOf(scheduledDate);
         const docs = await readDayDocs(db, trainerId, day, transaction);
         const decision = decideBookingStart(
-          { ...dayContextFrom(docs), durationMinutes: service.durationMinutes, now: new Date() },
+          { ...dayContextFrom(docs, day), durationMinutes, now: new Date() },
           scheduledDate,
         );
         if (!decision.ok) {

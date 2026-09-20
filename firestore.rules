@@ -310,10 +310,14 @@ service cloud.firestore {
     // ============================================
 
     match /instructors/{instructorId} {
-      // Public read for verified instructors
+      // Public read for verified instructors. The last clause matches the services rule's
+      // reasoning below: ownership by path id, not by a `uid` field older/pending provider
+      // docs may lack, so a pending or legacy provider can always load their own hours
+      // (fetchMyAvailability) — the same doc updateMyAvailability already lets them save.
       allow read: if (resource.data.get('providerProfile', {}).get('isVerified', false) == true) ||
                     isAdmin() ||
-                    (isAuthenticated() && request.auth.uid == resource.data.uid);
+                    (isAuthenticated() && request.auth.uid == resource.data.uid) ||
+                    (isAuthenticated() && request.auth.uid == instructorId);
 
       // Create: admin, or the user creating their OWN unverified pending profile
       allow create: if isAdmin() ||

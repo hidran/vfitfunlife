@@ -1,10 +1,13 @@
 import { describe, it, expect } from "vitest";
 import {
   canManageOwnAvailability,
+  isBookableInstructor,
   validateAvailabilityUpdate,
   validateServiceDuration,
   validateSlotsRequest,
   MAX_OVERRIDE_WRITES,
+  MAX_SCHEDULE_ENTRIES,
+  MAX_SLOT_DATE_LOOKAHEAD_DAYS,
 } from "./validate";
 
 const RULES = { bufferMinutes: 15, minAdvanceNoticeHours: 24, maxBookingsPerDay: 8 };
@@ -95,6 +98,11 @@ describe("validateAvailabilityUpdate", () => {
       .toThrow(/at most/);
   });
 
+  it(`caps the schedule at ${MAX_SCHEDULE_ENTRIES} entries so a huge payload fails clearly`, () => {
+    const schedule = Array.from({ length: MAX_SCHEDULE_ENTRIES + 1 }, () => mon("09:00", "10:00"));
+    expect(() => validateAvailabilityUpdate(payload({ schedule }))).toThrow(/at most/);
+  });
+
   it("rejects a payload that is not an object", () => {
     expect(() => validateAvailabilityUpdate(null)).toThrow(/payload/);
     expect(() => validateAvailabilityUpdate(payload({ schedule: "mon 9-5" }))).toThrow(/schedule/);
@@ -114,6 +122,14 @@ describe("validateSlotsRequest", () => {
       .toThrow(/serviceId/);
     expect(() => validateSlotsRequest({ instructorId: "i1", serviceId: "s1", date: "21/09/2026" }))
       .toThrow(/date/);
+  });
+
+  it(`rejects a date more than ${MAX_SLOT_DATE_LOOKAHEAD_DAYS} days ahead`, () => {
+    const now = new Date("2026-01-01T00:00:00Z");
+    expect(validateSlotsRequest({ instructorId: "i1", serviceId: "s1", date: "2026-06-01" }, now).date)
+      .toBe("2026-06-01");
+    expect(() => validateSlotsRequest({ instructorId: "i1", serviceId: "s1", date: "2027-01-01" }, now))
+      .toThrow(/within/);
   });
 });
 
@@ -148,5 +164,22 @@ describe("canManageOwnAvailability", () => {
     expect(canManageOwnAvailability({ role: "customer" })).toBe(false);
     expect(canManageOwnAvailability({ role: "provider", providerStatus: "rejected" })).toBe(false);
     expect(canManageOwnAvailability({ providerStatus: "verified", isDeleted: true })).toBe(false);
+  });
+});
+
+describe("isBookableInstructor", () => {
+  it("is true for a verified instructor, nested or legacy top-level", () => {
+    expect(isBookableInstructor({ providerProfile: { isVerified: true } })).toBe(true);
+    expect(isBookableInstructor({ isVerified: true })).toBe(true);
+  });
+
+  it("prefers the nested field when both are present", () => {
+    expect(isBookableInstructor({ providerProfile: { isVerified: false }, isVerified: true })).toBe(false);
+  });
+
+  it("is false for anything unverified or missing", () => {
+    expect(isBookableInstructor(undefined)).toBe(false);
+    expect(isBookableInstructor({})).toBe(false);
+    expect(isBookableInstructor({ providerProfile: { isVerified: false } })).toBe(false);
   });
 });

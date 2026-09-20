@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { busyFrom, dayContextFrom, parseOverride, resolveRules } from "./dayContext";
+import { bookingsStartingOn, busyFrom, dayContextFrom, parseOverride, parseSchedule, resolveRules } from "./dayContext";
 
 const ts = (iso: string) => ({ toDate: () => new Date(iso) });
 
@@ -30,6 +30,22 @@ describe("parseOverride", () => {
   it("treats a missing or foreign-shaped doc as no override", () => {
     expect(parseOverride(undefined)).toBeNull();
     expect(parseOverride({ slots: [{ start: "09:00", isBooked: true }] })).toBeNull();
+  });
+});
+
+describe("parseSchedule", () => {
+  it("keeps only well-formed windows: HH:mm on both ends, start before end, day 0-6", () => {
+    expect(parseSchedule([
+      { dayOfWeek: 1, startTime: "09:00", endTime: "12:00", isAvailable: true },
+      { dayOfWeek: 2, startTime: "bad", endTime: "12:00", isAvailable: true }, // malformed start
+      { dayOfWeek: 3, startTime: "09:00", endTime: "18:00:00", isAvailable: true }, // non-canonical end
+      { dayOfWeek: 4, startTime: "12:00", endTime: "09:00", isAvailable: true }, // end before start
+    ])).toEqual([{ dayOfWeek: 1, startTime: "09:00", endTime: "12:00", isAvailable: true }]);
+  });
+
+  it("gives nothing for garbage", () => {
+    expect(parseSchedule(null)).toEqual([]);
+    expect(parseSchedule(undefined)).toEqual([]);
   });
 });
 
@@ -72,8 +88,22 @@ describe("busyFrom", () => {
   });
 });
 
+describe("bookingsStartingOn", () => {
+  it("counts only active bookings whose Rome date equals the target day", () => {
+    const bookings = [
+      // Rome is UTC+2 in September: 20:00 UTC on the 20th is 22:00 Rome, still the 20th.
+      { status: "accepted", scheduledAt: ts("2026-09-20T20:00:00Z") },
+      { status: "accepted", scheduledAt: ts("2026-09-21T08:00:00Z") },
+      { status: "accepted", scheduledAt: ts("2026-09-21T20:30:00Z") }, // 22:30 Rome, still the 21st
+      { status: "declined", scheduledAt: ts("2026-09-21T09:00:00Z") }, // inactive
+    ];
+    expect(bookingsStartingOn(bookings, "2026-09-21")).toBe(2);
+    expect(bookingsStartingOn(bookings, "2026-09-20")).toBe(1);
+  });
+});
+
 describe("dayContextFrom", () => {
-  it("assembles schedule, override, rules and busy from the raw docs", () => {
+  it("assembles schedule, override, rules, busy and bookingsToday from the raw docs", () => {
     const ctx = dayContextFrom({
       instructor: {
         availabilitySchedule: [{ dayOfWeek: 1, startTime: "09:00", endTime: "12:00", isAvailable: true }],
@@ -81,16 +111,30 @@ describe("dayContextFrom", () => {
       },
       override: undefined,
       bookings: [],
-    });
+    }, "2026-09-21");
     expect(ctx).toEqual({
       schedule: [{ dayOfWeek: 1, startTime: "09:00", endTime: "12:00", isAvailable: true }],
       override: null,
       rules: { bufferMinutes: 0, minAdvanceNoticeHours: 0, maxBookingsPerDay: 3 },
       busy: [],
+      bookingsToday: 0,
     });
   });
 
   it("gives a provider with no instructor doc no hours", () => {
-    expect(dayContextFrom({ instructor: undefined, override: undefined, bookings: [] }).schedule).toEqual([]);
+    expect(dayContextFrom({ instructor: undefined, override: undefined, bookings: [] }, "2026-09-21").schedule)
+      .toEqual([]);
+  });
+
+  it("splits busy (blocks a slot) from bookingsToday (counts toward the cap): a booking spilling over from the previous day is one but not the other", () => {
+    // 23:00 Rome on the 20th, 90 minutes — ends 00:30 Rome on the 21st.
+    const bookings = [{
+      status: "accepted",
+      scheduledAt: ts("2026-09-20T21:00:00Z"),
+      durationMinutes: 90,
+    }];
+    const ctx = dayContextFrom({ instructor: undefined, override: undefined, bookings }, "2026-09-21");
+    expect(ctx.busy).toHaveLength(1);
+    expect(ctx.bookingsToday).toBe(0);
   });
 });

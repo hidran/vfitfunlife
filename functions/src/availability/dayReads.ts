@@ -16,11 +16,26 @@ export function bookingDayRef(db: Firestore, instructorId: string, date: string)
   return db.collection("instructors").doc(instructorId).collection("bookingDays").doc(date);
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * [start, end) to read a provider-day's bookings from: from 24h before `date` begins (a
+ * booking that starts the previous Rome calendar day can still run past midnight and block a
+ * slot today — windows cannot cross midnight, so 24h is always enough margin) up to the start
+ * of the next day. `busyFrom`/`bookingsStartingOn` in dayContext.ts then split this wider read
+ * into "blocks a slot" versus "counts toward today's cap".
+ */
+export function bookingReadWindow(date: string): { start: Date; end: Date } {
+  const { start, end } = romeDayBounds(date);
+  return { start: new Date(start.getTime() - DAY_MS), end };
+}
+
 /**
  * The documents one provider-day needs: the instructor (weekly hours, booking rules), that
- * date's override and the bookings that start that day (every status — dayContextFrom keeps
- * the active ones, so no status index is needed). Pass `tx` to read inside a transaction;
- * that also reads the provider-day lock.
+ * date's override and the bookings that could affect that day (every status — dayContextFrom
+ * keeps the active ones, so no status index is needed; every start from 24h before the day to
+ * its end, so a booking spilling over from the previous day is not missed). Pass `tx` to read
+ * inside a transaction; that also reads the provider-day lock.
  */
 export async function readDayDocs(
   db: Firestore,
@@ -30,7 +45,7 @@ export async function readDayDocs(
 ): Promise<DayDocs> {
   const instructorRef = db.collection("instructors").doc(instructorId);
   const overrideRef = instructorRef.collection("availability").doc(date);
-  const { start, end } = romeDayBounds(date);
+  const { start, end } = bookingReadWindow(date);
   // orderBy desc matches the existing (instructorId ASC, scheduledAt DESC) composite index.
   const bookingsQuery = db.collection("bookings")
     .where("instructorId", "==", instructorId)

@@ -3,11 +3,14 @@ import type { LegacyBookingStatus } from "../bookings/types";
 import {
   DEFAULT_BOOKING_RULES,
   isTimeKey,
+  romeDateOf,
+  toMinutes,
   type BookingRules,
   type BusyInterval,
   type DateOverride,
   type SlotQuery,
   type TimeWindow,
+  type WeeklyWindow,
 } from "./slots";
 
 /**
@@ -57,6 +60,23 @@ export function resolveRules(raw: unknown): BookingRules {
   };
 }
 
+/**
+ * The provider's weekly hours, validated the same way an override's windows are: only
+ * well-formed "HH:mm" on both ends, with start before end, survive. `functions/src/users/
+ * roles.ts` still stores whatever schedule a client supplies for a role change, so this is
+ * reachable with malformed data. Without it, a bad `startTime` (`toMinutes` is NaN, and NaN
+ * compared to anything is always false) silently empties the whole day in `freeSlots`, and a
+ * non-canonical `endTime` like "18:00:00" makes `romeInstant` build an invalid instant, so the
+ * "session must fit before the window ends" check never fires and a session can be offered
+ * past the window.
+ */
+export function parseSchedule(raw: unknown): WeeklyWindow[] {
+  return normalizeAvailability(raw).filter((w) =>
+    w.dayOfWeek >= 0 && w.dayOfWeek <= 6 &&
+    isTimeKey(w.startTime) && isTimeKey(w.endTime) &&
+    toMinutes(w.startTime) < toMinutes(w.endTime));
+}
+
 /** An override doc, or null when there is none (or it is not in the current shape). */
 export function parseOverride(raw: Doc | undefined): DateOverride | null {
   if (!raw || typeof raw.isAvailable !== "boolean") return null;
@@ -68,11 +88,20 @@ export function parseOverride(raw: Doc | undefined): DateOverride | null {
   return { isAvailable: raw.isAvailable, windows };
 }
 
-/** Active bookings as busy intervals. A missing end falls back to start + duration. */
+function isActiveBooking(b: Doc): boolean {
+  return typeof b.status === "string" && ACTIVE_BOOKING_STATUSES.includes(b.status);
+}
+
+/**
+ * Active bookings as busy intervals, for the buffer/overlap check. A missing end falls back
+ * to start + duration. `bookings` may span more than `date` itself (dayReads reads from 24h
+ * before the day begins) — a booking from the previous day that runs past midnight still
+ * blocks a slot here even though it does not count toward `date`'s own cap (bookingsStartingOn).
+ */
 export function busyFrom(bookings: Doc[]): BusyInterval[] {
   const out: BusyInterval[] = [];
   for (const b of bookings) {
-    if (typeof b.status !== "string" || !ACTIVE_BOOKING_STATUSES.includes(b.status)) continue;
+    if (!isActiveBooking(b)) continue;
     if (!isTimestampLike(b.scheduledAt)) continue;
     const start = b.scheduledAt.toDate();
     const minutes = Number(b.durationMinutes ?? b.duration ?? 60) || 60;
@@ -84,12 +113,29 @@ export function busyFrom(bookings: Doc[]): BusyInterval[] {
   return out;
 }
 
-/** Everything freeSlots needs except the duration, the date and the clock. */
-export function dayContextFrom(docs: DayDocs): Pick<SlotQuery, "schedule" | "override" | "rules" | "busy"> {
+/**
+ * How many active bookings actually START on `date` (Rome calendar day) — the
+ * maxBookingsPerDay cap. Distinct from `busyFrom(bookings).length`: a booking that spilled
+ * over from the previous day is busy (it blocks a slot) but was not one of today's bookings.
+ */
+export function bookingsStartingOn(bookings: Doc[], date: string): number {
+  let n = 0;
+  for (const b of bookings) {
+    if (isActiveBooking(b) && isTimestampLike(b.scheduledAt) && romeDateOf(b.scheduledAt.toDate()) === date) n++;
+  }
+  return n;
+}
+
+/** Everything freeSlots needs except the duration and the clock. */
+export function dayContextFrom(
+  docs: DayDocs,
+  date: string,
+): Pick<SlotQuery, "schedule" | "override" | "rules" | "busy" | "bookingsToday"> {
   return {
-    schedule: normalizeAvailability(docs.instructor?.availabilitySchedule),
+    schedule: parseSchedule(docs.instructor?.availabilitySchedule),
     override: parseOverride(docs.override),
     rules: resolveRules(docs.instructor?.bookingRules),
     busy: busyFrom(docs.bookings),
+    bookingsToday: bookingsStartingOn(docs.bookings, date),
   };
 }

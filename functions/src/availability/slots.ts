@@ -49,12 +49,26 @@ export interface BusyInterval {
   end: Date;
 }
 
+/** One offerable start: `time` is Rome wall-clock "HH:mm"; `startsAt` is its real instant. */
+export interface Slot {
+  time: string;
+  startsAt: Date;
+}
+
 export interface SlotQuery {
   schedule: WeeklyWindow[];
   override: DateOverride | null;
   rules: BookingRules;
-  /** The provider's active bookings that start on `date`. */
+  /**
+   * Every active booking whose interval could overlap a candidate start on `date` — used only
+   * for the buffer/overlap check. May include bookings that start the previous Rome calendar
+   * day and run past midnight (dayReads reads from 24h before the day begins for exactly
+   * this), so it is not the same count as "how many bookings does `date` itself have" — see
+   * `bookingsToday` for that.
+   */
   busy: BusyInterval[];
+  /** Active bookings that START on `date` (Rome calendar day) — the maxBookingsPerDay cap. */
+  bookingsToday: number;
   durationMinutes: number;
   date: string; // "YYYY-MM-DD", Europe/Rome
   now: Date;
@@ -126,25 +140,29 @@ function overlaps(aStart: number, aEnd: number, bStart: number, bEnd: number): b
 }
 
 /**
- * Start times ("HH:mm", Rome) a new booking of `durationMinutes` can take on `date`.
+ * Start times a new booking of `durationMinutes` can take on `date`, each carrying its real
+ * instant (`startsAt`) alongside the Rome wall-clock label (`time`).
  *
  * A start t qualifies iff: some window contains [t, t + duration]; t is at least
  * minAdvanceNoticeHours after `now`; [t − buffer, t + duration + buffer] overlaps no busy
- * interval; and the day holds fewer than maxBookingsPerDay active bookings.
+ * interval; and `date` holds fewer than maxBookingsPerDay active bookings (bookingsToday).
  *
  * Candidates step from each window's start. Everything is compared as real instants, so a
  * DST day's missing or repeated hour is handled: a wall time that does not exist is skipped.
+ * Deduped by instant (not by the "HH:mm" label), so two windows that could ever produce the
+ * same wall-clock label at different real instants — only possible on the autumn DST day,
+ * when one label names two instants — are never silently collapsed into one.
  */
-export function freeSlots(q: SlotQuery): string[] {
+export function freeSlots(q: SlotQuery): Slot[] {
   if (!(q.durationMinutes > 0)) return [];
-  if (q.busy.length >= q.rules.maxBookingsPerDay) return [];
+  if (q.bookingsToday >= q.rules.maxBookingsPerDay) return [];
 
   const step = q.stepMinutes ?? 30;
   const durationMs = q.durationMinutes * 60_000;
   const bufferMs = q.rules.bufferMinutes * 60_000;
   const earliest = q.now.getTime() + q.rules.minAdvanceNoticeHours * 3_600_000;
   const busy = q.busy.map((b) => ({ start: b.start.getTime(), end: b.end.getTime() }));
-  const out = new Set<string>();
+  const out = new Map<number, Slot>();
 
   for (const w of windowsFor(q.schedule, q.override, q.date)) {
     const windowEnd = romeInstant(q.date, w.end).getTime();
@@ -157,15 +175,17 @@ export function freeSlots(q: SlotQuery): string[] {
       if (e > windowEnd) break;
       if (s < earliest) continue;
       if (busy.some((b) => overlaps(s - bufferMs, e + bufferMs, b.start, b.end))) continue;
-      out.add(time);
+      out.set(s, { time, startsAt: start });
     }
   }
-  return [...out].sort();
+  return [...out.values()].sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
 }
 
 /**
- * createBooking's check: is `scheduledAt` exactly one of the day's free starts?
- * An instant between two grid points, or a wall time the day does not have, is not.
+ * createBooking's check: is `scheduledAt` exactly one of the day's free starts? Compares the
+ * real instant against each free slot's own `startsAt` (rather than re-deriving "HH:mm" and
+ * comparing labels), so an instant between two grid points, or a wall time the day does not
+ * have, is never accidentally accepted via a rounded-down label.
  */
 export function decideBookingStart(
   q: Omit<SlotQuery, "date">,
@@ -173,6 +193,6 @@ export function decideBookingStart(
 ): { ok: boolean; date: string; time: string } {
   const date = romeDateOf(scheduledAt);
   const time = romeTimeOf(scheduledAt);
-  const exact = romeInstant(date, time).getTime() === scheduledAt.getTime();
-  return { ok: exact && freeSlots({ ...q, date }).includes(time), date, time };
+  const ok = freeSlots({ ...q, date }).some((slot) => slot.startsAt.getTime() === scheduledAt.getTime());
+  return { ok, date, time };
 }

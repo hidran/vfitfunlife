@@ -2,6 +2,7 @@ import { HttpsError } from "firebase-functions/v2/https";
 import {
   isDateKey,
   isTimeKey,
+  romeInstant,
   toMinutes,
   type BookingRules,
   type DateOverride,
@@ -13,6 +14,11 @@ export const MAX_WINDOWS_PER_DAY = 10;
 /** One batch: the instructor doc plus every override write must stay under Firestore's 500. */
 export const MAX_OVERRIDE_WRITES = 400;
 const MAX_REASON = 200;
+/** Generous headroom over 7 entries/day * 10 windows/day; a bigger payload risks the 1 MiB
+ * document limit and is certainly not a real schedule. */
+export const MAX_SCHEDULE_ENTRIES = 70;
+/** getProviderSlots: how far ahead a client may ask for a day's slots. */
+export const MAX_SLOT_DATE_LOOKAHEAD_DAYS = 180;
 
 export interface OverrideUpsert extends DateOverride {
   date: string;
@@ -59,6 +65,7 @@ function assertNoOverlap(windows: TimeWindow[], what: string): void {
 
 function validateSchedule(v: unknown): WeeklyWindow[] {
   if (!Array.isArray(v)) bad("schedule must be an array");
+  if (v.length > MAX_SCHEDULE_ENTRIES) bad(`schedule must have at most ${MAX_SCHEDULE_ENTRIES} entries`);
   const schedule = v.map((raw, i): WeeklyWindow => {
     const e = asObject(raw, `schedule[${i}]`);
     const dayOfWeek = intIn(e.dayOfWeek, 0, 6, `schedule[${i}].dayOfWeek`);
@@ -140,13 +147,32 @@ function docId(v: unknown, what: string): string {
   return v;
 }
 
-/** getProviderSlots input. */
-export function validateSlotsRequest(data: unknown): { instructorId: string; serviceId: string; date: string } {
+/** getProviderSlots input. `now` is injectable for tests; defaults to the real clock. */
+export function validateSlotsRequest(
+  data: unknown,
+  now: Date = new Date(),
+): { instructorId: string; serviceId: string; date: string } {
   const d = asObject(data, "payload");
   const instructorId = docId(d.instructorId, "instructorId");
   const serviceId = docId(d.serviceId, "serviceId");
   if (!isDateKey(d.date)) bad("date must be YYYY-MM-DD");
+  const daysAhead = (romeInstant(d.date, "00:00").getTime() - now.getTime()) / 86_400_000;
+  if (daysAhead > MAX_SLOT_DATE_LOOKAHEAD_DAYS) {
+    bad(`date must be within ${MAX_SLOT_DATE_LOOKAHEAD_DAYS} days`);
+  }
   return { instructorId, serviceId, date: d.date };
+}
+
+/**
+ * Whether getProviderSlots should offer any times for this instructor at all — the same
+ * verification convention as public search results (ai/tools/index.ts) and the instructors
+ * read rule: `providerProfile.isVerified`, falling back to a legacy top-level `isVerified` for
+ * older documents (see src/users/roles.ts's own fallback for the same field).
+ */
+export function isBookableInstructor(instructor: Record<string, unknown> | undefined): boolean {
+  if (!instructor) return false;
+  const profile = instructor.providerProfile as Record<string, unknown> | undefined;
+  return (profile?.isVerified ?? instructor.isVerified) === true;
 }
 
 /**
