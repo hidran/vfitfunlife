@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   draftServicesForCategories,
+  instructorVerificationPatch,
   needsDefaultHours,
   resolveLegacySpecialties,
   providerRolePatch,
@@ -99,5 +100,24 @@ describe("providerRolePatch", () => {
     expect(providerRolePatch("provider", [], providerDefaults)).toBeNull();
     expect(providerRolePatch("admin", [], providerDefaults)).toBeNull();
     expect(providerRolePatch("superadmin", [], providerDefaults)).toBeNull();
+  });
+});
+
+describe("instructorVerificationPatch", () => {
+  it("nests isVerified under providerProfile", () => {
+    expect(instructorVerificationPatch(true)).toEqual({ providerProfile: { isVerified: true } });
+    expect(instructorVerificationPatch(false)).toEqual({ providerProfile: { isVerified: false } });
+  });
+
+  it("uses no dotted key, because the patch is applied with set(merge) which would take one literally", () => {
+    // The regression: `{ "providerProfile.isVerified": true }` through set(..., { merge: true })
+    // writes a top-level field *named* "providerProfile.isVerified" and leaves the nested
+    // providerProfile.isVerified at false. firestore.rules gates the public read of
+    // instructors/{id} on the nested value, so approval silently left the provider
+    // unreadable to customers — unsearchable and unbookable.
+    for (const verified of [true, false]) {
+      const keys = Object.keys(instructorVerificationPatch(verified));
+      expect(keys.some((k) => k.includes("."))).toBe(false);
+    }
   });
 });

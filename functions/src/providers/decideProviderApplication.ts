@@ -2,7 +2,12 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { requireSuperAdmin, getDefaultPermissionsForRole } from "../utils/roles";
 import { auditLogData, auditLogDoc } from "../lib/audit";
-import { draftServicesForCategories, needsDefaultHours, providerRolePatch } from "./applicationDecision";
+import {
+  draftServicesForCategories,
+  instructorVerificationPatch,
+  needsDefaultHours,
+  providerRolePatch,
+} from "./applicationDecision";
 import { DEFAULT_WEEKLY_HOURS } from "../availability/slots";
 import { isProtectedSuperadmin } from "../lib/superadmins";
 
@@ -91,7 +96,9 @@ export const decideProviderApplication = onCall<DecideProviderApplicationData>(
     // stamped, so the dashboard still nudges the provider to review the default.
     const instructorPatch: Record<string, unknown> = {
       "applicationStatus": decision,
-      "providerProfile.isVerified": verified,
+      // Nested map, never the dotted path — see instructorVerificationPatch. This patch is
+      // applied with set(..., { merge: true }) below, which does not resolve dotted keys.
+      ...instructorVerificationPatch(verified),
       "updatedAt": now,
     };
     if (!instructorSnap.exists) {

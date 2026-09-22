@@ -105,3 +105,20 @@ export function providerRolePatch(
     permissions: [...new Set([...(permissions ?? []), ...providerDefaults])],
   };
 }
+
+/**
+ * The verification fields written onto `instructors/{uid}` when a decision is made.
+ *
+ * Kept as its own function for one reason: this patch is applied with
+ * `set(..., { merge: true })`, and merge does NOT resolve dotted field paths. Writing
+ * `"providerProfile.isVerified"` there creates a top-level field whose *name* contains a
+ * dot and leaves the real nested flag untouched — which silently un-approves the provider,
+ * because `firestore.rules` gates the public read of `instructors/{id}` on the nested
+ * value. Returning a nested map keeps merge's recursive behaviour, so `bio`, `rating` and
+ * `reviewCount` survive while only `isVerified` changes.
+ */
+export function instructorVerificationPatch(verified: boolean): {
+  providerProfile: { isVerified: boolean };
+} {
+  return { providerProfile: { isVerified: verified } };
+}
