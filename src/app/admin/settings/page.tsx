@@ -11,6 +11,7 @@ import { SuperadminOnly } from "@/components/admin/SuperadminOnly";
 import { AiAssistantSettings } from "@/components/admin/settings/AiAssistantSettings";
 import { AiAuthoringSettings } from "@/components/admin/settings/AiAuthoringSettings";
 import { PilotFlagsSettings } from "@/components/admin/settings/PilotFlagsSettings";
+import { ProviderOnboardingSettings } from "@/components/admin/settings/ProviderOnboardingSettings";
 import { recordAudit } from "@/components/admin/auditLog";
 import { useI18n } from "@/hooks/useI18n";
 import {
@@ -245,6 +246,10 @@ export default function SettingsPage() {
         <SuperadminOnly>
           <PilotFlagsSettings />
         </SuperadminOnly>
+
+        {/* Provider onboarding. Not SuperadminOnly: verification is admin work now, and
+            this is the switch that decides whether they have to do it one by one. */}
+        <ProviderOnboardingSettings />
 
         {/* Maintenance Mode */}
         <div className="bg-[#EF4444]/10 border border-[#EF4444]/30 rounded-2xl p-6 lg:col-span-2">

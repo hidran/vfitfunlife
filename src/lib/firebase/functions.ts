@@ -544,10 +544,39 @@ export async function applyAsProvider(data: {
   return (await fn(data)).data;
 }
 
+export interface ProviderOnboardingSettings {
+  /** True: signup verifies the applicant immediately. False: it queues them for an admin. */
+  autoApprove: boolean;
+}
+
+/** The current provider-onboarding settings. Admin only. */
+export async function getProviderOnboardingSettings(): Promise<ProviderOnboardingSettings> {
+  const fn = httpsCallable<void, ProviderOnboardingSettings>(
+    functions,
+    "getProviderOnboardingSettings",
+  );
+  return (await fn()).data;
+}
+
 /**
- * An admin verifies or un-verifies a provider. Since signup auto-approves, this is mostly
- * the revoking route; verifying also promotes the user to role 'provider' and seeds a draft
- * service per requested category (functions/src/providers/decideProviderApplication.ts).
+ * Turn provider auto-approval on or off. Admin only, and audited — this is the setting that
+ * decides whether strangers can list themselves in the marketplace.
+ */
+export async function setProviderOnboardingSettings(
+  data: ProviderOnboardingSettings,
+): Promise<{ success: boolean; autoApprove: boolean }> {
+  const fn = httpsCallable<typeof data, { success: boolean; autoApprove: boolean }>(
+    functions,
+    "setProviderOnboardingSettings",
+  );
+  return (await fn(data)).data;
+}
+
+/**
+ * An admin verifies or un-verifies a provider. With auto-approval on this is mostly the
+ * revoking route; with it off it is how a pending application is decided. Verifying also
+ * promotes the user to role 'provider' and seeds a draft service per requested category
+ * (functions/src/providers/decideProviderApplication.ts).
  */
 export async function decideProviderApplication(data: {
   providerId: string;
