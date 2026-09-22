@@ -1,6 +1,7 @@
 import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import * as admin from "firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 import { generateReferralCode } from "../utils/helpers";
 import { resolveEmailVerified } from "./emailVerification";
 
@@ -33,7 +34,7 @@ export const initializeUserProfile = onCall(
     if (userDoc.exists) {
       // Update last login
       await db.collection("users").doc(userId).update({
-        lastLoginAt: admin.firestore.FieldValue.serverTimestamp(),
+        lastLoginAt: FieldValue.serverTimestamp(),
       });
       return { success: true, isNewUser: false };
     }
@@ -90,9 +91,9 @@ export const initializeUserProfile = onCall(
       referralCount: 0,
 
       // Timestamps
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      lastLoginAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+      lastLoginAt: FieldValue.serverTimestamp(),
     };
 
     try {
@@ -106,7 +107,7 @@ export const initializeUserProfile = onCall(
         sourceId: null,
         description: "Punti di benvenuto",
         balanceAfter: 100,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: FieldValue.serverTimestamp(),
       });
 
       console.log(`User profile initialized for ${userId}`);
@@ -176,15 +177,15 @@ export const applyReferralCode = onCall<ReferralData>(
     // Update user with referrer
     batch.update(db.collection("users").doc(userId), {
       referredBy: referrerId,
-      pointsBalance: admin.firestore.FieldValue.increment(referralPoints),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      pointsBalance: FieldValue.increment(referralPoints),
+      updatedAt: FieldValue.serverTimestamp(),
     });
 
     // Award points to referrer
     batch.update(db.collection("users").doc(referrerId), {
-      referralCount: admin.firestore.FieldValue.increment(1),
-      pointsBalance: admin.firestore.FieldValue.increment(referralPoints),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      referralCount: FieldValue.increment(1),
+      pointsBalance: FieldValue.increment(referralPoints),
+      updatedAt: FieldValue.serverTimestamp(),
     });
 
     // Create points transactions
@@ -196,7 +197,7 @@ export const applyReferralCode = onCall<ReferralData>(
       sourceId: referrerId,
       description: "Bonus referral",
       balanceAfter: (userData?.pointsBalance || 0) + referralPoints,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
     });
 
     const referrerData = referrerSnapshot.docs[0].data();
@@ -208,7 +209,7 @@ export const applyReferralCode = onCall<ReferralData>(
       sourceId: userId,
       description: "Bonus referral - nuovo utente",
       balanceAfter: (referrerData?.pointsBalance || 0) + referralPoints,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
     });
 
     await batch.commit();

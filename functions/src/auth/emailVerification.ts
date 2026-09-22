@@ -1,5 +1,6 @@
 import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 
 const region = process.env.FIREBASE_REGION || "europe-west1";
 
@@ -59,7 +60,7 @@ export const syncEmailVerification = onCall(
     if (snap.exists && snap.data()?.emailVerified !== emailVerified) {
       await userRef.update({
         emailVerified,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
       });
     }
 

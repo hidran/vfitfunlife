@@ -10,6 +10,7 @@
 
 import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
 import { getUserRoleInfo } from "../utils/roles";
 import { writeAuditLog } from "../lib/audit";
@@ -31,8 +32,8 @@ interface BookingDoc {
   instructorId?: string | null;
   status: BookingStatus;
   serviceName?: string;
-  scheduledAt: admin.firestore.Timestamp;
-  scheduledEndAt?: admin.firestore.Timestamp;
+  scheduledAt: Timestamp;
+  scheduledEndAt?: Timestamp;
   pointsEarned?: number;
   [key: string]: unknown;
 }
@@ -123,14 +124,14 @@ export async function applyTransition(opts: ApplyTransitionOptions) {
     const historyRole: StatusActorRole = role;
     tx.update(ref, {
       status: to,
-      statusHistory: admin.firestore.FieldValue.arrayUnion({
+      statusHistory: FieldValue.arrayUnion({
         status: to,
         actorUid: uid,
         actorRole: historyRole,
-        at: admin.firestore.Timestamp.now(),
+        at: Timestamp.now(),
         ...(note ? { note } : {}),
       }),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
       ...(opts.extraFields?.(doc, uid) ?? {}),
     });
 
@@ -174,7 +175,7 @@ export const acceptBooking = onCall<TransitionRequest>(
     request,
     to: "accepted",
     extraFields: (_b, uid) => ({
-      confirmedAt: admin.firestore.FieldValue.serverTimestamp(),
+      confirmedAt: FieldValue.serverTimestamp(),
       confirmedBy: uid,
     }),
     notify: (b) => ({ recipientUid: b.userId, event: "accepted" }),
@@ -196,7 +197,7 @@ export const cancelBookingAsTrainer = onCall<TransitionRequest>(
     request,
     to: "cancelled_by_trainer",
     extraFields: (b) => ({
-      cancelledAt: admin.firestore.FieldValue.serverTimestamp(),
+      cancelledAt: FieldValue.serverTimestamp(),
       cancelledBy: "provider",
       cancellationReason: request.data?.note ?? null,
       // PILOT: flagged for data collection only — no fees in the pilot.
@@ -231,7 +232,7 @@ export const completeBooking = onCall<CompleteRequest>(
       extraFields: (_b, uid) => noShow ?
         {} :
         {
-          completedAt: admin.firestore.FieldValue.serverTimestamp(),
+          completedAt: FieldValue.serverTimestamp(),
           completedBy: uid,
         },
 
@@ -256,8 +257,8 @@ export const completeBooking = onCall<CompleteRequest>(
         }
 
         tx.update(userSnap.ref, {
-          pointsBalance: admin.firestore.FieldValue.increment(points),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          pointsBalance: FieldValue.increment(points),
+          updatedAt: FieldValue.serverTimestamp(),
         });
       },
 

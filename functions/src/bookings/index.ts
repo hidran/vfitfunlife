@@ -1,5 +1,6 @@
 import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { addMinutes } from "date-fns";
 import { UserData, VenueData, ServiceData, InstructorData, PromotionData } from "../types";
 import { getUserRoleInfo, requirePermission, checkIsAdmin } from "../utils/roles";
@@ -314,8 +315,8 @@ export const createBooking = onCall<BookingData>(
       serviceAddress: bookingType === "home_service" ? serviceAddress : null,
 
       // Schedule
-      scheduledAt: admin.firestore.Timestamp.fromDate(scheduledDate),
-      scheduledEndAt: admin.firestore.Timestamp.fromDate(scheduledEndDate),
+      scheduledAt: Timestamp.fromDate(scheduledDate),
+      scheduledEndAt: Timestamp.fromDate(scheduledEndDate),
       durationMinutes,
 
       // Status
@@ -325,7 +326,7 @@ export const createBooking = onCall<BookingData>(
           status: "requested" as BookingStatus,
           actorUid: userId,
           actorRole: "client" as StatusActorRole,
-          at: admin.firestore.Timestamp.now(),
+          at: Timestamp.now(),
         },
       ],
       lateCancellation: false,
@@ -357,8 +358,8 @@ export const createBooking = onCall<BookingData>(
       reviewId: null,
 
       // Timestamps
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
       confirmedAt: null,
       completedAt: null,
     };
@@ -380,7 +381,7 @@ export const createBooking = onCall<BookingData>(
         }
         transaction.set(
           bookingDayRef(db, trainerId, day),
-          { lastBookingId: bookingRef.id, updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+          { lastBookingId: bookingRef.id, updatedAt: FieldValue.serverTimestamp() },
           { merge: true },
         );
       }
@@ -391,8 +392,8 @@ export const createBooking = onCall<BookingData>(
       if (financials.pointsUsed > 0) {
         const userRef = db.collection("users").doc(userId);
         transaction.update(userRef, {
-          pointsBalance: admin.firestore.FieldValue.increment(-financials.pointsUsed),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          pointsBalance: FieldValue.increment(-financials.pointsUsed),
+          updatedAt: FieldValue.serverTimestamp(),
         });
 
         const pointsRef = db.collection("users").doc(userId).collection("pointsTransactions").doc();
@@ -403,7 +404,7 @@ export const createBooking = onCall<BookingData>(
           sourceId: bookingRef.id,
           description: `Punti utilizzati per ${service.name}`,
           balanceAfter: userData.pointsBalance - financials.pointsUsed,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          createdAt: FieldValue.serverTimestamp(),
         });
       }
 
@@ -411,7 +412,7 @@ export const createBooking = onCall<BookingData>(
       if (financials.promotionId) {
         const promoRef = db.collection("promotions").doc(financials.promotionId);
         transaction.update(promoRef, {
-          currentUses: admin.firestore.FieldValue.increment(1),
+          currentUses: FieldValue.increment(1),
         });
       }
     });
@@ -603,28 +604,28 @@ export const cancelBooking = onCall<CancelBookingData>(
 
     batch.update(bookingRef, {
       status: newStatus,
-      statusHistory: admin.firestore.FieldValue.arrayUnion({
+      statusHistory: FieldValue.arrayUnion({
         status: newStatus,
         actorUid: callerId,
         actorRole,
-        at: admin.firestore.Timestamp.now(),
+        at: Timestamp.now(),
         ...(reason ? { note: reason } : {}),
       }),
       // PILOT: flagged for data collection only — no cancellation fees in the pilot.
       lateCancellation: isLateCancellation(scheduledAt, now),
-      cancelledAt: admin.firestore.FieldValue.serverTimestamp(),
+      cancelledAt: FieldValue.serverTimestamp(),
       cancelledBy,
       cancellationReason: reason || null,
       refundAmount,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     });
 
     // Refund points if used
     if (booking.pointsUsed > 0) {
       const userRef = db.collection("users").doc(booking.userId);
       batch.update(userRef, {
-        pointsBalance: admin.firestore.FieldValue.increment(booking.pointsUsed),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        pointsBalance: FieldValue.increment(booking.pointsUsed),
+        updatedAt: FieldValue.serverTimestamp(),
       });
 
       const userDoc = await userRef.get();
@@ -638,7 +639,7 @@ export const cancelBooking = onCall<CancelBookingData>(
         sourceId: bookingId,
         description: "Rimborso punti - prenotazione cancellata",
         balanceAfter: (userData?.pointsBalance || 0) + booking.pointsUsed,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: FieldValue.serverTimestamp(),
       });
     }
 
@@ -701,15 +702,15 @@ export const confirmBooking = onCall<ConfirmBookingData>(
 
     await bookingRef.update({
       status: "accepted" as BookingStatus,
-      statusHistory: admin.firestore.FieldValue.arrayUnion({
+      statusHistory: FieldValue.arrayUnion({
         status: "accepted" as BookingStatus,
         actorUid: callerId,
         actorRole: "admin" as StatusActorRole,
-        at: admin.firestore.Timestamp.now(),
+        at: Timestamp.now(),
       }),
-      confirmedAt: admin.firestore.FieldValue.serverTimestamp(),
+      confirmedAt: FieldValue.serverTimestamp(),
       confirmedBy: callerId,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     });
 
     // Send notification to user
@@ -720,7 +721,7 @@ export const confirmBooking = onCall<ConfirmBookingData>(
       data: { bookingId },
       imageUrl: null,
       isRead: false,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
     });
 
     // Write to audit_logs collection (only when actor is admin/superadmin)
@@ -782,16 +783,16 @@ export const updateBookingStatus = onCall<UpdateBookingStatusData>(
 
     const updateData: Record<string, unknown> = {
       status: nextStatus,
-      statusHistory: admin.firestore.FieldValue.arrayUnion({
+      statusHistory: FieldValue.arrayUnion({
         status: nextStatus,
         actorUid: callerId,
         actorRole: "admin" as StatusActorRole,
-        at: admin.firestore.Timestamp.now(),
+        at: Timestamp.now(),
         ...(notes ? { note: notes } : {}),
       }),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
       statusUpdatedBy: callerId,
-      statusUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      statusUpdatedAt: FieldValue.serverTimestamp(),
     };
 
     if (notes) {
@@ -800,10 +801,10 @@ export const updateBookingStatus = onCall<UpdateBookingStatusData>(
 
     // Add timestamp for specific statuses
     if (nextStatus === "accepted") {
-      updateData.confirmedAt = admin.firestore.FieldValue.serverTimestamp();
+      updateData.confirmedAt = FieldValue.serverTimestamp();
       updateData.confirmedBy = callerId;
     } else if (nextStatus === "completed") {
-      updateData.completedAt = admin.firestore.FieldValue.serverTimestamp();
+      updateData.completedAt = FieldValue.serverTimestamp();
       updateData.completedBy = callerId;
     }
 
@@ -829,7 +830,7 @@ export const updateBookingStatus = onCall<UpdateBookingStatusData>(
         data: { bookingId },
         imageUrl: null,
         isRead: false,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: FieldValue.serverTimestamp(),
       });
     }
 

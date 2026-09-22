@@ -6,6 +6,7 @@
  */
 
 import * as admin from "firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
 import { sendPushToUser } from "../notifications";
 import { buildMessage, type BookingMessageEvent, type MessageContext }
@@ -65,7 +66,7 @@ export async function notifyTransition(opts: {
       data: { bookingId },
       imageUrl: null,
       isRead: false,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
     }),
 
     recipient.email ?

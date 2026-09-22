@@ -11,6 +11,7 @@
 
 import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { EMAIL_SECRETS } from "../lib/email";
 import { notifyTransition } from "./notify";
 import { applyTransition } from "./transitionCallables";
@@ -72,7 +73,7 @@ export const confirmBookingPayment = onCall<ConfirmPaymentRequest>(
         paymentConfirmation: {
           method,
           amount,
-          confirmedByTrainerAt: admin.firestore.Timestamp.now(),
+          confirmedByTrainerAt: Timestamp.now(),
           clientResponse: null,
           clientRespondedAt: null,
           autoConfirmed: false,
@@ -143,11 +144,11 @@ export const respondToPaymentConfirmation = onCall<RespondToPaymentRequest>(
 
       tx.update(ref, {
         "paymentConfirmation.clientResponse": response,
-        "paymentConfirmation.clientRespondedAt": admin.firestore.FieldValue.serverTimestamp(),
+        "paymentConfirmation.clientRespondedAt": FieldValue.serverTimestamp(),
         ...(disputeReason ? { "paymentConfirmation.disputeReason": disputeReason } : {}),
         // A dispute is surfaced to admin via the Disputes filter; it does not revert status.
         ...(response === "disputed" ? { needsAdminReview: true } : {}),
-        "updatedAt": admin.firestore.FieldValue.serverTimestamp(),
+        "updatedAt": FieldValue.serverTimestamp(),
       });
 
       return doc;
