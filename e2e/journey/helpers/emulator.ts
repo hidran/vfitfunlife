@@ -67,6 +67,49 @@ export async function listDocs(
   );
 }
 
+/** Firestore's typed wrapper, built from a plain value. Mirrors `decodeValue`. */
+function encodeValue(value: unknown): FirestoreValue {
+  if (value === null || value === undefined) return { nullValue: null };
+  if (typeof value === 'string') return { stringValue: value };
+  if (typeof value === 'boolean') return { booleanValue: value };
+  if (typeof value === 'number') {
+    return Number.isInteger(value) ? { integerValue: String(value) } : { doubleValue: value };
+  }
+  if (value instanceof Date) return { timestampValue: value.toISOString() };
+  if (Array.isArray(value)) return { arrayValue: { values: value.map(encodeValue) } };
+  if (typeof value === 'object') return { mapValue: { fields: encodeFields(value as Record<string, unknown>) } };
+  throw new Error(`cannot encode ${typeof value} for Firestore`);
+}
+
+function encodeFields(data: Record<string, unknown>): Record<string, FirestoreValue> {
+  return Object.fromEntries(Object.entries(data).map(([k, v]) => [k, encodeValue(v)]));
+}
+
+/**
+ * Write a document as the emulator's owner, bypassing rules.
+ *
+ * For *arranging* state a spec needs but is not itself testing — a booking that already
+ * exists so the dashboard has something to count. Anything the spec is actually asserting
+ * about should go through the app, or the test proves only that Firestore stores what you
+ * put in it.
+ */
+export async function putDoc(path: string, data: Record<string, unknown>): Promise<void> {
+  const res = await fetch(`${DOCS}/${path}`, {
+    method: 'PATCH',
+    headers: { ...OWNER, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields: encodeFields(data) }),
+  });
+  if (!res.ok) throw new Error(`emulator write ${path} failed: ${res.status} ${await res.text()}`);
+}
+
+/** Remove a document. Missing documents are not an error, so this is safe in cleanup. */
+export async function removeDoc(path: string): Promise<void> {
+  const res = await fetch(`${DOCS}/${path}`, { method: 'DELETE', headers: OWNER });
+  if (!res.ok && res.status !== 404) {
+    throw new Error(`emulator delete ${path} failed: ${res.status}`);
+  }
+}
+
 /**
  * Poll until `read` returns something truthy. Firestore writes made by a Cloud Function
  * land after the HTTP response the UI awaited, so asserting immediately is flaky in a way
@@ -103,6 +146,39 @@ export async function latestSmsCode(phoneNumber: string): Promise<string> {
     },
     { what: `an SMS code for ${phoneNumber}` }
   );
+}
+
+const FUNCTIONS_HOST = process.env.FUNCTIONS_EMULATOR_HOST ?? 'localhost:5001';
+const REGION = process.env.NEXT_PUBLIC_FIREBASE_REGION ?? 'europe-west1';
+
+/**
+ * Invoke a callable as a specific signed-in user, over HTTP.
+ *
+ * Callables are ordinary POST endpoints: `{ data }` in, `{ result }` or `{ error }` out, with
+ * the caller identified by a bearer ID token. Going through the wire rather than the page's
+ * SDK matters for the permission tests — a refusal has to be the *server* refusing, not a
+ * button the UI declined to render, and this returns the error code that proves which.
+ */
+export async function callAs(
+  idToken: string,
+  name: string,
+  data: unknown
+): Promise<{ ok: true; data: unknown } | { ok: false; code: string; message: string }> {
+  const res = await fetch(`http://${FUNCTIONS_HOST}/${PROJECT_ID}/${REGION}/${name}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${idToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ data }),
+  });
+  const body = (await res.json()) as {
+    result?: unknown;
+    error?: { status?: string; message?: string };
+  };
+  if (res.ok && !body.error) return { ok: true, data: body.result };
+  return {
+    ok: false,
+    code: body.error?.status ?? String(res.status),
+    message: body.error?.message ?? '',
+  };
 }
 
 /** Fails loudly when the emulators are not up, rather than letting every spec time out. */

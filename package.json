@@ -40,7 +40,10 @@
     "deploy:staging:functions": "firebase deploy -P staging --only functions",
     "deploy:prod": "npm run build:prod && firebase deploy -P production --only hosting,firestore,storage",
     "dev:e2e": "dotenv -e .env.e2e -- next dev",
-    "e2e:journey": "playwright test --config playwright.e2e.config.ts"
+    "e2e:journey": "playwright test --config playwright.e2e.config.ts",
+    "seed:demo-accounts": "node scripts/seed-demo-accounts.mjs",
+    "seed:demo-accounts:staging": "node scripts/seed-demo-accounts.mjs --project vfit-app-staging",
+    "seed:demo-accounts:prod": "node scripts/seed-demo-accounts.mjs --project vfit-funlife"
   },
   "dependencies": {
     "@capacitor-firebase/authentication": "^8.2.0",

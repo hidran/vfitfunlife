@@ -71,6 +71,48 @@ export async function skipPermissions(page: Page): Promise<void> {
   }
 }
 
+/**
+ * The signed-in user's ID token, read out of the SDK's own IndexedDB store.
+ *
+ * The app never puts the Firebase instance on `window`, and importing a second copy of the
+ * SDK into the page gets you a module with no registered app — so the token is fetched from
+ * where the SDK persists it.
+ */
+export async function idTokenOf(page: Page, timeoutMs = 15_000): Promise<string> {
+  const deadline = Date.now() + timeoutMs;
+  // Sign-in resolves before the SDK has finished persisting the session, so a single read
+  // straight after submitting the login form finds nothing.
+  for (;;) {
+    const token = await readStoredToken(page);
+    if (token) return token;
+    if (Date.now() > deadline) {
+      throw new Error('no signed-in user: the page holds no Firebase ID token');
+    }
+    await page.waitForTimeout(250);
+  }
+}
+
+async function readStoredToken(page: Page): Promise<string | null> {
+  return page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const req = indexedDB.open('firebaseLocalStorageDb');
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    const rows = await new Promise<{ value?: { stsTokenManager?: { accessToken?: string } } }[]>(
+      (resolve, reject) => {
+        const req = db.transaction('firebaseLocalStorage', 'readonly')
+          .objectStore('firebaseLocalStorage')
+          .getAll();
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      }
+    );
+    return rows.find((r) => r.value?.stsTokenManager?.accessToken)?.value?.stsTokenManager
+      ?.accessToken ?? null;
+  });
+}
+
 /** Email + password sign-in. The method picker comes first, then the credentials form. */
 export async function loginWithEmail(page: Page, email: string, password: string): Promise<void> {
   await page.goto('/auth/login');
@@ -158,14 +200,47 @@ export async function registerWithPhone(
   }
   await page.getByRole('button', { name: /verifica codice/i }).click();
 
-  // New number -> "Completa il profilo". These inputs carry no ids, unlike the email form.
-  await page.getByRole('button', { name: /completa registrazione/i }).waitFor();
-  await page.locator('input[placeholder="Mario Rossi"]').fill(opts.fullName);
-  if (opts.email) await page.locator('input[type=email]').fill(opts.email);
-  if (opts.dateOfBirth) await page.locator('input[type=date]').fill(opts.dateOfBirth);
-  if (opts.interest) await page.getByRole('button', { name: opts.interest, exact: true }).click();
-  await checkHiddenBox(page, '#terms');
-  await page.getByRole('button', { name: /completa registrazione/i }).click();
+  // What happens next depends on whether the account ended up with a profile. When
+  // `initializeUserProfile` creates one, the app treats the account as complete and goes
+  // straight to /home; when there is no profile it asks the user to finish signing up on
+  // "Completa il profilo". Both are legitimate, so wait for either rather than assuming.
+  const completion = page.getByRole('button', { name: /completa registrazione/i });
+  await Promise.race([
+    completion.waitFor({ state: 'visible' }).catch(() => undefined),
+    page.waitForURL(/\/home|\/profile/, { timeout: 30_000 }).catch(() => undefined),
+  ]);
+
+  if (await completion.isVisible().catch(() => false)) {
+    // These inputs carry no ids, unlike the email form.
+    await page.locator('input[placeholder="Mario Rossi"]').fill(opts.fullName);
+    if (opts.email) await page.locator('input[type=email]').fill(opts.email);
+    if (opts.dateOfBirth) await page.locator('input[type=date]').fill(opts.dateOfBirth);
+    if (opts.interest) await page.getByRole('button', { name: opts.interest, exact: true }).click();
+    await checkHiddenBox(page, '#terms');
+    await completion.click();
+  }
+}
+
+/**
+ * Fill in the profile from /profile/edit — the route a customer takes when their account was
+ * created with defaults (a phone signup gets the placeholder name "Utente VFit").
+ *
+ * "Salva modifiche" is the page's real submit. The bare "Salva" belongs to the unsaved-changes
+ * dialog, so matching on /salva/ alone picks up a button that is usually not even on screen.
+ */
+export async function fillProfileDetails(
+  page: Page,
+  details: { fullName: string; bio?: string; phone?: string; dateOfBirth?: string }
+): Promise<void> {
+  await page.goto('/profile/edit');
+
+  const name = page.locator('input[placeholder="Inserisci il tuo nome completo"]');
+  await name.waitFor();
+  await name.fill(details.fullName);
+  if (details.bio) await page.locator('textarea[placeholder="Parlaci di te..."]').first().fill(details.bio);
+  if (details.dateOfBirth) await page.locator('input[type=date]').first().fill(details.dateOfBirth);
+
+  await page.getByRole('button', { name: /salva modifiche/i }).click();
 }
 
 /**

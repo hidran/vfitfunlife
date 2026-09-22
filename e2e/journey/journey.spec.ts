@@ -1,14 +1,8 @@
 import { test, expect, type BrowserContext, type Page } from '@playwright/test';
+import { assertEmulatorsReachable, getDoc, latestSmsCode, listDocs, waitFor } from './helpers/emulator';
 import {
-  assertEmulatorsReachable,
-  getDoc,
-  latestSmsCode,
-  listDocs,
-  waitFor,
-} from './helpers/emulator';
-import {
+  fillProfileDetails,
   firstBookableWeekday,
-  loginWithEmail,
   personaContext,
   registerWithEmail,
   registerWithPhone,
@@ -19,24 +13,21 @@ import {
 /**
  * The marketplace's two-sided journey, end to end, in the order it really happens:
  *
- *   provider signs up (email) -> superadmin approves -> provider publishes a service
- *     -> customer signs up (phone/SMS) -> customer searches, finds them, books
- *     -> provider sees the booking and accepts -> customer sees it accepted
+ *   professional signs up by email and is live immediately -> publishes a priced service
+ *     -> customer signs up by phone/SMS -> searches, finds them, books
+ *     -> provider accepts -> customer sees it accepted
  *
- * It is one `describe.serial`: each step is the previous step's output. Splitting it into
- * independent tests would mean seeding the state the previous step was supposed to produce,
- * which is precisely the integration this suite exists to check.
+ * One `describe.serial`: each step is the previous step's output. Splitting it up would mean
+ * seeding the state the previous step was supposed to produce, which is the integration this
+ * file exists to check.
  *
- * Both halves of "registration with email and phone" are covered: the provider takes the
- * email path (it is the one that carries the professional opt-in), the customer takes the
- * SMS path.
+ * Both halves of "registration with email and phone" are covered — the provider takes the
+ * email path (it carries the professional opt-in), the customer takes the SMS path.
  *
- * Every UI step is followed by an assertion against Firestore, because several defects in
- * this flow were invisible in the UI — an approval that reported success while leaving the
- * provider unverified, for one.
+ * Every UI step is followed by an assertion against Firestore, because the defects in this
+ * flow have been invisible ones: a signup that reported success while writing no profile, an
+ * approval that left the provider unreadable to customers.
  */
-
-const SUPERADMIN = { email: 'admin@vfit.dev', password: 'test1234' }; // from scripts/seed-emulator.mjs
 
 const provider = uniqueIdentity('provider');
 const customer = uniqueIdentity('customer');
@@ -51,20 +42,18 @@ const SERVICE = {
   durationMinutes: '60',
 };
 
-/** Filled in as the journey proceeds; later steps address the accounts the earlier ones made. */
 const state = {
   providerUid: '',
   customerUid: '',
   serviceId: '',
+  bookingId: '',
   bookingDate: firstBookableWeekday(),
 };
 
 let providerCtx: BrowserContext;
 let customerCtx: BrowserContext;
-let adminCtx: BrowserContext;
 let providerPage: Page;
 let customerPage: Page;
-let adminPage: Page;
 
 test.describe.configure({ mode: 'serial' });
 
@@ -72,18 +61,16 @@ test.beforeAll(async ({ browser }) => {
   await assertEmulatorsReachable();
   providerCtx = await personaContext(browser);
   customerCtx = await personaContext(browser);
-  adminCtx = await personaContext(browser);
   providerPage = await providerCtx.newPage();
   customerPage = await customerCtx.newPage();
-  adminPage = await adminCtx.newPage();
 });
 
 test.afterAll(async () => {
-  await Promise.all([providerCtx?.close(), customerCtx?.close(), adminCtx?.close()]);
+  await Promise.all([providerCtx?.close(), customerCtx?.close()]);
 });
 
 test.describe('provider and customer journey', () => {
-  test('a professional signs up with email and lands as a pending applicant', async () => {
+  test('a professional signs up with email and is approved on the spot', async () => {
     await registerWithEmail(providerPage, provider, {
       dateOfBirth: '1990-05-15',
       interest: 'VFit',
@@ -91,64 +78,58 @@ test.describe('provider and customer journey', () => {
     });
     await skipPermissions(providerPage);
 
-    const users = await waitFor(
+    // Wait for the decision to land, not merely for the document to appear: the profile is
+    // written first and `applyAsProvider` patches it a moment later, so reading the fields
+    // the instant the document exists is a race that reports "undefined" either way.
+    const [uid, userDoc] = await waitFor(
       async () => {
         const all = await listDocs('users');
         const match = Object.entries(all).find(([, u]) => u.email === provider.email);
-        return match ?? null;
+        return match && match[1].providerStatus !== undefined ? match : null;
       },
-      { what: `a users document for ${provider.email}` }
+      { what: `a users document for ${provider.email} carrying a provider decision` }
     );
-    const [uid, userDoc] = users;
     state.providerUid = uid;
 
     expect(userDoc.fullName).toBe(provider.fullName);
-    // Opting in does not grant the role. It records an application for an admin to decide.
-    expect(userDoc.providerStatus).toBe('pending');
-    expect(userDoc.role).toBe('customer');
+    // No queue: opting in as a professional both applies and approves, so the account is a
+    // provider before the signup redirect finishes.
+    expect(userDoc.providerStatus).toBe('verified');
+    expect(userDoc.role).toBe('provider');
 
     const instructor = await waitFor(() => getDoc(`instructors/${uid}`), {
-      what: 'the pending instructor application',
+      what: 'the instructor profile',
     });
-    expect(instructor.applicationStatus).toBe('pending');
+    expect(instructor.applicationStatus).toBe('verified');
     expect(instructor.requestedCategoryIds).toEqual([SERVICE.categoryId]);
-    expect((instructor.providerProfile as Record<string, unknown>).isVerified).toBe(false);
+
+    // The flag the public read rule keys on. It is written through set(..., { merge: true }),
+    // where a dotted key would land as a *literal* field named "providerProfile.isVerified"
+    // and leave the nested one false — approving the provider on paper while leaving them
+    // unreadable to customers. Assert both the value and the absence of the literal key,
+    // since only the pair tells a real fix from that bug.
+    expect((instructor.providerProfile as Record<string, unknown>).isVerified).toBe(true);
+    expect(Object.keys(instructor)).not.toContain('providerProfile.isVerified');
+
+    // Bookable immediately: default Mon-Fri hours, and a draft service per chosen category.
+    expect(instructor.availabilitySchedule).toBeTruthy();
+    const drafts = await listDocs(`instructors/${uid}/services`);
+    expect(Object.keys(drafts)).toContain(`requested-${SERVICE.categoryId}`);
   });
 
-  test('a superadmin approves the application, which verifies and equips the provider', async () => {
-    await loginWithEmail(adminPage, SUPERADMIN.email, SUPERADMIN.password);
-    await adminPage.goto('/admin/providers');
-
-    const row = adminPage.locator('div', { hasText: provider.fullName });
-    await expect(row.first()).toBeVisible();
-    await adminPage.getByRole('button', { name: /^verifica$/i }).first().click();
-
-    const user = await waitFor(
-      async () => {
-        const u = await getDoc(`users/${state.providerUid}`);
-        return u?.providerStatus === 'verified' ? u : null;
-      },
-      { what: 'the approved provider user document' }
-    );
-    expect(user.role).toBe('provider');
-
-    const instructor = await getDoc(`instructors/${state.providerUid}`);
-    expect(instructor?.applicationStatus).toBe('verified');
-
-    // The regression that made every approved provider invisible: this flag is written
-    // through set(..., { merge: true }), where a dotted key would land as a *literal* field
-    // named "providerProfile.isVerified" and leave the nested one false. firestore.rules
-    // gates the public read of instructors/{id} on the nested value, so a customer could
-    // neither find nor open the provider. Assert both the value and the absence of the
-    // literal key, since only the pair distinguishes a real fix from the bug.
-    expect((instructor?.providerProfile as Record<string, unknown>)?.isVerified).toBe(true);
-    expect(Object.keys(instructor ?? {})).not.toContain('providerProfile.isVerified');
-
-    // Approval also makes them immediately bookable: default Mon–Fri hours, and one draft
-    // service per category they applied for.
-    expect(instructor?.availabilitySchedule).toBeTruthy();
+  test('the seeded drafts are unpriced and inactive, so nothing is sold for nothing', async () => {
     const drafts = await listDocs(`instructors/${state.providerUid}/services`);
-    expect(Object.keys(drafts)).toContain(`requested-${SERVICE.categoryId}`);
+    const draft = drafts[`requested-${SERVICE.categoryId}`];
+
+    expect(draft.isActive).toBe(false);
+    expect(draft.price).toBe(0);
+
+    // And a customer is not offered it: the booking page lists active services only.
+    await customerPage.goto(`/book?providerId=${state.providerUid}`);
+    await expect(customerPage.getByText(/provider non trovato/i)).toHaveCount(0);
+    await expect(
+      customerPage.getByRole('button', { name: /^seleziona$/i })
+    ).toHaveCount(0);
   });
 
   test('the provider publishes a priced, active service', async () => {
@@ -163,15 +144,13 @@ test.describe('provider and customer journey', () => {
     // The dialog's own submit, not the page-level button that opened it.
     await providerPage.getByRole('button', { name: /aggiungi servizio/i }).last().click();
 
-    const created = await waitFor(
+    const [serviceId, service] = await waitFor(
       async () => {
         const services = await listDocs(`instructors/${state.providerUid}/services`);
-        const match = Object.entries(services).find(([, s]) => s.name === SERVICE.name);
-        return match ?? null;
+        return Object.entries(services).find(([, s]) => s.name === SERVICE.name) ?? null;
       },
       { what: 'the published service' }
     );
-    const [serviceId, service] = created;
     state.serviceId = serviceId;
 
     expect(service.price).toBe(Number(SERVICE.price));
@@ -201,19 +180,38 @@ test.describe('provider and customer journey', () => {
     });
     await skipPermissions(customerPage);
 
-    const found = await waitFor(
+    const [uid, userDoc] = await waitFor(
       async () => {
         const all = await listDocs('users');
-        const match = Object.entries(all).find(([, u]) => u.fullName === customer.fullName);
-        return match ?? null;
+        // The number is stored as `phone`; there is no `phoneNumber` field.
+        return Object.entries(all).find(([, u]) => u.phone === customerE164) ?? null;
       },
-      { what: `a users document for ${customer.fullName}` }
+      { what: `a users document for ${customerE164}` }
     );
-    const [uid, userDoc] = found;
     state.customerUid = uid;
 
     expect(userDoc.role).toBe('customer');
-    expect(userDoc.email).toBe(customer.email);
+    // A phone signup starts anonymous: the profile exists but carries no name yet, which is
+    // what the next step is for.
+    expect(userDoc.fullName ?? '').toBe('');
+  });
+
+  test('the customer fills in their profile', async () => {
+    // Where a real customer puts their details in — and where the app has to persist them.
+    await fillProfileDetails(customerPage, {
+      fullName: customer.fullName,
+      bio: 'Cliente di prova della suite end-to-end.',
+      dateOfBirth: '1995-03-22',
+    });
+
+    const saved = await waitFor(
+      async () => {
+        const u = await getDoc(`users/${state.customerUid}`);
+        return u?.fullName === customer.fullName ? u : null;
+      },
+      { what: 'the saved profile name' }
+    );
+    expect(saved.fullName).toBe(customer.fullName);
   });
 
   test('the customer finds the provider by searching and opens their booking page', async () => {
@@ -222,8 +220,7 @@ test.describe('provider and customer journey', () => {
     await customerPage.goto('/booking');
     await customerPage.locator('input[placeholder="Cerca trainer, servizi..."]').fill(provider.fullName);
 
-    const card = customerPage.getByText(provider.fullName, { exact: false });
-    await expect(card.first()).toBeVisible();
+    await expect(customerPage.getByText(provider.fullName).first()).toBeVisible();
     await expect(customerPage.getByText(`Da ${SERVICE.price},00 €`).first()).toBeVisible();
 
     // The result card is a clickable div rather than a button or link, so the click has to
@@ -255,23 +252,9 @@ test.describe('provider and customer journey', () => {
     await expect(customerPage.getByText(`${SERVICE.price},00 €`).first()).toBeVisible();
   });
 
-  /**
-   * The remaining three steps — create the booking, have the provider accept it, and show the
-   * customer the acceptance — are written but not run under the emulator.
-   *
-   * `createBooking` throws there: the Functions emulator's firebase-admin shim does not carry
-   * the namespace statics, so `admin.firestore.Timestamp` is undefined at
-   * functions/src/bookings/index.ts:317 and the callable fails before writing anything. The
-   * same module works deployed (staging booking ruMYVkykNs3BV4TJx5ml was created by it), and
-   * the emulator log shows the same shape of failure for every module that reaches for
-   * `admin.firestore.*` rather than importing from "firebase-admin/firestore".
-   *
-   * Two ways to turn this on, whichever you prefer:
-   *   - migrate those modules to `import { Timestamp } from "firebase-admin/firestore"`, the
-   *     style the newer functions already use and which works under the emulator today; or
-   *   - point this spec at a real backend, where the callable already works.
-   */
-  test.fixme('the customer confirms and the booking is created as requested', async () => {
+  test('the customer confirms and the booking is created as a request', async () => {
+    // The terms control is an empty <button> with no text, role or aria-checked, so it can
+    // only be reached positionally, through the row that holds the wording.
     await customerPage
       .locator('div.flex.items-start.gap-3', { hasText: /accetto i/i })
       .locator('button')
@@ -279,37 +262,45 @@ test.describe('provider and customer journey', () => {
       .click();
     await customerPage.getByRole('button', { name: /^conferma$/i }).click();
 
-    const booking = await waitFor(
+    const [bookingId, booking] = await waitFor(
       async () => {
         const all = await listDocs('bookings');
-        const match = Object.entries(all).find(([, b]) => b.instructorId === state.providerUid);
-        return match ?? null;
+        return Object.entries(all).find(([, b]) => b.instructorId === state.providerUid) ?? null;
       },
       { what: 'the created booking' }
     );
-    const [, doc] = booking;
-    expect(doc.status).toBe('requested');
-    expect(doc.serviceId).toBe(state.serviceId);
+    state.bookingId = bookingId;
+
+    // A new booking starts as a request: the provider has not agreed to it yet.
+    expect(booking.status).toBe('requested');
+    expect(booking.serviceId).toBe(state.serviceId);
+    expect(booking.userId).toBe(state.customerUid);
     await expect(customerPage).toHaveURL(/\/bookings\/detail/);
   });
 
-  test.fixme('the provider sees the request and accepts it', async () => {
+  test('the provider sees the request and accepts it', async () => {
     await providerPage.goto('/provider/bookings');
-    await expect(providerPage.getByText(customer.fullName)).toBeVisible();
-    await providerPage.getByRole('button', { name: /accetta/i }).first().click();
 
-    await waitFor(
+    await expect(providerPage.getByText(customer.fullName).first()).toBeVisible();
+    // "Conferma" in the provider's table is the accept action — it calls acceptBooking and
+    // moves the booking to `accepted`. The customer's side of the same transition is worded
+    // "Confermato", which is why the next test matches on that.
+    await providerPage.getByRole('button', { name: /^conferma$/i }).first().click();
+
+    const booking = await waitFor(
       async () => {
-        const all = await listDocs('bookings');
-        return Object.values(all).find((b) => b.instructorId === state.providerUid && b.status === 'accepted');
+        const b = await getDoc(`bookings/${state.bookingId}`);
+        return b?.status === 'accepted' ? b : null;
       },
       { what: 'the booking to become accepted' }
     );
+    expect(booking.instructorId).toBe(state.providerUid);
   });
 
-  test.fixme('the customer sees the booking confirmed', async () => {
+  test('the customer sees the booking confirmed', async () => {
     await customerPage.goto('/bookings');
-    await expect(customerPage.getByText(SERVICE.name)).toBeVisible();
+
+    await expect(customerPage.getByText(SERVICE.name).first()).toBeVisible();
     await expect(customerPage.getByText(/accettat|confermat/i).first()).toBeVisible();
   });
 });
