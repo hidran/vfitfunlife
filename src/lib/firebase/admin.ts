@@ -1,5 +1,7 @@
 "use client";
 
+import { isProviderVerified, needsVerificationDecision } from "@/lib/providerVerification";
+
 import {
   collection,
   query,
@@ -136,15 +138,16 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
       0
     );
 
-    // Get pending verifications
-    const pendingVerificationsQuery = query(
-      collection(db, USERS_COLLECTION),
-      where("role", "==", "provider"),
-      where("providerProfile.isVerified", "==", false)
-    );
-    const pendingVerificationsSnapshot = await getDocs(pendingVerificationsQuery);
+    // Pending verifications.
+    //
+    // Derived in memory rather than filtered in Firestore: `where(..., '==', false)` never
+    // matches a document where the field is absent, and most provider records have no
+    // `providerProfile` at all — so the old query saw 6 of the 38 the table was showing as
+    // unverified. `role == 'provider'` is dropped for the same reason it is dropped in
+    // getPendingVerifications: an applicant is still a customer until the decision.
+    const pendingVerificationsSnapshot = await getDocs(collection(db, USERS_COLLECTION));
     const pendingVerifications = pendingVerificationsSnapshot.docs.filter(
-      (d) => !isHiddenAccount(d.id, d.data())
+      (d) => !isHiddenAccount(d.id, d.data()) && needsVerificationDecision(d.data())
     ).length;
 
     // Get recent activity
@@ -312,15 +315,10 @@ export async function getProviders(
   filters: ProviderFilters
 ): Promise<{ providers: AdminProvider[]; total: number }> {
   try {
+    // Verification is filtered in memory, not here: `== false` cannot match a document whose
+    // `providerProfile` is absent, so filtering by "pending" in Firestore silently hid most
+    // of the rows the table itself renders as unverified.
     const constraints: QueryConstraint[] = [where("role", "==", "provider")];
-
-    if (filters.verificationStatus && filters.verificationStatus !== "all") {
-      if (filters.verificationStatus === "verified") {
-        constraints.push(where("providerProfile.isVerified", "==", true));
-      } else if (filters.verificationStatus === "pending") {
-        constraints.push(where("providerProfile.isVerified", "==", false));
-      }
-    }
 
     constraints.push(orderBy("createdAt", "desc"));
 
@@ -332,6 +330,11 @@ export async function getProviders(
       uid: doc.id,
       ...convertTimestamps(doc.data()),
     })) as AdminProvider[]).filter((p) => !isHiddenAccount(p.id, p));
+
+    if (filters.verificationStatus && filters.verificationStatus !== "all") {
+      const wantVerified = filters.verificationStatus === "verified";
+      providers = providers.filter((p) => isProviderVerified(p) === wantVerified);
+    }
 
     // Client-side filtering for search
     if (filters.search) {
@@ -361,19 +364,25 @@ export async function getProviders(
 // Get pending verifications
 export async function getPendingVerifications(): Promise<AdminProvider[]> {
   try {
-    const q = query(
-      collection(db, USERS_COLLECTION),
-      where("role", "==", "provider"),
-      where("providerProfile.isVerified", "==", false),
-      orderBy("createdAt", "desc")
-    );
-    const snapshot = await getDocs(q);
+    // No Firestore filter on the verification flag, and no orderBy: `== false` misses every
+    // document where the field is absent, and `orderBy('createdAt')` drops every document
+    // that has no createdAt — the two ways this counter silently read low. Sorted in memory
+    // instead, so a record missing either field still shows up as work to do.
+    const snapshot = await getDocs(collection(db, USERS_COLLECTION));
 
-    return (snapshot.docs.map((doc) => ({
-      id: doc.id,
-      uid: doc.id,
-      ...convertTimestamps(doc.data()),
-    })) as AdminProvider[]).filter((p) => !isHiddenAccount(p.id, p));
+    return (snapshot.docs
+      .filter((doc) => !isHiddenAccount(doc.id, doc.data()))
+      .filter((doc) => needsVerificationDecision(doc.data()))
+      .map((doc) => ({
+        id: doc.id,
+        uid: doc.id,
+        ...convertTimestamps(doc.data()),
+      })) as AdminProvider[])
+      .sort((a, b) => {
+        const at = a.createdAt ? new Date(a.createdAt as unknown as string).getTime() : 0;
+        const bt = b.createdAt ? new Date(b.createdAt as unknown as string).getTime() : 0;
+        return bt - at;
+      });
   } catch (error) {
     console.error("Error fetching pending verifications:", error);
     throw error;

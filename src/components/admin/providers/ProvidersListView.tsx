@@ -12,6 +12,7 @@ import {
   ProviderApplicationsPanel,
   ProviderTypeBadge,
 } from "@/components/admin";
+import { isProviderVerified } from "@/lib/providerVerification";
 import { ProviderOnboardingSettings } from "@/components/admin/settings/ProviderOnboardingSettings";
 import { Button } from "@/components/ui/button";
 import { AdminProvider, ProviderFilters } from "@/types/admin";
@@ -125,10 +126,7 @@ export function ProvidersListView() {
       key: "verification",
       header: t("admin.providers.col.verification"),
       cell: (provider) => (
-        <VerificationBadge
-          isVerified={provider.providerProfile?.isVerified ?? false}
-          size="sm"
-        />
+        <VerificationBadge isVerified={isProviderVerified(provider)} size="sm" />
       ),
       sortable: true,
       width: "w-28",
