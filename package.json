@@ -38,7 +38,9 @@
     "dev:staging": "dotenv -e .env.staging -- next dev",
     "deploy:staging": "npm run build:staging && firebase deploy -P staging --only hosting,firestore,storage",
     "deploy:staging:functions": "firebase deploy -P staging --only functions",
-    "deploy:prod": "npm run build:prod && firebase deploy -P production --only hosting,firestore,storage"
+    "deploy:prod": "npm run build:prod && firebase deploy -P production --only hosting,firestore,storage",
+    "dev:e2e": "dotenv -e .env.e2e -- next dev",
+    "e2e:journey": "playwright test --config playwright.e2e.config.ts"
   },
   "dependencies": {
     "@capacitor-firebase/authentication": "^8.2.0",
