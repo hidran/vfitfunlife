@@ -95,17 +95,34 @@ const WEEKLY_HOURS = [1, 2, 3, 4, 5].map((dayOfWeek) => ({
   isAvailable: true,
 }));
 
+/**
+ * Create the account, or bring an existing one in line.
+ *
+ * Returns the uid actually in use, which is not always the requested one: these emails may
+ * already exist on staging or production from earlier hand-made demo accounts, and an email
+ * cannot be moved to a different uid. Adopting the existing account is the only idempotent
+ * option — so callers write their Firestore documents under the uid they get back, not the
+ * one they asked for. On a fresh project (the emulator) the two are the same.
+ */
 async function ensureAuthUser({ uid, email, fullName }) {
   try {
     await auth.createUser({ uid, email, password: PASSWORD, displayName: fullName, emailVerified: true });
-    console.log(`  auth created  ${email}`);
+    console.log(`  auth created  ${email}  (${uid})`);
+    return uid;
   } catch (e) {
-    if (e.code === "auth/uid-already-exists" || e.code === "auth/email-already-exists") {
-      await auth.updateUser(uid, { email, password: PASSWORD, displayName: fullName, emailVerified: true });
-      console.log(`  auth updated  ${email}`);
-    } else {
-      throw e;
-    }
+    if (e.code !== "auth/uid-already-exists" && e.code !== "auth/email-already-exists") throw e;
+
+    const existing = await auth.getUserByEmail(email).catch(() => null);
+    const targetUid = existing?.uid ?? uid;
+    await auth.updateUser(targetUid, {
+      email,
+      password: PASSWORD,
+      displayName: fullName,
+      emailVerified: true,
+    });
+    const note = targetUid === uid ? "" : `  [adopted existing uid, wanted ${uid}]`;
+    console.log(`  auth updated  ${email}  (${targetUid})${note}`);
+    return targetUid;
   }
 }
 
@@ -130,8 +147,8 @@ async function writeUser(uid, data) {
 console.log(`Seeding demo accounts into ${useEmulator ? `the emulator (${projectId})` : projectId}…`);
 
 // --- customer -------------------------------------------------------------------------
-await ensureAuthUser(CUSTOMER);
-await writeUser(CUSTOMER.uid, {
+const customerUid = await ensureAuthUser(CUSTOMER);
+await writeUser(customerUid, {
   email: CUSTOMER.email,
   fullName: CUSTOMER.fullName,
   role: "customer",
@@ -139,8 +156,8 @@ await writeUser(CUSTOMER.uid, {
 });
 
 // --- admin ----------------------------------------------------------------------------
-await ensureAuthUser(ADMIN);
-await writeUser(ADMIN.uid, {
+const adminUid = await ensureAuthUser(ADMIN);
+await writeUser(adminUid, {
   email: ADMIN.email,
   fullName: ADMIN.fullName,
   role: "admin",
@@ -148,8 +165,8 @@ await writeUser(ADMIN.uid, {
 });
 
 // --- provider -------------------------------------------------------------------------
-await ensureAuthUser(PROVIDER);
-await writeUser(PROVIDER.uid, {
+const providerUid = await ensureAuthUser(PROVIDER);
+await writeUser(providerUid, {
   email: PROVIDER.email,
   fullName: PROVIDER.fullName,
   role: "provider",
@@ -161,9 +178,9 @@ await writeUser(PROVIDER.uid, {
 // The instructors document is what makes a provider real: the public read rule keys on the
 // NESTED providerProfile.isVerified, the dashboard counters read this document, and search
 // reads categoryIds and lowestPrice from it.
-await db.collection("instructors").doc(PROVIDER.uid).set(
+await db.collection("instructors").doc(providerUid).set(
   {
-    uid: PROVIDER.uid,
+    uid: providerUid,
     name: PROVIDER.fullName,
     fullName: PROVIDER.fullName,
     isActive: true,
@@ -192,7 +209,7 @@ await db.collection("instructors").doc(PROVIDER.uid).set(
 // One active, priced service — without it the provider shows up but cannot be booked.
 await db
   .collection("instructors")
-  .doc(PROVIDER.uid)
+  .doc(providerUid)
   .collection("services")
   .doc(PROVIDER.service.id)
   .set(
@@ -210,10 +227,10 @@ await db
 
 console.log(`
 Done.
-  customer  ${CUSTOMER.email}  /  ${PASSWORD}   (uid ${CUSTOMER.uid})
-  admin     ${ADMIN.email}  /  ${PASSWORD}   (uid ${ADMIN.uid})
+  customer  ${CUSTOMER.email}  /  ${PASSWORD}   (uid ${customerUid})
+  admin     ${ADMIN.email}  /  ${PASSWORD}   (uid ${adminUid})
             role 'admin': verifies providers and changes roles, but cannot touch superadmin
-  provider  ${PROVIDER.email}  /  ${PASSWORD}   (uid ${PROVIDER.uid})
+  provider  ${PROVIDER.email}  /  ${PASSWORD}   (uid ${providerUid})
             verified, Mon-Fri 09:00-17:00, one active service at EUR ${PROVIDER.service.price}
 `);
 
