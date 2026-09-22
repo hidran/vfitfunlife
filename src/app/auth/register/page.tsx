@@ -86,7 +86,7 @@ export default function RegisterPage() {
       });
 
       if (wantsProvider) {
-        await submitProviderApplication(firebaseUser.uid, { fullName: fullName.trim(), categoryIds: providerCategoryIds });
+        await submitProviderApplication({ fullName: fullName.trim(), categoryIds: providerCategoryIds });
       }
 
       // Refresh user profile in store
@@ -151,7 +151,7 @@ export default function RegisterPage() {
         if (!uid) {
           throw new Error('Registration user is not available');
         }
-        await submitProviderApplication(uid, { fullName: fullName.trim(), categoryIds: providerCategoryIds });
+        await submitProviderApplication({ fullName: fullName.trim(), categoryIds: providerCategoryIds });
         // Keep the in-memory profile in sync so the professional state is
         // visible immediately after permissions/home navigation.
         await refreshUserProfile();

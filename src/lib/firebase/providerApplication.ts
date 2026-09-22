@@ -1,53 +1,35 @@
-import { doc, writeBatch, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from './config';
+import { applyAsProvider } from './functions';
 
 /**
- * User opts in as a provider. Creates/merges instructors/{uid} as an unverified
- * pending profile and marks users/{uid}.providerStatus = 'pending'. Both docs are
- * written in one batch so the mirrored status never drifts. Idempotent: re-running
- * merges into an existing instructor doc (does not reset a verified provider's
- * isVerified — callers gate this behind providerStatus === 'none').
+ * User opts in as a provider and is approved on the spot: `instructors/{uid}` is created as a
+ * verified, bookable profile, `users/{uid}` becomes role 'provider' with
+ * `providerStatus: 'verified'`, default Mon-Fri hours are seeded, and one inactive, unpriced
+ * draft service is created per requested category so the choices made at signup land in
+ * /provider/services. An admin can un-verify afterwards from the back office.
  *
- * `categoryIds` are taxonomy LEAF ids, stored as `requestedCategoryIds`. They are what the
- * applicant asked to offer, for the admin to review; on approval the
- * decideProviderApplication callable seeds one draft service per id, and the provider's
- * searchable `categoryIds` are then derived from their active services.
- * Throws on Firestore failure; callers (TanStack mutation / form handler) surface the error.
+ * This is a callable, not a client batch. `firestore.rules` deliberately allows a user to
+ * create only an *unverified, pending* instructors document and forbids them from ever
+ * writing `providerProfile.isVerified` or `applicationStatus` — the public read of
+ * `instructors/{id}` keys on that flag, so letting the browser set it would let anyone list
+ * themselves. The Admin SDK performs the same write an admin's decision would.
+ *
+ * `categoryIds` are taxonomy LEAF ids. The server drops unknown and non-leaf ids, so what
+ * ends up in `requestedCategoryIds` is always a real part of the catalogue.
+ *
+ * Takes no uid: the server acts on the authenticated caller, so passing one would only
+ * invite the belief that a client can apply on someone else's behalf.
+ *
+ * Throws on failure; callers (the registration form) surface the error.
  */
 export async function submitProviderApplication(
-  uid: string,
   opts: { fullName: string; categoryIds: string[] }
 ): Promise<void> {
-  const batch = writeBatch(db);
-  const instructorRef = doc(db, 'instructors', uid);
-  const userRef = doc(db, 'users', uid);
-
-  batch.set(
-    instructorRef,
-    {
-      uid,
-      name: opts.fullName,
-      fullName: opts.fullName,
-      isActive: true,
-      requestedCategoryIds: opts.categoryIds,
-      providerProfile: {
-        isVerified: false,
-        bio: '',
-        rating: 0,
-        reviewCount: 0,
-      },
-      applicationStatus: 'pending',
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    },
-    { merge: true }
-  );
-  batch.update(userRef, { providerStatus: 'pending', updatedAt: serverTimestamp() });
-
-  await batch.commit();
+  await applyAsProvider({ categoryIds: opts.categoryIds, fullName: opts.fullName });
 }
 
-/** A pending applicant changes which categories they are applying to offer. */
+/** A provider changes which categories they offer, before they have priced real services. */
 export async function updateRequestedCategories(uid: string, categoryIds: string[]): Promise<void> {
   await updateDoc(doc(db, 'instructors', uid), {
     requestedCategoryIds: categoryIds,

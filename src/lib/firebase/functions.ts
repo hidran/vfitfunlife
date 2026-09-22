@@ -526,9 +526,28 @@ export async function updateAiAuthoringSettings(patch: Partial<AiAuthoringSettin
 // --- Provider applications ---
 
 /**
- * Superadmin approves or rejects a self-registered provider application. Approval also
- * promotes the applicant to role 'provider' and seeds a draft service per requested
- * category (functions/src/providers/decideProviderApplication.ts).
+ * A user opts in as a professional and is approved immediately — role 'provider', default
+ * Mon-Fri hours and a draft service per chosen category, all in one server-side write
+ * (functions/src/providers/applyAsProvider.ts).
+ *
+ * It cannot be done from the client: firestore.rules lets a user create only an unverified,
+ * pending instructors document and never lets them set `providerProfile.isVerified`.
+ */
+export async function applyAsProvider(data: {
+  categoryIds: string[];
+  fullName?: string;
+}): Promise<{ success: boolean; providerId: string; draftServicesSeeded: number }> {
+  const fn = httpsCallable<
+    typeof data,
+    { success: boolean; providerId: string; draftServicesSeeded: number }
+  >(functions, "applyAsProvider");
+  return (await fn(data)).data;
+}
+
+/**
+ * An admin verifies or un-verifies a provider. Since signup auto-approves, this is mostly
+ * the revoking route; verifying also promotes the user to role 'provider' and seeds a draft
+ * service per requested category (functions/src/providers/decideProviderApplication.ts).
  */
 export async function decideProviderApplication(data: {
   providerId: string;

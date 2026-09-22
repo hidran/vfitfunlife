@@ -9,7 +9,6 @@ import { db, functions } from '@/lib/firebase/config';
 import {
   EntityDetailLayout,
   ConfirmDeleteDialog,
-  SuperadminOnly,
   useEntityMutation,
   VerificationBadge,
   StatusBadge,
@@ -248,9 +247,12 @@ export function ProviderDetailView({ providerId }: Props) {
                   </div>
                 </div>
 
-                {/* Verification actions - superadmin only */}
+                {/* Verification is admin work now — signup auto-approves, so the back
+                    office's job here is reviewing who got listed. The whole /admin area
+                    already requires admin or superadmin, and decideProviderApplication
+                    enforces the same on the server. */}
                 {!profile?.isVerified && (
-                  <SuperadminOnly>
+                  <>
                     <div className="flex gap-2">
                       {!showRejectForm ? (
                         <>
@@ -287,7 +289,7 @@ export function ProviderDetailView({ providerId }: Props) {
                         </div>
                       )}
                     </div>
-                  </SuperadminOnly>
+                  </>
                 )}
               </div>
 

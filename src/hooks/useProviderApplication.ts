@@ -14,7 +14,7 @@ export function useSubmitProviderApplication() {
     mutationFn: async (categoryIds: string[]) => {
       const user = useAuthStore.getState().user;
       if (!user) throw new Error('Not authenticated');
-      await submitProviderApplication(user.uid, { fullName: user.fullName, categoryIds });
+      await submitProviderApplication({ fullName: user.fullName, categoryIds });
       return user.uid;
     },
     onSuccess: async (uid) => {

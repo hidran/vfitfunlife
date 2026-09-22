@@ -1,5 +1,6 @@
 import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 import {
   UserRole,
   Permission,
@@ -7,7 +8,6 @@ import {
   ProviderProfile,
 } from "../types";
 import {
-  requireSuperAdmin,
   requireAdmin,
   getUserRoleInfo,
   isValidRole,
@@ -15,7 +15,7 @@ import {
   getDefaultPermissionsForRole,
   getProviderTypeList,
 } from "../utils/roles";
-import { writeAuditLog } from "../lib/audit";
+import { writeAuditLog, toActorRole } from "../lib/audit";
 import { seedProviderServicesFromTemplates } from "../providers/seedProviderServices";
 import { mayHoldSuperadmin, isProtectedSuperadmin } from "../lib/superadmins";
 
@@ -90,25 +90,30 @@ export const setUserRole = onCall<SetUserRoleData>(
     const callerId = request.auth.uid;
     const { userId, role, customPermissions, reason } = request.data;
 
-    // Only superadmin can set roles
+    // Managing roles is back-office work, so admins do it. What stays superadmin-only is
+    // anything touching the superadmin role itself — granting it, or taking it away — which
+    // is enforced below once we know the target's current role.
     try {
-      await requireSuperAdmin(callerId);
+      await requireAdmin(callerId);
     } catch (error) {
-      throw new HttpsError("permission-denied", "Only superadmin can manage user roles");
+      throw new HttpsError("permission-denied", "Only an admin can manage user roles");
     }
 
     // Fetch caller info for audit log
     const callerSnap = await db.collection("users").doc(callerId).get();
     const caller = callerSnap.data();
+    const callerIsSuperadmin = caller?.role === "superadmin";
 
     // Validate role
     if (!isValidRole(role)) {
       throw new HttpsError("invalid-argument", `Invalid role: ${role}`);
     }
 
-    // Prevent self-demotion from superadmin
-    if (userId === callerId && role !== "superadmin") {
-      throw new HttpsError("failed-precondition", "Cannot demote yourself from superadmin");
+    // Nobody talks themselves out of their own access: an admin cannot drop their own role
+    // any more than a superadmin can. Someone else with the authority has to do it, which
+    // also keeps the last admin from locking the back office by accident.
+    if (userId === callerId && role !== caller?.role) {
+      throw new HttpsError("failed-precondition", "Cannot change your own role");
     }
 
     // Check if target user exists
@@ -131,6 +136,15 @@ export const setUserRole = onCall<SetUserRoleData>(
       throw new HttpsError("permission-denied", "Only the designated superadmin accounts may hold that role");
     }
 
+    // Admins manage customers, providers and each other — not superadmins. Both directions
+    // are closed: an admin can neither hand out the superadmin role nor strip it from a
+    // superadmin who is not on the protected list (the staging one, for instance). Without
+    // the second half, "admin can change roles" would quietly make every admin a superadmin
+    // by way of demoting the real one.
+    if (!callerIsSuperadmin && (role === "superadmin" || targetUserData?.role === "superadmin")) {
+      throw new HttpsError("permission-denied", "Only a superadmin can grant or remove the superadmin role");
+    }
+
     // Calculate permissions based on role
     const permissions = calculatePermissions(role, customPermissions);
 
@@ -138,16 +152,16 @@ export const setUserRole = onCall<SetUserRoleData>(
     const updateData: Record<string, unknown> = {
       role,
       permissions,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
       roleUpdatedBy: callerId,
-      roleUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      roleUpdatedAt: FieldValue.serverTimestamp(),
       roleUpdateReason: reason || null,
     };
 
     // Clear provider profile if role is not provider
     if (role !== "provider") {
-      updateData.userType = admin.firestore.FieldValue.delete();
-      updateData.providerProfile = admin.firestore.FieldValue.delete();
+      updateData.userType = FieldValue.delete();
+      updateData.providerProfile = FieldValue.delete();
     }
 
     await db.collection("users").doc(userId).update(updateData);
@@ -159,14 +173,16 @@ export const setUserRole = onCall<SetUserRoleData>(
       newRole: role,
       changedBy: callerId,
       reason: reason || null,
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
     });
 
     // Write to audit_logs collection
     await writeAuditLog({
       actorUid: callerId,
       actorEmail: caller?.email ?? "",
-      actorRole: "superadmin",
+      // The caller's real role, not a constant: admins can make this change now, and an
+      // audit trail that says "superadmin" for every role change answers the wrong question.
+      actorRole: toActorRole(caller?.role),
       action: "role_change",
       entityType: "user",
       entityId: userId,
@@ -262,7 +278,7 @@ export const createProviderProfile = onCall<CreateProviderProfileData>(
         userType,
         providerProfile,
         status: "pending",
-        submittedAt: admin.firestore.FieldValue.serverTimestamp(),
+        submittedAt: FieldValue.serverTimestamp(),
         reviewedAt: null,
         reviewedBy: null,
         notes: null,
@@ -333,7 +349,7 @@ export const createProviderProfile = onCall<CreateProviderProfileData>(
     };
 
     // Create user document
-    const now = admin.firestore.FieldValue.serverTimestamp();
+    const now = FieldValue.serverTimestamp();
     const userData = {
       uid: userId,
       email,
@@ -446,7 +462,7 @@ export const updateProviderProfile = onCall<UpdateProviderProfileData>(
 
     await db.collection("users").doc(userId).update({
       providerProfile: updatedProfile,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     });
 
     return {
@@ -499,10 +515,10 @@ export const verifyProvider = onCall<VerifyProviderData>(
     await db.collection("users").doc(providerId).update({
       "providerProfile.isVerified": verified,
       "isVerified": verified,
-      "updatedAt": admin.firestore.FieldValue.serverTimestamp(),
+      "updatedAt": FieldValue.serverTimestamp(),
       "verificationNotes": notes || null,
       "verifiedBy": callerId,
-      "verifiedAt": admin.firestore.FieldValue.serverTimestamp(),
+      "verifiedAt": FieldValue.serverTimestamp(),
     });
 
     // Log verification action
@@ -511,7 +527,7 @@ export const verifyProvider = onCall<VerifyProviderData>(
       verified,
       verifiedBy: callerId,
       notes: notes || null,
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
     });
 
     // On approval, give the provider a starting point instead of an empty services page.
@@ -750,9 +766,9 @@ export const setUserActiveStatus = onCall(
 
     await db.collection("users").doc(userId).update({
       isActive,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
       statusChangedBy: callerId,
-      statusChangedAt: admin.firestore.FieldValue.serverTimestamp(),
+      statusChangedAt: FieldValue.serverTimestamp(),
       statusChangeReason: reason || null,
     });
 
@@ -762,7 +778,7 @@ export const setUserActiveStatus = onCall(
       isActive,
       changedBy: callerId,
       reason: reason || null,
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
     });
 
     // Write to audit_logs collection
@@ -828,10 +844,10 @@ export const adminDeleteProvider = onCall<{ providerId: string; reason: string }
 
     await db.collection("users").doc(providerId).update({
       role: "customer",
-      providerProfile: admin.firestore.FieldValue.delete(),
+      providerProfile: FieldValue.delete(),
       providerStatus: "removed",
-      userType: admin.firestore.FieldValue.delete(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      userType: FieldValue.delete(),
+      updatedAt: FieldValue.serverTimestamp(),
     });
 
     await writeAuditLog({

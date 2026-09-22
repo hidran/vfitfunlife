@@ -3,52 +3,49 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('./config', () => ({ db: {} }));
 vi.mock('firebase/firestore', () => ({
   doc: vi.fn((_db: unknown, col: string, id: string) => ({ col, id })),
-  writeBatch: vi.fn(),
   updateDoc: vi.fn(),
   serverTimestamp: vi.fn(() => 'TS'),
 }));
+vi.mock('./functions', () => ({
+  applyAsProvider: vi.fn().mockResolvedValue({
+    success: true,
+    providerId: 'u1',
+    draftServicesSeeded: 2,
+  }),
+}));
 
-import { writeBatch, updateDoc } from 'firebase/firestore';
+import { updateDoc } from 'firebase/firestore';
+import { applyAsProvider } from './functions';
 import { submitProviderApplication, updateRequestedCategories } from './providerApplication';
-
-function makeBatch() {
-  return { set: vi.fn(), update: vi.fn(), commit: vi.fn().mockResolvedValue(undefined) };
-}
 
 beforeEach(() => vi.clearAllMocks());
 
 describe('submitProviderApplication', () => {
-  it('stores the requested category ids on a pending unverified instructor doc', async () => {
-    const batch = makeBatch();
-    vi.mocked(writeBatch).mockReturnValue(batch as never);
+  it('delegates to the callable, which approves the applicant server-side', async () => {
+    await submitProviderApplication({ fullName: 'Mia Rossi', categoryIds: ['yoga', 'pilates'] });
 
-    await submitProviderApplication('u1', { fullName: 'Mia Rossi', categoryIds: ['yoga', 'pilates'] });
-
-    expect(batch.set).toHaveBeenCalledWith(
-      { col: 'instructors', id: 'u1' },
-      expect.objectContaining({
-        uid: 'u1',
-        applicationStatus: 'pending',
-        requestedCategoryIds: ['yoga', 'pilates'],
-        providerProfile: expect.objectContaining({ isVerified: false }),
-      }),
-      { merge: true }
-    );
-    expect(batch.update).toHaveBeenCalledWith(
-      { col: 'users', id: 'u1' },
-      { providerStatus: 'pending', updatedAt: 'TS' }
-    );
-    expect(batch.commit).toHaveBeenCalled();
+    expect(applyAsProvider).toHaveBeenCalledWith({
+      fullName: 'Mia Rossi',
+      categoryIds: ['yoga', 'pilates'],
+    });
   });
 
-  it('no longer writes display names into the legacy specialties field', async () => {
-    const batch = makeBatch();
-    vi.mocked(writeBatch).mockReturnValue(batch as never);
+  it('writes nothing to Firestore from the browser', async () => {
+    // The verification flag the public read rule keys on is server-only for a reason: a
+    // client batch that set it would let anyone list themselves in the marketplace. If this
+    // ever starts touching Firestore directly again, the rules will reject the write at
+    // runtime and this test says so first.
+    await submitProviderApplication({ fullName: 'Mia Rossi', categoryIds: ['yoga'] });
 
-    await submitProviderApplication('u1', { fullName: 'Mia Rossi', categoryIds: ['yoga'] });
+    expect(updateDoc).not.toHaveBeenCalled();
+  });
 
-    const instructorDoc = batch.set.mock.calls[0][1] as { providerProfile: Record<string, unknown> };
-    expect(instructorDoc.providerProfile).not.toHaveProperty('specialties');
+  it('surfaces a failed application rather than reporting success', async () => {
+    vi.mocked(applyAsProvider).mockRejectedValueOnce(new Error('permission-denied'));
+
+    await expect(
+      submitProviderApplication({ fullName: 'Mia Rossi', categoryIds: ['yoga'] })
+    ).rejects.toThrow('permission-denied');
   });
 });
 

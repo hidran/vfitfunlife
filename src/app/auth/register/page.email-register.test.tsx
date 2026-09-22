@@ -191,7 +191,9 @@ describe('RegisterPage Email Registration', () => {
     fireEvent.click(screen.getByRole('button', { name: /Crea account/i }));
 
     await waitFor(() => {
-      expect(mockSubmitProviderApplication).toHaveBeenCalledWith('new-uid', {
+      // No uid: the application is a callable that acts on the authenticated caller, so
+      // passing one would suggest a client can apply on someone else's behalf.
+      expect(mockSubmitProviderApplication).toHaveBeenCalledWith({
         fullName: 'Professional User',
         categoryIds: ['personal_training'],
       });
