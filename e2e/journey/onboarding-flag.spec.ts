@@ -145,6 +145,25 @@ test.describe('provider onboarding flag', () => {
     await context.close();
   });
 
+  test('an admin can work the queue from the back office, not just the callable', async ({ browser }) => {
+    // The panel used to hide its buttons behind `role === 'superadmin'`, so an admin saw the
+    // pending list and a note telling them they were not allowed to act on it — the callable
+    // accepting their call was no help when the UI offered no way to make it.
+    const context = await personaContext(browser);
+    const page = await context.newPage();
+    await loginWithEmail(page, DEMO_ADMIN.email, DEMO_ADMIN.password);
+    await page.goto('/admin/providers');
+
+    await expect(page.getByRole('heading', { name: /domande in attesa/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^verifica$/i }).first()).toBeVisible();
+    await expect(page.getByText(/solo un superadmin/i)).toHaveCount(0);
+
+    // And the flag's own switch is on this page, since /admin/settings is superadmin-only.
+    await expect(page.getByRole('button', { name: /approvazione automatica/i })).toBeVisible();
+
+    await context.close();
+  });
+
   test('an admin can then approve the queued applicant', async ({ browser }) => {
     const pending = await waitFor(
       async () => {

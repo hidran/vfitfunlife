@@ -66,6 +66,7 @@ export const esMessages: Messages = {
   'admin.applications.empty': 'No hay solicitudes pendientes.',
   'admin.applications.verify': 'Verificar',
   'admin.applications.reject': 'Rechazar',
+  'admin.applications.adminOnly': 'Solo un administrador puede verificar o rechazar las solicitudes.',
   'admin.applications.superadminOnly': 'Solo un superadmin puede verificar o rechazar solicitudes.',
   'admin.applications.error': 'No se pudo guardar la decisión. Inténtalo de nuevo.',
 

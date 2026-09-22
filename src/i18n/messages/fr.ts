@@ -66,6 +66,7 @@ export const frMessages: Messages = {
   'admin.applications.empty': 'Aucune candidature en attente.',
   'admin.applications.verify': 'Vérifier',
   'admin.applications.reject': 'Rejeter',
+  'admin.applications.adminOnly': 'Seul un administrateur peut vérifier ou refuser les demandes.',
   'admin.applications.superadminOnly': 'Seul un superadmin peut vérifier ou refuser les candidatures.',
   'admin.applications.error': 'Impossible d\'enregistrer la décision. Réessayez.',
 

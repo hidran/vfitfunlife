@@ -64,6 +64,7 @@ export const itMessages = {
   'admin.applications.empty': 'Nessuna domanda in attesa.',
   'admin.applications.verify': 'Verifica',
   'admin.applications.reject': 'Rifiuta',
+  'admin.applications.adminOnly': 'Solo un amministratore può verificare o rifiutare le domande.',
   'admin.applications.superadminOnly': 'Solo un superadmin può verificare o rifiutare le domande.',
   'admin.applications.error': 'Impossibile salvare la decisione. Riprova.',
 

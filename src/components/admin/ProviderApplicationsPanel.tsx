@@ -12,8 +12,9 @@ import { useServiceCategoryMap } from '@/hooks/useServiceCategories';
 
 export function ProviderApplicationsPanel() {
   const { t } = useI18n();
-  // Verification is a delicate operation: superadmin only, enforced by the callable too.
-  const isSuperadmin = useAuthStore((s) => s.user?.role === 'superadmin');
+  // Verification is admin work, and decideProviderApplication enforces the same server-side.
+  // It was superadmin-only, which meant every signup waited on one of two accounts.
+  const isAdmin = useAuthStore((s) => s.user?.role === 'admin' || s.user?.role === 'superadmin');
   const categoryMap = useServiceCategoryMap();
   const [apps, setApps] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,8 +56,8 @@ export function ProviderApplicationsPanel() {
         <span className="text-sm text-content-muted">({apps.length})</span>
       </div>
 
-      {!isSuperadmin && apps.length > 0 && (
-        <p className="mb-3 text-sm text-content-muted">{t('admin.applications.superadminOnly')}</p>
+      {!isAdmin && apps.length > 0 && (
+        <p className="mb-3 text-sm text-content-muted">{t('admin.applications.adminOnly')}</p>
       )}
 
       {loading ? (
@@ -74,7 +75,7 @@ export function ProviderApplicationsPanel() {
                   <p className="text-sm text-[#EF4444]">{t('admin.applications.error')}</p>
                 )}
               </div>
-              {isSuperadmin && (
+              {isAdmin && (
                 <div className="flex gap-2">
                   <Button size="sm" disabled={busyId === a.id} onClick={() => decide(a.id, 'verified')}>
                     <CheckCircle className="w-4 h-4 mr-1" /> {t('admin.applications.verify')}

@@ -66,6 +66,7 @@ export const enMessages: Messages = {
   'admin.applications.empty': 'No pending applications.',
   'admin.applications.verify': 'Verify',
   'admin.applications.reject': 'Reject',
+  'admin.applications.adminOnly': 'Only an admin can verify or reject applications.',
   'admin.applications.superadminOnly': 'Only a superadmin can verify or reject applications.',
   'admin.applications.error': 'Could not save the decision. Try again.',
 

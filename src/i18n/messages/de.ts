@@ -66,6 +66,7 @@ export const deMessages: Messages = {
   'admin.applications.empty': 'Keine ausstehenden Bewerbungen.',
   'admin.applications.verify': 'Verifizieren',
   'admin.applications.reject': 'Ablehnen',
+  'admin.applications.adminOnly': 'Nur ein Administrator kann Anfragen verifizieren oder ablehnen.',
   'admin.applications.superadminOnly': 'Nur ein Superadmin kann Bewerbungen prüfen oder ablehnen.',
   'admin.applications.error': 'Die Entscheidung konnte nicht gespeichert werden. Bitte erneut versuchen.',
 

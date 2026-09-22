@@ -12,6 +12,7 @@ import {
   ProviderApplicationsPanel,
   ProviderTypeBadge,
 } from "@/components/admin";
+import { ProviderOnboardingSettings } from "@/components/admin/settings/ProviderOnboardingSettings";
 import { Button } from "@/components/ui/button";
 import { AdminProvider, ProviderFilters } from "@/types/admin";
 import { Column } from "@/components/admin/DataTable";
@@ -260,6 +261,10 @@ export function ProvidersListView() {
       )}
 
       {/* Pending provider self-registration applications */}
+      {/* The switch that decides whether that queue receives anything at all. It lives
+          here, not in /admin/settings: that page is superadmin-only, and provider
+          onboarding is admin work. */}
+      <ProviderOnboardingSettings />
       <ProviderApplicationsPanel />
 
       {/* Filters */}
