@@ -54,6 +54,8 @@ import {
 } from "@/lib/bookingStatus";
 
 const PROVIDER_COLLECTION = "providers";
+/** The provider catalogue. `providers` is a leftover name that holds no documents. */
+const INSTRUCTORS_COLLECTION = "instructors";
 const BOOKINGS_COLLECTION = "bookings";
 const CLIENTS_COLLECTION = "clients";
 const EARNINGS_COLLECTION = "earnings";
@@ -78,11 +80,16 @@ async function getCurrentProviderId(): Promise<string> {
 // Dashboard Stats
 export async function getProviderDashboardStats(): Promise<DashboardStats> {
   const providerId = await getCurrentProviderId();
-  
-  // Get stats from provider document
-  const providerRef = doc(db, PROVIDER_COLLECTION, providerId);
+
+  // `instructors`, not PROVIDER_COLLECTION. The provider catalogue is `instructors`;
+  // `providers` has never held a document in either project, so this read always missed and
+  // the early return below handed every provider a dashboard of zeros — the queries further
+  // down never ran at all. The remaining PROVIDER_COLLECTION paths in this file
+  // (blocked_times, notifications) point at the same empty collection and want the same
+  // treatment, but moving where they read and write is a data question, not a counter fix.
+  const providerRef = doc(db, INSTRUCTORS_COLLECTION, providerId);
   const providerSnap = await getDoc(providerRef);
-  
+
   if (!providerSnap.exists()) {
     // Return default stats if provider document doesn't exist
     return {
@@ -190,7 +197,14 @@ export async function getProviderDashboardStats(): Promise<DashboardStats> {
   const completionRate = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   // Get average rating
-  const averageRating = data.rating || 0;
+  // Instructor documents carry the rating in more than one place depending on when they were
+  // written: `ratingAvg` on the seeded ones, `providerProfile.rating` on those created by an
+  // application. `rating` is the shape the old `providers` document used.
+  const averageRating =
+    (data.rating as number | undefined) ??
+    (data.ratingAvg as number | undefined) ??
+    ((data.providerProfile as { rating?: number } | undefined)?.rating) ??
+    0;
 
   // Generate chart data (last 30 days)
   const chartData = generateChartData(recentBookingsSnap);
