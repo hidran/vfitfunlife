@@ -20,6 +20,21 @@ import { postAuthRoute } from '@/lib/auth/postAuthRoute';
 
 type LoginMethod = 'phone' | 'email' | null;
 
+function toE164PhoneNumber(countryCode: string, phoneNumber: string): string {
+  const digits = phoneNumber.replace(/\D/g, '');
+  const countryDigits = countryCode.replace(/\D/g, '');
+
+  if (digits.startsWith('00') && digits.length > 2) {
+    return `+${digits.slice(2)}`;
+  }
+
+  if (countryDigits && digits.startsWith(countryDigits) && digits.length > countryDigits.length) {
+    return `+${digits}`;
+  }
+
+  return `${countryCode}${digits}`;
+}
+
 function AuthFrame({ children }: { children: ReactNode }) {
   return (
     <div className="relative min-h-screen overflow-hidden bg-background-dark">
@@ -121,7 +136,7 @@ export default function LoginPage() {
       return;
     }
 
-    const fullPhoneNumber = `${countryCode}${phoneNumber}`;
+    const fullPhoneNumber = toE164PhoneNumber(countryCode, phoneNumber);
     const success = await sendPhoneOtp(fullPhoneNumber);
 
     if (success) {
@@ -133,7 +148,7 @@ export default function LoginPage() {
     if (countdown > 0) return;
 
     clearError();
-    const fullPhoneNumber = `${countryCode}${phoneNumber}`;
+    const fullPhoneNumber = toE164PhoneNumber(countryCode, phoneNumber);
     const success = await sendPhoneOtp(fullPhoneNumber);
 
     if (success) {
@@ -170,7 +185,7 @@ export default function LoginPage() {
   };
 
   // Show loading while initializing or during auth operations
-  if (!isInitialized || (isLoading && !isOtpSent && loginMethod !== 'email')) {
+  if (!isInitialized || (isLoading && !isOtpSent && loginMethod === null)) {
     return (
       <AuthFrame>
         <div className="min-h-screen flex items-center justify-center">
