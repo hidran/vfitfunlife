@@ -14,23 +14,41 @@ vi.mock('next/navigation', () => ({
 const mockRegisterWithEmail = vi.fn();
 const mockClearError = vi.fn();
 const mockSubmitProviderApplication = vi.fn();
+const mockCompleteRegistration = vi.fn();
+const mockRefreshUserProfile = vi.fn();
+
+type MockFirebaseUser = {
+  uid: string;
+  email: string | null;
+};
+
+type MockAuthState = {
+  firebaseUser: MockFirebaseUser | null;
+  user: { providerStatus?: string; role?: string } | null;
+  refreshUserProfile: typeof mockRefreshUserProfile;
+  registerWithEmail: typeof mockRegisterWithEmail;
+  clearError: typeof mockClearError;
+  error: string | null;
+  isLoading: boolean;
+};
+
+let mockAuthState: MockAuthState;
 
 vi.mock('@/stores/authStore', () => {
   const useAuthStore = (selector?: (state: unknown) => unknown) => {
-    const state = {
-      firebaseUser: null,
-      refreshUserProfile: vi.fn(),
-      registerWithEmail: mockRegisterWithEmail,
-      clearError: mockClearError,
-      error: null,
-      isLoading: false,
-    };
-    return selector ? selector(state) : state;
+    return selector ? selector(mockAuthState) : mockAuthState;
   };
   // The page reads the freshly-created user imperatively after registerWithEmail.
-  useAuthStore.getState = () => ({ firebaseUser: { uid: 'new-uid' }, error: null });
+  useAuthStore.getState = () => ({
+    ...mockAuthState,
+    firebaseUser: mockAuthState.firebaseUser ?? { uid: 'new-uid', email: 'new@example.com' },
+  });
   return { useAuthStore };
 });
+
+vi.mock('@/lib/firebase/auth', () => ({
+  completeRegistration: (...args: unknown[]) => mockCompleteRegistration(...args),
+}));
 
 vi.mock('@/lib/firebase/providerApplication', () => ({
   submitProviderApplication: (...args: unknown[]) => mockSubmitProviderApplication(...args),
@@ -39,6 +57,15 @@ vi.mock('@/lib/firebase/providerApplication', () => ({
 describe('RegisterPage Email Registration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAuthState = {
+      firebaseUser: null,
+      user: null,
+      refreshUserProfile: mockRefreshUserProfile,
+      registerWithEmail: mockRegisterWithEmail,
+      clearError: mockClearError,
+      error: null,
+      isLoading: false,
+    };
   });
 
   it('renders registration method selection when no firebaseUser', () => {
@@ -195,6 +222,41 @@ describe('RegisterPage Email Registration', () => {
       // passing one would suggest a client can apply on someone else's behalf.
       expect(mockSubmitProviderApplication).toHaveBeenCalledWith({
         fullName: 'Professional User',
+        categoryIds: ['personal_training'],
+      });
+    });
+  });
+
+  it('lets an authenticated phone or social user opt in as a provider during profile completion', async () => {
+    mockAuthState.firebaseUser = { uid: 'phone-or-social-uid', email: null };
+    mockCompleteRegistration.mockResolvedValueOnce(undefined);
+    mockSubmitProviderApplication.mockResolvedValueOnce(undefined);
+    mockRefreshUserProfile.mockResolvedValueOnce(undefined);
+
+    render(<RegisterPage />);
+
+    expect(screen.getByText('Completa il profilo')).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /professionista/i })).not.toBeChecked();
+
+    fireEvent.change(screen.getByPlaceholderText('Mario Rossi'), {
+      target: { value: 'Provider User' },
+    });
+    fireEvent.click(screen.getByRole('checkbox', { name: /professionista/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Personal Training/i }));
+    fireEvent.click(screen.getByLabelText(/Termini/i));
+    fireEvent.click(screen.getByRole('button', { name: /Completa registrazione/i }));
+
+    await waitFor(() => {
+      expect(mockCompleteRegistration).toHaveBeenCalledWith(
+        'phone-or-social-uid',
+        expect.objectContaining({
+          fullName: 'Provider User',
+          preferredSection: 'fit',
+          preferredLanguage: 'it',
+        })
+      );
+      expect(mockSubmitProviderApplication).toHaveBeenCalledWith({
+        fullName: 'Provider User',
         categoryIds: ['personal_training'],
       });
     });

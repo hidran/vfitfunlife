@@ -15,7 +15,6 @@ import {
   registerWithEmail,
   signInWithEmail,
   resetPassword,
-  initializeUserProfile,
   sendVerificationEmail,
   syncEmailVerification,
 } from '@/lib/firebase/auth';
@@ -257,21 +256,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       let userData = await getUserData(uid);
       console.log('[Auth] User data from Firestore:', userData ? 'found' : 'not found');
 
-      // If no user data, try to initialize profile (for existing Auth users without Firestore docs)
-      if (!userData) {
-        try {
-          console.log('[Auth] No user document found, initializing profile...');
-          const initResult = await initializeUserProfile();
-          console.log('[Auth] Profile init result:', initResult);
-          if (initResult.success) {
-            // Retry loading user data
-            userData = await getUserData(uid);
-            console.log('[Auth] User data after init:', userData ? 'found' : 'not found');
-          }
-        } catch (initError) {
-          console.error('[Auth] Failed to initialize profile:', initError);
-        }
-      }
+      // No user document means the Auth account still needs the registration form. Do not
+      // auto-create a blank profile here: that skips the provider opt-in/category step for
+      // phone and social signups.
 
       // A freshly-written profile (just-registered user) may not be readable
       // immediately. Retry with short backoff, re-reading each time, so we

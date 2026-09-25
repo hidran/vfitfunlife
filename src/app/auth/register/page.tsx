@@ -35,9 +35,9 @@ export default function RegisterPage() {
   const [registrationMethod, setRegistrationMethod] = useState<RegistrationMethod>(
     firebaseUser ? 'social' : null
   );
-  
+
   // Form fields
-  const [fullName, setFullName] = useState('');
+  const [fullName, setFullName] = useState(firebaseUser?.displayName || '');
   const [email, setEmail] = useState(firebaseUser?.email || '');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');

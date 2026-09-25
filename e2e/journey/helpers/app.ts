@@ -171,6 +171,7 @@ export async function registerWithPhone(
     email?: string;
     dateOfBirth?: string;
     interest?: string;
+    providerCategories?: string[];
     readCode: (e164: string) => Promise<string>;
   }
 ): Promise<void> {
@@ -205,10 +206,14 @@ export async function registerWithPhone(
   // straight to /home; when there is no profile it asks the user to finish signing up on
   // "Completa il profilo". Both are legitimate, so wait for either rather than assuming.
   const completion = page.getByRole('button', { name: /completa registrazione/i });
-  await Promise.race([
-    completion.waitFor({ state: 'visible' }).catch(() => undefined),
-    page.waitForURL(/\/home|\/profile/, { timeout: 30_000 }).catch(() => undefined),
-  ]);
+  if (opts.providerCategories?.length) {
+    await completion.waitFor({ state: 'visible', timeout: 30_000 });
+  } else {
+    await Promise.race([
+      completion.waitFor({ state: 'visible' }).catch(() => undefined),
+      page.waitForURL(/\/home|\/profile/, { timeout: 30_000 }).catch(() => undefined),
+    ]);
+  }
 
   if (await completion.isVisible().catch(() => false)) {
     // These inputs carry no ids, unlike the email form.
@@ -216,6 +221,13 @@ export async function registerWithPhone(
     if (opts.email) await page.locator('input[type=email]').fill(opts.email);
     if (opts.dateOfBirth) await page.locator('input[type=date]').fill(opts.dateOfBirth);
     if (opts.interest) await page.getByRole('button', { name: opts.interest, exact: true }).click();
+    if (opts.providerCategories?.length) {
+      await page.getByText(/offrire servizi come professionista/i).click({ force: true });
+      await page.getByText(/seleziona uno o più servizi che offri/i).waitFor();
+      for (const category of opts.providerCategories) {
+        await page.getByRole('button', { name: category, exact: true }).click();
+      }
+    }
     await checkHiddenBox(page, '#terms');
     await completion.click();
   }

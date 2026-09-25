@@ -240,19 +240,9 @@ export async function isProfileComplete(userId: string): Promise<boolean> {
     const userDoc = await getDoc(doc(db, "users", userId));
 
     if (!userDoc.exists()) {
-      // Try to initialize profile for existing Auth users
-      try {
-        console.log('[Auth] Profile not found, attempting to initialize...');
-        await initializeUserProfile();
-        // Re-check after initialization
-        const newDoc = await getDoc(doc(db, "users", userId));
-        if (newDoc.exists()) {
-          const data = newDoc.data();
-          return Boolean(data.fullName && data.fullName.trim().length > 0);
-        }
-      } catch (initError) {
-        console.error('[Auth] Failed to auto-initialize profile:', initError);
-      }
+      // A Firebase Auth account without a Firestore profile must complete registration.
+      // Auto-initializing here would skip the provider opt-in/category picker on phone and
+      // social signups.
       return false;
     }
 
@@ -307,6 +297,7 @@ export async function completeRegistration(
 ): Promise<void> {
   const userRef = doc(db, "users", userId);
   const userDoc = await getDoc(userRef);
+  const authPhone = auth.currentUser?.uid === userId ? auth.currentUser.phoneNumber : null;
 
   if (!userDoc.exists()) {
     // New user, create document with all required fields to satisfy isValidUserCreate
@@ -314,6 +305,7 @@ export async function completeRegistration(
       uid: userId,
       fullName: data.fullName,
       email: data.email || null,
+      phone: authPhone || null,
       dateOfBirth: data.dateOfBirth || null,
       preferredSection: data.preferredSection || "fit",
       role: "customer",

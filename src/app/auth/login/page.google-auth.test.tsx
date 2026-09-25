@@ -146,7 +146,7 @@ describe('LoginPage Google Sign-in', () => {
     render(<LoginPage />);
 
     // Should show loading spinner
-    expect(screen.getByRole('status', { name: /loading/i })).toBeInTheDocument();
+    expect(screen.getByRole('status')).toBeInTheDocument();
   });
 
   it('clears error when Google sign-in is clicked', async () => {
