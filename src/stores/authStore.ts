@@ -82,6 +82,30 @@ let lastProcessedUrl: string | null = null;
 // so a sign-in the server refuses to verify isn't re-synced on every profile load.
 const verificationAutoSynced = new Set<string>();
 
+function phoneAuthErrorKey(error: unknown, fallback: string): string {
+  const code = typeof error === 'object' && error !== null && 'code' in error
+    ? (error as { code?: unknown }).code
+    : null;
+
+  switch (code) {
+    case 'auth/invalid-phone-number':
+      return 'auth.login.phone.error.invalidPhone';
+    case 'auth/captcha-check-failed':
+      return 'auth.login.phone.error.captchaFailed';
+    case 'auth/too-many-requests':
+      return 'auth.login.phone.error.tooManyRequests';
+    case 'auth/code-expired':
+    case 'auth/invalid-verification-id':
+    case 'auth/session-expired':
+      return 'auth.login.phone.error.expiredCode';
+    case 'auth/invalid-verification-code':
+    case 'auth/missing-verification-code':
+      return 'auth.login.phone.error.invalidCode';
+    default:
+      return fallback;
+  }
+}
+
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   // Initial state
@@ -429,7 +453,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error: any) {
       console.error('Send OTP error:', error);
       set({
-        error: error.message || 'Failed to send verification code',
+        error: phoneAuthErrorKey(error, 'auth.login.phone.error.sendCode'),
         isLoading: false,
         isOtpSent: false
       });
@@ -457,7 +481,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error: any) {
       console.error('Verify OTP error:', error);
       set({
-        error: error.message || 'Invalid verification code',
+        error: phoneAuthErrorKey(error, 'auth.login.phone.error.generic'),
         isLoading: false
       });
     }

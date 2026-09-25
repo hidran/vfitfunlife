@@ -17,6 +17,7 @@ import { isNativePlatform } from '@/lib/capacitor';
 import { useI18n } from '@/hooks/useI18n';
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import { postAuthRoute } from '@/lib/auth/postAuthRoute';
+import type { MessageKey } from '@/i18n/messages';
 
 type LoginMethod = 'phone' | 'email' | null;
 
@@ -77,6 +78,9 @@ export default function LoginPage() {
   const [countdown, setCountdown] = useState(0);
   const [recaptchaInitialized, setRecaptchaInitialized] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const displayError = error?.startsWith('auth.login.')
+    ? t(error as MessageKey)
+    : error;
 
   // Initialize reCAPTCHA only when phone method is selected (web only — native
   // phone auth uses the Capacitor plugin's native verification, no reCAPTCHA).
@@ -227,9 +231,9 @@ export default function LoginPage() {
           </p>
 
           {/* Error Message */}
-          {error && (
+          {displayError && (
             <div className="w-full max-w-md mb-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
-              <p className="text-red-400 text-sm text-center">{error}</p>
+              <p className="text-red-400 text-sm text-center">{displayError}</p>
             </div>
           )}
 
@@ -351,9 +355,9 @@ export default function LoginPage() {
           </p>
 
           {/* Error Message */}
-          {error && (
+          {displayError && (
             <div className="w-full max-w-md mb-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
-              <p className="text-red-400 text-sm text-center">{error}</p>
+              <p className="text-red-400 text-sm text-center">{displayError}</p>
             </div>
           )}
 
@@ -491,9 +495,9 @@ export default function LoginPage() {
               </div>
 
               {/* Error Message */}
-              {error && (
+              {displayError && (
                 <div className="mb-4 rounded-xl border border-red-500/25 bg-red-500/10 p-4">
-                  <p className="text-sm text-red-400 text-center">{error}</p>
+                  <p className="text-sm text-red-400 text-center">{displayError}</p>
                 </div>
               )}
 

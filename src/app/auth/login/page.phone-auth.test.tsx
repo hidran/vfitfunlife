@@ -89,4 +89,17 @@ describe('LoginPage phone authentication', () => {
     expect(screen.getByPlaceholderText('Numero di telefono')).toBeInTheDocument();
     expect(document.getElementById('recaptcha-container')).toBeInTheDocument();
   });
+
+  it('translates an invalid OTP error key on the phone verification form', () => {
+    mockAuthState.isOtpSent = true;
+    mockAuthState.phoneNumber = '+393755805819';
+    mockAuthState.error = 'auth.login.phone.error.invalidCode';
+
+    render(<LoginPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Telefono/i }));
+
+    expect(screen.getByText('Il codice non è valido. Riprova.')).toBeInTheDocument();
+    expect(screen.queryByText('auth.login.phone.error.invalidCode')).not.toBeInTheDocument();
+  });
 });
