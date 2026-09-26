@@ -1292,6 +1292,7 @@ export const itMessages = {
   'settings.appearance': 'Aspetto',
   'settings.theme.light': 'Chiaro',
   'settings.theme.dark': 'Scuro',
+  'settings.theme.system': 'Sistema',
   'profile.menu.helpCenter': 'Centro assistenza',
   'profile.menu.rateApp': "Valuta l'app",
   'profile.menu.subtitle.personalData': 'Gestisci i tuoi dati',

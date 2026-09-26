@@ -1,3 +1,5 @@
+'use client';
+
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -22,84 +24,20 @@ import {
   UserRound,
   WalletCards,
 } from 'lucide-react';
+import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { useI18n } from '@/hooks/useI18n';
+import { landingCopy } from '@/i18n/landing';
 
-const worlds = [
-  {
-    name: 'VFit',
-    label: 'Training and gym',
-    text: 'Gyms, classes, personal trainers and home workouts for people who want to train in the place that fits their day.',
-    href: '/fit/classes',
-    icon: Dumbbell,
-    color: 'from-[#00C9FF] to-[#0066FF]',
-    surface: 'bg-[#EAF8FF]',
-    textColor: 'text-[#0056D6]',
-    items: ['Palestre', 'Corsi', 'A domicilio', 'Virtual'],
-  },
-  {
-    name: 'VFun',
-    label: 'Events and social',
-    text: 'Events, parties, VR experiences and social moments built around movement, discovery and shared energy.',
-    href: '/fun/events',
-    icon: Music2,
-    color: 'from-[#B461FF] to-[#FF00E5]',
-    surface: 'bg-[#F8ECFF]',
-    textColor: 'text-[#8A22D5]',
-    items: ['Eventi', 'Party', 'VR', 'Streaming'],
-  },
-  {
-    name: 'VLife',
-    label: 'Wellness and care',
-    text: 'Spa, aesthetics, massage and mental wellness services for recovery, beauty and everyday wellbeing.',
-    href: '/life/home-services',
-    icon: HeartPulse,
-    color: 'from-[#00E676] to-[#FFD600]',
-    surface: 'bg-[#ECFFF4]',
-    textColor: 'text-[#047D43]',
-    items: ['Wellness', 'Estetica', 'Massaggi', 'Mental coach'],
-  },
-];
+const worldMeta = {
+  VFit: { href: '/fit/classes', icon: Dumbbell, color: 'from-[#00C9FF] to-[#0066FF]', surface: 'bg-[#EAF8FF]', textColor: 'text-[#0056D6]' },
+  VFun: { href: '/fun/events', icon: Music2, color: 'from-[#B461FF] to-[#FF00E5]', surface: 'bg-[#F8ECFF]', textColor: 'text-[#8A22D5]' },
+  VLife: { href: '/life/home-services', icon: HeartPulse, color: 'from-[#00E676] to-[#FFD600]', surface: 'bg-[#ECFFF4]', textColor: 'text-[#047D43]' },
+} as const;
 
-const customerSteps = [
-  {
-    icon: Search,
-    title: 'Discover nearby services',
-    text: 'Search by category, price, availability, rating and distance, then compare verified profiles.',
-  },
-  {
-    icon: CalendarCheck,
-    title: 'Book with context',
-    text: 'Choose a service, date, time and location type, then review notes, policies and the final price.',
-  },
-  {
-    icon: Bell,
-    title: 'Stay on track',
-    text: 'Get confirmations, reminders and review prompts across the same account you use for Fit, Fun and Life.',
-  },
-];
-
-const providerSteps = [
-  {
-    icon: SlidersHorizontal,
-    title: 'Apply with your services',
-    text: 'Choose service categories, set availability and submit for verification before your profile goes live.',
-  },
-  {
-    icon: ShieldCheck,
-    title: 'Build trust',
-    text: 'Add bio, certifications, languages, gallery, service radius and pricing that customers can understand quickly.',
-  },
-  {
-    icon: WalletCards,
-    title: 'Run the calendar',
-    text: 'Receive bookings, message customers, manage schedule and track payments from the provider workspace.',
-  },
-];
-
-const stats = [
-  { value: '3', label: 'connected verticals' },
-  { value: '1', label: 'account for customers and providers' },
-  { value: '+39', label: 'built around the Italian pilot' },
-];
+const stepIcons = [Search, CalendarCheck, Bell];
+const providerIcons = [SlidersHorizontal, ShieldCheck, WalletCards];
+const featureIcons = [MapPin, MessageCircle, Star, WalletCards];
 
 function BrandMark({ compact = false, idSuffix }: { compact?: boolean; idSuffix: string }) {
   const gradientId = `vfit-logo-${idSuffix}`;
@@ -147,47 +85,55 @@ function BrandMark({ compact = false, idSuffix }: { compact?: boolean; idSuffix:
 }
 
 export default function LandingPage() {
+  const { locale } = useI18n();
+  const copy = landingCopy[locale];
+  const worlds = copy.worlds.map((world) => ({ ...world, ...worldMeta[world.name] }));
+  const customerSteps = copy.customerSteps.map((step, index) => ({ ...step, icon: stepIcons[index] }));
+  const providerSteps = copy.providerSteps.map((step, index) => ({ ...step, icon: providerIcons[index] }));
+  const stats = ['3', '1', '+39'].map((value, index) => ({ value, label: copy.stats[index] }));
+
   return (
-    <main className="min-h-screen bg-[#F8FAFC] text-[#111827]">
-      <header className="sticky top-0 z-40 border-b border-[#E5E7EB] bg-white/95 backdrop-blur-md">
+    <main className="landing-page min-h-screen bg-[#F8FAFC] text-[#111827]">
+      <header className="landing-light-surface sticky top-0 z-40 border-b border-[#E5E7EB] bg-white/95 backdrop-blur-md">
         <nav className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <Link href="/" aria-label="Vfitfunlife home">
+          <Link href="/" aria-label={copy.homeLabel}>
             <BrandMark compact idSuffix="nav" />
           </Link>
 
           <div className="flex items-center gap-2">
+            <LanguageSwitcher variant="menu" />
+            <ThemeToggle compact />
             <Link
               href="/auth/login"
               className="inline-flex h-10 items-center gap-2 px-3 text-sm font-semibold text-[#475569] transition hover:text-[#111827]"
             >
               <LogIn className="h-4 w-4" />
-              Log in
+              {copy.login}
             </Link>
             <Link
               href="/auth/register"
               className="inline-flex h-10 items-center gap-2 rounded-md bg-[#111827] px-4 text-sm font-semibold text-white transition hover:bg-[#1F2937]"
             >
               <UserPlus className="h-4 w-4" />
-              Sign up
+              {copy.signUp}
             </Link>
           </div>
         </nav>
       </header>
 
-      <section className="relative overflow-hidden bg-white">
+      <section className="landing-light-surface relative overflow-hidden bg-white">
         <div className="mx-auto grid min-h-[calc(100svh-4rem)] w-full max-w-7xl items-center gap-12 px-4 py-12 sm:px-6 lg:grid-cols-[0.94fr_1.06fr] lg:px-8">
           <div className="max-w-3xl">
             <div className="mb-7">
               <BrandMark idSuffix="hero" />
-              <p className="mt-3 text-sm font-bold text-[#697386]">#DOitDIFFERENTLY</p>
+              <p className="mt-3 text-sm font-bold text-[#697386]">{copy.tagline}</p>
             </div>
 
             <h1 className="max-w-3xl font-display text-5xl font-black leading-[0.98] text-[#111827] sm:text-6xl lg:text-7xl">
-              Connect, train, transform
+              {copy.heroTitle}
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-[#475569] sm:text-xl">
-              One mobile-first marketplace where customers book fitness, events and wellness,
-              while providers turn their skills, calendar and service area into real appointments.
+              {copy.heroText}
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -196,14 +142,14 @@ export default function LandingPage() {
                 className="inline-flex min-h-14 items-center justify-center gap-3 rounded-md bg-[#111827] px-6 text-base font-bold text-white transition hover:bg-[#1F2937]"
               >
                 <UserRound className="h-5 w-5" />
-                Register as a customer
+                {copy.registerCustomer}
               </Link>
               <Link
                 href="/auth/register?as=provider"
                 className="inline-flex min-h-14 items-center justify-center gap-3 rounded-md border border-[#CBD5E1] bg-white px-6 text-base font-bold text-[#111827] transition hover:border-[#94A3B8]"
               >
                 <BriefcaseBusiness className="h-5 w-5" />
-                Register as a provider
+                {copy.registerProvider}
               </Link>
             </div>
 
@@ -251,15 +197,14 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="border-y border-[#E5E7EB] bg-[#F8FAFC] px-4 py-14 sm:px-6 lg:px-8">
+      <section className="landing-light-surface border-y border-[#E5E7EB] bg-[#F8FAFC] px-4 py-14 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="max-w-3xl">
             <h2 className="font-display text-3xl font-black text-[#111827] sm:text-4xl">
-              Three ways into the same active life
+              {copy.worldsTitle}
             </h2>
             <p className="mt-4 text-base leading-7 text-[#475569]">
-              The docs describe Vfitfunlife as one codebase and one account across VFit, VFun
-              and VLife. The landing page now shows those verticals as real service paths.
+              {copy.worldsText}
             </p>
           </div>
 
@@ -295,23 +240,22 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="bg-white px-4 py-16 sm:px-6 lg:px-8">
+      <section className="landing-light-surface bg-white px-4 py-16 sm:px-6 lg:px-8">
         <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[0.92fr_1.08fr]">
           <div>
             <div className="inline-flex items-center gap-2 rounded-md bg-[#EAF8FF] px-3 py-2 text-sm font-bold text-[#0056D6]">
               <Sparkles className="h-4 w-4" />
-              Customer journey
+              {copy.customerBadge}
             </div>
-            <h2 className="mt-5 font-display text-3xl font-black text-[#111827] sm:text-4xl">For customers</h2>
+            <h2 className="mt-5 font-display text-3xl font-black text-[#111827] sm:text-4xl">{copy.customerTitle}</h2>
             <p className="mt-4 text-base leading-7 text-[#475569]">
-              Find the right trainer, gym, event, wellness center or home service without jumping
-              between vertical apps. Profiles, pricing, availability and reviews stay in one flow.
+              {copy.customerText}
             </p>
             <Link
               href="/auth/register?as=customer"
               className="mt-6 inline-flex min-h-12 items-center gap-2 rounded-md bg-[#111827] px-5 text-sm font-bold text-white transition hover:bg-[#1F2937]"
             >
-              Start as a customer
+              {copy.customerCta}
               <ChevronRight className="h-4 w-4" />
             </Link>
           </div>
@@ -349,45 +293,37 @@ export default function LandingPage() {
           <div>
             <div className="inline-flex items-center gap-2 rounded-md bg-white/10 px-3 py-2 text-sm font-bold text-[#00E676]">
               <BadgeCheck className="h-4 w-4" />
-              Provider journey
+              {copy.providerBadge}
             </div>
-            <h2 className="mt-5 font-display text-3xl font-black text-white sm:text-4xl">For providers</h2>
+            <h2 className="mt-5 font-display text-3xl font-black text-white sm:text-4xl">{copy.providerTitle}</h2>
             <p className="mt-4 text-base leading-7 text-white/70">
-              Register with email, phone or social login, select the provider option, choose the
-              categories you serve and move into verification, scheduling and bookings.
+              {copy.providerText}
             </p>
             <Link
               href="/auth/register?as=provider"
               className="mt-6 inline-flex min-h-12 items-center gap-2 rounded-md bg-white px-5 text-sm font-bold text-[#111827] transition hover:bg-white/90"
             >
-              Apply as a provider
+              {copy.providerCta}
               <ChevronRight className="h-4 w-4" />
             </Link>
           </div>
         </div>
       </section>
 
-      <section className="bg-white px-4 py-16 sm:px-6 lg:px-8">
+      <section className="landing-light-surface bg-white px-4 py-16 sm:px-6 lg:px-8">
         <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.92fr_1.08fr]">
           <div className="max-w-xl">
             <h2 className="font-display text-3xl font-black text-[#111827] sm:text-4xl">
-              Built for the moments around the booking
+              {copy.aroundTitle}
             </h2>
             <p className="mt-4 text-base leading-7 text-[#475569]">
-              Vfitfunlife is not only a catalog. The product docs cover messages, reminders,
-              payments, reviews, provider profiles, maps and mobile permissions because the real
-              experience starts before the session and continues after it.
+              {copy.aroundText}
             </p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            {[
-              { icon: MapPin, title: 'Nearby discovery', text: 'Map and list views help customers compare what is around them.' },
-              { icon: MessageCircle, title: 'Customer contact', text: 'Profiles include messaging and service context before booking.' },
-              { icon: Star, title: 'Reviews and trust', text: 'Ratings, verification badges and profile details make choices easier.' },
-              { icon: WalletCards, title: 'Payment ready', text: 'Stripe, deposits, promo codes and wallet concepts are already in the flow.' },
-            ].map((item) => {
-              const Icon = item.icon;
+            {copy.features.map((item, index) => {
+              const Icon = featureIcons[index];
               return (
                 <article key={item.title} className="rounded-md border border-[#E5E7EB] bg-[#F8FAFC] p-5">
                   <Icon className="h-5 w-5 text-[#7B61FF]" />
@@ -400,13 +336,12 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="bg-[#F8FAFC] px-4 py-14 sm:px-6 lg:px-8">
-        <div className="mx-auto flex max-w-7xl flex-col gap-6 rounded-md border border-[#E5E7EB] bg-white p-6 sm:p-8 lg:flex-row lg:items-center lg:justify-between">
+      <section className="landing-light-surface bg-[#F8FAFC] px-4 py-14 sm:px-6 lg:px-8">
+        <div className="landing-light-surface mx-auto flex max-w-7xl flex-col gap-6 rounded-md border border-[#E5E7EB] bg-white p-6 sm:p-8 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <BrandMark compact idSuffix="footer" />
             <p className="mt-3 max-w-2xl text-sm leading-6 text-[#475569]">
-              One account for customers and providers across fitness, entertainment, wellness and
-              beauty. Sign up now, or log in from the menu if you are already part of the pilot.
+              {copy.footerText}
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
@@ -415,14 +350,14 @@ export default function LandingPage() {
               className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-[#111827] px-5 text-sm font-bold text-white transition hover:bg-[#1F2937]"
             >
               <UserRound className="h-4 w-4" />
-              Register as a customer
+              {copy.registerCustomer}
             </Link>
             <Link
               href="/auth/register?as=provider"
               className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md border border-[#CBD5E1] px-5 text-sm font-bold text-[#111827] transition hover:border-[#94A3B8]"
             >
               <BriefcaseBusiness className="h-4 w-4" />
-              Register as a provider
+              {copy.registerProvider}
             </Link>
           </div>
         </div>

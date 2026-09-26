@@ -1134,6 +1134,7 @@ export const deMessages: Messages = {
   'settings.appearance': 'Darstellung',
   'settings.theme.light': 'Hell',
   'settings.theme.dark': 'Dunkel',
+  'settings.theme.system': 'System',
   'profile.menu.helpCenter': 'Hilfezentrum',
   'profile.menu.rateApp': 'App bewerten',
   'profile.menu.subtitle.personalData': 'Verwalte deine Daten',

@@ -11,18 +11,18 @@ interface LanguageSwitcherProps {
 }
 
 export function LanguageSwitcher({ variant = 'row', className }: LanguageSwitcherProps) {
-  const { locale, locales, localeLabels } = useI18n();
+  const { locale, locales, localeLabels, t } = useI18n();
   const changeLocale = useChangeLocale();
 
   if (variant === 'menu') {
     return (
       <div className={cn('relative inline-flex items-center', className)}>
-        <Globe className="pointer-events-none absolute left-2 h-4 w-4 text-white/60" />
+        <Globe className="pointer-events-none absolute left-2 h-4 w-4 text-content-muted" />
         <select
-          aria-label="Language"
+          aria-label={t('common.language')}
           value={locale}
           onChange={(e) => changeLocale(e.target.value as typeof locale)}
-          className="appearance-none rounded-lg border border-white/15 bg-white/5 py-2 pl-8 pr-3 text-xs font-semibold uppercase text-white focus:ring-2 focus:ring-section-primary focus:outline-none cursor-pointer"
+          className="appearance-none rounded-lg border border-hairline bg-surface-2 py-2 pl-8 pr-3 text-xs font-semibold uppercase text-content focus:ring-2 focus:ring-section-primary focus:outline-none cursor-pointer"
         >
           {locales.map((l) => (
             <option key={l} value={l} className="text-black">

@@ -1293,6 +1293,7 @@ export const enMessages: Messages = {
   'settings.appearance': 'Appearance',
   'settings.theme.light': 'Light',
   'settings.theme.dark': 'Dark',
+  'settings.theme.system': 'System',
   'profile.menu.helpCenter': 'Help center',
   'profile.menu.rateApp': 'Rate the app',
   'profile.menu.subtitle.personalData': 'Manage your details',

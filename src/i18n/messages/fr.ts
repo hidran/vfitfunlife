@@ -1136,6 +1136,7 @@ export const frMessages: Messages = {
   'settings.appearance': 'Apparence',
   'settings.theme.light': 'Clair',
   'settings.theme.dark': 'Sombre',
+  'settings.theme.system': 'Système',
   'profile.menu.helpCenter': "Centre d'aide",
   'profile.menu.rateApp': "Noter l'application",
   'profile.menu.subtitle.personalData': 'Gérer vos informations',

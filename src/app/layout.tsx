@@ -47,7 +47,7 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "(function(){try{var t=localStorage.getItem('vfit.theme');document.documentElement.dataset.theme=(t==='light'||t==='dark')?t:'dark';}catch(e){document.documentElement.dataset.theme='dark';}})();",
+              "(function(){try{var t=localStorage.getItem('vfit.theme');var s=window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';document.documentElement.dataset.theme=(t==='light'||t==='dark')?t:s;}catch(e){document.documentElement.dataset.theme='dark';}})();",
           }}
         />
         <Providers>{children}</Providers>

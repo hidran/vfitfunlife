@@ -4,6 +4,33 @@
    (gold/orange text is unreadable on white). */
 @custom-variant light (&:where([data-theme='light'], [data-theme='light'] *));
 
+/* The public landing keeps its bright editorial palette in light mode and
+   becomes a quiet ink-on-surface layout when the system or user selects dark. */
+[data-theme='dark'] .landing-page .landing-light-surface {
+  background-color: #14171F !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-theme='dark'] .landing-page [class~="text-[#111827]"] {
+  color: #F8FAFC !important;
+}
+
+[data-theme='dark'] .landing-page [class~="text-[#334155]"],
+[data-theme='dark'] .landing-page [class~="text-[#475569]"],
+[data-theme='dark'] .landing-page [class~="text-[#64748B]"],
+[data-theme='dark'] .landing-page [class~="text-[#697386]"] {
+  color: rgba(255, 255, 255, 0.68) !important;
+}
+
+[data-theme='dark'] .landing-page [class~="border-[#E5E7EB]"],
+[data-theme='dark'] .landing-page [class~="border-[#CBD5E1]"] {
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+[data-theme='dark'] .landing-page [class~="bg-[#F8FAFC]"] {
+  background-color: #1E2230 !important;
+}
+
 :root {
   /* Section-based theming - defaults to VFit */
   --section-primary: var(--color-vfit-primary);
