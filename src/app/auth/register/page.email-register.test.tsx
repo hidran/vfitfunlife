@@ -1,13 +1,15 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import RegisterPage from './page';
+import { RegisterClient } from './RegisterClient';
 
 // Mock useRouter
 const mockPush = vi.fn();
+let mockSearchParams = new URLSearchParams();
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
   }),
+  useSearchParams: () => mockSearchParams,
 }));
 
 // Mock useAuthStore
@@ -57,6 +59,7 @@ vi.mock('@/lib/firebase/providerApplication', () => ({
 describe('RegisterPage Email Registration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSearchParams = new URLSearchParams();
     mockAuthState = {
       firebaseUser: null,
       user: null,
@@ -69,7 +72,7 @@ describe('RegisterPage Email Registration', () => {
   });
 
   it('renders registration method selection when no firebaseUser', () => {
-    render(<RegisterPage />);
+    render(<RegisterClient />);
 
     expect(screen.getByText('Crea un account')).toBeInTheDocument();
     expect(screen.getByText('Email e Password')).toBeInTheDocument();
@@ -78,7 +81,7 @@ describe('RegisterPage Email Registration', () => {
   });
 
   it('navigates to email registration form when Email option is clicked', () => {
-    render(<RegisterPage />);
+    render(<RegisterClient />);
 
     fireEvent.click(screen.getByText('Email e Password'));
 
@@ -90,8 +93,18 @@ describe('RegisterPage Email Registration', () => {
     expect(screen.getByRole('checkbox', { name: /professionista/i })).not.toBeChecked();
   });
 
+  it('opens the email form with provider opt-in enabled from the provider CTA', () => {
+    mockSearchParams = new URLSearchParams('as=provider');
+
+    render(<RegisterClient />);
+
+    expect(screen.getByText('Crea il tuo account')).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /professionista/i })).toBeChecked();
+    expect(screen.getByText('Seleziona uno o più servizi che offri')).toBeInTheDocument();
+  });
+
   it('shows error when passwords do not match', async () => {
-    render(<RegisterPage />);
+    render(<RegisterClient />);
 
     // Navigate to email registration
     fireEvent.click(screen.getByText('Email e Password'));
@@ -126,7 +139,7 @@ describe('RegisterPage Email Registration', () => {
   it('calls registerWithEmail when form is valid', async () => {
     mockRegisterWithEmail.mockResolvedValueOnce(undefined);
 
-    render(<RegisterPage />);
+    render(<RegisterClient />);
 
     // Navigate to email registration
     fireEvent.click(screen.getByText('Email e Password'));
@@ -168,7 +181,7 @@ describe('RegisterPage Email Registration', () => {
   });
 
   it('requires a category when professional opt-in is selected', async () => {
-    render(<RegisterPage />);
+    render(<RegisterClient />);
 
     fireEvent.click(screen.getByText('Email e Password'));
     fireEvent.change(screen.getByLabelText(/Nome completo/i), {
@@ -197,7 +210,7 @@ describe('RegisterPage Email Registration', () => {
     mockRegisterWithEmail.mockResolvedValueOnce(undefined);
     mockSubmitProviderApplication.mockResolvedValueOnce(undefined);
 
-    render(<RegisterPage />);
+    render(<RegisterClient />);
 
     fireEvent.click(screen.getByText('Email e Password'));
     fireEvent.change(screen.getByLabelText(/Nome completo/i), {
@@ -233,7 +246,7 @@ describe('RegisterPage Email Registration', () => {
     mockSubmitProviderApplication.mockResolvedValueOnce(undefined);
     mockRefreshUserProfile.mockResolvedValueOnce(undefined);
 
-    render(<RegisterPage />);
+    render(<RegisterClient />);
 
     expect(screen.getByText('Completa il profilo')).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: /professionista/i })).not.toBeChecked();
@@ -263,7 +276,7 @@ describe('RegisterPage Email Registration', () => {
   });
 
   it('requires all mandatory fields', async () => {
-    render(<RegisterPage />);
+    render(<RegisterClient />);
 
     // Navigate to email registration
     fireEvent.click(screen.getByText('Email e Password'));
@@ -282,7 +295,7 @@ describe('RegisterPage Email Registration', () => {
   });
 
   it('requires terms acceptance', async () => {
-    render(<RegisterPage />);
+    render(<RegisterClient />);
 
     // Navigate to email registration
     fireEvent.click(screen.getByText('Email e Password'));
@@ -312,7 +325,7 @@ describe('RegisterPage Email Registration', () => {
   });
 
   it('allows selecting preferred section', () => {
-    render(<RegisterPage />);
+    render(<RegisterClient />);
 
     // Navigate to email registration
     fireEvent.click(screen.getByText('Email e Password'));
@@ -328,7 +341,7 @@ describe('RegisterPage Email Registration', () => {
   });
 
   it('shows password strength hint', () => {
-    render(<RegisterPage />);
+    render(<RegisterClient />);
 
     // Navigate to email registration
     fireEvent.click(screen.getByText('Email e Password'));
@@ -337,7 +350,7 @@ describe('RegisterPage Email Registration', () => {
   });
 
   it('toggles password visibility', () => {
-    render(<RegisterPage />);
+    render(<RegisterClient />);
 
     // Navigate to email registration
     fireEvent.click(screen.getByText('Email e Password'));
