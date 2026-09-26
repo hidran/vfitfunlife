@@ -2004,6 +2004,7 @@ export const deMessages: Messages = {
   'provider.optIn.toggle': 'Ich möchte auch Dienstleistungen als Fachkraft anbieten',
   'provider.optIn.pickType': 'Welche Art von Dienstleistung bieten Sie an?',
   'provider.optIn.pickServices': 'Wähle eine oder mehrere Leistungen, die du anbietest',
+  'provider.optIn.selectedCount': '{{count}} Services ausgewählt',
   'provider.optIn.errorNoCategory': 'Bitte wählen Sie die Art der Dienstleistung, die Sie anbieten.',
   'provider.card.cta.title': 'Werden Sie Fachkraft',
   'provider.card.cta.subtitle': 'Bieten Sie Ihre Dienste auf der Plattform an.',

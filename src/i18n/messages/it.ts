@@ -2021,6 +2021,7 @@ export const itMessages = {
   'provider.optIn.toggle': 'Voglio anche offrire servizi come professionista',
   'provider.optIn.pickType': 'Che tipo di servizio offri?',
   'provider.optIn.pickServices': 'Seleziona uno o più servizi che offri',
+  'provider.optIn.selectedCount': '{{count}} servizi selezionati',
   'provider.optIn.errorNoCategory': 'Seleziona il tipo di servizio che offri.',
   'provider.card.cta.title': 'Diventa un professionista',
   'provider.card.cta.subtitle': 'Offri i tuoi servizi sulla piattaforma.',

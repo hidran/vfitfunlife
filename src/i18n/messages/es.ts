@@ -1997,6 +1997,7 @@ export const esMessages: Messages = {
   'provider.optIn.toggle': 'También quiero ofrecer servicios como profesional',
   'provider.optIn.pickType': '¿Qué tipo de servicio ofreces?',
   'provider.optIn.pickServices': 'Selecciona uno o más servicios que ofreces',
+  'provider.optIn.selectedCount': '{{count}} servicios seleccionados',
   'provider.optIn.errorNoCategory': 'Selecciona el tipo de servicio que ofreces.',
   'provider.card.cta.title': 'Conviértete en profesional',
   'provider.card.cta.subtitle': 'Ofrece tus servicios en la plataforma.',

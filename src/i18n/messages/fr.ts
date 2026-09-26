@@ -2006,6 +2006,7 @@ export const frMessages: Messages = {
   'provider.optIn.toggle': 'Je souhaite aussi proposer des services en tant que professionnel',
   'provider.optIn.pickType': 'Quel type de service proposez-vous ?',
   'provider.optIn.pickServices': 'Sélectionnez un ou plusieurs services que vous proposez',
+  'provider.optIn.selectedCount': '{{count}} services sélectionnés',
   'provider.optIn.errorNoCategory': 'Veuillez sélectionner le type de service que vous proposez.',
   'provider.card.cta.title': 'Devenez professionnel',
   'provider.card.cta.subtitle': 'Proposez vos services sur la plateforme.',

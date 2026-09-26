@@ -2023,6 +2023,7 @@ export const enMessages: Messages = {
   'provider.optIn.toggle': 'I also want to offer services as a professional',
   'provider.optIn.pickType': 'What type of service do you offer?',
   'provider.optIn.pickServices': 'Select one or more services you offer',
+  'provider.optIn.selectedCount': '{{count}} services selected',
   'provider.optIn.errorNoCategory': 'Please select the type of service you offer.',
   'provider.card.cta.title': 'Become a professional',
   'provider.card.cta.subtitle': 'Offer your services on the platform.',

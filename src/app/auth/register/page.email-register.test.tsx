@@ -56,6 +56,19 @@ vi.mock('@/lib/firebase/providerApplication', () => ({
   submitProviderApplication: (...args: unknown[]) => mockSubmitProviderApplication(...args),
 }));
 
+vi.mock('@/hooks/useServiceCategories', () => ({
+  useServiceCategoryGroups: () => [
+    {
+      group: { id: 'strength_conditioning', name: 'Forza e Condizionamento', icon: '💪' },
+      leaves: [{ id: 'personal_training', name: 'Personal Training', icon: '💪' }],
+    },
+    {
+      group: { id: 'cardio_endurance', name: 'Cardio e Resistenza', icon: '🏃' },
+      leaves: [{ id: 'swimming', name: 'Nuoto', icon: '🏊' }],
+    },
+  ],
+}));
+
 describe('RegisterPage Email Registration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -101,6 +114,26 @@ describe('RegisterPage Email Registration', () => {
     expect(screen.getByText('Crea il tuo account')).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: /professionista/i })).toBeChecked();
     expect(screen.getByText('Seleziona uno o più servizi che offri')).toBeInTheDocument();
+  });
+
+  it('keeps provider categories compact by showing one category group at a time', async () => {
+    mockSearchParams = new URLSearchParams('as=provider');
+
+    render(<RegisterClient />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: /Forza e Condizionamento/i })).toHaveAttribute('aria-expanded', 'true');
+      expect(screen.getByRole('tab', { name: /Cardio e Resistenza/i })).toHaveAttribute('aria-expanded', 'false');
+    });
+    expect(screen.getByRole('button', { name: /Personal Training/i })).toBeVisible();
+    expect(screen.queryByRole('button', { name: /Nuoto/i })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: /Cardio e Resistenza/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Nuoto/i })).toBeVisible();
+      expect(screen.queryByRole('button', { name: /Personal Training/i })).not.toBeInTheDocument();
+    });
   });
 
   it('shows error when passwords do not match', async () => {
