@@ -16,10 +16,20 @@ import { cn } from '@/lib/utils';
 import { isNativePlatform } from '@/lib/capacitor';
 import { useI18n } from '@/hooks/useI18n';
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { postAuthRoute } from '@/lib/auth/postAuthRoute';
 import type { MessageKey } from '@/i18n/messages';
 
 type LoginMethod = 'phone' | 'email' | null;
+
+function AuthControls() {
+  return (
+    <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
+      <LanguageSwitcher variant="menu" />
+      <ThemeToggle compact />
+    </div>
+  );
+}
 
 function toE164PhoneNumber(countryCode: string, phoneNumber: string): string {
   const digits = phoneNumber.replace(/\D/g, '');
@@ -38,11 +48,11 @@ function toE164PhoneNumber(countryCode: string, phoneNumber: string): string {
 
 function AuthFrame({ children }: { children: ReactNode }) {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-background-dark">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop')] bg-cover bg-center opacity-25 mix-blend-overlay" />
-        <div className="absolute inset-0 bg-gradient-to-b from-background-dark/80 via-background-dark/90 to-background-dark" />
-        <div className="absolute -top-24 left-1/2 h-72 w-[120%] -translate-x-1/2 rounded-full bg-vlife-primary/20 blur-3xl" />
+    <div className="auth-page auth-surface relative min-h-screen overflow-hidden">
+      <div className="auth-backdrop pointer-events-none absolute inset-0">
+        <div className="auth-backdrop-image absolute inset-0 bg-[url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop')] bg-cover bg-center opacity-25 mix-blend-overlay" />
+        <div className="auth-backdrop-gradient absolute inset-0 bg-gradient-to-b from-background-dark/80 via-background-dark/90 to-background-dark" />
+        <div className="auth-backdrop-glow absolute -top-24 left-1/2 h-72 w-[120%] -translate-x-1/2 rounded-full bg-vlife-primary/20 blur-3xl" />
       </div>
       <div className="relative z-10">{children}</div>
     </div>
@@ -215,7 +225,7 @@ export default function LoginPage() {
     return (
       <AuthFrame>
         <div className="relative min-h-screen flex flex-col">
-          <LanguageSwitcher variant="menu" className="absolute right-4 top-4 z-10" />
+          <AuthControls />
         {/* Logo Section */}
         <div className="flex-1 flex flex-col items-center justify-center px-6 pt-12 pb-8">
           <div className="w-24 h-24 mb-6 relative">
@@ -242,6 +252,7 @@ export default function LoginPage() {
             <button
               onClick={() => setLoginMethod('phone')}
               className={cn(
+                'auth-option',
                 'w-full flex items-center gap-4 p-4 rounded-2xl border transition-all',
                 'border-hairline bg-surface-2 hover:bg-surface-2 hover:border-vlife-primary/30'
               )}
@@ -258,6 +269,7 @@ export default function LoginPage() {
             <button
               onClick={() => setLoginMethod('email')}
               className={cn(
+                'auth-option',
                 'w-full flex items-center gap-4 p-4 rounded-2xl border transition-all',
                 'border-hairline bg-surface-2 hover:bg-surface-2 hover:border-vlife-primary/30'
               )}
@@ -278,7 +290,7 @@ export default function LoginPage() {
               <Button
                 type="button"
                 variant="outline"
-                className="w-full bg-surface-2 border-hairline hover:bg-surface-2 text-content"
+                className="auth-control w-full bg-surface-2 border-hairline hover:bg-surface-2 text-content"
                 onClick={handleGoogleLogin}
                 disabled={isLoading}
               >
@@ -289,7 +301,7 @@ export default function LoginPage() {
               <Button
                 type="button"
                 variant="outline"
-                className="w-full bg-surface-2 border-hairline hover:bg-surface-2 text-content"
+                className="auth-control w-full bg-surface-2 border-hairline hover:bg-surface-2 text-content"
                 onClick={handleAppleLogin}
                 disabled={isLoading}
               >
@@ -332,7 +344,7 @@ export default function LoginPage() {
     return (
       <AuthFrame>
         <div className="relative min-h-screen flex flex-col">
-          <LanguageSwitcher variant="menu" className="absolute right-4 top-4 z-10" />
+          <AuthControls />
         {/* Header */}
         <div className="px-6 pt-6">
           <button
@@ -458,7 +470,7 @@ export default function LoginPage() {
     return (
       <AuthFrame>
         <div className="relative min-h-screen flex flex-col">
-          <LanguageSwitcher variant="menu" className="absolute right-4 top-4 z-10" />
+          <AuthControls />
           {/* Header */}
           <div className="px-6 pt-6">
             <button

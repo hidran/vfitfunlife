@@ -13,6 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { submitProviderApplication } from '@/lib/firebase/providerApplication';
 import { ProviderOptInField } from '@/components/auth/ProviderOptInField';
 import { validatePasswordStrength } from '@/lib/auth/passwordPolicy';
@@ -26,6 +27,15 @@ const SECTIONS = [
 ];
 
 type RegistrationMethod = 'social' | 'email' | null;
+
+function AuthControls() {
+  return (
+    <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
+      <LanguageSwitcher variant="menu" />
+      <ThemeToggle compact />
+    </div>
+  );
+}
 
 export function RegisterClient() {
   const router = useRouter();
@@ -172,8 +182,8 @@ export function RegisterClient() {
   // Method Selection Screen
   if (!registrationMethod && !firebaseUser) {
     return (
-      <div className="relative min-h-screen flex flex-col bg-gradient-to-br from-background-dark via-background-dark to-primary-dark/20">
-        <LanguageSwitcher variant="menu" className="absolute right-4 top-4 z-10" />
+      <div className="auth-page auth-surface relative min-h-screen flex flex-col bg-gradient-to-br from-background-dark via-background-dark to-primary-dark/20">
+        <AuthControls />
         {/* Header */}
         <div className="px-6 pt-12 pb-6">
           <button
@@ -195,7 +205,7 @@ export function RegisterClient() {
             <button
               onClick={() => setRegistrationMethod('email')}
               className={cn(
-                'w-full flex items-center gap-4 p-5 rounded-2xl border transition-all',
+                'auth-option w-full flex items-center gap-4 p-5 rounded-2xl border transition-all',
                 'border-hairline bg-surface-2 hover:bg-surface-2 hover:border-white/20'
               )}
             >
@@ -211,7 +221,7 @@ export function RegisterClient() {
             <button
               onClick={() => router.push('/auth/login')}
               className={cn(
-                'w-full flex items-center gap-4 p-5 rounded-2xl border transition-all',
+                'auth-option w-full flex items-center gap-4 p-5 rounded-2xl border transition-all',
                 'border-hairline bg-surface-2 hover:bg-surface-2 hover:border-white/20'
               )}
             >
@@ -232,7 +242,7 @@ export function RegisterClient() {
             <button
               onClick={() => router.push('/auth/login')}
               className={cn(
-                'w-full flex items-center gap-4 p-5 rounded-2xl border transition-all',
+                'auth-option w-full flex items-center gap-4 p-5 rounded-2xl border transition-all',
                 'border-hairline bg-surface-2 hover:bg-surface-2 hover:border-white/20'
               )}
             >
@@ -250,7 +260,7 @@ export function RegisterClient() {
             <button
               onClick={() => router.push('/auth/login')}
               className={cn(
-                'w-full flex items-center gap-4 p-5 rounded-2xl border transition-all',
+                'auth-option w-full flex items-center gap-4 p-5 rounded-2xl border transition-all',
                 'border-hairline bg-surface-2 hover:bg-surface-2 hover:border-white/20'
               )}
             >
@@ -282,8 +292,8 @@ export function RegisterClient() {
   // Email Registration Form
   if (registrationMethod === 'email' || !firebaseUser) {
     return (
-      <div className="relative min-h-screen flex flex-col bg-gradient-to-br from-background-dark via-background-dark to-primary-dark/20">
-        <LanguageSwitcher variant="menu" className="absolute right-4 top-4 z-10" />
+      <div className="auth-page auth-surface relative min-h-screen flex flex-col bg-gradient-to-br from-background-dark via-background-dark to-primary-dark/20">
+        <AuthControls />
         {/* Header */}
         <div className="px-6 pt-8 pb-6">
           <button
@@ -360,7 +370,7 @@ export function RegisterClient() {
                   placeholder={t('auth.register.placeholder.fullName')}
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="pl-10"
+                  className="auth-input pl-10"
                   required
                   disabled={isLoading}
                 />
@@ -380,7 +390,7 @@ export function RegisterClient() {
                   placeholder={t('auth.common.emailPlaceholder')}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10"
+                  className="auth-input pl-10"
                   required
                   disabled={isLoading}
                 />
@@ -400,7 +410,7 @@ export function RegisterClient() {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 pr-20"
+                  className="auth-input pl-10 pr-20"
                   required
                   minLength={12}
                   disabled={isLoading}
@@ -429,7 +439,7 @@ export function RegisterClient() {
                   placeholder="••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="pl-10"
+                  className="auth-input pl-10"
                   required
                   minLength={6}
                   disabled={isLoading}
@@ -449,7 +459,7 @@ export function RegisterClient() {
                   type="date"
                   value={dateOfBirth}
                   onChange={(e) => setDateOfBirth(e.target.value)}
-                  className="pl-10"
+                  className="auth-input pl-10"
                   disabled={isLoading}
                 />
               </div>
@@ -535,8 +545,8 @@ export function RegisterClient() {
 
   // Social Registration Form (existing firebaseUser)
   return (
-    <div className="relative min-h-screen flex flex-col bg-gradient-to-br from-background-dark via-background-dark to-primary-dark/20">
-      <LanguageSwitcher variant="menu" className="absolute right-4 top-4 z-10" />
+    <div className="auth-page auth-surface relative min-h-screen flex flex-col bg-gradient-to-br from-background-dark via-background-dark to-primary-dark/20">
+      <AuthControls />
       {/* Header */}
       <div className="px-6 pt-12 pb-6">
         <h1 className="text-3xl font-bold text-content mb-2">{t('auth.register.socialForm.title')}</h1>
@@ -577,7 +587,7 @@ export function RegisterClient() {
                 placeholder={t('auth.register.placeholder.fullName')}
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="pl-10"
+                className="auth-input pl-10"
                 required
                 disabled={isLoading}
               />
@@ -609,7 +619,7 @@ export function RegisterClient() {
                 type="date"
                 value={dateOfBirth}
                 onChange={(e) => setDateOfBirth(e.target.value)}
-                className="pl-10"
+              className="auth-input pl-10"
                 disabled={isLoading}
               />
             </div>
