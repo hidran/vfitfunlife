@@ -31,6 +31,21 @@
   background-color: #1E2230 !important;
 }
 
+[data-theme='dark'] .landing-page .landing-world-card {
+  background-color: #1E2230 !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+[data-theme='dark'] .landing-page .landing-world-tag {
+  background-color: #2A2D3A !important;
+  color: #F8FAFC !important;
+}
+
+[data-theme='dark'] .landing-page .landing-inverse-button {
+  background-color: #F8FAFC !important;
+  color: #111827 !important;
+}
+
 :root {
   /* Section-based theming - defaults to VFit */
   --section-primary: var(--color-vfit-primary);

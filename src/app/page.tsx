@@ -146,7 +146,7 @@ export default function LandingPage() {
               </Link>
               <Link
                 href="/auth/register?as=provider"
-                className="inline-flex min-h-14 items-center justify-center gap-3 rounded-md border border-[#CBD5E1] bg-white px-6 text-base font-bold text-[#111827] transition hover:border-[#94A3B8]"
+                className="landing-inverse-button inline-flex min-h-14 items-center justify-center gap-3 rounded-md border border-[#CBD5E1] bg-white px-6 text-base font-bold text-[#111827] transition hover:border-[#94A3B8]"
               >
                 <BriefcaseBusiness className="h-5 w-5" />
                 {copy.registerProvider}
@@ -215,7 +215,7 @@ export default function LandingPage() {
                 <Link
                   key={world.name}
                   href={world.href}
-                  className={`group rounded-md border border-[#E5E7EB] ${world.surface} p-5 transition hover:-translate-y-0.5 hover:shadow-[0_16px_35px_rgba(15,23,42,0.12)]`}
+                  className={`landing-world-card group rounded-md border border-[#E5E7EB] ${world.surface} p-5 transition hover:-translate-y-0.5 hover:shadow-[0_16px_35px_rgba(15,23,42,0.12)]`}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <span className={`inline-flex h-12 w-12 items-center justify-center rounded-md bg-gradient-to-br ${world.color}`}>
@@ -228,7 +228,7 @@ export default function LandingPage() {
                   <p className="mt-4 text-sm leading-6 text-[#334155]">{world.text}</p>
                   <div className="mt-5 flex flex-wrap gap-2">
                     {world.items.map((item) => (
-                      <span key={item} className="rounded-md bg-white/80 px-3 py-1 text-xs font-bold text-[#334155]">
+                      <span key={item} className="landing-world-tag rounded-md bg-white/80 px-3 py-1 text-xs font-bold text-[#334155]">
                         {item}
                       </span>
                     ))}
@@ -301,7 +301,7 @@ export default function LandingPage() {
             </p>
             <Link
               href="/auth/register?as=provider"
-              className="mt-6 inline-flex min-h-12 items-center gap-2 rounded-md bg-white px-5 text-sm font-bold text-[#111827] transition hover:bg-white/90"
+              className="landing-inverse-button mt-6 inline-flex min-h-12 items-center gap-2 rounded-md bg-white px-5 text-sm font-bold text-[#111827] transition hover:bg-white/90"
             >
               {copy.providerCta}
               <ChevronRight className="h-4 w-4" />
