@@ -8,8 +8,10 @@ import type { User } from '@/types/firebase';
 
 function makeWrapper() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return ({ children }: { children: ReactNode }) =>
-    createElement(QueryClientProvider, { client }, children);
+  function HookWrapper({ children }: { children: ReactNode }) {
+    return createElement(QueryClientProvider, { client }, children);
+  }
+  return HookWrapper;
 }
 
 // Mock the auth store at the module level. The factory captures mockUseAuthStore

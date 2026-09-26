@@ -204,9 +204,10 @@ function AnimatedVLogo() {
         stroke="url(#vGradient)"
         strokeWidth="2"
         strokeOpacity="0.3"
+        style={{ transformOrigin: '60px 60px' }}
         animate={{
           strokeOpacity: [0.2, 0.4, 0.2],
-          r: [55, 57, 55],
+          scale: [1, 1.035, 1],
         }}
         transition={{
           duration: 1.5,

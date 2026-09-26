@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "description": "V Fitness Cloud Functions",
   "scripts": {
+    "clean": "rm -rf lib",
     "lint": "ESLINT_USE_FLAT_CONFIG=false eslint --ext .js,.ts .",
-    "build": "tsc",
+    "build": "npm run clean && tsc",
     "build:watch": "tsc --watch",
     "serve": "npm run build && firebase emulators:start --only functions",
     "shell": "npm run build && firebase functions:shell",

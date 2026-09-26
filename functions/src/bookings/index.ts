@@ -11,6 +11,7 @@ import { dayContextFrom } from "../availability/dayContext";
 import { bookingDayRef, readDayDocs } from "../availability/dayReads";
 import { decideBookingStart, romeDateOf } from "../availability/slots";
 import { validateServiceDuration } from "../availability/validate";
+import { hotCallableOptions } from "../lib/runtimeOptions";
 
 const db = admin.firestore();
 const region = process.env.FIREBASE_REGION || "europe-west1";
@@ -236,7 +237,7 @@ async function calculateBookingFinancials(
  * Customers can create bookings for themselves
  */
 export const createBooking = onCall<BookingData>(
-  { region },
+  hotCallableOptions<BookingData>(),
   async (request: CallableRequest<BookingData>) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Must be authenticated");

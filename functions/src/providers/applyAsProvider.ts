@@ -7,8 +7,7 @@ import {
   ProviderOnboardingSettings,
   mergeProviderOnboarding,
 } from "./onboardingSettings";
-
-const region = process.env.FIREBASE_REGION || "europe-west1";
+import { hotCallableOptions } from "../lib/runtimeOptions";
 
 interface ApplyAsProviderData {
   categoryIds: string[];
@@ -43,7 +42,7 @@ async function readOnboardingSettings(): Promise<ProviderOnboardingSettings> {
  * when the provider has none.
  */
 export const applyAsProvider = onCall<ApplyAsProviderData>(
-  { region },
+  hotCallableOptions<ApplyAsProviderData>(),
   async (req) => {
     const callerUid = req.auth?.uid;
     if (!callerUid) {

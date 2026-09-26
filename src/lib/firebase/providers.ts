@@ -78,6 +78,9 @@ export async function fetchProviders(opts: ProviderListOptions = {}): Promise<Pr
     if (opts.onlyVerified) {
       constraints.push(where('providerProfile.isVerified', '==', true));
     }
+    if (opts.categoryId) {
+      constraints.push(where('categoryIds', 'array-contains', opts.categoryId));
+    }
     if (opts.limit) constraints.push(limitQuery(opts.limit));
     const q: Query | CollectionReference = constraints.length
       ? query(collection(db, 'instructors'), ...constraints)

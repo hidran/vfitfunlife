@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { UserCheck } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useI18n } from "@/hooks/useI18n";
@@ -30,22 +30,7 @@ export function ProviderOnboardingSettings() {
     queryFn: getProviderOnboardingSettings,
   });
 
-  const save = useMutation({
-    mutationFn: setProviderOnboardingSettings,
-    onSuccess: (result) => {
-      queryClient.setQueryData(["provider-onboarding-settings"], {
-        autoApprove: result.autoApprove,
-      });
-    },
-  });
-
-  const [autoApprove, setAutoApprove] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    if (typeof data?.autoApprove === "boolean") setAutoApprove(data.autoApprove);
-  }, [data?.autoApprove]);
-
-  if (isLoading || autoApprove === null) {
+  if (isLoading || typeof data?.autoApprove !== "boolean") {
     return (
       <div className="bg-surface rounded-2xl border border-hairline p-6 lg:col-span-2">
         <p className="text-sm text-content-muted">{t("common.loading")}</p>
@@ -61,7 +46,35 @@ export function ProviderOnboardingSettings() {
     );
   }
 
-  const dirty = autoApprove !== data?.autoApprove;
+  return (
+    <ProviderOnboardingSettingsForm
+      key={String(data.autoApprove)}
+      initialAutoApprove={data.autoApprove}
+      onSaved={(autoApprove) => {
+        queryClient.setQueryData(["provider-onboarding-settings"], { autoApprove });
+      }}
+    />
+  );
+}
+
+function ProviderOnboardingSettingsForm({
+  initialAutoApprove,
+  onSaved,
+}: {
+  initialAutoApprove: boolean;
+  onSaved: (autoApprove: boolean) => void;
+}) {
+  const { t } = useI18n();
+  const [autoApprove, setAutoApprove] = useState(initialAutoApprove);
+
+  const save = useMutation({
+    mutationFn: setProviderOnboardingSettings,
+    onSuccess: (result) => {
+      onSaved(result.autoApprove);
+    },
+  });
+
+  const dirty = autoApprove !== initialAutoApprove;
 
   return (
     <div className="bg-surface rounded-2xl border border-hairline p-6 lg:col-span-2">

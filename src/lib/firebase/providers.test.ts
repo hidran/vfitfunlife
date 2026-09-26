@@ -10,6 +10,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const addDoc = vi.fn(async () => ({ id: 'generated-id' }));
 const updateDoc = vi.fn(async () => undefined);
 const deleteDoc = vi.fn(async () => undefined);
+const getDocs = vi.fn();
+const query = vi.fn((_collection: unknown, ...constraints: unknown[]) => ({ constraints }));
+const where = vi.fn((field: string, op: string, value: unknown) => ({ field, op, value }));
+const limit = vi.fn((value: number) => ({ type: 'limit', value }));
 
 vi.mock('firebase/firestore', () => ({
   // Path builders return the segments so assertions can read the target directly.
@@ -19,16 +23,17 @@ vi.mock('firebase/firestore', () => ({
   updateDoc: (...args: unknown[]) => updateDoc(...(args as [])),
   deleteDoc: (...args: unknown[]) => deleteDoc(...(args as [])),
   getDoc: vi.fn(),
-  getDocs: vi.fn(),
-  query: vi.fn(),
-  where: vi.fn(),
-  limit: vi.fn(),
+  getDocs: (...args: unknown[]) => getDocs(...(args as [])),
+  query: (...args: unknown[]) => query(...(args as [])),
+  where: (...args: unknown[]) => where(...(args as [string, string, unknown])),
+  limit: (...args: unknown[]) => limit(...(args as [number])),
 }));
 
 vi.mock('./config', () => ({ db: {} }));
 
 import {
   createProviderService,
+  fetchProviders,
   updateProviderService,
   deleteProviderService,
 } from './providers';
@@ -37,6 +42,39 @@ beforeEach(() => {
   addDoc.mockClear();
   updateDoc.mockClear();
   deleteDoc.mockClear();
+  getDocs.mockReset();
+  query.mockClear();
+  where.mockClear();
+  limit.mockClear();
+});
+
+describe('fetchProviders', () => {
+  it('pushes taxonomy category filtering into Firestore instead of reading every provider', async () => {
+    getDocs.mockResolvedValueOnce({
+      docs: [
+        {
+          id: 'trainer-1',
+          data: () => ({
+            fullName: 'Trainer',
+            isActive: true,
+            providerProfile: { isVerified: true },
+            categoryIds: ['personal_training'],
+          }),
+        },
+      ],
+    });
+
+    const providers = await fetchProviders({
+      onlyVerified: true,
+      categoryId: 'personal_training',
+      limit: 10,
+    });
+
+    expect(providers.map((provider) => provider.id)).toEqual(['trainer-1']);
+    expect(where).toHaveBeenCalledWith('providerProfile.isVerified', '==', true);
+    expect(where).toHaveBeenCalledWith('categoryIds', 'array-contains', 'personal_training');
+    expect(limit).toHaveBeenCalledWith(10);
+  });
 });
 
 describe('createProviderService', () => {

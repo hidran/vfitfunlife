@@ -1,17 +1,17 @@
-import { initializeApp, getApps, FirebaseApp } from "firebase/app";
-import { getAuth, Auth, connectAuthEmulator } from "firebase/auth";
+import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
+import { getAuth, type Auth, connectAuthEmulator } from "firebase/auth";
 import {
   getFirestore,
   initializeFirestore,
   persistentLocalCache,
   persistentMultipleTabManager,
   connectFirestoreEmulator,
-  Firestore,
+  type Firestore,
 } from "firebase/firestore";
-import { getStorage, FirebaseStorage, connectStorageEmulator } from "firebase/storage";
-import { getFunctions, Functions, connectFunctionsEmulator } from "firebase/functions";
-import { getAnalytics, Analytics, isSupported } from "firebase/analytics";
-import { getMessaging, Messaging, isSupported as isMessagingSupported } from "firebase/messaging";
+import { getStorage, type FirebaseStorage, connectStorageEmulator } from "firebase/storage";
+import { getFunctions, type Functions, connectFunctionsEmulator } from "firebase/functions";
+import type { Analytics } from "firebase/analytics";
+import type { Messaging } from "firebase/messaging";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -77,6 +77,7 @@ function initializeFirebase() {
 // Initialize analytics (only in browser)
 async function initializeAnalytics(): Promise<Analytics | null> {
   if (typeof window !== "undefined") {
+    const { getAnalytics, isSupported } = await import("firebase/analytics");
     const supported = await isSupported();
     if (supported) {
       analytics = getAnalytics(app);
@@ -89,6 +90,7 @@ async function initializeAnalytics(): Promise<Analytics | null> {
 // Initialize FCM (only in browser)
 async function initializeMessaging(): Promise<Messaging | null> {
   if (typeof window !== "undefined") {
+    const { getMessaging, isSupported: isMessagingSupported } = await import("firebase/messaging");
     const supported = await isMessagingSupported();
     if (supported) {
       messaging = getMessaging(app);

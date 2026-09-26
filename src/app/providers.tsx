@@ -1,6 +1,7 @@
 'use client';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import dynamic from 'next/dynamic';
 import { useState, useEffect, type ReactNode } from 'react';
 import { Toaster } from 'sonner';
 import { SectionProvider } from '@/contexts/SectionContext';
@@ -8,8 +9,15 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { I18nProvider } from '@/contexts/I18nContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { FloatingAssistantButton } from '@/components/assistant/FloatingAssistantButton';
 import { initializeCapacitor } from '@/lib/capacitor';
+
+const FloatingAssistantButton = dynamic(
+  () =>
+    import('@/components/assistant/FloatingAssistantButton').then(
+      (mod) => mod.FloatingAssistantButton
+    ),
+  { ssr: false, loading: () => null }
+);
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(

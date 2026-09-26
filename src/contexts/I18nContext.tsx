@@ -43,6 +43,14 @@ function interpolate(message: string, values?: TranslateValues): string {
   }, message);
 }
 
+function afterCurrentEffect(callback: () => void): void {
+  if (typeof window !== 'undefined' && typeof window.queueMicrotask === 'function') {
+    window.queueMicrotask(callback);
+    return;
+  }
+  setTimeout(callback, 0);
+}
+
 export function I18nProvider({ children }: { children: ReactNode }) {
   // First render MUST match the static prerender, which always uses
   // DEFAULT_LOCALE (window is undefined at build time). Reading localStorage or
@@ -58,11 +66,13 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     if (typeof window === 'undefined') return;
     const stored = window.localStorage.getItem(STORAGE_KEY);
     if (stored && isSupportedLocale(stored)) {
-      if (stored !== DEFAULT_LOCALE) setLocaleState(stored);
+      if (stored !== DEFAULT_LOCALE) afterCurrentEffect(() => setLocaleState(stored));
       return;
     }
     const browser = detectBrowserLocale();
-    if (browser && browser !== DEFAULT_LOCALE) setLocaleState(browser);
+    if (browser && browser !== DEFAULT_LOCALE) {
+      afterCurrentEffect(() => setLocaleState(browser));
+    }
   }, []);
 
   useEffect(() => {

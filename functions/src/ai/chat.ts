@@ -7,8 +7,7 @@ import { createAiTools } from "./tools";
 import { buildSystemPrompt } from "./prompt";
 import { reserveQuota, recordTokens, releaseQuota } from "./quota";
 import { ResultCard, AiStreamChunk } from "./types";
-
-const region = process.env.FIREBASE_REGION || "europe-west1";
+import { hotCallableOptions } from "../lib/runtimeOptions";
 
 interface ChatRequest {
   chatId?: string;
@@ -17,7 +16,7 @@ interface ChatRequest {
 }
 
 export const chatWithAssistant = onCall<ChatRequest>(
-  { region, secrets: AI_SECRETS },
+  hotCallableOptions<ChatRequest>({ secrets: AI_SECRETS }),
   async (request: CallableRequest<ChatRequest>, response?: CallableResponse<AiStreamChunk>) => {
     if (!request.auth) throw new HttpsError("unauthenticated", "Must be authenticated");
     const uid = request.auth.uid;
