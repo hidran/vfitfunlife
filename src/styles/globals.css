@@ -4,6 +4,7 @@
    (gold/orange text is unreadable on white). */
 @custom-variant light (&:where([data-theme='light'], [data-theme='light'] *));
 
+@layer components {
 /* The public landing keeps its bright editorial palette in light mode and
    becomes a quiet ink-on-surface layout when the system or user selects dark. */
 [data-theme='dark'] .landing-page .landing-light-surface {
@@ -44,6 +45,89 @@
 [data-theme='dark'] .landing-page .landing-inverse-button {
   background-color: #F8FAFC !important;
   color: #111827 !important;
+}
+
+/* Landing brand hierarchy: VFit blue for customer actions, VFun violet for
+   provider actions, and VLife green as a supporting wellness highlight. */
+.landing-page .landing-header-cta,
+.landing-page .landing-cta-customer {
+  background-color: #0066FF;
+  box-shadow: 0 10px 24px rgba(0, 102, 255, 0.22);
+}
+
+.landing-page .landing-header-cta:hover,
+.landing-page .landing-cta-customer:hover {
+  background-color: #0052CC;
+  box-shadow: 0 13px 28px rgba(0, 102, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.landing-page .landing-cta-provider {
+  background-color: #8A22D5;
+  border-color: #8A22D5;
+  box-shadow: 0 10px 24px rgba(138, 34, 213, 0.22);
+  color: #FFFFFF;
+}
+
+.landing-page .landing-cta-provider:hover {
+  background-color: #7418B6;
+  border-color: #7418B6;
+  box-shadow: 0 13px 28px rgba(138, 34, 213, 0.3);
+  transform: translateY(-1px);
+}
+
+.landing-page .landing-cta:focus-visible,
+.landing-page .landing-header-cta:focus-visible {
+  outline: 3px solid #00C9FF;
+  outline-offset: 3px;
+}
+
+.landing-page .landing-world-card {
+  border-color: #D6E4F2;
+}
+
+.landing-page .landing-provider-band {
+  background-color: #101A35;
+  border-color: #243862;
+}
+
+.landing-page .landing-provider-band .landing-cta-provider {
+  background-color: #B461FF;
+  border-color: #B461FF;
+  color: #FFFFFF;
+}
+
+.landing-page .landing-provider-band .landing-cta-provider:hover {
+  background-color: #9B3DEB;
+  border-color: #9B3DEB;
+}
+
+[data-theme='dark'] .landing-page .landing-header-cta,
+[data-theme='dark'] .landing-page .landing-cta-customer {
+  background-color: #2D8CFF;
+  box-shadow: 0 10px 24px rgba(45, 140, 255, 0.28);
+}
+
+[data-theme='dark'] .landing-page .landing-header-cta:hover,
+[data-theme='dark'] .landing-page .landing-cta-customer:hover {
+  background-color: #56A3FF;
+}
+
+[data-theme='dark'] .landing-page .landing-cta-provider {
+  background-color: #B461FF;
+  border-color: #B461FF;
+}
+
+[data-theme='dark'] .landing-page .landing-cta-provider:hover {
+  background-color: #C47DFF;
+  border-color: #C47DFF;
+}
+
+[data-theme='dark'] .landing-page .landing-provider-band {
+  background-color: #0D152B;
+  border-color: #243862;
+}
+
 }
 
 :root {

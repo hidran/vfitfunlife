@@ -93,8 +93,8 @@ export default function LandingPage() {
   const stats = ['3', '1', '+39'].map((value, index) => ({ value, label: copy.stats[index] }));
 
   return (
-    <main className="landing-page min-h-screen bg-[#F8FAFC] text-[#111827]">
-      <header className="landing-light-surface sticky top-0 z-40 border-b border-[#E5E7EB] bg-white/95 backdrop-blur-md">
+    <main className="landing-page min-h-screen bg-[#F6FAFF] text-[#111827]">
+      <header className="landing-light-surface sticky top-0 z-40 border-b border-[#DCE8F7] bg-white/95 backdrop-blur-md">
         <nav className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <Link href="/" aria-label={copy.homeLabel}>
             <BrandMark compact idSuffix="nav" />
@@ -112,7 +112,7 @@ export default function LandingPage() {
             </Link>
             <Link
               href="/auth/register"
-              className="inline-flex h-10 items-center gap-2 rounded-md bg-[#111827] px-4 text-sm font-semibold text-white transition hover:bg-[#1F2937]"
+              className="landing-header-cta inline-flex h-10 items-center gap-2 rounded-md px-4 text-sm font-bold text-white transition"
             >
               <UserPlus className="h-4 w-4" />
               {copy.signUp}
@@ -121,7 +121,7 @@ export default function LandingPage() {
         </nav>
       </header>
 
-      <section className="landing-light-surface relative overflow-hidden bg-white">
+      <section className="landing-light-surface relative overflow-hidden border-b border-[#DCE8F7] bg-white">
         <div className="mx-auto grid min-h-[calc(100svh-4rem)] w-full max-w-7xl items-center gap-12 px-4 py-12 sm:px-6 lg:grid-cols-[0.94fr_1.06fr] lg:px-8">
           <div className="max-w-3xl">
             <div className="mb-7">
@@ -139,14 +139,14 @@ export default function LandingPage() {
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
                 href="/auth/register?as=customer"
-                className="inline-flex min-h-14 items-center justify-center gap-3 rounded-md bg-[#111827] px-6 text-base font-bold text-white transition hover:bg-[#1F2937]"
+                className="landing-cta landing-cta-customer inline-flex min-h-14 items-center justify-center gap-3 rounded-md px-6 text-base font-bold text-white transition"
               >
                 <UserRound className="h-5 w-5" />
                 {copy.registerCustomer}
               </Link>
               <Link
                 href="/auth/register?as=provider"
-                className="landing-inverse-button inline-flex min-h-14 items-center justify-center gap-3 rounded-md border border-[#CBD5E1] bg-white px-6 text-base font-bold text-[#111827] transition hover:border-[#94A3B8]"
+                className="landing-cta landing-cta-provider inline-flex min-h-14 items-center justify-center gap-3 rounded-md border px-6 text-base font-bold transition"
               >
                 <BriefcaseBusiness className="h-5 w-5" />
                 {copy.registerProvider}
@@ -197,7 +197,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="landing-light-surface border-y border-[#E5E7EB] bg-[#F8FAFC] px-4 py-14 sm:px-6 lg:px-8">
+      <section className="landing-light-surface border-y border-[#DCE8F7] bg-[#F0F8FF] px-4 py-14 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="max-w-3xl">
             <h2 className="font-display text-3xl font-black text-[#111827] sm:text-4xl">
@@ -215,7 +215,7 @@ export default function LandingPage() {
                 <Link
                   key={world.name}
                   href={world.href}
-                  className={`landing-world-card group rounded-md border border-[#E5E7EB] ${world.surface} p-5 transition hover:-translate-y-0.5 hover:shadow-[0_16px_35px_rgba(15,23,42,0.12)]`}
+                  className={`landing-world-card group rounded-md border ${world.surface} p-5 transition hover:-translate-y-0.5 hover:shadow-[0_16px_35px_rgba(15,23,42,0.12)]`}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <span className={`inline-flex h-12 w-12 items-center justify-center rounded-md bg-gradient-to-br ${world.color}`}>
@@ -240,7 +240,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="landing-light-surface bg-white px-4 py-16 sm:px-6 lg:px-8">
+      <section className="landing-light-surface relative bg-white px-4 py-16 sm:px-6 lg:px-8">
         <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[0.92fr_1.08fr]">
           <div>
             <div className="inline-flex items-center gap-2 rounded-md bg-[#EAF8FF] px-3 py-2 text-sm font-bold text-[#0056D6]">
@@ -253,7 +253,7 @@ export default function LandingPage() {
             </p>
             <Link
               href="/auth/register?as=customer"
-              className="mt-6 inline-flex min-h-12 items-center gap-2 rounded-md bg-[#111827] px-5 text-sm font-bold text-white transition hover:bg-[#1F2937]"
+              className="landing-cta landing-cta-customer mt-6 inline-flex min-h-12 items-center gap-2 rounded-md px-5 text-sm font-bold text-white transition"
             >
               {copy.customerCta}
               <ChevronRight className="h-4 w-4" />
@@ -275,7 +275,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="border-y border-[#E5E7EB] bg-[#111827] px-4 py-16 text-white sm:px-6 lg:px-8">
+      <section className="landing-provider-band border-y px-4 py-16 text-white sm:px-6 lg:px-8">
         <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[1.08fr_0.92fr]">
           <div className="grid gap-4 md:grid-cols-3">
             {providerSteps.map((step) => {
@@ -301,7 +301,7 @@ export default function LandingPage() {
             </p>
             <Link
               href="/auth/register?as=provider"
-              className="landing-inverse-button mt-6 inline-flex min-h-12 items-center gap-2 rounded-md bg-white px-5 text-sm font-bold text-[#111827] transition hover:bg-white/90"
+              className="landing-cta landing-cta-provider mt-6 inline-flex min-h-12 items-center gap-2 rounded-md px-5 text-sm font-bold transition"
             >
               {copy.providerCta}
               <ChevronRight className="h-4 w-4" />
@@ -336,7 +336,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="landing-light-surface bg-[#F8FAFC] px-4 py-14 sm:px-6 lg:px-8">
+      <section className="landing-light-surface bg-[#F0F8FF] px-4 py-14 sm:px-6 lg:px-8">
         <div className="landing-light-surface mx-auto flex max-w-7xl flex-col gap-6 rounded-md border border-[#E5E7EB] bg-white p-6 sm:p-8 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <BrandMark compact idSuffix="footer" />
@@ -347,14 +347,14 @@ export default function LandingPage() {
           <div className="flex flex-col gap-3 sm:flex-row">
             <Link
               href="/auth/register?as=customer"
-              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-[#111827] px-5 text-sm font-bold text-white transition hover:bg-[#1F2937]"
+              className="landing-cta landing-cta-customer inline-flex min-h-12 items-center justify-center gap-2 rounded-md px-5 text-sm font-bold text-white transition"
             >
               <UserRound className="h-4 w-4" />
               {copy.registerCustomer}
             </Link>
             <Link
               href="/auth/register?as=provider"
-              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md border border-[#CBD5E1] px-5 text-sm font-bold text-[#111827] transition hover:border-[#94A3B8]"
+              className="landing-cta landing-cta-provider inline-flex min-h-12 items-center justify-center gap-2 rounded-md border px-5 text-sm font-bold transition"
             >
               <BriefcaseBusiness className="h-4 w-4" />
               {copy.registerProvider}
