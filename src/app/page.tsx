@@ -94,6 +94,25 @@ export default function LandingPage() {
 
   return (
     <main className="landing-page min-h-screen bg-[#F6FAFF] text-[#111827]">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'WebSite',
+            name: 'Vfitfunlife',
+            alternateName: ['VFit', 'VFun', 'VLife'],
+            url: 'https://vfit-funlife.web.app/',
+            description:
+              'A marketplace for fitness, events, wellness and beauty services.',
+            potentialAction: {
+              '@type': 'SearchAction',
+              target: 'https://vfit-funlife.web.app/search?query={search_term_string}',
+              'query-input': 'required name=search_term_string',
+            },
+          }),
+        }}
+      />
       <header className="landing-light-surface sticky top-0 z-40 border-b border-[#DCE8F7] bg-white/95 backdrop-blur-md">
         <nav className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <Link href="/" aria-label={copy.homeLabel}>

@@ -17,8 +17,49 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: 'V Fitness & Wellness',
-  description: 'Your Ultimate Fitness & Wellness Platform - Connect, Train, Transform',
+  metadataBase: new URL('https://vfit-funlife.web.app'),
+  title: {
+    default: 'Vfitfunlife | Fitness, Fun & Life',
+    template: '%s | Vfitfunlife',
+  },
+  description:
+    'Vfitfunlife connects customers with fitness, events, wellness and beauty services across VFit, VFun and VLife.',
+  keywords: [
+    'Vfitfunlife',
+    'VFit',
+    'VFun',
+    'VLife',
+    'fitness services',
+    'wellness services',
+    'events and experiences',
+    'providers and bookings',
+  ],
+  alternates: {
+    canonical: '/',
+    languages: {
+      'it-IT': '/',
+      'en-US': '/',
+      'es-ES': '/',
+      'fr-FR': '/',
+      'de-DE': '/',
+    },
+  },
+  openGraph: {
+    type: 'website',
+    url: '/',
+    siteName: 'Vfitfunlife',
+    title: 'Vfitfunlife | Fitness, Fun & Life',
+    description:
+      'Discover and book fitness, events, wellness and beauty services in one place.',
+    images: [{ url: '/landing/home.png', width: 414, height: 896, alt: 'Vfitfunlife app preview' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Vfitfunlife | Fitness, Fun & Life',
+    description:
+      'Discover and book fitness, events, wellness and beauty services in one place.',
+    images: ['/landing/home.png'],
+  },
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
