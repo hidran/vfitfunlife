@@ -10,6 +10,14 @@ interface LanguageSwitcherProps {
   className?: string;
 }
 
+const localeFlags = {
+  it: '🇮🇹',
+  en: '🇬🇧',
+  es: '🇪🇸',
+  fr: '🇫🇷',
+  de: '🇩🇪',
+} as const;
+
 export function LanguageSwitcher({ variant = 'row', className }: LanguageSwitcherProps) {
   const { locale, locales, localeLabels, t } = useI18n();
   const changeLocale = useChangeLocale();
@@ -26,7 +34,7 @@ export function LanguageSwitcher({ variant = 'row', className }: LanguageSwitche
         >
           {locales.map((l) => (
             <option key={l} value={l} className="text-black">
-              {localeLabels[l]}
+              {localeFlags[l]} {localeLabels[l]}
             </option>
           ))}
         </select>
@@ -48,7 +56,9 @@ export function LanguageSwitcher({ variant = 'row', className }: LanguageSwitche
               : 'border-white/15 bg-white/5 text-text-tertiary'
           )}
         >
-          <Globe className="mr-1 inline-block h-3.5 w-3.5" />
+          <span className="mr-1" aria-hidden="true">
+            {localeFlags[l]}
+          </span>
           {localeLabels[l]}
         </button>
       ))}
