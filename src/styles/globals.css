@@ -463,11 +463,11 @@
   }
 
   [data-theme='light'] .auth-page .auth-provider-toggle {
-    color: #334155;
+    color: #334155 !important;
   }
 
   [data-theme='light'] .auth-page .auth-provider-help {
-    color: #64748B;
+    color: #64748B !important;
   }
 
   [data-theme='light'] .auth-page .auth-terms {
@@ -476,7 +476,7 @@
   }
 
   [data-theme='light'] .auth-page .auth-terms-copy {
-    color: #475569;
+    color: #475569 !important;
   }
 
   /* Section-aware primary color */
