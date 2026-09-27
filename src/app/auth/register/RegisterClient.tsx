@@ -501,14 +501,14 @@ export function RegisterClient() {
             />
 
             {/* Terms & Privacy */}
-            <div className="flex items-start gap-3 p-4 bg-surface-2 rounded-lg">
+            <div className="auth-terms flex items-start gap-3 p-4 bg-surface-2 rounded-lg">
               <Checkbox
                 id="terms"
                 checked={acceptTerms}
                 onChange={(e) => setAcceptTerms(e.target.checked)}
                 disabled={isLoading}
               />
-              <label htmlFor="terms" className="text-sm text-text-secondary leading-relaxed">
+              <label htmlFor="terms" className="auth-terms-copy text-sm text-text-secondary leading-relaxed">
                 {t('auth.register.acceptPrefix')}{' '}
                 <Link href="/terms" className="text-primary hover:underline">
                   {t('auth.common.termsOfService')}
@@ -661,14 +661,14 @@ export function RegisterClient() {
           />
 
           {/* Terms & Privacy */}
-          <div className="flex items-start gap-3 p-4 bg-surface-2 rounded-lg">
+          <div className="auth-terms flex items-start gap-3 p-4 bg-surface-2 rounded-lg">
             <Checkbox
               id="terms"
               checked={acceptTerms}
               onChange={(e) => setAcceptTerms(e.target.checked)}
               disabled={isLoading}
             />
-            <label htmlFor="terms" className="text-sm text-text-secondary leading-relaxed">
+            <label htmlFor="terms" className="auth-terms-copy text-sm text-text-secondary leading-relaxed">
               {t('auth.register.acceptPrefix')}{' '}
               <Link href="/terms" className="text-primary hover:underline">
                 {t('auth.common.termsOfService')}

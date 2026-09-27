@@ -15,7 +15,7 @@ export function ProviderOptInField({ enabled, onToggle, categoryIds, onChangeCat
   const { t } = useI18n();
 
   return (
-    <div className="mt-4 rounded-xl border border-white/10 p-4">
+    <div className="auth-provider-opt-in mt-4 rounded-xl border border-white/10 p-4">
       <label className="flex items-center gap-3 cursor-pointer">
         <input
           type="checkbox"
@@ -23,14 +23,14 @@ export function ProviderOptInField({ enabled, onToggle, categoryIds, onChangeCat
           onChange={(e) => onToggle(e.target.checked)}
           className="w-5 h-5 accent-vfit-primary"
         />
-        <span className="text-sm text-white">
+        <span className="auth-provider-toggle text-sm text-white">
           {t('provider.optIn.toggle')}
         </span>
       </label>
 
       {enabled && (
         <div className="mt-3">
-          <p className="text-sm text-white/60 mb-2">{t('provider.optIn.pickServices')}</p>
+          <p className="auth-provider-help text-sm text-white/60 mb-2">{t('provider.optIn.pickServices')}</p>
           <CategoryLeafPicker value={categoryIds} onChange={onChangeCategoryIds} />
         </div>
       )}
