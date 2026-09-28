@@ -317,6 +317,7 @@ export async function completeRegistration(
         "promotions:read",
       ],
       isActive: true,
+      isSuspended: false, // always present so admin filters see every user (P0-9)
       isVerified: false,
       isVip: false,
       pointsBalance: 100, // Welcome points

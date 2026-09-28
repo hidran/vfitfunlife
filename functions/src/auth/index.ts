@@ -64,6 +64,8 @@ export const initializeUserProfile = onCall(
 
       // Status flags
       isActive: true,
+      // Written explicitly so admin queries can filter on it (P0-9 normalization).
+      isSuspended: false,
       isVerified: false,
       emailVerified,
 

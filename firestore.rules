@@ -117,8 +117,11 @@ service cloud.firestore {
         'pointsBalance', 'walletBalance',
         'preferredLanguage', 'preferredSection', 'notificationsEnabled',
         'fcmTokens', 'referralCode', 'referredBy', 'referralCount',
-        'createdAt', 'updatedAt', 'lastLoginAt', 'createdBy'
-      ]);
+        'createdAt', 'updatedAt', 'lastLoginAt', 'createdBy', 'isSuspended'
+      ]) &&
+      // A self-created profile may carry isSuspended only as false: the field is written on
+      // creation so every user doc has it (P0-9), but suspension itself stays admin-only.
+      request.resource.data.get('isSuspended', false) == false;
     }
 
     /**

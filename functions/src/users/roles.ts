@@ -367,6 +367,7 @@ export const createProviderProfile = onCall<CreateProviderProfileData>(
 
       // Status
       isActive: true,
+      isSuspended: false,
       isVip: false,
       isVerified: false,
 
