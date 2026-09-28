@@ -36,9 +36,14 @@ import { useAuthStore } from '@/stores/authStore';
 import { fetchMyAvailability, saveMyAvailability } from '@/lib/firebase/availability';
 import { savedOverrides, toSettings, toUpdate, type OverrideDoc } from '@/lib/availability/adapter';
 
+/** fetchDashboardStats skips a refetch inside this window (ms) unless forced. */
+const DASHBOARD_STATS_CACHE_MS = 60_000;
+
 interface ProviderState {
   // Data
   dashboardStats: DashboardStats | null;
+  /** When dashboardStats was last fetched successfully (Date.now()), or null if never. */
+  dashboardStatsFetchedAt: number | null;
   bookings: ProviderBooking[];
   schedule: ScheduleEvent[];
   earnings: EarningsData | null;
@@ -67,7 +72,8 @@ interface ProviderState {
   bookingError: string | null;
 
   // Actions - Dashboard
-  fetchDashboardStats: () => Promise<void>;
+  /** `force: true` bypasses the 60s cache (e.g. a manual refresh control). */
+  fetchDashboardStats: (force?: boolean) => Promise<void>;
 
   // Actions - Bookings
   fetchBookings: (filters?: BookingFilters) => Promise<void>;
@@ -114,6 +120,7 @@ interface ProviderState {
 export const useProviderStore = create<ProviderState>((set, get) => ({
   // Initial state
   dashboardStats: null,
+  dashboardStatsFetchedAt: null,
   bookings: [],
   schedule: [],
   earnings: null,
@@ -138,11 +145,25 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
   bookingError: null,
 
   // Dashboard
-  fetchDashboardStats: async () => {
+  fetchDashboardStats: async (force = false) => {
+    // The dashboard mounts fresh on every visit to /provider/dashboard and re-runs this on
+    // every mount; without this the provider doc read plus five booking/client
+    // queries/aggregates fired again each time, even seconds apart. `dashboardStats` already
+    // being set is part of the guard so a failed first fetch (stats still null) always
+    // retries rather than getting stuck behind the cache window.
+    const { dashboardStats, dashboardStatsFetchedAt } = get();
+    if (
+      !force &&
+      dashboardStats &&
+      dashboardStatsFetchedAt !== null &&
+      Date.now() - dashboardStatsFetchedAt < DASHBOARD_STATS_CACHE_MS
+    ) {
+      return;
+    }
     set({ isLoading: true, error: null });
     try {
       const stats = await getProviderDashboardStats();
-      set({ dashboardStats: stats, isLoading: false });
+      set({ dashboardStats: stats, dashboardStatsFetchedAt: Date.now(), isLoading: false });
     } catch (error: any) {
       set({ error: error.message || 'Failed to fetch dashboard stats', isLoading: false });
     }
