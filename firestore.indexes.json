@@ -276,6 +276,36 @@
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
+    },
+    // expireVipSubscriptions (functions/src/scheduled/index.ts): isVip == true AND
+    // vipExpiresAt <= now. Missing since the function shipped — every daily run failed
+    // with FAILED_PRECONDITION (HTTP 500) on both projects.
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isVip", "order": "ASCENDING" },
+        { "fieldPath": "vipExpiresAt", "order": "ASCENDING" }
+      ]
+    },
+    // expirePromotions: isActive == true AND validUntil <= now. Same failure as above.
+    {
+      "collectionGroup": "promotions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isActive", "order": "ASCENDING" },
+        { "fieldPath": "validUntil", "order": "ASCENDING" }
+      ]
+    },
+    // cleanupOldNotifications: one collection-group query over every users/{uid}/notifications
+    // inbox, isRead == true AND createdAt <= 30 days ago, ordered by createdAt.
+    {
+      "collectionGroup": "notifications",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "isRead", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
     }
     // mergeServiceCategories runs a collection-group query on services.categoryId. That
     // needs NO composite entry — Firestore maintains single-field indexes at collection

@@ -5,9 +5,23 @@ import * as admin from "firebase-admin";
 import { subHours, addDays } from "date-fns";
 import { sendPushToUser } from "../notifications";
 import { buildMessage } from "../notifications/bookingMessages";
+import {
+  applyChallengeProgress,
+  isCompletionTransition,
+  isUserInboxNotification,
+  runPaginatedCleanup,
+} from "./maintenance";
 
 const db = admin.firestore();
 const region = process.env.FIREBASE_REGION || "europe-west1";
+
+/**
+ * BulkWriter write promises reject individually; an un-awaited rejection would crash the
+ * instance. Log it instead — the scheduled jobs are all safe to pick up on their next run.
+ */
+function guardWrite(p: Promise<unknown>): void {
+  p.catch((err) => logger.error("Scheduled bulk write failed", err));
+}
 
 interface BookingData {
   userId: string;
@@ -21,21 +35,6 @@ interface BookingData {
   status: string;
   /** Present on trainer sessions; absent on venue bookings. The discriminator throughout. */
   instructorId?: string | null;
-  [key: string]: unknown;
-}
-
-interface UserChallengeData {
-  challengeId: string;
-  currentProgress: number;
-  [key: string]: unknown;
-}
-
-interface ChallengeData {
-  id: string;
-  title: string;
-  challengeType: string;
-  targetValue: number;
-  pointsReward: number;
   [key: string]: unknown;
 }
 
@@ -64,35 +63,53 @@ export const sendBookingReminders = onSchedule(
       .where("scheduledAt", "<=", reminderWindow.end)
       .get();
 
+    // Pushes go out concurrently; each booking's flag is only set once its push succeeded,
+    // and all flag updates are written together at the end.
+    const writer = db.bulkWriter();
+    let sent = 0;
+    const sends: Promise<void>[] = [];
+
     for (const doc of upcomingBookings.docs) {
       const booking = doc.data() as BookingData;
       const scheduledAt = booking.scheduledAt.toDate();
       const hoursUntil = (scheduledAt.getTime() - now.getTime()) / (1000 * 60 * 60);
 
-      // Send 24h reminder
+      let payload: Parameters<typeof sendPushToUser>[1] | null = null;
+      let flag: "reminder24hSent" | "reminder2hSent" | null = null;
+
       if (hoursUntil >= 23 && hoursUntil <= 25 && !booking.reminder24hSent) {
-        await sendPushToUser(booking.userId, {
+        payload = {
           title: "Promemoria prenotazione",
           body: `Ricorda: domani hai ${booking.serviceName} presso ${booking.venueName}`,
           data: { bookingId: doc.id, type: "booking_reminder" },
-        });
-
-        await doc.ref.update({ reminder24hSent: true });
-      }
-
-      // Send 2h reminder
-      if (hoursUntil >= 1.5 && hoursUntil <= 2.5 && !booking.reminder2hSent) {
-        await sendPushToUser(booking.userId, {
+        };
+        flag = "reminder24hSent";
+      } else if (hoursUntil >= 1.5 && hoursUntil <= 2.5 && !booking.reminder2hSent) {
+        payload = {
           title: "Tra poco!",
           body: `${booking.serviceName} inizia tra 2 ore presso ${booking.venueName}`,
           data: { bookingId: doc.id, type: "booking_reminder" },
-        });
-
-        await doc.ref.update({ reminder2hSent: true });
+        };
+        flag = "reminder2hSent";
       }
+      if (!payload || !flag) continue;
+
+      const field = flag;
+      sends.push(
+        sendPushToUser(booking.userId, payload).then(
+          () => {
+            guardWrite(writer.update(doc.ref, { [field]: true }));
+            sent++;
+          },
+          (err) => logger.error(`Booking reminder push failed for ${doc.id}`, err)
+        )
+      );
     }
 
-    logger.info(`Processed ${upcomingBookings.size} bookings for reminders`);
+    await Promise.all(sends);
+    await writer.close();
+
+    logger.info(`Processed ${upcomingBookings.size} bookings for reminders; sent ${sent}`);
   }
 );
 
@@ -186,24 +203,38 @@ export const remindTrainerToComplete = onSchedule(
       .where("completionReminderSentAt", "==", null)
       .get();
 
-    let sent = 0;
-    for (const doc of stale.docs) {
-      const booking = doc.data() as BookingData;
-      if (!booking.instructorId) continue; // venue bookings auto-complete elsewhere
+    // venue bookings auto-complete elsewhere
+    const trainerBookings = stale.docs.filter((d) => (d.data() as BookingData).instructorId);
 
-      const trainerSnap = await db.collection("users").doc(booking.instructorId).get();
-      const locale = trainerSnap.data()?.preferredLanguage;
-      const message = buildMessage("completion_reminder", locale, {
+    // One read per distinct trainer, not per booking.
+    const trainerIds = [...new Set(trainerBookings.map((d) => (d.data() as BookingData).instructorId as string))];
+    const localeByTrainer = new Map<string, string | undefined>();
+    if (trainerIds.length > 0) {
+      const trainerSnaps = await db.getAll(...trainerIds.map((id) => db.collection("users").doc(id)));
+      for (const snap of trainerSnaps) localeByTrainer.set(snap.id, snap.data()?.preferredLanguage);
+    }
+
+    const writer = db.bulkWriter();
+    let sent = 0;
+    await Promise.all(trainerBookings.map(async (doc) => {
+      const booking = doc.data() as BookingData;
+      const instructorId = booking.instructorId as string;
+      const message = buildMessage("completion_reminder", localeByTrainer.get(instructorId), {
         serviceName: booking.serviceName,
       });
 
-      await sendPushToUser(booking.instructorId, {
-        title: message.title,
-        body: message.body,
-        data: { bookingId: doc.id, type: "booking_completion_reminder" },
-      });
+      try {
+        await sendPushToUser(instructorId, {
+          title: message.title,
+          body: message.body,
+          data: { bookingId: doc.id, type: "booking_completion_reminder" },
+        });
+      } catch (err) {
+        logger.error(`Completion reminder push failed for ${doc.id}`, err);
+        return;
+      }
 
-      await db.collection("users").doc(booking.instructorId).collection("notifications").add({
+      guardWrite(writer.create(db.collection("users").doc(instructorId).collection("notifications").doc(), {
         title: message.title,
         body: message.body,
         type: "booking_completion_reminder",
@@ -211,13 +242,13 @@ export const remindTrainerToComplete = onSchedule(
         imageUrl: null,
         isRead: false,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-
-      await doc.ref.update({
+      }));
+      guardWrite(writer.update(doc.ref, {
         completionReminderSentAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
+      }));
       sent++;
-    }
+    }));
+    await writer.close();
 
     logger.info(`Sent ${sent} completion reminders to trainers`);
   }
@@ -278,18 +309,20 @@ export const expireVipSubscriptions = onSchedule(
       .where("vipExpiresAt", "<=", now)
       .get();
 
-    const batch = db.batch();
+    // Needs the users (isVip, vipExpiresAt) composite index in firestore.indexes.json.
+    // BulkWriter rather than one batch: no 500-write ceiling, no sequential awaits.
+    const writer = db.bulkWriter();
 
     for (const doc of expiredVips.docs) {
-      batch.update(doc.ref, {
+      guardWrite(writer.update(doc.ref, {
         isVip: false,
         vipPlanId: null,
         vipExpiresAt: null,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
+      }));
 
       // Send notification
-      await db.collection("users").doc(doc.id).collection("notifications").add({
+      guardWrite(writer.create(db.collection("users").doc(doc.id).collection("notifications").doc(), {
         title: "Abbonamento VIP scaduto",
         body: "Il tuo abbonamento VIP è scaduto. Rinnova per continuare a godere dei vantaggi esclusivi!",
         type: "vip",
@@ -297,10 +330,10 @@ export const expireVipSubscriptions = onSchedule(
         imageUrl: null,
         isRead: false,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
+      }));
     }
 
-    await batch.commit();
+    await writer.close();
     logger.info(`Expired ${expiredVips.size} VIP subscriptions`);
   }
 );
@@ -323,13 +356,12 @@ export const expirePromotions = onSchedule(
       .where("validUntil", "<=", now)
       .get();
 
-    const batch = db.batch();
-
+    // Needs the promotions (isActive, validUntil) composite index in firestore.indexes.json.
+    const writer = db.bulkWriter();
     for (const doc of expiredPromos.docs) {
-      batch.update(doc.ref, { isActive: false });
+      guardWrite(writer.update(doc.ref, { isActive: false }));
     }
-
-    await batch.commit();
+    await writer.close();
     logger.info(`Expired ${expiredPromos.size} promotions`);
   }
 );
@@ -344,47 +376,77 @@ export const expirePromotions = onSchedule(
  */
 
 
+/** Page size and wall-clock budget for cleanupOldNotifications. */
+const CLEANUP_PAGE_SIZE = 500;
+const CLEANUP_TIMEOUT_SECONDS = 540;
+const CLEANUP_BUDGET_MS = 480_000; // leave headroom under the timeout to flush and log
+
 /**
  * Clean up old notifications (runs weekly)
+ *
+ * One collection-group query over every users/{uid}/notifications inbox (read, older than
+ * 30 days), cursor-paginated and deleted through a BulkWriter, until it runs dry or the time
+ * budget is spent — whatever is left is picked up next week. Needs the COLLECTION_GROUP
+ * (isRead, createdAt) index on `notifications` in firestore.indexes.json.
  */
 export const cleanupOldNotifications = onSchedule(
   {
     region,
     schedule: "0 3 * * 0",
     timeZone: "Europe/Rome",
+    timeoutSeconds: CLEANUP_TIMEOUT_SECONDS,
   },
   async (_event: ScheduledEvent) => {
     const thirtyDaysAgo = admin.firestore.Timestamp.fromDate(addDays(new Date(), -30));
+    const baseQuery = db
+      .collectionGroup("notifications")
+      .where("isRead", "==", true)
+      .where("createdAt", "<=", thirtyDaysAgo)
+      .orderBy("createdAt", "asc");
 
-    // Get all users
-    const users = await db.collection("users").get();
+    const writer = db.bulkWriter();
+    let failed = 0;
+    writer.onWriteError((err) => {
+      if (err.failedAttempts < 3) return true;
+      failed++;
+      logger.warn(`Could not delete ${err.documentRef.path}: ${err.message}`);
+      return false;
+    });
 
-    let totalDeleted = 0;
+    type Snap = admin.firestore.QueryDocumentSnapshot;
+    const result = await runPaginatedCleanup<Snap>(
+      {
+        fetchPage: async (cursor, limit) => {
+          const q = cursor ? baseQuery.startAfter(cursor).limit(limit) : baseQuery.limit(limit);
+          return (await q.get()).docs;
+        },
+        isEligible: (doc) => isUserInboxNotification(doc.ref),
+        enqueueDelete: (doc) => {
+          // Rejections are handled (and counted) by onWriteError above.
+          writer.delete(doc.ref).catch(() => undefined);
+        },
+        flush: () => writer.flush(),
+        now: () => Date.now(),
+      },
+      { pageSize: CLEANUP_PAGE_SIZE, deadlineMs: Date.now() + CLEANUP_BUDGET_MS }
+    );
+    await writer.close();
 
-    for (const userDoc of users.docs) {
-      const oldNotifs = await db
-        .collection("users")
-        .doc(userDoc.id)
-        .collection("notifications")
-        .where("isRead", "==", true)
-        .where("createdAt", "<=", thirtyDaysAgo)
-        .limit(100)
-        .get();
-
-      if (!oldNotifs.empty) {
-        const batch = db.batch();
-        oldNotifs.docs.forEach((doc) => batch.delete(doc.ref));
-        await batch.commit();
-        totalDeleted += oldNotifs.size;
-      }
-    }
-
-    logger.info(`Cleaned up ${totalDeleted} old notifications`);
+    logger.info(
+      `Cleaned up ${result.deleted - failed} old notifications over ${result.pages} page(s)` +
+      (failed ? `; ${failed} deletes failed` : "") +
+      (result.exhausted ? "" : "; time budget spent, the rest carries over to next run")
+    );
   }
 );
 
 /**
  * Update challenge progress (triggered by booking completion)
+ *
+ * Fires on every bookings update, so it exits before any read unless this update is the
+ * transition into `completed`. The progress itself is applied in one transaction together
+ * with a per-booking ledger entry (applyChallengeProgress), so a retried delivery neither
+ * double-counts nor re-sends the "challenge completed" push.
  */
 export const updateChallengeProgress = onDocumentUpdated(
   {
@@ -392,94 +454,30 @@ export const updateChallengeProgress = onDocumentUpdated(
     document: "bookings/{bookingId}",
   },
   async (event) => {
-    if (!event.data) {
-      return;
-    }
+    if (!event.data) return;
 
     const before = event.data.before.data() as BookingData | undefined;
     const after = event.data.after.data() as BookingData | undefined;
+    if (!isCompletionTransition(before, after) || !after?.userId) return;
 
-    if (!before || !after) {
+    const userId = after.userId;
+    const result = await applyChallengeProgress(db, {
+      userId,
+      bookingId: event.params.bookingId,
+      eventId: event.id,
+    });
+
+    if (result.alreadyApplied) {
+      logger.info(`Challenge progress for booking ${event.params.bookingId} already applied; skipping`);
       return;
     }
 
-    // Only process when booking becomes completed
-    if (before.status !== "completed" && after.status === "completed") {
-      const userId = after.userId;
-
-      // Get active challenges for user
-      const userChallenges = await db
-        .collection("users")
-        .doc(userId)
-        .collection("userChallenges")
-        .where("status", "==", "in_progress")
-        .get();
-
-      for (const ucDoc of userChallenges.docs) {
-        const userChallenge = ucDoc.data() as UserChallengeData;
-
-        // Get challenge details
-        const challengeDoc = await db
-          .collection("challenges")
-          .doc(userChallenge.challengeId)
-          .get();
-        const challenge = challengeDoc.data() as ChallengeData;
-
-        if (!challenge) continue;
-
-        let newProgress = userChallenge.currentProgress;
-
-        // Update progress based on challenge type
-        switch (challenge.challengeType) {
-        case "total_classes":
-          newProgress += 1;
-          break;
-        case "streak":
-          // Streak logic would need date tracking
-          newProgress = userChallenge.currentProgress + 1;
-          break;
-        }
-
-        // Check if completed
-        if (newProgress >= challenge.targetValue) {
-          // Award points
-          const userRef = db.collection("users").doc(userId);
-          const userDoc = await userRef.get();
-          const userData = userDoc.data();
-
-          await userRef.update({
-            pointsBalance: admin.firestore.FieldValue.increment(challenge.pointsReward),
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-          });
-
-          await db.collection("users").doc(userId).collection("pointsTransactions").add({
-            points: challenge.pointsReward,
-            type: "bonus",
-            source: "challenge",
-            sourceId: challenge.id,
-            description: `Sfida completata: ${challenge.title}`,
-            balanceAfter: (userData?.pointsBalance || 0) + challenge.pointsReward,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          });
-
-          await ucDoc.ref.update({
-            currentProgress: newProgress,
-            status: "completed",
-            completedAt: admin.firestore.FieldValue.serverTimestamp(),
-          });
-
-          // Send notification
-          await sendPushToUser(userId, {
-            title: "Sfida completata!",
-            body: `Hai completato "${challenge.title}" e guadagnato ${challenge.pointsReward} punti!`,
-            data: { challengeId: challenge.id, type: "challenge" },
-          });
-        } else {
-          await ucDoc.ref.update({
-            currentProgress: newProgress,
-          });
-        }
-      }
-    }
+    await Promise.all(result.completed.map((challenge) =>
+      sendPushToUser(userId, {
+        title: "Sfida completata!",
+        body: `Hai completato "${challenge.title}" e guadagnato ${challenge.pointsReward} punti!`,
+        data: { challengeId: challenge.id, type: "challenge" },
+      }).catch((err) => logger.error(`Challenge push failed for ${userId}/${challenge.id}`, err))
+    ));
   }
 );
