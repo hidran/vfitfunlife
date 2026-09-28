@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
-import { db, functions } from '@/lib/firebase/config';
+import { db, getFunctionsInstance } from '@/lib/firebase/config';
 import {
   EntityDetailLayout,
   ConfirmDeleteDialog,
@@ -93,6 +93,7 @@ export function UserDetailView({ userId }: Props) {
     mutate: async ({ reason }) => {
       // Matches the server's own timeoutSeconds: 300 — the default 70s client timeout would
       // otherwise abort (and report failure for) a delete that's still running server-side.
+      const functions = await getFunctionsInstance();
       const fn = httpsCallable(functions, 'adminDeleteUser', { timeout: 300_000 });
       await fn({ uid: userId, reason });
     },

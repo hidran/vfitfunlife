@@ -9,7 +9,7 @@ import {
   type QuerySnapshot, type DocumentData,
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
-import { db, auth, functions } from './config';
+import { db, auth, getFunctionsInstance } from './config';
 import type { Recipe, RecipeParams } from '@/types/recipes';
 
 const RECIPES = 'recipes';
@@ -112,6 +112,7 @@ export async function unshareRecipe(id: string, userId: string): Promise<void> {
 export async function aiGenerateRecipes(
   params: RecipeParams, locale: string,
 ): Promise<{ recipes: Recipe[]; dropped: number }> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<{ params: RecipeParams; locale: string }, { recipes: Recipe[]; dropped: number }>(
     functions, 'generateRecipes',
   );

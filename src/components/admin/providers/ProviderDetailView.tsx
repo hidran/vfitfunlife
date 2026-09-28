@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { doc, getDoc, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
-import { db, functions } from '@/lib/firebase/config';
+import { db, getFunctionsInstance } from '@/lib/firebase/config';
 import {
   EntityDetailLayout,
   ConfirmDeleteDialog,
@@ -127,6 +127,7 @@ export function ProviderDetailView({ providerId }: Props) {
 
   const deleteMut = useEntityMutation<{ reason: string }, void>({
     mutate: async ({ reason }) => {
+      const functions = await getFunctionsInstance();
       const fn = httpsCallable(functions, 'adminDeleteProvider');
       await fn({ providerId, reason });
     },

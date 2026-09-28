@@ -10,7 +10,7 @@
 
 import { useState } from 'react';
 import { httpsCallable } from 'firebase/functions';
-import { functions } from '@/lib/firebase/config';
+import { getFunctionsInstance } from '@/lib/firebase/config';
 import { Button } from '@/components/ui/button';
 
 const SPECIALTIES = [
@@ -47,6 +47,7 @@ export function TrainerLeadForm() {
 
     const form = new FormData(e.currentTarget);
     try {
+      const functions = await getFunctionsInstance();
       const fn = httpsCallable(functions, 'submitTrainerLead');
       await fn({
         fullName: String(form.get('fullName') ?? ''),

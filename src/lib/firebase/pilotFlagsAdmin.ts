@@ -1,5 +1,5 @@
 import { httpsCallable } from 'firebase/functions';
-import { functions } from './config';
+import { getFunctionsInstance } from './config';
 
 /**
  * Superadmin client for the pilot flags. Reads go through the callable, NOT through
@@ -23,6 +23,7 @@ export interface PilotFlagsResult {
 }
 
 export async function getPilotFlagsAdmin(): Promise<PilotFlagsResult> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<void, PilotFlagsResult>(functions, 'getPilotFlagsAdmin');
   const res = await fn();
   return res.data;
@@ -31,6 +32,7 @@ export async function getPilotFlagsAdmin(): Promise<PilotFlagsResult> {
 export async function setPilotFlags(
   updates: Partial<PilotFlagValues>
 ): Promise<PilotFlagsResult> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<Partial<PilotFlagValues>, PilotFlagsResult>(
     functions,
     'setPilotFlags'

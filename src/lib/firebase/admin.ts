@@ -21,7 +21,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
-import { auth, db, functions } from "./config";
+import { auth, db, getFunctionsInstance } from "./config";
 import { cancelBooking as cancelBookingFn, decideProviderApplication } from "./functions";
 import {
   AdminDashboardStats,
@@ -559,6 +559,7 @@ export async function cancelBookingAdmin(bookingId: string, reason: string): Pro
 export async function processRefund(bookingId: string, amount: number): Promise<void> {
   try {
     // This would typically call a Cloud Function to handle Stripe refund
+    const functions = await getFunctionsInstance();
     const processRefundFn = httpsCallable(functions, "processRefund");
     await processRefundFn({ bookingId, amount });
 
@@ -887,6 +888,7 @@ export async function exportData(
 ): Promise<string> {
   try {
     // This would typically call a Cloud Function to generate and return a download URL
+    const functions = await getFunctionsInstance();
     const exportDataFn = httpsCallable(functions, "exportData");
     const result = await exportDataFn({ collection, ...options });
     return (result.data as any).downloadUrl;

@@ -14,7 +14,7 @@ export function useChangeLocale() {
   const { setLocale } = useI18n();
   return useCallback(
     async (locale: AppLocale) => {
-      setLocale(locale);
+      await setLocale(locale);
       const { user, loadUserData } = useAuthStore.getState();
       if (!user?.uid) return;
       try {

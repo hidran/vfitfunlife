@@ -22,8 +22,7 @@ import {
 } from "firebase/auth";
 import { Capacitor } from "@capacitor/core";
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp, arrayUnion, arrayRemove } from "firebase/firestore";
-import { httpsCallable } from "firebase/functions";
-import { auth, db, functions } from "./config";
+import { auth, db, getFunctionsInstance } from "./config";
 import { nativeGoogleSignIn, nativeAppleSignIn } from "./nativeAuth";
 import { ProviderProfile, Certification, Education, SocialLinks, NotificationSettings, PrivacySettings } from "@/types/firebase";
 import { DEFAULT_LOCALE, type AppLocale } from "@/types/locale";
@@ -350,6 +349,10 @@ export async function completeRegistration(
 export async function initializeUserProfile(): Promise<{ success: boolean; isNewUser: boolean }> {
   console.log('[Auth] Calling initializeUserProfile Cloud Function...');
   try {
+    const [{ httpsCallable }, functions] = await Promise.all([
+      import('firebase/functions'),
+      getFunctionsInstance(),
+    ]);
     const initProfile = httpsCallable(functions, 'initializeUserProfile');
     const result = await initProfile();
     console.log('[Auth] initializeUserProfile result:', result.data);
@@ -420,6 +423,10 @@ export async function sendVerificationEmail(user: User, locale?: AppLocale): Pro
  * marks Google/Apple sign-ins verified. Returns the resulting state.
  */
 export async function syncEmailVerification(): Promise<{ emailVerified: boolean }> {
+  const [{ httpsCallable }, functions] = await Promise.all([
+    import('firebase/functions'),
+    getFunctionsInstance(),
+  ]);
   const sync = httpsCallable<void, { emailVerified: boolean }>(functions, "syncEmailVerification");
   const result = await sync();
   return result.data;

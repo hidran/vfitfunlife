@@ -21,8 +21,11 @@ afterEach(() => {
 vi.mock('@/lib/firebase/config', () => ({
   auth: {},
   db: {},
-  storage: {},
-  functions: {},
+  // Storage and Functions are lazy (dynamic-import getters) in the real module — see
+  // src/lib/firebase/config.ts. Tests that need a specific resolved instance/behavior
+  // override this mock locally (e.g. vi.mocked(getStorageInstance).mockResolvedValue(...)).
+  getStorageInstance: vi.fn(async () => ({})),
+  getFunctionsInstance: vi.fn(async () => ({})),
 }));
 
 // Mock Capacitor
@@ -45,7 +48,7 @@ vi.mock('@/hooks/useI18n', () => ({
       fr: 'Français',
       de: 'Deutsch',
     },
-    setLocale: vi.fn(),
+    setLocale: vi.fn(async () => {}),
     t: (key: string, params?: Record<string, string | number>) => {
       const raw = (itMessages as Record<string, string>)[key] ?? key;
       if (!params) return raw;

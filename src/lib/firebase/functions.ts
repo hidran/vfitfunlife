@@ -1,5 +1,5 @@
 import { httpsCallable } from "firebase/functions";
-import { functions } from "./config";
+import { getFunctionsInstance } from "./config";
 import type { AppLocale } from "@/types/locale";
 import type {
   AiStreamChunk,
@@ -87,6 +87,7 @@ export async function createBooking(data: {
   usePoints?: boolean;
   userNotes?: string;
 }): Promise<BookingResult> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<typeof data, BookingResult>(functions, "createBooking");
   const result = await fn(data);
   return result.data;
@@ -96,6 +97,7 @@ export async function cancelBooking(data: {
   bookingId: string;
   reason?: string;
 }): Promise<CancelBookingResult> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<typeof data, CancelBookingResult>(functions, "cancelBooking");
   const result = await fn(data);
   return result.data;
@@ -104,6 +106,7 @@ export async function cancelBooking(data: {
 export async function confirmBooking(data: {
   bookingId: string;
 }): Promise<{ success: boolean }> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<typeof data, { success: boolean }>(functions, "confirmBooking");
   const result = await fn(data);
   return result.data;
@@ -121,6 +124,7 @@ async function callTransition<T extends { bookingId: string }>(
   name: string,
   data: T
 ): Promise<TransitionResult> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<T, TransitionResult>(functions, name);
   const result = await fn(data);
   return result.data;
@@ -164,6 +168,7 @@ export async function respondToPaymentConfirmation(data: {
   response: "confirmed" | "disputed";
   disputeReason?: string;
 }): Promise<{ success: boolean; bookingId: string; response: string }> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<typeof data, { success: boolean; bookingId: string; response: string }>(
     functions,
     "respondToPaymentConfirmation"
@@ -181,6 +186,7 @@ export async function migrateBookingStatuses(data: { dryRun?: boolean } = {}): P
   instructorIdBackfilled: number;
   counts: Record<string, number>;
 }> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<typeof data, {
     dryRun: boolean; scanned: number; migrated: number;
     skipped: number; instructorIdBackfilled: number; counts: Record<string, number>;
@@ -191,6 +197,7 @@ export async function migrateBookingStatuses(data: { dryRun?: boolean } = {}): P
 
 // Payment functions
 export async function createStripeCustomer(): Promise<{ customerId: string }> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<void, { customerId: string }>(functions, "createStripeCustomer");
   const result = await fn();
   return result.data;
@@ -200,6 +207,7 @@ export async function createPaymentIntent(data: {
   bookingId: string;
   isDeposit?: boolean;
 }): Promise<PaymentIntentResult> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<typeof data, PaymentIntentResult>(functions, "createPaymentIntent");
   const result = await fn(data);
   return result.data;
@@ -208,6 +216,7 @@ export async function createPaymentIntent(data: {
 export async function createVipSubscription(data: {
   planId: string;
 }): Promise<SubscriptionResult> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<typeof data, SubscriptionResult>(functions, "createVipSubscription");
   const result = await fn(data);
   return result.data;
@@ -216,6 +225,7 @@ export async function createVipSubscription(data: {
 export async function addWalletFunds(data: {
   amount: number;
 }): Promise<{ clientSecret: string }> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<typeof data, { clientSecret: string }>(functions, "addWalletFunds");
   const result = await fn(data);
   return result.data;
@@ -223,6 +233,7 @@ export async function addWalletFunds(data: {
 
 // User functions
 export async function seedDefaultSeason0Progress(): Promise<{ seeded: boolean; xp: number; level: number; xpToNextLevel: number; dayStreak: number }> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<void, { seeded: boolean; xp: number; level: number; xpToNextLevel: number; dayStreak: number }>(functions, 'seedDefaultSeason0Progress');
   const result = await fn();
   return result.data;
@@ -231,6 +242,7 @@ export async function seedDefaultSeason0Progress(): Promise<{ seeded: boolean; x
 export async function applyReferralCode(data: {
   referralCode: string;
 }): Promise<ReferralResult> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<typeof data, ReferralResult>(functions, "applyReferralCode");
   const result = await fn(data);
   return result.data;
@@ -243,12 +255,14 @@ export async function updateProfile(data: {
   preferredSection?: "fit" | "fun" | "life";
   notificationsEnabled?: boolean;
 }): Promise<{ success: boolean }> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<typeof data, { success: boolean }>(functions, "updateProfile");
   const result = await fn(data);
   return result.data;
 }
 
 export async function getUserStats(): Promise<UserStatsResult> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<void, UserStatsResult>(functions, "getUserStats");
   const result = await fn();
   return result.data;
@@ -270,6 +284,7 @@ export async function saveAddress(data: {
     isDefault?: boolean;
   };
 }): Promise<{ addressId: string }> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<typeof data, { addressId: string }>(functions, "saveAddress");
   const result = await fn(data);
   return result.data;
@@ -278,6 +293,7 @@ export async function saveAddress(data: {
 export async function deleteAddress(data: {
   addressId: string;
 }): Promise<{ success: boolean }> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<typeof data, { success: boolean }>(functions, "deleteAddress");
   const result = await fn(data);
   return result.data;
@@ -287,6 +303,7 @@ export async function getLeaderboard(data: {
   type?: "points" | "bookings";
   limit?: number;
 }): Promise<LeaderboardResult> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<typeof data, LeaderboardResult>(functions, "getLeaderboard");
   const result = await fn(data);
   return result.data;
@@ -298,6 +315,7 @@ export async function submitReview(data: {
   comment?: string;
   images?: string[];
 }): Promise<ReviewResult> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<typeof data, ReviewResult>(functions, "submitReview");
   const result = await fn(data);
   return result.data;
@@ -320,6 +338,7 @@ export interface CheckInResult {
 }
 
 export async function checkIn(): Promise<CheckInResult> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<void, CheckInResult>(functions, "checkIn");
   const result = await fn();
   return result.data;
@@ -333,24 +352,28 @@ export interface Season0ClaimResult {
 }
 
 export async function claimProfileCompleteReward(): Promise<Season0ClaimResult> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<void, Season0ClaimResult>(functions, "claimProfileCompleteReward");
   const result = await fn();
   return result.data;
 }
 
 export async function claimInterestsReward(data: { interestsCount?: number }): Promise<Season0ClaimResult> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<typeof data, Season0ClaimResult>(functions, "claimInterestsReward");
   const result = await fn(data);
   return result.data;
 }
 
 export async function claimZoneReward(): Promise<Season0ClaimResult> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<void, Season0ClaimResult>(functions, "claimZoneReward");
   const result = await fn();
   return result.data;
 }
 
 export async function claimFamilyReward(): Promise<Season0ClaimResult> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<void, Season0ClaimResult>(functions, "claimFamilyReward");
   const result = await fn();
   return result.data;
@@ -393,24 +416,28 @@ export interface FamilyQueryResult {
 }
 
 export async function createFamily(data: { name: string }): Promise<FamilyResult> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<typeof data, FamilyResult>(functions, "createFamily");
   const result = await fn(data);
   return result.data;
 }
 
 export async function joinFamily(data: { inviteCode?: string; familyId?: string }): Promise<FamilyResult> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<typeof data, FamilyResult>(functions, "joinFamily");
   const result = await fn(data);
   return result.data;
 }
 
 export async function leaveFamily(): Promise<FamilyLeaveResult> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<void, FamilyLeaveResult>(functions, "leaveFamily");
   const result = await fn();
   return result.data;
 }
 
 export async function getMyFamily(): Promise<FamilyQueryResult> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<void, FamilyQueryResult>(functions, "getMyFamily");
   const result = await fn();
   return result.data;
@@ -421,6 +448,7 @@ export async function registerFcmToken(data: {
   token: string;
   platform: "ios" | "android" | "web";
 }): Promise<{ success: boolean }> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<typeof data, { success: boolean }>(functions, "registerFcmToken");
   const result = await fn(data);
   return result.data;
@@ -429,12 +457,14 @@ export async function registerFcmToken(data: {
 export async function markNotificationRead(data: {
   notificationId: string;
 }): Promise<{ success: boolean }> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<typeof data, { success: boolean }>(functions, "markNotificationRead");
   const result = await fn(data);
   return result.data;
 }
 
 export async function markAllNotificationsRead(): Promise<{ markedCount: number }> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<void, { markedCount: number }>(functions, "markAllNotificationsRead");
   const result = await fn();
   return result.data;
@@ -449,7 +479,8 @@ type AssistantStreamFinal = {
 };
 
 /** Stream a chat turn. Yields chunks; resolves final on the returned promise. */
-export function streamAssistant(input: { chatId?: string; message: string; locale: string }) {
+export async function streamAssistant(input: { chatId?: string; message: string; locale: string }) {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<typeof input, AssistantStreamFinal>(functions, "chatWithAssistant");
   return fn.stream(input) as Promise<{
     stream: AsyncIterable<AiStreamChunk>;
@@ -461,6 +492,7 @@ export async function getAiSettingsAdmin(): Promise<{
   settings: AiAssistantSettings;
   keyPresence: Record<AiProviderId, boolean>;
 }> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<
     void,
     { settings: AiAssistantSettings; keyPresence: Record<AiProviderId, boolean> }
@@ -469,6 +501,7 @@ export async function getAiSettingsAdmin(): Promise<{
 }
 
 export async function updateAiSettings(patch: Partial<AiAssistantSettings>): Promise<void> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<Partial<AiAssistantSettings>, { success: boolean }>(
     functions,
     "updateAiSettings",
@@ -480,6 +513,7 @@ export async function testAiConnection(input: {
   provider?: AiProviderId;
   model?: string;
 }): Promise<{ ok: boolean; sample?: string; error?: string }> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<typeof input, { ok: boolean; sample?: string; error?: string }>(
     functions,
     "testAiConnection",
@@ -488,6 +522,7 @@ export async function testAiConnection(input: {
 }
 
 export async function migrateInstructorCatalog(): Promise<{ scanned: number; updated: number; skippedCity?: number; skippedActivity?: number }> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<void, { scanned: number; updated: number; skippedCity?: number; skippedActivity?: number }>(functions, "migrateInstructorCatalog");
   return (await fn()).data;
 }
@@ -508,6 +543,7 @@ export async function getAiAuthoringSettingsAdmin(): Promise<{
   settings: AiAuthoringSettings;
   keyPresence: Record<AiProviderId, boolean>;
 }> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<
     void,
     { settings: AiAuthoringSettings; keyPresence: Record<AiProviderId, boolean> }
@@ -516,6 +552,7 @@ export async function getAiAuthoringSettingsAdmin(): Promise<{
 }
 
 export async function updateAiAuthoringSettings(patch: Partial<AiAuthoringSettings>): Promise<void> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<Partial<AiAuthoringSettings>, { success: boolean }>(
     functions,
     "updateAiAuthoringSettings",
@@ -537,6 +574,7 @@ export async function applyAsProvider(data: {
   categoryIds: string[];
   fullName?: string;
 }): Promise<{ success: boolean; providerId: string; draftServicesSeeded: number }> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<
     typeof data,
     { success: boolean; providerId: string; draftServicesSeeded: number }
@@ -551,6 +589,7 @@ export interface ProviderOnboardingSettings {
 
 /** The current provider-onboarding settings. Admin only. */
 export async function getProviderOnboardingSettings(): Promise<ProviderOnboardingSettings> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<void, ProviderOnboardingSettings>(
     functions,
     "getProviderOnboardingSettings",
@@ -565,6 +604,7 @@ export async function getProviderOnboardingSettings(): Promise<ProviderOnboardin
 export async function setProviderOnboardingSettings(
   data: ProviderOnboardingSettings,
 ): Promise<{ success: boolean; autoApprove: boolean }> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<typeof data, { success: boolean; autoApprove: boolean }>(
     functions,
     "setProviderOnboardingSettings",
@@ -583,6 +623,7 @@ export async function decideProviderApplication(data: {
   decision: "verified" | "rejected";
   notes?: string;
 }): Promise<{ success: boolean; draftServicesSeeded: number }> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<typeof data, { success: boolean; draftServicesSeeded: number }>(
     functions,
     "decideProviderApplication",

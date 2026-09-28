@@ -10,7 +10,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
-import { db, functions } from '@/lib/firebase/config';
+import { db, getFunctionsInstance } from '@/lib/firebase/config';
 import {
   EntityDetailLayout,
   ConfirmDeleteDialog,
@@ -103,6 +103,7 @@ export function BookingDetailView({ bookingId }: Props) {
   ) => {
     setStatusBusy(true);
     try {
+      const functions = await getFunctionsInstance();
       const fn = httpsCallable(functions, fnName);
       await fn({ bookingId, ...payload });
       await refetch();

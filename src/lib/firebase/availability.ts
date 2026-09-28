@@ -1,6 +1,6 @@
 import { collection, doc, documentId, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
-import { db, functions } from './config';
+import { db, getFunctionsInstance } from './config';
 import {
   overrideFromDoc,
   scheduleFromDoc,
@@ -63,6 +63,7 @@ export async function fetchMyAvailability(uid: string): Promise<StoredAvailabili
 }
 
 export async function saveMyAvailability(update: AvailabilityUpdate): Promise<void> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<AvailabilityUpdate, unknown>(functions, 'updateMyAvailability');
   await fn(update);
 }
@@ -82,6 +83,7 @@ export async function fetchProviderSlots(input: {
    */
   excludeBookingId?: string;
 }): Promise<ProviderSlot[]> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<typeof input, { slots: ProviderSlot[] }>(functions, 'getProviderSlots');
   return (await fn(input)).data.slots;
 }

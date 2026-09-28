@@ -1,5 +1,5 @@
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { storage } from './config';
+import { getStorageInstance } from './config';
 import imageCompression from 'browser-image-compression';
 
 const COMPRESSION_OPTIONS = {
@@ -19,6 +19,7 @@ export async function uploadGalleryPhoto(opts: {
   const compressed = await imageCompression(file, COMPRESSION_OPTIONS);
   const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
   const path = `${scope}/${entityId}/gallery/${filename}`;
+  const storage = await getStorageInstance();
   const objRef = ref(storage, path);
   const snapshot = await uploadBytes(objRef, compressed, { contentType: 'image/jpeg' });
   return getDownloadURL(snapshot.ref);
@@ -34,6 +35,7 @@ export async function deleteGalleryPhoto(downloadUrl: string): Promise<void> {
     const match = downloadUrl.match(/\/o\/([^?]+)/);
     if (!match) return;
     const path = decodeURIComponent(match[1]);
+    const storage = await getStorageInstance();
     const objRef = ref(storage, path);
     await deleteObject(objRef);
   } catch (error) {

@@ -1,7 +1,7 @@
 'use client';
 import { httpsCallable } from 'firebase/functions';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { functions } from '@/lib/firebase/config';
+import { getFunctionsInstance } from '@/lib/firebase/config';
 import type {
   SocialLinks,
   NotificationSettings,
@@ -14,6 +14,7 @@ export function useUpdateAvatar() {
   const uid = useAuthStore((s) => s.user?.uid);
   return useMutation({
     mutationFn: async (avatarUrl: string) => {
+      const functions = await getFunctionsInstance();
       const fn = httpsCallable<{ avatarUrl: string }, { success: true; avatarUrl: string; previousUrl: string | null }>(
         functions, 'updateAvatar'
       );
@@ -29,6 +30,7 @@ export function useUpdateSocialLinks() {
   const uid = useAuthStore((s) => s.user?.uid);
   return useMutation({
     mutationFn: async (socialLinks: SocialLinks) => {
+      const functions = await getFunctionsInstance();
       const fn = httpsCallable<{ socialLinks: SocialLinks }, { success: true }>(functions, 'updateSocialLinks');
       const r = await fn({ socialLinks });
       return r.data;
@@ -42,6 +44,7 @@ export function useUpdateNotificationSettings() {
   const uid = useAuthStore((s) => s.user?.uid);
   return useMutation({
     mutationFn: async (settings: NotificationSettings) => {
+      const functions = await getFunctionsInstance();
       const fn = httpsCallable<{ settings: NotificationSettings }, { success: true }>(
         functions, 'updateNotificationSettings'
       );
@@ -57,6 +60,7 @@ export function useUpdatePrivacySettings() {
   const uid = useAuthStore((s) => s.user?.uid);
   return useMutation({
     mutationFn: async (settings: PrivacySettings) => {
+      const functions = await getFunctionsInstance();
       const fn = httpsCallable<{ settings: PrivacySettings }, { success: true }>(
         functions, 'updatePrivacySettings'
       );

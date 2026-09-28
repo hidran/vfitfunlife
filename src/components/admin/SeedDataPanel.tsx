@@ -5,8 +5,6 @@ import { useAuthStore } from "@/stores/authStore";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/Spinner";
 import { useI18n } from "@/hooks/useI18n";
-import { getFunctions, httpsCallable } from "firebase/functions";
-import { functions } from "@/lib/firebase/config";
 import {
   Database,
   Trash2,

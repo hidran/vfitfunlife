@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { httpsCallable } from 'firebase/functions';
-import { functions } from '@/lib/firebase/config';
+import { getFunctionsInstance } from '@/lib/firebase/config';
 import { Button } from '@/components/ui/button';
 import { useI18n } from '@/hooks/useI18n';
 import { AlertTriangle, X } from 'lucide-react';
@@ -23,6 +23,7 @@ export function RefundDialog({ open, paymentId, maxAmount, onClose }: Props) {
     { ok: boolean; refundId?: string }
   >({
     mutate: async ({ amount, reason }) => {
+      const functions = await getFunctionsInstance();
       const fn = httpsCallable<
         { paymentId: string; amount: number; reason: string },
         { ok: boolean; refundId?: string }

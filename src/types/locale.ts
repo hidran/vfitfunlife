@@ -4,6 +4,13 @@ export type AppLocale = (typeof SUPPORTED_LOCALES)[number];
 
 export const DEFAULT_LOCALE: AppLocale = 'it';
 
+/**
+ * localStorage key for the user's chosen locale. Shared between I18nContext (which reads/
+ * writes it after mount) and the messages loader (which reads it once, synchronously, at
+ * module-eval time to kick off the non-Italian dictionary's chunk fetch as early as possible).
+ */
+export const LOCALE_STORAGE_KEY = 'vfit.locale';
+
 export const LOCALE_LABELS: Record<AppLocale, string> = {
   it: 'Italiano',
   en: 'English',

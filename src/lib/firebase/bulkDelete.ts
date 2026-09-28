@@ -1,6 +1,6 @@
 import { httpsCallable } from 'firebase/functions';
 import { collection, doc, limit, onSnapshot, orderBy, query, where, getDocs } from 'firebase/firestore';
-import { db, functions } from './config';
+import { db, getFunctionsInstance } from './config';
 
 export type JobStatus = 'queued' | 'running' | 'completed' | 'completed_with_errors' | 'failed';
 type Outcome = { status: 'deleted' | 'skipped' | 'failed'; reason?: string; error?: string };
@@ -17,6 +17,7 @@ export interface BulkDeleteJobView {
 }
 
 export async function startBulkDelete(uids: string[], reason: string): Promise<string> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<{ uids: string[]; reason: string }, { jobId: string }>(functions, 'adminBulkDeleteUsers');
   return (await fn({ uids, reason })).data.jobId;
 }

@@ -2,7 +2,7 @@ import {
   collection, doc, addDoc, updateDoc, deleteDoc, getDocs, query, orderBy, serverTimestamp, Timestamp,
 } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
-import { db, auth, functions } from "./config";
+import { db, auth, getFunctionsInstance } from "./config";
 import type {
   ClientGoal, TrainingProgram, TrainingParams,
 } from "@/types/clientPlans";
@@ -83,6 +83,7 @@ export const deleteTrainingProgram = (c: string, id: string) => deletePlan(c, "t
 
 // ---- AI generation callable wrappers ----
 export async function aiGenerateTraining(clientId: string, params: TrainingParams, locale: string): Promise<TrainingProgram> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<{ clientId: string; params: TrainingParams; locale: string }, TrainingProgram>(functions, "generateTrainingProgram");
   return (await fn({ clientId, params, locale })).data;
 }

@@ -9,17 +9,18 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { getMessage, type MessageKey } from '@/i18n/messages';
+import { getMessage, loadMessages, type MessageKey } from '@/i18n/messages';
 import { detectBrowserLocale, detectDeviceLocale } from '@/lib/i18n/detectLocale';
 import {
   DEFAULT_LOCALE,
   LOCALE_LABELS,
+  LOCALE_STORAGE_KEY,
   SUPPORTED_LOCALES,
   isSupportedLocale,
   type AppLocale,
 } from '@/types/locale';
 
-const STORAGE_KEY = 'vfit.locale';
+const STORAGE_KEY = LOCALE_STORAGE_KEY;
 
 export interface TranslateValues {
   [key: string]: string | number;
@@ -27,7 +28,8 @@ export interface TranslateValues {
 
 interface I18nContextValue {
   locale: AppLocale;
-  setLocale: (locale: AppLocale) => void;
+  /** Resolves once `locale`'s dictionary has loaded and the context has switched to it. */
+  setLocale: (locale: AppLocale) => Promise<void>;
   locales: typeof SUPPORTED_LOCALES;
   localeLabels: typeof LOCALE_LABELS;
   t: (key: MessageKey, values?: TranslateValues) => string;
@@ -61,18 +63,43 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<AppLocale>(DEFAULT_LOCALE);
 
   // After mount, resolve the real locale (stored choice > browser > default)
-  // and switch. This causes one extra render but keeps hydration safe.
+  // and switch. This causes one extra render but keeps hydration safe. The
+  // dictionary for a non-Italian locale is awaited before switching state, so the
+  // provider only ever renders a locale whose messages are actually loaded — never a
+  // frame of English markup showing Italian (or raw-key) text. In practice this is
+  // usually already resolved by the time this effect runs: src/i18n/messages/index.ts
+  // kicks off the same dynamic import eagerly, at module-eval time, from localStorage.
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    let cancelled = false;
     const stored = window.localStorage.getItem(STORAGE_KEY);
     if (stored && isSupportedLocale(stored)) {
-      if (stored !== DEFAULT_LOCALE) afterCurrentEffect(() => setLocaleState(stored));
-      return;
+      if (stored !== DEFAULT_LOCALE) {
+        loadMessages(stored)
+          .then(() => {
+            if (!cancelled) afterCurrentEffect(() => setLocaleState(stored));
+          })
+          .catch((error) => {
+            console.error('[i18n] failed to load stored locale dictionary', stored, error);
+          });
+      }
+      return () => {
+        cancelled = true;
+      };
     }
     const browser = detectBrowserLocale();
     if (browser && browser !== DEFAULT_LOCALE) {
-      afterCurrentEffect(() => setLocaleState(browser));
+      loadMessages(browser)
+        .then(() => {
+          if (!cancelled) afterCurrentEffect(() => setLocaleState(browser));
+        })
+        .catch((error) => {
+          console.error('[i18n] failed to load browser locale dictionary', browser, error);
+        });
     }
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -87,16 +114,30 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     const stored = window.localStorage.getItem(STORAGE_KEY);
     if (stored && isSupportedLocale(stored)) return; // explicit/prior choice wins
     let cancelled = false;
-    detectDeviceLocale().then((deviceLocale) => {
-      if (!cancelled && deviceLocale) setLocaleState(deviceLocale);
+    detectDeviceLocale().then(async (deviceLocale) => {
+      if (cancelled || !deviceLocale) return;
+      try {
+        await loadMessages(deviceLocale);
+        if (!cancelled) setLocaleState(deviceLocale);
+      } catch (error) {
+        console.error('[i18n] failed to load device locale dictionary', deviceLocale, error);
+      }
     });
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const setLocale = useCallback((nextLocale: AppLocale) => {
-    setLocaleState(nextLocale);
+  const setLocale = useCallback(async (nextLocale: AppLocale) => {
+    try {
+      await loadMessages(nextLocale);
+      setLocaleState(nextLocale);
+    } catch (error) {
+      // A failed chunk fetch (offline, etc.) keeps the UI on its current locale instead
+      // of switching to one whose messages never arrived — getMessage() would otherwise
+      // fall back to Italian text under labels the user picked a different language for.
+      console.error('[i18n] failed to load locale dictionary', nextLocale, error);
+    }
   }, []);
 
   const t = useCallback(
@@ -129,7 +170,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 // locale instead lets the component render and recover on the next pass.
 const FALLBACK_I18N: I18nContextValue = {
   locale: DEFAULT_LOCALE,
-  setLocale: () => {},
+  setLocale: async () => {},
   locales: SUPPORTED_LOCALES,
   localeLabels: LOCALE_LABELS,
   t: (key, values) => interpolate(getMessage(DEFAULT_LOCALE, key), values),

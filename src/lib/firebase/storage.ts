@@ -1,4 +1,4 @@
-import { storage } from '@/lib/firebase/config';
+import { getStorageInstance } from '@/lib/firebase/config';
 import {
   ref,
   uploadBytes,
@@ -29,6 +29,7 @@ export async function uploadAvatar(userId: string, file: File): Promise<string> 
     const compressedFile = await imageCompression(file, avatarCompressionOptions);
 
     // Upload to Storage - matching storage.rules path: /users/{userId}/avatar/{fileName}
+    const storage = await getStorageInstance();
     const storageRef = ref(storage, `users/${userId}/avatar/${Date.now()}.jpg`);
     const snapshot = await uploadBytes(storageRef, compressedFile);
 
@@ -49,6 +50,7 @@ export async function updateProfilePhoto(userId: string, file: File): Promise<st
     const compressedFile = await imageCompression(file, avatarCompressionOptions);
 
     // Upload to profile-photos path
+    const storage = await getStorageInstance();
     const storageRef = ref(storage, `profile-photos/${userId}/${Date.now()}.jpg`);
     const snapshot = await uploadBytes(storageRef, compressedFile);
 
@@ -83,6 +85,7 @@ export async function uploadCertification(
 
     // Upload to certifications path
     const extension = file.type === 'application/pdf' ? 'pdf' : 'jpg';
+    const storage = await getStorageInstance();
     const storageRef = ref(storage, `certifications/${userId}/${name}_${Date.now()}.${extension}`);
     const snapshot = await uploadBytes(storageRef, fileToUpload);
 
@@ -99,6 +102,7 @@ export async function uploadCertification(
 // Delete certification
 export async function deleteCertification(fileUrl: string): Promise<void> {
   try {
+    const storage = await getStorageInstance();
     const fileRef = ref(storage, fileUrl);
     await deleteObject(fileRef);
   } catch (error) {
@@ -114,6 +118,7 @@ export async function uploadPortfolioImage(userId: string, file: File): Promise<
     const compressedFile = await imageCompression(file, defaultCompressionOptions);
 
     // Upload to portfolios path
+    const storage = await getStorageInstance();
     const storageRef = ref(storage, `portfolios/${userId}/${Date.now()}.jpg`);
     const snapshot = await uploadBytes(storageRef, compressedFile);
 
@@ -130,6 +135,7 @@ export async function uploadPortfolioImage(userId: string, file: File): Promise<
 // Delete portfolio image
 export async function deletePortfolioImage(fileUrl: string): Promise<void> {
   try {
+    const storage = await getStorageInstance();
     const fileRef = ref(storage, fileUrl);
     await deleteObject(fileRef);
   } catch (error) {
@@ -141,6 +147,7 @@ export async function deletePortfolioImage(fileUrl: string): Promise<void> {
 // Get all portfolio images for a user
 export async function getPortfolioImages(userId: string): Promise<string[]> {
   try {
+    const storage = await getStorageInstance();
     const portfolioRef = ref(storage, `portfolios/${userId}`);
     const result = await listAll(portfolioRef);
     const urls = await Promise.all(
@@ -154,11 +161,12 @@ export async function getPortfolioImages(userId: string): Promise<string[]> {
 }
 
 // Upload with progress tracking
-export function uploadWithProgress(
+export async function uploadWithProgress(
   path: string,
   file: File,
   onProgress: (progress: number) => void
 ): Promise<string> {
+  const storage = await getStorageInstance();
   const storageRef = ref(storage, path);
   const uploadTask = uploadBytesResumable(storageRef, file);
 
@@ -181,6 +189,7 @@ export function uploadWithProgress(
 // Delete file by URL
 export async function deleteFile(fileUrl: string): Promise<void> {
   try {
+    const storage = await getStorageInstance();
     const fileRef = ref(storage, fileUrl);
     await deleteObject(fileRef);
   } catch (error) {

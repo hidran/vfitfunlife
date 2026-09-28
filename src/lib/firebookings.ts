@@ -16,7 +16,7 @@ import {
   type QueryConstraint,
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
-import { db, functions } from './firebase/config';
+import { db, getFunctionsInstance } from './firebase/config';
 import { isCancelled, isDelivered } from './bookingStatus';
 import {
   createBooking as createBookingFn,
@@ -303,6 +303,7 @@ export interface RescheduleResult {
  * on the wrong instant for anyone outside Europe/Rome.
  */
 export async function rescheduleBooking(bookingId: string, startsAt: string): Promise<RescheduleResult> {
+  const functions = await getFunctionsInstance();
   const fn = httpsCallable<{ bookingId: string; startsAt: string }, RescheduleResult>(
     functions,
     'rescheduleBooking'
