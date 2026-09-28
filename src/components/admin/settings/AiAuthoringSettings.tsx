@@ -2,52 +2,46 @@
 import { useEffect, useState } from "react";
 import { Wand2 } from "lucide-react";
 import { useI18n } from "@/hooks/useI18n";
-import {
-  getAiAuthoringSettingsAdmin,
-  updateAiAuthoringSettings,
-  testAiConnection,
-} from "@/lib/firebase/functions";
+import { testAiConnection } from "@/lib/firebase/functions";
 import type { AiAuthoringSettings as Settings } from "@/lib/firebase/functions";
 import type { AiProviderId } from "@/types/assistant";
+import {
+  useAiAuthoringSettingsAdmin,
+  useUpdateAiAuthoringSettings,
+} from "@/hooks/useAiAuthoringSettingsAdmin";
 
 const PROVIDERS: AiProviderId[] = ["anthropic", "openai", "google", "openai-compatible"];
 
 export function AiAuthoringSettings() {
   const { t } = useI18n();
+  const { data } = useAiAuthoringSettingsAdmin();
+  const updateMut = useUpdateAiAuthoringSettings();
+  const keys = data?.keyPresence ?? null;
+
+  // Staged local draft — the query's data is the source of truth, `settings` is what the
+  // form edits before Save (same shape as PilotFlagsSettings' `draft`).
   const [settings, setSettings] = useState<Settings | null>(null);
-  const [keys, setKeys] = useState<Record<AiProviderId, boolean> | null>(null);
-  const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testMsg, setTestMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    getAiAuthoringSettingsAdmin()
-      .then((r) => {
-        setSettings(r.settings);
-        setKeys(r.keyPresence);
-      })
-      .catch((err) => console.error("[AiAuthoringSettings] failed to load", err));
-  }, []);
+    if (data?.settings) setSettings(data.settings);
+  }, [data?.settings]);
 
   if (!settings) return null;
   const set = <K extends keyof Settings>(k: K, v: Settings[K]) => setSettings({ ...settings, [k]: v });
 
   const save = async () => {
-    setSaving(true);
-    try {
-      await updateAiAuthoringSettings({
-        enabled: settings.enabled,
-        provider: settings.provider,
-        model: settings.model,
-        temperature: settings.temperature,
-        maxOutputTokens: settings.maxOutputTokens,
-        dailyQuota: settings.dailyQuota,
-        recipeClientDailyQuota: settings.recipeClientDailyQuota,
-        systemPromptOverride: settings.systemPromptOverride?.trim() || undefined,
-      });
-    } finally {
-      setSaving(false);
-    }
+    await updateMut.mutateAsync({
+      enabled: settings.enabled,
+      provider: settings.provider,
+      model: settings.model,
+      temperature: settings.temperature,
+      maxOutputTokens: settings.maxOutputTokens,
+      dailyQuota: settings.dailyQuota,
+      recipeClientDailyQuota: settings.recipeClientDailyQuota,
+      systemPromptOverride: settings.systemPromptOverride?.trim() || undefined,
+    });
   };
 
   const test = async () => {
@@ -187,7 +181,7 @@ export function AiAuthoringSettings() {
       <div className="flex items-center gap-3">
         <button
           onClick={save}
-          disabled={saving}
+          disabled={updateMut.isPending}
           className="px-4 py-2 rounded-xl bg-[#00C9FF] text-black font-medium disabled:opacity-50"
         >
           {t("common.save") || "Save"}

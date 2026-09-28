@@ -2,56 +2,49 @@
 import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
 import { useI18n } from "@/hooks/useI18n";
+import { testAiConnection, migrateInstructorCatalog } from "@/lib/firebase/functions";
 import {
-  getAiSettingsAdmin,
-  updateAiSettings,
-  testAiConnection,
-  migrateInstructorCatalog,
-} from "@/lib/firebase/functions";
+  useAiAssistantSettingsAdmin,
+  useUpdateAiAssistantSettings,
+} from "@/hooks/useAiAssistantSettingsAdmin";
 import type { AiAssistantSettings as Settings, AiProviderId } from "@/types/assistant";
 
 const PROVIDERS: AiProviderId[] = ["anthropic", "openai", "google", "openai-compatible"];
 
 export function AiAssistantSettings() {
   const { t } = useI18n();
+  const { data } = useAiAssistantSettingsAdmin();
+  const updateMut = useUpdateAiAssistantSettings();
+  const keys = data?.keyPresence ?? null;
+
+  // Staged local draft — the query's data is the source of truth, `settings` is what the
+  // form edits before Save (same shape as PilotFlagsSettings' `draft`).
   const [settings, setSettings] = useState<Settings | null>(null);
-  const [keys, setKeys] = useState<Record<AiProviderId, boolean> | null>(null);
-  const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testMsg, setTestMsg] = useState<string | null>(null);
   const [migrating, setMigrating] = useState(false);
   const [migrateMsg, setMigrateMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    getAiSettingsAdmin()
-      .then((r) => {
-        setSettings(r.settings);
-        setKeys(r.keyPresence);
-      })
-      .catch((err) => console.error("[AiAssistantSettings] failed to load", err));
-  }, []);
+    if (data?.settings) setSettings(data.settings);
+  }, [data?.settings]);
 
   if (!settings) return null;
   const set = <K extends keyof Settings>(k: K, v: Settings[K]) => setSettings({ ...settings, [k]: v });
   const models = settings.availableModels[settings.provider] ?? [];
 
   const save = async () => {
-    setSaving(true);
-    try {
-      await updateAiSettings({
-        enabled: settings.enabled,
-        provider: settings.provider,
-        model: settings.model,
-        temperature: settings.temperature,
-        maxOutputTokens: settings.maxOutputTokens,
-        maxContextMessages: settings.maxContextMessages,
-        maxInputChars: settings.maxInputChars,
-        dailyMessageQuota: settings.dailyMessageQuota,
-        systemPromptOverride: settings.systemPromptOverride,
-      });
-    } finally {
-      setSaving(false);
-    }
+    await updateMut.mutateAsync({
+      enabled: settings.enabled,
+      provider: settings.provider,
+      model: settings.model,
+      temperature: settings.temperature,
+      maxOutputTokens: settings.maxOutputTokens,
+      maxContextMessages: settings.maxContextMessages,
+      maxInputChars: settings.maxInputChars,
+      dailyMessageQuota: settings.dailyMessageQuota,
+      systemPromptOverride: settings.systemPromptOverride,
+    });
   };
 
   const test = async () => {
@@ -233,7 +226,7 @@ export function AiAssistantSettings() {
       <div className="flex items-center gap-3">
         <button
           onClick={save}
-          disabled={saving}
+          disabled={updateMut.isPending}
           className="px-4 py-2 rounded-xl bg-[#00C9FF] text-black font-medium disabled:opacity-50"
         >
           {t("common.save") || "Save"}

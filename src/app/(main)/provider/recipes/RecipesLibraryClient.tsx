@@ -12,7 +12,8 @@
  * The header carries both fixed legal strings — the disclaimer and the trainer notice.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/Spinner';
@@ -24,32 +25,29 @@ import { RecipeGenerateModal } from '@/components/recipes/RecipeGenerateModal';
 import { ShareRecipeModal } from '@/components/recipes/ShareRecipeModal';
 import { createRecipe, deleteRecipe, listMyRecipes, updateRecipe } from '@/lib/firebase/recipes';
 import type { Recipe } from '@/types/recipes';
+import { queryKeys } from '@/lib/queryKeys';
 import RecipeEditor, { type RecipeEditorPayload } from '../clients/detail/tabs/editors/RecipeEditor';
 
 export default function RecipesLibraryClient() {
   const { t, locale } = useI18n();
+  const queryClient = useQueryClient();
   const clients = useProviderStore((s) => s.clients);
   const fetchClients = useProviderStore((s) => s.fetchClients);
 
-  const [recipes, setRecipes] = useState<Recipe[] | null>(null);
+  // Same cache entry as the client-facing recipes screen and RecipesTab's share picker —
+  // `listMyRecipes()` is scoped server-side by the caller's own uid (see queryKeys.ts).
+  const recipesQuery = useQuery({
+    queryKey: queryKeys.recipesMine(),
+    queryFn: listMyRecipes,
+  });
+  const recipes = recipesQuery.data ?? (recipesQuery.isError ? [] : null);
   const [showGenerate, setShowGenerate] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
   const [editing, setEditing] = useState<Recipe | null>(null);
   const [sharing, setSharing] = useState<Recipe | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const reload = useCallback(async () => {
-    try {
-      setRecipes(await listMyRecipes());
-    } catch (e) {
-      console.error('[RecipesLibrary] load failed', e);
-      setRecipes([]);
-    }
-  }, []);
-
-  useEffect(() => {
-    void reload();
-  }, [reload]);
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: queryKeys.recipesMine() });
 
   // The share picker needs the roster; loading it up front keeps opening the modal instant.
   useEffect(() => {
@@ -67,7 +65,7 @@ export default function RecipesLibraryClient() {
       if (editing) await updateRecipe(editing.id, data);
       else await createRecipe(data, 'provider');
       closeEditor();
-      await reload();
+      await invalidate();
     } catch (e) {
       console.error('[RecipesLibrary] save failed', e);
     } finally {
@@ -80,7 +78,7 @@ export default function RecipesLibraryClient() {
     setSaving(true);
     try {
       await deleteRecipe(id);
-      await reload();
+      await invalidate();
     } catch (e) {
       console.error('[RecipesLibrary] delete failed', e);
     } finally {
@@ -157,7 +155,7 @@ export default function RecipesLibraryClient() {
       <RecipeGenerateModal
         open={showGenerate}
         onClose={() => setShowGenerate(false)}
-        onGenerated={() => void reload()}
+        onGenerated={() => void invalidate()}
         locale={locale}
         audience="provider"
       />
@@ -168,7 +166,7 @@ export default function RecipesLibraryClient() {
           clients={clients}
           onClose={() => {
             setSharing(null);
-            void reload();
+            void invalidate();
           }}
         />
       )}

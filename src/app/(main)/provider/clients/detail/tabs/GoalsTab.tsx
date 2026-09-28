@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Edit, Trash2, Save, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/Spinner';
@@ -8,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
 import { listGoals, createGoal, updateGoal, deleteGoal } from '@/lib/firebase/clientPlans';
 import type { ClientGoal, GoalType, GoalStatus } from '@/types/clientPlans';
+import { queryKeys } from '@/lib/queryKeys';
 
 const GOAL_TYPES: GoalType[] = ['weight_loss', 'muscle_gain', 'endurance', 'mobility', 'nutrition', 'other'];
 const GOAL_STATUSES: GoalStatus[] = ['active', 'achieved', 'paused'];
@@ -41,25 +43,18 @@ const inputClass =
 
 export default function GoalsTab({ clientId }: { clientId: string }) {
   const { t } = useI18n();
-  const [goals, setGoals] = useState<ClientGoal[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { data: goals, isLoading: loading } = useQuery({
+    queryKey: queryKeys.clientGoals(clientId),
+    queryFn: () => listGoals(clientId),
+  });
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<GoalFormState>(emptyForm);
 
-  const reload = useCallback(async () => {
-    setLoading(true);
-    try {
-      setGoals(await listGoals(clientId));
-    } finally {
-      setLoading(false);
-    }
-  }, [clientId]);
-
-  useEffect(() => {
-    void reload();
-  }, [reload]);
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: queryKeys.clientGoals(clientId) });
 
   const openNew = () => {
     setForm(emptyForm);
@@ -102,7 +97,7 @@ export default function GoalsTab({ clientId }: { clientId: string }) {
         await createGoal(clientId, payload);
       }
       closeForm();
-      await reload();
+      await invalidate();
     } finally {
       setSaving(false);
     }
@@ -113,7 +108,7 @@ export default function GoalsTab({ clientId }: { clientId: string }) {
     setSaving(true);
     try {
       await deleteGoal(clientId, id);
-      await reload();
+      await invalidate();
     } catch (e) {
       console.error('[GoalsTab] delete failed', e);
     } finally {
@@ -222,7 +217,7 @@ export default function GoalsTab({ clientId }: { clientId: string }) {
         <div className="flex justify-center py-10">
           <Spinner size="md" />
         </div>
-      ) : goals.length === 0 ? (
+      ) : !goals || goals.length === 0 ? (
         <p className="text-content-muted text-sm">{t('clients.goals.empty')}</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
