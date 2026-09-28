@@ -8,7 +8,7 @@ import { getAiSettings, invalidateAiSettingsCache, AI_SETTINGS_DOC } from "./set
 import { buildModel, keyPresence, AI_SECRETS } from "./providers";
 import { AiProviderId } from "./types";
 
-const region = process.env.FIREBASE_REGION || "europe-west1";
+import { region } from "../lib/runtimeOptions";
 
 const patchSchema = z.object({
   enabled: z.boolean().optional(),
@@ -104,7 +104,7 @@ export const testAiConnection = onCall(
     const model = request.data.model ?? settings.model;
     try {
       const { text } = await generateText({
-        model: buildModel(provider, model),
+        model: await buildModel(provider, model),
         prompt: "Reply with the single word: OK",
         maxOutputTokens: 5,
       });

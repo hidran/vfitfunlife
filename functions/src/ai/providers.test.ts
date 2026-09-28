@@ -39,9 +39,9 @@ describe("getProviderApiKey", () => {
 });
 
 describe("buildModel", () => {
-  it("throws when openai-compatible baseURL is missing", () => {
+  it("throws when openai-compatible baseURL is missing", async () => {
     process.env.OPENAI_COMPAT_API_KEY = "key";
     delete process.env.OPENAI_COMPAT_BASE_URL;
-    expect(() => buildModel("openai-compatible", "llama3")).toThrow(/OPENAI_COMPAT_BASE_URL/);
+    await expect(buildModel("openai-compatible", "llama3")).rejects.toThrow(/OPENAI_COMPAT_BASE_URL/);
   });
 });

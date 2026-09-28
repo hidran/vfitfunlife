@@ -5,7 +5,7 @@ import { defaultNotificationSettings, allFalseNotificationSettings } from "../ty
 
 const db = admin.firestore();
 const messaging = admin.messaging();
-const region = process.env.FIREBASE_REGION || "europe-west1";
+import { region } from "../lib/runtimeOptions";
 
 interface NotificationPayload {
   title: string;

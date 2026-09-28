@@ -3,7 +3,7 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { requireSuperAdmin } from "../utils/roles";
 import { writeAuditLog } from "../lib/audit";
 
-const region = process.env.FIREBASE_REGION || "europe-west1";
+import { region } from "../lib/runtimeOptions";
 const MAX_BATCH = 450;
 
 /**

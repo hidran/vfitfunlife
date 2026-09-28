@@ -14,7 +14,7 @@ import { logger } from "firebase-functions";
 import * as admin from "firebase-admin";
 
 const db = admin.firestore();
-const region = process.env.FIREBASE_REGION || "europe-west1";
+import { region } from "../lib/runtimeOptions";
 
 const MAX_PER_IP_PER_DAY = 5;
 const FIELD_MAX = 120;

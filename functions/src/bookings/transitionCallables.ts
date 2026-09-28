@@ -20,7 +20,7 @@ import { notifyTransition } from "./notify";
 import type { BookingStatus, StatusActorRole, TransitionActorRole } from "./types";
 
 const db = admin.firestore();
-const region = process.env.FIREBASE_REGION || "europe-west1";
+import { region } from "../lib/runtimeOptions";
 
 interface TransitionRequest {
   bookingId: string;

@@ -3,7 +3,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import { requireAdmin } from "../utils/roles";
 import { commitProviderDecision } from "./commitDecision";
 
-const region = process.env.FIREBASE_REGION || "europe-west1";
+import { region } from "../lib/runtimeOptions";
 
 interface DecideProviderApplicationData {
   providerId: string;

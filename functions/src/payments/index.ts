@@ -1,17 +1,13 @@
 import { onCall, onRequest, HttpsError, CallableRequest } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import Stripe from "stripe";
+import type Stripe from "stripe";
+import { region } from "../lib/runtimeOptions";
+import { getStripe } from "../lib/stripeClient";
 
 // Re-export admin-only payment mutations (superadmin-gated refunds)
 export * from "./admin";
 
 const db = admin.firestore();
-const region = process.env.FIREBASE_REGION || "europe-west1";
-
-// Initialize Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2023-10-16",
-});
 
 interface PaymentIntentData {
   bookingId: string;
@@ -49,6 +45,7 @@ export const createStripeCustomer = onCall(
       return { customerId: userData.stripeCustomerId };
     }
 
+    const stripe = await getStripe();
     const customer = await stripe.customers.create({
       email: userData.email || undefined,
       phone: userData.phone || undefined,
@@ -102,6 +99,7 @@ export const createPaymentIntent = onCall<PaymentIntentData>(
     const amount = isDeposit ? booking.depositAmount : booking.finalPrice;
     const amountInCents = Math.round(amount * 100);
 
+    const stripe = await getStripe();
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amountInCents,
       currency: "eur",
@@ -165,6 +163,7 @@ export const createVipSubscription = onCall<VipSubscriptionData>(
       throw new HttpsError("not-found", "VIP plan not found");
     }
 
+    const stripe = await getStripe();
     let customerId = userData.stripeCustomerId;
     if (!customerId) {
       const customer = await stripe.customers.create({
@@ -220,6 +219,7 @@ export const stripeWebhook = onRequest(
     let event: Stripe.Event;
 
     try {
+      const stripe = await getStripe();
       event = stripe.webhooks.constructEvent(req.rawBody, sig, webhookSecret);
     } catch (err) {
       console.error("Webhook signature verification failed:", err);
@@ -377,6 +377,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
   const subscription = invoice.subscription as string;
   if (!subscription) return;
 
+  const stripe = await getStripe();
   const sub = await stripe.subscriptions.retrieve(subscription);
   const { firebaseUserId } = sub.metadata;
 
@@ -412,6 +413,7 @@ export const addWalletFunds = onCall<WalletFundsData>(
       throw new HttpsError("failed-precondition", "No Stripe customer found");
     }
 
+    const stripe = await getStripe();
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount * 100),
       currency: "eur",

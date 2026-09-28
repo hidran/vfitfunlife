@@ -18,7 +18,7 @@ import type { LegacyBookingStatus, LegacyCancelledBy } from "./types";
 export { mapLegacyStatus, isAlreadyMigrated };
 
 const db = admin.firestore();
-const region = process.env.FIREBASE_REGION || "europe-west1";
+import { region } from "../lib/runtimeOptions";
 const BATCH_SIZE = 400;
 
 interface MigrateRequest {

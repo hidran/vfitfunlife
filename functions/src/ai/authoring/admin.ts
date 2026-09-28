@@ -6,7 +6,7 @@ import { writeAuditLog } from "../../lib/audit";
 import { getAiAuthoringSettings, invalidateAiAuthoringSettingsCache, AI_AUTHORING_DOC } from "./settings";
 import { keyPresence, AI_SECRETS } from "../providers";
 
-const region = process.env.FIREBASE_REGION || "europe-west1";
+import { region } from "../../lib/runtimeOptions";
 
 const patchSchema = z.object({
   enabled: z.boolean().optional(),

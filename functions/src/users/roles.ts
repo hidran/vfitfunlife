@@ -20,7 +20,7 @@ import { seedProviderServicesFromTemplates } from "../providers/seedProviderServ
 import { mayHoldSuperadmin, isProtectedSuperadmin } from "../lib/superadmins";
 
 const db = admin.firestore();
-const region = process.env.FIREBASE_REGION || "europe-west1";
+import { region } from "../lib/runtimeOptions";
 
 // ============================================
 // REQUEST INTERFACES

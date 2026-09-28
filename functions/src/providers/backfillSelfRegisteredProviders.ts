@@ -10,7 +10,7 @@ import {
 } from "./applicationDecision";
 import { DEFAULT_WEEKLY_HOURS } from "../availability/slots";
 
-const region = process.env.FIREBASE_REGION || "europe-west1";
+import { region } from "../lib/runtimeOptions";
 
 interface ProviderReport {
   uid: string;

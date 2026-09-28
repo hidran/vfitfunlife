@@ -12,7 +12,7 @@ import { logger } from "firebase-functions";
 import { getUserRoleInfo } from "../utils/roles";
 import { EXERCISE_CATALOG } from "./catalog";
 
-const region = process.env.FIREBASE_REGION || "europe-west1";
+import { region } from "../lib/runtimeOptions";
 
 export const seedExerciseLibrary = onCall<{ dryRun?: boolean }>(
   { region, timeoutSeconds: 300 },

@@ -1,3 +1,11 @@
+// MUST be the very first import: setGlobalOptions() has to run before any of
+// the `export * from "./<module>"` statements below load a function
+// definition (onCall/onRequest/onSchedule/etc. all read the global options
+// synchronously at module-load time). Because `module: "commonjs"` preserves
+// import order as `require()` order, keeping this import first guarantees
+// that ordering. See lib/globalOptions.ts for details.
+import "./lib/globalOptions";
+
 import * as admin from "firebase-admin";
 
 // Initialize Firebase Admin

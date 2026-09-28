@@ -22,7 +22,7 @@ import { EMAIL_SECRETS } from "../lib/email";
 import { getUserRoleInfo } from "../utils/roles";
 import { notifyTransition } from "./notify";
 
-const region = process.env.FIREBASE_REGION || "europe-west1";
+import { region } from "../lib/runtimeOptions";
 
 export type RescheduleRefusal = "not_reschedulable" | "past_booking" | "permission_denied" | "same_slot";
 

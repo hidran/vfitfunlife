@@ -5,6 +5,7 @@ import { truncateError } from "../lib/errors";
 import { isValidUid } from "../lib/uid";
 import { isProtectedSuperadmin } from "../lib/superadmins";
 import { adminCascadeDeps, deleteUserCascade } from "./deleteUserCascade";
+import { region } from "../lib/runtimeOptions";
 
 interface AdminDeleteUserData {
   uid: string;
@@ -28,7 +29,7 @@ function delay(ms: number): Promise<void> {
  * pre-delete audit write itself fails, nothing is deleted.
  */
 export const adminDeleteUser = onCall<AdminDeleteUserData>(
-  { region: "europe-west1", timeoutSeconds: 300 },
+  { region, timeoutSeconds: 300 },
   async (req) => {
     const callerUid = req.auth?.uid;
     if (!callerUid) {

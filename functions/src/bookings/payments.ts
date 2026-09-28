@@ -18,7 +18,7 @@ import { applyTransition } from "./transitionCallables";
 import { PAYMENT_CONFIRMATION_METHODS, type PaymentConfirmationMethod } from "./types";
 
 const db = admin.firestore();
-const region = process.env.FIREBASE_REGION || "europe-west1";
+import { region } from "../lib/runtimeOptions";
 
 interface ConfirmPaymentRequest {
   bookingId: string;
