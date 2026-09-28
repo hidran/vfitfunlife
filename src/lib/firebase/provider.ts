@@ -3,9 +3,6 @@ import {
   doc,
   getDoc,
   getDocs,
-  getCountFromServer,
-  getAggregateFromServer,
-  sum,
   setDoc,
   updateDoc,
   deleteDoc,
@@ -24,6 +21,7 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 import { db } from "./config";
+import { countOrFallback, sumOrFallback } from "./firestore";
 import {
   acceptBooking as acceptBookingFn,
   declineBooking as declineBookingFn,
@@ -160,19 +158,27 @@ export async function getProviderDashboardStats(): Promise<DashboardStats> {
   // included here too: on the rare document that doesn't exist yet, this costs a handful of
   // reads that get thrown away below, in exchange for every existing provider's dashboard
   // loading in one round trip instead of up to six sequential ones.
+  //
+  // countOrFallback/sumOrFallback (src/lib/firebase/firestore.ts): aggregation queries can
+  // need a composite index a plain getDocs() on the exact same filters doesn't — confirmed live
+  // against staging, where `instructorId == / status in / scheduledAt range` already works via
+  // getDocs() (an existing descending-sorted index) but rejects a count()/sum() over the same
+  // filters until an ascending-sorted (and, for the sum, finalPrice-inclusive) index is built.
+  // These fall back to the getDocs()-computed answer on any aggregation failure, so a missing
+  // or still-building index costs reads, not correctness.
   const [
     providerSnap,
-    todayCountSnap,
-    weekCountSnap,
-    monthEarningsAggSnap,
-    newClientsCountSnap,
+    todayAppointments,
+    weekBookings,
+    monthEarnings,
+    newClients,
     recentBookingsSnap,
   ] = await Promise.all([
     getDoc(providerRef),
-    getCountFromServer(todayBookingsQuery),
-    getCountFromServer(weekBookingsQuery),
-    getAggregateFromServer(monthEarningsQuery, { total: sum("finalPrice") }),
-    getCountFromServer(newClientsQuery),
+    countOrFallback(todayBookingsQuery),
+    countOrFallback(weekBookingsQuery),
+    sumOrFallback(monthEarningsQuery, "finalPrice"),
+    countOrFallback(newClientsQuery),
     getDocs(recentBookingsQuery),
   ]);
 
@@ -190,12 +196,6 @@ export async function getProviderDashboardStats(): Promise<DashboardStats> {
   }
 
   const data = providerSnap.data();
-
-  const todayAppointments = todayCountSnap.data().count;
-  const weekBookings = weekCountSnap.data().count;
-  // sum() treats a missing/non-numeric finalPrice as 0, same as the `|| 0` this replaces.
-  const monthEarnings = monthEarningsAggSnap.data().total || 0;
-  const newClients = newClientsCountSnap.data().count;
 
   // Calculate completion rate (last 30 days)
   let completedCount = 0;

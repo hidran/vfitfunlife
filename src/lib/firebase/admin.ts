@@ -10,9 +10,6 @@ import {
   limit,
   getDocs,
   getDoc,
-  getCountFromServer,
-  getAggregateFromServer,
-  sum,
   doc,
   updateDoc,
   setDoc,
@@ -26,6 +23,7 @@ import {
 } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { auth, db, getFunctionsInstance } from "./config";
+import { countOrFallback, sumOrFallback } from "./firestore";
 import { cancelBooking as cancelBookingFn, decideProviderApplication } from "./functions";
 import {
   AdminDashboardStats,
@@ -178,27 +176,29 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
     // getDocs just to call `.size`/reduce over `.amount` threw the documents away unread.
     // pendingVerifications still needs real documents (see fetchPendingVerificationCandidates
     // above), but no longer the entire `users` collection.
+    //
+    // countOrFallback/sumOrFallback (src/lib/firebase/firestore.ts): confirmed live against
+    // staging that the revenue sum needs its OWN composite index (transactions: status, type,
+    // createdAt, **amount**) beyond the one the equivalent getDocs() query already uses — a sum
+    // aggregation needs the summed field in the index, which a filter-only index doesn't carry.
+    // These fall back to the getDocs()-computed answer on any aggregation failure, so a missing
+    // or still-building index costs reads, not a broken dashboard.
     const [
-      totalUsersSnap,
-      activeProvidersSnap,
-      todayBookingsSnap,
-      revenueSnap,
+      totalUsers,
+      activeProviders,
+      todayBookings,
+      monthlyRevenue,
       pendingCandidates,
       activitySnapshot,
     ] = await Promise.all([
-      getCountFromServer(usersRef),
-      getCountFromServer(providersQuery),
-      getCountFromServer(todayQuery),
-      getAggregateFromServer(revenueQuery, { total: sum("amount") }),
+      countOrFallback(usersRef),
+      countOrFallback(providersQuery),
+      countOrFallback(todayQuery),
+      sumOrFallback(revenueQuery, "amount"),
       fetchPendingVerificationCandidates(),
       getDocs(activityQuery),
     ]);
 
-    const totalUsers = totalUsersSnap.data().count;
-    const activeProviders = activeProvidersSnap.data().count;
-    const todayBookings = todayBookingsSnap.data().count;
-    // sum() treats a missing/non-numeric `amount` as 0, same as the `|| 0` this replaces.
-    const monthlyRevenue = revenueSnap.data().total || 0;
     const pendingVerifications = filterNeedsVerificationDecision(pendingCandidates).length;
 
     const recentActivity = activitySnapshot.docs.map((doc) => ({
