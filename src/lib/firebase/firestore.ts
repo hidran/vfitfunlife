@@ -3,6 +3,9 @@ import {
   doc,
   getDoc,
   getDocs,
+  getCountFromServer,
+  getAggregateFromServer,
+  sum,
   setDoc,
   updateDoc,
   deleteDoc,
@@ -13,6 +16,8 @@ import {
   limit,
   startAfter,
   DocumentSnapshot,
+  Query,
+  DocumentData,
   QueryConstraint,
   onSnapshot,
   Timestamp,
@@ -230,3 +235,39 @@ export function subscribeToSubcollection<T>(
 
 // Query builder helpers
 export { where, orderBy, limit, startAfter };
+
+/**
+ * getCountFromServer()/getAggregateFromServer() can require their OWN composite index even
+ * when the equivalent getDocs() query already works fine — discovered live on staging while
+ * building the P1-3/P1-4 dashboard-stats optimizations: an `in` filter combined with a range
+ * needs the range field indexed ascending specifically, which an existing descending-sorted
+ * index (built for a plain getDocs() query, which tolerates either direction) does not satisfy
+ * for aggregation, and a sum() additionally needs the summed field itself in the index. Both
+ * helpers below fall back to computing the answer from the fetched documents on any aggregation
+ * failure (most usefully FAILED_PRECONDITION for a missing/still-building index), so a query
+ * degrades to the pre-aggregation cost instead of failing its caller outright — and speeds back
+ * up automatically the moment the right index finishes building.
+ */
+export async function countOrFallback(q: Query<DocumentData>): Promise<number> {
+  try {
+    return (await getCountFromServer(q)).data().count;
+  } catch (error) {
+    console.error("[countOrFallback] aggregation count failed, falling back to getDocs()", error);
+    return (await getDocs(q)).size;
+  }
+}
+
+/** Same fallback as countOrFallback, for a sum() over `field`. */
+export async function sumOrFallback(q: Query<DocumentData>, field: string): Promise<number> {
+  try {
+    return (await getAggregateFromServer(q, { total: sum(field) })).data().total || 0;
+  } catch (error) {
+    console.error(`[sumOrFallback] aggregation sum(${field}) failed, falling back to getDocs()`, error);
+    const snapshot = await getDocs(q);
+    let total = 0;
+    snapshot.forEach((doc) => {
+      total += (doc.data()[field] as number | undefined) || 0;
+    });
+    return total;
+  }
+}

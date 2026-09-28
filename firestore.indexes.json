@@ -81,6 +81,22 @@
         { "fieldPath": "createdAt", "order": "ASCENDING" }
       ]
     },
+    // P1-4 (getAdminDashboardStats' monthlyRevenue): getAggregateFromServer(sum('amount'))
+    // over this exact filter shape rejects with FAILED_PRECONDITION even though the index right
+    // above already serves the plain getDocs() version fine — a sum() additionally needs the
+    // summed field itself present in the index. Confirmed live against staging. Needs
+    // `firebase deploy --only firestore:indexes`; sumOrFallback (src/lib/firebase/firestore.ts)
+    // covers the gap with a getDocs()+reduce fallback until this is built.
+    {
+      "collectionGroup": "transactions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "type", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" },
+        { "fieldPath": "amount", "order": "ASCENDING" }
+      ]
+    },
     {
       "collectionGroup": "bookings",
       "queryScope": "COLLECTION",
@@ -149,6 +165,39 @@
         { "fieldPath": "scheduledAt", "order": "DESCENDING" }
       ]
     },
+    // P1-3 (getProviderDashboardStats' today/week counts): discovered live against staging
+    // that this query — instructorId ==, status IN [...], scheduledAt range — already needs a
+    // composite index for a *plain* getDocs() too (an `in` filter combined with a range isn't
+    // automatically indexed), and the index right above it, built DESCENDING for a different
+    // (working) query, doesn't satisfy it. `getProviderDashboardStats` had no try/catch, so
+    // every provider's today/week counts (and the identically-shaped month-earnings sum below)
+    // have been silently throwing and rendering as zero — a pre-existing bug, not introduced by
+    // switching to getCountFromServer, just found while doing it. Needs
+    // `firebase deploy --only firestore:indexes`.
+    {
+      "collectionGroup": "bookings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "instructorId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "scheduledAt", "order": "ASCENDING" }
+      ]
+    },
+    // Same shape, plus `finalPrice`: getAggregateFromServer(sum('finalPrice')) for the
+    // month-earnings query needs the summed field in the index too (see the transactions
+    // sum index above for the same rule). sumOrFallback/countOrFallback
+    // (src/lib/firebase/firestore.ts) fall back to a getDocs()+reduce answer until both this
+    // and the index above are built.
+    {
+      "collectionGroup": "bookings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "instructorId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "scheduledAt", "order": "ASCENDING" },
+        { "fieldPath": "finalPrice", "order": "ASCENDING" }
+      ]
+    },
     {
       "collectionGroup": "recipes",
       "queryScope": "COLLECTION",
@@ -184,6 +233,21 @@
       "fields": [
         { "fieldPath": "providerId", "order": "ASCENDING" },
         { "fieldPath": "lastVisit", "order": "DESCENDING" }
+      ]
+    },
+    // getProviderDashboardStats' newClients count (src/lib/firebase/provider.ts): a different
+    // field pair than the index above (firstVisit, not lastVisit), and just as missing — this
+    // query has been silently throwing and rendering newClients as zero since it was written,
+    // for a plain getDocs() every bit as much as for the getCountFromServer() it was rewritten
+    // to (confirmed live against staging: both fail identically). countOrFallback
+    // (src/lib/firebase/firestore.ts) can't rescue this one — its getDocs() fallback needs the
+    // same index. Needs `firebase deploy --only firestore:indexes`.
+    {
+      "collectionGroup": "clients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "providerId", "order": "ASCENDING" },
+        { "fieldPath": "firstVisit", "order": "ASCENDING" }
       ]
     },
     // Category search. categoryIds holds the leaf AND its ancestors, so one

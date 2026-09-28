@@ -21,6 +21,7 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 import { db } from "./config";
+import { countOrFallback, sumOrFallback } from "./firestore";
 import {
   acceptBooking as acceptBookingFn,
   declineBooking as declineBookingFn,
@@ -83,33 +84,17 @@ export async function getProviderDashboardStats(): Promise<DashboardStats> {
 
   // `instructors`, not PROVIDER_COLLECTION. The provider catalogue is `instructors`;
   // `providers` has never held a document in either project, so this read always missed and
-  // the early return below handed every provider a dashboard of zeros — the queries further
-  // down never ran at all. The remaining PROVIDER_COLLECTION paths in this file
-  // (blocked_times, notifications) point at the same empty collection and want the same
-  // treatment, but moving where they read and write is a data question, not a counter fix.
+  // the early return below handed every provider a dashboard of zeros. The remaining
+  // PROVIDER_COLLECTION paths in this file (blocked_times, notifications) point at the same
+  // empty collection and want the same treatment, but moving where they read and write is a
+  // data question, not a counter fix.
   const providerRef = doc(db, INSTRUCTORS_COLLECTION, providerId);
-  const providerSnap = await getDoc(providerRef);
 
-  if (!providerSnap.exists()) {
-    // Return default stats if provider document doesn't exist
-    return {
-      todayAppointments: 0,
-      weekBookings: 0,
-      monthEarnings: 0,
-      newClients: 0,
-      completionRate: 0,
-      averageRating: 0,
-      chartData: [],
-    };
-  }
-
-  const data = providerSnap.data();
-  
   // Get today's bookings
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const todayTimestamp = Timestamp.fromDate(today);
-  
+
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowTimestamp = Timestamp.fromDate(tomorrow);
@@ -121,9 +106,6 @@ export async function getProviderDashboardStats(): Promise<DashboardStats> {
     where("scheduledAt", "<", tomorrowTimestamp),
     where("status", "in", BOOKED_STATUSES)
   );
-
-  const todayBookingsSnap = await getDocs(todayBookingsQuery);
-  const todayAppointments = todayBookingsSnap.size;
 
   // Get this week's bookings
   const weekStart = new Date(today);
@@ -139,9 +121,6 @@ export async function getProviderDashboardStats(): Promise<DashboardStats> {
     where("status", "in", CALENDAR_STATUSES)
   );
 
-  const weekBookingsSnap = await getDocs(weekBookingsQuery);
-  const weekBookings = weekBookingsSnap.size;
-
   // Get this month's earnings
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
   const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
@@ -154,13 +133,6 @@ export async function getProviderDashboardStats(): Promise<DashboardStats> {
     where("status", "in", DELIVERED_STATUSES)
   );
 
-  const monthEarningsSnap = await getDocs(monthEarningsQuery);
-  let monthEarnings = 0;
-  monthEarningsSnap.forEach(doc => {
-    const booking = doc.data();
-    monthEarnings += booking.finalPrice || 0;
-  });
-
   // Get new clients this month
   const newClientsQuery = query(
     collection(db, CLIENTS_COLLECTION),
@@ -168,10 +140,9 @@ export async function getProviderDashboardStats(): Promise<DashboardStats> {
     where("firstVisit", ">=", Timestamp.fromDate(monthStart))
   );
 
-  const newClientsSnap = await getDocs(newClientsQuery);
-  const newClients = newClientsSnap.size;
-
-  // Calculate completion rate (last 30 days)
+  // Bookings feeding the completion rate and the chart (last 30 days). Needs the full
+  // documents (status + scheduledAt + finalPrice per booking), so this one stays a getDocs —
+  // an aggregation can only return a single count/sum, not a per-day breakdown.
   const last30Days = new Date(today);
   last30Days.setDate(last30Days.getDate() - 30);
 
@@ -182,10 +153,54 @@ export async function getProviderDashboardStats(): Promise<DashboardStats> {
     where("status", "in", OUTCOME_STATUSES)
   );
 
-  const recentBookingsSnap = await getDocs(recentBookingsQuery);
+  // None of these reads depend on one another's results (they all just need providerId), so
+  // they're fired together instead of one round trip after another. The provider doc read is
+  // included here too: on the rare document that doesn't exist yet, this costs a handful of
+  // reads that get thrown away below, in exchange for every existing provider's dashboard
+  // loading in one round trip instead of up to six sequential ones.
+  //
+  // countOrFallback/sumOrFallback (src/lib/firebase/firestore.ts): aggregation queries can
+  // need a composite index a plain getDocs() on the exact same filters doesn't — confirmed live
+  // against staging, where `instructorId == / status in / scheduledAt range` already works via
+  // getDocs() (an existing descending-sorted index) but rejects a count()/sum() over the same
+  // filters until an ascending-sorted (and, for the sum, finalPrice-inclusive) index is built.
+  // These fall back to the getDocs()-computed answer on any aggregation failure, so a missing
+  // or still-building index costs reads, not correctness.
+  const [
+    providerSnap,
+    todayAppointments,
+    weekBookings,
+    monthEarnings,
+    newClients,
+    recentBookingsSnap,
+  ] = await Promise.all([
+    getDoc(providerRef),
+    countOrFallback(todayBookingsQuery),
+    countOrFallback(weekBookingsQuery),
+    sumOrFallback(monthEarningsQuery, "finalPrice"),
+    countOrFallback(newClientsQuery),
+    getDocs(recentBookingsQuery),
+  ]);
+
+  if (!providerSnap.exists()) {
+    // Return default stats if provider document doesn't exist
+    return {
+      todayAppointments: 0,
+      weekBookings: 0,
+      monthEarnings: 0,
+      newClients: 0,
+      completionRate: 0,
+      averageRating: 0,
+      chartData: [],
+    };
+  }
+
+  const data = providerSnap.data();
+
+  // Calculate completion rate (last 30 days)
   let completedCount = 0;
   let totalCount = 0;
-  
+
   recentBookingsSnap.forEach(doc => {
     const booking = doc.data();
     totalCount++;
