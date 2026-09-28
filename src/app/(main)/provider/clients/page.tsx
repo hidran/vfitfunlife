@@ -44,14 +44,14 @@ export default function ProviderClientsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-content">{t('provider.clients.title')}</h1>
-          <p className="text-gray-400 mt-1">
+          <p className="text-content-muted mt-1">
             {t('provider.clients.subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-3">
           <div className="text-right">
             <p className="text-2xl font-bold text-content">{displayClients.length}</p>
-            <p className="text-sm text-gray-400">{t('provider.clients.totalClients')}</p>
+            <p className="text-sm text-content-muted">{t('provider.clients.totalClients')}</p>
           </div>
         </div>
       </div>
@@ -59,7 +59,7 @@ export default function ProviderClientsPage() {
       {/* Search */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-content-muted" />
           <input
             type="text"
             placeholder={t('provider.clients.search.placeholder')}
@@ -97,44 +97,44 @@ export default function ProviderClientsPage() {
                   </div>
                 )}
                 <div>
-                  <h3 className="font-semibold text-content group-hover:text-section-primary transition-colors">
+                  <h3 className="font-semibold text-content group-hover:text-section-primary light:group-hover:text-primary-dark transition-colors">
                     {client.name}
                   </h3>
-                  <p className="text-sm text-gray-400">{client.email}</p>
+                  <p className="text-sm text-content-muted">{client.email}</p>
                   {client.notes && (
                     <div className="flex items-center gap-1 mt-1">
-                      <FileText className="w-3 h-3 text-gray-500" />
-                      <span className="text-xs text-gray-500">{t('provider.clients.hasNotes')}</span>
+                      <FileText className="w-3 h-3 text-content-faint light:text-content-muted" />
+                      <span className="text-xs text-content-faint light:text-content-muted">{t('provider.clients.hasNotes')}</span>
                     </div>
                   )}
                 </div>
               </div>
-              <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-section-primary transition-colors" />
+              <ChevronRight className="w-5 h-5 text-content-faint light:text-content-muted group-hover:text-section-primary light:group-hover:text-primary-dark transition-colors" />
             </div>
 
             <div className="grid grid-cols-3 gap-4 mt-5 pt-4 border-t border-hairline">
               <div className="text-center">
-                <div className="flex items-center justify-center gap-1 text-gray-400 mb-1">
+                <div className="flex items-center justify-center gap-1 text-content-muted mb-1">
                   <Calendar className="w-4 h-4" />
                 </div>
                 <p className="text-lg font-semibold text-content">{client.totalBookings}</p>
-                <p className="text-xs text-gray-500">{t('provider.clients.stat.bookings')}</p>
+                <p className="text-xs text-content-faint light:text-content-muted">{t('provider.clients.stat.bookings')}</p>
               </div>
               <div className="text-center border-x border-hairline">
-                <div className="flex items-center justify-center gap-1 text-gray-400 mb-1">
+                <div className="flex items-center justify-center gap-1 text-content-muted mb-1">
                   <DollarSign className="w-4 h-4" />
                 </div>
                 <p className="text-lg font-semibold text-content">€{client.totalSpent}</p>
-                <p className="text-xs text-gray-500">{t('provider.clients.stat.totalSpent')}</p>
+                <p className="text-xs text-content-faint light:text-content-muted">{t('provider.clients.stat.totalSpent')}</p>
               </div>
               <div className="text-center">
-                <div className="flex items-center justify-center gap-1 text-gray-400 mb-1">
+                <div className="flex items-center justify-center gap-1 text-content-muted mb-1">
                   <Users className="w-4 h-4" />
                 </div>
                 <p className="text-lg font-semibold text-content">
                   {formatDate(client.lastVisit)}
                 </p>
-                <p className="text-xs text-gray-500">{t('provider.clients.stat.lastVisit')}</p>
+                <p className="text-xs text-content-faint light:text-content-muted">{t('provider.clients.stat.lastVisit')}</p>
               </div>
             </div>
           </Link>
@@ -143,9 +143,9 @@ export default function ProviderClientsPage() {
 
       {filteredClients.length === 0 && (
         <div className="text-center py-12">
-          <Users className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+          <Users className="w-12 h-12 text-content-faint light:text-content-muted mx-auto mb-4" />
           <h3 className="text-lg font-medium text-content mb-2">{t('provider.clients.empty.title')}</h3>
-          <p className="text-gray-400">{t('provider.clients.empty.subtitle')}</p>
+          <p className="text-content-muted">{t('provider.clients.empty.subtitle')}</p>
         </div>
       )}
     </div>

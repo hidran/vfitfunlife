@@ -98,7 +98,7 @@ export default function BookingDetailClient() {
             <p className="text-sm text-error mb-3 max-w-md">{bookingError}</p>
           )}
           <div className="w-16 h-16 bg-surface-elevated rounded-full flex items-center justify-center mx-auto mb-4">
-            <Calendar className="w-8 h-8 text-gray-500" />
+            <Calendar className="w-8 h-8 text-content-faint light:text-content-muted" />
           </div>
           <h2 className="text-xl font-semibold text-content mb-2">{t('provider.bookingDetail.notFound')}</h2>
           <Link href="/provider/bookings">
@@ -168,7 +168,7 @@ export default function BookingDetailClient() {
       {/* Back Link */}
       <Link
         href="/provider/bookings"
-        className="inline-flex items-center gap-2 text-gray-400 hover:text-content transition-colors"
+        className="inline-flex items-center gap-2 text-content-muted hover:text-content transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         {t('provider.bookingDetail.backToBookings')}
@@ -183,7 +183,7 @@ export default function BookingDetailClient() {
               {statusBadgeLabel}
             </Badge>
           </div>
-          <p className="text-gray-400">
+          <p className="text-content-muted">
             {t('provider.bookingDetail.bookingId', { id: booking.id })}
           </p>
         </div>
@@ -195,14 +195,14 @@ export default function BookingDetailClient() {
                 <CheckCircle className="w-4 h-4 mr-2" />
                 {t('provider.bookingDetail.confirm')}
               </Button>
-              <Button variant="outline" onClick={handleDecline} className="border-red-500/50 text-red-400 hover:bg-red-500/10">
+              <Button variant="outline" onClick={handleDecline} className="border-red-500/50 text-red-400 light:text-red-700 hover:bg-red-500/10">
                 <XCircle className="w-4 h-4 mr-2" />
                 {t('provider.bookingDetail.decline')}
               </Button>
             </>
           )}
           {booking.status === 'accepted' && sessionHasEnded && (
-            <Button variant="outline" onClick={handleNoShow} className="border-amber-500/50 text-amber-400 hover:bg-amber-500/10">
+            <Button variant="outline" onClick={handleNoShow} className="border-amber-500/50 text-amber-400 light:text-amber-700 hover:bg-amber-500/10">
               <XCircle className="w-4 h-4 mr-2" />
               {t('provider.bookingDetail.noShow' as MessageKey)}
             </Button>
@@ -231,7 +231,7 @@ export default function BookingDetailClient() {
             </>
           )}
           {(booking.status === 'accepted' || booking.status === 'requested') && (
-            <Button variant="outline" onClick={handleCancel} className="border-red-500/50 text-red-400 hover:bg-red-500/10">
+            <Button variant="outline" onClick={handleCancel} className="border-red-500/50 text-red-400 light:text-red-700 hover:bg-red-500/10">
               <XCircle className="w-4 h-4 mr-2" />
               {t('provider.bookingDetail.cancel')}
             </Button>
@@ -272,12 +272,12 @@ export default function BookingDetailClient() {
                 <h4 className="text-xl font-medium text-content">{booking.userName}</h4>
                 <div className="flex flex-col gap-1 mt-2">
                   {booking.userEmail && (
-                    <a href={`mailto:${booking.userEmail}`} className="flex items-center gap-2 text-gray-400 hover:text-content text-sm">
+                    <a href={`mailto:${booking.userEmail}`} className="flex items-center gap-2 text-content-muted hover:text-content text-sm">
                       <Mail className="w-4 h-4" />
                       {booking.userEmail}
                     </a>
                   )}
-                  <a href={`tel:${booking.userPhone}`} className="flex items-center gap-2 text-gray-400 hover:text-content text-sm">
+                  <a href={`tel:${booking.userPhone}`} className="flex items-center gap-2 text-content-muted hover:text-content text-sm">
                     <Phone className="w-4 h-4" />
                     {booking.userPhone}
                   </a>
@@ -303,27 +303,27 @@ export default function BookingDetailClient() {
             <h3 className="text-lg font-semibold text-content mb-4">{t('provider.bookingDetail.serviceDetails')}</h3>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-gray-400">{t('provider.bookingDetail.service')}</span>
+                <span className="text-content-muted">{t('provider.bookingDetail.service')}</span>
                 <span className="text-content font-medium">{booking.serviceName}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-gray-400">{t('provider.bookingDetail.duration')}</span>
+                <span className="text-content-muted">{t('provider.bookingDetail.duration')}</span>
                 <span className="text-content">{t('provider.bookingDetail.durationMinutes', { count: booking.durationMinutes })}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-gray-400">{t('provider.bookingDetail.type')}</span>
+                <span className="text-content-muted">{t('provider.bookingDetail.type')}</span>
                 <span className={cn(
                   'text-sm capitalize',
-                  booking.bookingType === 'virtual' && 'text-blue-400',
-                  booking.bookingType === 'home_service' && 'text-green-400',
-                  booking.bookingType === 'in_venue' && 'text-purple-400',
+                  booking.bookingType === 'virtual' && 'text-blue-400 light:text-blue-700',
+                  booking.bookingType === 'home_service' && 'text-green-400 light:text-green-700',
+                  booking.bookingType === 'in_venue' && 'text-purple-400 light:text-purple-700',
                 )}>
                   {booking.bookingType.replace('_', ' ')}
                 </span>
               </div>
               {booking.venueName && (
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-400">{t('provider.bookingDetail.location')}</span>
+                  <span className="text-content-muted">{t('provider.bookingDetail.location')}</span>
                   <span className="text-content">{booking.venueName}</span>
                 </div>
               )}
@@ -336,22 +336,22 @@ export default function BookingDetailClient() {
             <div className="space-y-4">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-lg bg-surface-input flex items-center justify-center">
-                  <Calendar className="w-6 h-6 text-section-primary" />
+                  <Calendar className="w-6 h-6 text-section-primary light:text-primary-dark" />
                 </div>
                 <div>
                   <p className="text-content font-medium">{formatDate(booking.scheduledAt)}</p>
-                  <p className="text-sm text-gray-400">{t('provider.bookingDetail.date')}</p>
+                  <p className="text-sm text-content-muted">{t('provider.bookingDetail.date')}</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-lg bg-surface-input flex items-center justify-center">
-                  <Clock className="w-6 h-6 text-section-primary" />
+                  <Clock className="w-6 h-6 text-section-primary light:text-primary-dark" />
                 </div>
                 <div>
                   <p className="text-content font-medium">
                     {formatTime(booking.scheduledAt)} - {formatTime(booking.scheduledEndAt)}
                   </p>
-                  <p className="text-sm text-gray-400">{t('provider.bookingDetail.time')}</p>
+                  <p className="text-sm text-content-muted">{t('provider.bookingDetail.time')}</p>
                 </div>
               </div>
             </div>
@@ -362,7 +362,7 @@ export default function BookingDetailClient() {
             <div className="bg-surface-elevated rounded-xl border border-hairline p-6">
               <h3 className="text-lg font-semibold text-content mb-4">{t('provider.bookingDetail.clientNotes')}</h3>
               <div className="bg-surface-input rounded-lg p-4">
-                <p className="text-gray-300">{booking.userNotes}</p>
+                <p className="text-content/85">{booking.userNotes}</p>
               </div>
             </div>
           )}
@@ -392,7 +392,7 @@ export default function BookingDetailClient() {
                 </div>
               </div>
             ) : (
-              <p className="text-gray-500 text-sm">{t('provider.bookingDetail.privateNotesEmpty')}</p>
+              <p className="text-content-faint light:text-content-muted text-sm">{t('provider.bookingDetail.privateNotesEmpty')}</p>
             )}
           </div>
         </div>
@@ -404,18 +404,18 @@ export default function BookingDetailClient() {
             <h3 className="text-lg font-semibold text-content mb-4">{t('provider.bookingDetail.paymentSummary')}</h3>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-gray-400">{t('provider.bookingDetail.originalPrice')}</span>
+                <span className="text-content-muted">{t('provider.bookingDetail.originalPrice')}</span>
                 <span className="text-content">€{booking.originalPrice.toFixed(2)}</span>
               </div>
               {booking.discountAmount > 0 && (
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-400">{t('provider.bookingDetail.discount')}</span>
-                  <span className="text-green-400">-€{booking.discountAmount.toFixed(2)}</span>
+                  <span className="text-content-muted">{t('provider.bookingDetail.discount')}</span>
+                  <span className="text-green-400 light:text-green-700">-€{booking.discountAmount.toFixed(2)}</span>
                 </div>
               )}
               {booking.homeServiceFee > 0 && (
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-400">{t('provider.bookingDetail.homeServiceFee')}</span>
+                  <span className="text-content-muted">{t('provider.bookingDetail.homeServiceFee')}</span>
                   <span className="text-content">+€{booking.homeServiceFee.toFixed(2)}</span>
                 </div>
               )}
@@ -427,12 +427,12 @@ export default function BookingDetailClient() {
               </div>
               <div className="pt-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-400">{t('provider.bookingDetail.paymentStatus')}</span>
+                  <span className="text-content-muted">{t('provider.bookingDetail.paymentStatus')}</span>
                   <span className={cn(
                     'text-sm font-medium',
-                    booking.paymentStatus === 'paid' ? 'text-green-400' :
-                    booking.paymentStatus === 'pending' ? 'text-yellow-400' :
-                    'text-gray-400'
+                    booking.paymentStatus === 'paid' ? 'text-green-400 light:text-green-700' :
+                    booking.paymentStatus === 'pending' ? 'text-yellow-400 light:text-yellow-700' :
+                    'text-content-muted'
                   )}>
                     {booking.paymentStatus.replace('_', ' ')}
                   </span>
@@ -440,8 +440,8 @@ export default function BookingDetailClient() {
               </div>
               {booking.depositPaid && (
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-400">{t('provider.bookingDetail.deposit')}</span>
-                  <span className="text-green-400">{t('provider.bookingDetail.depositPaid')}</span>
+                  <span className="text-content-muted">{t('provider.bookingDetail.deposit')}</span>
+                  <span className="text-green-400 light:text-green-700">{t('provider.bookingDetail.depositPaid')}</span>
                 </div>
               )}
             </div>
@@ -455,7 +455,7 @@ export default function BookingDetailClient() {
                 <div className="w-2 h-2 rounded-full bg-section-primary mt-2" />
                 <div>
                   <p className="text-sm text-content">{t('provider.bookingDetail.historyCreated')}</p>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-content-muted">
                     {formatDateTime(booking.createdAt)}
                   </p>
                 </div>
@@ -465,7 +465,7 @@ export default function BookingDetailClient() {
                   <div className="w-2 h-2 rounded-full bg-green-400 mt-2" />
                   <div>
                     <p className="text-sm text-content">{t('provider.bookingDetail.historyConfirmed')}</p>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-content-muted">
                       {formatDateTime(booking.confirmedAt)}
                     </p>
                   </div>
@@ -476,7 +476,7 @@ export default function BookingDetailClient() {
                   <div className="w-2 h-2 rounded-full bg-blue-400 mt-2" />
                   <div>
                     <p className="text-sm text-content">{t('provider.bookingDetail.historyCompleted')}</p>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-content-muted">
                       {formatDateTime(booking.completedAt)}
                     </p>
                   </div>

@@ -7,10 +7,10 @@ import { toLocaleTag } from '@/types/locale';
 import type { ClientBookingHistory } from '@/types/provider';
 
 const STATUS_COLORS: Record<string, string> = {
-  completed: 'bg-green-500/20 text-green-400',
-  confirmed: 'bg-blue-500/20 text-blue-400',
-  pending: 'bg-yellow-500/20 text-yellow-400',
-  cancelled: 'bg-red-500/20 text-red-400',
+  completed: 'bg-green-500/20 text-green-400 light:text-green-700',
+  confirmed: 'bg-blue-500/20 text-blue-400 light:text-blue-700',
+  pending: 'bg-yellow-500/20 text-yellow-400 light:text-yellow-700',
+  cancelled: 'bg-red-500/20 text-red-400 light:text-red-700',
 };
 
 interface MeetingsTabProps {
@@ -35,7 +35,7 @@ export default function MeetingsTab({ bookingHistory }: MeetingsTabProps) {
       <div className="p-6 border-b border-hairline">
         <h3 className="text-lg font-semibold text-content">{t('provider.clientDetail.bookingHistory')}</h3>
       </div>
-      <div className="divide-y divide-white/5">
+      <div className="divide-y divide-content/5 light:divide-hairline">
         {bookingHistory.map((entry) => (
           <div
             key={entry.booking.id}
@@ -43,11 +43,11 @@ export default function MeetingsTab({ bookingHistory }: MeetingsTabProps) {
           >
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-lg bg-surface-input flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-section-primary" />
+                <Calendar className="w-6 h-6 text-section-primary light:text-primary-dark" />
               </div>
               <div>
                 <p className="font-medium text-content">{entry.serviceName}</p>
-                <p className="text-sm text-gray-400">{formatDate(entry.date)}</p>
+                <p className="text-sm text-content-muted">{formatDate(entry.date)}</p>
               </div>
             </div>
             <div className="flex items-center gap-4">

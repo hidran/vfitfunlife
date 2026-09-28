@@ -6,10 +6,10 @@ import { toLocaleTag } from '@/types/locale';
 import type { ProviderClient, ClientBookingHistory } from '@/types/provider';
 
 const STATUS_COLORS: Record<string, string> = {
-  completed: 'bg-green-500/20 text-green-400',
-  confirmed: 'bg-blue-500/20 text-blue-400',
-  pending: 'bg-yellow-500/20 text-yellow-400',
-  cancelled: 'bg-red-500/20 text-red-400',
+  completed: 'bg-green-500/20 text-green-400 light:text-green-700',
+  confirmed: 'bg-blue-500/20 text-blue-400 light:text-blue-700',
+  pending: 'bg-yellow-500/20 text-yellow-400 light:text-yellow-700',
+  cancelled: 'bg-red-500/20 text-red-400 light:text-red-700',
 };
 
 interface OverviewTabProps {
@@ -38,7 +38,7 @@ export default function OverviewTab({ client, bookingHistory }: OverviewTabProps
           <h3 className="text-lg font-semibold text-content">{t('provider.clientDetail.notes.title')}</h3>
         </div>
 
-        <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">
+        <p className="text-content/85 leading-relaxed whitespace-pre-wrap">
           {client.notes || t('provider.clientDetail.notes.empty')}
         </p>
       </div>
@@ -54,7 +54,7 @@ export default function OverviewTab({ client, bookingHistory }: OverviewTabProps
             >
               <div>
                 <p className="font-medium text-content">{entry.serviceName}</p>
-                <p className="text-sm text-gray-400">{formatDate(entry.date)}</p>
+                <p className="text-sm text-content-muted">{formatDate(entry.date)}</p>
               </div>
               <div className="text-right">
                 <p className="font-medium text-content">€{entry.amount}</p>

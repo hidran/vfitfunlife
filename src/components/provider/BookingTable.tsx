@@ -62,9 +62,9 @@ export function BookingTable({
 
   if (loading) {
     return (
-      <div className="bg-surface-elevated rounded-xl border border-white/5 p-8">
+      <div className="bg-surface-elevated rounded-xl border border-content/5 light:border-hairline p-8">
         <div className="flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-white/20 border-t-section-primary rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-content/20 border-t-section-primary rounded-full animate-spin" />
         </div>
       </div>
     );
@@ -72,22 +72,22 @@ export function BookingTable({
 
   if (bookings.length === 0) {
     return (
-      <div className="bg-surface-elevated rounded-xl border border-white/5 p-12 text-center">
+      <div className="bg-surface-elevated rounded-xl border border-content/5 light:border-hairline p-12 text-center">
         <div className="w-16 h-16 bg-surface-input rounded-full flex items-center justify-center mx-auto mb-4">
-          <Calendar className="w-8 h-8 text-gray-500" />
+          <Calendar className="w-8 h-8 text-content-faint light:text-content-muted" />
         </div>
-        <h3 className="text-lg font-medium text-white mb-2">{t('provider.bookingTable.empty.title')}</h3>
-        <p className="text-gray-400">{t('provider.bookingTable.empty.subtitle')}</p>
+        <h3 className="text-lg font-medium text-content mb-2">{t('provider.bookingTable.empty.title')}</h3>
+        <p className="text-content-muted">{t('provider.bookingTable.empty.subtitle')}</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-surface-elevated rounded-xl border border-white/5 overflow-hidden">
+    <div className="bg-surface-elevated rounded-xl border border-content/5 light:border-hairline overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-white/5 bg-surface-input/50">
+            <tr className="border-b border-content/5 light:border-hairline bg-surface-input/50">
               {onSelect && (
                 <th className="w-12 px-4 py-3">
                   <input
@@ -97,19 +97,19 @@ export function BookingTable({
                       if (el) el.indeterminate = isSomeSelected;
                     }}
                     onChange={(e) => onSelectAll?.(e.target.checked)}
-                    className="w-4 h-4 rounded border-white/20 bg-transparent text-section-primary focus:ring-section-primary"
+                    className="w-4 h-4 rounded border-content/20 bg-transparent text-section-primary focus:ring-section-primary"
                   />
                 </th>
               )}
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-400">{t('provider.bookingTable.col.client')}</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-400">{t('provider.bookingTable.col.service')}</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-400">{t('provider.bookingTable.col.dateTime')}</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-400">{t('provider.bookingTable.col.price')}</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-400">{t('provider.bookingTable.col.status')}</th>
-              <th className="px-4 py-3 text-right text-sm font-medium text-gray-400">{t('provider.bookingTable.col.actions')}</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-content-muted">{t('provider.bookingTable.col.client')}</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-content-muted">{t('provider.bookingTable.col.service')}</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-content-muted">{t('provider.bookingTable.col.dateTime')}</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-content-muted">{t('provider.bookingTable.col.price')}</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-content-muted">{t('provider.bookingTable.col.status')}</th>
+              <th className="px-4 py-3 text-right text-sm font-medium text-content-muted">{t('provider.bookingTable.col.actions')}</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/5">
+          <tbody className="divide-y divide-content/5 light:divide-hairline">
             {bookings.map((booking) => {
               const isSelected = selectedIds.includes(booking.id);
               const statusMeta = BOOKING_STATUS_META[booking.status];
@@ -129,7 +129,7 @@ export function BookingTable({
                         type="checkbox"
                         checked={isSelected}
                         onChange={(e) => onSelect(booking.id, e.target.checked)}
-                        className="w-4 h-4 rounded border-white/20 bg-transparent text-section-primary focus:ring-section-primary"
+                        className="w-4 h-4 rounded border-content/20 bg-transparent text-section-primary focus:ring-section-primary"
                       />
                     </td>
                   )}
@@ -146,33 +146,33 @@ export function BookingTable({
                         />
                       ) : (
                         <div className="w-10 h-10 rounded-full bg-surface-input flex items-center justify-center">
-                          <User className="w-5 h-5 text-gray-500" />
+                          <User className="w-5 h-5 text-content-faint light:text-content-muted" />
                         </div>
                       )}
                       <div>
-                        <p className="font-medium text-white">{booking.userName}</p>
-                        <p className="text-sm text-gray-400">{booking.userEmail || booking.userPhone}</p>
+                        <p className="font-medium text-content">{booking.userName}</p>
+                        <p className="text-sm text-content-muted">{booking.userEmail || booking.userPhone}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-4 py-4">
-                    <p className="text-white">{booking.serviceName}</p>
-                    <p className="text-sm text-gray-400">{booking.durationMinutes} min</p>
+                    <p className="text-content">{booking.serviceName}</p>
+                    <p className="text-sm text-content-muted">{booking.durationMinutes} min</p>
                   </td>
                   <td className="px-4 py-4">
-                    <div className="flex items-center gap-2 text-gray-300">
-                      <Calendar className="w-4 h-4 text-gray-500" />
+                    <div className="flex items-center gap-2 text-content/85">
+                      <Calendar className="w-4 h-4 text-content-faint light:text-content-muted" />
                       <span>{formatDate(booking.scheduledAt)}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-gray-400 text-sm mt-1">
+                    <div className="flex items-center gap-2 text-content-muted text-sm mt-1">
                       <Clock className="w-4 h-4" />
                       <span>{formatTime(booking.scheduledAt)}</span>
                     </div>
                   </td>
                   <td className="px-4 py-4">
-                    <p className="text-white font-medium">€{booking.finalPrice.toFixed(2)}</p>
+                    <p className="text-content font-medium">€{booking.finalPrice.toFixed(2)}</p>
                     {booking.depositPaid && (
-                      <p className="text-xs text-green-400">{t('provider.bookingTable.depositPaid')}</p>
+                      <p className="text-xs text-green-400 light:text-green-700">{t('provider.bookingTable.depositPaid')}</p>
                     )}
                   </td>
                   <td className="px-4 py-4">
@@ -197,7 +197,7 @@ export function BookingTable({
                             variant="outline"
                             size="sm"
                             onClick={() => onCancel?.(booking.id)}
-                            className="px-3 py-1.5 border-red-500/50 text-red-400 hover:bg-red-500/10"
+                            className="px-3 py-1.5 border-red-500/50 text-red-400 light:text-red-700 hover:bg-red-500/10"
                           >
                             <X className="w-4 h-4 mr-1" />
                             {t('provider.bookingTable.action.decline')}
@@ -219,19 +219,19 @@ export function BookingTable({
                       <div className="relative">
                         <button
                           onClick={() => setOpenMenuId(openMenuId === booking.id ? null : booking.id)}
-                          className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                          className="p-2 rounded-lg hover:bg-content/10 transition-colors"
                         >
-                          <MoreVertical className="w-4 h-4 text-gray-400" />
+                          <MoreVertical className="w-4 h-4 text-content-muted" />
                         </button>
                         
                         {openMenuId === booking.id && (
-                          <div className="absolute right-0 mt-1 w-48 bg-surface-input rounded-lg border border-white/10 shadow-xl z-10 py-1">
+                          <div className="absolute right-0 mt-1 w-48 bg-surface-input rounded-lg border border-hairline shadow-xl z-10 py-1">
                             <button
                               onClick={() => {
                                 onView?.(booking.id);
                                 setOpenMenuId(null);
                               }}
-                              className="w-full px-4 py-2 text-left text-sm text-white hover:bg-white/5"
+                              className="w-full px-4 py-2 text-left text-sm text-content hover:bg-content/5"
                             >
                               {t('provider.bookingTable.action.viewDetails')}
                             </button>
@@ -240,7 +240,7 @@ export function BookingTable({
                                 onMessage?.(booking.id);
                                 setOpenMenuId(null);
                               }}
-                              className="w-full px-4 py-2 text-left text-sm text-white hover:bg-white/5"
+                              className="w-full px-4 py-2 text-left text-sm text-content hover:bg-content/5"
                             >
                               {t('provider.bookingTable.action.messageClient')}
                             </button>
@@ -250,7 +250,7 @@ export function BookingTable({
                                   onCancel?.(booking.id);
                                   setOpenMenuId(null);
                                 }}
-                                className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-red-500/10"
+                                className="w-full px-4 py-2 text-left text-sm text-red-400 light:text-red-700 hover:bg-red-500/10"
                               >
                                 {t('provider.bookingTable.action.cancelBooking')}
                               </button>

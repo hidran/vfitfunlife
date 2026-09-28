@@ -89,7 +89,7 @@ export default function ProviderDashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-content">{t('provider.dashboard.title')}</h1>
-          <p className="text-gray-400 mt-1">
+          <p className="text-content-muted mt-1">
             {t('provider.dashboard.subtitle')}
           </p>
         </div>
@@ -165,19 +165,19 @@ export default function ProviderDashboardPage() {
               <h2 className="text-lg font-semibold text-content">{t('provider.dashboard.upcoming.title')}</h2>
               <Link
                 href="/provider/bookings"
-                className="text-sm text-section-primary hover:underline flex items-center gap-1"
+                className="text-sm text-section-primary light:text-primary-dark hover:underline flex items-center gap-1"
               >
                 {t('provider.dashboard.upcoming.viewAll')}
                 <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
 
-            <div className="divide-y divide-white/5">
+            <div className="divide-y divide-content/5 light:divide-hairline">
               {upcomingBookings.length === 0 ? (
                 <div className="p-8 text-center">
-                  <Calendar className="w-12 h-12 text-gray-500 mx-auto mb-3" />
-                  <p className="text-gray-400">{t('provider.dashboard.upcoming.empty.title')}</p>
-                  <p className="text-sm text-gray-500 mt-1">
+                  <Calendar className="w-12 h-12 text-content-faint light:text-content-muted mx-auto mb-3" />
+                  <p className="text-content-muted">{t('provider.dashboard.upcoming.empty.title')}</p>
+                  <p className="text-sm text-content-faint light:text-content-muted mt-1">
                     {t('provider.dashboard.upcoming.empty.subtitle')}
                   </p>
                 </div>
@@ -189,7 +189,7 @@ export default function ProviderDashboardPage() {
                   >
                     <div className="flex items-center gap-4">
                       <div className="flex flex-col items-center justify-center w-14 h-14 bg-surface-input rounded-lg">
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-content-muted">
                           {formatDate(booking.scheduledAt)}
                         </span>
                         <span className="text-sm font-semibold text-content">
@@ -198,17 +198,17 @@ export default function ProviderDashboardPage() {
                       </div>
                       <div>
                         <p className="font-medium text-content">{booking.userName}</p>
-                        <p className="text-sm text-gray-400">{booking.serviceName}</p>
+                        <p className="text-sm text-content-muted">{booking.serviceName}</p>
                         {booking.bookingType === 'virtual' && (
-                          <span className="text-xs text-blue-400">{t('provider.dashboard.upcoming.virtual')}</span>
+                          <span className="text-xs text-blue-400 light:text-blue-700">{t('provider.dashboard.upcoming.virtual')}</span>
                         )}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`
                         px-2 py-1 rounded text-xs font-medium
-                        ${booking.status === 'accepted' ? 'bg-green-500/20 text-green-400' : ''}
-                        ${booking.status === 'requested' ? 'bg-yellow-500/20 text-yellow-400' : ''}
+                        ${booking.status === 'accepted' ? 'bg-green-500/20 text-green-400 light:text-green-700' : ''}
+                        ${booking.status === 'requested' ? 'bg-yellow-500/20 text-yellow-400 light:text-yellow-700' : ''}
                       `}>
                         {booking.status}
                       </span>
@@ -230,15 +230,15 @@ export default function ProviderDashboardPage() {
           <div className="bg-surface-elevated rounded-xl border border-hairline overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b border-hairline">
               <h2 className="text-lg font-semibold text-content">{t('provider.dashboard.activity.title')}</h2>
-              <Bell className="w-5 h-5 text-gray-400" />
+              <Bell className="w-5 h-5 text-content-muted" />
             </div>
 
             <div className="p-4 space-y-4">
               {activities.length === 0 ? (
                 <div className="text-center py-8">
-                  <Bell className="w-10 h-10 text-gray-600 mx-auto mb-3" />
-                  <p className="text-sm text-gray-400">{t('provider.dashboard.activity.empty.title')}</p>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <Bell className="w-10 h-10 text-content/15 light:text-content-faint mx-auto mb-3" />
+                  <p className="text-sm text-content-muted">{t('provider.dashboard.activity.empty.title')}</p>
+                  <p className="text-xs text-content-faint light:text-content-muted mt-1">
                     {t('provider.dashboard.activity.empty.subtitle')}
                   </p>
                 </div>
@@ -246,11 +246,11 @@ export default function ProviderDashboardPage() {
                 activities.map((activity) => (
                   <div key={activity.id} className="flex items-start gap-3">
                     <div className="w-8 h-8 rounded-full bg-section-primary/20 flex items-center justify-center flex-shrink-0">
-                      <Bell className="w-4 h-4 text-section-primary" />
+                      <Bell className="w-4 h-4 text-section-primary light:text-primary-dark" />
                     </div>
                     <div>
                       <p className="text-sm text-content">{activity.action}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
+                      <p className="text-xs text-content-muted mt-0.5">
                         {activity.description}
                       </p>
                     </div>

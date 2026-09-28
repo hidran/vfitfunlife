@@ -143,7 +143,7 @@ export default function RecipeEditor({ initial, saving, onSave, onCancel }: Reci
     <div className="bg-surface-elevated rounded-xl border border-hairline p-6 space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div className="sm:col-span-2">
-          <label className="block text-sm text-gray-400 mb-1">{t('clients.recipes.title')}</label>
+          <label className="block text-sm text-content-muted mb-1">{t('clients.recipes.title')}</label>
           <input
             type="text"
             value={title}
@@ -152,7 +152,7 @@ export default function RecipeEditor({ initial, saving, onSave, onCancel }: Reci
           />
         </div>
         <div>
-          <label className="block text-sm text-gray-400 mb-1">{t('clients.recipes.servings')}</label>
+          <label className="block text-sm text-content-muted mb-1">{t('clients.recipes.servings')}</label>
           <input
             type="number"
             min={1}
@@ -163,7 +163,7 @@ export default function RecipeEditor({ initial, saving, onSave, onCancel }: Reci
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="block text-sm text-gray-400 mb-1">{t('clients.recipes.prep')}</label>
+            <label className="block text-sm text-content-muted mb-1">{t('clients.recipes.prep')}</label>
             <input
               type="number"
               min={1}
@@ -174,7 +174,7 @@ export default function RecipeEditor({ initial, saving, onSave, onCancel }: Reci
             />
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-1">{t('clients.recipes.cook')}</label>
+            <label className="block text-sm text-content-muted mb-1">{t('clients.recipes.cook')}</label>
             <input
               type="number"
               min={0}
@@ -207,7 +207,7 @@ export default function RecipeEditor({ initial, saving, onSave, onCancel }: Reci
             />
             <button
               onClick={() => removeIngredient(i)}
-              className="w-11 h-11 flex items-center justify-center text-red-400 hover:text-red-300 rounded justify-self-end sm:col-span-1"
+              className="w-11 h-11 flex items-center justify-center text-red-400 light:text-red-700 hover:text-red-300 light:hover:text-red-800 rounded justify-self-end sm:col-span-1"
               aria-label={t('clients.common.remove')}
             >
               <Trash2 className="w-4 h-4" aria-hidden />
@@ -225,7 +225,7 @@ export default function RecipeEditor({ initial, saving, onSave, onCancel }: Reci
         <p className="text-sm font-semibold text-content">{t('recipes.steps')}</p>
         {steps.map((step, i) => (
           <div key={i} className="flex items-start gap-2">
-            <span className="text-sm text-gray-400 pt-2.5 w-6 shrink-0 text-right">{i + 1}.</span>
+            <span className="text-sm text-content-muted pt-2.5 w-6 shrink-0 text-right">{i + 1}.</span>
             <textarea
               value={step}
               onChange={(e) => setStep(i, e.target.value)}
@@ -234,7 +234,7 @@ export default function RecipeEditor({ initial, saving, onSave, onCancel }: Reci
             />
             <button
               onClick={() => removeStep(i)}
-              className="w-11 h-11 flex items-center justify-center text-red-400 hover:text-red-300 rounded shrink-0"
+              className="w-11 h-11 flex items-center justify-center text-red-400 light:text-red-700 hover:text-red-300 light:hover:text-red-800 rounded shrink-0"
               aria-label={t('clients.common.remove')}
             >
               <Trash2 className="w-4 h-4" aria-hidden />
@@ -252,7 +252,7 @@ export default function RecipeEditor({ initial, saving, onSave, onCancel }: Reci
         <p className="text-sm font-semibold text-content mb-2">{t('recipes.nutrition')}</p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div>
-            <label className="block text-xs text-gray-400 mb-1">{t('recipes.kcal')}</label>
+            <label className="block text-xs text-content-muted mb-1">{t('recipes.kcal')}</label>
             <input
               type="number"
               min={0}
@@ -262,7 +262,7 @@ export default function RecipeEditor({ initial, saving, onSave, onCancel }: Reci
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">{t('recipes.protein')}</label>
+            <label className="block text-xs text-content-muted mb-1">{t('recipes.protein')}</label>
             <input
               type="number"
               min={0}
@@ -272,7 +272,7 @@ export default function RecipeEditor({ initial, saving, onSave, onCancel }: Reci
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">{t('recipes.carbs')}</label>
+            <label className="block text-xs text-content-muted mb-1">{t('recipes.carbs')}</label>
             <input
               type="number"
               min={0}
@@ -282,7 +282,7 @@ export default function RecipeEditor({ initial, saving, onSave, onCancel }: Reci
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">{t('recipes.fat')}</label>
+            <label className="block text-xs text-content-muted mb-1">{t('recipes.fat')}</label>
             <input
               type="number"
               min={0}
@@ -297,7 +297,7 @@ export default function RecipeEditor({ initial, saving, onSave, onCancel }: Reci
 
       {/* Tags */}
       <div>
-        <label className="block text-sm text-gray-400 mb-1">{t('clients.recipes.tags')}</label>
+        <label className="block text-sm text-content-muted mb-1">{t('clients.recipes.tags')}</label>
         <input
           type="text"
           value={tags}

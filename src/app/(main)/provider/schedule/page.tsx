@@ -45,7 +45,7 @@ export default function ProviderSchedulePage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-content">{t('provider.schedule.title')}</h1>
-          <p className="text-gray-400 mt-1">
+          <p className="text-content-muted mt-1">
             {t('provider.schedule.subtitle')}
           </p>
         </div>
@@ -81,7 +81,7 @@ export default function ProviderSchedulePage() {
                 onClick={() => setSelectedEvent(null)}
                 className="p-2 rounded-lg hover:bg-surface-2"
               >
-                <X className="w-5 h-5 text-gray-400" />
+                <X className="w-5 h-5 text-content-muted" />
               </button>
             </div>
 
@@ -91,7 +91,7 @@ export default function ProviderSchedulePage() {
                   <Clock className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-400">{t('provider.schedule.modal.time')}</p>
+                  <p className="text-sm text-content-muted">{t('provider.schedule.modal.time')}</p>
                   <p className="text-content font-medium">
                     {formatTime(selectedEvent.start)} - {formatTime(selectedEvent.end)}
                   </p>
@@ -102,20 +102,20 @@ export default function ProviderSchedulePage() {
                 <>
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-surface-input flex items-center justify-center">
-                      <User className="w-5 h-5 text-gray-400" />
+                      <User className="w-5 h-5 text-content-muted" />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-400">{t('provider.schedule.modal.client')}</p>
+                      <p className="text-sm text-content-muted">{t('provider.schedule.modal.client')}</p>
                       <p className="text-content font-medium">{selectedEvent.clientName}</p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-surface-input flex items-center justify-center">
-                      <FileText className="w-5 h-5 text-gray-400" />
+                      <FileText className="w-5 h-5 text-content-muted" />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-400">{t('provider.schedule.modal.service')}</p>
+                      <p className="text-sm text-content-muted">{t('provider.schedule.modal.service')}</p>
                       <p className="text-content font-medium">{selectedEvent.serviceName}</p>
                     </div>
                   </div>
@@ -123,10 +123,10 @@ export default function ProviderSchedulePage() {
                   {selectedEvent.location && (
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-surface-input flex items-center justify-center">
-                        <MapPin className="w-5 h-5 text-gray-400" />
+                        <MapPin className="w-5 h-5 text-content-muted" />
                       </div>
                       <div>
-                        <p className="text-sm text-gray-400">{t('provider.schedule.modal.location')}</p>
+                        <p className="text-sm text-content-muted">{t('provider.schedule.modal.location')}</p>
                         <p className="text-content font-medium">{selectedEvent.location}</p>
                       </div>
                     </div>
@@ -136,10 +136,10 @@ export default function ProviderSchedulePage() {
                     <div className="pt-4 border-t border-hairline">
                       <span className={`
                         px-3 py-1 rounded-full text-sm font-medium
-                        ${selectedEvent.status === 'confirmed' ? 'bg-green-500/20 text-green-400' : ''}
-                        ${selectedEvent.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' : ''}
-                        ${selectedEvent.status === 'completed' ? 'bg-gray-500/20 text-gray-400' : ''}
-                        ${selectedEvent.status === 'cancelled' ? 'bg-red-500/20 text-red-400' : ''}
+                        ${selectedEvent.status === 'confirmed' ? 'bg-green-500/20 text-green-400 light:text-green-700' : ''}
+                        ${selectedEvent.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400 light:text-yellow-700' : ''}
+                        ${selectedEvent.status === 'completed' ? 'bg-gray-500/20 text-content-muted' : ''}
+                        ${selectedEvent.status === 'cancelled' ? 'bg-red-500/20 text-red-400 light:text-red-700' : ''}
                       `}>
                         {selectedEvent.status.charAt(0).toUpperCase() + selectedEvent.status.slice(1)}
                       </span>
@@ -150,7 +150,7 @@ export default function ProviderSchedulePage() {
 
               {selectedEvent.notes && (
                 <div className="pt-4 border-t border-hairline">
-                  <p className="text-sm text-gray-400 mb-1">{t('provider.schedule.modal.notes')}</p>
+                  <p className="text-sm text-content-muted mb-1">{t('provider.schedule.modal.notes')}</p>
                   <p className="text-content">{selectedEvent.notes}</p>
                 </div>
               )}
@@ -193,7 +193,7 @@ export default function ProviderSchedulePage() {
                 onClick={() => setSelectedDate(null)}
                 className="p-2 rounded-lg hover:bg-surface-2"
               >
-                <X className="w-5 h-5 text-gray-400" />
+                <X className="w-5 h-5 text-content-muted" />
               </button>
             </div>
 

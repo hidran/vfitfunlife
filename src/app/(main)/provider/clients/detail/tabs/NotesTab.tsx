@@ -61,13 +61,13 @@ export default function NotesTab({ clientId, initialNotes = [] }: NotesTabProps)
       </div>
 
       {notes.length === 0 ? (
-        <p className="text-gray-400 text-sm">{t('clients.notes.empty')}</p>
+        <p className="text-content-muted text-sm">{t('clients.notes.empty')}</p>
       ) : (
         <div className="space-y-4">
           {notes.map((note) => (
             <div key={note.id} className="bg-surface-input rounded-lg p-4">
-              <span className="text-sm text-gray-400">{formatDate(note.createdAt)}</span>
-              <p className="text-gray-300 mt-2 whitespace-pre-wrap">{note.content}</p>
+              <span className="text-sm text-content-muted">{formatDate(note.createdAt)}</span>
+              <p className="text-content/85 mt-2 whitespace-pre-wrap">{note.content}</p>
             </div>
           ))}
         </div>

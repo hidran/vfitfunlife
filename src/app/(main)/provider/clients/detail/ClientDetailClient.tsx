@@ -76,7 +76,7 @@ export default function ClientDetailClient() {
       {/* Back Link */}
       <Link
         href="/provider/clients"
-        className="inline-flex items-center gap-2 text-gray-400 hover:text-content transition-colors"
+        className="inline-flex items-center gap-2 text-content-muted hover:text-content transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         {t('provider.clientDetail.backToClients')}
@@ -105,12 +105,12 @@ export default function ClientDetailClient() {
           <div className="flex-1">
             <h1 className="text-2xl font-bold text-content">{client.name}</h1>
             <div className="flex flex-col sm:flex-row gap-4 mt-3">
-              <a href={`mailto:${client.email}`} className="flex items-center gap-2 text-gray-400 hover:text-content text-sm">
+              <a href={`mailto:${client.email}`} className="flex items-center gap-2 text-content-muted hover:text-content text-sm">
                 <Mail className="w-4 h-4" />
                 {client.email}
               </a>
               {client.phone && (
-                <a href={`tel:${client.phone}`} className="flex items-center gap-2 text-gray-400 hover:text-content text-sm">
+                <a href={`tel:${client.phone}`} className="flex items-center gap-2 text-content-muted hover:text-content text-sm">
                   <Phone className="w-4 h-4" />
                   {client.phone}
                 </a>
@@ -122,7 +122,7 @@ export default function ClientDetailClient() {
                 {client.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="px-3 py-1 bg-section-primary/20 text-section-primary rounded-full text-xs"
+                    className="px-3 py-1 bg-section-primary/20 text-section-primary light:text-primary-dark rounded-full text-xs"
                   >
                     {tag}
                   </span>
@@ -147,19 +147,19 @@ export default function ClientDetailClient() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-hairline">
           <div>
             <p className="text-2xl font-bold text-content">{client.totalBookings}</p>
-            <p className="text-sm text-gray-400">{t('provider.clientDetail.totalBookings')}</p>
+            <p className="text-sm text-content-muted">{t('provider.clientDetail.totalBookings')}</p>
           </div>
           <div>
             <p className="text-2xl font-bold text-content">€{client.totalSpent}</p>
-            <p className="text-sm text-gray-400">{t('provider.clientDetail.totalSpent')}</p>
+            <p className="text-sm text-content-muted">{t('provider.clientDetail.totalSpent')}</p>
           </div>
           <div>
             <p className="text-2xl font-bold text-content">{formatDate(client.firstVisit)}</p>
-            <p className="text-sm text-gray-400">{t('provider.clientDetail.firstVisit')}</p>
+            <p className="text-sm text-content-muted">{t('provider.clientDetail.firstVisit')}</p>
           </div>
           <div>
             <p className="text-2xl font-bold text-content">{formatDate(client.lastVisit)}</p>
-            <p className="text-sm text-gray-400">{t('provider.clientDetail.lastVisit')}</p>
+            <p className="text-sm text-content-muted">{t('provider.clientDetail.lastVisit')}</p>
           </div>
         </div>
       </div>
@@ -174,7 +174,7 @@ export default function ClientDetailClient() {
               'px-4 py-3 text-sm font-medium transition-colors border-b-2 whitespace-nowrap shrink-0',
               activeTab === tab
                 ? 'text-content border-section-primary'
-                : 'text-gray-400 border-transparent hover:text-content'
+                : 'text-content-muted border-transparent hover:text-content'
             )}
           >
             {t(`clientDetail.tab.${tab}`)}

@@ -193,16 +193,16 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
   };
 
   return (
-    <div className="bg-surface-elevated rounded-xl border border-white/5 overflow-hidden">
+    <div className="bg-surface-elevated rounded-xl border border-content/5 light:border-hairline overflow-hidden">
       {/* Tabs */}
-      <div className="flex border-b border-white/5">
+      <div className="flex border-b border-content/5 light:border-hairline">
         <button
           onClick={() => setActiveTab('weekly')}
           className={cn(
             'flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors',
             activeTab === 'weekly'
-              ? 'text-white border-b-2 border-section-primary'
-              : 'text-gray-400 hover:text-white'
+              ? 'text-content border-b-2 border-section-primary'
+              : 'text-content-muted hover:text-content'
           )}
         >
           <Clock className="w-4 h-4" />
@@ -213,8 +213,8 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
           className={cn(
             'flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors',
             activeTab === 'overrides'
-              ? 'text-white border-b-2 border-section-primary'
-              : 'text-gray-400 hover:text-white'
+              ? 'text-content border-b-2 border-section-primary'
+              : 'text-content-muted hover:text-content'
           )}
         >
           <Calendar className="w-4 h-4" />
@@ -240,7 +240,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                 key={key}
                 className={cn(
                   'bg-surface-input rounded-lg border transition-all',
-                  hasProblem ? 'border-error/60' : isExpanded ? 'border-section-primary/50' : 'border-white/5'
+                  hasProblem ? 'border-error/60' : isExpanded ? 'border-section-primary/50' : 'border-content/5 light:border-hairline'
                 )}
               >
                 <div className="flex items-center gap-3 p-2">
@@ -249,7 +249,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                     checked={daySchedule.isAvailable}
                     onChange={(e) => updateDayAvailability(key, { isAvailable: e.target.checked })}
                     aria-label={label}
-                    className="ml-2 h-5 w-5 flex-shrink-0 rounded border-white/20 bg-transparent text-section-primary focus:ring-section-primary"
+                    className="ml-2 h-5 w-5 flex-shrink-0 rounded border-content/20 bg-transparent text-section-primary focus:ring-section-primary"
                   />
                   {/* A real button (not a clickable div) so the row is keyboard-operable; the
                       checkbox stays a sibling since interactive content can't nest in a button. */}
@@ -261,7 +261,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                   >
                     <span className={cn(
                       'flex items-center gap-2 font-medium',
-                      daySchedule.isAvailable ? 'text-white' : 'text-gray-500'
+                      daySchedule.isAvailable ? 'text-content' : 'text-content-faint light:text-content-muted'
                     )}>
                       {label}
                       {hasProblem && <AlertCircle className="h-4 w-4 flex-shrink-0 text-error" aria-hidden="true" />}
@@ -269,7 +269,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
 
                     <div className="flex items-center gap-3">
                       {daySchedule.isAvailable && daySchedule.slots.length > 0 && (
-                        <span className="text-sm text-gray-400">
+                        <span className="text-sm text-content-muted">
                           {daySchedule.slots.length > 1
                             ? t('provider.availabilityEditor.slots', { count: daySchedule.slots.length })
                             : t('provider.availabilityEditor.slot', { count: daySchedule.slots.length })}
@@ -277,7 +277,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                       )}
                       <ChevronDown
                         className={cn(
-                          'w-5 h-5 text-gray-400 transition-transform',
+                          'w-5 h-5 text-content-muted transition-transform',
                           isExpanded && 'rotate-180'
                         )}
                       />
@@ -300,7 +300,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                             value={slot.start}
                             onChange={(e) => updateTimeSlot(key, index, 'start', e.target.value)}
                             aria-label={t('provider.availabilityEditor.startTime')}
-                            className="min-h-[44px] bg-transparent text-white text-sm outline-none"
+                            className="min-h-[44px] bg-transparent text-content text-sm outline-none"
                           >
                             {TIME_OPTIONS.map(time => (
                               <option key={time} value={time}>{time}</option>
@@ -308,14 +308,14 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                           </select>
                         </div>
 
-                        <span className="text-gray-500">{t('provider.availabilityEditor.slotTo')}</span>
+                        <span className="text-content-faint light:text-content-muted">{t('provider.availabilityEditor.slotTo')}</span>
 
                         <div className="flex min-h-[44px] items-center gap-2 bg-surface-elevated rounded-lg px-3 py-2">
                           <select
                             value={slot.end}
                             onChange={(e) => updateTimeSlot(key, index, 'end', e.target.value)}
                             aria-label={t('provider.availabilityEditor.endTime')}
-                            className="min-h-[44px] bg-transparent text-white text-sm outline-none"
+                            className="min-h-[44px] bg-transparent text-content text-sm outline-none"
                           >
                             {TIME_OPTIONS.map(time => (
                               <option key={time} value={time}>{time}</option>
@@ -327,7 +327,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                           type="button"
                           onClick={() => removeTimeSlot(key, index)}
                           aria-label={t('provider.availabilityEditor.removeSlot')}
-                          className="touch-target flex items-center justify-center text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                          className="touch-target flex items-center justify-center text-red-400 light:text-red-700 hover:bg-red-500/10 rounded-lg transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -346,7 +346,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
 
                       <button
                         onClick={() => copyToAllDays(key)}
-                        className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white transition-colors"
+                        className="flex items-center gap-1.5 text-sm text-content-muted hover:text-content transition-colors"
                       >
                         <Copy className="w-4 h-4" />
                         {t('provider.availabilityEditor.copyToAll')}
@@ -365,12 +365,12 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
         <div className="p-6 space-y-4">
           <div className="flex items-end gap-3">
             <div className="flex-1">
-              <label className="block text-sm text-gray-400 mb-2">{t('provider.availabilityEditor.override.addLabel')}</label>
+              <label className="block text-sm text-content-muted mb-2">{t('provider.availabilityEditor.override.addLabel')}</label>
               <input
                 type="date"
                 value={newOverrideDate}
                 onChange={(e) => setNewOverrideDate(e.target.value)}
-                className="w-full bg-surface-input border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-section-primary"
+                className="w-full bg-surface-input border border-hairline rounded-lg px-4 py-2.5 text-content outline-none focus:border-section-primary"
               />
             </div>
             <Button onClick={addDateOverride} disabled={!newOverrideDate}>
@@ -381,9 +381,9 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
 
           {localSettings.dateOverrides.length === 0 ? (
             <div className="text-center py-8">
-              <AlertCircle className="w-12 h-12 text-gray-500 mx-auto mb-3" />
-              <p className="text-gray-400">{t('provider.availabilityEditor.override.empty')}</p>
-              <p className="text-sm text-gray-500 mt-1">
+              <AlertCircle className="w-12 h-12 text-content-faint light:text-content-muted mx-auto mb-3" />
+              <p className="text-content-muted">{t('provider.availabilityEditor.override.empty')}</p>
+              <p className="text-sm text-content-faint light:text-content-muted mt-1">
                 {t('provider.availabilityEditor.override.emptyHint')}
               </p>
             </div>
@@ -392,11 +392,11 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
               {localSettings.dateOverrides.map((override) => (
                 <div
                   key={override.id}
-                  className="bg-surface-input rounded-lg border border-white/5 p-4"
+                  className="bg-surface-input rounded-lg border border-content/5 light:border-hairline p-4"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <p className="font-medium text-white">
+                      <p className="font-medium text-content">
                         {/* Noon, not midnight: a bare YYYY-MM-DD parses as UTC and can show the day before. */}
                         {new Date(`${override.date}T12:00:00`).toLocaleDateString(toLocaleTag(locale), {
                           weekday: 'long',
@@ -414,7 +414,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                             onChange={() => updateDateOverride(override.id, { isAvailable: false })}
                             className="w-4 h-4 text-section-primary focus:ring-section-primary"
                           />
-                          <span className="text-sm text-gray-400">{t('provider.availabilityEditor.override.unavailable')}</span>
+                          <span className="text-sm text-content-muted">{t('provider.availabilityEditor.override.unavailable')}</span>
                         </label>
                         <label className="flex items-center gap-2">
                           <input
@@ -426,7 +426,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                             })}
                             className="w-4 h-4 text-section-primary focus:ring-section-primary"
                           />
-                          <span className="text-sm text-gray-400">{t('provider.availabilityEditor.override.customHours')}</span>
+                          <span className="text-sm text-content-muted">{t('provider.availabilityEditor.override.customHours')}</span>
                         </label>
                       </div>
 
@@ -439,19 +439,19 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                                 onChange={(e) => updateOverrideSlots(override.id, (slots) =>
                                   slots.map((s, i) => (i === index ? { ...s, start: e.target.value } : s)))}
                                 aria-label={t('provider.availabilityEditor.startTime')}
-                                className="min-h-[44px] bg-surface-elevated rounded px-2 py-1 text-sm text-white outline-none"
+                                className="min-h-[44px] bg-surface-elevated rounded px-2 py-1 text-sm text-content outline-none"
                               >
                                 {TIME_OPTIONS.map(time => (
                                   <option key={time} value={time}>{time}</option>
                                 ))}
                               </select>
-                              <span className="text-gray-500">{t('provider.availabilityEditor.slotTo')}</span>
+                              <span className="text-content-faint light:text-content-muted">{t('provider.availabilityEditor.slotTo')}</span>
                               <select
                                 value={slot.end}
                                 onChange={(e) => updateOverrideSlots(override.id, (slots) =>
                                   slots.map((s, i) => (i === index ? { ...s, end: e.target.value } : s)))}
                                 aria-label={t('provider.availabilityEditor.endTime')}
-                                className="min-h-[44px] bg-surface-elevated rounded px-2 py-1 text-sm text-white outline-none"
+                                className="min-h-[44px] bg-surface-elevated rounded px-2 py-1 text-sm text-content outline-none"
                               >
                                 {TIME_OPTIONS.map(time => (
                                   <option key={time} value={time}>{time}</option>
@@ -461,7 +461,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                                 type="button"
                                 onClick={() => updateOverrideSlots(override.id, (slots) => slots.filter((_, i) => i !== index))}
                                 aria-label={t('provider.availabilityEditor.removeSlot')}
-                                className="touch-target flex items-center justify-center text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                                className="touch-target flex items-center justify-center text-red-400 light:text-red-700 hover:bg-red-500/10 rounded-lg transition-colors"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -483,7 +483,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                         placeholder={t('provider.availabilityEditor.override.reason')}
                         value={override.reason || ''}
                         onChange={(e) => updateDateOverride(override.id, { reason: e.target.value })}
-                        className="mt-3 w-full bg-surface-elevated border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 outline-none focus:border-section-primary"
+                        className="mt-3 w-full bg-surface-elevated border border-hairline rounded-lg px-3 py-2 text-sm text-content placeholder-gray-500 outline-none focus:border-section-primary"
                       />
                     </div>
                     
@@ -491,7 +491,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                       type="button"
                       onClick={() => removeDateOverride(override.id)}
                       aria-label={t('provider.availabilityEditor.override.remove')}
-                      className="touch-target flex items-center justify-center text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                      className="touch-target flex items-center justify-center text-red-400 light:text-red-700 hover:bg-red-500/10 rounded-lg transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -504,16 +504,16 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
       )}
 
       {/* Settings */}
-      <div className="border-t border-white/5 p-6">
-        <h4 className="font-medium text-white mb-4">{t('provider.availabilityEditor.settings.title')}</h4>
+      <div className="border-t border-content/5 light:border-hairline p-6">
+        <h4 className="font-medium text-content mb-4">{t('provider.availabilityEditor.settings.title')}</h4>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm text-gray-400 mb-2">{t('provider.availabilityEditor.settings.bufferTime')}</label>
+            <label className="block text-sm text-content-muted mb-2">{t('provider.availabilityEditor.settings.bufferTime')}</label>
             <select
               value={localSettings.bufferMinutes}
               onChange={(e) => setLocalSettings(prev => ({ ...prev, bufferMinutes: parseInt(e.target.value) }))}
-              className="w-full bg-surface-input border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-section-primary"
+              className="w-full bg-surface-input border border-hairline rounded-lg px-4 py-2.5 text-content outline-none focus:border-section-primary"
             >
               <option value={0}>{t('provider.availabilityEditor.settings.bufferNone')}</option>
               <option value={5}>{t('provider.availabilityEditor.settings.buffer5')}</option>
@@ -524,11 +524,11 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
           </div>
           
           <div>
-            <label className="block text-sm text-gray-400 mb-2">{t('provider.availabilityEditor.settings.advanceNotice')}</label>
+            <label className="block text-sm text-content-muted mb-2">{t('provider.availabilityEditor.settings.advanceNotice')}</label>
             <select
               value={localSettings.minAdvanceNoticeHours}
               onChange={(e) => setLocalSettings(prev => ({ ...prev, minAdvanceNoticeHours: parseInt(e.target.value) }))}
-              className="w-full bg-surface-input border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-section-primary"
+              className="w-full bg-surface-input border border-hairline rounded-lg px-4 py-2.5 text-content outline-none focus:border-section-primary"
             >
               <option value={0}>{t('provider.availabilityEditor.settings.sameDay')}</option>
               <option value={1}>1 hour</option>
@@ -541,7 +541,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
           </div>
           
           <div>
-            <label className="block text-sm text-gray-400 mb-2">{t('provider.availabilityEditor.settings.maxBookings')}</label>
+            <label className="block text-sm text-content-muted mb-2">{t('provider.availabilityEditor.settings.maxBookings')}</label>
             <input
               type="number"
               min={MIN_BOOKINGS_PER_DAY}
@@ -554,20 +554,20 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
                 const clamped = Math.min(MAX_BOOKINGS_PER_DAY, Math.max(MIN_BOOKINGS_PER_DAY, parsed));
                 setLocalSettings(prev => ({ ...prev, maxBookingsPerDay: clamped }));
               }}
-              className="w-full bg-surface-input border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-section-primary"
+              className="w-full bg-surface-input border border-hairline rounded-lg px-4 py-2.5 text-content outline-none focus:border-section-primary"
             />
           </div>
           
           <div>
-            <p className="block text-sm text-gray-400 mb-2">{t('provider.availabilityEditor.settings.timezone')}</p>
+            <p className="block text-sm text-content-muted mb-2">{t('provider.availabilityEditor.settings.timezone')}</p>
             {/* Every provider is in Italy; the server computes all slots in Europe/Rome. */}
-            <p className="py-2.5 text-sm text-white">{t('provider.availabilityEditor.settings.timezoneNote')}</p>
+            <p className="py-2.5 text-sm text-content">{t('provider.availabilityEditor.settings.timezoneNote')}</p>
           </div>
         </div>
       </div>
 
       {/* Save Button */}
-      <div className="border-t border-white/5 p-6">
+      <div className="border-t border-content/5 light:border-hairline p-6">
         {badDays.size > 0 && (
           <p role="alert" className="mb-3 flex items-center gap-2 text-sm text-error">
             <AlertCircle className="h-4 w-4 flex-shrink-0" />

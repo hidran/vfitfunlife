@@ -158,7 +158,7 @@ export default function TrainingProgramEditor({
     <div className="bg-surface-elevated rounded-xl border border-hairline p-6 space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="sm:col-span-1">
-          <label className="block text-sm text-gray-400 mb-1">{t('clients.training.title')}</label>
+          <label className="block text-sm text-content-muted mb-1">{t('clients.training.title')}</label>
           <input
             type="text"
             value={title}
@@ -167,7 +167,7 @@ export default function TrainingProgramEditor({
           />
         </div>
         <div>
-          <label className="block text-sm text-gray-400 mb-1">{t('clients.training.weeks')}</label>
+          <label className="block text-sm text-content-muted mb-1">{t('clients.training.weeks')}</label>
           <input
             type="number"
             min={1}
@@ -177,7 +177,7 @@ export default function TrainingProgramEditor({
           />
         </div>
         <div>
-          <label className="block text-sm text-gray-400 mb-1">{t('clients.training.daysPerWeek')}</label>
+          <label className="block text-sm text-content-muted mb-1">{t('clients.training.daysPerWeek')}</label>
           <input
             type="number"
             min={1}
@@ -197,7 +197,7 @@ export default function TrainingProgramEditor({
               </h4>
               <button
                 onClick={() => removeWeek(wi)}
-                className="p-1.5 text-red-400 hover:text-red-300 rounded"
+                className="p-1.5 text-red-400 light:text-red-700 hover:text-red-300 light:hover:text-red-800 rounded"
                 aria-label={t('clients.common.remove')}
               >
                 <Trash2 className="w-4 h-4" />
@@ -223,7 +223,7 @@ export default function TrainingProgramEditor({
                   />
                   <button
                     onClick={() => removeDay(wi, di)}
-                    className="p-1.5 text-red-400 hover:text-red-300 rounded shrink-0"
+                    className="p-1.5 text-red-400 light:text-red-700 hover:text-red-300 light:hover:text-red-800 rounded shrink-0"
                     aria-label={t('clients.common.remove')}
                   >
                     <Trash2 className="w-4 h-4" />
@@ -286,7 +286,7 @@ export default function TrainingProgramEditor({
                       />
                       <button
                         onClick={() => removeExercise(wi, di, ei)}
-                        className="p-1.5 text-red-400 hover:text-red-300 rounded justify-self-end sm:col-span-1"
+                        className="p-1.5 text-red-400 light:text-red-700 hover:text-red-300 light:hover:text-red-800 rounded justify-self-end sm:col-span-1"
                         aria-label={t('clients.common.remove')}
                       >
                         <Trash2 className="w-4 h-4" />

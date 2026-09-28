@@ -534,10 +534,14 @@
     -webkit-backdrop-filter: blur(10px);
   }
 
-  /* Focus ring */
+  /* Focus ring — keyboard focus only. The offset matches the page canvas
+     (background-dark flips under [data-theme='light']). */
   .focus-ring {
-    @apply outline-none ring-2 ring-offset-2 ring-offset-background-dark;
-    ring-color: var(--section-primary);
+    @apply outline-none;
+  }
+
+  .focus-ring:focus-visible {
+    @apply ring-2 ring-(--section-primary) ring-offset-2 ring-offset-background-dark;
   }
 
   /* Admin entity form input */
