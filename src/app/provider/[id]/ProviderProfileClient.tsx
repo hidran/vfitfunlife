@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 import { useRouter, useParams } from 'next/navigation';
 import { useI18n } from '@/hooks/useI18n';
@@ -27,27 +27,8 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/Spinner';
 import { Badge } from '@/components/ui/Badge';
 import { Rating } from '@/components/ui/Rating';
-import { getProviderProfile, isProvider } from '@/lib/firebase/auth';
-import { getUserData } from '@/lib/firebase/auth';
-import { ProviderProfile as ProviderProfileType, Certification, Education, User } from '@/types/firebase';
 import { Timestamp } from 'firebase/firestore';
-import { getPortfolioImages } from '@/lib/firebase/storage';
-
-interface ProviderPublicProfile {
-  id: string;
-  fullName: string;
-  avatarUrl: string | null;
-  bio: string | null;
-  providerProfile: ProviderProfileType | null;
-  socialLinks: {
-    instagram?: string;
-    linkedin?: string;
-    website?: string;
-    facebook?: string;
-    twitter?: string;
-  } | null;
-  isProvider: boolean;
-}
+import { ProviderNotFoundError, useProviderPublicProfile } from '@/hooks/useProviderPublicProfile';
 
 export default function ProviderProfileClient() {
   const { t, locale } = useI18n();
@@ -55,61 +36,16 @@ export default function ProviderProfileClient() {
   const params = useParams();
   const providerId = params.id as string;
 
-  const [profile, setProfile] = useState<ProviderPublicProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [portfolioImages, setPortfolioImages] = useState<string[]>([]);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isLiked, setIsLiked] = useState(false);
 
-  useEffect(() => {
-    const loadProfile = async () => {
-      if (!providerId) return;
-
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        // Check if user is a provider
-        const isProv = await isProvider(providerId);
-        if (!isProv) {
-          setError(t('providerProfile.error.notFound'));
-          return;
-        }
-
-        // Get user data
-        const userData = await getUserData(providerId);
-        if (!userData) {
-          setError(t('providerProfile.error.notFound'));
-          return;
-        }
-
-        // Get provider profile
-        const providerProfile = await getProviderProfile(providerId);
-
-        // Get portfolio images
-        const images = await getPortfolioImages(providerId);
-
-        setProfile({
-          id: providerId,
-          fullName: userData.fullName || 'Unknown Provider',
-          avatarUrl: userData.avatarUrl || null,
-          bio: userData.bio || null,
-          providerProfile,
-          socialLinks: userData.socialLinks || null,
-          isProvider: true,
-        });
-        setPortfolioImages(images);
-      } catch (err) {
-        console.error('Error loading provider profile:', err);
-        setError(t('providerProfile.error.loadFailed'));
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadProfile();
-  }, [providerId]);
+  const { data: profile, isLoading, error: queryError } = useProviderPublicProfile(providerId);
+  const portfolioImages = profile?.portfolioImages ?? [];
+  const error = queryError
+    ? queryError instanceof ProviderNotFoundError
+      ? t('providerProfile.error.notFound')
+      : t('providerProfile.error.loadFailed')
+    : null;
 
   const handleBookNow = () => {
     router.push(`/book?providerId=${providerId}`);

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { useShallow } from 'zustand/react/shallow';
 import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,7 +42,15 @@ export function RegisterClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t, locale } = useI18n();
-  const { firebaseUser, refreshUserProfile, registerWithEmail, clearError, error: storeError } = useAuthStore();
+  const { firebaseUser, refreshUserProfile, registerWithEmail, clearError, error: storeError } = useAuthStore(
+    useShallow((s) => ({
+      firebaseUser: s.firebaseUser,
+      refreshUserProfile: s.refreshUserProfile,
+      registerWithEmail: s.registerWithEmail,
+      clearError: s.clearError,
+      error: s.error,
+    })),
+  );
   const startsAsProvider = searchParams.get('as') === 'provider';
 
   const [registrationMethod, setRegistrationMethod] = useState<RegistrationMethod>(

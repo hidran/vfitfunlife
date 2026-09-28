@@ -2,6 +2,7 @@
 
 import { type ReactNode, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useShallow } from 'zustand/react/shallow';
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
@@ -77,7 +78,24 @@ export default function LoginPage() {
     loginWithApple,
     loginWithEmail,
     clearError,
-  } = useAuthStore();
+  } = useAuthStore(
+    useShallow((s) => ({
+      firebaseUser: s.firebaseUser,
+      user: s.user,
+      isLoading: s.isLoading,
+      isInitialized: s.isInitialized,
+      error: s.error,
+      isOtpSent: s.isOtpSent,
+      phoneNumber: s.phoneNumber,
+      initPhoneAuth: s.initPhoneAuth,
+      sendPhoneOtp: s.sendPhoneOtp,
+      verifyPhoneOtp: s.verifyPhoneOtp,
+      loginWithGoogle: s.loginWithGoogle,
+      loginWithApple: s.loginWithApple,
+      loginWithEmail: s.loginWithEmail,
+      clearError: s.clearError,
+    })),
+  );
 
   const [loginMethod, setLoginMethod] = useState<LoginMethod>(null);
   const [countryCode, setCountryCode] = useState('+39');

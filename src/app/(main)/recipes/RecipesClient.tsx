@@ -17,7 +17,8 @@
  * `RecipeDisclaimer` is mandatory here as on every other recipe surface (spec §12.1).
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/Spinner';
@@ -26,34 +27,34 @@ import { RecipeCard } from '@/components/recipes/RecipeCard';
 import { RecipeDisclaimer } from '@/components/recipes/RecipeDisclaimer';
 import { RecipeGenerateModal } from '@/components/recipes/RecipeGenerateModal';
 import { deleteRecipe, listMyRecipes, listSharedWithMe } from '@/lib/firebase/recipes';
-import type { Recipe } from '@/types/recipes';
+import { queryKeys } from '@/lib/queryKeys';
 
 export default function RecipesClient() {
   const { t, locale } = useI18n();
+  const queryClient = useQueryClient();
 
-  const [shared, setShared] = useState<Recipe[] | null>(null);
-  const [mine, setMine] = useState<Recipe[] | null>(null);
   const [showGenerate, setShowGenerate] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const reload = useCallback(async () => {
-    // Settled, not all: one denied query must not blank the other list.
-    const [sharedResult, mineResult] = await Promise.allSettled([listSharedWithMe(), listMyRecipes()]);
-    if (sharedResult.status === 'fulfilled') setShared(sharedResult.value);
-    else {
-      console.error('[Recipes] shared load failed', sharedResult.reason);
-      setShared([]);
-    }
-    if (mineResult.status === 'fulfilled') setMine(mineResult.value);
-    else {
-      console.error('[Recipes] own load failed', mineResult.reason);
-      setMine([]);
-    }
-  }, []);
+  // Two independent queries (rather than one Promise.allSettled effect) so a denied read on
+  // one list can't blank the other's already-cached data, and each has its own loading state.
+  const sharedQuery = useQuery({
+    queryKey: queryKeys.recipesSharedWithMe(),
+    queryFn: listSharedWithMe,
+  });
+  const mineQuery = useQuery({
+    queryKey: queryKeys.recipesMine(),
+    queryFn: listMyRecipes,
+  });
+  const shared = sharedQuery.data ?? (sharedQuery.isError ? [] : null);
+  const mine = mineQuery.data ?? (mineQuery.isError ? [] : null);
 
-  useEffect(() => {
-    void reload();
-  }, [reload]);
+  const reload = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.recipesSharedWithMe() }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.recipesMine() }),
+    ]);
+  };
 
   const handleDelete = async (id: string) => {
     if (busy) return;

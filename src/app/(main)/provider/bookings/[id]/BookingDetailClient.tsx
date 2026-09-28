@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useShallow } from 'zustand/react/shallow';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -34,6 +36,7 @@ import type { MessageKey } from '@/i18n/messages';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
+import { queryKeys } from '@/lib/queryKeys';
 
 export default function BookingDetailClient() {
   const { t, locale } = useI18n();
@@ -53,8 +56,21 @@ export default function BookingDetailClient() {
   const {
     bookings, isLoadingBookings, bookingError, fetchBookings, confirmBooking, declineBooking, completeBooking,
     markBookingNoShow, cancelBooking, confirmBookingPayment,
-  } = useProviderStore();
-  const { user } = useAuthStore();
+  } = useProviderStore(
+    useShallow((s) => ({
+      bookings: s.bookings,
+      isLoadingBookings: s.isLoadingBookings,
+      bookingError: s.bookingError,
+      fetchBookings: s.fetchBookings,
+      confirmBooking: s.confirmBooking,
+      declineBooking: s.declineBooking,
+      completeBooking: s.completeBooking,
+      markBookingNoShow: s.markBookingNoShow,
+      cancelBooking: s.cancelBooking,
+      confirmBookingPayment: s.confirmBookingPayment,
+    })),
+  );
+  const user = useAuthStore((s) => s.user);
   const [showPaymentSheet, setShowPaymentSheet] = useState(false);
 
   const booking = bookings.find((entry) => entry.id === id);
@@ -65,16 +81,19 @@ export default function BookingDetailClient() {
       new Date(booking.scheduledEndAt as unknown as string)
     : null;
   const sessionHasEnded = sessionEndsAt ? sessionEndsAt <= new Date() : false;
-  useEffect(() => {
-    // Deep links from push notifications land here directly, with the store unpopulated —
-    // the list page is what normally fills it.
-    //
-    // This must wait for auth: on a cold load Firebase restores the session
-    // asynchronously, so getCurrentProviderId() throws "Not authenticated" if we fetch on
-    // mount. Keying the effect on `user` retries once the session is available.
-    if (user && bookings.length === 0 && !isLoadingBookings) void fetchBookings();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  // Deep links from push notifications land here directly, with the store unpopulated — the
+  // list page is what normally fills it.
+  //
+  // This must wait for auth: on a cold load Firebase restores the session asynchronously, so
+  // getCurrentProviderId() throws "Not authenticated" if we fetch too early. Gating the query
+  // on `user` retries once the session is available. TanStack Query (rather than a manual
+  // "if empty" effect) decides *when* to call the store's fetch action, so a remount within
+  // the cache's staleTime is instant instead of re-fetching.
+  useQuery({
+    queryKey: queryKeys.providerBookings(),
+    queryFn: () => fetchBookings(),
+    enabled: !!user,
+  });
 
   const [showNotes, setShowNotes] = useState(false);
   const [privateNotes, setPrivateNotes] = useState('');

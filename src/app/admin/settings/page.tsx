@@ -27,7 +27,7 @@ import {
 export default function SettingsPage() {
   const { t } = useI18n();
   const router = useRouter();
-  const { user } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
   const { platformSettings, fetchPlatformSettings, updatePlatformSettingsAction } = useAdminStore(
     useShallow((s) => ({
       platformSettings: s.platformSettings,

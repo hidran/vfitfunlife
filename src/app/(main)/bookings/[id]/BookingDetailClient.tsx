@@ -1,6 +1,8 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useShallow } from 'zustand/react/shallow';
 import dynamic from 'next/dynamic';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -43,6 +45,7 @@ import {
   canReview as canReviewBooking,
 } from '@/lib/bookingStatus';
 import type { Booking, BookingStatus } from '@/types/booking';
+import { queryKeys } from '@/lib/queryKeys';
 
 const statusIcons: Record<BookingStatus, LucideIcon> = {
   requested: AlertCircle,
@@ -87,9 +90,17 @@ export default function BookingDetailPage() {
     updateBookingInList,
     updateCurrentBooking,
     fetchUserBookings,
-    isLoadingBookings,
-  } = useBookingStore();
-  const { user } = useAuthStore();
+  } = useBookingStore(
+    useShallow((s) => ({
+      cancelBooking: s.cancelBooking,
+      userBookings: s.userBookings,
+      currentBooking: s.currentBooking,
+      updateBookingInList: s.updateBookingInList,
+      updateCurrentBooking: s.updateCurrentBooking,
+      fetchUserBookings: s.fetchUserBookings,
+    })),
+  );
+  const user = useAuthStore((s) => s.user);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [localBookingOverride, setLocalBookingOverride] = useState<Booking | null>(null);
 
@@ -98,13 +109,15 @@ export default function BookingDetailPage() {
   // client sees fabricated data instead of their real one.
   //
   // Gated on `user`: Firebase restores the session asynchronously, so fetching on mount
-  // alone would run before there is a uid and never retry.
-  useEffect(() => {
-    if (user?.uid && userBookings.length === 0 && !isLoadingBookings) {
-      void fetchUserBookings(user.uid);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.uid]);
+  // alone would run before there is a uid and never retry. TanStack Query (rather than a
+  // manual "if empty" effect) owns *when* to call the store's fetch action: it dedupes
+  // concurrent mounts and skips the call entirely when this uid's bookings were already
+  // fetched within the last staleTime, so navigating away and back doesn't re-fetch.
+  useQuery({
+    queryKey: queryKeys.userBookings(user?.uid),
+    queryFn: () => fetchUserBookings(user!.uid),
+    enabled: !!user?.uid,
+  });
 
   const storeBooking = useMemo(() => {
     return (

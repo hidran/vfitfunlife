@@ -69,7 +69,7 @@ const inputClass =
 
 export function FamilyCard({ className }: { className?: string }) {
   const { t } = useI18n();
-  const { user } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
   const gamification = useUserGamification();
 
   const familyId = user?.familyId ?? null;

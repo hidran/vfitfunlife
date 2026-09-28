@@ -96,7 +96,8 @@ const CARD_BRANDS: Array<{ value: string; labelKey: MessageKey }> = [
 ];
 
 export function ProfileSectionScreen({ section }: { section: ProfileRouteSection }) {
-  const { user, refreshUserProfile } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
+  const refreshUserProfile = useAuthStore((s) => s.refreshUserProfile);
   const { t, locale } = useI18n();
   const [addresses, setAddresses] = useState<LocalAddress[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<LocalPaymentMethod[]>([]);

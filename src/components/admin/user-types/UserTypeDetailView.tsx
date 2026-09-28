@@ -1,13 +1,14 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   EntityDetailLayout,
   ConfirmDeleteDialog,
   useEntityMutation,
 } from '@/components/admin';
+import { useFirestoreDocQuery } from '@/hooks/useFirestoreDocQuery';
+import { queryKeys } from '@/lib/queryKeys';
 import {
   updateUserType as updateUserTypeFn,
   deleteUserType as deleteUserTypeFn,
@@ -46,23 +47,16 @@ function toUserTypeData(form: UserTypeFormData): UserTypeData & {
 export function UserTypeDetailView({ userTypeId }: { userTypeId: string }) {
   const router = useRouter();
   const { t } = useI18n();
-  const [ut, setUt] = useState<UserTypeDoc | null>(null);
-  const [loading, setLoading] = useState(true);
+  const qc = useQueryClient();
+  const queryKey = queryKeys.adminUserType(userTypeId);
+  const { data: ut, isLoading: loading } = useFirestoreDocQuery<UserTypeDoc>(
+    queryKey,
+    USER_TYPES_COLLECTION,
+    userTypeId,
+    (id, data) => ({ id, ...data } as UserTypeDoc),
+  );
   const [editing, setEditing] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const snap = await getDoc(doc(db, USER_TYPES_COLLECTION, userTypeId));
-      if (cancelled) return;
-      setUt(snap.exists() ? ({ id: snap.id, ...snap.data() } as UserTypeDoc) : null);
-      setLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [userTypeId]);
 
   const updateMut = useEntityMutation<UserTypeFormData, void>({
     mutate: async (data) => {
@@ -75,16 +69,11 @@ export function UserTypeDetailView({ userTypeId }: { userTypeId: string }) {
       before: (ut ?? undefined) as Record<string, unknown> | undefined,
       after: toUserTypeData(data) as unknown as Record<string, unknown>,
     }),
-    invalidateKeys: [['userTypes']],
+    invalidateKeys: [['userTypes'], queryKey],
     onSuccess: (_r, data) => {
       const persisted = toUserTypeData(data);
-      setUt((prev) =>
-        prev
-          ? ({
-              ...prev,
-              ...persisted,
-            } as UserTypeDoc)
-          : prev,
+      qc.setQueryData(queryKey, (prev: UserTypeDoc | null | undefined) =>
+        prev ? ({ ...prev, ...persisted } as UserTypeDoc) : prev,
       );
       setEditing(false);
     },

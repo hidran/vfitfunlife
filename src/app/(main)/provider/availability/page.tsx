@@ -5,6 +5,7 @@ import { AlertCircle, CheckCircle } from 'lucide-react';
 import { AvailabilityEditor } from '@/components/provider/AvailabilityEditor';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/Spinner';
+import { useShallow } from 'zustand/react/shallow';
 import { useProviderStore } from '@/stores/providerStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useI18n } from '@/hooks/useI18n';
@@ -32,7 +33,16 @@ export default function ProviderAvailabilityPage() {
     isLoading,
     fetchAvailability,
     updateAvailability,
-  } = useProviderStore();
+  } = useProviderStore(
+    useShallow((s) => ({
+      availability: s.availability,
+      availabilityVersion: s.availabilityVersion,
+      availabilityLoadError: s.availabilityLoadError,
+      isLoading: s.isLoading,
+      fetchAvailability: s.fetchAvailability,
+      updateAvailability: s.updateAvailability,
+    })),
+  );
   const [saveResult, setSaveResult] = useState<
     { ok: true } | { ok: false; key: MessageKey; day: number | null } | null
   >(null);

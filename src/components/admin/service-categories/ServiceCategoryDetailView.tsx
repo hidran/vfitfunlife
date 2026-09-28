@@ -1,13 +1,14 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   EntityDetailLayout,
   ConfirmDeleteDialog,
   useEntityMutation,
 } from '@/components/admin';
+import { useFirestoreDocQuery } from '@/hooks/useFirestoreDocQuery';
+import { queryKeys } from '@/lib/queryKeys';
 import {
   updateServiceCategory as updateServiceCategoryFn,
   deleteServiceCategory as deleteServiceCategoryFn,
@@ -41,25 +42,16 @@ export function ServiceCategoryDetailView({
 }) {
   const router = useRouter();
   const { t, locale } = useI18n();
-  const [sc, setSc] = useState<ServiceCategoryDoc | null>(null);
-  const [loading, setLoading] = useState(true);
+  const qc = useQueryClient();
+  const queryKey = queryKeys.adminServiceCategory(serviceCategoryId);
+  const { data: sc, isLoading: loading } = useFirestoreDocQuery<ServiceCategoryDoc>(
+    queryKey,
+    SERVICE_CATEGORIES_COLLECTION,
+    serviceCategoryId,
+    (id, data) => ({ id, ...data } as ServiceCategoryDoc),
+  );
   const [editing, setEditing] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const snap = await getDoc(doc(db, SERVICE_CATEGORIES_COLLECTION, serviceCategoryId));
-      if (cancelled) return;
-      setSc(
-        snap.exists() ? ({ id: snap.id, ...snap.data() } as ServiceCategoryDoc) : null,
-      );
-      setLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [serviceCategoryId]);
 
   const updateMut = useEntityMutation<ServiceCategoryFormData, void>({
     mutate: async (data) => {
@@ -72,16 +64,11 @@ export function ServiceCategoryDetailView({
       before: (sc ?? undefined) as Record<string, unknown> | undefined,
       after: toServiceCategoryData(data) as unknown as Record<string, unknown>,
     }),
-    invalidateKeys: [['serviceCategories']],
+    invalidateKeys: [['serviceCategories'], queryKey],
     onSuccess: (_r, data) => {
       const persisted = toServiceCategoryData(data);
-      setSc((prev) =>
-        prev
-          ? ({
-              ...prev,
-              ...persisted,
-            } as ServiceCategoryDoc)
-          : prev,
+      qc.setQueryData(queryKey, (prev: ServiceCategoryDoc | null | undefined) =>
+        prev ? ({ ...prev, ...persisted } as ServiceCategoryDoc) : prev,
       );
       setEditing(false);
     },

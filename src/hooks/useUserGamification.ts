@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useShallow } from 'zustand/react/shallow';
 import { useAuthStore } from '@/stores/authStore';
 import {
   getUserStats,
@@ -74,7 +75,13 @@ const gamificationKey = (userId: string | undefined) => ['userGamification', use
  * single seed + stats round-trip instead of one each.
  */
 export function useUserGamification(): UserGamification {
-  const { user, isLoading: authLoading, refreshUserProfile } = useAuthStore();
+  const { user, isLoading: authLoading, refreshUserProfile } = useAuthStore(
+    useShallow((s) => ({
+      user: s.user,
+      isLoading: s.isLoading,
+      refreshUserProfile: s.refreshUserProfile,
+    })),
+  );
   const queryClient = useQueryClient();
   const userId = user?.id;
 

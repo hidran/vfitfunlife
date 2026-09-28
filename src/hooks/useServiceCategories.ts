@@ -2,11 +2,28 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import {
   fallbackCategories,
-  fetchActiveServiceCategories,
   fetchAllServiceCategories,
 } from '@/lib/firebase/serviceCategories';
 import { useI18n } from '@/hooks/useI18n';
+import { queryKeys } from '@/lib/queryKeys';
 import type { ServiceCategory, ServiceCategoryGroup } from '@/types/serviceCategory';
+
+const STALE_5_MIN = 5 * 60 * 1000;
+
+/**
+ * The one query behind every hook in this file. Categories rarely change, so a single
+ * long-staleTime `useQuery` backs both the client-facing "active only" views and the admin
+ * "everything" view — two Firestore reads of the same small collection collapsed into one,
+ * shared through the query cache instead of each caller fetching its own copy.
+ */
+function useAllServiceCategoriesQuery() {
+  const { locale } = useI18n();
+  return useQuery({
+    queryKey: queryKeys.serviceCategoriesAll(locale),
+    queryFn: () => fetchAllServiceCategories(locale),
+    staleTime: STALE_5_MIN,
+  });
+}
 
 /**
  * Active service categories from the admin-managed catalog, labels resolved for the
@@ -15,12 +32,9 @@ import type { ServiceCategory, ServiceCategoryGroup } from '@/types/serviceCateg
  */
 export function useServiceCategories(): ServiceCategory[] {
   const { locale } = useI18n();
-  const { data } = useQuery({
-    queryKey: ['serviceCategories', 'active', locale],
-    queryFn: () => fetchActiveServiceCategories(locale),
-    staleTime: 5 * 60 * 1000,
-  });
-  return data && data.length > 0 ? data : fallbackCategories(locale);
+  const { data } = useAllServiceCategoriesQuery();
+  const active = useMemo(() => data?.filter((c) => c.isActive), [data]);
+  return active && active.length > 0 ? active : fallbackCategories(locale);
 }
 
 /** Only the leaves — the categories a service may actually be tagged with. */
@@ -64,10 +78,5 @@ export function useServiceCategoryMap(): Map<string, ServiceCategory> {
  * parent.
  */
 export function useAllServiceCategories() {
-  const { locale } = useI18n();
-  return useQuery({
-    queryKey: ['serviceCategories', 'all', locale],
-    queryFn: () => fetchAllServiceCategories(locale),
-    staleTime: 60 * 1000,
-  });
+  return useAllServiceCategoriesQuery();
 }

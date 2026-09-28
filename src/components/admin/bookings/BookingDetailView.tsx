@@ -1,9 +1,9 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   doc,
-  getDoc,
   updateDoc,
   deleteDoc,
   serverTimestamp,
@@ -17,6 +17,8 @@ import {
   StatusBadge,
   useEntityMutation,
 } from '@/components/admin';
+import { useFirestoreDocQuery } from '@/hooks/useFirestoreDocQuery';
+import { queryKeys } from '@/lib/queryKeys';
 import { Button } from '@/components/ui/button';
 import { BookingFormView, type BookingFormData } from './BookingFormView';
 import { StatusHistoryTimeline } from './StatusHistoryTimeline';
@@ -33,29 +35,21 @@ interface Props {
 export function BookingDetailView({ bookingId }: Props) {
   const router = useRouter();
   const { t } = useI18n();
-  const [booking, setBooking] = useState<Booking | null>(null);
-  const [loading, setLoading] = useState(true);
+  const qc = useQueryClient();
+  const queryKey = queryKeys.adminBooking(bookingId);
+  const {
+    data: booking,
+    isLoading: loading,
+    refetch,
+  } = useFirestoreDocQuery<Booking>(
+    queryKey,
+    'bookings',
+    bookingId,
+    (id, data) => ({ id, ...data } as Booking),
+  );
   const [editing, setEditing] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [statusBusy, setStatusBusy] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const snap = await getDoc(doc(db, 'bookings', bookingId));
-      if (cancelled) return;
-      setBooking(snap.exists() ? ({ id: snap.id, ...snap.data() } as Booking) : null);
-      setLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [bookingId]);
-
-  const refetch = async () => {
-    const snap = await getDoc(doc(db, 'bookings', bookingId));
-    setBooking(snap.exists() ? ({ id: snap.id, ...snap.data() } as Booking) : null);
-  };
 
   const updateMut = useEntityMutation<BookingFormData, void>({
     mutate: async (data) => {
@@ -107,6 +101,7 @@ export function BookingDetailView({ bookingId }: Props) {
       const fn = httpsCallable(functions, fnName);
       await fn({ bookingId, ...payload });
       await refetch();
+      qc.invalidateQueries({ queryKey: ['bookings'] });
     } catch (err) {
       console.error(`[${fnName}] failed`, err);
       alert((err as Error).message);

@@ -25,6 +25,7 @@ import {
   Clock,
   Award,
 } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -143,7 +144,15 @@ const menuItems: ProfileMenuSection[] = [
 export default function ProfilePage() {
   const router = useRouter();
   const { t } = useI18n();
-  const { user, firebaseUser, logout, isLoading, refreshUserProfile } = useAuthStore();
+  const { user, firebaseUser, logout, isLoading, refreshUserProfile } = useAuthStore(
+    useShallow((s) => ({
+      user: s.user,
+      firebaseUser: s.firebaseUser,
+      logout: s.logout,
+      isLoading: s.isLoading,
+      refreshUserProfile: s.refreshUserProfile,
+    })),
+  );
 
   const visibleSections = useMemo<ProfileMenuSection[]>(() => {
     const role = user?.role;

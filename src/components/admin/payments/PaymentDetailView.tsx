@@ -1,12 +1,15 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import {
   EntityDetailLayout,
   SuperadminOnly,
   useEntityMutation,
 } from '@/components/admin';
+import { useFirestoreDocQuery } from '@/hooks/useFirestoreDocQuery';
+import { queryKeys } from '@/lib/queryKeys';
 import { PaymentFormView, type PaymentFormData } from './PaymentFormView';
 import { RefundDialog } from './RefundDialog';
 import type { AdminTransaction } from '@/types/admin';
@@ -26,23 +29,16 @@ const COLLECTION = 'transactions';
 
 export function PaymentDetailView({ paymentId }: { paymentId: string }) {
   const { t } = useI18n();
-  const [payment, setPayment] = useState<PaymentDoc | null>(null);
-  const [loading, setLoading] = useState(true);
+  const qc = useQueryClient();
+  const queryKey = queryKeys.adminPayment(paymentId);
+  const { data: payment, isLoading: loading } = useFirestoreDocQuery<PaymentDoc>(
+    queryKey,
+    COLLECTION,
+    paymentId,
+    (id, data) => ({ id, ...data } as PaymentDoc),
+  );
   const [editing, setEditing] = useState(false);
   const [refundOpen, setRefundOpen] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const snap = await getDoc(doc(db, COLLECTION, paymentId));
-      if (cancelled) return;
-      setPayment(snap.exists() ? ({ id: snap.id, ...snap.data() } as PaymentDoc) : null);
-      setLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [paymentId]);
 
   const updateMut = useEntityMutation<PaymentFormData, void>({
     mutate: async (data) => {
@@ -58,12 +54,10 @@ export function PaymentDetailView({ paymentId }: { paymentId: string }) {
       before: (payment ?? undefined) as Record<string, unknown> | undefined,
       after: data as unknown as Record<string, unknown>,
     }),
-    invalidateKeys: [['transactions']],
+    invalidateKeys: [['transactions'], queryKey],
     onSuccess: (_r, data) => {
-      setPayment((p) =>
-        p
-          ? { ...p, notes: data.notes ?? undefined, disputed: data.disputed }
-          : p,
+      qc.setQueryData(queryKey, (p: PaymentDoc | null | undefined) =>
+        p ? { ...p, notes: data.notes ?? undefined, disputed: data.disputed } : p,
       );
       setEditing(false);
     },

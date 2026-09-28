@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { useQueryClient } from '@tanstack/react-query';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, getFunctionsInstance } from '@/lib/firebase/config';
 import {
@@ -12,6 +13,8 @@ import {
   UserRoleBadge,
   StatusBadge,
 } from '@/components/admin';
+import { useFirestoreDocQuery } from '@/hooks/useFirestoreDocQuery';
+import { queryKeys } from '@/lib/queryKeys';
 import { Button } from '@/components/ui/button';
 import { useAdminStore } from '@/stores/adminStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -39,28 +42,21 @@ export function UserDetailView({ userId }: Props) {
     }))
   );
   const myUid = useAuthStore((s) => s.user?.uid);
+  const qc = useQueryClient();
+  const queryKey = queryKeys.adminUser(userId);
 
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: user, isLoading: loading } = useFirestoreDocQuery<User>(
+    queryKey,
+    'users',
+    userId,
+    (id, data) => ({ id, ...data } as User),
+  );
   const [editing, setEditing] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<UserTab>('overview');
   // Back to the list as it was filtered, not the bare list. This view only renders client-side
   // (it hangs off ?id=), so reading sessionStorage in the initializer is safe.
   const [listHref] = useState(usersListHref);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const snap = await getDoc(doc(db, 'users', userId));
-      if (cancelled) return;
-      setUser(snap.exists() ? ({ id: snap.id, ...snap.data() } as User) : null);
-      setLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [userId]);
 
   const updateMut = useEntityMutation<UserFormData, void>({
     mutate: async (patch) => {
@@ -79,9 +75,9 @@ export function UserDetailView({ userId }: Props) {
       before: (user ?? undefined) as Record<string, unknown> | undefined,
       after: { ...(user ?? {}), ...patch } as Record<string, unknown>,
     }),
-    invalidateKeys: [['users']],
+    invalidateKeys: [['users'], queryKey],
     onSuccess: (_r, patch) => {
-      setUser((prev) =>
+      qc.setQueryData(queryKey, (prev: User | null | undefined) =>
         prev
           ? ({
               ...prev,
@@ -112,7 +108,7 @@ export function UserDetailView({ userId }: Props) {
     if (!user) return;
     try {
       await updateUserRoleAction(user.id, newRole);
-      setUser({ ...user, role: newRole });
+      qc.setQueryData(queryKey, { ...user, role: newRole });
     } catch (error) {
       console.error('Failed to update role:', error);
     }
@@ -124,7 +120,7 @@ export function UserDetailView({ userId }: Props) {
     if (!reason) return;
     try {
       await suspendUserAction(user.id, reason);
-      setUser({ ...user, isSuspended: true } as User);
+      qc.setQueryData(queryKey, { ...user, isSuspended: true } as User);
     } catch (error) {
       console.error('Failed to suspend user:', error);
     }
@@ -134,7 +130,7 @@ export function UserDetailView({ userId }: Props) {
     if (!user) return;
     try {
       await activateUserAction(user.id);
-      setUser({ ...user, isSuspended: false } as User);
+      qc.setQueryData(queryKey, { ...user, isSuspended: false } as User);
     } catch (error) {
       console.error('Failed to activate user:', error);
     }

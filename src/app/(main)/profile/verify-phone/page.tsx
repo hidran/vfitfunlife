@@ -11,7 +11,7 @@ import { useI18n } from '@/hooks/useI18n';
 export default function VerifyPhonePage() {
   const router = useRouter();
   const { t } = useI18n();
-  const { user } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
   const [phoneNumber, setPhoneNumber] = useState(user?.phone || '');
   const [verificationCode, setVerificationCode] = useState('');
   const [step, setStep] = useState<'phone' | 'code'>('phone');

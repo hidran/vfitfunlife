@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { MailCheck } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 import { useAuthStore } from '@/stores/authStore';
 import { useI18n } from '@/hooks/useI18n';
 import { isAwaitingEmailVerification } from '@/lib/emailVerification';
@@ -23,7 +24,14 @@ type Notice = { key: MessageKey; tone: 'info' | 'error' } | null;
  */
 export function EmailVerificationBanner({ className }: { className?: string }) {
   const { t } = useI18n();
-  const { firebaseUser, user, resendVerificationEmail, checkEmailVerification } = useAuthStore();
+  const { firebaseUser, user, resendVerificationEmail, checkEmailVerification } = useAuthStore(
+    useShallow((s) => ({
+      firebaseUser: s.firebaseUser,
+      user: s.user,
+      resendVerificationEmail: s.resendVerificationEmail,
+      checkEmailVerification: s.checkEmailVerification,
+    })),
+  );
   const [notice, setNotice] = useState<Notice>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [isSending, setIsSending] = useState(false);

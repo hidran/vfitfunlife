@@ -39,7 +39,8 @@ interface Operation {
 export default function DataManagementPage() {
   const { t, locale } = useI18n();
   const router = useRouter();
-  const { user, firebaseUser } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
+  const firebaseUser = useAuthStore((s) => s.firebaseUser);
   const [operations, setOperations] = useState<Operation[]>([]);
   const [currentOperation, setCurrentOperation] = useState<string | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState<"quick" | "full" | "clear" | null>(null);

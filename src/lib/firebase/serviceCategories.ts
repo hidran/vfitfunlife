@@ -41,22 +41,14 @@ export function fallbackCategories(locale: AppLocale): ServiceCategory[] {
 }
 
 /**
- * The full catalogue, active entries only, sorted by `order`.
+ * The whole catalogue (active and inactive), sorted by `order`.
  *
  * Sorting client-side avoids a composite (isActive + order) index, and the whole catalogue
- * is small enough to read in one go — it is cached by TanStack Query for five minutes.
+ * is small enough to read in one go. This is the *only* place that reads the
+ * `serviceCategories` collection — `useServiceCategories` (src/hooks/useServiceCategories.ts)
+ * caches the result behind a single long-staleTime `useQuery` and derives the "active only"
+ * view from it in memory, rather than issuing a second, near-identical Firestore read.
  */
-export async function fetchActiveServiceCategories(
-  locale: AppLocale
-): Promise<ServiceCategory[]> {
-  const snap = await getDocs(collection(db, 'serviceCategories'));
-  return snap.docs
-    .map((d) => toResolved(d.id, d.data() as Partial<ServiceCategoryDoc>, locale))
-    .filter((c) => c.isActive)
-    .sort((a, b) => a.order - b.order);
-}
-
-/** Every category including inactive ones — for the admin catalogue screen. */
 export async function fetchAllServiceCategories(
   locale: AppLocale
 ): Promise<ServiceCategory[]> {

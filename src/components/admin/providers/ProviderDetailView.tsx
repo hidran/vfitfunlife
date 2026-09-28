@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { doc, getDoc, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { useQueryClient } from '@tanstack/react-query';
+import { doc, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, getFunctionsInstance } from '@/lib/firebase/config';
 import {
@@ -14,6 +15,8 @@ import {
   StatusBadge,
   ProviderTypeBadge,
 } from '@/components/admin';
+import { useFirestoreDocQuery } from '@/hooks/useFirestoreDocQuery';
+import { queryKeys } from '@/lib/queryKeys';
 import { Button } from '@/components/ui/button';
 import { useAdminStore } from '@/stores/adminStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -52,31 +55,20 @@ export function ProviderDetailView({ providerId }: Props) {
       rejectProviderAction: s.rejectProviderAction,
     }))
   );
+  const qc = useQueryClient();
+  const queryKey = queryKeys.adminProvider(providerId);
 
-  const [provider, setProvider] = useState<AdminProvider | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: provider, isLoading: loading } = useFirestoreDocQuery<AdminProvider>(
+    queryKey,
+    'users',
+    providerId,
+    (id, data) => ({ id, uid: id, ...data } as AdminProvider),
+  );
   const [editing, setEditing] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<ProviderTab>('overview');
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const snap = await getDoc(doc(db, 'users', providerId));
-      if (cancelled) return;
-      setProvider(
-        snap.exists()
-          ? ({ id: snap.id, uid: snap.id, ...snap.data() } as AdminProvider)
-          : null,
-      );
-      setLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [providerId]);
 
   const updateMut = useEntityMutation<ProviderFormData, void>({
     mutate: async (patch) => {
@@ -103,14 +95,14 @@ export function ProviderDetailView({ providerId }: Props) {
       before: (provider ?? undefined) as Record<string, unknown> | undefined,
       after: { ...(provider ?? {}), ...patch } as Record<string, unknown>,
     }),
-    invalidateKeys: [['providers']],
+    invalidateKeys: [['providers'], queryKey],
     onSuccess: (_r, patch) => {
-      setProvider((prev) => {
+      const specialties = (patch.specialties ?? '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      qc.setQueryData(queryKey, (prev: AdminProvider | null | undefined) => {
         if (!prev) return prev;
-        const specialties = (patch.specialties ?? '')
-          .split(',')
-          .map((s) => s.trim())
-          .filter(Boolean);
         return {
           ...prev,
           fullName: patch.fullName,
@@ -155,16 +147,20 @@ export function ProviderDetailView({ providerId }: Props) {
         status: 'verified',
         verifiedAt: Timestamp.now(),
       });
-      setProvider({
-        ...provider,
-        // providerStatus is what the provider's own app reads; showing only the nested
-        // verification flag here is how this screen used to look approved while they were
-        // still stuck on "pending".
-        providerStatus: 'verified',
-        providerProfile: provider.providerProfile
-          ? { ...provider.providerProfile, isVerified: true }
-          : provider.providerProfile,
-      });
+      qc.setQueryData(queryKey, (prev: AdminProvider | null | undefined) =>
+        prev
+          ? {
+              ...prev,
+              // providerStatus is what the provider's own app reads; showing only the
+              // nested verification flag here is how this screen used to look approved
+              // while they were still stuck on "pending".
+              providerStatus: 'verified',
+              providerProfile: prev.providerProfile
+                ? { ...prev.providerProfile, isVerified: true }
+                : prev.providerProfile,
+            }
+          : prev,
+      );
       notify.success(t('admin.providerDetail.verifiedSuccess'));
     } catch (error) {
       console.error('Failed to verify provider:', error);
