@@ -73,7 +73,7 @@ export default function VipPage() {
           onClick={() => setBilling('monthly')}
           className={cn(
             'rounded-full px-4 py-2 text-xs font-semibold transition-colors',
-            billing === 'monthly' ? 'bg-section-primary text-background-dark' : 'text-text-secondary'
+            billing === 'monthly' ? 'bg-section-primary text-background-dark light:text-content' : 'text-text-secondary'
           )}
         >
           {t('vip.billing.monthly')}
@@ -83,7 +83,7 @@ export default function VipPage() {
           onClick={() => setBilling('yearly')}
           className={cn(
             'rounded-full px-4 py-2 text-xs font-semibold transition-colors',
-            billing === 'yearly' ? 'bg-section-primary text-background-dark' : 'text-text-secondary'
+            billing === 'yearly' ? 'bg-section-primary text-background-dark light:text-content' : 'text-text-secondary'
           )}
         >
           {t('vip.billing.yearly')}

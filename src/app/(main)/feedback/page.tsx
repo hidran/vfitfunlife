@@ -37,11 +37,11 @@ export default function FeedbackPage() {
                   'rounded-full border p-2 transition-colors',
                   active
                     ? 'border-yellow-400/60 bg-yellow-400/20'
-                    : 'border-white/15 bg-surface-2'
+                    : 'border-content/15 bg-surface-2'
                 )}
               >
                 <Star
-                  className={cn('h-5 w-5', active ? 'fill-yellow-400 text-yellow-400' : 'text-text-tertiary')}
+                  className={cn('h-5 w-5', active ? 'fill-yellow-400 text-yellow-400 light:fill-amber-500 light:text-amber-600' : 'text-text-tertiary')}
                 />
               </button>
             );

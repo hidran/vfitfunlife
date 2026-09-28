@@ -29,7 +29,7 @@ export function TestimonialCard({
     <div
       className={cn(
         'relative flex flex-col p-5 rounded-2xl',
-        'bg-white/5 border border-white/10',
+        'bg-content/5 border border-hairline',
         'min-w-[300px] max-w-[320px]',
         className
       )}
@@ -62,7 +62,7 @@ export function TestimonialCard({
             key={i}
             className={cn(
               'w-4 h-4',
-              i < rating ? 'text-vlife-accent fill-vlife-accent' : 'text-white/20'
+              i < rating ? 'text-vlife-accent fill-vlife-accent' : 'text-content/20'
             )}
           />
         ))}
@@ -74,8 +74,8 @@ export function TestimonialCard({
       </p>
 
       {/* Service & Venue */}
-      <div className="pt-3 border-t border-white/10">
-        <p className="text-vlife-primary text-xs font-medium">{serviceName}</p>
+      <div className="pt-3 border-t border-hairline">
+        <p className="text-vlife-primary light:text-emerald-700 text-xs font-medium">{serviceName}</p>
         <p className="text-text-tertiary text-xs">{venueName}</p>
       </div>
     </div>

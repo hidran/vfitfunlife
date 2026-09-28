@@ -40,12 +40,12 @@ export function FeaturePlaceholderPage({
 
   return (
     <div className={cn('container-mobile py-8', className)}>
-      <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6 sm:p-8">
+      <section className="relative overflow-hidden rounded-3xl border border-hairline bg-content/5 p-6 sm:p-8">
         <div className="absolute -top-14 -right-10 h-32 w-32 rounded-full bg-section-primary/20 blur-3xl" />
         <div className="absolute -bottom-20 -left-12 h-40 w-40 rounded-full bg-section-secondary/20 blur-3xl" />
 
         <div className="relative">
-          <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-text-tertiary">
+          <span className="inline-flex items-center rounded-full border border-content/15 bg-content/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-text-tertiary">
             {resolvedBadge}
           </span>
 
@@ -67,7 +67,7 @@ export function FeaturePlaceholderPage({
               {notes.map((note) => (
                 <li
                   key={note}
-                  className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-text-tertiary"
+                  className="rounded-xl border border-hairline bg-surface-sunken px-3 py-2 text-sm text-text-tertiary"
                 >
                   {note}
                 </li>
@@ -80,7 +80,7 @@ export function FeaturePlaceholderPage({
               {primaryAction && (
                 <Link
                   href={primaryAction.href}
-                  className="inline-flex items-center gap-2 rounded-full bg-section-primary px-4 py-2 text-sm font-semibold text-background-dark"
+                  className="inline-flex items-center gap-2 rounded-full bg-section-primary px-4 py-2 text-sm font-semibold text-background-dark light:text-content"
                 >
                   {primaryAction.label ?? (primaryAction.labelKey ? t(primaryAction.labelKey) : '')}
                   <ArrowRight className="h-4 w-4" />
@@ -90,7 +90,7 @@ export function FeaturePlaceholderPage({
               {secondaryAction && (
                 <Link
                   href={secondaryAction.href}
-                  className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-4 py-2 text-sm font-semibold text-text-inverse"
+                  className="inline-flex items-center gap-2 rounded-full border border-content/20 bg-content/5 px-4 py-2 text-sm font-semibold text-text-inverse"
                 >
                   {secondaryAction.label ?? (secondaryAction.labelKey ? t(secondaryAction.labelKey) : '')}
                 </Link>

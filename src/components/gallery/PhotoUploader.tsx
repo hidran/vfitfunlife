@@ -92,7 +92,7 @@ export function PhotoUploader({
         {photos.map((url, i) => (
           <div
             key={url}
-            className="relative h-28 w-28 flex-shrink-0 overflow-hidden rounded-xl bg-slate-200"
+            className="relative h-28 w-28 flex-shrink-0 overflow-hidden rounded-xl bg-content/10"
           >
             <img src={url} alt={t('gallery.photoAlt', { index: i + 1 })} className="h-full w-full object-cover" />
             <button
@@ -115,7 +115,7 @@ export function PhotoUploader({
             type="button"
             onClick={handleAddClick}
             className={cn(
-              'inline-flex h-28 w-28 flex-shrink-0 flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-white/30 bg-white/5 text-text-secondary',
+              'inline-flex h-28 w-28 flex-shrink-0 flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-content/30 bg-content/5 text-text-secondary',
               busy && 'opacity-50'
             )}
           >
@@ -131,7 +131,7 @@ export function PhotoUploader({
         className="hidden"
         onChange={handleFilePicked}
       />
-      {error && <p className="text-xs text-red-400">{error}</p>}
+      {error && <p className="text-xs text-red-400 light:text-red-600">{error}</p>}
       <p className="text-xs text-text-tertiary">
         {t('gallery.photoCount', { count: photos.length, max: maxPhotos })}
       </p>

@@ -49,7 +49,7 @@ export function PhotoLightbox({ photos, initialIndex, onClose }: PhotoLightboxPr
           e.stopPropagation();
           onClose();
         }}
-        className="absolute right-4 top-4 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white"
+        className="absolute right-4 top-4 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 light:bg-white/10 text-white"
         aria-label={t('common.close')}
       >
         <X className="h-5 w-5" />
@@ -67,7 +67,7 @@ export function PhotoLightbox({ photos, initialIndex, onClose }: PhotoLightboxPr
             e.stopPropagation();
             prev();
           }}
-          className="absolute left-4 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white"
+          className="absolute left-4 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 light:bg-white/10 text-white"
           aria-label={t('gallery.prev')}
         >
           <ChevronLeft className="h-6 w-6" />
@@ -80,7 +80,7 @@ export function PhotoLightbox({ photos, initialIndex, onClose }: PhotoLightboxPr
             e.stopPropagation();
             next();
           }}
-          className="absolute right-4 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white"
+          className="absolute right-4 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 light:bg-white/10 text-white"
           aria-label={t('gallery.next')}
         >
           <ChevronRight className="h-6 w-6" />

@@ -71,7 +71,7 @@ export function BecomeProviderCard() {
   return (
     <div className="rounded-xl border border-hairline p-4">
       <div className="flex items-center gap-3">
-        <Briefcase className="w-5 h-5 text-vfit-primary" />
+        <Briefcase className="w-5 h-5 text-vfit-primary light:text-vfit-secondary" />
         <div className="flex-1">
           <p className="text-content font-medium">{t('provider.card.cta.title')}</p>
           <p className="text-sm text-content-muted">{t('provider.card.cta.subtitle')}</p>

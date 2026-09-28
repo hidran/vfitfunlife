@@ -81,7 +81,7 @@ export function TabBar() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200/80 bg-white/95 backdrop-blur-md"
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-hairline bg-surface/95 backdrop-blur-md"
       role="navigation"
       aria-label={t('tab.mainNavigation')}
     >
@@ -103,7 +103,7 @@ export function TabBar() {
                 className={cn(
                   'relative flex flex-col items-center justify-center touch-target min-w-[64px] py-1.5',
                   'transition-all duration-200 ease-out focus:outline-none focus-visible:ring-2',
-                  'focus-visible:ring-[var(--section-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-white'
+                  'focus-visible:ring-[var(--section-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-background-dark'
                 )}
               >
                 {isActive && (
@@ -115,10 +115,10 @@ export function TabBar() {
                 <Icon
                   size={22}
                   strokeWidth={isActive ? 2.5 : 2}
-                  className={cn('transition-colors duration-200', isActive ? 'text-section-primary' : 'text-slate-400')}
+                  className={cn('transition-colors duration-200', isActive ? 'text-section-primary' : 'text-content-muted')}
                   aria-hidden="true"
                 />
-                <span className={cn('mt-1 text-[10px] font-medium transition-colors duration-200', isActive ? 'text-section-primary' : 'text-slate-500')}>
+                <span className={cn('mt-1 text-[10px] font-medium transition-colors duration-200', isActive ? 'text-section-primary' : 'text-content-muted')}>
                   {tab.label}
                 </span>
               </button>
@@ -133,7 +133,7 @@ export function TabBar() {
           >
             <span
               className={cn(
-                'relative -top-4 flex h-14 w-14 items-center justify-center rounded-full border-4 border-white shadow-xl transition-transform',
+                'relative -top-4 flex h-14 w-14 items-center justify-center rounded-full border-4 border-surface shadow-xl transition-transform',
                 isBookingActive
                   ? 'bg-section-gradient text-white scale-105 shadow-[0_10px_24px_rgba(0,0,0,0.2)]'
                   : 'bg-section-gradient text-white hover:scale-105 shadow-[0_10px_24px_rgba(0,0,0,0.15)]'
@@ -159,7 +159,7 @@ export function TabBar() {
                 className={cn(
                   'relative flex flex-col items-center justify-center touch-target min-w-[64px] py-1.5',
                   'transition-all duration-200 ease-out focus:outline-none focus-visible:ring-2',
-                  'focus-visible:ring-[var(--section-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-white'
+                  'focus-visible:ring-[var(--section-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-background-dark'
                 )}
               >
                 {isActive && (
@@ -171,10 +171,10 @@ export function TabBar() {
                 <Icon
                   size={22}
                   strokeWidth={isActive ? 2.5 : 2}
-                  className={cn('transition-colors duration-200', isActive ? 'text-section-primary' : 'text-slate-400')}
+                  className={cn('transition-colors duration-200', isActive ? 'text-section-primary' : 'text-content-muted')}
                   aria-hidden="true"
                 />
-                <span className={cn('mt-1 text-[10px] font-medium transition-colors duration-200', isActive ? 'text-section-primary' : 'text-slate-500')}>
+                <span className={cn('mt-1 text-[10px] font-medium transition-colors duration-200', isActive ? 'text-section-primary' : 'text-content-muted')}>
                   {tab.label}
                 </span>
               </button>
@@ -188,7 +188,7 @@ export function TabBar() {
             className={cn(
               'relative flex flex-col items-center justify-center touch-target min-w-[64px] py-1.5',
               'transition-all duration-200 ease-out focus:outline-none focus-visible:ring-2',
-              'focus-visible:ring-[var(--section-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-white'
+              'focus-visible:ring-[var(--section-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-background-dark'
             )}
           >
             {isProfileActive && (
@@ -202,14 +202,14 @@ export function TabBar() {
               strokeWidth={isProfileActive ? 2.5 : 2}
               className={cn(
                 'transition-colors duration-200',
-                isProfileActive ? 'text-section-primary' : 'text-slate-400'
+                isProfileActive ? 'text-section-primary' : 'text-content-muted'
               )}
               aria-hidden="true"
             />
             <span
               className={cn(
                 'mt-1 text-[10px] font-medium transition-colors duration-200',
-                isProfileActive ? 'text-section-primary' : 'text-slate-500'
+                isProfileActive ? 'text-section-primary' : 'text-content-muted'
               )}
             >
               {t(profileTab.labelKey)}

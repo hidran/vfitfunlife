@@ -332,7 +332,7 @@ export default function BookingConfirmPage() {
               'mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors',
               termsAccepted
                 ? 'bg-[var(--section-primary)] border-[var(--section-primary)]'
-                : 'border-white/30 hover:border-white/50'
+                : 'border-content/30 hover:border-content/50'
             )}
           >
             {termsAccepted && <Check className="w-3 h-3 text-white" />}

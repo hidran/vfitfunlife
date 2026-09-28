@@ -94,7 +94,7 @@ export function RecipeCard({ recipe, onShare, onEdit, onDelete, shared }: Recipe
                 type="button"
                 onClick={onDelete}
                 aria-label={t('clients.common.delete')}
-                className="w-11 h-11 flex items-center justify-center text-red-400 hover:text-red-300 rounded-lg"
+                className="w-11 h-11 flex items-center justify-center text-red-400 hover:text-red-300 light:text-red-600 light:hover:text-red-700 rounded-lg"
               >
                 <Trash2 className="w-4 h-4" aria-hidden />
               </button>
@@ -108,7 +108,7 @@ export function RecipeCard({ recipe, onShare, onEdit, onDelete, shared }: Recipe
           className={cn(
             'px-2.5 py-1 rounded-full text-xs',
             recipe.source === 'ai'
-              ? 'bg-purple-500/20 text-purple-400'
+              ? 'bg-purple-500/20 text-purple-400 light:text-purple-700'
               : 'bg-section-primary/20 text-section-primary',
           )}
         >

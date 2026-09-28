@@ -88,7 +88,7 @@ const menuItems: ProfileMenuSection[] = [
         icon: CreditCard,
         labelKey: 'profile.menu.paymentMethods',
         subtitleKey: 'profile.menu.subtitle.paymentMethods',
-        accentClass: 'text-vfun-primary',
+        accentClass: 'text-vfun-primary light:text-purple-700',
         href: '/profile/payment',
       },
       {
@@ -107,7 +107,7 @@ const menuItems: ProfileMenuSection[] = [
         icon: Bell,
         labelKey: 'profile.menu.notifications',
         subtitleKey: 'profile.menu.subtitle.notifications',
-        accentClass: 'text-vfit-primary',
+        accentClass: 'text-vfit-primary light:text-vfit-secondary',
         href: '/profile/notifications',
       },
       {
@@ -133,7 +133,7 @@ const menuItems: ProfileMenuSection[] = [
         icon: Star,
         labelKey: 'profile.menu.rateApp',
         subtitleKey: 'profile.menu.subtitle.rateApp',
-        accentClass: 'text-vip-gold',
+        accentClass: 'text-vip-gold light:text-amber-700',
         href: '/feedback',
       },
     ],
@@ -155,7 +155,7 @@ export default function ProfilePage() {
             icon: Shield,
             labelKey: 'profile.menu.adminDashboard',
             subtitleKey: 'profile.menu.subtitle.adminDashboard',
-            accentClass: 'text-vip-gold',
+            accentClass: 'text-vip-gold light:text-amber-700',
             href: '/admin',
           },
         ],
@@ -170,7 +170,7 @@ export default function ProfilePage() {
             icon: Briefcase,
             labelKey: 'profile.menu.startAsProvider',
             subtitleKey: 'profile.menu.subtitle.startAsProvider',
-            accentClass: 'text-vfit-primary',
+            accentClass: 'text-vfit-primary light:text-vfit-secondary',
             scrollTargetId: 'become-provider',
           },
         ],
@@ -242,7 +242,7 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-background-dark pb-20">
       {/* Profile Header */}
       <div className="p-4 pt-6">
-        <div className="rounded-[28px] border border-hairline bg-gradient-to-b from-white/10 to-white/[0.03] p-5 shadow-[0_14px_40px_rgba(0,0,0,0.28)]">
+        <div className="rounded-[28px] border border-hairline bg-gradient-to-b from-white/10 to-white/[0.03] p-5 shadow-[0_14px_40px_rgba(0,0,0,0.28)] light:from-surface light:to-surface light:shadow-[0_8px_24px_rgba(15,23,42,0.08)]">
           <div className="flex flex-col items-center">
             <ProfilePhotoUploader
               userId={user?.id || ''}
@@ -259,7 +259,7 @@ export default function ProfilePage() {
                   {displayName}
                 </h1>
                 {isVip && (
-                  <span className="rounded-full bg-vip-gold/20 px-2 py-0.5 text-xs font-medium text-vip-gold">
+                  <span className="rounded-full bg-vip-gold/20 px-2 py-0.5 text-xs font-medium text-vip-gold light:text-amber-700">
                     {t('profile.badge.vip')}
                   </span>
                 )}
@@ -292,7 +292,7 @@ export default function ProfilePage() {
                   className={cn(
                     'rounded-full px-3 py-2 text-center text-sm font-semibold transition-colors',
                     isProfessionalMode
-                      ? 'bg-vlife-primary text-background-dark shadow-[0_0_16px_rgba(0,230,118,0.32)]'
+                      ? 'bg-vlife-primary text-background-dark light:text-content shadow-[0_0_16px_rgba(0,230,118,0.32)]'
                       : 'text-text-tertiary'
                   )}
                 >
@@ -302,7 +302,7 @@ export default function ProfilePage() {
                   className={cn(
                     'rounded-full px-3 py-2 text-center text-sm font-semibold transition-colors',
                     !isProfessionalMode
-                      ? 'bg-white text-text-primary'
+                      ? 'bg-white text-text-primary light:shadow-sm'
                       : 'text-text-tertiary'
                   )}
                 >
@@ -385,7 +385,7 @@ export default function ProfilePage() {
           </div>
 
           <div className="relative min-w-0 overflow-hidden rounded-2xl border border-hairline bg-surface bg-gradient-to-br from-vfun-primary/15 to-transparent p-4">
-            <div className="mb-1 flex items-center gap-1 text-vfun-primary">
+            <div className="mb-1 flex items-center gap-1 text-vfun-primary light:text-purple-700">
               <Award size={14} aria-hidden />
               <p className="truncate text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">
                 {isProviderUser ? t('profile.stats.earnings') : t('profile.stats.reviews')}
@@ -427,17 +427,17 @@ export default function ProfilePage() {
           className="w-full bg-gradient-to-r from-vip-gold/20 to-vip-gold/5 border border-vip-gold/30 rounded-2xl p-4 flex items-center gap-4 mb-4"
         >
           <div className="w-12 h-12 rounded-full bg-vip-gold/20 flex items-center justify-center">
-            <Crown className="w-6 h-6 text-vip-gold" />
+            <Crown className="w-6 h-6 text-vip-gold light:text-amber-700" />
           </div>
           <div className="flex-1 text-left">
-            <h3 className="font-semibold text-vip-gold">
+            <h3 className="font-semibold text-vip-gold light:text-amber-700">
               {isVip ? t('profile.vip.isVipTitle') : t('profile.vip.ctaTitle')}
             </h3>
             <p className="text-sm text-text-secondary">
               {isVip ? t('profile.vip.isVipSubtitle') : t('profile.vip.ctaSubtitle')}
             </p>
           </div>
-          <ChevronRight className="w-5 h-5 text-vip-gold" />
+          <ChevronRight className="w-5 h-5 text-vip-gold light:text-amber-700" />
         </button>
 
         {/* Gamification (Season 0): stacked on phones, side by side from md */}
@@ -458,7 +458,7 @@ export default function ProfilePage() {
           className="w-full bg-gradient-to-r from-vfit-primary/20 to-vfun-primary/20 border border-vfit-primary/30 rounded-2xl p-4 flex items-center gap-4 mb-6"
         >
           <div className="w-12 h-12 rounded-full bg-vfit-primary/20 flex items-center justify-center">
-            <Gift className="w-6 h-6 text-vfit-primary" />
+            <Gift className="w-6 h-6 text-vfit-primary light:text-vfit-secondary" />
           </div>
           <div className="flex-1 text-left">
             <h3 className="font-semibold text-text-inverse">{t('profile.referral.title')}</h3>
@@ -483,7 +483,7 @@ export default function ProfilePage() {
       <div className="px-4 space-y-6">
         {/* Social Links */}
         {user?.id && (
-          <div className="bg-background-secondary/5 rounded-xl p-4">
+          <div className="bg-content/5 rounded-xl p-4">
             <SocialLinksEditor
               userId={user.id}
               socialLinks={user.socialLinks}
@@ -494,7 +494,7 @@ export default function ProfilePage() {
 
         {/* Notification Settings */}
         {user?.id && user.notificationSettings && (
-          <div className="bg-background-secondary/5 rounded-xl p-4">
+          <div className="bg-content/5 rounded-xl p-4">
             <NotificationSettings
               userId={user.id}
               settings={user.notificationSettings}
@@ -513,7 +513,7 @@ export default function ProfilePage() {
 
             {/* Professional Bio */}
             {providerProfile?.professionalBio && (
-              <div className="bg-background-secondary/5 rounded-xl p-4">
+              <div className="bg-content/5 rounded-xl p-4">
                 <h3 className="text-sm font-medium text-text-tertiary mb-2">{t('profile.provider.about')}</h3>
                 <p className="text-sm text-text-secondary">{providerProfile.professionalBio}</p>
               </div>
@@ -521,7 +521,7 @@ export default function ProfilePage() {
 
 
             {/* Languages Selector */}
-            <div className="bg-background-secondary/5 rounded-xl p-4">
+            <div className="bg-content/5 rounded-xl p-4">
               <LanguagesSelector
                 userId={user.id}
                 languages={providerProfile?.languages || []}
@@ -531,7 +531,7 @@ export default function ProfilePage() {
 
             {/* Years of Experience */}
             {providerProfile?.yearsOfExperience !== undefined && providerProfile.yearsOfExperience > 0 && (
-              <div className="bg-background-secondary/5 rounded-xl p-4">
+              <div className="bg-content/5 rounded-xl p-4">
                 <h3 className="text-sm font-medium text-text-tertiary mb-2">{t('profile.provider.experience')}</h3>
                 <div className="flex items-center gap-2">
                   <Clock className="text-section-primary" size={18} />
@@ -547,7 +547,7 @@ export default function ProfilePage() {
             )}
 
             {/* Education */}
-            <div className="bg-background-secondary/5 rounded-xl p-4">
+            <div className="bg-content/5 rounded-xl p-4">
               <EducationHistory
                 userId={user.id}
                 education={providerProfile?.education || []}
@@ -556,7 +556,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Certifications */}
-            <div className="bg-background-secondary/5 rounded-xl p-4">
+            <div className="bg-content/5 rounded-xl p-4">
               <CertificationUpload
                 userId={user.id}
                 certifications={providerProfile?.certifications || []}
@@ -565,7 +565,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Portfolio Gallery */}
-            <div className="bg-background-secondary/5 rounded-xl p-4">
+            <div className="bg-content/5 rounded-xl p-4">
               <PortfolioGallery
                 userId={user.id}
                 images={providerProfile?.portfolioImages || []}
@@ -580,7 +580,7 @@ export default function ProfilePage() {
             <button
               type="button"
               onClick={() => router.push('/provider/availability')}
-              className="w-full bg-background-secondary/5 rounded-xl p-4 text-left hover:bg-background-secondary/10 transition-colors"
+              className="w-full bg-content/5 rounded-xl p-4 text-left hover:bg-content/10 transition-colors"
             >
               <div className="flex items-center gap-2">
                 <Calendar className="text-section-primary" size={20} />
@@ -600,7 +600,7 @@ export default function ProfilePage() {
             <button
               type="button"
               onClick={() => router.push('/provider/services')}
-              className="w-full bg-background-secondary/5 rounded-xl p-4 text-left hover:bg-background-secondary/10 transition-colors"
+              className="w-full bg-content/5 rounded-xl p-4 text-left hover:bg-content/10 transition-colors"
             >
               <div className="flex items-center gap-2">
                 <DollarSign className="text-section-primary" size={20} />
@@ -614,7 +614,7 @@ export default function ProfilePage() {
 
             {/* License Number */}
             {providerProfile?.licenseNumber && (
-              <div className="bg-background-secondary/5 rounded-xl p-4">
+              <div className="bg-content/5 rounded-xl p-4">
                 <h3 className="text-sm font-medium text-text-tertiary mb-2">{t('profile.provider.license')}</h3>
                 <p className="text-sm text-text-inverse font-mono">{providerProfile.licenseNumber}</p>
                 {providerProfile.isVerified && (
@@ -627,7 +627,7 @@ export default function ProfilePage() {
             )}
 
             {/* Cancellation Policy */}
-            <div className="bg-background-secondary/5 rounded-xl p-4">
+            <div className="bg-content/5 rounded-xl p-4">
               <CancellationPolicyEditor
                 userId={user.id}
                 policy={providerProfile?.cancellationPolicy || null}
@@ -637,7 +637,7 @@ export default function ProfilePage() {
 
             {/* Reviews Section (Read-only) */}
             {providerProfile && (
-              <div className="bg-background-secondary/5 rounded-xl p-4">
+              <div className="bg-content/5 rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Star className="text-section-primary" size={20} />
                   <h3 className="text-sm font-medium text-text-tertiary">{t('profile.stats.reviews')}</h3>
@@ -654,7 +654,7 @@ export default function ProfilePage() {
                           size={16}
                           className={cn(
                             star <= Math.round(providerProfile.rating || 0)
-                              ? 'text-vip-gold fill-vip-gold'
+                              ? 'text-vip-gold fill-vip-gold light:text-amber-500 light:fill-amber-400'
                               : 'text-text-tertiary'
                           )}
                         />
@@ -698,7 +698,7 @@ export default function ProfilePage() {
                     }
                   }}
                   className={cn(
-                    'w-full flex items-center gap-3 rounded-2xl border border-hairline bg-surface-2 p-4 text-left transition-all hover:-translate-y-0.5 hover:border-white/20 hover:bg-surface-2'
+                    'w-full flex items-center gap-3 rounded-2xl border border-hairline bg-surface-2 p-4 text-left transition-all hover:-translate-y-0.5 hover:border-content/20 hover:bg-surface-2'
                   )}
                 >
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-2">

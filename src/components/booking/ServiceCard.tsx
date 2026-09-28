@@ -39,7 +39,7 @@ export function ServiceCard({
     >
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-white truncate">{service.name}</h3>
+          <h3 className="font-semibold text-content truncate">{service.name}</h3>
           
           {service.description && (
             <p className="text-sm text-text-secondary mt-1 line-clamp-2">

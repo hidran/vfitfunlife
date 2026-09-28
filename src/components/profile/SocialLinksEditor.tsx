@@ -201,7 +201,7 @@ export function SocialLinksEditor({
                   href={formatUrl(value, platform.key)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-background-secondary/10 text-text-inverse text-sm hover:bg-background-secondary/20 transition-colors"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-content/10 text-text-inverse text-sm hover:bg-content/20 transition-colors"
                   style={{ borderLeft: `3px solid ${platform.color}` }}
                 >
                   <platform.icon size={14} style={{ color: platform.color }} />

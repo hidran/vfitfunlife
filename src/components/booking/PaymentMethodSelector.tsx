@@ -62,8 +62,8 @@ export function PaymentMethodSelector({
     if (!brand) return <CreditCard className="w-5 h-5" />;
 
     return (
-      <div className="w-8 h-5 bg-white/20 rounded flex items-center justify-center">
-        <span className="text-[8px] font-bold text-white">
+      <div className="w-8 h-5 bg-content/20 rounded flex items-center justify-center">
+        <span className="text-[8px] font-bold text-content">
           {cardBrandIcons[brand.toLowerCase()] || brand.toUpperCase()}
         </span>
       </div>
@@ -122,8 +122,8 @@ export function PaymentMethodSelector({
       <button
         onClick={() => setShowAddCard(true)}
         className={cn(
-          'w-full p-4 rounded-xl border-2 border-dashed border-white/20',
-          'flex items-center gap-3 text-text-secondary hover:text-white hover:border-white/40',
+          'w-full p-4 rounded-xl border-2 border-dashed border-content/20',
+          'flex items-center gap-3 text-text-secondary hover:text-content hover:border-content/40',
           'transition-colors'
         )}
       >
@@ -135,7 +135,7 @@ export function PaymentMethodSelector({
       {showAddCard && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-surface-elevated rounded-2xl p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold text-white mb-4">
+            <h3 className="text-lg font-semibold text-content mb-4">
               {t('booking.payment.addCardTitle')}
             </h3>
             <p className="text-text-secondary mb-6">
@@ -184,7 +184,7 @@ function PaymentMethodItem({
         'flex items-center gap-3 text-left',
         isSelected
           ? 'border-[var(--section-primary)] bg-[var(--section-primary)]/10'
-          : 'border-white/10 hover:border-white/20',
+          : 'border-hairline hover:border-content/20',
         disabled && 'opacity-50 cursor-not-allowed'
       )}
     >
@@ -194,7 +194,7 @@ function PaymentMethodItem({
         <div className="flex items-center gap-2">
           <span className={cn(
             'font-medium truncate',
-            isSelected ? 'text-white' : 'text-text-secondary'
+            isSelected ? 'text-content' : 'text-text-secondary'
           )}>
             {title}
           </span>

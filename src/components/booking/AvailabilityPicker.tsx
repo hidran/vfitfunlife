@@ -165,7 +165,7 @@ export function AvailabilityPicker({
               className={cn(
                 'py-2 px-3 rounded-lg text-sm font-medium transition-all duration-200',
                 slot.isAvailable && !slot.isBooked && [
-                  'bg-surface-elevated text-white hover:bg-[var(--section-primary)]/20',
+                  'bg-surface-elevated text-content hover:bg-[var(--section-primary)]/20',
                   selectedTime === slot.time && [
                     'bg-[var(--section-primary)] text-white',
                     'ring-2 ring-[var(--section-primary)] ring-offset-2 ring-offset-background-dark',
@@ -193,21 +193,21 @@ export function AvailabilityPicker({
         <div className="flex items-center justify-between mb-4">
           <button
             onClick={handlePrevMonth}
-            className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+            className="p-2 rounded-lg hover:bg-content/10 transition-colors"
           >
             <ChevronLeft className="w-5 h-5 text-text-secondary" />
           </button>
 
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-[var(--section-primary)]" />
-            <span className="font-semibold text-white">
+            <span className="font-semibold text-content">
               {MONTHS[currentMonth.getMonth()]} {currentMonth.getFullYear()}
             </span>
           </div>
 
           <button
             onClick={handleNextMonth}
-            className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+            className="p-2 rounded-lg hover:bg-content/10 transition-colors"
           >
             <ChevronRight className="w-5 h-5 text-text-secondary" />
           </button>
@@ -235,7 +235,7 @@ export function AvailabilityPicker({
               className={cn(
                 'aspect-square rounded-lg text-sm font-medium transition-all duration-200',
                 !day.isCurrentMonth && 'text-text-tertiary/50',
-                day.isCurrentMonth && !day.isDisabled && 'text-white hover:bg-white/10',
+                day.isCurrentMonth && !day.isDisabled && 'text-content hover:bg-content/10',
                 day.isDisabled && 'text-text-tertiary/30 cursor-not-allowed',
                 day.isToday && [
                   'ring-1 ring-[var(--section-primary)]',
@@ -259,7 +259,7 @@ export function AvailabilityPicker({
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-[var(--section-primary)]" />
-              <h3 className="font-semibold text-white">
+              <h3 className="font-semibold text-content">
                 {t('booking.availability.slotsTitle')}
               </h3>
             </div>
@@ -295,7 +295,7 @@ export function AvailabilityPicker({
           )}
 
           {/* Timezone indicator */}
-          <div className="mt-4 pt-3 border-t border-white/10">
+          <div className="mt-4 pt-3 border-t border-hairline">
             <p className="text-xs text-text-tertiary text-center">
               {t('booking.availability.timezone', { tz: timezone })}
             </p>

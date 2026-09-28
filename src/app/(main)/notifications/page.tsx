@@ -86,7 +86,7 @@ export default function NotificationsPage() {
             'rounded-full border px-3 py-2 text-xs font-semibold transition-colors',
             showUnreadOnly
               ? 'border-section-primary bg-section-primary/15 text-section-primary'
-              : 'border-white/15 bg-surface-2 text-text-secondary'
+              : 'border-content/15 bg-surface-2 text-text-secondary'
           )}
         >
           {t('notifications.unreadOnly')}
@@ -137,7 +137,7 @@ export default function NotificationsPage() {
                   <button
                     type="button"
                     onClick={() => toggleRead(notification.id)}
-                    className="rounded-lg border border-white/15 px-2 py-1 text-[11px] text-text-tertiary transition-colors hover:text-text-inverse"
+                    className="rounded-lg border border-content/15 px-2 py-1 text-[11px] text-text-tertiary transition-colors hover:text-text-inverse"
                   >
                     {notification.read ? t('notifications.unread') : t('notifications.read')}
                   </button>

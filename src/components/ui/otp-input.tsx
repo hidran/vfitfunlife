@@ -146,12 +146,12 @@ export function OtpInput({
           disabled={disabled}
           className={cn(
             'w-12 h-14 sm:w-14 sm:h-16 text-center text-2xl font-bold',
-            'bg-background-secondary/20 border-2 rounded-xl',
+            'bg-background-secondary/20 light:bg-surface-input border-2 rounded-xl',
             'text-text-inverse placeholder:text-text-tertiary',
             'focus:outline-none transition-all duration-200',
             activeIndex === index
               ? 'border-section-primary ring-2 ring-section-primary/20'
-              : 'border-white/10',
+              : 'border-hairline',
             error && 'border-error-DEFAULT animate-shake',
             disabled && 'opacity-50 cursor-not-allowed'
           )}

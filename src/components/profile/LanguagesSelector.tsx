@@ -126,7 +126,7 @@ export function LanguagesSelector({
                 'px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-2',
                 isSelected
                   ? 'bg-section-gradient text-white shadow-lg'
-                  : 'bg-background-secondary/20 text-text-secondary hover:bg-background-secondary/30 border border-hairline'
+                  : 'bg-content/20 text-text-secondary hover:bg-content/30 border border-hairline'
               )}
             >
               <span>{language.flag}</span>

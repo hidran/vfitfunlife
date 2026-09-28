@@ -20,13 +20,13 @@ export default function HomeTrainingPage() {
         <div className="mt-4 flex flex-wrap gap-2">
           <Link
             href="/booking"
-            className="rounded-full bg-section-primary px-4 py-2 text-xs font-semibold text-background-dark"
+            className="rounded-full bg-section-primary px-4 py-2 text-xs font-semibold text-background-dark light:text-content"
           >
             {t('fit.homeTraining.startBooking')}
           </Link>
           <Link
             href="/profile/addresses"
-            className="rounded-full border border-white/20 bg-surface-2 px-4 py-2 text-xs font-semibold text-text-inverse"
+            className="rounded-full border border-content/20 bg-surface-2 px-4 py-2 text-xs font-semibold text-text-inverse"
           >
             {t('fit.homeTraining.manageAddresses')}
           </Link>
@@ -35,7 +35,7 @@ export default function HomeTrainingPage() {
 
       <section className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
         <p className="inline-flex items-center gap-2 text-sm font-medium text-text-inverse">
-          <ShieldCheck className="h-4 w-4 text-emerald-300" />
+          <ShieldCheck className="h-4 w-4 text-emerald-300 light:text-emerald-700" />
           {t('fit.homeTraining.certifiedBanner')}
         </p>
       </section>
@@ -58,7 +58,7 @@ export default function HomeTrainingPage() {
                   {service.eta}
                 </span>
                 <span className="inline-flex items-center gap-1">
-                  <Star className="h-3.5 w-3.5 text-yellow-400" />
+                  <Star className="h-3.5 w-3.5 text-yellow-400 light:text-amber-700" />
                   {service.rating.toFixed(1)}
                 </span>
               </div>

@@ -66,9 +66,9 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
             'focus-visible:ring-[var(--section-primary,#00C9FF)]',
           ],
           variant === 'ghost' && [
-            'bg-transparent text-[#6B7280]',
-            'hover:bg-gray-100 hover:text-[#1A1D29]',
-            'focus-visible:ring-gray-400',
+            'bg-transparent text-content-muted',
+            'hover:bg-content/5 hover:text-content',
+            'focus-visible:ring-content/40',
           ],
           variant === 'outline' && [
             'bg-transparent text-[var(--section-primary,#00C9FF)]',

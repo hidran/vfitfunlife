@@ -206,7 +206,7 @@ export function CertificationUpload({
           {certifications.map((cert) => (
             <div
               key={cert.id}
-              className="flex items-center gap-3 p-3 rounded-xl bg-background-secondary/5 border border-hairline"
+              className="flex items-center gap-3 p-3 rounded-xl bg-content/5 border border-hairline"
             >
               <div className="w-10 h-10 rounded-lg bg-section-gradient/10 flex items-center justify-center flex-shrink-0">
                 {cert.documentUrl ? (
@@ -273,7 +273,7 @@ export function CertificationUpload({
 
       {/* Add New Form */}
       {isAdding && (
-        <div className="p-4 rounded-xl bg-background-secondary/5 border border-hairline space-y-4">
+        <div className="p-4 rounded-xl bg-content/5 border border-hairline space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-medium text-text-inverse">{t('profile.certifications.addTitle')}</h4>
             <button
@@ -333,7 +333,7 @@ export function CertificationUpload({
               
               {/* Preview */}
               {previewUrl && previewType === 'image' && (
-                <div className="relative mb-3 h-40 rounded-xl overflow-hidden bg-background-secondary/10">
+                <div className="relative mb-3 h-40 rounded-xl overflow-hidden bg-content/10">
                   <Image
                     src={previewUrl}
                     alt={t('profile.certifications.previewAlt')}
@@ -352,7 +352,7 @@ export function CertificationUpload({
               )}
 
               {previewUrl && previewType === 'pdf' && (
-                <div className="relative mb-3 p-4 rounded-xl bg-background-secondary/10 border border-hairline">
+                <div className="relative mb-3 p-4 rounded-xl bg-content/10 border border-hairline">
                   <div className="flex items-center gap-3">
                     <FileText className="text-section-primary" size={32} />
                     <div className="flex-1">
@@ -388,7 +388,7 @@ export function CertificationUpload({
                     'w-full flex items-center gap-3 p-3 rounded-xl border border-dashed transition-colors',
                     selectedFile
                       ? 'border-section-primary bg-section-gradient/5'
-                      : 'border-white/20 hover:border-white/40'
+                      : 'border-content/20 hover:border-content/40'
                   )}
                 >
                   <Upload className="text-text-tertiary" size={20} />
@@ -434,7 +434,7 @@ export function CertificationUpload({
       )}
 
       {certifications.length === 0 && !isAdding && (
-        <div className="text-center py-6 bg-background-secondary/5 rounded-xl">
+        <div className="text-center py-6 bg-content/5 rounded-xl">
           <p className="text-text-tertiary text-sm">{t('profile.certifications.empty')}</p>
           <p className="text-text-tertiary/70 text-xs mt-1">
             {t('profile.certifications.emptyHint')}

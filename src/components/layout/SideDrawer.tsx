@@ -221,15 +221,15 @@ export function SideDrawer({
 
       <aside
         className={cn(
-          'absolute inset-y-0 left-0 w-[88%] max-w-sm bg-[#f4f5f8] shadow-2xl',
+          'absolute inset-y-0 left-0 w-[88%] max-w-sm bg-background-dark shadow-2xl',
           'transform transition-transform duration-300 ease-out',
           isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
         role="dialog"
         aria-modal="true"
       >
-        <div className="flex h-full flex-col text-slate-800">
-          <div className="border-b border-slate-200 p-5 pt-safe">
+        <div className="flex h-full flex-col text-content">
+          <div className="border-b border-hairline p-5 pt-safe">
             <div className="flex items-start justify-between">
               <div className="flex min-w-0 items-center gap-3">
                 <div className="relative">
@@ -238,33 +238,33 @@ export function SideDrawer({
                       name={userName || t('profile.defaultUser')}
                       src={userAvatarUrl || undefined}
                       size="lg"
-                      className="border-2 border-white"
+                      className="border-2 border-background-dark"
                     />
                   </div>
-                  <span className="absolute bottom-1 right-1 h-3 w-3 rounded-full border-2 border-white bg-vlife-primary" />
+                  <span className="absolute bottom-1 right-1 h-3 w-3 rounded-full border-2 border-background-dark bg-vlife-primary" />
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate text-xl font-bold text-slate-900">
+                  <p className="truncate text-xl font-bold text-content">
                     {userName || t('profile.defaultUser')}
                   </p>
-                  <p className="truncate text-sm text-slate-500">{userEmail || ''}</p>
+                  <p className="truncate text-sm text-content-muted">{userEmail || ''}</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={onClose}
-                className="touch-target rounded-full text-slate-400 transition-colors hover:text-slate-600"
+                className="touch-target rounded-full text-content-muted transition-colors hover:text-content"
                 aria-label={t('auth.common.back')}
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-1 rounded-xl bg-slate-200 p-1">
+            <div className="mt-4 grid grid-cols-2 gap-1 rounded-xl bg-content/10 p-1">
               <div
                 className={cn(
                   'rounded-lg py-2 text-center text-sm font-semibold transition-colors',
-                  isProfessionalMode ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
+                  isProfessionalMode ? 'bg-surface text-content shadow-sm' : 'text-content-muted'
                 )}
               >
                 {t('profile.mode.professional')}
@@ -272,7 +272,7 @@ export function SideDrawer({
               <div
                 className={cn(
                   'rounded-lg py-2 text-center text-sm font-semibold transition-colors',
-                  !isProfessionalMode ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
+                  !isProfessionalMode ? 'bg-surface text-content shadow-sm' : 'text-content-muted'
                 )}
               >
                 {t('profile.mode.private')}
@@ -318,23 +318,23 @@ export function SideDrawer({
                     key={item.labelKey}
                     type="button"
                     onClick={() => handleNavigate(item.href, item.section)}
-                    className="flex w-full items-center gap-3 rounded-xl bg-white px-3 py-3 text-left shadow-sm transition-colors hover:bg-slate-50"
+                    className="flex w-full items-center gap-3 rounded-xl bg-surface px-3 py-3 text-left shadow-sm transition-colors hover:bg-content/5"
                   >
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100">
-                      <Icon className="h-4 w-4 text-slate-600" />
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-content/5">
+                      <Icon className="h-4 w-4 text-content/80" />
                     </div>
-                    <span className="flex-1 text-sm font-medium text-slate-700">{t(item.labelKey)}</span>
-                    {item.value ? <span className="text-sm font-semibold text-[#8A4FFF]">{item.value}</span> : null}
+                    <span className="flex-1 text-sm font-medium text-content/80">{t(item.labelKey)}</span>
+                    {item.value ? <span className="text-sm font-semibold text-[#8A4FFF] light:text-[#6B2FE0]">{item.value}</span> : null}
                   </button>
                 );
               })}
             </div>
 
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.1em] text-slate-400">
+            <div className="mt-4 rounded-2xl border border-hairline bg-surface p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.1em] text-content-muted">
                 {t('drawer.section.categories')}
               </p>
-              <h3 className="mt-2 text-lg font-bold text-slate-900">{t('drawer.category.vfit')}</h3>
+              <h3 className="mt-2 text-lg font-bold text-content">{t('drawer.category.vfit')}</h3>
 
               <div className="mt-3 grid grid-cols-2 gap-y-2">
                 {categoryLinks
@@ -344,7 +344,7 @@ export function SideDrawer({
                     key={category.href}
                     type="button"
                     onClick={() => handleNavigate(category.href, category.section)}
-                    className="flex items-center gap-2 text-left text-sm text-slate-600 transition-colors hover:text-slate-900"
+                    className="flex items-center gap-2 text-left text-sm text-content/80 transition-colors hover:text-content"
                   >
                     <span className="h-1.5 w-1.5 rounded-full bg-[#8A4FFF]" />
                     {t(category.labelKey)}
@@ -353,7 +353,7 @@ export function SideDrawer({
               </div>
             </div>
 
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-3">
+            <div className="mt-4 rounded-2xl border border-hairline bg-surface p-3">
               <div className="grid grid-cols-3 gap-2">
                 {sectionPills.map((pill) => {
                   const Icon = pill.icon;
@@ -368,8 +368,8 @@ export function SideDrawer({
                         'rounded-xl px-2 py-2 text-xs font-semibold transition-all',
                         'flex flex-col items-center justify-center gap-1',
                         isActive
-                          ? 'bg-section-gradient text-background-dark shadow-sm'
-                          : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700'
+                          ? 'bg-section-gradient text-[#1A1D29] shadow-sm'
+                          : 'bg-content/5 text-content-muted hover:bg-content/10 hover:text-content'
                       )}
                     >
                       <Icon className="h-4 w-4" />
@@ -395,11 +395,11 @@ export function SideDrawer({
                       'w-full rounded-xl border px-3 py-3 text-left transition-colors',
                       'flex items-center gap-3',
                       isActive
-                        ? 'border-section-primary/40 bg-section-primary/10 text-slate-900'
-                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                        ? 'border-section-primary/40 bg-section-primary/10 text-content'
+                        : 'border-hairline bg-surface text-content/80 hover:bg-content/5'
                     )}
                   >
-                    <Icon className={cn('h-5 w-5', isActive ? 'text-section-primary' : 'text-slate-500')} />
+                    <Icon className={cn('h-5 w-5', isActive ? 'text-section-primary' : 'text-content-muted')} />
                     <span className="text-sm font-medium">{t(item.labelKey)}</span>
                   </button>
                 );
@@ -407,20 +407,20 @@ export function SideDrawer({
             </nav>
 
             {/* Language + theme: the only place a signed-in user can reach them outside
-                /profile/settings. The drawer surface is always light, hence tone="light". */}
+                /profile/settings. The drawer follows the theme, so both use the default tone. */}
             <div
               className="mt-6 flex flex-wrap items-center justify-between gap-2"
               data-testid="drawer-preferences"
             >
-              <LanguageSwitcher variant="menu" tone="light" />
-              <ThemeToggle compact tone="light" />
+              <LanguageSwitcher variant="menu" />
+              <ThemeToggle compact />
             </div>
 
             <button
               type="button"
               onClick={handleLogout}
               disabled={isLoading}
-              className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white py-3 text-sm font-semibold text-rose-500 transition-colors hover:bg-rose-50 disabled:opacity-60"
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl border border-rose-500/30 bg-surface py-3 text-sm font-semibold text-rose-500 light:text-rose-600 transition-colors hover:bg-rose-500/10 disabled:opacity-60"
             >
               <LogOut className="h-4 w-4" />
               <span>{t('profile.logout.action')}</span>
@@ -431,7 +431,7 @@ export function SideDrawer({
                 href="https://www.facebook.com"
                 target="_blank"
                 rel="noreferrer"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition-colors hover:text-slate-700"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-hairline bg-surface text-content-muted transition-colors hover:text-content"
                 aria-label="Facebook"
               >
                 <Facebook className="h-4 w-4" />
@@ -440,7 +440,7 @@ export function SideDrawer({
                 href="https://www.instagram.com"
                 target="_blank"
                 rel="noreferrer"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition-colors hover:text-slate-700"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-hairline bg-surface text-content-muted transition-colors hover:text-content"
                 aria-label="Instagram"
               >
                 <Instagram className="h-4 w-4" />
@@ -449,7 +449,7 @@ export function SideDrawer({
                 href="https://www.youtube.com"
                 target="_blank"
                 rel="noreferrer"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition-colors hover:text-slate-700"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-hairline bg-surface text-content-muted transition-colors hover:text-content"
                 aria-label="YouTube"
               >
                 <Youtube className="h-4 w-4" />

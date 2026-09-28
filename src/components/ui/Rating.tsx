@@ -72,7 +72,7 @@ const Rating = React.forwardRef<HTMLDivElement, RatingProps>(
             <div className="relative" aria-hidden="true">
               <Star
                 size={config.star}
-                className="text-[#E5E7EB]"
+                className="text-content/20"
               />
               <div className="absolute inset-0 overflow-hidden w-1/2">
                 <Star
@@ -88,7 +88,7 @@ const Rating = React.forwardRef<HTMLDivElement, RatingProps>(
             <Star
               key={`empty-${i}`}
               size={config.star}
-              className="text-[#E5E7EB]"
+              className="text-content/20"
               aria-hidden="true"
             />
           ))}
@@ -96,14 +96,14 @@ const Rating = React.forwardRef<HTMLDivElement, RatingProps>(
 
         {/* Value */}
         {showValue && (
-          <span className={cn('font-semibold text-[#1A1D29]', config.text)}>
+          <span className={cn('font-semibold text-content', config.text)}>
             {value.toFixed(1)}
           </span>
         )}
 
         {/* Count */}
         {showCount && typeof count === 'number' && (
-          <span className={cn('text-[#6B7280]', config.text)}>
+          <span className={cn('text-content-muted', config.text)}>
             ({count.toLocaleString()})
           </span>
         )}

@@ -63,8 +63,8 @@ export function BookingCard({
       <button
         onClick={() => router.push(`/bookings/detail?id=${booking.id}`)}
         className={cn(
-          'group relative w-full overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-4 text-left',
-          'hover:bg-white/10 transition-colors',
+          'group relative w-full overflow-hidden rounded-2xl border border-hairline bg-content/5 p-4 text-left',
+          'hover:bg-content/10 transition-colors',
           className
         )}
       >
@@ -97,7 +97,7 @@ export function BookingCard({
               </Badge>
             </div>
 
-            <h3 className="truncate font-semibold text-white">
+            <h3 className="truncate font-semibold text-content">
               {booking.serviceName}
             </h3>
             <p className="truncate text-sm text-text-secondary">{booking.providerName}</p>
@@ -127,7 +127,7 @@ export function BookingCard({
           </div>
         </div>
 
-        <ChevronRight className="h-5 w-5 shrink-0 text-text-tertiary group-hover:text-white" />
+        <ChevronRight className="h-5 w-5 shrink-0 text-text-tertiary group-hover:text-content" />
       </button>
     );
   }
@@ -140,7 +140,7 @@ export function BookingCard({
       )}
     >
       {/* Header */}
-      <div className="p-4 border-b border-white/10">
+      <div className="p-4 border-b border-hairline">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
             <Avatar
@@ -149,7 +149,7 @@ export function BookingCard({
               size="lg"
             />
             <div>
-              <h3 className="font-semibold text-white">{booking.providerName}</h3>
+              <h3 className="font-semibold text-content">{booking.providerName}</h3>
               <p className="text-sm text-text-secondary">{booking.serviceName}</p>
             </div>
           </div>
@@ -162,7 +162,7 @@ export function BookingCard({
       <div className="p-4 space-y-3">
         <div className="flex items-center gap-3 text-sm">
           <Calendar className="w-4 h-4 text-[var(--section-primary)]" />
-          <span className="text-white">
+          <span className="text-content">
             {scheduledAt.toLocaleDateString(toLocaleTag(locale), {
               weekday: 'long',
               day: 'numeric',
@@ -173,7 +173,7 @@ export function BookingCard({
 
         <div className="flex items-center gap-3 text-sm">
           <Clock className="w-4 h-4 text-[var(--section-primary)]" />
-          <span className="text-white">
+          <span className="text-content">
             {scheduledAt.toLocaleTimeString(toLocaleTag(locale), {
               hour: '2-digit',
               minute: '2-digit',
@@ -192,9 +192,9 @@ export function BookingCard({
           </div>
         )}
 
-        <div className="flex items-center justify-between pt-3 border-t border-white/10">
+        <div className="flex items-center justify-between pt-3 border-t border-hairline">
           <span className="text-text-secondary">{t('booking.card.total')}</span>
-          <span className="text-lg font-bold text-white">
+          <span className="text-lg font-bold text-content">
             {formatPrice(booking.totalPrice)}
           </span>
         </div>
@@ -215,7 +215,7 @@ export function BookingCard({
         {canReschedule && (
           <button
             onClick={() => onReschedule?.(booking.id)}
-            className="flex-1 bg-white/10 text-white py-2.5 rounded-xl font-medium text-sm hover:bg-white/20 transition-colors flex items-center justify-center gap-2"
+            className="flex-1 bg-content/10 text-content py-2.5 rounded-xl font-medium text-sm hover:bg-content/20 transition-colors flex items-center justify-center gap-2"
           >
             <RotateCcw className="w-4 h-4" />
             {t('booking.card.reschedule')}
@@ -234,7 +234,7 @@ export function BookingCard({
 
         <button
           onClick={() => router.push(`/bookings/detail?id=${booking.id}`)}
-          className="flex-1 bg-white/10 text-white py-2.5 rounded-xl font-medium text-sm hover:bg-white/20 transition-colors flex items-center justify-center gap-2"
+          className="flex-1 bg-content/10 text-content py-2.5 rounded-xl font-medium text-sm hover:bg-content/20 transition-colors flex items-center justify-center gap-2"
         >
           {t('booking.card.details')}
           <ChevronRight className="w-4 h-4" />

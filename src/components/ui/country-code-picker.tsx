@@ -68,8 +68,8 @@ export function CountryCodePicker({ value, onChange, className }: CountryCodePic
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          'flex items-center gap-2 px-3 py-3 bg-background-secondary/20 border border-white/10 rounded-xl',
-          'hover:bg-background-secondary/35 transition-colors min-h-[52px]',
+          'flex items-center gap-2 px-3 py-3 bg-background-secondary/20 light:bg-surface-input border border-hairline rounded-xl',
+          'hover:bg-background-secondary/35 light:hover:bg-content/5 transition-colors min-h-[52px]',
           'focus:outline-none focus:ring-2 focus:ring-section-primary'
         )}
       >
@@ -84,8 +84,8 @@ export function CountryCodePicker({ value, onChange, className }: CountryCodePic
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-64 bg-background-dark border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden animate-fade-in">
-          <div className="p-2 border-b border-white/10">
+        <div className="absolute top-full left-0 mt-2 w-64 bg-background-dark border border-hairline rounded-xl shadow-xl z-50 overflow-hidden animate-fade-in">
+          <div className="p-2 border-b border-hairline">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary" />
               <input
@@ -93,7 +93,7 @@ export function CountryCodePicker({ value, onChange, className }: CountryCodePic
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={`${t('common.search')}...`}
-                className="w-full bg-background-secondary/20 border-0 rounded-lg pl-10 pr-3 py-2 text-sm text-text-inverse placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-section-primary"
+                className="w-full bg-background-secondary/20 light:bg-surface-input border-0 rounded-lg pl-10 pr-3 py-2 text-sm text-text-inverse placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-section-primary"
               />
             </div>
           </div>
@@ -108,8 +108,8 @@ export function CountryCodePicker({ value, onChange, className }: CountryCodePic
                   setSearch('');
                 }}
                 className={cn(
-                  'w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/5 transition-colors',
-                  country.dialCode === value && 'bg-white/10'
+                  'w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-content/5 transition-colors',
+                  country.dialCode === value && 'bg-content/10'
                 )}
               >
                 <span className="text-xl">{country.flag}</span>

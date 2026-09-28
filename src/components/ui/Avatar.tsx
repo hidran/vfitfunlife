@@ -130,7 +130,7 @@ const AvatarGroup = React.forwardRef<HTMLDivElement, AvatarGroupProps>(
         {visibleChildren.map((child, index) => (
           <div
             key={index}
-            className="relative ring-2 ring-white rounded-full"
+            className="relative ring-2 ring-background-dark rounded-full"
             style={{ zIndex: visibleChildren.length - index }}
           >
             {React.isValidElement(child)
@@ -142,8 +142,8 @@ const AvatarGroup = React.forwardRef<HTMLDivElement, AvatarGroupProps>(
           <div
             className={cn(
               'relative inline-flex items-center justify-center',
-              'rounded-full bg-[#F3F4F6] ring-2 ring-white',
-              'text-[#6B7280] font-medium',
+              'rounded-full bg-surface-elevated ring-2 ring-background-dark',
+              'text-content-muted font-medium',
               sizeClasses[size]
             )}
             style={{ zIndex: 0 }}

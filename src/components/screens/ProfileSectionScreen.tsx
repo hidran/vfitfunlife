@@ -184,7 +184,7 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
   if (!user) {
     return (
       <div className="container-mobile py-6 pb-24">
-        <p className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-text-tertiary">
+        <p className="rounded-2xl border border-hairline bg-content/5 p-4 text-sm text-text-tertiary">
           {t('profileSection.noUser')}
         </p>
       </div>
@@ -298,11 +298,11 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
 
   return (
     <div className="container-mobile py-6 pb-24 space-y-6">
-      <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-5">
+      <section className="relative overflow-hidden rounded-3xl border border-hairline bg-content/5 p-5">
         <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-section-primary/20 blur-2xl" />
         <div className="absolute -bottom-12 left-0 h-32 w-32 rounded-full bg-section-secondary/20 blur-3xl" />
         <div className="relative">
-          <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">
+          <span className="inline-flex items-center rounded-full border border-content/15 bg-content/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">
             {t('profileSection.badge')}
           </span>
           <div className="mt-4 flex items-start gap-3">
@@ -317,13 +317,13 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
           <div className="mt-4 flex flex-wrap gap-2">
             <Link
               href="/profile"
-              className="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold text-text-inverse"
+              className="rounded-full border border-content/15 bg-content/10 px-4 py-2 text-xs font-semibold text-text-inverse"
             >
               {t('profileSection.backToProfile')}
             </Link>
             <Link
               href="/help"
-              className="rounded-full bg-section-primary px-4 py-2 text-xs font-semibold text-background-dark"
+              className="rounded-full bg-section-primary px-4 py-2 text-xs font-semibold text-background-dark light:text-content"
             >
               {t('profileSection.helpCenter')}
             </Link>
@@ -333,7 +333,7 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
 
       {section === 'addresses' && (
         <section className="space-y-3">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div className="rounded-2xl border border-hairline bg-content/5 p-4">
             <h2 className="text-sm font-semibold text-text-inverse">
               {t('profileSection.addresses.addTitle')}
             </h2>
@@ -379,7 +379,7 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
 
           <div className="space-y-3">
             {addresses.map((address) => (
-              <article key={address.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <article key={address.id} className="rounded-2xl border border-hairline bg-content/5 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h3 className="text-sm font-semibold text-text-inverse">{address.label}</h3>
@@ -398,7 +398,7 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
                     <button
                       type="button"
                       onClick={() => setDefaultAddress(address.id)}
-                      className="rounded-full border border-white/20 px-3 py-1.5 text-xs font-semibold text-text-inverse"
+                      className="rounded-full border border-content/20 px-3 py-1.5 text-xs font-semibold text-text-inverse"
                     >
                       {t('profileSection.addresses.setDefault')}
                     </button>
@@ -415,7 +415,7 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
               </article>
             ))}
             {addresses.length === 0 && (
-              <p className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-text-tertiary">
+              <p className="rounded-2xl border border-hairline bg-content/5 p-4 text-sm text-text-tertiary">
                 {t('profileSection.addresses.empty')}
               </p>
             )}
@@ -425,7 +425,7 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
 
       {section === 'payment' && (
         <section className="space-y-3">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div className="rounded-2xl border border-hairline bg-content/5 p-4">
             <h2 className="text-sm font-semibold text-text-inverse">
               {t('profileSection.payment.addCard')}
             </h2>
@@ -439,7 +439,7 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
                   onChange={(event) =>
                     setCardForm((current) => ({ ...current, brand: event.target.value }))
                   }
-                  className="w-full rounded-xl border border-white/10 bg-surface-elevated px-3 py-3 text-sm text-text-inverse focus:outline-none focus:ring-2 focus:ring-section-primary"
+                  className="w-full rounded-xl border border-hairline bg-surface-elevated px-3 py-3 text-sm text-text-inverse focus:outline-none focus:ring-2 focus:ring-section-primary"
                 >
                   {CARD_BRANDS.map((brand) => (
                     <option key={brand.value} value={brand.value}>
@@ -487,7 +487,7 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
 
           <div className="space-y-3">
             {paymentMethods.map((method) => (
-              <article key={method.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <article key={method.id} className="rounded-2xl border border-hairline bg-content/5 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h3 className="text-sm font-semibold text-text-inverse">
@@ -509,7 +509,7 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
                     <button
                       type="button"
                       onClick={() => setDefaultPayment(method.id)}
-                      className="rounded-full border border-white/20 px-3 py-1.5 text-xs font-semibold text-text-inverse"
+                      className="rounded-full border border-content/20 px-3 py-1.5 text-xs font-semibold text-text-inverse"
                     >
                       {t('profileSection.payment.setDefault')}
                     </button>
@@ -526,7 +526,7 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
               </article>
             ))}
             {paymentMethods.length === 0 && (
-              <p className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-text-tertiary">
+              <p className="rounded-2xl border border-hairline bg-content/5 p-4 text-sm text-text-tertiary">
                 {t('profileSection.payment.empty')}
               </p>
             )}
@@ -535,7 +535,7 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
       )}
 
       {section === 'notifications' && (
-        <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
+        <section className="rounded-2xl border border-hairline bg-content/5 p-4">
           <NotificationSettingsCard
             userId={user.id}
             settings={defaultNotificationConfig}
@@ -550,12 +550,12 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
         <section className="space-y-3">
           {/* Appearance applies instantly (stored on the device), so it sits outside the
               save-button flow below. */}
-          <article className="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <article className="rounded-2xl border border-hairline bg-content/5 p-4">
             <h2 className="text-sm font-semibold text-text-inverse">{t('settings.appearance')}</h2>
             <ThemeToggle className="mt-3 flex w-full" />
           </article>
 
-          <article className="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <article className="rounded-2xl border border-hairline bg-content/5 p-4">
             <h2 className="text-sm font-semibold text-text-inverse">
               {t('profileSection.settings.appPreferences')}
             </h2>
@@ -573,8 +573,8 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
                       className={cn(
                         'rounded-xl border px-3 py-2 text-xs font-semibold uppercase transition-colors',
                         preferredSection === item
-                          ? 'border-section-primary bg-section-primary text-background-dark'
-                          : 'border-white/15 bg-white/5 text-text-tertiary'
+                          ? 'border-section-primary bg-section-primary text-background-dark light:text-content'
+                          : 'border-content/15 bg-content/5 text-text-tertiary'
                       )}
                     >
                       {item}
@@ -591,7 +591,7 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
             </div>
           </article>
 
-          <article className="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <article className="rounded-2xl border border-hairline bg-content/5 p-4">
             <h2 className="text-sm font-semibold text-text-inverse">{t('profileSection.privacy.title')}</h2>
             <div className="mt-3 space-y-2">
               {privacyOptions.map(({ key, labelKey }) => (
@@ -605,19 +605,19 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
                     'flex w-full items-center justify-between rounded-xl border px-3 py-2 text-sm transition-colors',
                     privacySettings[key]
                       ? 'border-section-primary/40 bg-section-primary/10 text-text-inverse'
-                      : 'border-white/10 bg-black/20 text-text-tertiary'
+                      : 'border-hairline bg-surface-sunken text-text-tertiary light:bg-surface light:text-content'
                   )}
                 >
                   <span>{t(labelKey)}</span>
                   <span
                     className={cn(
                       'inline-flex h-5 w-9 items-center rounded-full p-1 transition-colors',
-                      privacySettings[key] ? 'bg-section-primary' : 'bg-white/15'
+                      privacySettings[key] ? 'bg-section-primary' : 'bg-white/15 light:bg-content/25'
                     )}
                   >
                     <span
                       className={cn(
-                        'h-3.5 w-3.5 rounded-full bg-white transition-transform',
+                        'h-3.5 w-3.5 rounded-full bg-white transition-transform light:shadow-sm',
                         privacySettings[key] ? 'translate-x-4' : 'translate-x-0'
                       )}
                     />

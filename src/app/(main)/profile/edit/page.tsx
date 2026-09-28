@@ -609,10 +609,10 @@ export default function EditProfilePage() {
             </div>
 
             {/* Email Verification Status */}
-            <div className="p-4 rounded-xl bg-background-secondary/5 border border-hairline">
+            <div className="p-4 rounded-xl bg-content/5 border border-hairline">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-background-secondary/20 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-lg bg-content/20 flex items-center justify-center">
                     <Mail size={18} className="text-text-tertiary" />
                   </div>
                   <div>
@@ -642,10 +642,10 @@ export default function EditProfilePage() {
             </div>
 
             {/* Phone Verification Status */}
-            <div className="p-4 rounded-xl bg-background-secondary/5 border border-hairline">
+            <div className="p-4 rounded-xl bg-content/5 border border-hairline">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-background-secondary/20 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-lg bg-content/20 flex items-center justify-center">
                     <Phone size={18} className="text-text-tertiary" />
                   </div>
                   <div>
@@ -800,7 +800,7 @@ export default function EditProfilePage() {
                       'px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-2',
                       professionalData.languages.includes(language.code)
                         ? 'bg-section-gradient text-white'
-                        : 'bg-background-secondary/20 text-text-secondary hover:bg-background-secondary/30'
+                        : 'bg-content/20 text-text-secondary hover:bg-content/30'
                     )}
                   >
                     <span>{language.flag}</span>

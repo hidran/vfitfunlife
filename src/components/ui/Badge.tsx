@@ -24,11 +24,11 @@ const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(
           size === 'md' && 'px-3 py-1 text-xs',
           // Variant styles
           variant === 'vip' && [
-            'bg-[#FFF9E6] text-[#B8860B]',
+            'bg-[#FFF9E6] text-[#B8860B] light:text-[#8A6508]',
             'border border-[#FFD700]/30',
           ],
           variant === 'partner' && [
-            'bg-[#DBEAFE] text-[#3B82F6]',
+            'bg-[#DBEAFE] text-[#3B82F6] light:text-[#1D4ED8]',
             'border border-[#3B82F6]/30',
           ],
           variant === 'success' && [
@@ -36,7 +36,7 @@ const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(
             'border border-[#10B981]/30',
           ],
           variant === 'warning' && [
-            'bg-[#FEF3C7] text-[#D97706]',
+            'bg-[#FEF3C7] text-[#D97706] light:text-[#B45309]',
             'border border-[#F59E0B]/30',
           ],
           variant === 'error' && [
@@ -48,7 +48,7 @@ const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(
             'border border-[#3B82F6]/30',
           ],
           variant === 'default' && [
-            'bg-[#F3F4F6] text-[#6B7280]',
+            'bg-[#F3F4F6] text-[#6B7280] light:text-[#4B5563]',
             'border border-[#E5E7EB]',
           ],
           className

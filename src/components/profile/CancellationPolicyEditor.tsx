@@ -96,13 +96,13 @@ export function CancellationPolicyEditor({
         </div>
 
         {policy ? (
-          <div className="p-4 rounded-xl bg-background-secondary/5 border border-hairline">
+          <div className="p-4 rounded-xl bg-content/5 border border-hairline">
             <p className="text-sm text-text-secondary whitespace-pre-wrap">
               {policy}
             </p>
           </div>
         ) : (
-          <div className="p-4 rounded-xl bg-background-secondary/5 border border-dashed border-hairline text-center">
+          <div className="p-4 rounded-xl bg-content/5 border border-dashed border-hairline text-center">
             <AlertCircle size={24} className="text-text-tertiary/50 mx-auto mb-2" />
             <p className="text-sm text-text-tertiary">
               {t('profile.cancellation.empty')}
@@ -139,7 +139,7 @@ export function CancellationPolicyEditor({
                 'px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200',
                 currentPolicy === t(preset.valueKey)
                   ? 'bg-section-gradient text-white'
-                  : 'bg-background-secondary/20 text-text-secondary hover:bg-background-secondary/30'
+                  : 'bg-content/20 text-text-secondary hover:bg-content/30'
               )}
             >
               {t(preset.labelKey)}
