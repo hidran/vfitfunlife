@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>VFit</title>
+<!--
+  Legacy public-profile links /provider/<id>[/reviews] -> /providers/detail|reviews?id=<id>.
+  Served by the firebase.json rewrites for /provider/* and /provider/*/reviews. Rewrites run
+  AFTER exact-match static files, so real dashboard pages (/provider/dashboard/ ...) are never
+  touched. Same rule as legacyProviderPathToHref in src/lib/routes.ts - keep in sync.
+-->
+<script>
+(function () {
+  var dashboard = ['dashboard', 'schedule', 'bookings', 'clients', 'services', 'availability', 'earnings', 'recipes'];
+  var m = /^\/provider\/([^/]+)(\/reviews)?\/?$/.exec(location.pathname);
+  var id = null;
+  try { id = m ? decodeURIComponent(m[1]) : null; } catch (e) { id = null; }
+  var dest = '/';
+  if (id && dashboard.indexOf(id) === -1) {
+    dest = (m[2] ? '/providers/reviews/' : '/providers/detail/') + '?id=' + encodeURIComponent(id);
+  } else if (id && !m[2]) {
+    // A dashboard route that missed its static file (e.g. no trailing slash).
+    dest = '/provider/' + id + '/';
+    if (dest === location.pathname) dest = '/';
+  }
+  location.replace(dest);
+})();
+</script>
+</head>
+<body style="background:#1A1D29"></body>
+</html>

@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { readIdParam } from '@/lib/routes';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
 import {
@@ -33,8 +34,8 @@ import { ProviderNotFoundError, useProviderPublicProfile } from '@/hooks/useProv
 export default function ProviderProfileClient() {
   const { t, locale } = useI18n();
   const router = useRouter();
-  const params = useParams();
-  const providerId = params.id as string;
+  // Served from /providers/detail?id=<providerId> — see src/lib/routes.ts.
+  const providerId = readIdParam(useSearchParams()) ?? undefined;
 
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isLiked, setIsLiked] = useState(false);

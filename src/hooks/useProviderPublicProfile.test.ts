@@ -2,78 +2,82 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { makeQueryClientWrapper } from '@/test-utils/queryClientWrapper';
 import { ProviderNotFoundError, useProviderPublicProfile } from './useProviderPublicProfile';
-import { getProviderProfile, getUserData, isProvider } from '@/lib/firebase/auth';
+import { getDoc } from 'firebase/firestore';
 import { getPortfolioImages } from '@/lib/firebase/storage';
 
-vi.mock('@/lib/firebase/auth', () => ({
-  isProvider: vi.fn(),
-  getUserData: vi.fn(),
-  getProviderProfile: vi.fn(),
+vi.mock('@/lib/firebase/config', () => ({ db: {} }));
+vi.mock('firebase/firestore', () => ({
+  doc: vi.fn((_db: unknown, col: string, id: string) => ({ path: `${col}/${id}` })),
+  getDoc: vi.fn(),
 }));
 vi.mock('@/lib/firebase/storage', () => ({
   getPortfolioImages: vi.fn(),
 }));
 
+function snap(id: string, data: Record<string, unknown> | null) {
+  return { id, exists: () => data !== null, data: () => data } as never;
+}
+
 describe('useProviderPublicProfile', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getPortfolioImages).mockResolvedValue([]);
   });
 
-  it('fetches the 4 independent reads in parallel and assembles the profile', async () => {
-    vi.mocked(isProvider).mockResolvedValue(true);
-    vi.mocked(getUserData).mockResolvedValue({
-      fullName: 'Jane Trainer',
-      avatarUrl: 'https://example.com/a.png',
-      bio: 'Bio',
-      socialLinks: { website: 'https://jane.example' },
-    } as never);
-    vi.mocked(getProviderProfile).mockResolvedValue({ rating: 4.8 } as never);
-    vi.mocked(getPortfolioImages).mockResolvedValue(['img1.png', 'img2.png']);
+  it('reads the public instructors/{id} catalog doc and normalizes it', async () => {
+    vi.mocked(getDoc).mockResolvedValue(
+      snap('provider-1', {
+        fullName: 'Jane Trainer',
+        avatarUrl: 'https://example.com/a.png',
+        experienceYears: 5,
+        socialLinks: { website: 'https://jane.example' },
+        providerProfile: { bio: 'Bio', isVerified: true, rating: 4.8, reviewCount: 3, specialties: ['yoga'] },
+      }),
+    );
+    vi.mocked(getPortfolioImages).mockResolvedValue(['img1.png']);
 
     const { wrapper } = makeQueryClientWrapper();
     const { result } = renderHook(() => useProviderPublicProfile('provider-1'), { wrapper });
-
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(result.current.data).toEqual({
-      id: 'provider-1',
-      fullName: 'Jane Trainer',
-      avatarUrl: 'https://example.com/a.png',
-      bio: 'Bio',
-      providerProfile: { rating: 4.8 },
-      socialLinks: { website: 'https://jane.example' },
-      isProvider: true,
-      portfolioImages: ['img1.png', 'img2.png'],
+    const data = result.current.data!;
+    expect(vi.mocked(getDoc).mock.calls[0][0]).toEqual({ path: 'instructors/provider-1' });
+    expect(data.fullName).toBe('Jane Trainer');
+    expect(data.bio).toBe('Bio');
+    expect(data.portfolioImages).toEqual(['img1.png']);
+    expect(data.socialLinks).toEqual({ website: 'https://jane.example' });
+    expect(data.providerProfile).toMatchObject({
+      professionalBio: 'Bio',
+      isVerified: true,
+      rating: 4.8,
+      reviewCount: 3,
+      yearsOfExperience: 5,
+      specialties: ['yoga'],
+      certifications: [],
+      languages: [],
     });
-    // All 4 reads should have been issued (parallel), not just some.
-    expect(isProvider).toHaveBeenCalledWith('provider-1');
-    expect(getUserData).toHaveBeenCalledWith('provider-1');
-    expect(getProviderProfile).toHaveBeenCalledWith('provider-1');
-    expect(getPortfolioImages).toHaveBeenCalledWith('provider-1');
   });
 
-  it('throws ProviderNotFoundError when the target is not a provider', async () => {
-    vi.mocked(isProvider).mockResolvedValue(false);
-    vi.mocked(getUserData).mockResolvedValue({ fullName: 'Someone' } as never);
-    vi.mocked(getProviderProfile).mockResolvedValue(null);
-    vi.mocked(getPortfolioImages).mockResolvedValue([]);
-
+  it('throws ProviderNotFoundError when the doc is missing', async () => {
+    vi.mocked(getDoc).mockResolvedValue(snap('missing', null));
     const { wrapper } = makeQueryClientWrapper();
-    const { result } = renderHook(() => useProviderPublicProfile('not-a-provider'), { wrapper });
-
+    const { result } = renderHook(() => useProviderPublicProfile('missing'), { wrapper });
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toBeInstanceOf(ProviderNotFoundError);
   });
 
-  it('throws ProviderNotFoundError when the user doc is missing', async () => {
-    vi.mocked(isProvider).mockResolvedValue(true);
-    vi.mocked(getUserData).mockResolvedValue(null);
-    vi.mocked(getProviderProfile).mockResolvedValue(null);
-    vi.mocked(getPortfolioImages).mockResolvedValue([]);
-
+  it('treats a rules denial (unverified provider) as not found', async () => {
+    vi.mocked(getDoc).mockRejectedValue(Object.assign(new Error('denied'), { code: 'permission-denied' }));
     const { wrapper } = makeQueryClientWrapper();
-    const { result } = renderHook(() => useProviderPublicProfile('missing-user'), { wrapper });
+    const { result } = renderHook(() => useProviderPublicProfile('pending'), { wrapper });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error).toBeInstanceOf(ProviderNotFoundError);
+  });
 
+  it('rejects venue activities that share the collection', async () => {
+    vi.mocked(getDoc).mockResolvedValue(snap('evt', { name: 'Party', activityKind: 'event' }));
+    const { wrapper } = makeQueryClientWrapper();
+    const { result } = renderHook(() => useProviderPublicProfile('evt'), { wrapper });
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toBeInstanceOf(ProviderNotFoundError);
   });
@@ -81,8 +85,7 @@ describe('useProviderPublicProfile', () => {
   it('does not fetch when providerId is undefined', () => {
     const { wrapper } = makeQueryClientWrapper();
     const { result } = renderHook(() => useProviderPublicProfile(undefined), { wrapper });
-
     expect(result.current.fetchStatus).toBe('idle');
-    expect(isProvider).not.toHaveBeenCalled();
+    expect(getDoc).not.toHaveBeenCalled();
   });
 });

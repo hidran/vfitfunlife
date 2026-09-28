@@ -1,7 +1,9 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { readIdParam } from '@/lib/routes';
+import { Button } from '@/components/ui/button';
 import { ArrowLeft, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar } from '@/components/ui/Avatar';
@@ -52,9 +54,9 @@ type RatingFilter = 'all' | 5 | 4 | 3;
 
 export default function ProviderReviewsClient() {
   const { t, locale } = useI18n();
-  const params = useParams<{ id: string }>();
   const router = useRouter();
-  const providerId = params.id;
+  // Served from /providers/reviews?id=<providerId> — see src/lib/routes.ts.
+  const providerId = readIdParam(useSearchParams());
   const [ratingFilter, setRatingFilter] = useState<RatingFilter>('all');
 
   const filteredReviews = useMemo(() => {
@@ -66,6 +68,17 @@ export default function ProviderReviewsClient() {
     const sum = REVIEWS.reduce((acc, review) => acc + review.rating, 0);
     return REVIEWS.length > 0 ? sum / REVIEWS.length : 0;
   }, []);
+
+  if (!providerId) {
+    return (
+      <div className="min-h-screen bg-background-dark flex flex-col items-center justify-center p-4">
+        <p className="text-error text-lg">{t('providerProfile.error.notFound')}</p>
+        <Button variant="primary" className="mt-4" onClick={() => router.back()}>
+          {t('providerProfile.goBack')}
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background-dark">

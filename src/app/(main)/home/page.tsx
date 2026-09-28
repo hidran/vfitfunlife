@@ -39,6 +39,7 @@ import { useVenues } from '@/hooks/useVenues';
 import { useProviders } from '@/hooks/useProviders';
 import { useTodayClasses, useTestimonials } from '@/hooks';
 import type { MessageKey } from '@/i18n/messages';
+import { providerProfileHref } from '@/lib/routes';
 
 // Types
 interface Provider {
@@ -309,7 +310,7 @@ function VFitHome() {
                 featuredTrainers.map((trainer) => (
                   <Link
                     key={`coach-${trainer.id}`}
-                    href={`/provider/${trainer.id}`}
+                    href={providerProfileHref(trainer.id)}
                     className="flex items-center gap-3 rounded-xl border border-white/10 light:border-white/10 bg-white/5 light:bg-white/5 p-3 backdrop-blur-sm transition-colors hover:bg-white/15"
                   >
                     <Avatar name={trainer.fullName} size="md" src={trainer.avatarUrl} />

@@ -1,0 +1,65 @@
+/**
+ * Public provider (trainer / therapist / venue host) pages.
+ *
+ * They live under `/providers/*` with the id in the query string, NOT `/provider/<id>`:
+ *  - `output: 'export'` forces `dynamicParams = false`, so a `[id]` segment only serves the
+ *    ids known at build time — every provider created afterwards 404s.
+ *  - `/provider/*` is the provider DASHBOARD (src/app/(main)/provider/*), guarded by its
+ *    layout; a public page there would share its URL space (`/provider/dashboard` vs
+ *    `/provider/<id>`) and every future dashboard route would risk shadowing a profile.
+ *
+ * Legacy `/provider/<id>[/reviews]` links are forwarded by the firebase.json rewrite to
+ * public/provider-legacy-redirect.html (see `legacyProviderPathToHref` for the same rule).
+ */
+export const PROVIDER_PROFILE_PATH = '/providers/detail';
+export const PROVIDER_REVIEWS_PATH = '/providers/reviews';
+
+export function providerProfileHref(providerId: string): string {
+  return `${PROVIDER_PROFILE_PATH}?id=${encodeURIComponent(providerId)}`;
+}
+
+export function providerReviewsHref(providerId: string): string {
+  return `${PROVIDER_REVIEWS_PATH}?id=${encodeURIComponent(providerId)}`;
+}
+
+/** Top-level segments of the provider dashboard — `/provider/<one of these>` is never a profile id. */
+export const PROVIDER_DASHBOARD_SEGMENTS: readonly string[] = [
+  'dashboard',
+  'schedule',
+  'bookings',
+  'clients',
+  'services',
+  'availability',
+  'earnings',
+  'recipes',
+];
+
+/**
+ * Maps a legacy `/provider/<id>` or `/provider/<id>/reviews` pathname to the query-string
+ * URL, or null when it is not a legacy profile link (dashboard routes included).
+ * Mirrors the inline script in public/provider-legacy-redirect.html.
+ */
+export function legacyProviderPathToHref(pathname: string): string | null {
+  const match = /^\/provider\/([^/]+)(\/reviews)?\/?$/.exec(pathname);
+  if (!match) return null;
+  let id: string;
+  try {
+    id = decodeURIComponent(match[1]);
+  } catch {
+    return null;
+  }
+  if (!id || PROVIDER_DASHBOARD_SEGMENTS.includes(id)) return null;
+  return match[2] ? providerReviewsHref(id) : providerProfileHref(id);
+}
+
+/**
+ * Reads `?id=` on a query-string detail page. useSearchParams can hydrate empty on the first
+ * client render under `output: 'export'`, so fall back to the raw URL (same as
+ * BookingDetailClient).
+ */
+export function readIdParam(searchParams: { get(name: string): string | null } | null): string | null {
+  const fromHook = searchParams?.get('id');
+  if (fromHook) return fromHook;
+  if (typeof window === 'undefined') return null;
+  return new URLSearchParams(window.location.search).get('id') || null;
+}

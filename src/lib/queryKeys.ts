@@ -13,7 +13,7 @@ import type { AppLocale } from '@/types/locale';
  */
 
 export const queryKeys = {
-  // Public provider profile (src/app/provider/[id]/ProviderProfileClient.tsx)
+  // Public provider profile (src/app/providers/detail/ProviderProfileClient.tsx)
   providerPublicProfile: (providerId: string) => ['provider-public-profile', providerId] as const,
 
   // Booking detail pages — wrap the existing Zustand store fetch actions so remounts are

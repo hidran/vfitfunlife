@@ -17,6 +17,7 @@ import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 import { Share } from '@capacitor/share';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { PushNotifications } from '@capacitor/push-notifications';
+import { legacyProviderPathToHref } from '@/lib/routes';
 
 // Check if running on native platform
 export const isNativePlatform = (): boolean => {
@@ -267,9 +268,12 @@ export const handleDeepLink = (url: string) => {
     const providerId = path.split('/')[2];
     // Navigate to booking
     window.location.href = `/book?providerId=${providerId}`;
+  } else if (path.startsWith('/providers/')) {
+    // Current public profile URLs (/providers/detail?id=…) — open as-is.
+    window.location.href = `${path}${urlObj.search}`;
   } else if (path.startsWith('/provider/')) {
-    const providerId = path.split('/')[2];
-    window.location.href = `/provider/${providerId}`;
+    // Legacy /provider/<id>[/reviews] links; dashboard routes pass through untouched.
+    window.location.href = legacyProviderPathToHref(path) ?? `${path}${urlObj.search}`;
   }
   // Add more handlers as needed
 };

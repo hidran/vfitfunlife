@@ -50,6 +50,7 @@ import { isProvider } from '@/lib/firebase/auth';
 import { formatPrice } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
 import type { MessageKey } from '@/i18n/messages';
+import { providerProfileHref, providerReviewsHref } from '@/lib/routes';
 
 interface ProfileMenuItem {
   icon: typeof User;
@@ -368,10 +369,8 @@ export default function ProfilePage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  // /provider/{id} is not a route and cannot be one under output:'export'.
-                  // /book?providerId= is the real client-facing page — so this doubles as a
-                  // preview of what clients see, services included.
-                  onClick={() => router.push(`/book?providerId=${user?.id}`)}
+                  // The public profile clients see (query-string route, see src/lib/routes.ts).
+                  onClick={() => user?.id && router.push(providerProfileHref(user.id))}
                 >
                   <ExternalLink size={14} className="mr-1" />
                   {t('profile.action.publicProfile')}
@@ -678,7 +677,7 @@ export default function ProfilePage() {
                   variant="outline"
                   size="sm"
                   className="mt-3 w-full"
-                  onClick={() => router.push(`/provider/${user.id}/reviews`)}
+                  onClick={() => router.push(providerReviewsHref(user.id))}
                 >
                   {t('profile.reviews.viewAll')}
                 </Button>

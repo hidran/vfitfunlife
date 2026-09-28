@@ -31,6 +31,14 @@
     ],
     "rewrites": [
       {
+        "source": "/provider/*/reviews{,/}",
+        "destination": "/provider-legacy-redirect.html"
+      },
+      {
+        "source": "/provider/*{,/}",
+        "destination": "/provider-legacy-redirect.html"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
