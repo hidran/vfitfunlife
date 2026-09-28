@@ -10,12 +10,16 @@ import {
   limit,
   getDocs,
   getDoc,
+  getCountFromServer,
+  getAggregateFromServer,
+  sum,
   doc,
   updateDoc,
   setDoc,
   Timestamp,
   startAfter,
   QueryConstraint,
+  QueryDocumentSnapshot,
   writeBatch,
   addDoc,
   serverTimestamp,
@@ -98,33 +102,61 @@ export function hiddenAccountKind(id: string, data: any): "deleted" | "demo" | n
 
 const isHiddenAccount = (id: string, data: any): boolean => hiddenAccountKind(id, data) !== null;
 
+/**
+ * The bounded set of documents that could possibly need a verification decision, read instead
+ * of the entire `users` collection.
+ *
+ * `needsVerificationDecision` (src/lib/providerVerification.ts) can only return true for a
+ * document that is either `providerStatus == 'pending'` or `role == 'provider'` — every other
+ * document is unconditionally `false`. So the union of those two precise, single-field-equality
+ * queries (the same query shapes `getProviders` below already uses, needing no extra index)
+ * contains every candidate, and nothing outside it. It cannot be narrowed further into a plain
+ * count: `needsVerificationDecision` and `isHiddenAccount` both hinge on fields (`providerProfile
+ * .isVerified`, `isVerified`, `isDeleted`) being *absent*, and a Firestore equality/inequality
+ * filter never matches a missing field, so the final filter has to run in memory over real
+ * documents. This still cuts what's read from "every user" to "every provider plus every
+ * pending applicant" — a full scan turns into two small, precise reads.
+ */
+async function fetchPendingVerificationCandidates(): Promise<QueryDocumentSnapshot[]> {
+  const usersRef = collection(db, USERS_COLLECTION);
+  const [roleSnapshot, statusSnapshot] = await Promise.all([
+    getDocs(query(usersRef, where("role", "==", "provider"))),
+    getDocs(query(usersRef, where("providerStatus", "==", "pending"))),
+  ]);
+
+  const byId = new Map<string, QueryDocumentSnapshot>();
+  for (const snapshot of [roleSnapshot, statusSnapshot]) {
+    for (const d of snapshot.docs) byId.set(d.id, d);
+  }
+  return [...byId.values()];
+}
+
+/** Shared by the dashboard counter and the verification queue, so they can never disagree. */
+function filterNeedsVerificationDecision(docs: QueryDocumentSnapshot[]): QueryDocumentSnapshot[] {
+  return docs.filter((d) => !isHiddenAccount(d.id, d.data()) && needsVerificationDecision(d.data()));
+}
+
 // Get admin dashboard stats
 export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
   try {
-    // Get total users count
-    const usersSnapshot = await getDocs(collection(db, USERS_COLLECTION));
-    const totalUsers = usersSnapshot.size;
+    const usersRef = collection(db, USERS_COLLECTION);
 
-    // Get active providers count
+    // Active providers count
     const providersQuery = query(
-      collection(db, USERS_COLLECTION),
+      usersRef,
       where("role", "==", "provider"),
       where("providerProfile.isActive", "==", true)
     );
-    const providersSnapshot = await getDocs(providersQuery);
-    const activeProviders = providersSnapshot.size;
 
-    // Get today's bookings
+    // Today's bookings
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayQuery = query(
       collection(db, BOOKINGS_COLLECTION),
       where("scheduledAt", ">=", Timestamp.fromDate(today))
     );
-    const todayBookingsSnapshot = await getDocs(todayQuery);
-    const todayBookings = todayBookingsSnapshot.size;
 
-    // Get monthly revenue
+    // Monthly revenue
     const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
     const revenueQuery = query(
       collection(db, TRANSACTIONS_COLLECTION),
@@ -132,31 +164,43 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
       where("type", "==", "booking_payment"),
       where("status", "==", "completed")
     );
-    const revenueSnapshot = await getDocs(revenueQuery);
-    const monthlyRevenue = revenueSnapshot.docs.reduce(
-      (sum, doc) => sum + (doc.data().amount || 0),
-      0
-    );
 
-    // Pending verifications.
-    //
-    // Derived in memory rather than filtered in Firestore: `where(..., '==', false)` never
-    // matches a document where the field is absent, and most provider records have no
-    // `providerProfile` at all — so the old query saw 6 of the 38 the table was showing as
-    // unverified. `role == 'provider'` is dropped for the same reason it is dropped in
-    // getPendingVerifications: an applicant is still a customer until the decision.
-    const pendingVerificationsSnapshot = await getDocs(collection(db, USERS_COLLECTION));
-    const pendingVerifications = pendingVerificationsSnapshot.docs.filter(
-      (d) => !isHiddenAccount(d.id, d.data()) && needsVerificationDecision(d.data())
-    ).length;
-
-    // Get recent activity
+    // Recent activity
     const activityQuery = query(
       collection(db, LOGS_COLLECTION),
       orderBy("timestamp", "desc"),
       limit(10)
     );
-    const activitySnapshot = await getDocs(activityQuery);
+
+    // None of these six reads depends on another's result, so they run together instead of
+    // one after another. totalUsers, activeProviders and todayBookings only ever needed a
+    // count and monthlyRevenue only ever needed a sum — reading every matching document with
+    // getDocs just to call `.size`/reduce over `.amount` threw the documents away unread.
+    // pendingVerifications still needs real documents (see fetchPendingVerificationCandidates
+    // above), but no longer the entire `users` collection.
+    const [
+      totalUsersSnap,
+      activeProvidersSnap,
+      todayBookingsSnap,
+      revenueSnap,
+      pendingCandidates,
+      activitySnapshot,
+    ] = await Promise.all([
+      getCountFromServer(usersRef),
+      getCountFromServer(providersQuery),
+      getCountFromServer(todayQuery),
+      getAggregateFromServer(revenueQuery, { total: sum("amount") }),
+      fetchPendingVerificationCandidates(),
+      getDocs(activityQuery),
+    ]);
+
+    const totalUsers = totalUsersSnap.data().count;
+    const activeProviders = activeProvidersSnap.data().count;
+    const todayBookings = todayBookingsSnap.data().count;
+    // sum() treats a missing/non-numeric `amount` as 0, same as the `|| 0` this replaces.
+    const monthlyRevenue = revenueSnap.data().total || 0;
+    const pendingVerifications = filterNeedsVerificationDecision(pendingCandidates).length;
+
     const recentActivity = activitySnapshot.docs.map((doc) => ({
       id: doc.id,
       ...convertTimestamps(doc.data()),
@@ -416,15 +460,14 @@ export async function getProviders(
 // Get pending verifications
 export async function getPendingVerifications(): Promise<AdminProvider[]> {
   try {
-    // No Firestore filter on the verification flag, and no orderBy: `== false` misses every
-    // document where the field is absent, and `orderBy('createdAt')` drops every document
-    // that has no createdAt — the two ways this counter silently read low. Sorted in memory
-    // instead, so a record missing either field still shows up as work to do.
-    const snapshot = await getDocs(collection(db, USERS_COLLECTION));
+    // Reads only the candidate set (see fetchPendingVerificationCandidates), not the entire
+    // `users` collection, then applies the same in-memory hidden-account/needs-decision filter
+    // as before — no orderBy, since `orderBy('createdAt')` would drop every document that has
+    // no createdAt. Sorted in memory instead, so a record missing it still shows up as work to
+    // do.
+    const candidates = await fetchPendingVerificationCandidates();
 
-    return (snapshot.docs
-      .filter((doc) => !isHiddenAccount(doc.id, doc.data()))
-      .filter((doc) => needsVerificationDecision(doc.data()))
+    return (filterNeedsVerificationDecision(candidates)
       .map((doc) => ({
         id: doc.id,
         uid: doc.id,
