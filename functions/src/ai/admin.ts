@@ -4,7 +4,7 @@ import { z } from "zod";
 import { generateText } from "ai";
 import { requireSuperAdmin } from "../utils/roles";
 import { writeAuditLog } from "../lib/audit";
-import { getAiSettings, AI_SETTINGS_DOC } from "./settings";
+import { getAiSettings, invalidateAiSettingsCache, AI_SETTINGS_DOC } from "./settings";
 import { buildModel, keyPresence, AI_SECRETS } from "./providers";
 import { AiProviderId } from "./types";
 
@@ -72,6 +72,7 @@ export const updateAiSettings = onCall(
       { ...patch, updatedAt: admin.firestore.FieldValue.serverTimestamp(), updatedBy: callerId },
       { merge: true },
     );
+    invalidateAiSettingsCache();
 
     await writeAuditLog({
       actorUid: callerId,

@@ -8,16 +8,30 @@ import {
   mergeProviderOnboarding,
 } from "./onboardingSettings";
 import { hotCallableOptions } from "../lib/runtimeOptions";
+import { cachedDocRead } from "../lib/cachedDoc";
 
 interface ApplyAsProviderData {
   categoryIds: string[];
   fullName?: string;
 }
 
-/** The stored onboarding settings, or the defaults when nothing is configured. */
+/**
+ * The stored onboarding settings, or the defaults when nothing is configured.
+ *
+ * Cached for 60s (cachedDoc.ts's default): every signup as a professional reads this, and the
+ * value only ever changes from /admin/providers. Staleness: for up to 60s after an admin flips
+ * `autoApprove`, an applicant hitting THIS function's instances can still get the old
+ * behaviour (auto-approved when the admin just queued applications, or queued when the admin
+ * just turned auto-approval back on). `setProviderOnboardingSettings` invalidates its own
+ * instance's cache on write, but that is a different Cloud Run service from this one — see
+ * cachedDoc.ts — so it cannot reach these instances directly; this function's own cache still
+ * expires within 60s of the write. Accepted rather than reading uncached: both outcomes are
+ * reversible via the existing decideProviderApplication review flow, and auto-approve toggles
+ * are rare, deliberate admin actions rather than something timing-sensitive.
+ */
 async function readOnboardingSettings(): Promise<ProviderOnboardingSettings> {
-  const snap = await getFirestore().doc(PROVIDER_ONBOARDING_DOC).get();
-  return mergeProviderOnboarding(snap.data() as Partial<ProviderOnboardingSettings> | undefined);
+  const stored = await cachedDocRead<Partial<ProviderOnboardingSettings>>(PROVIDER_ONBOARDING_DOC);
+  return mergeProviderOnboarding(stored);
 }
 
 /**

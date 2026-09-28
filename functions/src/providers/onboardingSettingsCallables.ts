@@ -2,6 +2,7 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { requireAdmin } from "../utils/roles";
 import { writeAuditLog, toActorRole } from "../lib/audit";
+import { cachedDocRead, invalidateCachedDoc } from "../lib/cachedDoc";
 import {
   PROVIDER_ONBOARDING_DOC,
   ProviderOnboardingSettings,
@@ -12,9 +13,10 @@ import {
 
 const region = process.env.FIREBASE_REGION || "europe-west1";
 
+/** Cached (60s default TTL) — see the longer note on applyAsProvider.ts's copy of this read. */
 async function readSettings(): Promise<ProviderOnboardingSettings> {
-  const snap = await getFirestore().doc(PROVIDER_ONBOARDING_DOC).get();
-  return mergeProviderOnboarding(snap.data() as Partial<ProviderOnboardingSettings> | undefined);
+  const stored = await cachedDocRead<Partial<ProviderOnboardingSettings>>(PROVIDER_ONBOARDING_DOC);
+  return mergeProviderOnboarding(stored);
 }
 
 /** The current provider-onboarding settings, for the admin panel's toggle. */
@@ -66,6 +68,7 @@ export const setProviderOnboardingSettings = onCall<Partial<ProviderOnboardingSe
       { ...updates, updatedAt: FieldValue.serverTimestamp(), updatedBy: callerUid },
       { merge: true }
     );
+    invalidateCachedDoc(PROVIDER_ONBOARDING_DOC);
 
     const caller = (await db.collection("users").doc(callerUid).get()).data() ?? {};
     await writeAuditLog({

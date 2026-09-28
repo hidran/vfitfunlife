@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import {
   Search,
@@ -22,7 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/Spinner';
 import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
-import { GoogleMap } from '@/components/map/GoogleMap';
+import { MapPlaceholder } from '@/components/map/MapPlaceholder';
 import type { ProviderSearchResult, SearchParams } from '@/types/booking';
 import { useNearMe } from '@/hooks/useNearMe';
 import { RadiusFilter } from '@/components/map/RadiusFilter';
@@ -30,6 +31,13 @@ import { annotateAndSortByDistance, filterByRadius } from '@/lib/geo';
 import { useServiceCategoryGroups } from '@/hooks/useServiceCategories';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
+
+// Map view is a toggle away from the default list view, so GoogleMap (and its
+// @googlemaps/js-api-loader dependency) shouldn't sit in this route's initial JS.
+const GoogleMap = dynamic(() => import('@/components/map/GoogleMap').then((mod) => mod.GoogleMap), {
+  ssr: false,
+  loading: () => <MapPlaceholder className="h-full" />,
+});
 
 export default function BookingPage() {
   const { t, locale } = useI18n();

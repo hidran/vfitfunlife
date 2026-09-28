@@ -1,7 +1,18 @@
-import * as admin from "firebase-admin";
 import { AiProviderId } from "../types";
+import { cachedDocRead, invalidateCachedDoc } from "../../lib/cachedDoc";
 
 export const AI_AUTHORING_DOC = "systemSettings/aiAuthoring";
+
+/**
+ * TTL: 60s (the `cachedDocRead` default). Read on every recipe/workout/training-program
+ * generation call (generateRecipes, generateWorkoutPlan, generateTrainingProgram), so caching
+ * removes a Firestore read per generation request. Staleness: up to 60s after an admin changes
+ * quotas or flips `enabled` — see cachedDoc.ts for why that window can't be closed for
+ * instances other than the one that wrote the change. Acceptable here for the same reason as
+ * ai/settings.ts: no hard security boundary, and `invalidateAiAuthoringSettingsCache` keeps the
+ * admin panel's own instance from reading back its own stale write.
+ */
+const CACHE_TTL_MS = 60_000;
 
 export interface AiAuthoringSettings {
   enabled: boolean;
@@ -36,12 +47,17 @@ export function mergeAiAuthoringSettings(
   };
 }
 
-/** Read authoring settings from Firestore, falling back to defaults. */
+/** Read authoring settings from Firestore (cached, see CACHE_TTL_MS above), falling back to defaults. */
 export async function getAiAuthoringSettings(): Promise<AiAuthoringSettings> {
   try {
-    const snap = await admin.firestore().doc(AI_AUTHORING_DOC).get();
-    return mergeAiAuthoringSettings(snap.exists ? (snap.data() as Partial<AiAuthoringSettings>) : undefined);
+    const stored = await cachedDocRead<Partial<AiAuthoringSettings>>(AI_AUTHORING_DOC, CACHE_TTL_MS);
+    return mergeAiAuthoringSettings(stored);
   } catch (err) {
     throw new Error(`Failed to load AI authoring settings from Firestore: ${err}`);
   }
+}
+
+/** Call right after writing AI_AUTHORING_DOC so this instance never reads back its own stale write. */
+export function invalidateAiAuthoringSettingsCache(): void {
+  invalidateCachedDoc(AI_AUTHORING_DOC);
 }

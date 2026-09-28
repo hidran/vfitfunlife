@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
   ChevronLeft,
@@ -32,7 +33,7 @@ import { toLocaleTag } from '@/types/locale';
 import { Button } from '@/components/ui/button';
 import { Badge, type BadgeProps } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
-import { GoogleMap } from '@/components/map/GoogleMap';
+import { MapPlaceholder } from '@/components/map/MapPlaceholder';
 import {
   BOOKING_STATUS_META,
   isCancelled,
@@ -53,6 +54,13 @@ const statusIcons: Record<BookingStatus, LucideIcon> = {
   no_show: AlertCircle,
   payment_confirmed: CheckCircle,
 };
+
+// Only rendered once a booking has a location, so GoogleMap (and its
+// @googlemaps/js-api-loader dependency) shouldn't sit in this route's initial JS.
+const GoogleMap = dynamic(() => import('@/components/map/GoogleMap').then((mod) => mod.GoogleMap), {
+  ssr: false,
+  loading: () => <MapPlaceholder className="h-full" />,
+});
 
 export default function BookingDetailPage() {
   const params = useParams();
