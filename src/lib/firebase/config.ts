@@ -150,7 +150,7 @@ const firebase = initializeFirebase();
 
 // Performance Monitoring: loaded after first paint via dynamic import, deployed web builds
 // only (see lib/perf). No-op on the server, in dev/emulators and in the native shells.
-schedulePerformanceMonitoring(app);
+schedulePerformanceMonitoring(firebase.app);
 
 export {
   firebase,
