@@ -327,7 +327,7 @@ export function VerificationQueue({
                         variant="primary"
                         onClick={() => handleApprove(provider.id)}
                         disabled={isLoading}
-                        className="flex-1 bg-[#10B981] hover:bg-[#059669]"
+                        className="flex-1 bg-emerald-700 hover:bg-emerald-800"
                       >
                         <CheckCircle className="w-4 h-4 mr-2" />
                         {t('admin.verifications.approve')}

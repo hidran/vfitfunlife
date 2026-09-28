@@ -199,7 +199,7 @@ export function UserDetailView({ userId }: Props) {
               variant="primary"
               size="sm"
               onClick={handleActivate}
-              className="flex items-center gap-2 bg-[#10B981] hover:bg-[#059669]"
+              className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800"
             >
               <CheckCircle className="w-4 h-4" />
               {t('admin.userDetail.activate')}

@@ -270,7 +270,7 @@ export function ProviderDetailView({ providerId }: Props) {
                           <Button
                             variant="primary"
                             onClick={handleVerify}
-                            className="flex items-center gap-2 bg-[#10B981] hover:bg-[#059669]"
+                            className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800"
                           >
                             <CheckCircle className="w-4 h-4" />
                             {t('admin.providerDetail.verify')}

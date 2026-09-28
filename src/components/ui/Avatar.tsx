@@ -31,14 +31,17 @@ function getInitials(name: string): string {
  * Generate a consistent background color based on name
  */
 function getColorFromName(name: string): string {
+  // Each fill carries its own initials colour: the bright brand fills take
+  // near-black ink (white on cyan/green/lime is ~1.3–2:1), only the deep blue
+  // keeps white. Every pair clears WCAG AA 4.5:1.
   const colors = [
-    'bg-[#00C9FF]', // vfit cyan
-    'bg-[#0066FF]', // vfit blue
-    'bg-[#7B61FF]', // vfit purple
-    'bg-[#B461FF]', // vfun purple
-    'bg-[#FF00E5]', // vfun magenta
-    'bg-[#00E676]', // vlife green
-    'bg-[#76FF03]', // vlife lime
+    'bg-[#00C9FF] text-black', // vfit cyan
+    'bg-[#0066FF] text-white', // vfit blue
+    'bg-[#7B61FF] text-black', // vfit purple
+    'bg-[#B461FF] text-black', // vfun purple
+    'bg-[#FF00E5] text-black', // vfun magenta
+    'bg-[#00E676] text-black', // vlife green
+    'bg-[#76FF03] text-black', // vlife lime
   ];
 
   let hash = 0;
@@ -73,7 +76,7 @@ const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
     const usingThumb = !!thumb && thumb !== src;
     const showFallback = !src || imageError;
     const initials = name ? getInitials(name) : '?';
-    const bgColor = name ? getColorFromName(name) : 'bg-[#6B7280]';
+    const bgColor = name ? getColorFromName(name) : 'bg-[#6B7280] text-white';
 
     return (
       <div
@@ -99,7 +102,7 @@ const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
           />
         ) : (
           <span
-            className="font-semibold text-white select-none"
+            className="font-semibold select-none"
             aria-label={name || 'User avatar'}
           >
             {initials}
