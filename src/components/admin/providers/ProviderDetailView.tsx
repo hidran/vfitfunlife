@@ -240,7 +240,7 @@ export function ProviderDetailView({ providerId }: Props) {
                     {profile?.specialties?.map((specialty) => (
                       <span
                         key={specialty}
-                        className="px-2 py-0.5 bg-[#00C9FF]/10 text-[#00C9FF] text-xs rounded-full"
+                        className="px-2 py-0.5 bg-[#00C9FF]/10 text-[#00C9FF] light:text-cyan-700 text-xs rounded-full"
                       >
                         {specialty}
                       </span>
@@ -260,7 +260,7 @@ export function ProviderDetailView({ providerId }: Props) {
                           <Button
                             variant="secondary"
                             onClick={() => setShowRejectForm(true)}
-                            className="flex items-center gap-2 text-[#EF4444] hover:text-[#EF4444]"
+                            className="flex items-center gap-2 text-[#EF4444] light:text-red-700 hover:text-[#EF4444] light:hover:text-red-700"
                           >
                             <XCircle className="w-4 h-4" />
                             {t('admin.providerDetail.reject')}
@@ -322,7 +322,7 @@ export function ProviderDetailView({ providerId }: Props) {
                   value={provider.phone || t('admin.providerDetail.field.naValue')}
                 />
                 <ContactRow
-                  icon={<Star className="w-5 h-5 text-[#F59E0B]" />}
+                  icon={<Star className="w-5 h-5 text-[#F59E0B] light:text-amber-700" />}
                   label={t('admin.providerDetail.field.rating')}
                   value={`${profile?.rating?.toFixed(1) || '0.0'} ${t(
                     'admin.providerDetail.reviews',
@@ -344,13 +344,13 @@ export function ProviderDetailView({ providerId }: Props) {
         {/* Performance Metrics */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <MetricCard
-            icon={<Calendar className="w-5 h-5 text-[#00C9FF]" />}
+            icon={<Calendar className="w-5 h-5 text-[#00C9FF] light:text-cyan-700" />}
             bg="bg-[#00C9FF]/20"
             label={t('admin.providerDetail.stat.totalBookings')}
             value={String(metrics?.totalBookings || 0)}
           />
           <MetricCard
-            icon={<CheckCircle className="w-5 h-5 text-[#10B981]" />}
+            icon={<CheckCircle className="w-5 h-5 text-[#10B981] light:text-emerald-700" />}
             bg="bg-[#10B981]/20"
             label={t('admin.providerDetail.stat.completionRate')}
             value={`${
@@ -362,13 +362,13 @@ export function ProviderDetailView({ providerId }: Props) {
             }%`}
           />
           <MetricCard
-            icon={<CreditCard className="w-5 h-5 text-[#7B61FF]" />}
+            icon={<CreditCard className="w-5 h-5 text-[#7B61FF] light:text-violet-700" />}
             bg="bg-[#7B61FF]/20"
             label={t('admin.providerDetail.stat.totalRevenue')}
             value={formatPrice(metrics?.totalRevenue || 0)}
           />
           <MetricCard
-            icon={<TrendingUp className="w-5 h-5 text-[#F59E0B]" />}
+            icon={<TrendingUp className="w-5 h-5 text-[#F59E0B] light:text-amber-700" />}
             bg="bg-[#F59E0B]/20"
             label={t('admin.providerDetail.stat.commissionPaid')}
             value={formatPrice(metrics?.commissionPaid || 0)}

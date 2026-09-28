@@ -206,7 +206,7 @@ export function UserDetailView({ userId }: Props) {
               variant="secondary"
               size="sm"
               onClick={handleSuspend}
-              className="flex items-center gap-2 text-[#F59E0B] hover:text-[#F59E0B]"
+              className="flex items-center gap-2 text-[#F59E0B] light:text-amber-700 hover:text-[#F59E0B] light:hover:text-amber-700"
             >
               <Ban className="w-4 h-4" />
               {t('admin.userDetail.suspend')}

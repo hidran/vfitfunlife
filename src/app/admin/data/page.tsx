@@ -137,8 +137,8 @@ export default function DataManagementPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 px-4 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
-          <Shield className="w-4 h-4 text-yellow-400" />
-          <span className="text-sm text-yellow-400">
+          <Shield className="w-4 h-4 text-yellow-400 light:text-yellow-700" />
+          <span className="text-sm text-yellow-400 light:text-yellow-700">
             {user?.role === "superadmin" ? t('admin.data.accessLabel.superadmin') : t('admin.data.accessLabel.admin')}
           </span>
         </div>
@@ -150,7 +150,7 @@ export default function DataManagementPage() {
         <div className="bg-surface rounded-2xl border border-hairline p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
-              <Zap className="w-6 h-6 text-blue-400" />
+              <Zap className="w-6 h-6 text-blue-400 light:text-blue-700" />
             </div>
             <div>
               <h3 className="font-semibold text-content">{t('admin.data.quickSeed.title')}</h3>
@@ -175,7 +175,7 @@ export default function DataManagementPage() {
         <div className="bg-surface rounded-2xl border border-hairline p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
-              <Database className="w-6 h-6 text-green-400" />
+              <Database className="w-6 h-6 text-green-400 light:text-green-700" />
             </div>
             <div>
               <h3 className="font-semibold text-content">{t('admin.data.fullSeed.title')}</h3>
@@ -200,11 +200,11 @@ export default function DataManagementPage() {
         <div className="bg-surface rounded-2xl border border-red-500/20 p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center">
-              <Trash2 className="w-6 h-6 text-red-400" />
+              <Trash2 className="w-6 h-6 text-red-400 light:text-red-700" />
             </div>
             <div>
               <h3 className="font-semibold text-content">{t('admin.data.clearAll.title')}</h3>
-              <p className="text-xs text-red-400/70">{t('admin.data.clearAll.superadminOnly')}</p>
+              <p className="text-xs text-red-400/70 light:text-red-700">{t('admin.data.clearAll.superadminOnly')}</p>
             </div>
           </div>
           <Button
@@ -212,7 +212,7 @@ export default function DataManagementPage() {
             disabled={!!currentOperation || user?.role !== "superadmin"}
             variant="ghost"
             fullWidth
-            className="border border-red-500/30 text-red-400 hover:bg-red-500/10"
+            className="border border-red-500/30 text-red-400 light:text-red-700 hover:bg-red-500/10"
           >
             {currentOperation?.startsWith("clear") ? (
               <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {t('admin.data.clearAll.running')}</>
@@ -256,7 +256,7 @@ export default function DataManagementPage() {
       {operations.length > 0 && (
         <div className="bg-surface rounded-2xl border border-hairline p-6">
           <div className="flex items-center gap-3 mb-6">
-            <History className="w-5 h-5 text-purple-400" />
+            <History className="w-5 h-5 text-purple-400 light:text-purple-700" />
             <h3 className="text-lg font-semibold text-content">{t('admin.data.history.title')}</h3>
           </div>
           <div className="space-y-3">
@@ -275,9 +275,9 @@ export default function DataManagementPage() {
                     {op.status === "running" ? (
                       <Loader2 className="w-5 h-5 animate-spin text-content" />
                     ) : op.status === "completed" ? (
-                      <CheckCircle className="w-5 h-5 text-green-400" />
+                      <CheckCircle className="w-5 h-5 text-green-400 light:text-green-700" />
                     ) : (
-                      <AlertCircle className="w-5 h-5 text-red-400" />
+                      <AlertCircle className="w-5 h-5 text-red-400 light:text-red-700" />
                     )}
                     <div>
                       <p className="font-medium text-content">{getOperationLabel(op.type)}</p>
@@ -296,7 +296,7 @@ export default function DataManagementPage() {
                   )}
                 </div>
                 {op.error && (
-                  <p className="mt-2 text-sm text-red-400">{op.error}</p>
+                  <p className="mt-2 text-sm text-red-400 light:text-red-700">{op.error}</p>
                 )}
               </div>
             ))}

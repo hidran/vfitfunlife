@@ -31,7 +31,7 @@ export function BulkDeleteJobBanner({ job, onDismiss }: Props) {
     // the admin behind a permanent spinner.
     <div className="flex items-center gap-3 rounded-xl border border-hairline bg-surface-2 p-4">
       <Icon
-        className={`h-5 w-5 flex-shrink-0 ${finished ? '' : 'motion-safe:animate-spin'} ${hasFailures ? 'text-[#F59E0B]' : 'text-[#10B981]'}`}
+        className={`h-5 w-5 flex-shrink-0 ${finished ? '' : 'motion-safe:animate-spin'} ${hasFailures ? 'text-[#F59E0B] light:text-amber-700' : 'text-[#10B981] light:text-emerald-700'}`}
       />
       <div className="flex-1 text-sm text-content">
         {/* role="status" only on the heading — re-announcing the whole banner (counts

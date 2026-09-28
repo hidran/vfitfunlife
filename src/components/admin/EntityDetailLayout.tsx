@@ -57,7 +57,7 @@ export function EntityDetailLayout({
           )}
           {onDelete && (
             <SuperadminOnly>
-              <Button variant="secondary" size="sm" onClick={onDelete} className="text-red-400 hover:text-red-400">
+              <Button variant="secondary" size="sm" onClick={onDelete} className="text-red-400 light:text-red-700 hover:text-red-400 light:hover:text-red-700">
                 <Trash2 className="mr-1 h-4 w-4" />
                 {t('admin.detail.delete')}
               </Button>

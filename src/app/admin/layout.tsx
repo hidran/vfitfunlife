@@ -36,7 +36,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     return (
       <div className="min-h-screen bg-background-dark flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-3 border-white/20 border-t-[#00C9FF] rounded-full animate-spin" />
+          <div className="w-10 h-10 border-3 border-content/20 border-t-[#00C9FF] rounded-full animate-spin" />
           <p className="text-text-tertiary text-sm">{t('common.loading')}</p>
         </div>
       </div>
@@ -48,7 +48,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     return (
       <div className="min-h-screen bg-background-dark flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-3 border-white/20 border-t-[#00C9FF] rounded-full animate-spin" />
+          <div className="w-10 h-10 border-3 border-content/20 border-t-[#00C9FF] rounded-full animate-spin" />
           <p className="text-text-tertiary text-sm">{t('common.redirecting')}</p>
         </div>
       </div>

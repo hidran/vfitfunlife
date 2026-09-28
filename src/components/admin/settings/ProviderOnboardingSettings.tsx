@@ -41,7 +41,7 @@ export function ProviderOnboardingSettings() {
   if (error) {
     return (
       <div className="bg-surface rounded-2xl border border-hairline p-6 lg:col-span-2">
-        <p className="text-sm text-[#EF4444]">{t("admin.settings.providerOnboarding.loadError")}</p>
+        <p className="text-sm text-[#EF4444] light:text-red-700">{t("admin.settings.providerOnboarding.loadError")}</p>
       </div>
     );
   }
@@ -80,7 +80,7 @@ function ProviderOnboardingSettingsForm({
     <div className="bg-surface rounded-2xl border border-hairline p-6 lg:col-span-2">
       <div className="flex items-center gap-3 mb-2">
         <div className="w-10 h-10 rounded-xl bg-[#10B981]/20 flex items-center justify-center">
-          <UserCheck className="w-5 h-5 text-[#10B981]" />
+          <UserCheck className="w-5 h-5 text-[#10B981] light:text-emerald-700" />
         </div>
         <div>
           <h3 className="text-lg font-semibold text-content">
@@ -109,7 +109,7 @@ function ProviderOnboardingSettingsForm({
           aria-pressed={autoApprove}
           onClick={() => setAutoApprove(!autoApprove)}
           className={`relative w-12 h-6 shrink-0 rounded-full transition-colors ${
-            autoApprove ? "bg-[#10B981]" : "bg-white/20"
+            autoApprove ? "bg-[#10B981]" : "bg-content/20"
           }`}
         >
           <span
@@ -121,7 +121,7 @@ function ProviderOnboardingSettingsForm({
       </div>
 
       {save.isError && (
-        <p className="text-sm text-[#EF4444] mt-4">
+        <p className="text-sm text-[#EF4444] light:text-red-700 mt-4">
           {t("admin.settings.providerOnboarding.saveError")}
         </p>
       )}

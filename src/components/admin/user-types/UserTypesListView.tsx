@@ -81,7 +81,7 @@ export function UserTypesListView() {
       cell: (ut) => (
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00C9FF]/20 to-[#7B61FF]/20 flex items-center justify-center">
-            <Tag className="w-5 h-5 text-[#00C9FF]" />
+            <Tag className="w-5 h-5 text-[#00C9FF] light:text-cyan-700" />
           </div>
           <div>
             <p className="font-medium text-content">{ut.name}</p>
@@ -106,7 +106,7 @@ export function UserTypesListView() {
         <span
           className={`px-2.5 py-1 rounded-full text-xs font-medium ${
             ut.isActive
-              ? 'bg-[#10B981]/20 text-[#10B981]'
+              ? 'bg-[#10B981]/20 text-[#10B981] light:text-emerald-700'
               : 'bg-surface-2 text-content-muted'
           }`}
         >

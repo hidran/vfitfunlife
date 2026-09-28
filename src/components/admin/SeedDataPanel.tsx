@@ -125,7 +125,7 @@ export function SeedDataPanel() {
       {/* Header */}
       <div>
         <h2 className="text-xl font-bold text-content">{t('admin.seed.title')}</h2>
-        <p className="text-gray-400 mt-1">
+        <p className="text-content-muted mt-1">
           {t('admin.seed.subtitle')}
         </p>
       </div>
@@ -136,15 +136,15 @@ export function SeedDataPanel() {
         <div className="bg-surface-elevated rounded-xl border border-hairline p-5">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
-              <Zap className="w-5 h-5 text-blue-400" />
+              <Zap className="w-5 h-5 text-blue-400 light:text-blue-700" />
             </div>
             <div>
               <h3 className="font-semibold text-content">{t('admin.seed.quickSeed.title')}</h3>
-              <p className="text-xs text-gray-400">{t('admin.seed.quickSeed.subtitle')}</p>
+              <p className="text-xs text-content-muted">{t('admin.seed.quickSeed.subtitle')}</p>
             </div>
           </div>
 
-          <ul className="text-sm text-gray-400 space-y-1 mb-4">
+          <ul className="text-sm text-content-muted space-y-1 mb-4">
             <li>• {t('admin.seed.quickSeed.providers')}</li>
             <li>• {t('admin.seed.quickSeed.customers')}</li>
             <li>• {t('admin.seed.quickSeed.venues')}</li>
@@ -177,15 +177,15 @@ export function SeedDataPanel() {
         <div className="bg-surface-elevated rounded-xl border border-hairline p-5">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center">
-              <Database className="w-5 h-5 text-green-400" />
+              <Database className="w-5 h-5 text-green-400 light:text-green-700" />
             </div>
             <div>
               <h3 className="font-semibold text-content">{t('admin.seed.fullSeed.title')}</h3>
-              <p className="text-xs text-gray-400">{t('admin.seed.fullSeed.subtitle')}</p>
+              <p className="text-xs text-content-muted">{t('admin.seed.fullSeed.subtitle')}</p>
             </div>
           </div>
 
-          <ul className="text-sm text-gray-400 space-y-1 mb-4">
+          <ul className="text-sm text-content-muted space-y-1 mb-4">
             <li>• {t('admin.seed.fullSeed.providers')}</li>
             <li>• {t('admin.seed.fullSeed.customers')}</li>
             <li>• {t('admin.seed.fullSeed.venues')}</li>
@@ -218,27 +218,27 @@ export function SeedDataPanel() {
         <div className="bg-surface-elevated rounded-xl border border-hairline p-5">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center">
-              <Trash2 className="w-5 h-5 text-red-400" />
+              <Trash2 className="w-5 h-5 text-red-400 light:text-red-700" />
             </div>
             <div>
               <h3 className="font-semibold text-content">{t('admin.seed.clearAll.title')}</h3>
-              <p className="text-xs text-gray-400">{t('admin.seed.clearAll.subtitle')}</p>
+              <p className="text-xs text-content-muted">{t('admin.seed.clearAll.subtitle')}</p>
             </div>
           </div>
 
-          <ul className="text-sm text-gray-400 space-y-1 mb-4">
-            <li className="text-red-400">• ⚠️ {t('admin.seed.clearAll.users')}</li>
-            <li className="text-red-400">• ⚠️ {t('admin.seed.clearAll.venues')}</li>
-            <li className="text-red-400">• ⚠️ {t('admin.seed.clearAll.classes')}</li>
-            <li className="text-red-400">• ⚠️ {t('admin.seed.clearAll.bookings')}</li>
-            <li className="text-red-400">• ⚠️ {t('admin.seed.clearAll.reviews')}</li>
+          <ul className="text-sm text-content-muted space-y-1 mb-4">
+            <li className="text-red-400 light:text-red-700">• ⚠️ {t('admin.seed.clearAll.users')}</li>
+            <li className="text-red-400 light:text-red-700">• ⚠️ {t('admin.seed.clearAll.venues')}</li>
+            <li className="text-red-400 light:text-red-700">• ⚠️ {t('admin.seed.clearAll.classes')}</li>
+            <li className="text-red-400 light:text-red-700">• ⚠️ {t('admin.seed.clearAll.bookings')}</li>
+            <li className="text-red-400 light:text-red-700">• ⚠️ {t('admin.seed.clearAll.reviews')}</li>
           </ul>
 
           <Button
             onClick={handleClearAll}
             disabled={loading === "clear"}
             variant="ghost"
-            className="w-full border border-red-500/30 text-red-400 hover:bg-red-500/10"
+            className="w-full border border-red-500/30 text-red-400 light:text-red-700 hover:bg-red-500/10"
           >
             {loading === "clear" ? (
               <>
@@ -258,10 +258,10 @@ export function SeedDataPanel() {
       {/* Error Message */}
       {error && (
         <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-5 h-5 text-red-400 light:text-red-700 flex-shrink-0 mt-0.5" />
           <div>
-            <h4 className="font-medium text-red-400">{t('admin.seed.error.title')}</h4>
-            <p className="text-sm text-red-300 mt-1">{error}</p>
+            <h4 className="font-medium text-red-400 light:text-red-700">{t('admin.seed.error.title')}</h4>
+            <p className="text-sm text-red-300 light:text-red-700 mt-1">{error}</p>
           </div>
         </div>
       )}
@@ -270,12 +270,12 @@ export function SeedDataPanel() {
       {result?.success && (
         <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
           <div className="flex items-center gap-3 mb-3">
-            <CheckCircle className="w-5 h-5 text-green-400" />
-            <h4 className="font-medium text-green-400">{t('admin.seed.success.title')}</h4>
+            <CheckCircle className="w-5 h-5 text-green-400 light:text-green-700" />
+            <h4 className="font-medium text-green-400 light:text-green-700">{t('admin.seed.success.title')}</h4>
           </div>
           
           {result.message && (
-            <p className="text-sm text-green-300 mb-3">{result.message}</p>
+            <p className="text-sm text-green-300 light:text-green-700 mb-3">{result.message}</p>
           )}
           
           {result.summary && (
@@ -284,27 +284,27 @@ export function SeedDataPanel() {
                 <p className="text-2xl font-bold text-content">
                   {result.summary.totalCollections}
                 </p>
-                <p className="text-xs text-gray-400">{t('admin.seed.result.collections')}</p>
+                <p className="text-xs text-content-muted">{t('admin.seed.result.collections')}</p>
               </div>
               <div className="bg-surface-sunken rounded-lg p-3 text-center">
-                <p className="text-2xl font-bold text-green-400">
+                <p className="text-2xl font-bold text-green-400 light:text-green-700">
                   {result.summary.successful}
                 </p>
-                <p className="text-xs text-gray-400">{t('admin.seed.result.successful')}</p>
+                <p className="text-xs text-content-muted">{t('admin.seed.result.successful')}</p>
               </div>
               <div className="bg-surface-sunken rounded-lg p-3 text-center">
                 <p className="text-2xl font-bold text-content">
                   {result.summary.totalRecords ?? result.summary.totalDeleted ?? 0}
                 </p>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-content-muted">
                   {result.summary.totalRecords ? t('admin.seed.result.records') : t('admin.seed.result.deleted')}
                 </p>
               </div>
               <div className="bg-surface-sunken rounded-lg p-3 text-center">
-                <p className="text-2xl font-bold text-red-400">
+                <p className="text-2xl font-bold text-red-400 light:text-red-700">
                   {result.summary.failed}
                 </p>
-                <p className="text-xs text-gray-400">{t('admin.seed.result.failed')}</p>
+                <p className="text-xs text-content-muted">{t('admin.seed.result.failed')}</p>
               </div>
             </div>
           )}
@@ -319,7 +319,7 @@ export function SeedDataPanel() {
                     key={detail.collection}
                     className="flex items-center justify-between text-sm py-1 px-2 rounded bg-surface-sunken"
                   >
-                    <span className="text-gray-300 capitalize">
+                    <span className="text-content/80 capitalize">
                       {detail.collection}
                     </span>
                     <div className="flex items-center gap-3">
@@ -327,9 +327,9 @@ export function SeedDataPanel() {
                         {detail.count}
                       </span>
                       {detail.success ? (
-                        <CheckCircle className="w-4 h-4 text-green-400" />
+                        <CheckCircle className="w-4 h-4 text-green-400 light:text-green-700" />
                       ) : (
-                        <AlertCircle className="w-4 h-4 text-red-400" />
+                        <AlertCircle className="w-4 h-4 text-red-400 light:text-red-700" />
                       )}
                     </div>
                   </div>

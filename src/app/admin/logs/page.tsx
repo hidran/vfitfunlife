@@ -59,22 +59,22 @@ export default function SystemLogsPage() {
   const getSeverityIcon = (severity: string) => {
     switch (severity) {
       case "error":
-        return <AlertCircle className="w-4 h-4 text-[#EF4444]" />;
+        return <AlertCircle className="w-4 h-4 text-[#EF4444] light:text-red-700" />;
       case "warning":
-        return <AlertTriangle className="w-4 h-4 text-[#F59E0B]" />;
+        return <AlertTriangle className="w-4 h-4 text-[#F59E0B] light:text-amber-700" />;
       default:
-        return <Info className="w-4 h-4 text-[#00C9FF]" />;
+        return <Info className="w-4 h-4 text-[#00C9FF] light:text-cyan-700" />;
     }
   };
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case "error":
-        return "bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/30";
+        return "bg-[#EF4444]/10 text-[#EF4444] light:text-red-700 border-[#EF4444]/30";
       case "warning":
-        return "bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/30";
+        return "bg-[#F59E0B]/10 text-[#F59E0B] light:text-amber-700 border-[#F59E0B]/30";
       default:
-        return "bg-[#00C9FF]/10 text-[#00C9FF] border-[#00C9FF]/30";
+        return "bg-[#00C9FF]/10 text-[#00C9FF] light:text-cyan-700 border-[#00C9FF]/30";
     }
   };
 
@@ -171,8 +171,8 @@ export default function SystemLogsPage() {
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-2 px-3 py-2 bg-[#FFD700]/10 border border-[#FFD700]/30 rounded-xl">
-            <Shield className="w-4 h-4 text-[#FFD700]" />
-            <span className="text-sm text-[#FFD700]">{t('admin.logs.superadminOnly')}</span>
+            <Shield className="w-4 h-4 text-[#FFD700] light:text-yellow-700" />
+            <span className="text-sm text-[#FFD700] light:text-yellow-700">{t('admin.logs.superadminOnly')}</span>
           </div>
         </div>
       </div>
@@ -205,7 +205,7 @@ export default function SystemLogsPage() {
         <div className="bg-surface rounded-xl border border-hairline p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#00C9FF]/20 flex items-center justify-center">
-              <FileText className="w-5 h-5 text-[#00C9FF]" />
+              <FileText className="w-5 h-5 text-[#00C9FF] light:text-cyan-700" />
             </div>
             <div>
               <p className="text-xs text-content-faint">{t('admin.logs.stat.totalLogs')}</p>
@@ -216,7 +216,7 @@ export default function SystemLogsPage() {
         <div className="bg-surface rounded-xl border border-hairline p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/20 flex items-center justify-center">
-              <AlertTriangle className="w-5 h-5 text-[#F59E0B]" />
+              <AlertTriangle className="w-5 h-5 text-[#F59E0B] light:text-amber-700" />
             </div>
             <div>
               <p className="text-xs text-content-faint">{t('admin.logs.stat.warnings')}</p>
@@ -229,7 +229,7 @@ export default function SystemLogsPage() {
         <div className="bg-surface rounded-xl border border-hairline p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#EF4444]/20 flex items-center justify-center">
-              <AlertCircle className="w-5 h-5 text-[#EF4444]" />
+              <AlertCircle className="w-5 h-5 text-[#EF4444] light:text-red-700" />
             </div>
             <div>
               <p className="text-xs text-content-faint">{t('admin.logs.stat.errors')}</p>

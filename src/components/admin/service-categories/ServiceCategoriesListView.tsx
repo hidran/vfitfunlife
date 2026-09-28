@@ -110,7 +110,7 @@ export function ServiceCategoriesListView() {
         <span
           className={`px-2.5 py-1 rounded-full text-xs font-medium ${
             sc.isActive
-              ? 'bg-[#10B981]/20 text-[#10B981]'
+              ? 'bg-[#10B981]/20 text-[#10B981] light:text-emerald-700'
               : 'bg-surface-2 text-content-muted'
           }`}
         >

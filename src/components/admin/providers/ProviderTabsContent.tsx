@@ -38,7 +38,7 @@ export function ProviderTabBar({ active, onChange }: TabBarProps) {
             onClick={() => onChange(tab.id)}
             className={`flex items-center gap-2 px-1 py-3 text-sm font-medium border-b-2 transition-colors ${
               active === tab.id
-                ? 'text-[#00C9FF] border-[#00C9FF]'
+                ? 'text-[#00C9FF] light:text-cyan-700 border-[#00C9FF]'
                 : 'text-content-muted border-transparent hover:text-content'
             }`}
           >
@@ -85,7 +85,7 @@ export function ProviderTabContent({
                 className="flex items-center gap-4 p-4 bg-surface-sunken rounded-xl hover:bg-surface-sunken transition-colors group"
               >
                 <div className="w-12 h-12 rounded-xl bg-[#00C9FF]/20 flex items-center justify-center">
-                  <FileText className="w-6 h-6 text-[#00C9FF]" />
+                  <FileText className="w-6 h-6 text-[#00C9FF] light:text-cyan-700" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-content truncate">{doc.name}</p>
@@ -166,7 +166,7 @@ export function ProviderTabContent({
                   key={cert.id}
                   className="flex items-start gap-3 p-3 bg-surface-sunken rounded-xl"
                 >
-                  <Award className="w-5 h-5 text-[#00C9FF] flex-shrink-0 mt-0.5" />
+                  <Award className="w-5 h-5 text-[#00C9FF] light:text-cyan-700 flex-shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-content">{cert.name}</p>
                     <p className="text-sm text-content-muted">{cert.issuingOrganization}</p>

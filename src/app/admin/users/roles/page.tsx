@@ -120,7 +120,7 @@ export default function UserRolesPage() {
   if (!isSuperadmin) {
     return (
       <div className="flex flex-col items-center justify-center h-96">
-        <AlertTriangle className="w-16 h-16 text-[#F59E0B] mb-4" />
+        <AlertTriangle className="w-16 h-16 text-[#F59E0B] light:text-amber-700 mb-4" />
         <h2 className="text-xl font-semibold text-content mb-2">{t('admin.roles.accessDenied.title')}</h2>
         <p className="text-content-muted text-center max-w-md">
           {t('admin.roles.accessDenied.message')}
@@ -158,9 +158,9 @@ export default function UserRolesPage() {
 
       {/* Superadmin Notice */}
       <div className="bg-[#FFD700]/10 border border-[#FFD700]/30 rounded-xl p-4 flex items-start gap-3">
-        <Shield className="w-5 h-5 text-[#FFD700] flex-shrink-0 mt-0.5" />
+        <Shield className="w-5 h-5 text-[#FFD700] light:text-yellow-700 flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-sm font-medium text-[#FFD700]">{t('admin.roles.superadminNotice.label')}</p>
+          <p className="text-sm font-medium text-[#FFD700] light:text-yellow-700">{t('admin.roles.superadminNotice.label')}</p>
           <p className="text-sm text-content-muted">
             {t('admin.roles.superadminNotice.description')}
           </p>
@@ -172,7 +172,7 @@ export default function UserRolesPage() {
         <div className="bg-surface rounded-xl border border-hairline p-5">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-[#FFD700]/20 flex items-center justify-center">
-              <Shield className="w-5 h-5 text-[#FFD700]" />
+              <Shield className="w-5 h-5 text-[#FFD700] light:text-yellow-700" />
             </div>
             <div>
               <h3 className="font-semibold text-content">{t('admin.roles.superadminCard.title')}</h3>
@@ -202,7 +202,7 @@ export default function UserRolesPage() {
         <div className="bg-surface rounded-xl border border-hairline p-5">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-[#7B61FF]/20 flex items-center justify-center">
-              <Shield className="w-5 h-5 text-[#7B61FF]" />
+              <Shield className="w-5 h-5 text-[#7B61FF] light:text-violet-700" />
             </div>
             <div>
               <h3 className="font-semibold text-content">{t('admin.roles.adminCard.title')}</h3>

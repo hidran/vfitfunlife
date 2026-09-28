@@ -66,12 +66,12 @@ export function PaymentsListView() {
         <span
           className={`px-2.5 py-1 rounded-full text-xs font-medium ${
             tx.type === "booking_payment"
-              ? "bg-[#10B981]/20 text-[#10B981]"
+              ? "bg-[#10B981]/20 text-[#10B981] light:text-emerald-700"
               : tx.type === "payout"
-              ? "bg-[#00C9FF]/20 text-[#00C9FF]"
+              ? "bg-[#00C9FF]/20 text-[#00C9FF] light:text-cyan-700"
               : tx.type === "refund"
-              ? "bg-[#EF4444]/20 text-[#EF4444]"
-              : "bg-[#F59E0B]/20 text-[#F59E0B]"
+              ? "bg-[#EF4444]/20 text-[#EF4444] light:text-red-700"
+              : "bg-[#F59E0B]/20 text-[#F59E0B] light:text-amber-700"
           }`}
         >
           {tx.type.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase())}
@@ -100,9 +100,9 @@ export function PaymentsListView() {
         <span
           className={`font-medium ${
             tx.type === "booking_payment" || tx.type === "commission"
-              ? "text-[#10B981]"
+              ? "text-[#10B981] light:text-emerald-700"
               : tx.type === "refund"
-              ? "text-[#EF4444]"
+              ? "text-[#EF4444] light:text-red-700"
               : "text-content"
           }`}
         >
@@ -172,7 +172,7 @@ export function PaymentsListView() {
         <div className="bg-surface rounded-xl border border-hairline p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#10B981]/20 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-[#10B981]" />
+              <TrendingUp className="w-5 h-5 text-[#10B981] light:text-emerald-700" />
             </div>
             <div>
               <p className="text-xs text-content-faint">{t('admin.payments.stat.totalRevenue')}</p>
@@ -183,7 +183,7 @@ export function PaymentsListView() {
         <div className="bg-surface rounded-xl border border-hairline p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#00C9FF]/20 flex items-center justify-center">
-              <TrendingDown className="w-5 h-5 text-[#00C9FF]" />
+              <TrendingDown className="w-5 h-5 text-[#00C9FF] light:text-cyan-700" />
             </div>
             <div>
               <p className="text-xs text-content-faint">{t('admin.payments.stat.totalPayouts')}</p>
@@ -194,7 +194,7 @@ export function PaymentsListView() {
         <div className="bg-surface rounded-xl border border-hairline p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/20 flex items-center justify-center">
-              <CreditCard className="w-5 h-5 text-[#F59E0B]" />
+              <CreditCard className="w-5 h-5 text-[#F59E0B] light:text-amber-700" />
             </div>
             <div>
               <p className="text-xs text-content-faint">{t('admin.payments.stat.commission')}</p>
@@ -205,7 +205,7 @@ export function PaymentsListView() {
         <div className="bg-surface rounded-xl border border-hairline p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#7B61FF]/20 flex items-center justify-center">
-              <Calendar className="w-5 h-5 text-[#7B61FF]" />
+              <Calendar className="w-5 h-5 text-[#7B61FF] light:text-violet-700" />
             </div>
             <div>
               <p className="text-xs text-content-faint">{t('admin.payments.stat.thisMonth')}</p>

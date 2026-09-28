@@ -89,7 +89,7 @@ export function FilterBar({
               onClick={() => setShowFilters(!showFilters)}
               className={cn(
                 "flex items-center gap-2",
-                showFilters && "bg-white/20"
+                showFilters && "bg-content/20"
               )}
             >
               <Filter className="w-4 h-4" />
@@ -192,7 +192,7 @@ export function FilterBar({
       {hasActiveFilters && (
         <div className="flex flex-wrap items-center gap-2">
           {searchValue && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#00C9FF]/20 text-[#00C9FF] text-xs rounded-full">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#00C9FF]/20 text-[#00C9FF] light:text-cyan-700 text-xs rounded-full">
               {t('admin.filter.tagSearch', { value: searchValue })}
               <button
                 onClick={() => onSearchChange("")}

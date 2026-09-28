@@ -186,7 +186,7 @@ export function BookingDetailView({ bookingId }: Props) {
                 callStatusFn('cancelBooking', { reason });
               }}
               disabled={statusBusy}
-              className="flex items-center gap-2 text-red-400 hover:text-red-400"
+              className="flex items-center gap-2 text-red-400 light:text-red-700 hover:text-red-400 light:hover:text-red-700"
             >
               <XCircle className="w-4 h-4" />
               {t('admin.bookings.action.cancel')}

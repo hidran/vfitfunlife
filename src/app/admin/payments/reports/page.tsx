@@ -91,7 +91,7 @@ export default function PaymentReportsPage() {
         <div className="bg-surface rounded-xl border border-hairline p-5">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-xl bg-[#10B981]/20 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-[#10B981]" />
+              <TrendingUp className="w-5 h-5 text-[#10B981] light:text-emerald-700" />
             </div>
             <span className="text-sm text-content-muted">{t('admin.reports.stat.totalRevenue')}</span>
           </div>
@@ -102,7 +102,7 @@ export default function PaymentReportsPage() {
         <div className="bg-surface rounded-xl border border-hairline p-5">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-xl bg-[#00C9FF]/20 flex items-center justify-center">
-              <PieChart className="w-5 h-5 text-[#00C9FF]" />
+              <PieChart className="w-5 h-5 text-[#00C9FF] light:text-cyan-700" />
             </div>
             <span className="text-sm text-content-muted">{t('admin.reports.stat.platformCommission')}</span>
           </div>
@@ -114,7 +114,7 @@ export default function PaymentReportsPage() {
         <div className="bg-surface rounded-xl border border-hairline p-5">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-xl bg-[#7B61FF]/20 flex items-center justify-center">
-              <BarChart3 className="w-5 h-5 text-[#7B61FF]" />
+              <BarChart3 className="w-5 h-5 text-[#7B61FF] light:text-violet-700" />
             </div>
             <span className="text-sm text-content-muted">{t('admin.reports.stat.providerPayouts')}</span>
           </div>
@@ -126,7 +126,7 @@ export default function PaymentReportsPage() {
         <div className="bg-surface rounded-xl border border-hairline p-5">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/20 flex items-center justify-center">
-              <FileText className="w-5 h-5 text-[#F59E0B]" />
+              <FileText className="w-5 h-5 text-[#F59E0B] light:text-amber-700" />
             </div>
             <span className="text-sm text-content-muted">{t('admin.reports.stat.netRevenue')}</span>
           </div>
@@ -143,7 +143,7 @@ export default function PaymentReportsPage() {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-[#00C9FF]/20 flex items-center justify-center">
-                <PieChart className="w-5 h-5 text-[#00C9FF]" />
+                <PieChart className="w-5 h-5 text-[#00C9FF] light:text-cyan-700" />
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-content">
@@ -184,7 +184,7 @@ export default function PaymentReportsPage() {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-[#10B981]/20 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-[#10B981]" />
+                <TrendingUp className="w-5 h-5 text-[#10B981] light:text-emerald-700" />
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-content">{t('admin.reports.topProviders.title')}</h3>
@@ -210,7 +210,7 @@ export default function PaymentReportsPage() {
                   <p className="font-semibold text-content">
                     {formatPrice(provider.revenue)}
                   </p>
-                  <p className="text-xs text-[#10B981]">
+                  <p className="text-xs text-[#10B981] light:text-emerald-700">
                     {t('admin.reports.topProviders.commissionPrefix', { amount: formatPrice(provider.commission) })}
                   </p>
                 </div>
@@ -225,7 +225,7 @@ export default function PaymentReportsPage() {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#7B61FF]/20 flex items-center justify-center">
-              <BarChart3 className="w-5 h-5 text-[#7B61FF]" />
+              <BarChart3 className="w-5 h-5 text-[#7B61FF] light:text-violet-700" />
             </div>
             <div>
               <h3 className="text-lg font-semibold text-content">{t('admin.reports.revenueTrend.title')}</h3>

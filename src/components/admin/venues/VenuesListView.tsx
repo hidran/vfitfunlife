@@ -83,7 +83,7 @@ export function VenuesListView() {
       cell: (venue) => (
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00C9FF]/20 to-[#7B61FF]/20 flex items-center justify-center">
-            <Store className="w-5 h-5 text-[#00C9FF]" />
+            <Store className="w-5 h-5 text-[#00C9FF] light:text-cyan-700" />
           </div>
           <div>
             <p className="font-medium text-content">{venue.name}</p>
@@ -123,7 +123,7 @@ export function VenuesListView() {
       header: t('admin.venues.col.rating'),
       cell: (venue) => (
         <div className="flex items-center gap-1">
-          <Star className="w-4 h-4 text-[#F59E0B] fill-[#F59E0B]" />
+          <Star className="w-4 h-4 text-[#F59E0B] light:text-amber-700 fill-[#F59E0B] light:fill-amber-600" />
           <span className="text-sm text-content">{venue.rating}</span>
           <span className="text-xs text-content-faint">({venue.reviewCount})</span>
         </div>
@@ -138,7 +138,7 @@ export function VenuesListView() {
         <span
           className={`px-2.5 py-1 rounded-full text-xs font-medium ${
             venue.isPartner
-              ? "bg-[#7B61FF]/20 text-[#7B61FF]"
+              ? "bg-[#7B61FF]/20 text-[#7B61FF] light:text-violet-700"
               : "bg-surface-2 text-content-muted"
           }`}
         >
@@ -171,7 +171,7 @@ export function VenuesListView() {
               photoUrls: venue.photoUrls ?? [],
             });
           }}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-surface-2 text-content hover:bg-white/20"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-surface-2 text-content hover:bg-content/20"
           aria-label={t('admin.venues.col.editPhotosAria')}
         >
           <Camera className="h-4 w-4" />

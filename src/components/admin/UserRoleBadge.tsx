@@ -11,10 +11,10 @@ interface UserRoleBadgeProps {
 }
 
 const roleColors: Record<UserRole, string> = {
-  superadmin: "bg-[#FFD700]/20 text-[#FFD700] border-[#FFD700]/30",
-  admin: "bg-[#7B61FF]/20 text-[#7B61FF] border-[#7B61FF]/30",
-  provider: "bg-[#00C9FF]/20 text-[#00C9FF] border-[#00C9FF]/30",
-  customer: "bg-surface-2 text-content-muted border-white/20",
+  superadmin: "bg-[#FFD700]/20 text-[#FFD700] light:text-yellow-700 border-[#FFD700]/30",
+  admin: "bg-[#7B61FF]/20 text-[#7B61FF] light:text-violet-700 border-[#7B61FF]/30",
+  provider: "bg-[#00C9FF]/20 text-[#00C9FF] light:text-cyan-700 border-[#00C9FF]/30",
+  customer: "bg-surface-2 text-content-muted border-content/20",
 };
 
 export function UserRoleBadge({ role, size = "md", className }: UserRoleBadgeProps) {
@@ -48,17 +48,17 @@ interface StatusBadgeProps {
 }
 
 const statusColors: Record<string, string> = {
-  active: "bg-[#10B981]/20 text-[#10B981] border-[#10B981]/30",
-  suspended: "bg-[#EF4444]/20 text-[#EF4444] border-[#EF4444]/30",
-  pending: "bg-[#F59E0B]/20 text-[#F59E0B] border-[#F59E0B]/30",
-  verified: "bg-[#10B981]/20 text-[#10B981] border-[#10B981]/30",
-  rejected: "bg-[#EF4444]/20 text-[#EF4444] border-[#EF4444]/30",
-  completed: "bg-[#10B981]/20 text-[#10B981] border-[#10B981]/30",
-  cancelled: "bg-[#EF4444]/20 text-[#EF4444] border-[#EF4444]/30",
-  confirmed: "bg-[#00C9FF]/20 text-[#00C9FF] border-[#00C9FF]/30",
-  failed: "bg-[#EF4444]/20 text-[#EF4444] border-[#EF4444]/30",
+  active: "bg-[#10B981]/20 text-[#10B981] light:text-emerald-700 border-[#10B981]/30",
+  suspended: "bg-[#EF4444]/20 text-[#EF4444] light:text-red-700 border-[#EF4444]/30",
+  pending: "bg-[#F59E0B]/20 text-[#F59E0B] light:text-amber-700 border-[#F59E0B]/30",
+  verified: "bg-[#10B981]/20 text-[#10B981] light:text-emerald-700 border-[#10B981]/30",
+  rejected: "bg-[#EF4444]/20 text-[#EF4444] light:text-red-700 border-[#EF4444]/30",
+  completed: "bg-[#10B981]/20 text-[#10B981] light:text-emerald-700 border-[#10B981]/30",
+  cancelled: "bg-[#EF4444]/20 text-[#EF4444] light:text-red-700 border-[#EF4444]/30",
+  confirmed: "bg-[#00C9FF]/20 text-[#00C9FF] light:text-cyan-700 border-[#00C9FF]/30",
+  failed: "bg-[#EF4444]/20 text-[#EF4444] light:text-red-700 border-[#EF4444]/30",
   deleted: "bg-surface-2 border-hairline text-content-muted",
-  demo: "bg-[#7B61FF]/20 text-[#7B61FF] border-[#7B61FF]/30",
+  demo: "bg-[#7B61FF]/20 text-[#7B61FF] light:text-violet-700 border-[#7B61FF]/30",
 };
 
 type KnownStatus = 'active' | 'suspended' | 'pending' | 'verified' | 'rejected' | 'completed' | 'cancelled' | 'confirmed' | 'failed' | 'deleted' | 'demo';
@@ -84,7 +84,7 @@ export function StatusBadge({ status, size = "md", className }: StatusBadgeProps
     return (
       <span
         className={cn(
-          "inline-flex items-center font-medium rounded-full border bg-surface-2 text-content-muted border-white/20",
+          "inline-flex items-center font-medium rounded-full border bg-surface-2 text-content-muted border-content/20",
           size === "sm" && "px-2 py-0.5 text-[10px]",
           size === "md" && "px-2.5 py-1 text-xs",
           className
@@ -127,8 +127,8 @@ export function VerificationBadge({ isVerified, size = "md", className }: Verifi
         size === "sm" && "px-2 py-0.5 text-[10px]",
         size === "md" && "px-2.5 py-1 text-xs",
         isVerified
-          ? "bg-[#10B981]/20 text-[#10B981] border-[#10B981]/30"
-          : "bg-[#F59E0B]/20 text-[#F59E0B] border-[#F59E0B]/30",
+          ? "bg-[#10B981]/20 text-[#10B981] light:text-emerald-700 border-[#10B981]/30"
+          : "bg-[#F59E0B]/20 text-[#F59E0B] light:text-amber-700 border-[#F59E0B]/30",
         className
       )}
     >
@@ -165,7 +165,7 @@ export function ProviderTypeBadge({ userType, size = "md", className }: Provider
   return (
     <span
       className={cn(
-        "inline-flex items-center font-medium rounded-full border bg-[#7B61FF]/20 text-[#7B61FF] border-[#7B61FF]/30",
+        "inline-flex items-center font-medium rounded-full border bg-[#7B61FF]/20 text-[#7B61FF] light:text-violet-700 border-[#7B61FF]/30",
         size === "sm" && "px-2 py-0.5 text-[10px]",
         size === "md" && "px-2.5 py-1 text-xs",
         className

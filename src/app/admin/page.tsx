@@ -138,7 +138,7 @@ export default function AdminDashboardPage() {
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/20 flex items-center justify-center">
-                <AlertCircle className="w-5 h-5 text-[#F59E0B]" />
+                <AlertCircle className="w-5 h-5 text-[#F59E0B] light:text-amber-700" />
               </div>
               <div>
                 <h3 className="font-semibold text-content">{t('admin.dashboard.pendingVerifications.title')}</h3>
@@ -153,7 +153,7 @@ export default function AdminDashboardPage() {
               variant="ghost"
               size="sm"
               onClick={() => router.push("/admin/providers/verifications")}
-              className="text-[#F59E0B] hover:text-[#F59E0B] hover:bg-[#F59E0B]/10"
+              className="text-[#F59E0B] light:text-amber-700 hover:text-[#F59E0B] light:hover:text-amber-700 hover:bg-[#F59E0B]/10"
             >
               {t('admin.dashboard.pendingVerifications.review')}
               <ArrowRight className="w-4 h-4 ml-1" />
@@ -166,7 +166,7 @@ export default function AdminDashboardPage() {
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-[#EF4444]/20 flex items-center justify-center">
-                <Ticket className="w-5 h-5 text-[#EF4444]" />
+                <Ticket className="w-5 h-5 text-[#EF4444] light:text-red-700" />
               </div>
               <div>
                 <h3 className="font-semibold text-content">{t('admin.dashboard.supportTickets.title')}</h3>
@@ -180,7 +180,7 @@ export default function AdminDashboardPage() {
             <Button
               variant="ghost"
               size="sm"
-              className="text-[#EF4444] hover:text-[#EF4444] hover:bg-[#EF4444]/10"
+              className="text-[#EF4444] light:text-red-700 hover:text-[#EF4444] light:hover:text-red-700 hover:bg-[#EF4444]/10"
             >
               {t('admin.dashboard.supportTickets.viewAll')}
               <ArrowRight className="w-4 h-4 ml-1" />
@@ -300,7 +300,7 @@ export default function AdminDashboardPage() {
               variant="ghost"
               size="sm"
               onClick={() => router.push("/admin/providers")}
-              className="text-[#00C9FF]"
+              className="text-[#00C9FF] light:text-cyan-700"
             >
               {t('admin.dashboard.topProviders.viewAll')}
               <ArrowRight className="w-4 h-4 ml-1" />

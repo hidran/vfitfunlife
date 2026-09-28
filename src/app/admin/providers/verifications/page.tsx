@@ -68,7 +68,7 @@ export default function ProviderVerificationsPage() {
       </div>
 
       {actionError && (
-        <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-400">
+        <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-400 light:text-red-700">
           {actionError}
         </div>
       )}
@@ -82,8 +82,8 @@ export default function ProviderVerificationsPage() {
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-4 py-2 bg-[#F59E0B]/10 border border-[#F59E0B]/30 rounded-xl">
-            <AlertCircle className="w-4 h-4 text-[#F59E0B]" />
-            <span className="text-sm text-[#F59E0B]">
+            <AlertCircle className="w-4 h-4 text-[#F59E0B] light:text-amber-700" />
+            <span className="text-sm text-[#F59E0B] light:text-amber-700">
               {t('admin.verificationsPage.pendingBadge', { count: String(pendingVerifications.length) })}
             </span>
           </div>
@@ -95,7 +95,7 @@ export default function ProviderVerificationsPage() {
         <div className="bg-surface rounded-xl border border-hairline p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/20 flex items-center justify-center">
-              <AlertCircle className="w-5 h-5 text-[#F59E0B]" />
+              <AlertCircle className="w-5 h-5 text-[#F59E0B] light:text-amber-700" />
             </div>
             <div>
               <p className="text-sm text-content-muted">{t('admin.verificationsPage.stat.pending')}</p>
@@ -106,7 +106,7 @@ export default function ProviderVerificationsPage() {
         <div className="bg-surface rounded-xl border border-hairline p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#10B981]/20 flex items-center justify-center">
-              <CheckCircle className="w-5 h-5 text-[#10B981]" />
+              <CheckCircle className="w-5 h-5 text-[#10B981] light:text-emerald-700" />
             </div>
             <div>
               <p className="text-sm text-content-muted">{t('admin.verificationsPage.stat.verifiedToday')}</p>
@@ -117,7 +117,7 @@ export default function ProviderVerificationsPage() {
         <div className="bg-surface rounded-xl border border-hairline p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#00C9FF]/20 flex items-center justify-center">
-              <CheckCircle className="w-5 h-5 text-[#00C9FF]" />
+              <CheckCircle className="w-5 h-5 text-[#00C9FF] light:text-cyan-700" />
             </div>
             <div>
               <p className="text-sm text-content-muted">{t('admin.verificationsPage.stat.avgResponseTime')}</p>

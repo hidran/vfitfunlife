@@ -205,7 +205,7 @@ export function DataTable<T>({
                     {isAllSelected ? (
                       <CheckSquare className="w-5 h-5" />
                     ) : isPartiallySelected ? (
-                      <div className="w-5 h-5 border-2 border-white/40 rounded bg-[#00C9FF]/50" />
+                      <div className="w-5 h-5 border-2 border-content/40 rounded bg-[#00C9FF]/50" />
                     ) : (
                       <Square className="w-5 h-5" />
                     )}
@@ -285,7 +285,7 @@ export function DataTable<T>({
                           className="text-content-muted hover:text-content transition-colors"
                         >
                           {isSelected ? (
-                            <CheckSquare className="w-5 h-5 text-[#00C9FF]" />
+                            <CheckSquare className="w-5 h-5 text-[#00C9FF] light:text-cyan-700" />
                           ) : (
                             <Square className="w-5 h-5" />
                           )}
@@ -325,7 +325,7 @@ export function DataTable<T>({
                                       actions.view?.(row);
                                       setActionMenuOpen(null);
                                     }}
-                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white/80 hover:bg-surface-2 transition-colors"
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-content/80 hover:bg-surface-2 transition-colors"
                                   >
                                     <Eye className="w-4 h-4" />
                                     {t('admin.table.actions.view')}
@@ -337,7 +337,7 @@ export function DataTable<T>({
                                       actions.edit?.(row);
                                       setActionMenuOpen(null);
                                     }}
-                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white/80 hover:bg-surface-2 transition-colors"
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-content/80 hover:bg-surface-2 transition-colors"
                                   >
                                     <Edit className="w-4 h-4" />
                                     {t('admin.table.actions.edit')}
@@ -349,7 +349,7 @@ export function DataTable<T>({
                                       actions.delete?.(row);
                                       setActionMenuOpen(null);
                                     }}
-                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#EF4444] hover:bg-surface-2 transition-colors"
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#EF4444] light:text-red-700 hover:bg-surface-2 transition-colors"
                                   >
                                     <Trash2 className="w-4 h-4" />
                                     {t('admin.table.actions.delete')}

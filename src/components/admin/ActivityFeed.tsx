@@ -32,12 +32,12 @@ const activityIcons: Record<string, React.ReactNode> = {
 };
 
 const activityColors: Record<string, string> = {
-  user: "bg-[#00C9FF]/20 text-[#00C9FF]",
-  provider: "bg-[#7B61FF]/20 text-[#7B61FF]",
-  booking: "bg-[#F59E0B]/20 text-[#F59E0B]",
-  payment: "bg-[#10B981]/20 text-[#10B981]",
+  user: "bg-[#00C9FF]/20 text-[#00C9FF] light:text-cyan-700",
+  provider: "bg-[#7B61FF]/20 text-[#7B61FF] light:text-violet-700",
+  booking: "bg-[#F59E0B]/20 text-[#F59E0B] light:text-amber-700",
+  payment: "bg-[#10B981]/20 text-[#10B981] light:text-emerald-700",
   system: "bg-surface-2 text-content-muted",
-  verification: "bg-[#10B981]/20 text-[#10B981]",
+  verification: "bg-[#10B981]/20 text-[#10B981] light:text-emerald-700",
 };
 
 export function ActivityFeed({ activities, className }: ActivityFeedProps) {
