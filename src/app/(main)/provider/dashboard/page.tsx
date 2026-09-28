@@ -236,7 +236,7 @@ export default function ProviderDashboardPage() {
             <div className="p-4 space-y-4">
               {activities.length === 0 ? (
                 <div className="text-center py-8">
-                  <Bell className="w-10 h-10 text-content-faint mx-auto mb-3" />
+                  <Bell className="w-10 h-10 text-content/15 light:text-content-faint mx-auto mb-3" />
                   <p className="text-sm text-content-muted">{t('provider.dashboard.activity.empty.title')}</p>
                   <p className="text-xs text-content-faint light:text-content-muted mt-1">
                     {t('provider.dashboard.activity.empty.subtitle')}
