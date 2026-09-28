@@ -1,10 +1,11 @@
 'use client';
 
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useMemo, useState, useCallback } from 'react';
 import { List, Map as MapIcon, MapPin, Search, SlidersHorizontal, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { GoogleMap } from '@/components/map/GoogleMap';
+import { MapPlaceholder } from '@/components/map/MapPlaceholder';
 import { useRouter } from 'next/navigation';
 import { useI18n } from '@/hooks/useI18n';
 import type { MessageKey } from '@/i18n/messages';
@@ -21,6 +22,13 @@ const filterKeys: MessageKey[] = [
   'fit.gyms.filter.amenities',
   'fit.gyms.filter.price',
 ];
+
+// Map view is a toggle away from the default list view, so GoogleMap (and its
+// @googlemaps/js-api-loader dependency) shouldn't sit in this route's initial JS.
+const GoogleMap = dynamic(() => import('@/components/map/GoogleMap').then((mod) => mod.GoogleMap), {
+  ssr: false,
+  loading: () => <MapPlaceholder className="h-[60vh] min-h-[500px]" />,
+});
 
 export default function GymsPage() {
   const router = useRouter();

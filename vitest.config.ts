@@ -15,7 +15,11 @@ export default defineConfig({
     // a runner other than Playwright's imports it, so collecting them here only ever
     // produced failures that said nothing about the code. They run via
     // `npm run test:e2e` (legacy specs) and `npm run e2e:journey` (the journey suite).
-    exclude: [...configDefaults.exclude, 'e2e/**'],
+    //
+    // `.claude/**` excludes leftover agent worktrees (`.claude/worktrees/*`), which are full
+    // checkouts of this repo and would otherwise have their own `src/**/*.test.ts` collected
+    // a second time by whichever worktree (or the main checkout) runs the suite.
+    exclude: [...configDefaults.exclude, 'e2e/**', '.claude/**'],
     coverage: {
       reporter: ['text', 'html', 'json'],
       exclude: [

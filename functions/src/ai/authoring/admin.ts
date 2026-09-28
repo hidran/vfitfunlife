@@ -3,7 +3,7 @@ import * as admin from "firebase-admin";
 import { z } from "zod";
 import { requireSuperAdmin } from "../../utils/roles";
 import { writeAuditLog } from "../../lib/audit";
-import { getAiAuthoringSettings, AI_AUTHORING_DOC } from "./settings";
+import { getAiAuthoringSettings, invalidateAiAuthoringSettingsCache, AI_AUTHORING_DOC } from "./settings";
 import { keyPresence, AI_SECRETS } from "../providers";
 
 const region = process.env.FIREBASE_REGION || "europe-west1";
@@ -69,6 +69,7 @@ export const updateAiAuthoringSettings = onCall(
       { ...patch, updatedAt: admin.firestore.FieldValue.serverTimestamp(), updatedBy: callerId },
       { merge: true },
     );
+    invalidateAiAuthoringSettingsCache();
 
     await writeAuditLog({
       actorUid: callerId,

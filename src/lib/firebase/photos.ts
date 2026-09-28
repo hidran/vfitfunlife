@@ -1,6 +1,5 @@
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { getStorageInstance } from './config';
-import imageCompression from 'browser-image-compression';
 
 const COMPRESSION_OPTIONS = {
   maxSizeMB: 1,
@@ -16,6 +15,9 @@ export async function uploadGalleryPhoto(opts: {
   file: File;
 }): Promise<string> {
   const { scope, entityId, file } = opts;
+  // Dynamic import: browser-image-compression (and its web worker) only need to load for
+  // someone actually uploading a photo, not on every page that imports this module.
+  const { default: imageCompression } = await import('browser-image-compression');
   const compressed = await imageCompression(file, COMPRESSION_OPTIONS);
   const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
   const path = `${scope}/${entityId}/gallery/${filename}`;

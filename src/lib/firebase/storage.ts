@@ -7,7 +7,7 @@ import {
   deleteObject,
   listAll,
 } from 'firebase/storage';
-import imageCompression from 'browser-image-compression';
+import type { Options as ImageCompressionOptions } from 'browser-image-compression';
 
 // Default compression options
 const defaultCompressionOptions = {
@@ -22,11 +22,20 @@ const avatarCompressionOptions = {
   useWebWorker: true,
 };
 
+/**
+ * Dynamic import: browser-image-compression (and its web worker) only need to load for
+ * someone actually uploading a photo, not on every page that imports this module.
+ */
+async function compressImage(file: File, options: ImageCompressionOptions): Promise<File> {
+  const { default: imageCompression } = await import('browser-image-compression');
+  return imageCompression(file, options);
+}
+
 // Upload avatar with compression
 export async function uploadAvatar(userId: string, file: File): Promise<string> {
   try {
     // Compress image
-    const compressedFile = await imageCompression(file, avatarCompressionOptions);
+    const compressedFile = await compressImage(file, avatarCompressionOptions);
 
     // Upload to Storage - matching storage.rules path: /users/{userId}/avatar/{fileName}
     const storage = await getStorageInstance();
@@ -47,7 +56,7 @@ export async function uploadAvatar(userId: string, file: File): Promise<string> 
 export async function updateProfilePhoto(userId: string, file: File): Promise<string> {
   try {
     // Compress image for profile photo
-    const compressedFile = await imageCompression(file, avatarCompressionOptions);
+    const compressedFile = await compressImage(file, avatarCompressionOptions);
 
     // Upload to profile-photos path
     const storage = await getStorageInstance();
@@ -80,7 +89,7 @@ export async function uploadCertification(
     // Compress if it's an image
     let fileToUpload: File = file;
     if (file.type.startsWith('image/')) {
-      fileToUpload = await imageCompression(file, defaultCompressionOptions);
+      fileToUpload = await compressImage(file, defaultCompressionOptions);
     }
 
     // Upload to certifications path
@@ -115,7 +124,7 @@ export async function deleteCertification(fileUrl: string): Promise<void> {
 export async function uploadPortfolioImage(userId: string, file: File): Promise<string> {
   try {
     // Compress image
-    const compressedFile = await imageCompression(file, defaultCompressionOptions);
+    const compressedFile = await compressImage(file, defaultCompressionOptions);
 
     // Upload to portfolios path
     const storage = await getStorageInstance();
