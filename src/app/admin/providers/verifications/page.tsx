@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Timestamp } from "firebase/firestore";
 import { useAdminStore } from "@/stores/adminStore";
+import { useShallow } from "zustand/react/shallow";
 import { VerificationQueue } from "@/components/admin";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/hooks/useI18n";
@@ -16,12 +17,14 @@ import {
 export default function ProviderVerificationsPage() {
   const { t } = useI18n();
   const router = useRouter();
-  const {
-    pendingVerifications,
-    fetchPendingVerifications,
-    verifyProviderAction,
-    rejectProviderAction,
-  } = useAdminStore();
+  const { pendingVerifications, fetchPendingVerifications, verifyProviderAction, rejectProviderAction } = useAdminStore(
+    useShallow((s) => ({
+      pendingVerifications: s.pendingVerifications,
+      fetchPendingVerifications: s.fetchPendingVerifications,
+      verifyProviderAction: s.verifyProviderAction,
+      rejectProviderAction: s.rejectProviderAction,
+    }))
+  );
   // Approving is superadmin-only and now goes through a callable that can refuse. Swallowing
   // that into the console told the admin the same story as success — the row simply stayed.
   const [actionError, setActionError] = useState<string | null>(null);

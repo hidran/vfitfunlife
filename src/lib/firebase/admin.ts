@@ -17,6 +17,7 @@ import {
   startAfter,
   QueryConstraint,
   QueryDocumentSnapshot,
+  getCountFromServer,
   writeBatch,
   addDoc,
   serverTimestamp,
@@ -24,6 +25,7 @@ import {
 import { httpsCallable } from "firebase/functions";
 import { auth, db, getFunctionsInstance } from "./config";
 import { countOrFallback, sumOrFallback } from "./firestore";
+import { normalizeSearchQuery } from "@/lib/admin/adminIndex";
 import { cancelBooking as cancelBookingFn, decideProviderApplication } from "./functions";
 import {
   AdminDashboardStats,
@@ -231,70 +233,115 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
   }
 }
 
-// Get users with filters
+/**
+ * Last document of each page already read, keyed by page number — the `startAfter` cursor of
+ * the page after it. Owned by the caller (the admin store keeps one per filter combination)
+ * so next/previous and reloads of a visited page are one `limit(pageSize)` read each.
+ */
+export type PageCursors = Map<number, QueryDocumentSnapshot>;
+
+export interface ListPageResult {
+  docs: QueryDocumentSnapshot[];
+  total: number;
+  cursors: PageCursors;
+}
+
+/**
+ * One page of `users`, filtered server-side and ordered newest first, plus the filtered total.
+ *
+ * Page 1 and any page whose predecessor's cursor is known read exactly `pageSize` documents.
+ * A page reached without one (a `?page=N` URL, the "last page" button) reads the N pages up to
+ * it in one query and records every cursor on the way, so moving around from there is cheap
+ * again. The total is a `getCountFromServer` over the same filters (no orderBy/limit).
+ */
+async function fetchListPage(
+  filterConstraints: QueryConstraint[],
+  page: number,
+  pageSize: number,
+  cursors: PageCursors = new Map()
+): Promise<ListPageResult> {
+  const usersRef = collection(db, USERS_COLLECTION);
+  const ordered = [...filterConstraints, orderBy("createdAt", "desc")];
+  const before = page > 1 ? cursors.get(page - 1) : undefined;
+  const direct = page === 1 || before !== undefined;
+
+  const pageQuery = direct
+    ? query(usersRef, ...ordered, ...(before ? [startAfter(before)] : []), limit(pageSize))
+    : query(usersRef, ...ordered, limit(page * pageSize));
+
+  const [snapshot, count] = await Promise.all([
+    getDocs(pageQuery),
+    getCountFromServer(query(usersRef, ...filterConstraints)),
+  ]);
+
+  const nextCursors: PageCursors = new Map(cursors);
+  let docs: QueryDocumentSnapshot[];
+  if (direct) {
+    docs = snapshot.docs;
+  } else {
+    // Every full page read on the way is a cursor for later.
+    for (let p = 1; p < page && p * pageSize <= snapshot.docs.length; p++) {
+      nextCursors.set(p, snapshot.docs[p * pageSize - 1]);
+    }
+    docs = snapshot.docs.slice((page - 1) * pageSize);
+  }
+  if (docs.length > 0) nextCursors.set(page, docs[docs.length - 1]);
+
+  return { docs, total: count.data().count, cursors: nextCursors };
+}
+
+/** Doc id last, so a stray id/uid field in the data never wins over the document's own id. */
+const toAdminRecord = <T>(d: QueryDocumentSnapshot): T =>
+  ({ ...convertTimestamps(d.data()), id: d.id, uid: d.id }) as T;
+
+/** The `searchTokens` constraint for a search box value, or none when there is nothing to find. */
+function searchConstraint(search: string | undefined): QueryConstraint[] {
+  const token = search ? normalizeSearchQuery(search) : "";
+  return token ? [where("searchTokens", "array-contains", token)] : [];
+}
+
+/** `isSuspended` is on every user document (P0-9 backfill + the admin-index trigger). */
+function suspensionConstraint(status: string | undefined): QueryConstraint[] {
+  if (status === "active") return [where("isSuspended", "==", false)];
+  if (status === "suspended") return [where("isSuspended", "==", true)];
+  return [];
+}
+
+/**
+ * The Firestore filters of a users list query. Each combination has its composite index in
+ * firestore.indexes.json (scripts/verify-admin-list-indexes.mjs checks the shapes).
+ */
+export function userListConstraints(filters: UserFilters): QueryConstraint[] {
+  const constraints: QueryConstraint[] = [
+    // "hidden" (soft-deleted or seeded demo, see hiddenAccountKind) is the only way to reach
+    // those accounts — which the bulk delete needs; every other status excludes them.
+    where("adminHidden", "==", filters.status === "hidden"),
+  ];
+  if (filters.role && filters.role !== "all") constraints.push(where("role", "==", filters.role));
+  constraints.push(...suspensionConstraint(filters.status));
+  constraints.push(...searchConstraint(filters.search));
+  if (filters.dateFrom) constraints.push(where("createdAt", ">=", Timestamp.fromDate(filters.dateFrom)));
+  if (filters.dateTo) constraints.push(where("createdAt", "<=", Timestamp.fromDate(filters.dateTo)));
+  return constraints;
+}
+
+// Get users with filters — one page, filtered, searched and counted server-side.
 export async function getUsers(
-  filters: UserFilters
-): Promise<{ users: AdminUser[]; total: number }> {
+  filters: UserFilters,
+  cursors?: PageCursors
+): Promise<{ users: AdminUser[]; total: number; cursors: PageCursors }> {
   try {
-    const constraints: QueryConstraint[] = [];
-
-    if (filters.role && filters.role !== "all") {
-      constraints.push(where("role", "==", filters.role));
-    }
-
-    constraints.push(orderBy("createdAt", "desc"));
-
-    const q = query(collection(db, USERS_COLLECTION), ...constraints);
-    const snapshot = await getDocs(q);
-
-    // "hidden" is the only way to reach these accounts — which the bulk delete needs.
-    const wantHidden = filters.status === "hidden";
-    let users = snapshot.docs
-      .filter((doc) => isHiddenAccount(doc.id, doc.data()) === wantHidden)
-      .map((doc) => ({
-        // Spread first, doc id last: a stray `id`/`uid` field stored in the document data
-        // must never win over the document's own id — otherwise the row's checkbox and
-        // quick actions could silently act on a different account than the one displayed.
-        ...convertTimestamps(doc.data()),
-        id: doc.id,
-        uid: doc.id,
-      })) as AdminUser[];
-
-    // Client-side: most user docs have no isSuspended field, so `where` would miss them.
-    if (filters.status === "active") {
-      users = users.filter((u) => u.isSuspended !== true);
-    } else if (filters.status === "suspended") {
-      users = users.filter((u) => u.isSuspended === true);
-    }
-
-    // Client-side filtering for search
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
-      users = users.filter(
-        (u) =>
-          u.fullName?.toLowerCase().includes(searchLower) ||
-          u.email?.toLowerCase().includes(searchLower) ||
-          u.phone?.toLowerCase().includes(searchLower)
-      );
-    }
-
-    // Date filtering (createdAt is already converted to Date by convertTimestamps)
-    if (filters.dateFrom) {
-      users = users.filter((u) => (u.createdAt as unknown as Date) >= filters.dateFrom!);
-    }
-    if (filters.dateTo) {
-      users = users.filter((u) => (u.createdAt as unknown as Date) <= filters.dateTo!);
-    }
-
-    const total = users.length;
-
-    // Pagination
-    const page = filters.page || 1;
-    const pageSize = filters.limit || 20;
-    const start = (page - 1) * pageSize;
-    users = users.slice(start, start + pageSize);
-
-    return { users, total };
+    const result = await fetchListPage(
+      userListConstraints(filters),
+      filters.page || 1,
+      filters.limit || 20,
+      cursors
+    );
+    return {
+      users: result.docs.map((d) => toAdminRecord<AdminUser>(d)),
+      total: result.total,
+      cursors: result.cursors,
+    };
   } catch (error) {
     console.error("Error fetching users:", error);
     throw error;
@@ -377,80 +424,43 @@ export function providerVerificationState(record: {
   return isProviderVerified(record) ? "verified" : "pending";
 }
 
-/** Provider documents carry the same suspension flag as every user document. */
-type SuspendableProvider = AdminProvider & { isSuspended?: boolean };
+/** Every value `providerVerification` takes for a provider or applicant (null otherwise). */
+const PROVIDER_VERIFICATION_STATES: ProviderVerificationState[] = ["verified", "pending", "rejected"];
 
-const createdAtMillis = (value: unknown): number =>
-  value instanceof Date ? value.getTime() : Number.NEGATIVE_INFINITY;
+/**
+ * The Firestore filters of a providers list query. `providerVerification` is derived by the
+ * admin-index trigger with the same rule as providerVerificationState, so the "pending" filter
+ * and the verification queue (getPendingVerifications) always name the same people.
+ */
+export function providerListConstraints(filters: ProviderFilters): QueryConstraint[] {
+  const wanted = filters.verificationStatus ?? "all";
+  return [
+    where("adminHidden", "==", false),
+    wanted === "all"
+      ? where("providerVerification", "in", PROVIDER_VERIFICATION_STATES)
+      : where("providerVerification", "==", wanted),
+    ...suspensionConstraint(filters.status),
+    ...searchConstraint(filters.search),
+  ];
+}
 
-// Get providers with filters
+// Get providers with filters — providers and applicants, one page, server-side.
 export async function getProviders(
-  filters: ProviderFilters
-): Promise<{ providers: AdminProvider[]; total: number }> {
+  filters: ProviderFilters,
+  cursors?: PageCursors
+): Promise<{ providers: AdminProvider[]; total: number; cursors: PageCursors }> {
   try {
-    const wanted = filters.verificationStatus ?? "all";
-    const users = collection(db, USERS_COLLECTION);
-
-    // Two sources, because providers and applicants live under different roles:
-    //  - role == 'provider': the actual providers (verified, or awaiting verification);
-    //  - providerStatus pending/rejected: applicants, who stay `role: 'customer'` until a
-    //    decision promotes them — a role-only query made "pending"/"rejected" unreachable.
-    // Neither query has an orderBy: it would drop every document without `createdAt`, and the
-    // two result sets have to be merged and sorted in memory anyway. Both are single-field
-    // equality/`in` filters, served by Firestore's automatic indexes.
-    const reads: Promise<Awaited<ReturnType<typeof getDocs>>>[] = [];
-    if (wanted !== "rejected") {
-      reads.push(getDocs(query(users, where("role", "==", "provider"))));
-    }
-    if (wanted !== "verified") {
-      const statuses = wanted === "all" ? ["pending", "rejected"] : [wanted];
-      reads.push(getDocs(query(users, where("providerStatus", "in", statuses))));
-    }
-    const snapshots = await Promise.all(reads);
-
-    const byId = new Map<string, AdminProvider>();
-    for (const snapshot of snapshots) {
-      for (const d of snapshot.docs) {
-        if (byId.has(d.id) || isHiddenAccount(d.id, d.data())) continue;
-        // Doc id last, so a stray id/uid field in the data never wins (same as getUsers).
-        byId.set(d.id, { ...convertTimestamps(d.data()), id: d.id, uid: d.id } as AdminProvider);
-      }
-    }
-    let providers: SuspendableProvider[] = [...byId.values()].sort(
-      (a, b) => createdAtMillis(b.createdAt) - createdAtMillis(a.createdAt)
+    const result = await fetchListPage(
+      providerListConstraints(filters),
+      filters.page || 1,
+      filters.limit || 20,
+      cursors
     );
-
-    if (wanted !== "all") {
-      providers = providers.filter((p) => providerVerificationState(p) === wanted);
-    }
-
-    // Same semantics as getUsers: most documents carry no isSuspended field at all, so this
-    // is filtered in memory rather than with a Firestore `where` that would miss them.
-    if (filters.status === "active") {
-      providers = providers.filter((p) => p.isSuspended !== true);
-    } else if (filters.status === "suspended") {
-      providers = providers.filter((p) => p.isSuspended === true);
-    }
-
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
-      providers = providers.filter(
-        (p) =>
-          p.fullName?.toLowerCase().includes(searchLower) ||
-          p.email?.toLowerCase().includes(searchLower) ||
-          p.phone?.toLowerCase().includes(searchLower)
-      );
-    }
-
-    const total = providers.length;
-
-    // Pagination
-    const page = filters.page || 1;
-    const pageSize = filters.limit || 20;
-    const start = (page - 1) * pageSize;
-    providers = providers.slice(start, start + pageSize);
-
-    return { providers, total };
+    return {
+      providers: result.docs.map((d) => toAdminRecord<AdminProvider>(d)),
+      total: result.total,
+      cursors: result.cursors,
+    };
   } catch (error) {
     console.error("Error fetching providers:", error);
     throw error;

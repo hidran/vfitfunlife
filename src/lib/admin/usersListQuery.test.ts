@@ -19,6 +19,15 @@ describe('users list query', () => {
     expect(filters).toEqual(DEFAULT_USER_FILTERS);
   });
 
+  it('round-trips an allowed page size and ignores any other', () => {
+    const filters = { ...DEFAULT_USER_FILTERS, limit: 5, page: 2 };
+    const qs = queryFromFilters(filters);
+    expect(qs).toBe('page=2&size=5');
+    expect(filtersFromParams(new URLSearchParams(qs))).toEqual(filters);
+    expect(filtersFromParams(new URLSearchParams('size=7')).limit).toBe(20);
+    expect(filtersFromParams(new URLSearchParams('size=100000')).limit).toBe(20);
+  });
+
   it('round-trips the hidden status', () => {
     const filters = { ...DEFAULT_USER_FILTERS, status: 'hidden' as const };
     expect(filtersFromParams(new URLSearchParams(queryFromFilters(filters)))).toEqual(filters);

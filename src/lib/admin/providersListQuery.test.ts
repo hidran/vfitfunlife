@@ -24,6 +24,12 @@ describe('providers list query', () => {
     expect(providerFiltersFromParams(new URLSearchParams(qs))).toEqual(filters);
   });
 
+  it('round-trips an allowed page size', () => {
+    const filters = { ...DEFAULT_PROVIDER_FILTERS, limit: 10 };
+    expect(queryFromProviderFilters(filters)).toBe('size=10');
+    expect(providerFiltersFromParams(new URLSearchParams('size=10'))).toEqual(filters);
+  });
+
   it('ignores values it does not recognise rather than passing them to the query', () => {
     expect(
       providerFiltersFromParams(new URLSearchParams('verification=maybe&status=hidden&page=0'))

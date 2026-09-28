@@ -31,7 +31,10 @@ const mockAdminState = {
   exportDataAction: vi.fn(),
   clearError: vi.fn(),
 };
-vi.mock('@/stores/adminStore', () => ({ useAdminStore: () => mockAdminState }));
+// The views subscribe through a selector (useShallow): run it, so a field it forgets fails here.
+vi.mock('@/stores/adminStore', () => ({
+  useAdminStore: (selector: (s: typeof mockAdminState) => unknown) => selector(mockAdminState),
+}));
 
 const mockAuthState = { user: { id: 'admin1', role: 'superadmin' } };
 vi.mock('@/stores/authStore', () => ({

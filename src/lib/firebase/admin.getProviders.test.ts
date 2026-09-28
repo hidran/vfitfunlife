@@ -3,49 +3,24 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('./config', () => ({ auth: {}, db: {}, functions: {} }));
 vi.mock('./functions', () => ({ cancelBooking: vi.fn() }));
 vi.mock('firebase/functions', () => ({ httpsCallable: vi.fn() }));
+vi.mock('firebase/firestore', async () => (await import('./adminListFake.testutil')).firestoreFake);
 
-type Where = { field: string; op: string; value: unknown };
-vi.mock('firebase/firestore', () => ({
-  collection: vi.fn(() => ({})),
-  // The fake query is just its constraints; getDocs below evaluates them against `docs`.
-  query: vi.fn((_ref: unknown, ...constraints: Where[]) => ({ constraints })),
-  where: vi.fn((field: string, op: string, value: unknown) => ({ field, op, value })),
-  orderBy: vi.fn(),
-  limit: vi.fn(),
-  getDocs: vi.fn(),
-  getDoc: vi.fn(),
-  doc: vi.fn(),
-  updateDoc: vi.fn(),
-  setDoc: vi.fn(),
-  Timestamp: class {},
-  startAfter: vi.fn(),
-  writeBatch: vi.fn(),
-  addDoc: vi.fn(),
-  serverTimestamp: vi.fn(),
-}));
+import { where } from 'firebase/firestore';
+import { fakeDb, seedUsers } from './adminListFake.testutil';
+import { getPendingVerifications, getProviders, providerVerificationState } from './admin';
 
-import { getDocs, where } from 'firebase/firestore';
-import { getProviders, providerVerificationState } from './admin';
-
-let docs: Record<string, Record<string, unknown>> = {};
-
-function matches(data: Record<string, unknown>, c: Where): boolean {
-  const actual = data[c.field];
-  if (c.op === '==') return actual === c.value;
-  if (c.op === 'in') return (c.value as unknown[]).includes(actual);
-  throw new Error(`unsupported op ${c.op}`);
-}
+const day = (n: number) => new Date(Date.UTC(2026, 0, n));
 
 beforeEach(() => {
   vi.clearAllMocks();
-  docs = {
+  seedUsers({
     verifiedPro: {
       fullName: 'Vera Verificata',
       email: 'vera@example.com',
       role: 'provider',
       providerStatus: 'verified',
       providerProfile: { isVerified: true },
-      createdAt: new Date('2026-01-03'),
+      createdAt: day(3),
     },
     // Legacy provider: no providerStatus at all, verified through the flat flag.
     legacyVerified: {
@@ -53,7 +28,7 @@ beforeEach(() => {
       email: 'luca@example.com',
       role: 'provider',
       isVerified: true,
-      createdAt: new Date('2026-01-01'),
+      createdAt: day(1),
     },
     suspendedPro: {
       fullName: 'Sara Sospesa',
@@ -61,43 +36,33 @@ beforeEach(() => {
       role: 'provider',
       providerProfile: { isVerified: true },
       isSuspended: true,
-      createdAt: new Date('2026-01-02'),
+      createdAt: day(2),
     },
     // A provider no one has verified yet: pending, even with no providerStatus.
     unverifiedPro: {
       fullName: 'Ugo Nonverificato',
       email: 'ugo@example.com',
       role: 'provider',
-      createdAt: new Date('2026-01-04'),
+      createdAt: day(4),
     },
-    // Applicants stay role 'customer' until a decision — the rows the role query never saw.
+    // Applicants stay role 'customer' until a decision — still listed as providers.
     applicant: {
       fullName: 'Paola Pendente',
       email: 'paola@example.com',
       role: 'customer',
       providerStatus: 'pending',
-      createdAt: new Date('2026-01-05'),
+      createdAt: day(5),
     },
     rejectedApplicant: {
       fullName: 'Rita Respinta',
       email: 'rita@example.com',
       role: 'customer',
       providerStatus: 'rejected',
-      // No createdAt: must still show up, sorted last.
+      createdAt: day(0),
     },
-    plainCustomer: { fullName: 'Carlo Cliente', email: 'carlo@example.com', role: 'customer' },
-    hiddenPro: {
-      fullName: 'Demo',
-      email: 'demo@example.com',
-      role: 'provider',
-      isDeleted: true,
-    },
-  };
-  vi.mocked(getDocs).mockImplementation((async (q: { constraints: Where[] }) => ({
-    docs: Object.entries(docs)
-      .filter(([, data]) => q.constraints.every((c) => matches(data, c)))
-      .map(([id, data]) => ({ id, data: () => data })),
-  })) as never);
+    plainCustomer: { fullName: 'Carlo Cliente', email: 'carlo@example.com', role: 'customer', createdAt: day(6) },
+    hiddenPro: { fullName: 'Demo', email: 'demo@example.com', role: 'provider', isDeleted: true, createdAt: day(7) },
+  });
 });
 
 const ids = (r: { providers: { id: string }[] }) => r.providers.map((p) => p.id);
@@ -125,28 +90,34 @@ describe('getProviders', () => {
       'rejectedApplicant',
     ]);
     expect(result.total).toBe(6);
+    expect(where).toHaveBeenCalledWith('providerVerification', 'in', ['verified', 'pending', 'rejected']);
   });
 
   it('verification=pending includes applicants who are still customers', async () => {
     const result = await getProviders({ verificationStatus: 'pending' });
 
     expect(ids(result)).toEqual(['applicant', 'unverifiedPro']);
-    expect(where).toHaveBeenCalledWith('providerStatus', 'in', ['pending']);
+    expect(where).toHaveBeenCalledWith('providerVerification', '==', 'pending');
+  });
+
+  it('the pending filter and the verification queue name the same people', async () => {
+    // getPendingVerifications reads by role/providerStatus (no derived field): the two
+    // paths must still agree.
+    const queue = (await getPendingVerifications()).map((p) => p.id).sort();
+    const listed = ids(await getProviders({ verificationStatus: 'pending' })).sort();
+    expect(listed).toEqual(queue);
   });
 
   it('verification=rejected shows only rejections, never pending ones', async () => {
-    const result = await getProviders({ verificationStatus: 'rejected' });
-
-    expect(ids(result)).toEqual(['rejectedApplicant']);
-    // Rejected applicants are not providers: the role query is not needed at all.
-    expect(where).not.toHaveBeenCalledWith('role', '==', 'provider');
+    expect(ids(await getProviders({ verificationStatus: 'rejected' }))).toEqual(['rejectedApplicant']);
   });
 
   it('verification=verified keeps verified providers, including legacy flat-flag ones', async () => {
-    const result = await getProviders({ verificationStatus: 'verified' });
-
-    expect(ids(result)).toEqual(['verifiedPro', 'suspendedPro', 'legacyVerified']);
-    expect(where).not.toHaveBeenCalledWith('providerStatus', 'in', expect.anything());
+    expect(ids(await getProviders({ verificationStatus: 'verified' }))).toEqual([
+      'verifiedPro',
+      'suspendedPro',
+      'legacyVerified',
+    ]);
   });
 
   it('applies the status filter with the same semantics as getUsers', async () => {
@@ -162,21 +133,29 @@ describe('getProviders', () => {
     ]);
   });
 
-  it('searches name and email, case-insensitively', async () => {
+  it('searches name and email prefixes, case-insensitively', async () => {
     expect(ids(await getProviders({ search: 'PAOLA' }))).toEqual(['applicant']);
     expect(ids(await getProviders({ search: 'rita@' }))).toEqual(['rejectedApplicant']);
+    expect(ids(await getProviders({ search: 'pend' }))).toEqual(['applicant']);
+    expect(ids(await getProviders({ search: 'carlo' }))).toEqual([]); // a customer, not a provider
     expect(ids(await getProviders({ search: 'nobody' }))).toEqual([]);
   });
 
-  it('paginates after filtering and reports the filtered total', async () => {
-    const result = await getProviders({ page: 2, limit: 4 });
+  it('pages server-side and reports the filtered total', async () => {
+    fakeDb.reads = 0;
+    const first = await getProviders({ page: 1, limit: 4 });
+    expect(ids(first)).toEqual(['applicant', 'unverifiedPro', 'verifiedPro', 'suspendedPro']);
+    expect(fakeDb.reads).toBe(4);
 
-    expect(ids(result)).toEqual(['legacyVerified', 'rejectedApplicant']);
-    expect(result.total).toBe(6);
+    fakeDb.reads = 0;
+    const second = await getProviders({ page: 2, limit: 4 }, first.cursors);
+    expect(ids(second)).toEqual(['legacyVerified', 'rejectedApplicant']);
+    expect(second.total).toBe(6);
+    expect(fakeDb.reads).toBe(2);
   });
 
   it('uses the doc id even when the data carries a stray id/uid', async () => {
-    docs = { real: { role: 'provider', fullName: 'Real', id: 'other', uid: 'other' } };
+    seedUsers({ real: { role: 'provider', fullName: 'Real', id: 'other', uid: 'other', createdAt: day(1) } });
     const [provider] = (await getProviders({})).providers;
 
     expect(provider.id).toBe('real');

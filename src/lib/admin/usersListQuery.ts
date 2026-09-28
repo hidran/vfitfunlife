@@ -11,6 +11,18 @@ export const DEFAULT_USER_FILTERS: UserFilters = {
 const ROLES = ['all', 'superadmin', 'admin', 'provider', 'customer'] as const;
 const STATUSES = ['all', 'active', 'suspended', 'hidden'] as const;
 
+/**
+ * Page sizes a list URL may ask for (`?size=`); anything else falls back to the default 20.
+ * Pages are server-side (one limit(size) query per page), so the size is bounded.
+ */
+export const PAGE_SIZES = [5, 10, 20, 50, 100] as const;
+export const DEFAULT_PAGE_SIZE = 20;
+
+export function pageSizeFromParams(params: URLSearchParams): number {
+  const size = Number(params.get('size'));
+  return (PAGE_SIZES as readonly number[]).includes(size) ? size : DEFAULT_PAGE_SIZE;
+}
+
 /** sessionStorage key holding the list's last query, so leaving a user's page returns to it. */
 export const USERS_LIST_QUERY_KEY = 'admin.users.listQuery';
 
@@ -30,6 +42,7 @@ export function filtersFromParams(params: URLSearchParams): UserFilters {
       ? (status as UserFilters['status'])
       : 'all',
     page: Number.isInteger(page) && page > 1 ? page : 1,
+    limit: pageSizeFromParams(params),
   };
 }
 
@@ -40,6 +53,7 @@ export function queryFromFilters(filters: UserFilters): string {
   if (filters.role && filters.role !== 'all') params.set('role', filters.role);
   if (filters.status && filters.status !== 'all') params.set('status', filters.status);
   if (filters.page && filters.page > 1) params.set('page', String(filters.page));
+  if (filters.limit && filters.limit !== DEFAULT_PAGE_SIZE) params.set('size', String(filters.limit));
   return params.toString();
 }
 
