@@ -4,6 +4,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/hooks/useI18n";
+import { PAGE_SIZE_OPTIONS } from "@/lib/admin/usersListQuery";
 import {
   ChevronLeft,
   ChevronRight,
@@ -369,24 +370,51 @@ export function DataTable<T>({
         </table>
       </div>
 
-      {/* Pagination */}
-      {pagination && pagination.totalPages > 1 && (
-        <div className="px-4 py-3 border-t border-hairline flex items-center justify-between">
-          <div className="text-sm text-content-muted">
-            {t('admin.table.showing', {
-              from: (pagination.currentPage - 1) * pagination.pageSize + 1,
-              to: Math.min(pagination.currentPage * pagination.pageSize, pagination.totalItems),
-              total: pagination.totalItems,
-            })}
+      {/* Pagination. Shown with a single page too when the page size can be changed and a
+          smaller size would split the list — otherwise the selector could never be reached. */}
+      {pagination &&
+        (pagination.totalPages > 1 ||
+          (pagination.onPageSizeChange !== undefined &&
+            pagination.totalItems > PAGE_SIZE_OPTIONS[0])) && (
+        <div className="px-4 py-3 border-t border-hairline flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="text-sm text-content-muted">
+              {t('admin.table.showing', {
+                from: pagination.totalItems === 0 ? 0 : (pagination.currentPage - 1) * pagination.pageSize + 1,
+                to: Math.min(pagination.currentPage * pagination.pageSize, pagination.totalItems),
+                total: pagination.totalItems,
+              })}
+            </div>
+            {pagination.onPageSizeChange && (
+              <label className="flex items-center gap-2 text-sm text-content-muted">
+                <span>{t('admin.table.pageSize')}</span>
+                <select
+                  value={pagination.pageSize}
+                  onChange={(e) => pagination.onPageSizeChange?.(Number(e.target.value))}
+                  className="touch-target px-3 bg-surface-elevated border border-hairline rounded-lg text-content text-sm focus:outline-none focus:border-[#00C9FF]/50"
+                >
+                  {/* A ?size= outside the offered sizes (e.g. 5) still shows as selected. */}
+                  {[...new Set<number>([...PAGE_SIZE_OPTIONS, pagination.pageSize])]
+                    .sort((a, b) => a - b)
+                    .map((size) => (
+                      <option key={size} value={size}>
+                        {size}
+                      </option>
+                    ))}
+                </select>
+              </label>
+            )}
           </div>
 
+          {pagination.totalPages > 1 && (
           <div className="flex items-center gap-1">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => pagination.onPageChange(1)}
               disabled={pagination.currentPage === 1}
-              className="text-content-muted hover:text-content disabled:opacity-30"
+              aria-label={t('admin.table.firstPage')}
+              className="touch-target px-2 text-content-muted hover:text-content disabled:opacity-30"
             >
               <ChevronsLeft className="w-4 h-4" />
             </Button>
@@ -395,7 +423,8 @@ export function DataTable<T>({
               size="sm"
               onClick={() => pagination.onPageChange(pagination.currentPage - 1)}
               disabled={pagination.currentPage === 1}
-              className="text-content-muted hover:text-content disabled:opacity-30"
+              aria-label={t('admin.table.previousPage')}
+              className="touch-target px-2 text-content-muted hover:text-content disabled:opacity-30"
             >
               <ChevronLeft className="w-4 h-4" />
             </Button>
@@ -409,7 +438,8 @@ export function DataTable<T>({
               size="sm"
               onClick={() => pagination.onPageChange(pagination.currentPage + 1)}
               disabled={pagination.currentPage === pagination.totalPages}
-              className="text-content-muted hover:text-content disabled:opacity-30"
+              aria-label={t('admin.table.nextPage')}
+              className="touch-target px-2 text-content-muted hover:text-content disabled:opacity-30"
             >
               <ChevronRight className="w-4 h-4" />
             </Button>
@@ -418,11 +448,13 @@ export function DataTable<T>({
               size="sm"
               onClick={() => pagination.onPageChange(pagination.totalPages)}
               disabled={pagination.currentPage === pagination.totalPages}
-              className="text-content-muted hover:text-content disabled:opacity-30"
+              aria-label={t('admin.table.lastPage')}
+              className="touch-target px-2 text-content-muted hover:text-content disabled:opacity-30"
             >
               <ChevronsRight className="w-4 h-4" />
             </Button>
           </div>
+          )}
         </div>
       )}
     </div>

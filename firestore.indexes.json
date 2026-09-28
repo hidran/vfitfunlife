@@ -318,6 +318,63 @@
         { "fieldPath": "finalPrice", "order": "ASCENDING" }
       ]
     },
+    // Admin bookings list (bookingListConstraints in src/lib/firebase/admin.ts): one
+    // (equality field, scheduledAt desc) index per filter — status, the "disputed" pseudo-status,
+    // the customer-email search — next to the existing (userId|instructorId, scheduledAt desc)
+    // ones above. Combinations of filters (status + customer, + date range, …) are served by
+    // Firestore merging these, not by one index per combination; the page and its count both
+    // order by scheduledAt desc, so a date range needs no ascending twin. Checked with
+    // scripts/verify-admin-list-indexes.mjs.
+    {
+      "collectionGroup": "bookings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "scheduledAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "bookings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "paymentConfirmation.clientResponse", "order": "ASCENDING" },
+        { "fieldPath": "scheduledAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "bookings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userEmail", "order": "ASCENDING" },
+        { "fieldPath": "scheduledAt", "order": "DESCENDING" }
+      ]
+    },
+    // Admin system logs (logListConstraints): severity, action and actor (`by`) filters over
+    // timestamp desc, merged the same way for combinations.
+    {
+      "collectionGroup": "systemLogs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "severity", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "systemLogs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "action", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "systemLogs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "by", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    },
     {
       "collectionGroup": "recipes",
       "queryScope": "COLLECTION",

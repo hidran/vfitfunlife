@@ -12,15 +12,41 @@ const ROLES = ['all', 'superadmin', 'admin', 'provider', 'customer'] as const;
 const STATUSES = ['all', 'active', 'suspended', 'hidden'] as const;
 
 /**
- * Page sizes a list URL may ask for (`?size=`); anything else falls back to the default 20.
+ * Page sizes a list URL may ask for (`?size=`); anything else falls back to the list's default.
  * Pages are server-side (one limit(size) query per page), so the size is bounded.
  */
 export const PAGE_SIZES = [5, 10, 20, 50, 100] as const;
 export const DEFAULT_PAGE_SIZE = 20;
+/** What the admin tables' page-size selector offers (a subset of PAGE_SIZES). */
+export const PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
 
-export function pageSizeFromParams(params: URLSearchParams): number {
+export function pageSizeFromParams(params: URLSearchParams, fallback: number = DEFAULT_PAGE_SIZE): number {
   const size = Number(params.get('size'));
-  return (PAGE_SIZES as readonly number[]).includes(size) ? size : DEFAULT_PAGE_SIZE;
+  return (PAGE_SIZES as readonly number[]).includes(size) ? size : fallback;
+}
+
+/** `?page=` as a positive integer, 1 for anything else. */
+export function pageFromParams(params: URLSearchParams): number {
+  const page = Number(params.get('page'));
+  return Number.isInteger(page) && page > 1 ? page : 1;
+}
+
+/** `yyyy-mm-dd` of a date in local time — what an <input type="date"> and our URLs carry. */
+export function toDateParam(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+/**
+ * A `yyyy-mm-dd` URL value as a local Date: the start of that day, or with `endOfDay` its
+ * last millisecond (so a "to" date includes the whole day). Malformed values give undefined.
+ */
+export function fromDateParam(value: string | null, endOfDay = false): Date | undefined {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value ?? '');
+  if (!m) return undefined;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]) - 1, Number(m[3])];
+  const date = endOfDay ? new Date(y, mo, d, 23, 59, 59, 999) : new Date(y, mo, d);
+  return date.getFullYear() === y && date.getMonth() === mo && date.getDate() === d ? date : undefined;
 }
 
 /** sessionStorage key holding the list's last query, so leaving a user's page returns to it. */

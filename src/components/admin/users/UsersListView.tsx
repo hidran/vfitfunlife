@@ -557,6 +557,10 @@ export function UsersListView() {
           totalItems: usersTotal,
           pageSize: filters.limit || 20,
           onPageChange: handlePageChange,
+          onPageSizeChange: (limit) => {
+            setFilters((prev) => ({ ...prev, limit, page: 1 }));
+            setSelectedIds([]);
+          },
         }}
         emptyMessage={t('admin.users.empty')}
       />
