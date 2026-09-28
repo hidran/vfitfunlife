@@ -177,6 +177,11 @@
   --color-text-secondary: #4B5563;
   --color-text-tertiary: #6B7280;
   --glass-bg: rgba(255, 255, 255, 0.8);
+  /* Semantic text on white: the dark-theme hues are ~2.5:1, darken to AA. */
+  --color-success: #047857;
+  --color-warning: #B45309;
+  --color-error: #DC2626;
+  --color-info: #1D4ED8;
   color-scheme: light;
 }
 
@@ -205,6 +210,12 @@
   --section-secondary: var(--color-vlife-secondary);
   --section-accent: var(--color-vlife-accent);
   --section-gradient: linear-gradient(135deg, #00E676 0%, #76FF03 50%, #FFD600 100%);
+}
+
+/* Inline so utilities read --section-primary at the element (sections set it
+   on nested wrappers), enabling ring-section-primary, bg-section-primary/20 … */
+@theme inline {
+  --color-section-primary: var(--section-primary);
 }
 
 @theme {
@@ -270,6 +281,14 @@
 
   --color-info-DEFAULT: #3B82F6;
   --color-info-light: #DBEAFE;
+
+  /* Bare names so `text-error`, `bg-success/10`, `border-warning/40` … exist:
+     Tailwind v4 does not treat a `-DEFAULT` suffix as the bare color. */
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
+  --color-info: #3B82F6;
+  --color-border: var(--color-hairline);
 
   /* VIP Gold */
   --color-vip-gold: #FFD700;
@@ -494,6 +513,11 @@
   /* Section-aware primary color */
   .text-section-primary {
     color: var(--section-primary);
+  }
+
+  /* Section accents are ~1.6–2.5:1 on white; darken the text for AA in light. */
+  [data-theme='light'] .text-section-primary:not([class*='light:text-']) {
+    color: color-mix(in oklab, var(--section-primary) 55%, black);
   }
 
   .bg-section-primary {
