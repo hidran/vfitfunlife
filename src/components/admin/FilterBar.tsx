@@ -98,7 +98,7 @@ export function FilterBar({
               <Filter className="w-4 h-4" />
               {t('admin.filter.filters')}
               {filters.some((f) => f.value && f.value !== "all") && (
-                <span className="ml-1 w-5 h-5 rounded-full bg-[#00C9FF] text-white text-xs flex items-center justify-center">
+                <span className="ml-1 w-5 h-5 rounded-full bg-[#00C9FF] text-[#0B1220] text-xs font-semibold flex items-center justify-center">
                   {filters.filter((f) => f.value && f.value !== "all").length}
                 </span>
               )}
