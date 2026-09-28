@@ -23,7 +23,7 @@ import {
   type UserOutcome,
 } from "./bulkDeleteJob";
 
-const region = "europe-west1";
+import { region } from "../lib/runtimeOptions";
 export const MAX_BULK_DELETE = 500;
 /** Attempts (including the first) before a job gives up on its still-failing uids. */
 export const MAX_ATTEMPTS = 3;

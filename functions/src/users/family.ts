@@ -2,7 +2,7 @@ import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https
 import * as admin from "firebase-admin";
 import { awardXp } from "./gamification";
 
-const region = process.env.FIREBASE_REGION || "europe-west1";
+import { region } from "../lib/runtimeOptions";
 const db = admin.firestore();
 
 const MAX_MEMBERS = 8;

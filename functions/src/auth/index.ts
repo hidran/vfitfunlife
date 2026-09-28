@@ -8,7 +8,7 @@ import { resolveEmailVerified } from "./emailVerification";
 export { syncEmailVerification } from "./emailVerification";
 
 const db = admin.firestore();
-const region = process.env.FIREBASE_REGION || "europe-west1";
+import { region } from "../lib/runtimeOptions";
 
 interface ReferralData {
   referralCode: string;

@@ -10,7 +10,7 @@ import { getUserRoleInfo } from "../../utils/roles";
 import { trainingProgramSchema, trainingParamsSchema } from "./schemas";
 import { buildTrainingPrompt, ClientGoalLite, PromptContext } from "./prompts";
 
-const region = process.env.FIREBASE_REGION || "europe-west1";
+import { region } from "../../lib/runtimeOptions";
 const BUCKET = "ai_authoring_usage";
 
 interface GenReq { clientId: string; locale?: string; params: unknown; }
@@ -87,7 +87,7 @@ async function runGeneration<T extends z.ZodObject<z.ZodRawShape>, P>(opts: {
   let object: z.infer<T>;
   try {
     const res = await generateObject({
-      model: buildModel(settings.provider, settings.model),
+      model: await buildModel(settings.provider, settings.model),
       schema: opts.outputSchema,
       prompt,
       temperature: settings.temperature,

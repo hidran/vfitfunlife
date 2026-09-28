@@ -4,7 +4,7 @@ import { requireSuperAdmin } from "../utils/roles";
 import { writeAuditLog } from "../lib/audit";
 import { withAncestors } from "./tree";
 
-const region = process.env.FIREBASE_REGION || "europe-west1";
+import { region } from "../lib/runtimeOptions";
 const MAX_BATCH = 400;
 
 interface MergeData {

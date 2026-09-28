@@ -107,7 +107,7 @@ export const chatWithAssistant = onCall<ChatRequest>(
     const collectedCards: ResultCard[] = [];
 
     const result = streamText({
-      model: buildModel(settings.provider, settings.model),
+      model: await buildModel(settings.provider, settings.model),
       system,
       messages: [...history, { role: "user", content: message }],
       tools,

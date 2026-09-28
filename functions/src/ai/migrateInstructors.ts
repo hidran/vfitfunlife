@@ -5,7 +5,7 @@ import { writeAuditLog } from "../lib/audit";
 import { normalizeAvailability } from "./search/normalize";
 import { defaultWeeklySchedule } from "./catalog";
 
-const region = process.env.FIREBASE_REGION || "europe-west1";
+import { region } from "../lib/runtimeOptions";
 const MAX_BATCH = 450;
 
 /** Demo cities used to backfill `city` from `serviceAreaCenter`. */

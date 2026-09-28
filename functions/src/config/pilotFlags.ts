@@ -16,7 +16,7 @@ import {
   type PilotFlagValues,
 } from "./pilotFlagSpec";
 
-const region = "europe-west1";
+import { region } from "../lib/runtimeOptions";
 
 /** Remote Config stores every value as a string, whatever its declared valueType. */
 function readParam(template: RemoteConfigTemplate, key: PilotFlagKey): string {

@@ -28,7 +28,7 @@ import {
   MEDICAL_CLEARANCE_NOTE,
 } from "./workoutPlan";
 
-const region = process.env.FIREBASE_REGION || "europe-west1";
+import { region } from "../../lib/runtimeOptions";
 const BUCKET = "ai_authoring_usage";
 
 interface GenReq {
@@ -102,7 +102,7 @@ export const generateWorkoutPlan = onCall<GenReq>(
     let raw;
     try {
       const res = await generateObject({
-        model: buildModel(settings.provider, settings.model),
+        model: await buildModel(settings.provider, settings.model),
         schema: workoutPlanSchema,
         prompt,
         temperature: settings.temperature,

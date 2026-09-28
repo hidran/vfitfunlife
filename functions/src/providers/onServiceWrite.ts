@@ -3,7 +3,7 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { lowestActivePrice, type ServiceLike } from "./lowestPrice";
 import { activeCategoryIds } from "./deriveCategories";
 
-const region = "europe-west1";
+import { region } from "../lib/runtimeOptions";
 
 /** gRPC status code 5: NOT_FOUND. */
 const NOT_FOUND = 5;

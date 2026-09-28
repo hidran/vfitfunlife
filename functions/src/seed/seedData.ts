@@ -21,6 +21,7 @@ import {
   type SpecialtyServiceDef,
 } from "./demoProviderServices";
 import { resolveSeedParts, type DemoSeedPart } from "./seedParts";
+import { region } from "../lib/runtimeOptions";
 
 const db = getFirestore();
 
@@ -2601,7 +2602,7 @@ export async function generateDemoFunActivities(): Promise<{ activities: number 
 export const seedAllData = functions.onRequest(
   {
     cors: true,
-    region: "europe-west1",
+    region,
     maxInstances: 1,
     timeoutSeconds: 300,
   },
@@ -2700,7 +2701,7 @@ export const seedAllData = functions.onRequest(
 export const clearAllData = functions.onRequest(
   {
     cors: true,
-    region: "europe-west1",
+    region,
     maxInstances: 1,
     timeoutSeconds: 300,
   },
@@ -2771,7 +2772,7 @@ export const clearAllData = functions.onRequest(
 export const seedQuickData = functions.onRequest(
   {
     cors: true,
-    region: "europe-west1",
+    region,
     maxInstances: 1,
     timeoutSeconds: 120,
   },
@@ -2866,7 +2867,7 @@ const DEMO_SEED_RUNNERS: Record<DemoSeedPart, () => Promise<SeedingResult[]>> = 
 export const seedDemoData = functions.onRequest(
   {
     cors: true,
-    region: "europe-west1",
+    region,
     maxInstances: 1,
     timeoutSeconds: 540,
     memory: "512MiB",

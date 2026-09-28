@@ -6,7 +6,7 @@ import { normalizeAvailability } from "../ai/search/normalize";
 import { planAvailabilityBackfill } from "./backfillPlan";
 import { DEFAULT_WEEKLY_HOURS } from "./slots";
 
-const region = process.env.FIREBASE_REGION || "europe-west1";
+import { region } from "../lib/runtimeOptions";
 
 interface UserReport {
   uid: string;

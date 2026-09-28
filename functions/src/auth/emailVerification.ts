@@ -2,7 +2,7 @@ import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https
 import * as admin from "firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 
-const region = process.env.FIREBASE_REGION || "europe-west1";
+import { region } from "../lib/runtimeOptions";
 
 /** Sign-in providers that only hand out email addresses they have verified. */
 const EMAIL_VERIFYING_PROVIDERS = new Set(["google.com", "apple.com"]);

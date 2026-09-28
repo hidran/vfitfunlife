@@ -11,7 +11,7 @@ import {
   validateProviderOnboardingUpdate,
 } from "./onboardingSettings";
 
-const region = process.env.FIREBASE_REGION || "europe-west1";
+import { region } from "../lib/runtimeOptions";
 
 /** Cached (60s default TTL) — see the longer note on applyAsProvider.ts's copy of this read. */
 async function readSettings(): Promise<ProviderOnboardingSettings> {

@@ -1,12 +1,8 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
-import Stripe from "stripe";
 import { writeAuditLog } from "../lib/audit";
-
-// Match apiVersion from payments/index.ts to avoid drift across CFs.
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2023-10-16",
-});
+import { region } from "../lib/runtimeOptions";
+import { getStripe } from "../lib/stripeClient";
 
 interface RefundData {
   paymentId: string;
@@ -20,7 +16,7 @@ interface RefundData {
  * writes an audit_logs entry.
  */
 export const adminIssueRefund = onCall<RefundData>(
-  { region: "europe-west1", secrets: ["STRIPE_SECRET_KEY"] },
+  { region, secrets: ["STRIPE_SECRET_KEY"] },
   async (req) => {
     const callerUid = req.auth?.uid;
     if (!callerUid) {
@@ -70,6 +66,7 @@ export const adminIssueRefund = onCall<RefundData>(
       );
     }
 
+    const stripe = await getStripe();
     const refund = await stripe.refunds.create({
       payment_intent: before.stripePaymentIntentId,
       amount: Math.round(amount * 100),

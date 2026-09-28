@@ -10,6 +10,7 @@ import {
   type SocialLinks,
 } from "../types";
 import { auditLogDoc, auditLogData, toActorRole } from "../lib/audit";
+import { region } from "../lib/runtimeOptions";
 
 if (admin.apps.length === 0) admin.initializeApp();
 
@@ -20,7 +21,7 @@ interface UpdateNotificationSettingsData {
 }
 
 export const updateNotificationSettings = onCall<UpdateNotificationSettingsData>(
-  { region: "europe-west1" },
+  { region },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Must be authenticated.");
@@ -75,7 +76,7 @@ export const updateNotificationSettings = onCall<UpdateNotificationSettingsData>
 interface UpdatePrivacySettingsData { settings: PrivacySettings; }
 
 export const updatePrivacySettings = onCall<UpdatePrivacySettingsData>(
-  { region: "europe-west1" },
+  { region },
   async (request) => {
     if (!request.auth) throw new HttpsError("unauthenticated", "Must be authenticated.");
     const parsed = PrivacySettingsSchema.safeParse(request.data?.settings);
@@ -114,7 +115,7 @@ export const updatePrivacySettings = onCall<UpdatePrivacySettingsData>(
 interface UpdateSocialLinksData { socialLinks: SocialLinks; }
 
 export const updateSocialLinks = onCall<UpdateSocialLinksData>(
-  { region: "europe-west1" },
+  { region },
   async (request) => {
     if (!request.auth) throw new HttpsError("unauthenticated", "Must be authenticated.");
     const parsed = SocialLinksSchema.safeParse(request.data?.socialLinks);
@@ -164,7 +165,7 @@ function extractObjectPath(url: string): string | null {
 }
 
 export const updateAvatar = onCall<UpdateAvatarData>(
-  { region: "europe-west1" },
+  { region },
   async (request) => {
     if (!request.auth) throw new HttpsError("unauthenticated", "Must be authenticated.");
     const uid = request.auth.uid;

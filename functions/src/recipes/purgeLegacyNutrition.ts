@@ -14,7 +14,7 @@ import { logger } from "firebase-functions";
 import { requireSuperAdmin } from "../utils/roles";
 import { writeAuditLog } from "../lib/audit";
 
-const region = process.env.FIREBASE_REGION || "europe-west1";
+import { region } from "../lib/runtimeOptions";
 const GROUPS = ["dietPlans", "recipes"] as const;
 const DELETE_BATCH_SIZE = 400;
 

@@ -8,7 +8,7 @@ import {
 import { checkIsAdmin } from "../utils/roles";
 
 const db = admin.firestore();
-const region = process.env.FIREBASE_REGION || "europe-west1";
+import { region } from "../lib/runtimeOptions";
 
 interface SeedUserTypesData {
   force?: boolean;

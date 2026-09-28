@@ -22,7 +22,7 @@ import { validateIngredients, ForbiddenInputError } from "./screening";
 import { quotaForRole, partitionRecipes } from "./policy";
 import { buildRecipesPrompt } from "./prompt";
 
-const region = process.env.FIREBASE_REGION || "europe-west1";
+import { region } from "../lib/runtimeOptions";
 
 /** Separate from `ai_authoring_usage` so recipes cannot eat a trainer's workout-plan budget. */
 const BUCKET = "ai_recipes_usage";
@@ -81,7 +81,7 @@ export const generateRecipes = onCall<GenReq>(
     let batch;
     try {
       const res = await generateObject({
-        model: buildModel(settings.provider, settings.model),
+        model: await buildModel(settings.provider, settings.model),
         schema: recipeBatchSchema,
         prompt,
         temperature: settings.temperature,

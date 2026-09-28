@@ -11,10 +11,9 @@ import { dayContextFrom } from "../availability/dayContext";
 import { bookingDayRef, readDayDocs } from "../availability/dayReads";
 import { decideBookingStart, romeDateOf } from "../availability/slots";
 import { validateServiceDuration } from "../availability/validate";
-import { hotCallableOptions } from "../lib/runtimeOptions";
+import { hotCallableOptions, region } from "../lib/runtimeOptions";
 
 const db = admin.firestore();
-const region = process.env.FIREBASE_REGION || "europe-west1";
 
 interface BookingData {
   /** Absent for trainer sessions (home / online / outdoor), which have no venue. */

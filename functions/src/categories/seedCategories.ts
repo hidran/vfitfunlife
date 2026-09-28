@@ -4,7 +4,7 @@ import { requireSuperAdmin } from "../utils/roles";
 import { writeAuditLog } from "../lib/audit";
 import { SERVICE_CATEGORY_TREE } from "./tree";
 
-const region = process.env.FIREBASE_REGION || "europe-west1";
+import { region } from "../lib/runtimeOptions";
 
 /**
  * Superadmin-only: seed or refresh the service taxonomy.
