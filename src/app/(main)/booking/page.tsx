@@ -27,7 +27,9 @@ import { MapPlaceholder } from '@/components/map/MapPlaceholder';
 import type { ProviderSearchResult, SearchParams } from '@/types/booking';
 import { useNearMe } from '@/hooks/useNearMe';
 import { RadiusFilter } from '@/components/map/RadiusFilter';
-import { annotateAndSortByDistance, filterByRadius } from '@/lib/geo';
+import { useQuery } from '@tanstack/react-query';
+import { annotateAndSortByDistance, roundLocation, type LatLng } from '@/lib/geo';
+import { applyProviderSearchFilters, searchProvidersNear } from '@/lib/firebookings';
 import { useServiceCategoryGroups } from '@/hooks/useServiceCategories';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
@@ -61,18 +63,50 @@ export default function BookingPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState(searchFilters.query || '');
 
+  // Located with a radius: a bounded geohash search around the user, not a distance filter
+  // over the store's first-50-by-id page (which may hold nobody nearby). Radius "Tutti" and
+  // no location keep the store's bounded list. Only the category reaches Firestore; text,
+  // price and rating filter the fetched page in memory, so typing costs no reads.
+  const nearCenter = userLocation ? roundLocation(userLocation) : null;
+  const geoSearch = nearCenter != null && radiusKm != null;
+  const nearCategory = searchFilters.category;
+  const nearQuery = useQuery({
+    queryKey: ['providers-near', nearCategory ?? null, nearCenter, radiusKm],
+    queryFn: () =>
+      searchProvidersNear({ category: nearCategory }, nearCenter as LatLng, radiusKm as number),
+    enabled: geoSearch,
+    staleTime: 60 * 1000,
+  });
+
+  const displayedProviders = useMemo<(ProviderSearchResult & { distanceKm?: number })[]>(() => {
+    if (geoSearch) {
+      return applyProviderSearchFilters(nearQuery.data ?? [], {
+        ...searchFilters,
+        query: searchQuery,
+        sortBy: undefined, // distance order, as the near-me list always had
+      });
+    }
+    if (!userLocation) return searchResults;
+    return annotateAndSortByDistance(searchResults, userLocation, (p) =>
+      p.location ? { lat: p.location.lat, lng: p.location.lng } : null
+    );
+  }, [geoSearch, nearQuery.data, searchFilters, searchQuery, searchResults, userLocation]);
+  const isLoadingProviders = geoSearch ? nearQuery.isLoading : isSearching;
+
   const runSearch = useCallback(() => {
     return searchProviders({ ...searchFilters, query: searchQuery });
   }, [searchProviders, searchFilters, searchQuery]);
 
-  // Debounced search
+  // Debounced search. Skipped while the radius search drives the list: its page would be
+  // thrown away. Flipping geoSearch back re-runs it with the current filters.
   useEffect(() => {
+    if (geoSearch) return;
     const timer = setTimeout(() => {
       void runSearch();
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [runSearch]);
+  }, [runSearch, geoSearch]);
 
   const handleProviderSelect = useCallback((provider: ProviderSearchResult) => {
     selectProvider(provider);
@@ -82,14 +116,6 @@ export default function BookingPage() {
   const handleSortChange = (sortBy: SearchParams['sortBy']) => {
     setSearchFilters({ sortBy });
   };
-
-  const displayedProviders = useMemo(() => {
-    if (!userLocation) return searchResults;
-    const annotated = annotateAndSortByDistance(searchResults, userLocation, (p) =>
-      p.location ? { lat: p.location.lat, lng: p.location.lng } : null
-    );
-    return radiusKm == null ? annotated : filterByRadius(annotated, radiusKm);
-  }, [searchResults, userLocation, radiusKm]);
 
   return (
     <div className="min-h-screen bg-background-dark">
@@ -323,7 +349,7 @@ export default function BookingPage() {
 
       {/* Content */}
       <div className="p-4">
-        {isSearching ? (
+        {isLoadingProviders ? (
           <div className="flex flex-col items-center justify-center py-12">
             <Spinner size="lg" />
             <p className="text-text-secondary mt-4">{t('booking.searching')}</p>
@@ -447,9 +473,9 @@ export default function BookingPage() {
                           )}
                         </div>
                         <div className="flex items-center gap-2 text-sm text-text-secondary">
-                          {Number.isFinite((provider as unknown as { distanceKm?: number }).distanceKm) && (
+                          {provider.distanceKm != null && Number.isFinite(provider.distanceKm) && (
                             <span className="text-xs text-text-tertiary">
-                              {(provider as unknown as { distanceKm: number }).distanceKm.toFixed(1)} km
+                              {provider.distanceKm.toFixed(1)} km
                             </span>
                           )}
                           <Clock className="w-4 h-4" />

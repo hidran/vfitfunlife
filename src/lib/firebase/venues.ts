@@ -7,10 +7,13 @@ import {
   updateDoc,
   where,
   limit as limitQuery,
+  orderBy,
   type Query,
   type CollectionReference,
 } from 'firebase/firestore';
 import { db } from './config';
+import { geoRangeQuery } from './geoQuery';
+import { coordsOf, type LatLng } from '@/lib/geo';
 import type {
   Venue,
   VenueListOptions,
@@ -34,6 +37,8 @@ export async function fetchVenues(opts: VenueListOptions = {}): Promise<Venue[]>
     const constraints = [];
     if (opts.type) constraints.push(where('type', '==', opts.type));
     if (opts.city) constraints.push(where('city', '==', opts.city));
+    // With `type`, needs the (type, rating desc) composite index.
+    if (opts.orderByRating) constraints.push(orderBy('rating', 'desc'));
     if (opts.limit) constraints.push(limitQuery(opts.limit));
     const q: Query | CollectionReference = constraints.length
       ? query(collection(db, 'venues'), ...constraints)
@@ -42,6 +47,36 @@ export async function fetchVenues(opts: VenueListOptions = {}): Promise<Venue[]>
     return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Venue, 'id'>) }));
   } catch (error) {
     console.error('[fetchVenues]', opts, error);
+    return [];
+  }
+}
+
+export interface NearbyVenueOptions {
+  center: LatLng;
+  radiusKm: number;
+  type?: Venue['type'];
+}
+
+/**
+ * Venues within `radiusKm` of `center`, nearest-first, each with `distanceKm`. A bounded
+ * geohash range search (see geoRangeQuery) instead of reading the whole collection.
+ * With `type`, needs the (type, geohash) composite index.
+ */
+export async function fetchVenuesNear(
+  opts: NearbyVenueOptions
+): Promise<(Venue & { distanceKm: number })[]> {
+  try {
+    return await geoRangeQuery<Venue>({
+      collectionPath: 'venues',
+      filters: opts.type ? [where('type', '==', opts.type)] : [],
+      center: opts.center,
+      radiusKm: opts.radiusKm,
+      fromDoc: (id, data) =>
+        data.isActive === false ? null : { id, ...(data as Omit<Venue, 'id'>) },
+      getCoords: coordsOf,
+    });
+  } catch (error) {
+    console.error('[fetchVenuesNear]', opts, error);
     return [];
   }
 }

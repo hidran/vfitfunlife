@@ -263,6 +263,43 @@
         { "fieldPath": "categoryIds", "arrayConfig": "CONTAINS" }
       ]
     },
+    // P2-6 geohash radius search (src/lib/firebase/geoQuery.ts): equality filters +
+    // orderBy('geohash').startAt().endAt(). searchProvidersNear (booking, with and without
+    // a category chip) and fetchVenuesNear (/fit/gyms, type == gym).
+    {
+      "collectionGroup": "instructors",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "providerProfile.isVerified", "order": "ASCENDING" },
+        { "fieldPath": "geohash", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "instructors",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "providerProfile.isVerified", "order": "ASCENDING" },
+        { "fieldPath": "categoryIds", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "geohash", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "venues",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "type", "order": "ASCENDING" },
+        { "fieldPath": "geohash", "order": "ASCENDING" }
+      ]
+    },
+    // The bounded location-less gym list: top-rated first (useNearbyVenues fallback).
+    {
+      "collectionGroup": "venues",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "type", "order": "ASCENDING" },
+        { "fieldPath": "rating", "order": "DESCENDING" }
+      ]
+    },
     // Serves two queries on the same shape: findRunningBulkDelete in
     // src/lib/firebase/bulkDelete.ts (the caller's latest unfinished bulk-delete job, so a
     // reload mid-job brings the progress banner back) and adminBulkDeleteUsers's
