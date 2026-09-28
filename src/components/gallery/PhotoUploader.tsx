@@ -4,6 +4,7 @@ import { Camera as CameraIcon, X, Loader2 } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { uploadGalleryPhoto, deleteGalleryPhoto, type GalleryScope } from '@/lib/firebase/photos';
 import { cn } from '@/lib/utils';
+import { ThumbnailImage } from './ThumbnailImage';
 import { useI18n } from '@/hooks/useI18n';
 
 interface PhotoUploaderProps {
@@ -94,7 +95,13 @@ export function PhotoUploader({
             key={url}
             className="relative h-28 w-28 flex-shrink-0 overflow-hidden rounded-xl bg-content/10"
           >
-            <img src={url} alt={t('gallery.photoAlt', { index: i + 1 })} className="h-full w-full object-cover" />
+            <ThumbnailImage
+              src={url}
+              alt={t('gallery.photoAlt', { index: i + 1 })}
+              width={112}
+              height={112}
+              className="h-full w-full object-cover"
+            />
             <button
               type="button"
               onClick={() => handleDelete(url)}

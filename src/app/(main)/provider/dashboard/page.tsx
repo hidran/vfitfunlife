@@ -21,6 +21,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { fetchMyAvailabilityStatus } from '@/lib/firebase/availability';
 import { dashboardBannerKind } from '@/lib/availability/adapter';
 import { useI18n } from '@/hooks/useI18n';
+import { trace } from '@/lib/perf';
 import { toLocaleTag } from '@/types/locale';
 import Link from 'next/link';
 
@@ -37,7 +38,7 @@ export default function ProviderDashboardPage() {
   } = useProviderStore();
 
   useEffect(() => {
-    fetchDashboardStats();
+    trace('provider_dashboard_stats', () => fetchDashboardStats()).catch(() => {});
     fetchBookings({ status: 'all' });
     fetchActivities(5);
   }, [fetchDashboardStats, fetchBookings, fetchActivities]);
@@ -111,49 +112,37 @@ export default function ProviderDashboardPage() {
 
       {bannerKind && <NoHoursBanner kind={bannerKind} />}
 
-      {/* Stats Grid */}
+      {/* Stats Grid. No trend lines until real period-over-period values exist. */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard
           title={t('provider.dashboard.stats.todayAppointments')}
           value={stats.todayAppointments}
           icon={Calendar}
-          trend={12}
-          trendLabel={t('provider.dashboard.trend.vsYesterday')}
         />
         <StatCard
           title={t('provider.dashboard.stats.weekBookings')}
           value={stats.weekBookings}
           icon={TrendingUp}
-          trend={8}
-          trendLabel={t('provider.dashboard.trend.vsLastWeek')}
         />
         <StatCard
           title={t('provider.dashboard.stats.monthEarnings')}
           value={`€${stats.monthEarnings.toLocaleString()}`}
           icon={Wallet}
-          trend={15}
-          trendLabel={t('provider.dashboard.trend.vsLastMonth')}
         />
         <StatCard
           title={t('provider.dashboard.stats.newClients')}
           value={stats.newClients}
           icon={Users}
-          trend={20}
-          trendLabel={t('provider.dashboard.trend.vsLastMonth')}
         />
         <StatCard
           title={t('provider.dashboard.stats.completionRate')}
           value={`${stats.completionRate}%`}
           icon={CheckCircle}
-          trend={2}
-          trendLabel={t('provider.dashboard.trend.vsLastMonth')}
         />
         <StatCard
           title={t('provider.dashboard.stats.averageRating')}
           value={stats.averageRating}
           icon={Star}
-          trend={5}
-          trendLabel={t('provider.dashboard.trend.vsLastMonth')}
         />
       </div>
 

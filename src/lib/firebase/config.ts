@@ -18,6 +18,7 @@ import type { FirebaseStorage } from "firebase/storage";
 import type { Functions } from "firebase/functions";
 import type { Analytics } from "firebase/analytics";
 import type { Messaging } from "firebase/messaging";
+import { schedulePerformanceMonitoring } from "@/lib/perf";
 
 const useEmulators =
   process.env.NODE_ENV === "development" && process.env.NEXT_PUBLIC_USE_EMULATORS === "true";
@@ -146,6 +147,10 @@ async function initializeMessaging(): Promise<Messaging | null> {
 
 // Initialize on module load
 const firebase = initializeFirebase();
+
+// Performance Monitoring: loaded after first paint via dynamic import, deployed web builds
+// only (see lib/perf). No-op on the server, in dev/emulators and in the native shells.
+schedulePerformanceMonitoring(firebase.app);
 
 export {
   firebase,

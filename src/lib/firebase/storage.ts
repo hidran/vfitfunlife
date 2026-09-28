@@ -8,6 +8,16 @@ import {
   listAll,
 } from 'firebase/storage';
 import type { Options as ImageCompressionOptions } from 'browser-image-compression';
+import {
+  AVATAR_DERIVATIVES,
+  PHOTO_DERIVATIVES,
+  derivativePaths,
+  isThumbnailPath,
+  storagePathFromUrl,
+  thumbnailPathFor,
+  thumbnailUrl,
+  type DerivativeSpec,
+} from './thumbnails';
 
 // Default compression options
 const defaultCompressionOptions = {
@@ -18,7 +28,7 @@ const defaultCompressionOptions = {
 
 const avatarCompressionOptions = {
   maxSizeMB: 0.5,
-  maxWidthOrHeight: 500,
+  maxWidthOrHeight: AVATAR_DERIVATIVES.full,
   useWebWorker: true,
 };
 
@@ -31,21 +41,87 @@ async function compressImage(file: File, options: ImageCompressionOptions): Prom
   return imageCompression(file, options);
 }
 
-// Upload avatar with compression
+export interface UploadedImage {
+  /** Download URL of the full-size derivative (what gets stored in Firestore). */
+  url: string;
+  /** Storage path of the full-size derivative. */
+  path: string;
+  /** Token-less URL of the thumbnail, or null if the thumbnail upload failed. */
+  thumbUrl: string | null;
+  /** Storage path of the thumbnail (sibling of `path`). */
+  thumbPath: string;
+}
+
+/**
+ * Compresses `file` into a full-size derivative plus a thumbnail (see ./thumbnails for the
+ * naming convention that links them) and uploads both to `${dir}/`. The thumbnail is
+ * best-effort: if it fails the full image is still returned, and renderers fall back to it.
+ */
+export async function uploadImageWithThumbnail(opts: {
+  dir: string;
+  stem: string;
+  file: File;
+  spec: DerivativeSpec;
+  maxSizeMB: number;
+}): Promise<UploadedImage> {
+  const { dir, stem, file, spec, maxSizeMB } = opts;
+  const full = await compressImage(file, {
+    maxSizeMB,
+    maxWidthOrHeight: spec.full,
+    useWebWorker: true,
+  });
+  const names = derivativePaths(stem, spec);
+  const path = `${dir}/${names.full}`;
+  const thumbPath = `${dir}/${names.thumb}`;
+  const contentType = full.type || 'image/jpeg';
+
+  const storage = await getStorageInstance();
+  const thumbUpload = (async () => {
+    const thumb = await compressImage(full, {
+      maxSizeMB: 0.1,
+      maxWidthOrHeight: spec.thumb,
+      useWebWorker: true,
+    });
+    await uploadBytes(ref(storage, thumbPath), thumb, { contentType: thumb.type || contentType });
+    return true;
+  })().catch((error) => {
+    console.warn('[uploadImageWithThumbnail] thumbnail upload failed', thumbPath, error);
+    return false;
+  });
+
+  const snapshot = await uploadBytes(ref(storage, path), full, { contentType });
+  const [url, thumbOk] = await Promise.all([getDownloadURL(snapshot.ref), thumbUpload]);
+  return { url, path, thumbUrl: thumbOk ? thumbnailUrl(url) : null, thumbPath };
+}
+
+/**
+ * Deletes an image by download URL together with its thumbnail (if it has one).
+ * The thumbnail delete is best-effort: legacy images have none.
+ */
+async function deleteImageAndThumbnail(fileUrl: string): Promise<void> {
+  const storage = await getStorageInstance();
+  const path = storagePathFromUrl(fileUrl);
+  const thumbPath = path ? thumbnailPathFor(path) : null;
+  if (thumbPath) {
+    deleteObject(ref(storage, thumbPath)).catch(() => {
+      /* already gone / never uploaded */
+    });
+  }
+  await deleteObject(ref(storage, path ?? fileUrl));
+}
+
+// Upload avatar with compression (plus a 128px thumbnail for lists)
 export async function uploadAvatar(userId: string, file: File): Promise<string> {
   try {
-    // Compress image
-    const compressedFile = await compressImage(file, avatarCompressionOptions);
-
     // Upload to Storage - matching storage.rules path: /users/{userId}/avatar/{fileName}
-    const storage = await getStorageInstance();
-    const storageRef = ref(storage, `users/${userId}/avatar/${Date.now()}.jpg`);
-    const snapshot = await uploadBytes(storageRef, compressedFile);
-
-    // Get download URL
-    const downloadURL = await getDownloadURL(snapshot.ref);
-
-    return downloadURL;
+    const { url } = await uploadImageWithThumbnail({
+      dir: `users/${userId}/avatar`,
+      stem: String(Date.now()),
+      file,
+      spec: AVATAR_DERIVATIVES,
+      maxSizeMB: avatarCompressionOptions.maxSizeMB,
+    });
+    return url;
   } catch (error) {
     console.error('Upload avatar error:', error);
     throw error;
@@ -55,18 +131,15 @@ export async function uploadAvatar(userId: string, file: File): Promise<string> 
 // Update profile photo
 export async function updateProfilePhoto(userId: string, file: File): Promise<string> {
   try {
-    // Compress image for profile photo
-    const compressedFile = await compressImage(file, avatarCompressionOptions);
-
-    // Upload to profile-photos path
-    const storage = await getStorageInstance();
-    const storageRef = ref(storage, `profile-photos/${userId}/${Date.now()}.jpg`);
-    const snapshot = await uploadBytes(storageRef, compressedFile);
-
-    // Get download URL
-    const downloadURL = await getDownloadURL(snapshot.ref);
-
-    return downloadURL;
+    // Upload to profile-photos path (full 500px + 128px thumbnail for lists)
+    const { url } = await uploadImageWithThumbnail({
+      dir: `profile-photos/${userId}`,
+      stem: String(Date.now()),
+      file,
+      spec: AVATAR_DERIVATIVES,
+      maxSizeMB: avatarCompressionOptions.maxSizeMB,
+    });
+    return url;
   } catch (error) {
     console.error('Update profile photo error:', error);
     throw error;
@@ -123,30 +196,25 @@ export async function deleteCertification(fileUrl: string): Promise<void> {
 // Upload portfolio image
 export async function uploadPortfolioImage(userId: string, file: File): Promise<string> {
   try {
-    // Compress image
-    const compressedFile = await compressImage(file, defaultCompressionOptions);
-
-    // Upload to portfolios path
-    const storage = await getStorageInstance();
-    const storageRef = ref(storage, `portfolios/${userId}/${Date.now()}.jpg`);
-    const snapshot = await uploadBytes(storageRef, compressedFile);
-
-    // Get download URL
-    const downloadURL = await getDownloadURL(snapshot.ref);
-
-    return downloadURL;
+    // Upload to portfolios path (full 1200px + 320px thumbnail for the grid)
+    const { url } = await uploadImageWithThumbnail({
+      dir: `portfolios/${userId}`,
+      stem: String(Date.now()),
+      file,
+      spec: PHOTO_DERIVATIVES,
+      maxSizeMB: defaultCompressionOptions.maxSizeMB,
+    });
+    return url;
   } catch (error) {
     console.error('Upload portfolio image error:', error);
     throw error;
   }
 }
 
-// Delete portfolio image
+// Delete portfolio image (and its thumbnail)
 export async function deletePortfolioImage(fileUrl: string): Promise<void> {
   try {
-    const storage = await getStorageInstance();
-    const fileRef = ref(storage, fileUrl);
-    await deleteObject(fileRef);
+    await deleteImageAndThumbnail(fileUrl);
   } catch (error) {
     console.error('Delete portfolio image error:', error);
     throw error;
@@ -160,7 +228,9 @@ export async function getPortfolioImages(userId: string): Promise<string[]> {
     const portfolioRef = ref(storage, `portfolios/${userId}`);
     const result = await listAll(portfolioRef);
     const urls = await Promise.all(
-      result.items.map((item) => getDownloadURL(item))
+      result.items
+        .filter((item) => !isThumbnailPath(item.fullPath))
+        .map((item) => getDownloadURL(item))
     );
     return urls;
   } catch (error) {

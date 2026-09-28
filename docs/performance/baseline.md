@@ -125,7 +125,7 @@ Daily staging reads: 87, 519, 189, 275, 398, 449, 405.
 
 ```bash
 # 1. Bundles
-npm run build:staging && node measure.mjs out
+npm run build:staging && npm run check:bundle   # or: node measure.mjs out
 
 # 2. Function latency (repeat with -P vfit-app-staging); parse httpRequest.latency
 gcloud logging read 'resource.type=cloud_run_revision AND log_id(run.googleapis.com/requests)' \
@@ -138,3 +138,40 @@ gcloud logging read 'resource.type=cloud_run_revision AND textPayload:"Starting 
 curl -H "Authorization: Bearer $(gcloud auth print-access-token)" \
   "https://monitoring.googleapis.com/v3/projects/vfit-funlife/timeSeries?filter=metric.type%3D%22firestore.googleapis.com%2Fdocument%2Fread_count%22&interval.startTime=START&interval.endTime=END&aggregation.alignmentPeriod=86400s&aggregation.perSeriesAligner=ALIGN_SUM&aggregation.crossSeriesReducer=REDUCE_SUM"
 ```
+
+## Bundle budget (P3-2)
+
+`scripts/check-bundle-budget.mjs` (`npm run check:bundle`) runs the section 1 measurement
+against `out/` and exits non-zero if any route is over its budget. Run it after any build:
+`npm run build:staging && npm run check:bundle`. There is no CI workflow in the repo yet
+(no `.github/workflows`). When one is added, run this right after the build step.
+
+Budgets are about 5% above the sizes measured on 2026-09-28, after P2-10 (thumbnails),
+P3-1 (lazy Performance Monitoring) and P3-5 (WebP landing images):
+
+| Route       | Measured raw | Budget raw | Measured gzip | Budget gzip |
+|-------------|-------------:|-----------:|--------------:|------------:|
+| `/`         | 1377.4 KB    | 1446 KB    | 410.0 KB      | 431 KB      |
+| `/terms`    | 1324.8 KB    | 1391 KB    | 392.7 KB      | 412 KB      |
+| `/home`     | 1471.1 KB    | 1545 KB    | 435.5 KB      | 457 KB      |
+| `/admin`    | 1472.1 KB    | 1546 KB    | 432.6 KB      | 454 KB      |
+| `/fit/gyms` | 1437.8 KB    | 1510 KB    | 428.5 KB      | 450 KB      |
+| `/booking`  | 1588.3 KB    | 1668 KB    | 477.5 KB      | 501 KB      |
+
+If a change legitimately grows a route, re-measure and raise that budget in the same
+commit, and give the reason in the commit message.
+
+## Performance Monitoring (P3-1)
+
+`src/lib/perf.ts` sets up Firebase Performance Monitoring for the web. The SDK
+(`firebase/performance`, about 27 KB raw in its own chunk) is loaded with a dynamic import
+after the `load` event and `requestIdleCallback`. It is not part of any route's first-load
+JS. `/` measured 1376.3 KB without the hook and 1377.4 KB with it: +1.1 KB raw and +0.5 KB
+gzip for the scheduling code. It is enabled only in deployed web builds (production
+`NODE_ENV`, project and app id set, emulators off) and is skipped in the Capacitor native
+shells.
+
+Custom traces are `admin_dashboard_stats` and `provider_dashboard_stats`, with an `outcome`
+attribute of `ok` or `error`. To add one, wrap the call in `trace(name, fn)` from
+`@/lib/perf`. When monitoring is off, `trace` just runs `fn`. Measurements taken before the
+SDK has loaded are buffered and recorded once it is ready.

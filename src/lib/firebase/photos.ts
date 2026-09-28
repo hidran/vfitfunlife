@@ -1,45 +1,50 @@
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { ref, deleteObject } from 'firebase/storage';
 import { getStorageInstance } from './config';
-
-const COMPRESSION_OPTIONS = {
-  maxSizeMB: 1,
-  maxWidthOrHeight: 1200,
-  useWebWorker: true,
-};
+import { uploadImageWithThumbnail } from './storage';
+import { PHOTO_DERIVATIVES, storagePathFromUrl, thumbnailPathFor } from './thumbnails';
 
 export type GalleryScope = 'venues' | 'instructors';
 
+/**
+ * Uploads a gallery photo as a 1200px derivative plus a 320px thumbnail sibling
+ * (`…_w1200.jpg` / `…_w320.jpg`, see ./thumbnails). Returns the full-size download URL,
+ * which is what goes into the entity's `photoUrls` array; grids derive the thumbnail from it.
+ */
 export async function uploadGalleryPhoto(opts: {
   scope: GalleryScope;
   entityId: string;
   file: File;
 }): Promise<string> {
   const { scope, entityId, file } = opts;
-  // Dynamic import: browser-image-compression (and its web worker) only need to load for
-  // someone actually uploading a photo, not on every page that imports this module.
-  const { default: imageCompression } = await import('browser-image-compression');
-  const compressed = await imageCompression(file, COMPRESSION_OPTIONS);
-  const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
-  const path = `${scope}/${entityId}/gallery/${filename}`;
-  const storage = await getStorageInstance();
-  const objRef = ref(storage, path);
-  const snapshot = await uploadBytes(objRef, compressed, { contentType: 'image/jpeg' });
-  return getDownloadURL(snapshot.ref);
+  const { url } = await uploadImageWithThumbnail({
+    dir: `${scope}/${entityId}/gallery`,
+    stem: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    file,
+    spec: PHOTO_DERIVATIVES,
+    maxSizeMB: 1,
+  });
+  return url;
 }
 
 /**
- * Deletes a gallery photo by its Firebase Storage download URL.
- * Best-effort: silently swallows parse failures so callers can call this
+ * Deletes a gallery photo (and its thumbnail, when it has one) by its Firebase Storage
+ * download URL. Best-effort: silently swallows parse failures so callers can call this
  * defensively when removing photos from a Firestore array.
  */
 export async function deleteGalleryPhoto(downloadUrl: string): Promise<void> {
   try {
-    const match = downloadUrl.match(/\/o\/([^?]+)/);
-    if (!match) return;
-    const path = decodeURIComponent(match[1]);
+    const path = storagePathFromUrl(downloadUrl);
+    if (!path) return;
     const storage = await getStorageInstance();
-    const objRef = ref(storage, path);
-    await deleteObject(objRef);
+    const thumbPath = thumbnailPathFor(path);
+    await Promise.all([
+      deleteObject(ref(storage, path)),
+      thumbPath
+        ? deleteObject(ref(storage, thumbPath)).catch(() => {
+            /* thumbnail missing: nothing to clean up */
+          })
+        : Promise.resolve(),
+    ]);
   } catch (error) {
     console.error('[deleteGalleryPhoto]', downloadUrl, error);
   }

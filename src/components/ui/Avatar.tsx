@@ -3,6 +3,7 @@
 import * as React from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
+import { thumbnailUrl } from '@/lib/firebase/thumbnails';
 
 export interface AvatarProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Image source URL */
@@ -65,6 +66,11 @@ const sizePixels = {
 const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
   ({ className, src, alt = '', name = '', size = 'md', ...props }, ref) => {
     const [imageError, setImageError] = React.useState(false);
+    // Upload-time 128px thumbnail for sm/md/lg (<=64 CSS px, sharp up to 2x DPR); xl and
+    // legacy uploads use the full image. A missing thumb falls back to the full image first.
+    const [thumbFailed, setThumbFailed] = React.useState(false);
+    const thumb = src && size !== 'xl' && !thumbFailed ? thumbnailUrl(src) : src;
+    const usingThumb = !!thumb && thumb !== src;
     const showFallback = !src || imageError;
     const initials = name ? getInitials(name) : '?';
     const bgColor = name ? getColorFromName(name) : 'bg-[#6B7280]';
@@ -83,13 +89,13 @@ const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
       >
         {!showFallback ? (
           <Image
-            src={src}
+            src={thumb as string}
             alt={alt || name}
             fill
             sizes={`${sizePixels[size]}px`}
             unoptimized
             className="h-full w-full object-cover"
-            onError={() => setImageError(true)}
+            onError={() => (usingThumb ? setThumbFailed(true) : setImageError(true))}
           />
         ) : (
           <span

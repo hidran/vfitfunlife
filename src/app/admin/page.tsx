@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/utils";
 import { useI18n } from "@/hooks/useI18n";
+import { trace } from "@/lib/perf";
 import type { MessageKey } from "@/i18n/messages";
 import {
   Users,
@@ -39,7 +40,7 @@ export default function AdminDashboardPage() {
   } = useAdminStore();
 
   useEffect(() => {
-    fetchDashboardStats();
+    trace("admin_dashboard_stats", fetchDashboardStats).catch(() => {});
     fetchPendingVerifications();
     fetchProviders({ limit: 5, sortBy: 'bookings' });
   }, [fetchDashboardStats, fetchPendingVerifications, fetchProviders]);
@@ -95,37 +96,30 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Stats Grid */}
+      {/* Stats Grid. No trend line: the *Growth fields from getDashboardStats are
+          placeholders, not period-over-period values, so showing them would be fake data. */}
       <StatsGrid>
         <StatCard
           title={t('admin.dashboard.stats.totalUsers')}
           value={dashboardStats?.totalUsers.toLocaleString() || "0"}
-          trend={dashboardStats?.userGrowth}
-          trendLabel={t('admin.dashboard.trend.vsLastMonth')}
           icon="users"
           onClick={() => router.push("/admin/users")}
         />
         <StatCard
           title={t('admin.dashboard.stats.activeProviders')}
           value={dashboardStats?.activeProviders.toLocaleString() || "0"}
-          trend={dashboardStats?.providerGrowth}
-          trendLabel={t('admin.dashboard.trend.vsLastMonth')}
           icon="providers"
           onClick={() => router.push("/admin/providers")}
         />
         <StatCard
           title={t('admin.dashboard.stats.todayBookings')}
           value={dashboardStats?.todayBookings.toLocaleString() || "0"}
-          trend={dashboardStats?.bookingGrowth}
-          trendLabel={t('admin.dashboard.trend.vsYesterday')}
           icon="bookings"
           onClick={() => router.push("/admin/bookings")}
         />
         <StatCard
           title={t('admin.dashboard.stats.monthlyRevenue')}
           value={formatPrice(dashboardStats?.monthlyRevenue || 0)}
-          trend={dashboardStats?.revenueGrowth}
-          trendLabel={t('admin.dashboard.trend.vsLastMonth')}
           icon="revenue"
           onClick={() => router.push("/admin/payments")}
         />

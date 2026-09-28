@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { PhotoLightbox } from './PhotoLightbox';
+import { ThumbnailImage } from './ThumbnailImage';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
 
@@ -31,10 +32,12 @@ export function PhotoGallery({ photos, className }: PhotoGalleryProps) {
             className="relative h-56 w-72 flex-shrink-0 snap-center overflow-hidden rounded-2xl bg-content/10"
             aria-label={t('gallery.openPhoto', { index: i + 1 })}
           >
-            <img
+            <ThumbnailImage
               src={url}
               alt={t('gallery.photoAlt', { index: i + 1 })}
-              loading="lazy"
+              sizes="288px"
+              width={288}
+              height={224}
               className="absolute inset-0 h-full w-full object-cover"
             />
           </button>
