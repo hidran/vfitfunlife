@@ -35,6 +35,7 @@
     "mobile:run:android": "cap run android",
     "build:prod": "dotenv -e .env -- next build",
     "build:staging": "dotenv -e .env.staging -- next build",
+    "check:bundle": "node scripts/check-bundle-budget.mjs",
     "dev:staging": "dotenv -e .env.staging -- next dev",
     "deploy:staging": "npm run build:staging && firebase deploy -P staging --only hosting,firestore,storage",
     "deploy:staging:functions": "firebase deploy -P staging --only functions",
