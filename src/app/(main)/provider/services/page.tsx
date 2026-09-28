@@ -160,7 +160,7 @@ export default function ProviderServicesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-content">{t('provider.services.title')}</h1>
-          <p className="text-gray-400 mt-1">
+          <p className="text-content-muted mt-1">
             {t('provider.services.subtitle')}
           </p>
         </div>
@@ -217,7 +217,7 @@ export default function ProviderServicesPage() {
       {activeTab === 'services' && <>
 
       {error && (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300 light:text-red-700">
           {error}
         </div>
       )}
@@ -228,9 +228,9 @@ export default function ProviderServicesPage() {
         /* The state the reporting trainer was stuck in: a bare grid gave no hint that
            adding a service was even possible. */
         <div className="rounded-xl border border-hairline bg-surface-elevated p-8 text-center">
-          <Briefcase className="w-10 h-10 mx-auto text-gray-500 mb-3" />
+          <Briefcase className="w-10 h-10 mx-auto text-content-faint light:text-content-muted mb-3" />
           <h3 className="font-semibold text-content">{t('provider.services.empty.title')}</h3>
-          <p className="text-sm text-gray-400 mt-1 mb-4">{t('provider.services.empty.body')}</p>
+          <p className="text-sm text-content-muted mt-1 mb-4">{t('provider.services.empty.body')}</p>
           <Button onClick={() => setShowAddModal(true)} disabled={!uid}>
             <Plus className="w-4 h-4 mr-2" />
             {t('provider.services.btn.addService')}
@@ -253,13 +253,13 @@ export default function ProviderServicesPage() {
                 <div className="flex items-center gap-2">
                   <h3 className="font-semibold text-content">{service.name}</h3>
                   {!service.isActive && (
-                    <span className="px-2 py-0.5 bg-gray-500/20 text-gray-400 text-xs rounded-full">
+                    <span className="px-2 py-0.5 bg-gray-500/20 text-content-muted text-xs rounded-full">
                       {t('provider.services.card.inactive')}
                     </span>
                   )}
                 </div>
                 {service.categoryId && categoryMap.get(service.categoryId) && (
-                  <p className="text-sm text-gray-400 mt-1">
+                  <p className="text-sm text-content-muted mt-1">
                     {categoryMap.get(service.categoryId)!.icon}{' '}
                     {categoryMap.get(service.categoryId)!.name}
                   </p>
@@ -274,7 +274,7 @@ export default function ProviderServicesPage() {
                   onClick={() => setOpenMenuId((id) => (id === service.id ? null : service.id))}
                   className="-mr-2 -mt-2 flex h-11 w-11 items-center justify-center rounded-lg hover:bg-surface-2"
                 >
-                  <MoreVertical className="w-4 h-4 text-gray-400" aria-hidden />
+                  <MoreVertical className="w-4 h-4 text-content-muted" aria-hidden />
                 </button>
                 {openMenuId === service.id && (
                 <div role="menu" className="absolute right-0 mt-1 w-48 bg-surface-input rounded-lg border border-hairline shadow-xl z-10 py-1">
@@ -308,7 +308,7 @@ export default function ProviderServicesPage() {
                   <button
                     role="menuitem"
                     onClick={fromMenu(() => handleDelete(service.id))}
-                    className="w-full min-h-11 px-4 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-2"
+                    className="w-full min-h-11 px-4 py-2 text-left text-sm text-red-400 light:text-red-700 hover:bg-red-500/10 flex items-center gap-2"
                   >
                     <Trash2 className="w-4 h-4" />
                     {t('provider.services.menu.delete')}
@@ -319,21 +319,21 @@ export default function ProviderServicesPage() {
             </div>
 
             {service.description && (
-              <p className="text-sm text-gray-300 mb-4 line-clamp-2">
+              <p className="text-sm text-content/85 mb-4 line-clamp-2">
                 {service.description}
               </p>
             )}
 
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-surface-input rounded-lg p-3">
-                <div className="flex items-center gap-1 text-gray-400 text-xs mb-1">
+                <div className="flex items-center gap-1 text-content-muted text-xs mb-1">
                   <DollarSign className="w-3 h-3" />
                   {t('provider.services.card.price')}
                 </div>
                 <p className="text-lg font-semibold text-content">€{service.price}</p>
               </div>
               <div className="bg-surface-input rounded-lg p-3">
-                <div className="flex items-center gap-1 text-gray-400 text-xs mb-1">
+                <div className="flex items-center gap-1 text-content-muted text-xs mb-1">
                   <Clock className="w-3 h-3" />
                   {t('provider.services.card.duration')}
                 </div>
@@ -353,7 +353,7 @@ export default function ProviderServicesPage() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-2">{t('provider.services.edit.serviceName')}</label>
+                <label className="block text-sm text-content-muted mb-2">{t('provider.services.edit.serviceName')}</label>
                 <input
                   type="text"
                   value={editingService.name}
@@ -363,7 +363,7 @@ export default function ProviderServicesPage() {
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-2">{t('provider.services.edit.description')}</label>
+                <label className="block text-sm text-content-muted mb-2">{t('provider.services.edit.description')}</label>
                 <textarea
                   value={editingService.description ?? ''}
                   onChange={(e) => setEditingService({ ...editingService, description: e.target.value })}
@@ -372,7 +372,7 @@ export default function ProviderServicesPage() {
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-2">{t('provider.services.edit.category')}</label>
+                <label className="block text-sm text-content-muted mb-2">{t('provider.services.edit.category')}</label>
                 <select
                   value={editingService.categoryId ?? ''}
                   onChange={(e) => setEditingService({ ...editingService, categoryId: e.target.value })}
@@ -391,7 +391,7 @@ export default function ProviderServicesPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">{t('provider.services.edit.price')}</label>
+                  <label className="block text-sm text-content-muted mb-2">{t('provider.services.edit.price')}</label>
                   <input
                     type="number"
                     value={editingService.price}
@@ -400,7 +400,7 @@ export default function ProviderServicesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">{t('provider.services.edit.duration')}</label>
+                  <label className="block text-sm text-content-muted mb-2">{t('provider.services.edit.duration')}</label>
                   <input
                     type="number"
                     value={editingService.durationMinutes}
@@ -416,7 +416,7 @@ export default function ProviderServicesPage() {
                   id="isActive"
                   checked={editingService.isActive}
                   onChange={(e) => setEditingService({ ...editingService, isActive: e.target.checked })}
-                  className="w-5 h-5 rounded border-white/20 bg-transparent text-section-primary focus:ring-section-primary"
+                  className="w-5 h-5 rounded border-content/20 bg-transparent text-section-primary focus:ring-section-primary"
                 />
                 <label htmlFor="isActive" className="text-content">{t('provider.services.edit.isActive')}</label>
               </div>
@@ -447,7 +447,7 @@ export default function ProviderServicesPage() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-2">{t('provider.services.edit.serviceName')}</label>
+                <label className="block text-sm text-content-muted mb-2">{t('provider.services.edit.serviceName')}</label>
                 <input
                   type="text"
                   value={draft.name}
@@ -458,7 +458,7 @@ export default function ProviderServicesPage() {
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-2">{t('provider.services.edit.description')}</label>
+                <label className="block text-sm text-content-muted mb-2">{t('provider.services.edit.description')}</label>
                 <textarea
                   value={draft.description ?? ''}
                   onChange={(e) => setDraft({ ...draft, description: e.target.value })}
@@ -468,7 +468,7 @@ export default function ProviderServicesPage() {
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-2">{t('provider.services.edit.category')}</label>
+                <label className="block text-sm text-content-muted mb-2">{t('provider.services.edit.category')}</label>
                 <select
                   value={draft.categoryId ?? ''}
                   onChange={(e) => setDraft({ ...draft, categoryId: e.target.value })}
@@ -487,7 +487,7 @@ export default function ProviderServicesPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">{t('provider.services.edit.price')}</label>
+                  <label className="block text-sm text-content-muted mb-2">{t('provider.services.edit.price')}</label>
                   <input
                     type="number"
                     value={draft.price}
@@ -497,7 +497,7 @@ export default function ProviderServicesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">{t('provider.services.edit.duration')}</label>
+                  <label className="block text-sm text-content-muted mb-2">{t('provider.services.edit.duration')}</label>
                   <select
                     value={draft.durationMinutes}
                     onChange={(e) => setDraft({ ...draft, durationMinutes: parseInt(e.target.value) })}

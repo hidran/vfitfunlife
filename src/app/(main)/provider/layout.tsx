@@ -69,7 +69,7 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
       <aside className="hidden lg:block w-64 bg-background-dark border-r border-hairline">
         <div className="p-6">
           <h2 className="text-lg font-semibold text-content">{t('provider.layout.title')}</h2>
-          <p className="text-sm text-gray-400">{t('provider.layout.subtitle')}</p>
+          <p className="text-sm text-content-muted">{t('provider.layout.subtitle')}</p>
         </div>
 
         <nav className="px-3 pb-6">
@@ -85,7 +85,7 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
                   'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors mb-1',
                   isActive
                     ? 'bg-section-gradient text-white'
-                    : 'text-gray-400 hover:bg-surface-2 hover:text-content'
+                    : 'text-content-muted hover:bg-surface-2 hover:text-content'
                 )}
                 >
                   <Icon className="w-5 h-5" />
@@ -136,7 +136,7 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
                     'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors mb-1',
                     isActive
                       ? 'bg-section-gradient text-white'
-                      : 'text-gray-400 hover:bg-surface-2 hover:text-content'
+                      : 'text-content-muted hover:bg-surface-2 hover:text-content'
                   )}
                 >
                   <Icon className="w-5 h-5" />
@@ -157,8 +157,8 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
         <div className="p-4 lg:p-8 max-w-7xl mx-auto">
           {status === 'pending' && (
             <div className="mb-4 flex items-center gap-3 rounded-xl border border-[#F59E0B]/30 bg-[#F59E0B]/10 p-4">
-              <Clock className="w-5 h-5 text-[#F59E0B]" />
-              <p className="text-sm text-white/80">
+              <Clock className="w-5 h-5 text-[#F59E0B] light:text-amber-700" />
+              <p className="text-sm text-content/80">
                 {t('provider.banner.pending')}
               </p>
             </div>

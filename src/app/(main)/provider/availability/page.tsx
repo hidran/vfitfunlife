@@ -71,7 +71,7 @@ export default function ProviderAvailabilityPage() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-content">{t('provider.availability.title')}</h1>
-        <p className="text-gray-400 mt-1">
+        <p className="text-content-muted mt-1">
           {t('provider.availability.subtitle')}
         </p>
       </div>

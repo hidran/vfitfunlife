@@ -31,34 +31,34 @@ export function StatCard({
       className={cn(
         'bg-surface-elevated rounded-xl p-5 border border-content/5',
         'transition-all duration-200',
-        onClick && 'cursor-pointer hover:bg-[#3A3D4A] hover:border-content/10 light:hover:bg-background-dark',
+        onClick && 'cursor-pointer hover:bg-content/[0.08] hover:border-content/10',
         className
       )}
     >
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm text-gray-400 light:text-content-muted mb-1">{title}</p>
+          <p className="text-sm text-content-muted mb-1">{title}</p>
           <p className="text-2xl font-bold text-content">{value}</p>
           
           {trend !== undefined && (
             <div className="flex items-center gap-1 mt-2">
               {isPositive ? (
-                <TrendingUp className="w-4 h-4 text-green-400" />
+                <TrendingUp className="w-4 h-4 text-green-400 light:text-green-700" />
               ) : isNegative ? (
-                <TrendingDown className="w-4 h-4 text-red-400" />
+                <TrendingDown className="w-4 h-4 text-red-400 light:text-red-700" />
               ) : null}
               <span
                 className={cn(
                   'text-xs font-medium',
-                  isPositive && 'text-green-400',
-                  isNegative && 'text-red-400',
-                  !isPositive && !isNegative && 'text-gray-400 light:text-content-muted'
+                  isPositive && 'text-green-400 light:text-green-700',
+                  isNegative && 'text-red-400 light:text-red-700',
+                  !isPositive && !isNegative && 'text-content-muted'
                 )}
               >
                 {isPositive ? '+' : ''}{trend}%
               </span>
               {trendLabel && (
-                <span className="text-xs text-gray-500 light:text-content-muted">{trendLabel}</span>
+                <span className="text-xs text-content-faint light:text-content-muted">{trendLabel}</span>
               )}
             </div>
           )}

@@ -179,13 +179,13 @@ export default function TrainingTab({ clientId }: { clientId: string }) {
           <div className="bg-surface rounded-2xl border border-hairline p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="text-base font-semibold text-content flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-section-primary" />
+                <Sparkles className="w-4 h-4 text-section-primary light:text-primary-dark" />
                 {t('clients.aiGenerate.training.title')}
               </h4>
               <button
                 onClick={() => setShowAi(false)}
                 disabled={generating}
-                className="p-1 text-gray-400 hover:text-content rounded disabled:opacity-50"
+                className="p-1 text-content-muted hover:text-content rounded disabled:opacity-50"
                 aria-label={t('clients.common.cancel')}
               >
                 <X className="w-4 h-4" />
@@ -227,7 +227,7 @@ export default function TrainingTab({ clientId }: { clientId: string }) {
               <textarea className={aiInput} rows={2} value={constraints} onChange={(e) => setConstraints(e.target.value)} />
             </div>
 
-            {aiError && <p className="text-sm text-red-400">{aiError}</p>}
+            {aiError && <p className="text-sm text-red-400 light:text-red-700">{aiError}</p>}
 
             <div className="flex gap-2 justify-end pt-1">
               <Button size="sm" variant="outline" onClick={() => setShowAi(false)} disabled={generating}>
@@ -247,7 +247,7 @@ export default function TrainingTab({ clientId }: { clientId: string }) {
           <Spinner size="md" />
         </div>
       ) : programs.length === 0 ? (
-        <p className="text-gray-400 text-sm">{t('clients.training.empty')}</p>
+        <p className="text-content-muted text-sm">{t('clients.training.empty')}</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {programs.map((program) => (
@@ -255,11 +255,11 @@ export default function TrainingTab({ clientId }: { clientId: string }) {
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-surface-input flex items-center justify-center shrink-0">
-                    <Dumbbell className="w-5 h-5 text-section-primary" />
+                    <Dumbbell className="w-5 h-5 text-section-primary light:text-primary-dark" />
                   </div>
                   <div>
                     <p className="font-medium text-content">{program.title}</p>
-                    <p className="text-sm text-gray-400">
+                    <p className="text-sm text-content-muted">
                       {program.durationWeeks} × {program.daysPerWeek} {t('clients.training.daysPerWeek')}
                     </p>
                   </div>
@@ -267,7 +267,7 @@ export default function TrainingTab({ clientId }: { clientId: string }) {
                 <div className="flex gap-1">
                   <button
                     onClick={() => openEdit(program)}
-                    className="p-1.5 text-gray-400 hover:text-content rounded"
+                    className="p-1.5 text-content-muted hover:text-content rounded"
                     aria-label={t('clients.common.edit')}
                   >
                     <Edit className="w-4 h-4" />
@@ -275,7 +275,7 @@ export default function TrainingTab({ clientId }: { clientId: string }) {
                   <button
                     onClick={() => handleDelete(program.id)}
                     disabled={saving}
-                    className="p-1.5 text-red-400 hover:text-red-300 rounded disabled:opacity-50"
+                    className="p-1.5 text-red-400 light:text-red-700 hover:text-red-300 light:hover:text-red-800 rounded disabled:opacity-50"
                     aria-label={t('clients.common.delete')}
                   >
                     <Trash2 className="w-4 h-4" />
@@ -287,8 +287,8 @@ export default function TrainingTab({ clientId }: { clientId: string }) {
                   className={cn(
                     'px-2.5 py-1 rounded-full text-xs',
                     program.source === 'ai'
-                      ? 'bg-purple-500/20 text-purple-400'
-                      : 'bg-section-primary/20 text-section-primary'
+                      ? 'bg-purple-500/20 text-purple-400 light:text-purple-700'
+                      : 'bg-section-primary/20 text-section-primary light:text-primary-dark'
                   )}
                 >
                   {program.source === 'ai'
@@ -299,10 +299,10 @@ export default function TrainingTab({ clientId }: { clientId: string }) {
                   className={cn(
                     'px-2.5 py-1 rounded-full text-xs',
                     program.status === 'published' || program.status === 'active'
-                      ? 'bg-green-500/20 text-green-400'
+                      ? 'bg-green-500/20 text-green-400 light:text-green-700'
                       : program.status === 'draft'
-                        ? 'bg-amber-500/20 text-amber-400'
-                        : 'bg-gray-500/20 text-gray-400'
+                        ? 'bg-amber-500/20 text-amber-400 light:text-amber-700'
+                        : 'bg-gray-500/20 text-content-muted'
                   )}
                 >
                   {t(`clients.training.status.${program.status}`)}
@@ -314,7 +314,7 @@ export default function TrainingTab({ clientId }: { clientId: string }) {
                   rather than something that happens by default. */}
               {program.status === 'draft' && (
                 <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
-                  <p className="text-xs text-amber-300">
+                  <p className="text-xs text-amber-300 light:text-amber-700">
                     {program.generatedByAi
                       ? t('plans.reviewFirst' as MessageKey)
                       : t('plans.draftBadge' as MessageKey)}

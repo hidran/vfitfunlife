@@ -127,7 +127,7 @@ export default function ProviderEarningsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-content">{t('provider.earnings.title')}</h1>
-          <p className="text-gray-400 mt-1">
+          <p className="text-content-muted mt-1">
             {t('provider.earnings.subtitle')}
           </p>
         </div>
@@ -151,9 +151,9 @@ export default function ProviderEarningsPage() {
         <div className="bg-surface-elevated rounded-xl p-6 border border-hairline">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-green-500/20 rounded-lg">
-              <Wallet className="w-6 h-6 text-green-400" />
+              <Wallet className="w-6 h-6 text-green-400 light:text-green-700" />
             </div>
-            <span className="text-xs text-green-400 flex items-center gap-1">
+            <span className="text-xs text-green-400 light:text-green-700 flex items-center gap-1">
               <TrendingUp className="w-3 h-3" />
               {t('provider.earnings.stat.available')}
             </span>
@@ -161,30 +161,30 @@ export default function ProviderEarningsPage() {
           <p className="text-3xl font-bold text-content">
             €{earningsData.availableBalance.toFixed(2)}
           </p>
-          <p className="text-sm text-gray-400 mt-1">{t('provider.earnings.stat.availableLabel')}</p>
+          <p className="text-sm text-content-muted mt-1">{t('provider.earnings.stat.availableLabel')}</p>
         </div>
 
         <div className="bg-surface-elevated rounded-xl p-6 border border-hairline">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-yellow-500/20 rounded-lg">
-              <Clock className="w-6 h-6 text-yellow-400" />
+              <Clock className="w-6 h-6 text-yellow-400 light:text-yellow-700" />
             </div>
-            <span className="text-xs text-yellow-400 flex items-center gap-1">
+            <span className="text-xs text-yellow-400 light:text-yellow-700 flex items-center gap-1">
               {t('provider.earnings.stat.pending')}
             </span>
           </div>
           <p className="text-3xl font-bold text-content">
             €{earningsData.pendingAmount.toFixed(2)}
           </p>
-          <p className="text-sm text-gray-400 mt-1">{t('provider.earnings.stat.pendingLabel')}</p>
+          <p className="text-sm text-content-muted mt-1">{t('provider.earnings.stat.pendingLabel')}</p>
         </div>
 
         <div className="bg-surface-elevated rounded-xl p-6 border border-hairline">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-blue-500/20 rounded-lg">
-              <DollarSign className="w-6 h-6 text-blue-400" />
+              <DollarSign className="w-6 h-6 text-blue-400 light:text-blue-700" />
             </div>
-            <span className="text-xs text-blue-400 flex items-center gap-1">
+            <span className="text-xs text-blue-400 light:text-blue-700 flex items-center gap-1">
               <TrendingUp className="w-3 h-3" />
               +12%
             </span>
@@ -192,15 +192,15 @@ export default function ProviderEarningsPage() {
           <p className="text-3xl font-bold text-content">
             €{earningsData.monthTotal.toFixed(2)}
           </p>
-          <p className="text-sm text-gray-400 mt-1">{t('provider.earnings.stat.thisMonth')}</p>
+          <p className="text-sm text-content-muted mt-1">{t('provider.earnings.stat.thisMonth')}</p>
         </div>
 
         <div className="bg-surface-elevated rounded-xl p-6 border border-hairline">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-purple-500/20 rounded-lg">
-              <CheckCircle className="w-6 h-6 text-purple-400" />
+              <CheckCircle className="w-6 h-6 text-purple-400 light:text-purple-700" />
             </div>
-            <span className="text-xs text-purple-400 flex items-center gap-1">
+            <span className="text-xs text-purple-400 light:text-purple-700 flex items-center gap-1">
               <TrendingUp className="w-3 h-3" />
               +8%
             </span>
@@ -208,7 +208,7 @@ export default function ProviderEarningsPage() {
           <p className="text-3xl font-bold text-content">
             €{earningsData.yearTotal.toFixed(2)}
           </p>
-          <p className="text-sm text-gray-400 mt-1">{t('provider.earnings.stat.thisYear')}</p>
+          <p className="text-sm text-content-muted mt-1">{t('provider.earnings.stat.thisYear')}</p>
         </div>
       </div>
 
@@ -231,34 +231,34 @@ export default function ProviderEarningsPage() {
 
         {earningsData.transactions.length === 0 ? (
           <div className="p-12 text-center">
-            <Wallet className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+            <Wallet className="w-12 h-12 text-content-faint light:text-content-muted mx-auto mb-4" />
             <h3 className="text-lg font-medium text-content mb-2">{t('provider.earnings.transactions.empty.title')}</h3>
-            <p className="text-gray-400">{t('provider.earnings.transactions.empty.subtitle')}</p>
+            <p className="text-content-muted">{t('provider.earnings.transactions.empty.subtitle')}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-hairline bg-surface-input/50">
-                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">{t('provider.earnings.table.date')}</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">{t('provider.earnings.table.type')}</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-400">{t('provider.earnings.table.description')}</th>
-                  <th className="px-6 py-3 text-right text-sm font-medium text-gray-400">{t('provider.earnings.table.amount')}</th>
-                  <th className="px-6 py-3 text-right text-sm font-medium text-gray-400">{t('provider.earnings.table.status')}</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-content-muted">{t('provider.earnings.table.date')}</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-content-muted">{t('provider.earnings.table.type')}</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-content-muted">{t('provider.earnings.table.description')}</th>
+                  <th className="px-6 py-3 text-right text-sm font-medium text-content-muted">{t('provider.earnings.table.amount')}</th>
+                  <th className="px-6 py-3 text-right text-sm font-medium text-content-muted">{t('provider.earnings.table.status')}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-content/5 light:divide-hairline">
                 {earningsData.transactions.map((transaction) => (
                   <tr key={transaction.id} className="hover:bg-surface-input/30">
-                    <td className="px-6 py-4 text-sm text-gray-300">
+                    <td className="px-6 py-4 text-sm text-content/85">
                       {formatDate(transaction.createdAt)}
                     </td>
                     <td className="px-6 py-4">
                       <span className={cn(
                         'text-xs font-medium px-2 py-1 rounded-full',
-                        transaction.type === 'booking_payment' && 'bg-green-500/20 text-green-400',
-                        transaction.type === 'withdrawal' && 'bg-blue-500/20 text-blue-400',
-                        transaction.type === 'refund' && 'bg-red-500/20 text-red-400',
+                        transaction.type === 'booking_payment' && 'bg-green-500/20 text-green-400 light:text-green-700',
+                        transaction.type === 'withdrawal' && 'bg-blue-500/20 text-blue-400 light:text-blue-700',
+                        transaction.type === 'refund' && 'bg-red-500/20 text-red-400 light:text-red-700',
                       )}>
                         {transaction.type.replace('_', ' ')}
                       </span>
@@ -268,16 +268,16 @@ export default function ProviderEarningsPage() {
                     </td>
                     <td className={cn(
                       'px-6 py-4 text-sm text-right font-medium',
-                      transaction.amount > 0 ? 'text-green-400' : 'text-red-400'
+                      transaction.amount > 0 ? 'text-green-400 light:text-green-700' : 'text-red-400 light:text-red-700'
                     )}>
                       {transaction.amount > 0 ? '+' : ''}€{transaction.amount.toFixed(2)}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <span className={cn(
                         'text-xs',
-                        transaction.status === 'completed' ? 'text-green-400' :
-                        transaction.status === 'pending' ? 'text-yellow-400' :
-                        'text-gray-400'
+                        transaction.status === 'completed' ? 'text-green-400 light:text-green-700' :
+                        transaction.status === 'pending' ? 'text-yellow-400 light:text-yellow-700' :
+                        'text-content-muted'
                       )}>
                         {transaction.status}
                       </span>
@@ -297,16 +297,16 @@ export default function ProviderEarningsPage() {
             <h3 className="text-xl font-semibold text-content mb-4">{t('provider.earnings.withdraw.title')}</h3>
 
             <div className="mb-6">
-              <p className="text-sm text-gray-400 mb-2">{t('provider.earnings.withdraw.availableBalance')}</p>
+              <p className="text-sm text-content-muted mb-2">{t('provider.earnings.withdraw.availableBalance')}</p>
               <p className="text-2xl font-bold text-content">
                 €{earningsData.availableBalance.toFixed(2)}
               </p>
             </div>
 
             <div className="mb-6">
-              <label className="block text-sm text-gray-400 mb-2">{t('provider.earnings.withdraw.amountLabel')}</label>
+              <label className="block text-sm text-content-muted mb-2">{t('provider.earnings.withdraw.amountLabel')}</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">€</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-content-muted">€</span>
                 <input
                   type="number"
                   value={withdrawAmount}
@@ -318,7 +318,7 @@ export default function ProviderEarningsPage() {
               </div>
               <button
                 onClick={() => setWithdrawAmount(earningsData.availableBalance.toString())}
-                className="text-sm text-section-primary mt-2 hover:underline"
+                className="text-sm text-section-primary light:text-primary-dark mt-2 hover:underline"
               >
                 {t('provider.earnings.withdraw.withdrawAll')}
               </button>

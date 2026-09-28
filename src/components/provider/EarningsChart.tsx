@@ -65,12 +65,12 @@ export function EarningsChart({ data, className }: EarningsChartProps) {
   };
 
   return (
-    <div className={cn('bg-surface-elevated rounded-xl border border-white/5 p-6', className)}>
+    <div className={cn('bg-surface-elevated rounded-xl border border-content/5 light:border-hairline p-6', className)}>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h3 className="text-lg font-semibold text-white">{t('provider.earningsChart.title')}</h3>
-          <p className="text-sm text-gray-400 mt-1">
+          <h3 className="text-lg font-semibold text-content">{t('provider.earningsChart.title')}</h3>
+          <p className="text-sm text-content-muted mt-1">
             {t('provider.earningsChart.subtitle')}
           </p>
         </div>
@@ -85,7 +85,7 @@ export function EarningsChart({ data, className }: EarningsChartProps) {
                   'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
                   timeRange === range
                     ? 'bg-section-gradient text-white'
-                    : 'text-gray-400 hover:text-white'
+                    : 'text-content-muted hover:text-content'
                 )}
               >
                 {range === '7d' && t('provider.earningsChart.range.7d')}
@@ -101,7 +101,7 @@ export function EarningsChart({ data, className }: EarningsChartProps) {
               onClick={() => setChartType('line')}
               className={cn(
                 'p-1.5 rounded-md transition-colors',
-                chartType === 'line' ? 'bg-white/10' : 'text-gray-400 hover:text-white'
+                chartType === 'line' ? 'bg-content/10 text-content' : 'text-content-muted hover:text-content'
               )}
             >
               <LineChartIcon className="w-4 h-4" />
@@ -110,7 +110,7 @@ export function EarningsChart({ data, className }: EarningsChartProps) {
               onClick={() => setChartType('bar')}
               className={cn(
                 'p-1.5 rounded-md transition-colors',
-                chartType === 'bar' ? 'bg-white/10' : 'text-gray-400 hover:text-white'
+                chartType === 'bar' ? 'bg-content/10 text-content' : 'text-content-muted hover:text-content'
               )}
             >
               <BarChart3 className="w-4 h-4" />
@@ -122,17 +122,17 @@ export function EarningsChart({ data, className }: EarningsChartProps) {
       {/* Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="bg-surface-input rounded-lg p-4">
-          <div className="flex items-center gap-2 text-gray-400 text-sm mb-1">
+          <div className="flex items-center gap-2 text-content-muted text-sm mb-1">
             <DollarSign className="w-4 h-4" />
             {t('provider.earningsChart.stat.totalEarnings')}
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-white">
+            <span className="text-2xl font-bold text-content">
               €{stats.totalEarnings.toFixed(2)}
             </span>
             <span className={cn(
               'text-xs font-medium flex items-center gap-0.5',
-              stats.trend >= 0 ? 'text-green-400' : 'text-red-400'
+              stats.trend >= 0 ? 'text-green-400 light:text-green-700' : 'text-red-400 light:text-red-700'
             )}>
               {stats.trend >= 0 ? (
                 <TrendingUp className="w-3 h-3" />
@@ -145,19 +145,19 @@ export function EarningsChart({ data, className }: EarningsChartProps) {
         </div>
         
         <div className="bg-surface-input rounded-lg p-4">
-          <div className="flex items-center gap-2 text-gray-400 text-sm mb-1">
+          <div className="flex items-center gap-2 text-content-muted text-sm mb-1">
             <BarChart3 className="w-4 h-4" />
             {t('provider.earningsChart.stat.totalBookings')}
           </div>
-          <p className="text-2xl font-bold text-white">{stats.totalBookings}</p>
+          <p className="text-2xl font-bold text-content">{stats.totalBookings}</p>
         </div>
         
         <div className="bg-surface-input rounded-lg p-4">
-          <div className="flex items-center gap-2 text-gray-400 text-sm mb-1">
+          <div className="flex items-center gap-2 text-content-muted text-sm mb-1">
             <DollarSign className="w-4 h-4" />
             {t('provider.earningsChart.stat.avgPerBooking')}
           </div>
-          <p className="text-2xl font-bold text-white">
+          <p className="text-2xl font-bold text-content">
             €{stats.avgEarnings.toFixed(2)}
           </p>
         </div>
@@ -167,7 +167,7 @@ export function EarningsChart({ data, className }: EarningsChartProps) {
       <div className="relative h-64">
         {filteredData.length === 0 ? (
           <div className="absolute inset-0 flex items-center justify-center">
-            <p className="text-gray-400">{t('provider.earningsChart.noData')}</p>
+            <p className="text-content-muted">{t('provider.earningsChart.noData')}</p>
           </div>
         ) : (
           <div className="absolute inset-0 flex items-end gap-1">
@@ -182,12 +182,12 @@ export function EarningsChart({ data, className }: EarningsChartProps) {
                 >
                   {/* Tooltip */}
                   <div className="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                    <div className="bg-surface-input rounded-lg border border-white/10 p-2 text-xs whitespace-nowrap">
-                      <p className="text-gray-400">{formatDate(item.date)}</p>
-                      <p className="text-green-400 font-medium">
+                    <div className="bg-surface-input rounded-lg border border-hairline p-2 text-xs whitespace-nowrap">
+                      <p className="text-content-muted">{formatDate(item.date)}</p>
+                      <p className="text-green-400 light:text-green-700 font-medium">
                         €{item.earnings.toFixed(2)}
                       </p>
-                      <p className="text-blue-400 font-medium">
+                      <p className="text-blue-400 light:text-blue-700 font-medium">
                         {t('provider.earningsChart.tooltip.bookings', { count: item.bookings })}
                       </p>
                     </div>
@@ -230,7 +230,7 @@ export function EarningsChart({ data, className }: EarningsChartProps) {
         )}
         
         {/* Y-axis labels */}
-        <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-xs text-gray-500 -translate-x-full pr-2">
+        <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-xs text-content-faint light:text-content-muted -translate-x-full pr-2">
           <span>€{maxEarnings}</span>
           <span>€{(maxEarnings / 2).toFixed(0)}</span>
           <span>€0</span>
@@ -238,7 +238,7 @@ export function EarningsChart({ data, className }: EarningsChartProps) {
       </div>
 
       {/* X-axis labels */}
-      <div className="flex justify-between mt-2 text-xs text-gray-500">
+      <div className="flex justify-between mt-2 text-xs text-content-faint light:text-content-muted">
         {filteredData.length > 0 && (
           <>
             <span>{formatDate(filteredData[0].date)}</span>

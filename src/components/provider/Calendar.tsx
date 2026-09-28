@@ -20,11 +20,11 @@ interface CalendarProps {
 const VIEW_KEYS: CalendarView[] = ['month', 'week', 'day', 'agenda'];
 
 const STATUS_COLORS: Record<ScheduleEventStatus | string, string> = {
-  pending: 'bg-yellow-500/20 border-yellow-500/50 text-yellow-400',
-  confirmed: 'bg-green-500/20 border-green-500/50 text-green-400',
-  completed: 'bg-gray-500/20 border-gray-500/50 text-gray-400',
-  cancelled: 'bg-red-500/20 border-red-500/50 text-red-400',
-  blocked: 'bg-surface-input border-white/10 text-gray-400',
+  pending: 'bg-yellow-500/20 border-yellow-500/50 text-yellow-400 light:text-yellow-700',
+  confirmed: 'bg-green-500/20 border-green-500/50 text-green-400 light:text-green-700',
+  completed: 'bg-gray-500/20 border-gray-500/50 text-content-muted',
+  cancelled: 'bg-red-500/20 border-red-500/50 text-red-400 light:text-red-700',
+  blocked: 'bg-surface-input border-hairline text-content-muted',
 };
 
 export function Calendar({
@@ -140,25 +140,25 @@ export function Calendar({
   const today = new Date();
 
   return (
-    <div className="bg-surface-elevated rounded-xl border border-white/5 overflow-hidden">
+    <div className="bg-surface-elevated rounded-xl border border-content/5 light:border-hairline overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-white/5">
+      <div className="flex items-center justify-between p-4 border-b border-content/5 light:border-hairline">
         <div className="flex items-center gap-4">
-          <h2 className="text-lg font-semibold text-white">
+          <h2 className="text-lg font-semibold text-content">
             {MONTHS[month]} {year}
           </h2>
           <div className="flex items-center gap-1">
             <button
               onClick={handlePrevMonth}
-              className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-content/10 transition-colors"
             >
-              <ChevronLeft className="w-5 h-5 text-gray-400" />
+              <ChevronLeft className="w-5 h-5 text-content-muted" />
             </button>
             <button
               onClick={handleNextMonth}
-              className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-content/10 transition-colors"
             >
-              <ChevronRight className="w-5 h-5 text-gray-400" />
+              <ChevronRight className="w-5 h-5 text-content-muted" />
             </button>
           </div>
         </div>
@@ -173,7 +173,7 @@ export function Calendar({
                   'px-3 py-1.5 text-sm font-medium rounded-md capitalize transition-colors',
                   view === v
                     ? 'bg-section-gradient text-white'
-                    : 'text-gray-400 hover:text-white'
+                    : 'text-content-muted hover:text-content'
                 )}
               >
                 {VIEW_LABELS[v]}
@@ -192,26 +192,26 @@ export function Calendar({
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 px-4 py-2 border-b border-white/5 text-xs">
+      <div className="flex items-center gap-4 px-4 py-2 border-b border-content/5 light:border-hairline text-xs">
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-full bg-green-500/50" />
-          <span className="text-gray-400">{t('provider.calendar.legend.confirmed')}</span>
+          <span className="text-content-muted">{t('provider.calendar.legend.confirmed')}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-full bg-yellow-500/50" />
-          <span className="text-gray-400">{t('provider.calendar.legend.pending')}</span>
+          <span className="text-content-muted">{t('provider.calendar.legend.pending')}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-full bg-gray-500/50" />
-          <span className="text-gray-400">{t('provider.calendar.legend.completed')}</span>
+          <span className="text-content-muted">{t('provider.calendar.legend.completed')}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-full bg-red-500/50" />
-          <span className="text-gray-400">{t('provider.calendar.legend.cancelled')}</span>
+          <span className="text-content-muted">{t('provider.calendar.legend.cancelled')}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-surface-input border border-white/20" />
-          <span className="text-gray-400">{t('provider.calendar.legend.blocked')}</span>
+          <div className="w-3 h-3 rounded-full bg-surface-input border border-content/20" />
+          <span className="text-content-muted">{t('provider.calendar.legend.blocked')}</span>
         </div>
       </div>
 
@@ -222,7 +222,7 @@ export function Calendar({
           {DAYS.map((day) => (
             <div
               key={day}
-              className="text-center text-sm font-medium text-gray-400 py-2"
+              className="text-center text-sm font-medium text-content-muted py-2"
             >
               {day}
             </div>
@@ -250,18 +250,18 @@ export function Calendar({
                 className={cn(
                   'min-h-[100px] p-2 rounded-lg border transition-all cursor-pointer',
                   isCurrentMonth
-                    ? 'bg-surface-input border-white/5'
+                    ? 'bg-surface-input border-content/5 light:border-hairline'
                     : 'bg-surface-input/50 border-transparent',
                   isToday && 'ring-1 ring-section-primary',
                   isSelected && 'ring-2 ring-section-primary',
-                  'hover:border-white/10'
+                  'hover:border-hairline'
                 )}
               >
                 <div
                   className={cn(
                     'text-sm font-medium mb-1',
-                    isCurrentMonth ? 'text-white' : 'text-gray-500',
-                    isToday && 'text-section-primary'
+                    isCurrentMonth ? 'text-content' : 'text-content-faint light:text-content-muted',
+                    isToday && 'text-section-primary light:text-primary-dark'
                   )}
                 >
                   {date.getDate()}
@@ -281,7 +281,7 @@ export function Calendar({
                           ? STATUS_COLORS.blocked
                           : event.status
                           ? STATUS_COLORS[event.status]
-                          : 'bg-gray-500/20 text-gray-400'
+                          : 'bg-gray-500/20 text-content-muted'
                       )}
                     >
                       {event.start.getHours().toString().padStart(2, '0')}:
@@ -289,7 +289,7 @@ export function Calendar({
                     </div>
                   ))}
                   {dateEvents.length > 3 && (
-                    <div className="text-xs text-gray-500 pl-1">
+                    <div className="text-xs text-content-faint light:text-content-muted pl-1">
                       {t('provider.calendar.more', { count: dateEvents.length - 3 })}
                     </div>
                   )}
@@ -302,7 +302,7 @@ export function Calendar({
 
       {loading && (
         <div className="absolute inset-0 bg-surface-input/50 flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-white/20 border-t-section-primary rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-content/20 border-t-section-primary rounded-full animate-spin" />
         </div>
       )}
     </div>
