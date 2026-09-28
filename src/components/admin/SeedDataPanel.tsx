@@ -36,7 +36,7 @@ interface SeedingResult {
 
 export function SeedDataPanel() {
   const { t } = useI18n();
-  const { firebaseUser } = useAuthStore();
+  const firebaseUser = useAuthStore((s) => s.firebaseUser);
   const [loading, setLoading] = useState<string | null>(null);
   const [result, setResult] = useState<SeedingResult | null>(null);
   const [error, setError] = useState<string | null>(null);

@@ -8,7 +8,8 @@
  * few places in the app where the client is the author rather than a Cloud Function.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { CheckCircle2, Circle, Dumbbell, Info, Sparkles } from 'lucide-react';
 import { useI18n } from '@/hooks/useI18n';
 import { useAuthStore } from '@/stores/authStore';
@@ -20,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/Spinner';
 import { cn } from '@/lib/utils';
 import type { MessageKey } from '@/i18n/messages';
+import { queryKeys } from '@/lib/queryKeys';
 
 type Plan = TrainingProgram & { clientId: string };
 
@@ -31,26 +33,35 @@ export default function PlansClient() {
   const { t } = useI18n();
   const user = useAuthStore((s) => s.user);
 
-  const [plans, setPlans] = useState<Plan[] | null>(null);
-  const [library, setLibrary] = useState<Record<string, Exercise>>({});
-  const [progress, setProgress] = useState<Record<string, PlanProgressEntry>>({});
+  // Plans and the exercise library are independent reads, fetched in parallel (two
+  // concurrent queries) instead of a waterfall. The library is global reference data — not
+  // scoped to this user or plan — so it gets its own long-staleTime cache key rather than
+  // being re-fetched every time this screen loads.
+  const plansQuery = useQuery({
+    queryKey: queryKeys.myWorkoutPlans(user?.uid),
+    queryFn: () => getMyWorkoutPlans(user!.uid),
+    enabled: !!user?.uid,
+  });
+  const libraryQuery = useQuery({
+    queryKey: queryKeys.exerciseLibrary(),
+    queryFn: getExerciseLibrary,
+    staleTime: 5 * 60 * 1000,
+  });
+  const plans = plansQuery.data ?? null;
+  const library = libraryQuery.data ?? {};
+  const plan = plans?.[0] ?? null;
+
+  const progressQuery = useQuery({
+    queryKey: queryKeys.planProgress(plan?.clientId, plan?.id),
+    queryFn: () => getPlanProgress(plan!.clientId, plan!.id),
+    enabled: !!plan,
+  });
+  // Optimistic local edits (ticking a set, saving day feedback) layer on top of the fetched
+  // baseline so the UI updates instantly without waiting on a refetch.
+  const [progressOverride, setProgressOverride] = useState<Record<string, PlanProgressEntry>>({});
+  const progress = { ...(progressQuery.data ?? {}), ...progressOverride };
   const [openWeek, setOpenWeek] = useState(1);
   const [savingDay, setSavingDay] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!user?.uid) return;
-    let cancelled = false;
-    (async () => {
-      const [p, lib] = await Promise.all([getMyWorkoutPlans(user.uid), getExerciseLibrary()]);
-      if (cancelled) return;
-      setPlans(p);
-      setLibrary(lib);
-      if (p[0]) setProgress(await getPlanProgress(p[0].clientId, p[0].id));
-    })();
-    return () => { cancelled = true; };
-  }, [user?.uid]);
-
-  const plan = plans?.[0] ?? null;
 
   const toggleExercise = useCallback(
     async (week: number, dayLabel: string, index: number, exerciseCount: number) => {
@@ -61,7 +72,7 @@ export default function PlansClient() {
       exercises[String(index)] = { ...exercises[String(index)], done: !exercises[String(index)]?.done };
 
       // Optimistic: ticking a set should feel instant mid-workout, not wait on a round trip.
-      setProgress((prev) => ({
+      setProgressOverride((prev) => ({
         ...prev,
         [key]: { ...(prev[key] ?? { id: key, planId: plan.id, weekNumber: week, dayLabel, exercises: {} }), exercises },
       }));
@@ -79,7 +90,7 @@ export default function PlansClient() {
     [plan, progress],
   );
 
-  if (!plans) {
+  if (!plans || !libraryQuery.data) {
     return <div className="flex justify-center py-20"><Spinner size="md" /></div>;
   }
 
@@ -207,7 +218,7 @@ export default function PlansClient() {
                 weekNumber={week.weekNumber}
                 dayLabel={day.label}
                 existing={dayProgress}
-                onSaved={(entry) => setProgress((p) => ({ ...p, [key]: entry }))}
+                onSaved={(entry) => setProgressOverride((p) => ({ ...p, [key]: entry }))}
               />
             </section>
           );

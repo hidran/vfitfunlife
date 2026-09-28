@@ -31,21 +31,28 @@ async function clientDocIdsFor(userId: string): Promise<string[]> {
  */
 export async function getMyWorkoutPlans(userId: string): Promise<Array<TrainingProgram & { clientId: string }>> {
   const clientIds = await clientDocIdsFor(userId);
-  const out: Array<TrainingProgram & { clientId: string }> = [];
 
-  for (const clientId of clientIds) {
-    const snap = await getDocs(
-      query(
-        collection(db, 'clients', clientId, 'trainingPrograms'),
-        where('status', '==', 'published'),
-      ),
-    );
-    for (const d of snap.docs) {
-      out.push({ id: d.id, clientId, ...(d.data() as Omit<TrainingProgram, 'id'>) });
-    }
-  }
+  // A client usually has one trainer relationship, but the fetch-per-client loop shouldn't
+  // pay for that serially — each relationship's plans are independent of the others.
+  const perClientPlans = await Promise.all(
+    clientIds.map(async (clientId) => {
+      const snap = await getDocs(
+        query(
+          collection(db, 'clients', clientId, 'trainingPrograms'),
+          where('status', '==', 'published'),
+        ),
+      );
+      return snap.docs.map((d) => ({
+        id: d.id,
+        clientId,
+        ...(d.data() as Omit<TrainingProgram, 'id'>),
+      }));
+    }),
+  );
 
-  return out.sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')));
+  return perClientPlans
+    .flat()
+    .sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')));
 }
 
 /** The shared exercise library, keyed by id, for resolving names in a plan. */

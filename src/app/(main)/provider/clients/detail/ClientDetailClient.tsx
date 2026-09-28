@@ -8,6 +8,7 @@ import { ArrowLeft, Mail, Phone, Calendar, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/Spinner';
 import { cn } from '@/lib/utils';
+import { useShallow } from 'zustand/react/shallow';
 import { useProviderStore } from '@/stores/providerStore';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
@@ -35,7 +36,15 @@ export default function ClientDetailClient() {
     clientNotes,
     isLoading,
     fetchClientDetails,
-  } = useProviderStore();
+  } = useProviderStore(
+    useShallow((s) => ({
+      currentClient: s.currentClient,
+      clientBookingHistory: s.clientBookingHistory,
+      clientNotes: s.clientNotes,
+      isLoading: s.isLoading,
+      fetchClientDetails: s.fetchClientDetails,
+    })),
+  );
 
   const [activeTab, setActiveTab] = useState<TabId>('overview');
 

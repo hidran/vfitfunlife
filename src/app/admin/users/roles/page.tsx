@@ -29,7 +29,7 @@ type AdminUser = Pick<
 export default function UserRolesPage() {
   const { t } = useI18n();
   const router = useRouter();
-  const { user } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
 
   // Mock admin users data
   const adminUsers: AdminUser[] = [

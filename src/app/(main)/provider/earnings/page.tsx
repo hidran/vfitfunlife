@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Wallet, TrendingUp, TrendingDown, DollarSign, Download, ArrowUpRight, Clock, CheckCircle } from 'lucide-react';
 import { EarningsChart } from '@/components/provider/EarningsChart';
 import { Button } from '@/components/ui/button';
+import { useShallow } from 'zustand/react/shallow';
 import { useProviderStore } from '@/stores/providerStore';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
@@ -62,7 +63,14 @@ function generateEmptyChartData() {
 
 export default function ProviderEarningsPage() {
   const { t, locale } = useI18n();
-  const { earnings, isLoadingEarnings, fetchEarnings, requestWithdrawal } = useProviderStore();
+  const { earnings, isLoadingEarnings, fetchEarnings, requestWithdrawal } = useProviderStore(
+    useShallow((s) => ({
+      earnings: s.earnings,
+      isLoadingEarnings: s.isLoadingEarnings,
+      fetchEarnings: s.fetchEarnings,
+      requestWithdrawal: s.requestWithdrawal,
+    })),
+  );
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
 

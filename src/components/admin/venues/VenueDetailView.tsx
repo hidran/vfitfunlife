@@ -1,13 +1,16 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { useQueryClient } from '@tanstack/react-query';
+import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import {
   EntityDetailLayout,
   ConfirmDeleteDialog,
   useEntityMutation,
 } from '@/components/admin';
+import { useFirestoreDocQuery } from '@/hooks/useFirestoreDocQuery';
+import { queryKeys } from '@/lib/queryKeys';
 import { VenueFormView, type VenueFormData } from './VenueFormView';
 import type { Venue } from '@/types/firebase';
 import { useI18n } from '@/hooks/useI18n';
@@ -15,23 +18,16 @@ import { useI18n } from '@/hooks/useI18n';
 export function VenueDetailView({ venueId }: { venueId: string }) {
   const router = useRouter();
   const { t } = useI18n();
-  const [venue, setVenue] = useState<Venue | null>(null);
-  const [loading, setLoading] = useState(true);
+  const qc = useQueryClient();
+  const queryKey = queryKeys.adminVenue(venueId);
+  const { data: venue, isLoading: loading } = useFirestoreDocQuery<Venue>(
+    queryKey,
+    'venues',
+    venueId,
+    (id, data) => ({ id, ...data } as Venue),
+  );
   const [editing, setEditing] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const snap = await getDoc(doc(db, 'venues', venueId));
-      if (cancelled) return;
-      setVenue(snap.exists() ? ({ id: snap.id, ...snap.data() } as Venue) : null);
-      setLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [venueId]);
 
   const updateMut = useEntityMutation<VenueFormData, void>({
     mutate: async (data) => {
@@ -56,9 +52,9 @@ export function VenueDetailView({ venueId }: { venueId: string }) {
       before: (venue ?? undefined) as Record<string, unknown> | undefined,
       after: data as unknown as Record<string, unknown>,
     }),
-    invalidateKeys: [['venues']],
+    invalidateKeys: [['venues'], queryKey],
     onSuccess: (_r, data) => {
-      setVenue((prev) =>
+      qc.setQueryData(queryKey, (prev: Venue | null | undefined) =>
         prev
           ? ({
               ...prev,

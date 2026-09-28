@@ -17,6 +17,7 @@ import {
   Camera,
   Globe,
 } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 import { useAuthStore } from '@/stores/authStore';
 import { cn, toDate } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -108,7 +109,15 @@ type TabType = 'personal' | 'professional';
 export default function EditProfilePage() {
   const router = useRouter();
   const { t } = useI18n();
-  const { user, firebaseUser, refreshUserProfile, isLoading, resendVerificationEmail } = useAuthStore();
+  const { user, firebaseUser, refreshUserProfile, isLoading, resendVerificationEmail } = useAuthStore(
+    useShallow((s) => ({
+      user: s.user,
+      firebaseUser: s.firebaseUser,
+      refreshUserProfile: s.refreshUserProfile,
+      isLoading: s.isLoading,
+      resendVerificationEmail: s.resendVerificationEmail,
+    })),
+  );
   const emailVerified = !!(firebaseUser?.emailVerified || user?.emailVerified);
   const providerStatus = useProviderStatus();
   const categoryMap = useServiceCategoryMap();

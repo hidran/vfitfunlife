@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Calendar } from '@/components/provider/Calendar';
 import { ScheduleEvent, CalendarView } from '@/types/provider';
+import { useShallow } from 'zustand/react/shallow';
 import { useProviderStore } from '@/stores/providerStore';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/button';
@@ -12,7 +13,13 @@ import { X, Clock, MapPin, User, FileText } from 'lucide-react';
 
 export default function ProviderSchedulePage() {
   const { t, locale } = useI18n();
-  const { schedule, fetchSchedule, isLoadingSchedule } = useProviderStore();
+  const { schedule, fetchSchedule, isLoadingSchedule } = useProviderStore(
+    useShallow((s) => ({
+      schedule: s.schedule,
+      fetchSchedule: s.fetchSchedule,
+      isLoadingSchedule: s.isLoadingSchedule,
+    })),
+  );
   const [view, setView] = useState<CalendarView>('month');
   const [selectedEvent, setSelectedEvent] = useState<ScheduleEvent | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Search, Users, Calendar, DollarSign, ChevronRight, FileText } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
+import { useShallow } from 'zustand/react/shallow';
 import { useProviderStore } from '@/stores/providerStore';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
@@ -14,7 +15,13 @@ import Link from 'next/link';
 
 export default function ProviderClientsPage() {
   const { t, locale } = useI18n();
-  const { clients, isLoadingClients, fetchClients } = useProviderStore();
+  const { clients, isLoadingClients, fetchClients } = useProviderStore(
+    useShallow((s) => ({
+      clients: s.clients,
+      isLoadingClients: s.isLoadingClients,
+      fetchClients: s.fetchClients,
+    })),
+  );
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {

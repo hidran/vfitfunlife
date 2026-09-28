@@ -26,7 +26,7 @@ import {
 export default function AdminDashboardPage() {
   const router = useRouter();
   const { t } = useI18n();
-  const { user } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
   const {
     dashboardStats,
     isLoadingStats,

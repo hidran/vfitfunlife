@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useShallow } from "zustand/react/shallow";
 import { useAuthStore } from "@/stores/authStore";
 import { Sidebar } from "@/components/admin";
 import { cn } from "@/lib/utils";
@@ -12,7 +13,15 @@ interface AdminLayoutProps {
 }
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
-  const { firebaseUser, user, isLoading, isInitialized, logout } = useAuthStore();
+  const { firebaseUser, user, isLoading, isInitialized, logout } = useAuthStore(
+    useShallow((s) => ({
+      firebaseUser: s.firebaseUser,
+      user: s.user,
+      isLoading: s.isLoading,
+      isInitialized: s.isInitialized,
+      logout: s.logout,
+    })),
+  );
   const router = useRouter();
   const { t } = useI18n();
 

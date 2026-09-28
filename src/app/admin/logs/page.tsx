@@ -21,7 +21,7 @@ import {
 export default function SystemLogsPage() {
   const { t } = useI18n();
   const router = useRouter();
-  const { user } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
   const { systemLogs, logsTotal, isLoadingLogs, fetchSystemLogs } = useAdminStore();
 
   const [filters, setFilters] = useState<LogFilters>({

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useShallow } from 'zustand/react/shallow';
 import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,7 +14,14 @@ import { useI18n } from '@/hooks/useI18n';
 export default function ForgotPasswordPage() {
   const router = useRouter();
   const { t } = useI18n();
-  const { resetPassword, isLoading, error, clearError } = useAuthStore();
+  const { resetPassword, isLoading, error, clearError } = useAuthStore(
+    useShallow((s) => ({
+      resetPassword: s.resetPassword,
+      isLoading: s.isLoading,
+      error: s.error,
+      clearError: s.clearError,
+    })),
+  );
   
   const [email, setEmail] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
