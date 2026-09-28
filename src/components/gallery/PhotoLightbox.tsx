@@ -54,9 +54,13 @@ export function PhotoLightbox({ photos, initialIndex, onClose }: PhotoLightboxPr
       >
         <X className="h-5 w-5" />
       </button>
+      {/* Full-size image: eager, it is the one the user just asked to see. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={photos[index]}
         alt={t('gallery.photoAlt', { index: index + 1 })}
+        loading="eager"
+        decoding="async"
         className="max-h-screen max-w-full object-contain"
         onClick={(e) => e.stopPropagation()}
       />

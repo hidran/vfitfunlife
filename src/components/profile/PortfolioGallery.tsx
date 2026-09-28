@@ -6,6 +6,7 @@ import { Image as ImageIcon, Plus, X, Trash2, ZoomIn, ChevronLeft, ChevronRight 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/Spinner';
+import { ThumbnailImage } from '@/components/gallery/ThumbnailImage';
 import { uploadPortfolioImage, deletePortfolioImage } from '@/lib/firebase/storage';
 import { addPortfolioImage, removePortfolioImage } from '@/lib/firebase/auth';
 import { useI18n } from '@/hooks/useI18n';
@@ -172,13 +173,11 @@ export function PortfolioGallery({
               className="relative aspect-square rounded-xl overflow-hidden group cursor-pointer"
               onClick={() => openLightbox(index)}
             >
-              <NextImage
+              <ThumbnailImage
                 src={url}
                 alt={t('profile.portfolio.imageAlt', { index: index + 1 })}
-                fill
                 sizes="(max-width: 640px) 50vw, 33vw"
-                unoptimized
-                className="object-cover transition-transform duration-300 group-hover:scale-110"
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
               />
               
               {/* Overlay */}

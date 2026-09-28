@@ -59,7 +59,14 @@ export function AvatarUploader({ currentUrl, uid, onUploaded }: Props) {
     <div className="space-y-3">
       {currentUrl && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={currentUrl} alt="Current avatar" className="h-24 w-24 rounded-full object-cover" />
+        <img
+          src={currentUrl}
+          alt="Current avatar"
+          decoding="async"
+          width={96}
+          height={96}
+          className="h-24 w-24 rounded-full object-cover"
+        />
       )}
       <label htmlFor="avatar-input" className="inline-flex">
         <input
