@@ -25,7 +25,7 @@ import { doc, getDoc, setDoc, updateDoc, serverTimestamp, arrayUnion, arrayRemov
 import { auth, db, getFunctionsInstance } from "./config";
 import { nativeGoogleSignIn, nativeAppleSignIn } from "./nativeAuth";
 import { ProviderProfile, Certification, Education, SocialLinks, NotificationSettings, PrivacySettings } from "@/types/firebase";
-import { DEFAULT_LOCALE, type AppLocale } from "@/types/locale";
+import { DEFAULT_LOCALE, LOCALE_STORAGE_KEY, isSupportedLocale, type AppLocale } from "@/types/locale";
 
 // Store confirmation result for OTP verification (web reCAPTCHA flow)
 let confirmationResult: ConfirmationResult | null = null;
@@ -282,7 +282,22 @@ async function updateUserLastLogin(userId: string): Promise<void> {
 }
 
 /**
- * Complete user registration with profile data
+ * The locale the UI is currently showing (I18nProvider mirrors it to localStorage), or
+ * DEFAULT_LOCALE when nothing usable is stored.
+ */
+export function currentUiLocale(): AppLocale {
+  try {
+    const stored = typeof window !== "undefined" ? window.localStorage.getItem(LOCALE_STORAGE_KEY) : null;
+    if (stored && isSupportedLocale(stored)) return stored;
+  } catch {
+    /* storage unavailable */
+  }
+  return DEFAULT_LOCALE;
+}
+
+/**
+ * Complete user registration with profile data. preferredLanguage defaults to the locale
+ * the user is currently browsing in, not a hardcoded Italian.
  */
 export async function completeRegistration(
   userId: string,
@@ -296,6 +311,7 @@ export async function completeRegistration(
 ): Promise<void> {
   const userRef = doc(db, "users", userId);
   const userDoc = await getDoc(userRef);
+  const preferredLanguage = data.preferredLanguage ?? currentUiLocale();
   const authPhone = auth.currentUser?.uid === userId ? auth.currentUser.phoneNumber : null;
 
   if (!userDoc.exists()) {
@@ -321,7 +337,7 @@ export async function completeRegistration(
       isVip: false,
       pointsBalance: 100, // Welcome points
       walletBalance: 0,
-      preferredLanguage: data.preferredLanguage ?? DEFAULT_LOCALE,
+      preferredLanguage,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
       lastLoginAt: serverTimestamp(),
@@ -331,6 +347,9 @@ export async function completeRegistration(
     // Avoid sending 'createdAt' as it's not allowed in updates
     const updateData: Record<string, any> = {
       fullName: data.fullName,
+      // A doc pre-created server-side (initializeUserProfile) defaults to 'it'; the
+      // language the user registered in wins.
+      preferredLanguage,
       updatedAt: serverTimestamp(),
     };
 

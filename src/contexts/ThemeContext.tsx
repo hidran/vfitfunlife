@@ -5,12 +5,19 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { useAuthStore } from '@/stores/authStore';
+import {
+  clearExplicitChoice,
+  markExplicitChoice,
+  readExplicitChoice,
+} from '@/lib/preferences/explicitChoice';
 
 export type Theme = 'dark' | 'light';
 export type ThemePreference = Theme | 'system';
@@ -40,6 +47,10 @@ function applyNativeStatusBar(theme: Theme) {
     .catch(() => {});
 }
 
+function isThemePreference(value: unknown): value is ThemePreference {
+  return value === 'light' || value === 'dark' || value === 'system';
+}
+
 function systemTheme(): Theme {
   return typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: light)').matches
     ? 'light'
@@ -54,6 +65,11 @@ function afterCurrentEffect(callback: () => void): void {
   setTimeout(callback, 0);
 }
 
+function currentUid(): string | undefined {
+  const user = useAuthStore.getState().user;
+  return user?.id ?? user?.uid;
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   // First render must match the static prerender, which is always dark (no
   // attribute / window at build time). The real choice is read after mount,
@@ -63,6 +79,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [preference, setPreference] = useState<ThemePreference>('system');
 
   // Theme saved on the user's Firestore profile (follows them across devices).
+  const uid = useAuthStore((s) => s.user?.id ?? s.user?.uid);
   const remoteTheme = useAuthStore((s) => s.user?.theme);
 
   useEffect(() => {
@@ -73,7 +90,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       /* ignore */
     }
     afterCurrentEffect(() => {
-      if (stored === 'light' || stored === 'dark' || stored === 'system') {
+      if (isThemePreference(stored)) {
         setPreference(stored);
         setThemeState(stored === 'system' ? systemTheme() : stored);
       } else {
@@ -82,24 +99,56 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  // When a logged-in user's saved theme loads, adopt it (profile wins over the
-  // device default). Uses setThemeState directly so it isn't re-persisted.
+  // Persist a choice to the user's profile (best-effort; localStorage already covers the
+  // device + logged-out case). 'system' is persisted too, so choosing it sticks instead of
+  // being overridden by a previously saved light/dark on the next load.
+  const persistRemote = useCallback((userId: string, next: ThemePreference) => {
+    void updateDoc(doc(db, 'users', userId), { theme: next })
+      .then(() => {
+        // Mirror locally so the store's profile matches what was written.
+        useAuthStore.setState((state) =>
+          state.user && (state.user.id ?? state.user.uid) === userId && state.user.theme !== next
+            ? { user: { ...state.user, theme: next } }
+            : {},
+        );
+      })
+      .catch(() => {});
+  }, []);
+
+  // The uid whose login has already consumed the explicit pre-login marker.
+  const handledUid = useRef<string | null>(null);
+
+  // When a logged-in user's saved theme loads, adopt it (profile wins over the device
+  // default, cross-device) — unless the user explicitly picked a theme while logged out,
+  // in which case that choice is written to the profile instead. Adopting a remote value
+  // uses setThemeState directly so it isn't re-persisted.
   useEffect(() => {
-    if (remoteTheme === 'light' || remoteTheme === 'dark') {
+    if (!uid) {
+      handledUid.current = null;
+      return;
+    }
+    if (handledUid.current !== uid) {
+      handledUid.current = uid;
+      const explicit = readExplicitChoice('theme');
+      if (explicit) clearExplicitChoice('theme');
+      if (explicit && isThemePreference(explicit.value)) {
+        const chosen = explicit.value;
+        afterCurrentEffect(() => {
+          setPreference(chosen);
+          setThemeState(chosen === 'system' ? systemTheme() : chosen);
+        });
+        if (remoteTheme !== chosen) persistRemote(uid, chosen);
+        return;
+      }
+    }
+    if (isThemePreference(remoteTheme)) {
       afterCurrentEffect(() => {
         setPreference(remoteTheme);
-        setThemeState((cur) => (cur === remoteTheme ? cur : remoteTheme));
+        const next = remoteTheme === 'system' ? systemTheme() : remoteTheme;
+        setThemeState((cur) => (cur === next ? cur : next));
       });
     }
-  }, [remoteTheme]);
-
-  // Persist an explicit user choice to their profile (best-effort; localStorage
-  // already covers the device + logged-out case).
-  const persistRemote = useCallback((next: ThemePreference) => {
-    const uid = useAuthStore.getState().user?.id;
-    if (!uid || next === 'system') return;
-    void updateDoc(doc(db, 'users', uid), { theme: next }).catch(() => {});
-  }, []);
+  }, [uid, remoteTheme, persistRemote]);
 
   useEffect(() => {
     if (preference !== 'system') return;
@@ -122,34 +171,39 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     applyNativeStatusBar(theme);
   }, [preference, theme]);
 
+  // Latest resolved theme, so toggle() needs no side effect inside a state updater.
+  const themeRef = useRef<Theme>(theme);
+  useEffect(() => {
+    themeRef.current = theme;
+  }, [theme]);
+
   const setTheme = useCallback(
     (next: ThemePreference) => {
       setPreference(next);
       setThemeState(next === 'system' ? systemTheme() : next);
-      persistRemote(next);
-    },
-    [persistRemote],
-  );
-  const toggle = useCallback(
-    () => {
-      setPreference((prevPreference) => {
-        const next: Theme = prevPreference === 'dark' ? 'light' : 'dark';
-        persistRemote(next);
-        return next;
-      });
-      setThemeState((prev) => {
-        const next: Theme = prev === 'dark' ? 'light' : 'dark';
-        return next;
-      });
+      const userId = currentUid();
+      if (userId) {
+        clearExplicitChoice('theme');
+        persistRemote(userId, next);
+      } else {
+        // Logged out: remember this was a deliberate pick so login saves it to the
+        // profile rather than overwriting it with the profile's value.
+        markExplicitChoice('theme', next);
+      }
     },
     [persistRemote],
   );
 
-  return (
-    <ThemeContext.Provider value={{ theme, preference, setTheme, toggle }}>
-      {children}
-    </ThemeContext.Provider>
+  const toggle = useCallback(() => {
+    setTheme(themeRef.current === 'dark' ? 'light' : 'dark');
+  }, [setTheme]);
+
+  const value = useMemo<ThemeContextValue>(
+    () => ({ theme, preference, setTheme, toggle }),
+    [theme, preference, setTheme, toggle],
   );
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme(): ThemeContextValue {

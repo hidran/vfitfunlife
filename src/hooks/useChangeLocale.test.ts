@@ -45,3 +45,18 @@ it('persist failure does not throw and still sets locale', async () => {
   await expect(result.current('es')).resolves.toBeUndefined();
   expect(setLocale).toHaveBeenCalledWith('es');
 });
+
+it('logged-out: marks the choice as an explicit pre-login pick', async () => {
+  window.localStorage.clear();
+  const { result } = renderHook(() => useChangeLocale());
+  await result.current('en');
+  expect(JSON.parse(window.localStorage.getItem('vfit.locale.explicit') ?? '{}')).toMatchObject({ value: 'en' });
+});
+
+it('logged-in: does not leave an explicit pre-login marker', async () => {
+  window.localStorage.setItem('vfit.locale.explicit', JSON.stringify({ value: 'fr', at: 1 }));
+  mockUser = { uid: 'u1' };
+  const { result } = renderHook(() => useChangeLocale());
+  await result.current('de');
+  expect(window.localStorage.getItem('vfit.locale.explicit')).toBeNull();
+});
