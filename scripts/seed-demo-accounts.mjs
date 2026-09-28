@@ -126,8 +126,25 @@ async function ensureAuthUser({ uid, email, fullName }) {
   }
 }
 
+/**
+ * Merge-write a document, stamping `createdAt` (and any `onCreate` fields) only when the
+ * document is new — or, for a legacy doc, when it never had a createdAt. Re-running the
+ * seed must not make a months-old demo account look like it signed up today.
+ */
+async function mergeWithCreatedAt(ref, data, onCreate = {}) {
+  const snap = await ref.get();
+  const existing = snap.exists ? snap.data() : null;
+  const createOnly = !existing
+    ? { ...onCreate, createdAt: serverTimestamp() }
+    : existing.createdAt
+      ? {}
+      : { createdAt: serverTimestamp() };
+  await ref.set({ ...createOnly, ...data, updatedAt: serverTimestamp() }, { merge: true });
+}
+
 async function writeUser(uid, data) {
-  await db.collection("users").doc(uid).set(
+  await mergeWithCreatedAt(
+    db.collection("users").doc(uid),
     {
       uid,
       isActive: true,
@@ -136,11 +153,10 @@ async function writeUser(uid, data) {
       notificationsEnabled: true,
       pointsBalance: 0,
       walletBalance: 0,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
       ...data,
     },
-    { merge: true },
+    // Set on create only, so a re-run never silently un-suspends an account an admin suspended.
+    { isSuspended: false },
   );
 }
 
@@ -178,7 +194,8 @@ await writeUser(providerUid, {
 // The instructors document is what makes a provider real: the public read rule keys on the
 // NESTED providerProfile.isVerified, the dashboard counters read this document, and search
 // reads categoryIds and lowestPrice from it.
-await db.collection("instructors").doc(providerUid).set(
+await mergeWithCreatedAt(
+  db.collection("instructors").doc(providerUid),
   {
     uid: providerUid,
     name: PROVIDER.fullName,
@@ -200,10 +217,7 @@ await db.collection("instructors").doc(providerUid).set(
     lng: PROVIDER.lng,
     ratingAvg: 0,
     reviewCount: 0,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
   },
-  { merge: true },
 );
 
 // One active, priced service — without it the provider shows up but cannot be booked.

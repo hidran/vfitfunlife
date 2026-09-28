@@ -97,7 +97,7 @@ export function RefundDialog({ open, paymentId, maxAmount, onClose }: Props) {
             onClick={() => refundMut.mutate({ amount, reason })}
             disabled={!valid || refundMut.isPending}
             isLoading={refundMut.isPending}
-            className="bg-yellow-500 hover:bg-yellow-600"
+            className="bg-yellow-500 text-[#0B1220] hover:bg-yellow-400"
           >
             {t('admin.payments.refund.confirm')}
           </Button>

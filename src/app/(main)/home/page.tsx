@@ -766,7 +766,7 @@ function VLifeHome() {
 
         <Link
           href="/booking"
-          className="flex items-center justify-center gap-2 rounded-xl bg-vlife-primary px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-vlife-primary/20"
+          className="flex items-center justify-center gap-2 rounded-xl bg-vlife-primary px-4 py-3 text-sm font-semibold text-[#0B1220] shadow-lg shadow-vlife-primary/20"
         >
           <Phone className="h-4 w-4" />
           {t('home.life.contactQuote')}

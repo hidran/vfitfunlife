@@ -481,7 +481,8 @@ export default function ProfilePage() {
         </div>
 
         {/* Appearance / theme quick toggle */}
-        <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-hairline bg-surface-2 p-4">
+        {/* Wraps the toggle under the label when the labelled segments don't fit beside it */}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-hairline bg-surface-2 p-4">
           <p className="font-semibold text-text-inverse">{t('settings.appearance')}</p>
           <ThemeToggle />
         </div>

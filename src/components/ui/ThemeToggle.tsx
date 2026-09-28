@@ -72,7 +72,7 @@ export function ThemeToggle({
       role="group"
       aria-label={t('settings.appearance')}
       className={cn(
-        'inline-flex rounded-xl border p-1',
+        'inline-flex max-w-full rounded-xl border p-1',
         light ? 'border-slate-200 bg-white' : 'border-hairline bg-surface-2',
         className
       )}
@@ -90,15 +90,21 @@ export function ThemeToggle({
             className={cn(
               'flex min-h-11 min-w-11 flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
               'focus:outline-none focus-visible:ring-2 focus-visible:ring-section-primary',
+              // Cyan on a cyan tint is ~1.5:1 on light surfaces, so light
+              // mode swaps to a deep brand blue; dark keeps cyan on a fainter tint (both ≥4.5:1).
               active
-                ? 'bg-vfit-primary/20 text-vfit-primary'
+                ? light
+                  ? 'bg-vfit-secondary/10 text-[#0047B3]'
+                  : 'bg-vfit-primary/10 text-vfit-primary light:bg-vfit-secondary/10 light:text-[#0047B3]'
                 : light
                   ? 'text-slate-500 hover:text-slate-900'
                   : 'text-content-muted hover:text-content'
             )}
           >
             <opt.icon className="h-4 w-4" aria-hidden="true" />
-            {!compact && opt.label}
+            {/* Below 360px three labelled segments cannot fit a phone row; the
+                icons stay, named by aria-label/title. */}
+            {!compact && <span className="hidden min-[360px]:inline">{opt.label}</span>}
           </button>
         );
       })}

@@ -220,7 +220,7 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
           <Calendar className="w-4 h-4" />
           {t('provider.availabilityEditor.tab.overrides')}
           {localSettings.dateOverrides.length > 0 && (
-            <span className="bg-section-primary text-white text-xs px-1.5 py-0.5 rounded-full">
+            <span className="bg-section-primary text-[#0B1220] text-xs font-semibold px-1.5 py-0.5 rounded-full">
               {localSettings.dateOverrides.length}
             </span>
           )}
