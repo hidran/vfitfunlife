@@ -68,7 +68,7 @@ export function PilotFlagsSettings() {
     return (
       <div className="bg-surface rounded-2xl border border-hairline p-6 lg:col-span-2">
         <h3 className="text-lg font-semibold text-content">{t("admin.settings.pilot.title")}</h3>
-        <p className="text-sm text-[#EF4444] mt-2">
+        <p className="text-sm text-[#EF4444] light:text-red-700 mt-2">
           {error instanceof Error ? error.message : t("admin.settings.pilot.loadError")}
         </p>
       </div>
@@ -95,7 +95,7 @@ export function PilotFlagsSettings() {
     <div className="bg-surface rounded-2xl border border-hairline p-6 lg:col-span-2">
       <div className="flex items-center gap-3 mb-2">
         <div className="w-10 h-10 rounded-xl bg-[#7B61FF]/20 flex items-center justify-center">
-          <ToggleLeft className="w-5 h-5 text-[#7B61FF]" />
+          <ToggleLeft className="w-5 h-5 text-[#7B61FF] light:text-violet-700" />
         </div>
         <div>
           <h3 className="text-lg font-semibold text-content">{t("admin.settings.pilot.title")}</h3>
@@ -123,7 +123,7 @@ export function PilotFlagsSettings() {
                 aria-pressed={enabled}
                 onClick={() => setDraft({ ...draft, [key]: !enabled })}
                 className={`relative w-12 h-6 shrink-0 rounded-full transition-colors ${
-                  enabled ? "bg-[#10B981]" : "bg-white/20"
+                  enabled ? "bg-[#10B981]" : "bg-content/20"
                 }`}
               >
                 <span
@@ -154,7 +154,7 @@ export function PilotFlagsSettings() {
       </div>
 
       {publish.isError && (
-        <p className="text-sm text-[#EF4444] mt-4">
+        <p className="text-sm text-[#EF4444] light:text-red-700 mt-4">
           {publish.error instanceof Error
             ? publish.error.message
             : t("admin.settings.pilot.saveError")}

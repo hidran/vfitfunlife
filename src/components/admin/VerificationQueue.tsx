@@ -55,7 +55,7 @@ export function VerificationQueue({
   if (providers.length === 0) {
     return (
       <div className={cn("bg-surface rounded-2xl border border-hairline p-8 text-center", className)}>
-        <CheckCircle className="w-12 h-12 text-[#10B981] mx-auto mb-4" />
+        <CheckCircle className="w-12 h-12 text-[#10B981] light:text-emerald-700 mx-auto mb-4" />
         <h3 className="text-lg font-semibold text-content mb-2">{t('admin.verifications.allCaughtUp')}</h3>
         <p className="text-content-muted">{t('admin.verifications.noPending')}</p>
       </div>
@@ -174,7 +174,7 @@ export function VerificationQueue({
                         {provider.providerProfile.specialties.map((specialty) => (
                           <span
                             key={specialty}
-                            className="px-2.5 py-1 bg-[#00C9FF]/10 text-[#00C9FF] text-xs rounded-full"
+                            className="px-2.5 py-1 bg-[#00C9FF]/10 text-[#00C9FF] light:text-cyan-700 text-xs rounded-full"
                           >
                             {specialty}
                           </span>
@@ -230,7 +230,7 @@ export function VerificationQueue({
                             rel="noopener noreferrer"
                             className="flex items-center gap-3 p-3 bg-surface-sunken rounded-lg hover:bg-surface-sunken transition-colors group"
                           >
-                            <FileText className="w-5 h-5 text-[#00C9FF]" />
+                            <FileText className="w-5 h-5 text-[#00C9FF] light:text-cyan-700" />
                             <div className="flex-1 min-w-0">
                               <p className="text-sm text-content truncate">
                                 {doc.name}
@@ -258,7 +258,7 @@ export function VerificationQueue({
                             key={cert.id}
                             className="flex items-center gap-3 p-3 bg-surface-sunken rounded-lg"
                           >
-                            <FileText className="w-5 h-5 text-[#7B61FF]" />
+                            <FileText className="w-5 h-5 text-[#7B61FF] light:text-violet-700" />
                             <div className="flex-1 min-w-0">
                               <p className="text-sm text-content truncate">
                                 {cert.name}
@@ -318,7 +318,7 @@ export function VerificationQueue({
                         variant="secondary"
                         onClick={() => setShowRejectModal(provider.id)}
                         disabled={isLoading}
-                        className="flex-1 bg-[#EF4444]/20 text-[#EF4444] hover:bg-[#EF4444]/30 border-[#EF4444]/30"
+                        className="flex-1 bg-[#EF4444]/20 text-[#EF4444] light:text-red-700 hover:bg-[#EF4444]/30 border-[#EF4444]/30"
                       >
                         <XCircle className="w-4 h-4 mr-2" />
                         {t('admin.verifications.reject')}

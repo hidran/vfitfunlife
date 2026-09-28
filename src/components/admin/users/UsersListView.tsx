@@ -337,17 +337,17 @@ export function UsersListView() {
       {error && (
         <div role="alert" className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+            <AlertCircle className="w-5 h-5 text-red-400 light:text-red-700 flex-shrink-0" />
             <div>
-              <p className="text-red-200 font-medium">{t('admin.users.error.loading')}</p>
-              <p className="text-red-300/70 text-sm">{error}</p>
+              <p className="text-red-200 light:text-red-700 font-medium">{t('admin.users.error.loading')}</p>
+              <p className="text-red-300/70 light:text-red-700 text-sm">{error}</p>
             </div>
           </div>
           <button
             type="button"
             onClick={clearError}
             aria-label={t('common.close')}
-            className="touch-target flex items-center justify-center text-red-300/70 hover:text-red-200 transition-colors"
+            className="touch-target flex items-center justify-center text-red-300/70 light:text-red-700 hover:text-red-200 light:hover:text-red-700 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -357,17 +357,17 @@ export function UsersListView() {
       {bulkDeleteError && (
         <div role="alert" className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+            <AlertCircle className="w-5 h-5 text-red-400 light:text-red-700 flex-shrink-0" />
             <div>
-              <p className="text-red-200 font-medium">{t('admin.users.bulkDeleteJob.startError')}</p>
-              <p className="text-red-300/70 text-sm">{bulkDeleteError}</p>
+              <p className="text-red-200 light:text-red-700 font-medium">{t('admin.users.bulkDeleteJob.startError')}</p>
+              <p className="text-red-300/70 light:text-red-700 text-sm">{bulkDeleteError}</p>
             </div>
           </div>
           <button
             type="button"
             onClick={() => setBulkDeleteError(null)}
             aria-label={t('common.close')}
-            className="touch-target flex items-center justify-center text-red-300/70 hover:text-red-200 transition-colors"
+            className="touch-target flex items-center justify-center text-red-300/70 light:text-red-700 hover:text-red-200 light:hover:text-red-700 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -420,14 +420,14 @@ export function UsersListView() {
       {jobId && jobWatchErrorId === jobId && (
         <div role="alert" className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
-            <p className="text-red-200 font-medium">{t('admin.users.bulkDeleteJob.watchError')}</p>
+            <AlertCircle className="w-5 h-5 text-red-400 light:text-red-700 flex-shrink-0" />
+            <p className="text-red-200 light:text-red-700 font-medium">{t('admin.users.bulkDeleteJob.watchError')}</p>
           </div>
           <button
             type="button"
             onClick={() => setJobWatchErrorId(null)}
             aria-label={t('common.close')}
-            className="touch-target flex items-center justify-center text-red-300/70 hover:text-red-200 transition-colors"
+            className="touch-target flex items-center justify-center text-red-300/70 light:text-red-700 hover:text-red-200 light:hover:text-red-700 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -451,7 +451,7 @@ export function UsersListView() {
             size="sm"
             disabled={hasProtectedSelection}
             onClick={() => handleBulkAction("activate")}
-            className="text-[#10B981] hover:text-[#10B981] hover:bg-[#10B981]/10"
+            className="text-[#10B981] light:text-emerald-700 hover:text-[#10B981] light:hover:text-emerald-700 hover:bg-[#10B981]/10"
           >
             <CheckCircle className="w-4 h-4 mr-1" />
             {t('admin.users.bulkActivate')}
@@ -461,7 +461,7 @@ export function UsersListView() {
             size="sm"
             disabled={hasProtectedSelection}
             onClick={() => handleBulkAction("suspend")}
-            className="text-[#F59E0B] hover:text-[#F59E0B] hover:bg-[#F59E0B]/10"
+            className="text-[#F59E0B] light:text-amber-700 hover:text-[#F59E0B] light:hover:text-amber-700 hover:bg-[#F59E0B]/10"
           >
             <Ban className="w-4 h-4 mr-1" />
             {t('admin.users.bulkSuspend')}
@@ -494,7 +494,7 @@ export function UsersListView() {
                   console.error('Bulk role change failed:', err);
                 }
               }}
-              className="rounded-lg border border-white/20 bg-surface-2 px-3 py-1.5 text-sm text-content"
+              className="rounded-lg border border-content/20 bg-surface-2 px-3 py-1.5 text-sm text-content"
             />
           </SuperadminOnly>
           <SuperadminOnly>
@@ -503,7 +503,7 @@ export function UsersListView() {
               size="sm"
               disabled={hasProtectedSelection}
               onClick={() => setConfirmBulkDelete(true)}
-              className="text-[#EF4444] hover:text-[#EF4444] hover:bg-[#EF4444]/10"
+              className="text-[#EF4444] light:text-red-700 hover:text-[#EF4444] light:hover:text-red-700 hover:bg-[#EF4444]/10"
             >
               <Trash2 className="w-4 h-4 mr-1" />
               {t('admin.users.bulkDelete')}

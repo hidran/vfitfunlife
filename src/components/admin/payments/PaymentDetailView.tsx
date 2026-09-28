@@ -124,7 +124,7 @@ export function PaymentDetailView({ paymentId }: { paymentId: string }) {
               variant="secondary"
               size="sm"
               onClick={() => setRefundOpen(true)}
-              className="text-yellow-400 hover:text-yellow-400"
+              className="text-yellow-400 light:text-yellow-700 hover:text-yellow-400 light:hover:text-yellow-700"
             >
               <RotateCcw className="mr-1 h-4 w-4" />
               {t('admin.payments.action.refund')}

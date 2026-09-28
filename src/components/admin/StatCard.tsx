@@ -49,7 +49,7 @@ export function StatCard({
       onClick={onClick}
       className={cn(
         "bg-surface rounded-2xl p-6 border border-hairline",
-        onClick && "cursor-pointer hover:border-white/20 transition-colors",
+        onClick && "cursor-pointer hover:border-content/20 transition-colors",
         className
       )}
     >
@@ -61,16 +61,16 @@ export function StatCard({
           {trend !== undefined && (
             <div className="flex items-center gap-1 mt-2">
               {isPositive && (
-                <TrendingUp className="w-4 h-4 text-[#10B981]" />
+                <TrendingUp className="w-4 h-4 text-[#10B981] light:text-emerald-700" />
               )}
               {isNegative && (
-                <TrendingDown className="w-4 h-4 text-[#EF4444]" />
+                <TrendingDown className="w-4 h-4 text-[#EF4444] light:text-red-700" />
               )}
               <span
                 className={cn(
                   "text-sm font-medium",
-                  isPositive && "text-[#10B981]",
-                  isNegative && "text-[#EF4444]",
+                  isPositive && "text-[#10B981] light:text-emerald-700",
+                  isNegative && "text-[#EF4444] light:text-red-700",
                   !isPositive && !isNegative && "text-content-muted"
                 )}
               >
@@ -85,7 +85,7 @@ export function StatCard({
         </div>
 
         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#00C9FF]/20 to-[#7B61FF]/20 flex items-center justify-center">
-          <Icon className="w-6 h-6 text-[#00C9FF]" />
+          <Icon className="w-6 h-6 text-[#00C9FF] light:text-cyan-700" />
         </div>
       </div>
     </div>

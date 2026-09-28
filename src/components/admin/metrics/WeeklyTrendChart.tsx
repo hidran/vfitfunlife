@@ -45,7 +45,9 @@ export function WeeklyTrendChart({ data }: { data: WeeklyPoint[] }) {
   const barWidth = groupWidth / (SERIES.length + 1);
 
   return (
-    <figure className="space-y-3">
+    // Light theme: the 500-shade fallbacks sit near 2:1 on white; the 600 shades clear the
+    // 3:1 non-text contrast bar. Dark theme leaves the vars unset and keeps the fallbacks.
+    <figure className="space-y-3 light:[--chart-requested:#d97706] light:[--chart-accepted:#2563eb] light:[--chart-completed:#059669] light:[--chart-paid:#7c3aed]">
       <figcaption className="sr-only">{t('metrics.trend.title' as MessageKey)}</figcaption>
 
       <div className="flex flex-wrap gap-3">

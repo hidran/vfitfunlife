@@ -99,9 +99,9 @@ export default function SettingsPage() {
 
       {/* Superadmin Warning */}
       <div className="bg-[#FFD700]/10 border border-[#FFD700]/30 rounded-xl p-4 flex items-start gap-3">
-        <Shield className="w-5 h-5 text-[#FFD700] flex-shrink-0 mt-0.5" />
+        <Shield className="w-5 h-5 text-[#FFD700] light:text-yellow-700 flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-sm font-medium text-[#FFD700]">{t('admin.settings.superadminOnly.label')}</p>
+          <p className="text-sm font-medium text-[#FFD700] light:text-yellow-700">{t('admin.settings.superadminOnly.label')}</p>
           <p className="text-sm text-content-muted">
             {t('admin.settings.superadminOnly.description')}
           </p>
@@ -113,7 +113,7 @@ export default function SettingsPage() {
         <div className="bg-surface rounded-2xl border border-hairline p-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl bg-[#00C9FF]/20 flex items-center justify-center">
-              <Shield className="w-5 h-5 text-[#00C9FF]" />
+              <Shield className="w-5 h-5 text-[#00C9FF] light:text-cyan-700" />
             </div>
             <div>
               <h3 className="text-lg font-semibold text-content">{t('admin.settings.general.title')}</h3>
@@ -187,7 +187,7 @@ export default function SettingsPage() {
         <div className="bg-surface rounded-2xl border border-hairline p-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl bg-[#10B981]/20 flex items-center justify-center">
-              <CreditCard className="w-5 h-5 text-[#10B981]" />
+              <CreditCard className="w-5 h-5 text-[#10B981] light:text-emerald-700" />
             </div>
             <div>
               <h3 className="text-lg font-semibold text-content">{t('admin.settings.payment.title')}</h3>
@@ -250,7 +250,7 @@ export default function SettingsPage() {
         <div className="bg-[#EF4444]/10 border border-[#EF4444]/30 rounded-2xl p-6 lg:col-span-2">
           <div className="flex items-start gap-4">
             <div className="w-10 h-10 rounded-xl bg-[#EF4444]/20 flex items-center justify-center flex-shrink-0">
-              <AlertTriangle className="w-5 h-5 text-[#EF4444]" />
+              <AlertTriangle className="w-5 h-5 text-[#EF4444] light:text-red-700" />
             </div>
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-content">{t('admin.settings.maintenance.title')}</h3>
@@ -267,7 +267,7 @@ export default function SettingsPage() {
                     }))
                   }
                   className={`relative w-12 h-6 rounded-full transition-colors ${
-                    settings.maintenanceMode ? "bg-[#EF4444]" : "bg-white/20"
+                    settings.maintenanceMode ? "bg-[#EF4444]" : "bg-content/20"
                   }`}
                 >
                   <span
@@ -285,7 +285,7 @@ export default function SettingsPage() {
         <div className="bg-surface rounded-2xl border border-hairline p-6 lg:col-span-2">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
-              <Database className="w-5 h-5 text-purple-400" />
+              <Database className="w-5 h-5 text-purple-400 light:text-purple-700" />
             </div>
             <div>
               <h3 className="text-lg font-semibold text-content">{t('admin.settings.demoData.title')}</h3>

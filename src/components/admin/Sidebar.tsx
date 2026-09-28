@@ -195,7 +195,7 @@ export function Sidebar({
           )}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="hidden lg:flex w-6 h-6 rounded-full bg-surface-2 items-center justify-center text-content-muted hover:text-content hover:bg-white/20 transition-colors"
+            className="hidden lg:flex w-6 h-6 rounded-full bg-surface-2 items-center justify-center text-content-muted hover:text-content hover:bg-content/20 transition-colors"
           >
             {isCollapsed ? (
               <ChevronRight className="w-3 h-3" />
@@ -215,7 +215,7 @@ export function Sidebar({
                 onLogout();
               }}
               className={cn(
-                "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-[#EF4444] hover:bg-[#EF4444]/10",
+                "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-[#EF4444] light:text-red-700 hover:bg-[#EF4444]/10",
                 isCollapsed && "justify-center"
               )}
               title={t('admin.sidebar.logout')}
@@ -242,7 +242,7 @@ export function Sidebar({
                   <span
                     className={cn(
                       "transition-colors",
-                      isActive(item.href) && "text-[#00C9FF]"
+                      isActive(item.href) && "text-[#00C9FF] light:text-cyan-700"
                     )}
                   >
                     {item.icon}
@@ -328,7 +328,7 @@ export function Sidebar({
               )}
               <span
                 className={cn(
-                  "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#1E2230]",
+                  "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-surface",
                   userRole === "superadmin" ? "bg-[#FFD700]" : "bg-[#10B981]"
                 )}
                 title={userRole === "superadmin" ? t('admin.sidebar.roleTitle.superadmin') : t('admin.sidebar.roleTitle.admin')}

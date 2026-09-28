@@ -51,7 +51,7 @@ export function ProviderApplicationsPanel() {
   return (
     <div className="bg-surface rounded-xl border border-hairline p-4">
       <div className="flex items-center gap-2 mb-4">
-        <Clock className="w-5 h-5 text-[#F59E0B]" />
+        <Clock className="w-5 h-5 text-[#F59E0B] light:text-amber-700" />
         <h2 className="text-lg font-semibold text-content">{t('admin.applications.title')}</h2>
         <span className="text-sm text-content-muted">({apps.length})</span>
       </div>
@@ -72,7 +72,7 @@ export function ProviderApplicationsPanel() {
                 <p className="text-content font-medium">{a.fullName}</p>
                 <p className="text-sm text-content-muted">{categoryLabels(a) || '—'}</p>
                 {errorId === a.id && (
-                  <p className="text-sm text-[#EF4444]">{t('admin.applications.error')}</p>
+                  <p className="text-sm text-[#EF4444] light:text-red-700">{t('admin.applications.error')}</p>
                 )}
               </div>
               {isAdmin && (

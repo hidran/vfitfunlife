@@ -64,7 +64,7 @@ function Field({ label, error, children }: { label: string; error?: string; chil
     <label className="block space-y-1">
       <span className="text-xs text-content-muted">{label}</span>
       {children}
-      {error && <span className="text-xs text-red-400">{error}</span>}
+      {error && <span className="text-xs text-red-400 light:text-red-700">{error}</span>}
     </label>
   );
 }

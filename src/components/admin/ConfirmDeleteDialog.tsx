@@ -47,7 +47,7 @@ export function ConfirmDeleteDialog({ open, entityLabel, entityName, onClose, on
       <div className="w-full max-w-md rounded-2xl bg-surface border border-hairline p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-lg font-semibold text-content">
-            <AlertTriangle className="h-5 w-5 text-red-400" />
+            <AlertTriangle className="h-5 w-5 text-red-400 light:text-red-700" />
             {t('admin.delete.title', { entity: entityLabel })}
           </h2>
           <button

@@ -169,7 +169,7 @@ export function ProvidersListView() {
       header: t("admin.providers.col.rating"),
       cell: (provider) => (
         <div className="flex items-center gap-1">
-          <Star className="w-4 h-4 text-[#F59E0B] fill-[#F59E0B]" />
+          <Star className="w-4 h-4 text-[#F59E0B] light:text-amber-700 fill-[#F59E0B] light:fill-amber-600" />
           <span className="text-sm text-content">
             {provider.providerProfile?.rating?.toFixed(1) || "0.0"}
           </span>
@@ -247,7 +247,7 @@ export function ProvidersListView() {
             <AlertCircle className="w-4 h-4" />
             {t("admin.providers.verificationsBtn")}
             {pendingVerifications.length > 0 && (
-              <span className="ml-1 px-2 py-0.5 bg-white/20 rounded-full text-xs">
+              <span className="ml-1 px-2 py-0.5 bg-content/20 rounded-full text-xs">
                 {pendingVerifications.length}
               </span>
             )}
@@ -268,7 +268,7 @@ export function ProvidersListView() {
         <div className="bg-gradient-to-r from-[#F59E0B]/20 to-[#F59E0B]/5 rounded-xl border border-[#F59E0B]/30 p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/20 flex items-center justify-center">
-              <AlertCircle className="w-5 h-5 text-[#F59E0B]" />
+              <AlertCircle className="w-5 h-5 text-[#F59E0B] light:text-amber-700" />
             </div>
             <div>
               <h3 className="font-medium text-content">

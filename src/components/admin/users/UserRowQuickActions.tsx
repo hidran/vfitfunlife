@@ -144,12 +144,12 @@ export function UserRowQuickActions({ user, onDone }: Props) {
                     'admin action';
                 toggleMut.mutate({ reason });
               }}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-white/80 hover:bg-surface-2"
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-content/80 hover:bg-surface-2"
             >
               {isSuspended ? (
-                <CheckCircle className="h-4 w-4 text-[#10B981]" />
+                <CheckCircle className="h-4 w-4 text-[#10B981] light:text-emerald-700" />
               ) : (
-                <Ban className="h-4 w-4 text-[#F59E0B]" />
+                <Ban className="h-4 w-4 text-[#F59E0B] light:text-amber-700" />
               )}
               {isSuspended
                 ? t('admin.users.quick.activate')
@@ -167,7 +167,7 @@ export function UserRowQuickActions({ user, onDone }: Props) {
                 <UserRoleSelect
                   value={user.role}
                   onChange={(role) => roleMut.mutate({ role })}
-                  className="w-full rounded-lg border border-white/20 bg-surface-2 px-2 py-1.5 text-sm text-content"
+                  className="w-full rounded-lg border border-content/20 bg-surface-2 px-2 py-1.5 text-sm text-content"
                 />
               </div>
             </SuperadminOnly>
@@ -179,7 +179,7 @@ export function UserRowQuickActions({ user, onDone }: Props) {
               setOpen(false);
               router.push(`/admin/users/?id=${user.id}`);
             }}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-white/80 hover:bg-surface-2"
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-content/80 hover:bg-surface-2"
           >
             <Edit className="h-4 w-4" />
             {t('admin.detail.edit')}
@@ -190,7 +190,7 @@ export function UserRowQuickActions({ user, onDone }: Props) {
               <button
                 type="button"
                 onClick={() => setConfirmDelete(true)}
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-red-400 hover:bg-red-500/10"
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-red-400 light:text-red-700 hover:bg-red-500/10"
               >
                 <Trash2 className="h-4 w-4" />
                 {t('admin.detail.delete')}

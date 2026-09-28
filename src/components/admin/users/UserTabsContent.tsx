@@ -30,7 +30,7 @@ export function UserTabBar({ active, onChange }: TabBarProps) {
             onClick={() => onChange(tab.id)}
             className={`flex items-center gap-2 px-1 py-3 text-sm font-medium border-b-2 transition-colors ${
               active === tab.id
-                ? 'text-[#00C9FF] border-[#00C9FF]'
+                ? 'text-[#00C9FF] light:text-cyan-700 border-[#00C9FF]'
                 : 'text-content-muted border-transparent hover:text-content'
             }`}
           >
@@ -157,12 +157,12 @@ export function UserTabContent({
           <h3 className="text-lg font-semibold text-content mb-4">{t('admin.userDetail.stats')}</h3>
           <div className="grid grid-cols-2 gap-4">
             <StatBox
-              icon={<CalendarDays className="w-5 h-5 text-[#00C9FF]" />}
+              icon={<CalendarDays className="w-5 h-5 text-[#00C9FF] light:text-cyan-700" />}
               label={t('admin.userDetail.stat.totalBookings')}
               value="0"
             />
             <StatBox
-              icon={<CreditCard className="w-5 h-5 text-[#10B981]" />}
+              icon={<CreditCard className="w-5 h-5 text-[#10B981] light:text-emerald-700" />}
               label={t('admin.userDetail.stat.totalSpent')}
               value={formatPrice(0)}
             />
@@ -180,7 +180,7 @@ export function UserTabContent({
               }
             />
             <StatBox
-              icon={<Clock className="w-5 h-5 text-[#F59E0B]" />}
+              icon={<Clock className="w-5 h-5 text-[#F59E0B] light:text-amber-700" />}
               label={t('admin.userDetail.stat.points')}
               value={(user.pointsBalance || 0).toLocaleString()}
             />
@@ -220,7 +220,7 @@ export function UserTabContent({
                 <span className="text-content-muted">{setting.label}</span>
                 <span
                   className={`text-sm ${
-                    setting.enabled ? 'text-[#10B981]' : 'text-content-faint'
+                    setting.enabled ? 'text-[#10B981] light:text-emerald-700' : 'text-content-faint'
                   }`}
                 >
                   {setting.enabled
