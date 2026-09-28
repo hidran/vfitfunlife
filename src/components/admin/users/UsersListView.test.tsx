@@ -220,4 +220,29 @@ describe('UsersListView', () => {
       await screen.findByText("L'eliminazione prosegue sul server, ma non riesco a mostrarne l'avanzamento")
     ).toBeInTheDocument();
   });
+
+  it('debounces the search: one fetch with the final text once typing pauses', () => {
+    vi.useFakeTimers();
+    try {
+      renderView();
+      expect(mockAdminState.fetchUsers).toHaveBeenCalledTimes(1); // initial load
+      const box = screen.getByPlaceholderText(/cerca/i);
+
+      for (const text of ['m', 'ma', 'mar', 'mari', 'mario']) {
+        fireEvent.change(box, { target: { value: text } });
+        act(() => vi.advanceTimersByTime(100));
+      }
+      expect(mockAdminState.fetchUsers).toHaveBeenCalledTimes(1);
+      expect(box).toHaveValue('mario');
+
+      act(() => vi.advanceTimersByTime(300));
+      expect(mockAdminState.fetchUsers).toHaveBeenCalledTimes(2);
+      expect(mockAdminState.fetchUsers).toHaveBeenLastCalledWith(
+        expect.objectContaining({ search: 'mario', page: 1 })
+      );
+      expect(window.location.search).toBe('?q=mario');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

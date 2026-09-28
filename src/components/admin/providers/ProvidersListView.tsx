@@ -2,23 +2,29 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAdminStore } from "@/stores/adminStore";
 import {
   DataTable,
   FilterBar,
-  VerificationBadge,
   StatusBadge,
   ProviderApplicationsPanel,
   ProviderTypeBadge,
 } from "@/components/admin";
-import { isProviderVerified } from "@/lib/providerVerification";
+import { providerVerificationState } from "@/lib/firebase/admin";
+import {
+  DEFAULT_PROVIDER_FILTERS,
+  PROVIDERS_LIST_QUERY_KEY,
+  providerFiltersFromParams,
+  queryFromProviderFilters,
+} from "@/lib/admin/providersListQuery";
 import { ProviderOnboardingSettings } from "@/components/admin/settings/ProviderOnboardingSettings";
 import { Button } from "@/components/ui/button";
 import { AdminProvider, ProviderFilters } from "@/types/admin";
 import { Column } from "@/components/admin/DataTable";
 import { formatPrice } from "@/lib/utils";
 import { useI18n } from "@/hooks/useI18n";
+import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import {
   User,
   Star,
@@ -26,6 +32,9 @@ import {
   AlertCircle,
   UserPlus,
 } from "lucide-react";
+
+/** Sort order of the verification column: work to do first. */
+const VERIFICATION_ORDER = { pending: 0, rejected: 1, verified: 2 } as const;
 
 export function ProvidersListView() {
   const { t } = useI18n();
@@ -39,21 +48,47 @@ export function ProvidersListView() {
     fetchPendingVerifications,
   } = useAdminStore();
 
-  const [filters, setFilters] = useState<ProviderFilters>({
-    verificationStatus: "all",
-    status: "all",
-    search: "",
-    page: 1,
-    limit: 20,
-  });
+  const searchParams = useSearchParams();
+  // Seeded from the URL so a reload, or coming back from a provider's page, keeps the filters.
+  const [filters, setFilters] = useState<ProviderFilters>(() =>
+    providerFiltersFromParams(searchParams)
+  );
+  // The search box's text; it reaches `filters` only once typing pauses (see UsersListView).
+  const [searchInput, setSearchInput] = useState(() => filters.search ?? "");
+  const applySearch = useDebouncedCallback((search: string) =>
+    setFilters((prev) => (prev.search === search ? prev : { ...prev, search, page: 1 }))
+  );
 
   useEffect(() => {
     fetchProviders(filters);
+  }, [filters, fetchProviders]);
+
+  // The pending-verification counter does not depend on the list filters: load it once,
+  // not on every filter change or keystroke.
+  useEffect(() => {
     fetchPendingVerifications();
-  }, [filters, fetchProviders, fetchPendingVerifications]);
+  }, [fetchPendingVerifications]);
+
+  // replaceState rather than router.replace, as in UsersListView: no navigation per change.
+  useEffect(() => {
+    const query = queryFromProviderFilters(filters);
+    window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
+    try {
+      sessionStorage.setItem(PROVIDERS_LIST_QUERY_KEY, query);
+    } catch {
+      // Storage unavailable: the URL still carries the filters.
+    }
+  }, [filters]);
 
   const handleSearchChange = (search: string) => {
-    setFilters((prev) => ({ ...prev, search, page: 1 }));
+    setSearchInput(search);
+    if (search) {
+      applySearch.run(search);
+    } else {
+      // Clearing the box is a deliberate action, not typing: apply it at once.
+      applySearch.cancel();
+      setFilters((prev) => (prev.search ? { ...prev, search: "", page: 1 } : prev));
+    }
   };
 
   const handleVerificationStatusChange = (status: string) => {
@@ -77,13 +112,9 @@ export function ProvidersListView() {
   };
 
   const handleClearFilters = () => {
-    setFilters({
-      verificationStatus: "all",
-      status: "all",
-      search: "",
-      page: 1,
-      limit: 20,
-    });
+    setSearchInput("");
+    applySearch.cancel();
+    setFilters(DEFAULT_PROVIDER_FILTERS);
   };
 
   const columns: Column<AdminProvider>[] = [
@@ -112,6 +143,7 @@ export function ProvidersListView() {
           </div>
         </div>
       ),
+      sortValue: (provider) => provider.fullName || provider.email,
       width: "w-1/4",
     },
     {
@@ -125,10 +157,11 @@ export function ProvidersListView() {
     {
       key: "verification",
       header: t("admin.providers.col.verification"),
+      // Three states, not a verified/unverified pair: a rejected applicant is not "pending".
       cell: (provider) => (
-        <VerificationBadge isVerified={isProviderVerified(provider)} size="sm" />
+        <StatusBadge status={providerVerificationState(provider)} size="sm" />
       ),
-      sortable: true,
+      sortValue: (provider) => VERIFICATION_ORDER[providerVerificationState(provider)],
       width: "w-28",
     },
     {
@@ -145,7 +178,7 @@ export function ProvidersListView() {
           </span>
         </div>
       ),
-      sortable: true,
+      sortValue: (provider) => provider.providerProfile?.rating ?? 0,
       width: "w-24",
     },
     {
@@ -159,7 +192,7 @@ export function ProvidersListView() {
           </span>
         );
       },
-      sortable: true,
+      sortValue: (provider) => provider.performanceMetrics?.totalBookings ?? 0,
       width: "w-24",
     },
     {
@@ -173,7 +206,7 @@ export function ProvidersListView() {
           </span>
         );
       },
-      sortable: true,
+      sortValue: (provider) => provider.performanceMetrics?.totalRevenue ?? 0,
       width: "w-28",
     },
     {
@@ -187,7 +220,8 @@ export function ProvidersListView() {
           <StatusBadge status={isSuspended ? "suspended" : "active"} size="sm" />
         );
       },
-      sortable: true,
+      sortValue: (provider) =>
+        (provider as AdminProvider & { isSuspended?: boolean }).isSuspended ? "suspended" : "active",
       width: "w-24",
     },
   ];
@@ -268,7 +302,7 @@ export function ProvidersListView() {
       {/* Filters */}
       <FilterBar
         searchPlaceholder={t("admin.providers.search")}
-        searchValue={filters.search || ""}
+        searchValue={searchInput}
         onSearchChange={handleSearchChange}
         filters={[
           {

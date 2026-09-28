@@ -30,6 +30,8 @@ import { useVisibleSections } from '@/hooks/usePilotFlags';
 import { useSection, type Section } from '@/contexts/SectionContext';
 import { cn, formatPrice } from '@/lib/utils';
 import { Avatar } from '@/components/ui/Avatar';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import { useAuthStore } from '@/stores/authStore';
 import { canAccessProviderArea } from '@/lib/providerStatus';
 import { useShallow } from 'zustand/react/shallow';
@@ -403,6 +405,16 @@ export function SideDrawer({
                 );
               })}
             </nav>
+
+            {/* Language + theme: the only place a signed-in user can reach them outside
+                /profile/settings. The drawer surface is always light, hence tone="light". */}
+            <div
+              className="mt-6 flex flex-wrap items-center justify-between gap-2"
+              data-testid="drawer-preferences"
+            >
+              <LanguageSwitcher variant="menu" tone="light" />
+              <ThemeToggle compact tone="light" />
+            </div>
 
             <button
               type="button"

@@ -78,6 +78,8 @@ interface AdminState {
   /** The filters of the last users fetch, reused by refetches that pass none. */
   usersFilters: UserFilters;
   providersTotal: number;
+  /** The filters of the last providers fetch, reused by refetches that pass none. */
+  providersFilters: ProviderFilters;
   bookingsTotal: number;
   logsTotal: number;
 
@@ -113,6 +115,14 @@ interface AdminState {
   clearError: () => void;
 }
 
+/**
+ * Request sequence numbers for the list fetches. Responses can arrive out of order (a broad
+ * search typed first may resolve after a narrower one typed later); only the latest request
+ * may write the list, so a stale response never overwrites a fresher one.
+ */
+let usersRequestSeq = 0;
+let providersRequestSeq = 0;
+
 export const useAdminStore = create<AdminState>((set, get) => ({
   // Initial state
   dashboardStats: null,
@@ -141,6 +151,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   usersTotal: 0,
   usersFilters: {},
   providersTotal: 0,
+  providersFilters: {},
   bookingsTotal: 0,
   logsTotal: 0,
 
@@ -160,15 +171,19 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     // A refetch after a mutation passes no filters; reusing the last ones keeps the list
     // the admin was looking at instead of silently resetting it under a filled search box.
     const effective = filters ?? get().usersFilters;
+    const seq = ++usersRequestSeq;
     set({ isLoadingUsers: true, error: null, usersFilters: effective });
     try {
       const result = await getUsers(effective);
-      set({ 
-        users: result.users, 
+      // A newer fetch started while this one was in flight: its answer is the one on screen.
+      if (seq !== usersRequestSeq) return;
+      set({
+        users: result.users,
         usersTotal: result.total,
-        isLoadingUsers: false 
+        isLoadingUsers: false,
       });
     } catch (error: any) {
+      if (seq !== usersRequestSeq) return;
       set({ error: error.message || "Failed to fetch users", isLoadingUsers: false });
     }
   },
@@ -222,15 +237,20 @@ export const useAdminStore = create<AdminState>((set, get) => ({
 
   // Fetch providers
   fetchProviders: async (filters?: ProviderFilters) => {
-    set({ isLoadingProviders: true, error: null });
+    // Same as fetchUsers: a refetch after a mutation reuses the filters on screen.
+    const effective = filters ?? get().providersFilters;
+    const seq = ++providersRequestSeq;
+    set({ isLoadingProviders: true, error: null, providersFilters: effective });
     try {
-      const result = await getProviders(filters || {});
-      set({ 
-        providers: result.providers, 
+      const result = await getProviders(effective);
+      if (seq !== providersRequestSeq) return;
+      set({
+        providers: result.providers,
         providersTotal: result.total,
-        isLoadingProviders: false 
+        isLoadingProviders: false,
       });
     } catch (error: any) {
+      if (seq !== providersRequestSeq) return;
       set({ error: error.message || "Failed to fetch providers", isLoadingProviders: false });
     }
   },

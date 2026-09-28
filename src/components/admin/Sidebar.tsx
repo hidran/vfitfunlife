@@ -7,6 +7,8 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { UserRole } from "@/types/firebase";
 import { useI18n } from "@/hooks/useI18n";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
 import {
   LayoutDashboard,
   Users,
@@ -280,6 +282,27 @@ export function Sidebar({
               )}
             </button>
           )}
+
+          {/* Language + theme */}
+          <div
+            className={cn(
+              "mb-3 flex items-center gap-2",
+              isCollapsed ? "flex-col" : "flex-wrap justify-between"
+            )}
+            data-testid="admin-sidebar-preferences"
+          >
+            {isCollapsed ? (
+              <>
+                <LanguageSwitcher variant="icon" />
+                <ThemeToggle variant="cycle" />
+              </>
+            ) : (
+              <>
+                <LanguageSwitcher variant="menu" />
+                <ThemeToggle compact />
+              </>
+            )}
+          </div>
 
           {/* User Info */}
           <div

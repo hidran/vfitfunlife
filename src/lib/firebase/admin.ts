@@ -310,39 +310,91 @@ export async function activateUser(userId: string): Promise<void> {
   }
 }
 
+/** Where a provider (or provider applicant) stands in the verification flow. */
+export type ProviderVerificationState = "verified" | "pending" | "rejected";
+
+/**
+ * One answer for the providers table's badge and its verification filter, built on the same
+ * predicates as the dashboard counter and the verification queue (`needsVerificationDecision`,
+ * `isProviderVerified`) so the three never disagree.
+ *
+ * `providerStatus` decides first: an applicant is still `role: 'customer'` while pending or
+ * after a rejection, so a rejected applicant must never fall into "pending" just because it is
+ * unverified.
+ */
+export function providerVerificationState(record: {
+  role?: string;
+  providerStatus?: string;
+  providerProfile?: { isVerified?: boolean } | null;
+  isVerified?: boolean;
+}): ProviderVerificationState {
+  if (record.providerStatus === "rejected") return "rejected";
+  if (needsVerificationDecision(record)) return "pending";
+  return isProviderVerified(record) ? "verified" : "pending";
+}
+
+/** Provider documents carry the same suspension flag as every user document. */
+type SuspendableProvider = AdminProvider & { isSuspended?: boolean };
+
+const createdAtMillis = (value: unknown): number =>
+  value instanceof Date ? value.getTime() : Number.NEGATIVE_INFINITY;
+
 // Get providers with filters
 export async function getProviders(
   filters: ProviderFilters
 ): Promise<{ providers: AdminProvider[]; total: number }> {
   try {
-    // Verification is filtered in memory, not here: `== false` cannot match a document whose
-    // `providerProfile` is absent, so filtering by "pending" in Firestore silently hid most
-    // of the rows the table itself renders as unverified.
-    const constraints: QueryConstraint[] = [where("role", "==", "provider")];
+    const wanted = filters.verificationStatus ?? "all";
+    const users = collection(db, USERS_COLLECTION);
 
-    constraints.push(orderBy("createdAt", "desc"));
+    // Two sources, because providers and applicants live under different roles:
+    //  - role == 'provider': the actual providers (verified, or awaiting verification);
+    //  - providerStatus pending/rejected: applicants, who stay `role: 'customer'` until a
+    //    decision promotes them — a role-only query made "pending"/"rejected" unreachable.
+    // Neither query has an orderBy: it would drop every document without `createdAt`, and the
+    // two result sets have to be merged and sorted in memory anyway. Both are single-field
+    // equality/`in` filters, served by Firestore's automatic indexes.
+    const reads: Promise<Awaited<ReturnType<typeof getDocs>>>[] = [];
+    if (wanted !== "rejected") {
+      reads.push(getDocs(query(users, where("role", "==", "provider"))));
+    }
+    if (wanted !== "verified") {
+      const statuses = wanted === "all" ? ["pending", "rejected"] : [wanted];
+      reads.push(getDocs(query(users, where("providerStatus", "in", statuses))));
+    }
+    const snapshots = await Promise.all(reads);
 
-    const q = query(collection(db, USERS_COLLECTION), ...constraints);
-    const snapshot = await getDocs(q);
+    const byId = new Map<string, AdminProvider>();
+    for (const snapshot of snapshots) {
+      for (const d of snapshot.docs) {
+        if (byId.has(d.id) || isHiddenAccount(d.id, d.data())) continue;
+        // Doc id last, so a stray id/uid field in the data never wins (same as getUsers).
+        byId.set(d.id, { ...convertTimestamps(d.data()), id: d.id, uid: d.id } as AdminProvider);
+      }
+    }
+    let providers: SuspendableProvider[] = [...byId.values()].sort(
+      (a, b) => createdAtMillis(b.createdAt) - createdAtMillis(a.createdAt)
+    );
 
-    let providers = (snapshot.docs.map((doc) => ({
-      id: doc.id,
-      uid: doc.id,
-      ...convertTimestamps(doc.data()),
-    })) as AdminProvider[]).filter((p) => !isHiddenAccount(p.id, p));
-
-    if (filters.verificationStatus && filters.verificationStatus !== "all") {
-      const wantVerified = filters.verificationStatus === "verified";
-      providers = providers.filter((p) => isProviderVerified(p) === wantVerified);
+    if (wanted !== "all") {
+      providers = providers.filter((p) => providerVerificationState(p) === wanted);
     }
 
-    // Client-side filtering for search
+    // Same semantics as getUsers: most documents carry no isSuspended field at all, so this
+    // is filtered in memory rather than with a Firestore `where` that would miss them.
+    if (filters.status === "active") {
+      providers = providers.filter((p) => p.isSuspended !== true);
+    } else if (filters.status === "suspended") {
+      providers = providers.filter((p) => p.isSuspended === true);
+    }
+
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
       providers = providers.filter(
         (p) =>
           p.fullName?.toLowerCase().includes(searchLower) ||
-          p.email?.toLowerCase().includes(searchLower)
+          p.email?.toLowerCase().includes(searchLower) ||
+          p.phone?.toLowerCase().includes(searchLower)
       );
     }
 

@@ -23,6 +23,8 @@ import { useI18n } from '@/hooks/useI18n';
 import { useAuthStore } from '@/stores/authStore';
 import { canAccessProviderArea } from '@/lib/providerStatus';
 import type { MessageKey } from '@/i18n/messages';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 
 interface ProviderLayoutProps {
   children: ReactNode;
@@ -92,6 +94,14 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
             );
           })}
         </nav>
+
+        <div
+          className="mx-3 mb-6 flex flex-wrap items-center gap-2 border-t border-hairline px-1 pt-4"
+          data-testid="provider-nav-preferences"
+        >
+          <LanguageSwitcher variant="menu" />
+          <ThemeToggle compact />
+        </div>
       </aside>
 
       {/* Mobile Header */}
@@ -134,6 +144,10 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
                 </Link>
               );
             })}
+            <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-hairline px-1 pt-3">
+              <LanguageSwitcher variant="menu" />
+              <ThemeToggle compact />
+            </div>
           </nav>
         )}
       </div>

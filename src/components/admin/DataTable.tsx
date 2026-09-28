@@ -20,12 +20,68 @@ import {
   Square,
 } from "lucide-react";
 
+/** What a column sorts by. null/undefined always sort last, whichever the direction. */
+export type SortValue = string | number | boolean | Date | null | undefined;
+
 export interface Column<T> {
   key: string;
   header: string;
   cell: (row: T) => React.ReactNode;
+  /**
+   * The value this column sorts by. A column is sortable only when it has one: `key` is a
+   * column id, not a row field ("joined", "status", "earnings" are computed in `cell`), so
+   * sorting by `row[key]` compared `undefined` with `undefined` and never moved a row.
+   */
+  sortValue?: (row: T) => SortValue;
+  /**
+   * Legacy: sort by `row[key]`. Only correct when `key` really is a row field — prefer
+   * `sortValue`, which wins when both are set.
+   */
   sortable?: boolean;
   width?: string;
+}
+
+/** The accessor a column sorts by, or undefined when the column is not sortable. */
+export function columnSortAccessor<T>(column: Column<T>): ((row: T) => SortValue) | undefined {
+  if (column.sortValue) return column.sortValue;
+  if (column.sortable) return (row: T) => (row as Record<string, unknown>)[column.key] as SortValue;
+  return undefined;
+}
+
+function normalizeSortValue(value: SortValue): string | number | null {
+  if (value === null || value === undefined) return null;
+  if (value instanceof Date) {
+    const time = value.getTime();
+    return Number.isNaN(time) ? null : time;
+  }
+  if (typeof value === "boolean") return value ? 1 : 0;
+  if (typeof value === "number") return Number.isNaN(value) ? null : value;
+  return value;
+}
+
+/** Sorts a copy of `rows` by `sortValue`; stable, nulls last in both directions. */
+export function sortRows<T>(
+  rows: T[],
+  sortValue: (row: T) => SortValue,
+  direction: "asc" | "desc"
+): T[] {
+  const factor = direction === "asc" ? 1 : -1;
+  return rows
+    .map((row, index) => ({ row, index, value: normalizeSortValue(sortValue(row)) }))
+    .sort((a, b) => {
+      if (a.value === null || b.value === null) {
+        if (a.value === b.value) return a.index - b.index;
+        return a.value === null ? 1 : -1;
+      }
+      let cmp: number;
+      if (typeof a.value === "number" && typeof b.value === "number") {
+        cmp = a.value - b.value;
+      } else {
+        cmp = String(a.value).localeCompare(String(b.value), undefined, { sensitivity: "base" });
+      }
+      return cmp !== 0 ? cmp * factor : a.index - b.index;
+    })
+    .map((entry) => entry.row);
 }
 
 interface DataTableProps<T> {
@@ -91,19 +147,11 @@ export function DataTable<T>({
     }
   };
 
-  const sortedData = [...data];
-  if (sortKey && sortDirection) {
-    const column = columns.find((c) => c.key === sortKey);
-    if (column?.sortable) {
-      sortedData.sort((a, b) => {
-        const aValue = (a as any)[sortKey];
-        const bValue = (b as any)[sortKey];
-        if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
-        if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
-        return 0;
-      });
-    }
-  }
+  // Sorts the rows currently loaded (this page); server-side sorting comes with pagination.
+  const sortColumn = sortKey && sortDirection ? columns.find((c) => c.key === sortKey) : undefined;
+  const sortAccessor = sortColumn ? columnSortAccessor(sortColumn) : undefined;
+  const sortedData =
+    sortAccessor && sortDirection ? sortRows(data, sortAccessor, sortDirection) : data;
 
   const toggleSelectAll = () => {
     if (!onSelectionChange) return;
@@ -164,19 +212,28 @@ export function DataTable<T>({
                   </button>
                 </th>
               )}
-              {columns.map((column) => (
+              {columns.map((column) => {
+                const isSortable = columnSortAccessor(column) !== undefined;
+                return (
                 <th
                   key={column.key}
                   className={cn(
                     "px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wider",
-                    column.sortable && "cursor-pointer select-none hover:text-content",
+                    isSortable && "cursor-pointer select-none hover:text-content",
                     column.width
                   )}
-                  onClick={() => column.sortable && handleSort(column.key)}
+                  aria-sort={
+                    isSortable && sortKey === column.key && sortDirection
+                      ? sortDirection === "asc"
+                        ? "ascending"
+                        : "descending"
+                      : undefined
+                  }
+                  onClick={() => isSortable && handleSort(column.key)}
                 >
                   <div className="flex items-center gap-2">
                     {column.header}
-                    {column.sortable && (
+                    {isSortable && (
                       <span className="text-content-faint">
                         {sortKey === column.key ? (
                           sortDirection === "asc" ? (
@@ -191,7 +248,8 @@ export function DataTable<T>({
                     )}
                   </div>
                 </th>
-              ))}
+                );
+              })}
               {actions && <th className="px-4 py-3 w-10"></th>}
             </tr>
           </thead>

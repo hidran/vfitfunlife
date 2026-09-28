@@ -22,6 +22,7 @@ import { updatePrivacySettings, updateUserProfile } from '@/lib/firebase/auth';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import type { MessageKey } from '@/i18n/messages';
 import type { NotificationSettings, PrivacySettings, Section } from '@/types/firebase';
 
@@ -547,6 +548,13 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
 
       {section === 'settings' && (
         <section className="space-y-3">
+          {/* Appearance applies instantly (stored on the device), so it sits outside the
+              save-button flow below. */}
+          <article className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <h2 className="text-sm font-semibold text-text-inverse">{t('settings.appearance')}</h2>
+            <ThemeToggle className="mt-3 flex w-full" />
+          </article>
+
           <article className="rounded-2xl border border-white/10 bg-white/5 p-4">
             <h2 className="text-sm font-semibold text-text-inverse">
               {t('profileSection.settings.appPreferences')}

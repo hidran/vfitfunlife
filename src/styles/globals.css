@@ -149,6 +149,9 @@
   --safe-area-inset-left: env(safe-area-inset-left, 0px);
   --safe-area-inset-right: env(safe-area-inset-right, 0px);
 
+  /* Translucent chrome behind `.glass` (flipped under [data-theme='light']). */
+  --glass-bg: rgba(26, 29, 41, 0.8);
+
   color-scheme: dark;
 }
 
@@ -166,7 +169,14 @@
   --color-content: #14171F;
   --color-content-muted: rgba(0, 0, 0, 0.6);
   --color-content-faint: rgba(0, 0, 0, 0.45);
+  --color-surface-field: #F7F9FC;
   --color-hairline: rgba(0, 0, 0, 0.1);
+  /* Legacy text tokens: primary already reads dark, but secondary/tertiary
+     (#6B7280 / #9CA3AF) fall below AA on white — darken them for light. */
+  --color-text-primary: #14171F;
+  --color-text-secondary: #4B5563;
+  --color-text-tertiary: #6B7280;
+  --glass-bg: rgba(255, 255, 255, 0.8);
   color-scheme: light;
 }
 
@@ -241,6 +251,8 @@
   --color-surface-elevated: #2A2D3A;
   --color-surface-input: #1A1D29;
   --color-surface-sunken: rgba(0, 0, 0, 0.2);
+  /* Form-field well used by .admin-input (black/30 on dark cards). */
+  --color-surface-field: rgba(0, 0, 0, 0.3);
   --color-content: #FFFFFF;
   --color-content-muted: rgba(255, 255, 255, 0.6);
   --color-content-faint: rgba(255, 255, 255, 0.4);
@@ -517,7 +529,7 @@
 
   /* Glass effect */
   .glass {
-    background: rgba(26, 29, 41, 0.8);
+    background: var(--glass-bg);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
   }
@@ -530,7 +542,11 @@
 
   /* Admin entity form input */
   .admin-input {
-    @apply w-full rounded-lg bg-black/30 border border-white/10 px-3 py-2 text-white disabled:opacity-60;
+    @apply w-full rounded-lg bg-surface-field border border-hairline px-3 py-2 text-content disabled:opacity-60;
+  }
+
+  [data-theme='light'] .admin-input::placeholder {
+    color: var(--color-content-faint);
   }
 }
 
@@ -560,5 +576,48 @@
 
   .pr-safe {
     padding-right: var(--safe-area-inset-right);
+  }
+
+  /* Light-theme safety net for always-neutral dark-mode utilities.
+     Dashboards still use text-gray-*, white-alpha borders and white-alpha
+     fills that assume a dark canvas; on the light canvas they vanish.
+     Remap only these neutral classes — NOT .text-white, which is correct on
+     gradient/colored backgrounds.
+
+     Specificity instead of !important: `[data-theme='light'] .x:not([class*='light:…'])`
+     is (0,3,0), which beats the plain utility (0,1,0) and single-pseudo
+     variants such as hover:text-white (0,2,0) regardless of layer order, while
+     the :not() lets any element with an explicit `light:` override of the same
+     property keep full control. Remove entries as the per-file sweep migrates
+     components to tokens. */
+  [data-theme='light'] .text-gray-300:not([class*='light:text-']) {
+    color: var(--color-content);
+  }
+
+  [data-theme='light'] .text-gray-400:not([class*='light:text-']),
+  [data-theme='light'] .text-gray-500:not([class*='light:text-']) {
+    color: var(--color-content-muted);
+  }
+
+  [data-theme='light'] .border-white\/5:not([class*='light:border-']),
+  [data-theme='light'] .border-white\/10:not([class*='light:border-']) {
+    border-color: var(--color-hairline);
+  }
+
+  [data-theme='light'] .border-white\/20:not([class*='light:border-']) {
+    border-color: color-mix(in oklab, var(--color-content) 18%, transparent);
+  }
+
+  [data-theme='light'] .bg-white\/5:not([class*='light:bg-']) {
+    background-color: var(--color-surface-2);
+  }
+
+  [data-theme='light'] .bg-white\/10:not([class*='light:bg-']) {
+    background-color: color-mix(in oklab, var(--color-content) 8%, transparent);
+  }
+
+  [data-theme='light'] .divide-white\/5:not([class*='light:divide-']) > :not(:last-child),
+  [data-theme='light'] .divide-white\/10:not([class*='light:divide-']) > :not(:last-child) {
+    border-color: var(--color-hairline);
   }
 }

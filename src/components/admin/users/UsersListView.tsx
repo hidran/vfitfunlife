@@ -22,6 +22,7 @@ import { AdminUser, UserFilters } from "@/types/admin";
 import { Column } from "@/components/admin/DataTable";
 import { formatDate, toDate } from "@/lib/utils";
 import { useI18n } from "@/hooks/useI18n";
+import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import {
   DEFAULT_USER_FILTERS,
   USERS_LIST_QUERY_KEY,
@@ -64,6 +65,12 @@ export function UsersListView() {
   const searchParams = useSearchParams();
   // Seeded from the URL so a reload, or coming back from a user's page, keeps the filters.
   const [filters, setFilters] = useState<UserFilters>(() => filtersFromParams(searchParams));
+  // What the search box shows. It reaches `filters` (and so the fetch and the URL) only once
+  // typing pauses — one query per pause instead of one full collection read per keystroke.
+  const [searchInput, setSearchInput] = useState(() => filters.search ?? "");
+  const applySearch = useDebouncedCallback((search: string) =>
+    setFilters((prev) => (prev.search === search ? prev : { ...prev, search, page: 1 }))
+  );
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
@@ -143,7 +150,14 @@ export function UsersListView() {
   // them, so a hard delete could reach users that were never on screen (e.g. tick 2 under
   // "Tutti", switch to "Demo & eliminati", tick 5 more → 7 deleted).
   const handleSearchChange = (search: string) => {
-    setFilters((prev) => ({ ...prev, search, page: 1 }));
+    setSearchInput(search);
+    if (search) {
+      applySearch.run(search);
+    } else {
+      // Clearing the box is a deliberate action, not typing: apply it at once.
+      applySearch.cancel();
+      setFilters((prev) => (prev.search ? { ...prev, search: "", page: 1 } : prev));
+    }
     setSelectedIds([]);
   };
 
@@ -163,6 +177,8 @@ export function UsersListView() {
   };
 
   const handleClearFilters = () => {
+    setSearchInput("");
+    applySearch.cancel();
     setFilters(DEFAULT_USER_FILTERS);
     setSelectedIds([]);
   };
@@ -221,13 +237,14 @@ export function UsersListView() {
           </div>
         </div>
       ),
+      sortValue: (user) => user.fullName || user.email || user.phone,
       width: "w-1/4",
     },
     {
       key: "role",
       header: t('admin.users.col.role'),
       cell: (user) => <UserRoleBadge role={user.role} size="sm" />,
-      sortable: true,
+      sortValue: (user) => user.role,
       width: "w-24",
     },
     {
@@ -242,7 +259,8 @@ export function UsersListView() {
           />
         );
       },
-      sortable: true,
+      sortValue: (user) =>
+        hiddenAccountKind(user.id, user) ?? (user.isSuspended ? "suspended" : "active"),
       width: "w-24",
     },
     {
@@ -256,7 +274,7 @@ export function UsersListView() {
           </span>
         );
       },
-      sortable: true,
+      sortValue: (user) => toDate(user.createdAt),
       width: "w-32",
     },
     {
@@ -277,7 +295,7 @@ export function UsersListView() {
           </span>
         );
       },
-      sortable: true,
+      sortValue: (user) => toDate(user.lastLoginAt),
       width: "w-32",
     },
     {
@@ -359,7 +377,7 @@ export function UsersListView() {
       {/* Filters */}
       <FilterBar
         searchPlaceholder={t('admin.users.search')}
-        searchValue={filters.search || ""}
+        searchValue={searchInput}
         onSearchChange={handleSearchChange}
         filters={[
           {

@@ -1131,6 +1131,7 @@ export const esMessages: Messages = {
   'settings.theme.light': 'Claro',
   'settings.theme.dark': 'Oscuro',
   'settings.theme.system': 'Sistema',
+  'settings.theme.cycle': 'Tema: {{current}}. Cambiar a {{next}}',
   'profile.menu.helpCenter': 'Centro de ayuda',
   'profile.menu.rateApp': 'Valorar la app',
   'profile.menu.subtitle.personalData': 'Gestiona tus datos',

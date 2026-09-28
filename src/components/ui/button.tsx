@@ -33,11 +33,13 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 
     const variants = {
       primary: 'bg-section-gradient text-white shadow-lg hover:opacity-90',
-      secondary: 'bg-white/10 text-white hover:bg-white/20 border border-white/20',
+      // Tinted with the `content` token: white-alpha on dark (identical to the
+      // old bg-white/10 etc.), ink-alpha on light.
+      secondary: 'bg-content/10 text-content hover:bg-content/20 border border-content/20',
       outline: 'border-2 border-section-primary text-section-primary hover:bg-section-primary/10',
-      ghost: 'text-text-inverse hover:bg-white/10',
+      ghost: 'text-text-inverse hover:bg-content/10',
       social:
-        'bg-background-secondary/20 text-white border border-white/10 hover:bg-background-secondary/35 hover:border-white/20',
+        'bg-content/20 text-content border border-content/10 hover:bg-content/35 hover:border-content/20 light:bg-surface light:hover:bg-background-dark light:border-hairline',
     };
 
     const sizes = {
