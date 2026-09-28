@@ -21,19 +21,42 @@ import {
 import type { BookingStatus } from "../bookings/types";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const DATE_KEY_FORMATS = new Map<string, Intl.DateTimeFormat>();
 
 /** `YYYY-MM-DD` in the given IANA zone. Day boundaries must be local: a UTC boundary would
  *  split Italian evening sessions across two days and skew the weekly chart. */
 export function dateKeyInZone(date: Date, timeZone = "Europe/Rome"): string {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone, year: "numeric", month: "2-digit", day: "2-digit",
-  }).formatToParts(date);
+  // Constructing a DateTimeFormat is far costlier than formatting with one, and this runs
+  // for every history entry of every booking on every computed day.
+  let fmt = DATE_KEY_FORMATS.get(timeZone);
+  if (!fmt) {
+    fmt = new Intl.DateTimeFormat("en-CA", {
+      timeZone, year: "numeric", month: "2-digit", day: "2-digit",
+    });
+    DATE_KEY_FORMATS.set(timeZone, fmt);
+  }
+  const parts = fmt.formatToParts(date);
   const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
   return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
+/** End of the given local day (23:59:59.999 in `timeZone`), the "as of" instant for rolling
+ *  values. The offset is derived rather than assumed so this stays correct across DST. */
+export function endOfLocalDayInZone(dateKey: string, timeZone = "Europe/Rome"): Date {
+  const noonUtc = new Date(`${dateKey}T12:00:00Z`);
+  const localKey = dateKeyInZone(noonUtc, timeZone);
+  const shiftDays = localKey === dateKey ? 0 : localKey < dateKey ? 1 : -1;
+  const base = new Date(noonUtc.getTime() + shiftDays * DAY_MS);
+  const asString = new Intl.DateTimeFormat("en-US", {
+    timeZone, hour: "2-digit", hour12: false,
+  }).format(base);
+  const localHour = Number(asString);
+  // 12:00 local == (12 - localHour) hours from base; end of day is 23:59:59.999 local.
+  return new Date(base.getTime() + ((23 - localHour) * 3600 + 3599) * 1000 + 999);
+}
+
 /** First `statusHistory` entry with the given status, or undefined. */
-function firstEntry(booking: MetricsBooking, status: BookingStatus) {
+export function firstEntry(booking: MetricsBooking, status: BookingStatus) {
   return booking.statusHistory.find((h) => h.status === status);
 }
 
@@ -116,6 +139,44 @@ export function countTrainerCancellations(
     if (hit) n++;
   }
   return n;
+}
+
+/**
+ * Per-trainer activity in the 30 days up to `asOf`, plus the latest acceptance ever (up to
+ * `asOf`). Every trainer with a booking gets an entry, even with zero activity — the table's
+ * job is to show who is inactive. Insertion order is the order trainers first appear in
+ * `bookings`, which decides who survives truncation. Expects instructor bookings only.
+ */
+export function computeTrainerMap(
+  bookings: MetricsBooking[],
+  asOf: Date,
+): Map<string, TrainerMetrics> {
+  const upTo = (d: Date) => d.getTime() <= asOf.getTime();
+  const activeSince = new Date(asOf.getTime() - ACTIVE_TRAINER_WINDOW_DAYS * DAY_MS);
+  const byTrainerAll = new Map<string, TrainerMetrics>();
+  for (const b of bookings) {
+    if (!b.instructorId) continue;
+    const t = byTrainerAll.get(b.instructorId) ?? {
+      name: b.instructorName ?? b.instructorId,
+      accepted: 0, completed: 0, paymentConfirmed: 0, grossValue: 0, lastAcceptedAt: null,
+    };
+
+    for (const h of b.statusHistory) {
+      if (!upTo(h.at)) continue;
+      const inWindow = h.at.getTime() >= activeSince.getTime();
+      if (h.status === "accepted") {
+        if (inWindow) t.accepted++;
+        if (!t.lastAcceptedAt || h.at > t.lastAcceptedAt) t.lastAcceptedAt = h.at;
+      }
+      if (h.status === "completed" && inWindow) t.completed++;
+      if (h.status === "payment_confirmed" && inWindow) {
+        t.paymentConfirmed++;
+        t.grossValue += b.paymentConfirmation?.amount ?? 0;
+      }
+    }
+    byTrainerAll.set(b.instructorId, t);
+  }
+  return byTrainerAll;
 }
 
 export interface ComputeArgs {
@@ -240,29 +301,7 @@ export function computeMetricsForDay(args: ComputeArgs): MetricsDaily {
   ).length;
 
   // --- per trainer, trailing 30 days ---
-  const byTrainerAll = new Map<string, TrainerMetrics>();
-  for (const b of bookings) {
-    if (!b.instructorId) continue;
-    const t = byTrainerAll.get(b.instructorId) ?? {
-      name: b.instructorName ?? b.instructorId,
-      accepted: 0, completed: 0, paymentConfirmed: 0, grossValue: 0, lastAcceptedAt: null,
-    };
-
-    for (const h of b.statusHistory) {
-      if (!upTo(h.at)) continue;
-      const inWindow = h.at.getTime() >= activeSince.getTime();
-      if (h.status === "accepted") {
-        if (inWindow) t.accepted++;
-        if (!t.lastAcceptedAt || h.at > t.lastAcceptedAt) t.lastAcceptedAt = h.at;
-      }
-      if (h.status === "completed" && inWindow) t.completed++;
-      if (h.status === "payment_confirmed" && inWindow) {
-        t.paymentConfirmed++;
-        t.grossValue += b.paymentConfirmation?.amount ?? 0;
-      }
-    }
-    byTrainerAll.set(b.instructorId, t);
-  }
+  const byTrainerAll = computeTrainerMap(bookings, asOf);
 
   const byTrainerTruncated = byTrainerAll.size > MAX_TRAINERS_IN_MAP;
   const byTrainer: Record<string, TrainerMetrics> = {};

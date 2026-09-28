@@ -4,115 +4,58 @@
  */
 
 import * as admin from "firebase-admin";
-import { computeMetricsForDay, dateKeyInZone } from "./compute";
+import { logger } from "firebase-functions";
+import { computeMetricsForDay, endOfLocalDayInZone } from "./compute";
 import type { MetricsBooking, MetricsDaily, MetricsUser } from "./types";
-import type { BookingStatus, StatusActorRole } from "../bookings/types";
+import { toMetricsBooking, toMetricsUser } from "./mapping";
+import {
+  buildUserAggregates,
+  computeMetricsForDayIncremental,
+  emptyRollup,
+  foldIntoRollup,
+  rollupFromFirestore,
+  settleCutoffFor,
+  rollupToFirestore,
+  type BookingsRollup,
+  type UserAggregates,
+} from "./incremental";
 
 const db = admin.firestore();
 export const METRICS_COLLECTION = "metrics_daily";
 export const TIME_ZONE = "Europe/Rome";
 
-const DEMO_EMAIL_DOMAIN = "@demo.vfit";
+export const ROLLUP_DOC = "metrics_state/bookingsRollup";
+
+/** Every booking, in document-id order. Used by the backfill and by a rollup rebuild. */
+export async function loadAllBookings(): Promise<MetricsBooking[]> {
+  const snap = await db.collection("bookings").get();
+  return snap.docs.map((d) => toMetricsBooking(d.id, d.data()));
+}
+
+/** Bookings touched at or after `since` — every status entry and client payment response
+ *  sets `updatedAt`, so these carry every event at or after `since`. */
+export async function loadBookingsUpdatedSince(since: Date): Promise<MetricsBooking[]> {
+  const snap = await db.collection("bookings")
+    .where("updatedAt", ">=", admin.firestore.Timestamp.fromDate(since))
+    .get();
+  return snap.docs.map((d) => toMetricsBooking(d.id, d.data()));
+}
 
 /**
- * Mirrors `hiddenAccountKind`/`isHiddenAccount` in src/lib/firebase/admin.ts: soft-deleted
- * and seeded demo accounts (provider_* and customer_* ids, or an @demo.vfit email) must not
- * inflate trainer or client counts on a dashboard partners read.
+ * Full scan of both collections. Cost grows with collection size: the nightly job uses
+ * `loadUserAggregates` + the bookings rollup instead; the one-shot backfill still needs this.
  */
-function isHidden(id: string, data: FirebaseFirestore.DocumentData): boolean {
-  if (data.isDeleted === true || data.deletedAt) return true;
-  const email = typeof data.email === "string" ? data.email.toLowerCase() : "";
-  if (email.endsWith(DEMO_EMAIL_DOMAIN)) return true;
-  if (id.startsWith("provider_") || id.startsWith("customer_")) return true;
-  return false;
-}
-
-function toDate(v: unknown): Date | null {
-  if (!v) return null;
-  if (v instanceof admin.firestore.Timestamp) return v.toDate();
-  if (v instanceof Date) return v;
-  return null;
-}
-
-/** Loads every booking and user once. At pilot scale this is a few hundred documents;
- *  past a few thousand it should page or read from an incremental aggregate. */
 export async function loadInputs(): Promise<{
   bookings: MetricsBooking[];
   users: MetricsUser[];
   visibleTrainerIds: Set<string>;
 }> {
-  const [bookingSnap, userSnap] = await Promise.all([
-    db.collection("bookings").get(),
+  const [bookings, userSnap] = await Promise.all([
+    loadAllBookings(),
     db.collection("users").get(),
   ]);
 
-  const bookings: MetricsBooking[] = bookingSnap.docs.map((d) => {
-    const b = d.data();
-    let history = Array.isArray(b.statusHistory) ? b.statusHistory : [];
-
-    // The P0-1 migration gave each pre-migration booking a single synthetic entry dated
-    // `updatedAt`, so backfilled history would collapse into one spike on the migration
-    // date with no requested/accepted events at all. The legacy timestamp columns are
-    // still on the document, so reconstruct an approximate timeline from them.
-    const isMigrationOnly =
-      history.length > 0 &&
-      history.every((h: Record<string, unknown>) => h.actorUid === "migration");
-
-    if (isMigrationOnly) {
-      const terminal = history[0] as Record<string, unknown>;
-      const rebuilt: Array<Record<string, unknown>> = [];
-      const push = (status: string, at: unknown, actorRole: string) => {
-        if (at) rebuilt.push({ status, actorUid: "migration", actorRole, at });
-      };
-      push("requested", b.createdAt, "client");
-      push("accepted", b.confirmedAt, "system");
-      push("completed", b.completedAt, "system");
-      const covered = new Set(rebuilt.map((h) => h.status));
-      if (!covered.has(String(terminal.status))) rebuilt.push(terminal);
-      if (rebuilt.length) history = rebuilt;
-    }
-    return {
-      id: d.id,
-      userId: b.userId,
-      instructorId: b.instructorId ?? b.providerId ?? null,
-      instructorName: b.instructorName ?? null,
-      status: b.status as BookingStatus,
-      statusHistory: history
-        .map((h: Record<string, unknown>) => ({
-          status: h.status as BookingStatus,
-          actorUid: String(h.actorUid ?? ""),
-          actorRole: (h.actorRole ?? "system") as StatusActorRole,
-          at: toDate(h.at),
-        }))
-        // Entries without a usable timestamp cannot be attributed to a day; dropping them
-        // is better than bucketing them into the epoch.
-        .filter(
-          (h: { at: Date | null }): h is {
-            status: BookingStatus; actorUid: string; actorRole: StatusActorRole; at: Date;
-          } => h.at !== null,
-        ),
-      finalPrice: typeof b.finalPrice === "number" ? b.finalPrice : undefined,
-      lateCancellation: b.lateCancellation === true,
-      paymentConfirmation: b.paymentConfirmation ?
-        {
-          amount: Number(b.paymentConfirmation.amount ?? 0),
-          clientResponse: b.paymentConfirmation.clientResponse ?? null,
-          clientRespondedAt: toDate(b.paymentConfirmation.clientRespondedAt),
-        } :
-        null,
-    };
-  });
-
-  const users: MetricsUser[] = userSnap.docs.map((d) => {
-    const u = d.data();
-    return {
-      uid: d.id,
-      role: String(u.role ?? "customer"),
-      createdAt: toDate(u.createdAt),
-      fullName: u.fullName,
-      hidden: isHidden(d.id, u),
-    };
-  });
+  const users: MetricsUser[] = userSnap.docs.map((d) => toMetricsUser(d.id, d.data()));
 
   // activeTrainers is counted against this set so it describes the same population as
   // totalTrainers. Without it a seeded demo trainer, excluded from the denominator, could
@@ -126,17 +69,7 @@ export async function loadInputs(): Promise<{
 
 /** End of the given local day, as the "as of" instant for rolling values. */
 export function endOfLocalDay(dateKey: string): Date {
-  // The offset is derived rather than assumed so this stays correct across DST.
-  const noonUtc = new Date(`${dateKey}T12:00:00Z`);
-  const localKey = dateKeyInZone(noonUtc, TIME_ZONE);
-  const shiftDays = localKey === dateKey ? 0 : localKey < dateKey ? 1 : -1;
-  const base = new Date(noonUtc.getTime() + shiftDays * 86400000);
-  const asString = new Intl.DateTimeFormat("en-US", {
-    timeZone: TIME_ZONE, hour: "2-digit", hour12: false,
-  }).format(base);
-  const localHour = Number(asString);
-  // 12:00 local == (12 - localHour) hours from base; end of day is 23:59:59.999 local.
-  return new Date(base.getTime() + ((23 - localHour) * 3600 + 3599) * 1000 + 999);
+  return endOfLocalDayInZone(dateKey, TIME_ZONE);
 }
 
 export function toFirestoreDoc(m: MetricsDaily, backfilled: boolean) {
@@ -176,9 +109,163 @@ export async function writeMetricsForDay(opts: {
     timeZone: TIME_ZONE,
   });
 
-  if (!opts.dryRun) {
-    await db.collection(METRICS_COLLECTION).doc(opts.dateKey)
-      .set(toFirestoreDoc(metrics, opts.backfilled));
-  }
+  if (!opts.dryRun) await writeMetricsDoc(metrics, opts.backfilled);
   return metrics;
+}
+
+// --- bounded nightly path (P2-2) ---------------------------------------------------------
+
+/**
+ * The users side of the metric set without reading the users collection:
+ *   - count() of all users, of non-customer roles and of providers (1 read per 1000 entries);
+ *   - the user docs of the trainers on recent bookings (activeTrainers' visibility check);
+ *   - the hidden-account candidates (soft-deleted, or a seeded provider_/customer_ id) — the
+ *     only documents that can make the count() disagree with the visible-customer total;
+ *   - users created from `recentSince` on (newClients, and registeredClients for past days).
+ *
+ * Known gap: an account hidden ONLY by an @demo.vfit email (normal id, not deleted) cannot
+ * be found by a query. The seeder always pairs that domain with a provider_/customer_ id,
+ * and no such account exists on staging or prod (2026-09-28).
+ */
+export async function loadUserAggregates(
+  recentSince: Date,
+  recentBookings: MetricsBooking[],
+): Promise<UserAggregates> {
+  const users = db.collection("users");
+  const docId = admin.firestore.FieldPath.documentId();
+  const toUsers = (s: FirebaseFirestore.QuerySnapshot) =>
+    s.docs.map((d) => toMetricsUser(d.id, d.data()));
+
+  const trainerRefs = [...new Set(recentBookings.map((b) => b.instructorId).filter(Boolean))]
+    .map((id) => users.doc(id as string));
+
+  const [total, nonCustomer, providers, trainerDocs, deleted, deletedAt, seededC, seededP, recent] =
+    await Promise.all([
+      users.count().get(),
+      // `!=` skips documents where role is absent or null — exactly the users the metrics
+      // layer defaults to "customer" (`role ?? "customer"`).
+      users.where("role", "!=", "customer").count().get(),
+      users.where("role", "==", "provider").count().get(),
+      trainerRefs.length ? db.getAll(...trainerRefs) : Promise.resolve([]),
+      users.where("isDeleted", "==", true).get(),
+      users.where("deletedAt", "!=", null).get(),
+      users.where(docId, ">=", "customer_").where(docId, "<", "customer`").get(),
+      users.where(docId, ">=", "provider_").where(docId, "<", "provider`").get(),
+      users.where("createdAt", ">=", admin.firestore.Timestamp.fromDate(recentSince)).get(),
+    ]);
+
+  return buildUserAggregates({
+    totalUsers: total.data().count,
+    nonCustomerRoleUsers: nonCustomer.data().count,
+    providerUsers: providers.data().count,
+    recentTrainerUsers: trainerDocs
+      .filter((d) => d.exists)
+      .map((d) => toMetricsUser(d.id, d.data() as FirebaseFirestore.DocumentData)),
+    hiddenCandidates: [
+      ...toUsers(deleted), ...toUsers(deletedAt), ...toUsers(seededC), ...toUsers(seededP),
+    ],
+    recentUsers: toUsers(recent),
+  });
+}
+
+export async function loadRollup(): Promise<BookingsRollup | null> {
+  const snap = await db.doc(ROLLUP_DOC).get();
+  return rollupFromFirestore(snap.data());
+}
+
+/** Firestore's hard limit is 1 MiB; warn well before it, when the rollup should be sharded. */
+const ROLLUP_WARN_BYTES = 700_000;
+
+export async function saveRollup(r: BookingsRollup): Promise<void> {
+  const data = rollupToFirestore(r);
+  const approxBytes = JSON.stringify(data).length;
+  if (approxBytes > ROLLUP_WARN_BYTES) {
+    logger.warn("[metrics] bookings rollup nearing the 1 MiB document limit — shard it", {
+      approxBytes, clients: r.completions.size, requesters: r.requesters.size,
+    });
+  }
+  await db.doc(ROLLUP_DOC).set({
+    ...data,
+    computedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+}
+
+export async function writeMetricsDoc(m: MetricsDaily, backfilled: boolean): Promise<void> {
+  await db.collection(METRICS_COLLECTION).doc(m.dateKey).set(toFirestoreDoc(m, backfilled));
+}
+
+/** The rollup cutoff a run over `dateKeys` settles to. */
+export function cutoffForKeys(dateKeys: string[]): Date {
+  const oldest = [...dateKeys].sort()[0];
+  return settleCutoffFor(endOfLocalDay(oldest));
+}
+
+/** Builds a rollup from a full scan — the first run, a version bump, or a repair. */
+export function rebuildRollup(allBookings: MetricsBooking[], cutoff: Date): BookingsRollup {
+  return foldIntoRollup(emptyRollup(), allBookings, cutoff);
+}
+
+/**
+ * Recomputes `dateKeys` reading only recent activity. With `dryRun` nothing is written —
+ * neither the day documents nor the advanced rollup.
+ */
+export async function recomputeDaysBounded(dateKeys: string[], opts: { dryRun?: boolean } = {}) {
+  const cutoff = cutoffForKeys(dateKeys);
+  const oldestAsOf = endOfLocalDay([...dateKeys].sort()[0]);
+
+  let rollup = await loadRollup();
+  let recent: MetricsBooking[];
+  let rebuilt = false;
+  if (!rollup || rollup.settledBefore.getTime() > cutoff.getTime()) {
+    // A full list is a valid "recent" set: it is a superset of what the rollup leaves out.
+    recent = await loadAllBookings();
+    rollup = rebuildRollup(recent, cutoff);
+    rebuilt = true;
+  } else {
+    recent = await loadBookingsUpdatedSince(rollup.settledBefore);
+  }
+  const settledBefore = rollup.settledBefore;
+
+  // Two days of slack below the oldest day's end covers its local midnight across DST.
+  const users = await loadUserAggregates(new Date(oldestAsOf.getTime() - 2 * 86400000), recent);
+
+  const metrics = dateKeys.map((dateKey) =>
+    computeDayIncremental({ dateKey, rollup: rollup as BookingsRollup, recent, users }));
+
+  if (!opts.dryRun) {
+    for (const m of metrics) await writeMetricsDoc(m, false);
+    // Advance only after every day is written: a failed run leaves the old cutoff, and the
+    // next run simply reads a slightly larger recent set.
+    foldIntoRollup(rollup, recent, cutoff);
+    await saveRollup(rollup);
+  }
+
+  return {
+    metrics,
+    stats: {
+      rebuilt,
+      settledBefore: settledBefore.toISOString(),
+      nextSettledBefore: cutoff.toISOString(),
+      recentBookings: recent.length,
+      totalTrainers: users.totalTrainers,
+      recentTrainersVisible: users.visibleTrainerIds.size,
+      recentUsers: users.recentVisibleCustomerCreatedAts.length,
+    },
+  };
+}
+
+export function computeDayIncremental(opts: {
+  dateKey: string;
+  rollup: BookingsRollup;
+  recent: MetricsBooking[];
+  users: UserAggregates;
+}): MetricsDaily {
+  return computeMetricsForDayIncremental({
+    dateKey: opts.dateKey,
+    asOf: endOfLocalDay(opts.dateKey),
+    rollup: opts.rollup,
+    recent: opts.recent,
+    users: opts.users,
+    timeZone: TIME_ZONE,
+  });
 }

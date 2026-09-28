@@ -611,6 +611,12 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // The nightly metrics job's internal rollup (P2-2). Holds per-client completion times,
+    // so no client reads it; Cloud Functions bypass rules.
+    match /metrics_state/{docId} {
+      allow read, write: if false;
+    }
+
     // ============================================
     // ADMIN COLLECTION (Deprecated - using users with role)
     // ============================================

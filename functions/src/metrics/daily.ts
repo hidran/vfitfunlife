@@ -13,7 +13,16 @@ import * as admin from "firebase-admin";
 import { getUserRoleInfo } from "../utils/roles";
 import { writeAuditLog } from "../lib/audit";
 import { dateKeyInZone } from "./compute";
-import { loadInputs, writeMetricsForDay, TIME_ZONE, METRICS_COLLECTION } from "./store";
+import {
+  cutoffForKeys,
+  loadInputs,
+  rebuildRollup,
+  recomputeDaysBounded,
+  saveRollup,
+  writeMetricsForDay,
+  TIME_ZONE,
+  METRICS_COLLECTION,
+} from "./store";
 
 const db = admin.firestore();
 const region = process.env.FIREBASE_REGION || "europe-west1";
@@ -36,18 +45,18 @@ function recentDateKeys(from: Date, days: number): string[] {
 export const aggregateMetricsDaily = onSchedule(
   { region, schedule: "30 2 * * *", timeZone: TIME_ZONE, timeoutSeconds: 540 },
   async (_event: ScheduledEvent) => {
-    const { bookings, users, visibleTrainerIds } = await loadInputs();
     const keys = recentDateKeys(new Date(), RECOMPUTE_DAYS);
+    // Reads recent activity plus the bookings rollup, not the full collections (P2-2).
+    const { metrics, stats } = await recomputeDaysBounded(keys);
 
-    for (const dateKey of keys) {
-      const m = await writeMetricsForDay({ dateKey, bookings, users, visibleTrainerIds, backfilled: false });
+    for (const m of metrics) {
       if (m.byTrainerTruncated) {
         // Silently short would misreport who is inactive, which is the table's whole job.
-        logger.warn("[metrics] byTrainer truncated — move it to a subcollection", { dateKey });
+        logger.warn("[metrics] byTrainer truncated — move it to a subcollection", { dateKey: m.dateKey });
       }
     }
 
-    logger.info(`[metrics] recomputed ${keys.length} days`, { from: keys.at(-1), to: keys[0] });
+    logger.info(`[metrics] recomputed ${keys.length} days`, { from: keys.at(-1), to: keys[0], ...stats });
   }
 );
 
@@ -107,6 +116,10 @@ export const backfillMetricsDaily = onCall<BackfillRequest>(
     logger.info("[metrics] backfill complete", result);
 
     if (!dryRun) {
+      // The backfill has every booking in hand, so it also rewrites the nightly job's
+      // rollup from scratch — the repair path if its assumptions were ever violated.
+      await saveRollup(rebuildRollup(bookings, cutoffForKeys(recentDateKeys(new Date(), RECOMPUTE_DAYS))));
+
       const caller = (await db.collection("users").doc(uid).get()).data();
       await writeAuditLog({
         actorUid: uid, actorEmail: caller?.email ?? "", actorRole: "superadmin",
