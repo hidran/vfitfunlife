@@ -10,7 +10,8 @@
  * trainer's library — see `/provider/recipes`.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/Modal';
@@ -21,46 +22,36 @@ import { RecipeCard } from '@/components/recipes/RecipeCard';
 import { RecipeDisclaimer } from '@/components/recipes/RecipeDisclaimer';
 import { listMyRecipes, listSharedWithClient, shareRecipe, unshareRecipe } from '@/lib/firebase/recipes';
 import type { Recipe } from '@/types/recipes';
+import { queryKeys } from '@/lib/queryKeys';
 
 export default function RecipesTab({ clientId }: { clientId: string }) {
   const { t } = useI18n();
+  const queryClient = useQueryClient();
   const currentClient = useProviderStore((s) => s.currentClient);
   // Guarded on id: the store can still hold the previously opened client mid-fetch, and
   // sharing a recipe with the wrong person is not a mistake worth risking.
   const clientUserId = currentClient?.id === clientId ? currentClient.userId : undefined;
 
-  const [shared, setShared] = useState<Recipe[] | null>(null);
+  const sharedQuery = useQuery({
+    queryKey: queryKeys.recipesSharedWithClient(clientUserId),
+    queryFn: () => listSharedWithClient(clientUserId as string),
+    enabled: !!clientUserId,
+  });
+  const shared = clientUserId ? (sharedQuery.data ?? (sharedQuery.isError ? [] : null)) : null;
   const [busy, setBusy] = useState<string | null>(null);
 
   const [showPicker, setShowPicker] = useState(false);
-  const [library, setLibrary] = useState<Recipe[] | null>(null);
+  // Same cache entry as the provider's recipe library / the client-facing recipes screen —
+  // `listMyRecipes()` is scoped server-side by the caller's own uid (see queryKeys.ts).
+  const libraryQuery = useQuery({
+    queryKey: queryKeys.recipesMine(),
+    queryFn: listMyRecipes,
+    enabled: showPicker,
+  });
+  const library = libraryQuery.data ?? (libraryQuery.isError ? [] : null);
 
-  const reload = useCallback(async () => {
-    if (!clientUserId) {
-      setShared([]);
-      return;
-    }
-    try {
-      setShared(await listSharedWithClient(clientUserId));
-    } catch (e) {
-      console.error('[RecipesTab] load failed', e);
-      setShared([]);
-    }
-  }, [clientUserId]);
-
-  useEffect(() => {
-    void reload();
-  }, [reload]);
-
-  const openPicker = async () => {
+  const openPicker = () => {
     setShowPicker(true);
-    if (library) return;
-    try {
-      setLibrary(await listMyRecipes());
-    } catch (e) {
-      console.error('[RecipesTab] library load failed', e);
-      setLibrary([]);
-    }
   };
 
   const toggleShare = async (recipe: Recipe, share: boolean) => {
@@ -69,19 +60,10 @@ export default function RecipesTab({ clientId }: { clientId: string }) {
     try {
       if (share) await shareRecipe(recipe.id, clientUserId);
       else await unshareRecipe(recipe.id, clientUserId);
-      setLibrary((prev) =>
-        prev?.map((r) =>
-          r.id === recipe.id
-            ? {
-                ...r,
-                sharedWithUserIds: share
-                  ? [...(r.sharedWithUserIds ?? []), clientUserId]
-                  : (r.sharedWithUserIds ?? []).filter((u) => u !== clientUserId),
-              }
-            : r,
-        ) ?? prev,
-      );
-      await reload();
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.recipesSharedWithClient(clientUserId) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.recipesMine() }),
+      ]);
     } catch (e) {
       console.error('[RecipesTab] share toggle failed', e);
     } finally {

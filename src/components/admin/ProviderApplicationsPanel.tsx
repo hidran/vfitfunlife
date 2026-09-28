@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle, XCircle, Clock } from 'lucide-react';
 import { fetchProviderApplications } from '@/lib/firebase/providers';
 import { decideProviderApplication } from '@/lib/firebase/functions';
@@ -9,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { useI18n } from '@/hooks/useI18n';
 import { useAuthStore } from '@/stores/authStore';
 import { useServiceCategoryMap } from '@/hooks/useServiceCategories';
+import { queryKeys } from '@/lib/queryKeys';
 
 export function ProviderApplicationsPanel() {
   const { t } = useI18n();
@@ -16,25 +18,24 @@ export function ProviderApplicationsPanel() {
   // It was superadmin-only, which meant every signup waited on one of two accounts.
   const isAdmin = useAuthStore((s) => s.user?.role === 'admin' || s.user?.role === 'superadmin');
   const categoryMap = useServiceCategoryMap();
-  const [apps, setApps] = useState<Provider[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+
+  const appsQuery = useQuery({
+    queryKey: queryKeys.providerApplications(),
+    queryFn: fetchProviderApplications,
+  });
+  const apps = appsQuery.data ?? [];
+  const loading = appsQuery.isPending;
+
   const [busyId, setBusyId] = useState<string | null>(null);
   const [errorId, setErrorId] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setApps(await fetchProviderApplications());
-    setLoading(false);
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
 
   const decide = async (id: string, decision: 'verified' | 'rejected') => {
     setBusyId(id);
     setErrorId(null);
     try {
       await decideProviderApplication({ providerId: id, decision });
-      await load();
+      await queryClient.invalidateQueries({ queryKey: queryKeys.providerApplications() });
     } catch (e) {
       console.error('[ProviderApplicationsPanel] decide failed', id, decision, e);
       setErrorId(id);

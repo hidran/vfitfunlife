@@ -7,25 +7,31 @@
  * still land here. Redirects to /home while the section is flagged off.
  */
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '@/lib/queryKeys';
 import { Spinner } from '@/components/ui/Spinner';
 
 export default function LifeSectionLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const [allowed, setAllowed] = useState<boolean | null>(null);
+
+  // Shared cache key with /fun's layout: both guards read the same Remote Config fetch, so
+  // navigating between them (or mounting both, e.g. in tests) dedupes to a single fetch. The
+  // whole module is loaded dynamically inside queryFn — never at module scope — because it
+  // must never initialise under `output: 'export'`'s server render pass.
+  const { data } = useQuery({
+    queryKey: queryKeys.pilotFlags(),
+    queryFn: async () => {
+      const { loadPilotFlags, isSectionVisible } = await import('@/lib/firebase/remoteConfig');
+      return { flags: await loadPilotFlags(), isSectionVisible };
+    },
+  });
+  const allowed = data ? data.isSectionVisible('life', data.flags) : null;
 
   useEffect(() => {
-    let cancelled = false;
-    void import('@/lib/firebase/remoteConfig').then(async ({ loadPilotFlags, isSectionVisible }) => {
-      const flags = await loadPilotFlags();
-      if (cancelled) return;
-      const ok = isSectionVisible('life', flags);
-      setAllowed(ok);
-      if (!ok) router.replace('/home');
-    });
-    return () => { cancelled = true; };
-  }, [router]);
+    if (allowed === false) router.replace('/home');
+  }, [allowed, router]);
 
   // Render nothing until resolved: flashing the section before redirecting would advertise
   // that it exists, which is the thing pilot mode exists to avoid.

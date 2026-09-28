@@ -31,9 +31,33 @@ export const queryKeys = {
   // silently break label lookups for exercises past the cutoff.
   exerciseLibrary: () => ['exercise-library'] as const,
 
-  // Client recipes screen (src/app/(main)/recipes/RecipesClient.tsx)
+  // Client recipes screen (src/app/(main)/recipes/RecipesClient.tsx). `recipesMine` is also
+  // reused by the provider's own recipe library (RecipesLibraryClient) — `listMyRecipes()`
+  // is scoped server-side by the caller's own uid, so the same unparameterized key is safe
+  // for both surfaces (each session only ever sees its own data under it).
   recipesSharedWithMe: () => ['recipes', 'shared-with-me'] as const,
   recipesMine: () => ['recipes', 'mine'] as const,
+  // What the provider has shared with one specific client (RecipesTab.tsx).
+  recipesSharedWithClient: (clientUserId: string | undefined) =>
+    ['recipes', 'shared-with-client', clientUserId] as const,
+
+  // Provider "client detail" tabs (src/app/(main)/provider/clients/detail/tabs/).
+  clientGoals: (clientId: string) => ['client-goals', clientId] as const,
+  clientTrainingPrograms: (clientId: string) => ['client-training-programs', clientId] as const,
+
+  // Pilot feature flags (Remote Config) — read by the public /fun and /life section guards.
+  pilotFlags: () => ['pilot-flags'] as const,
+
+  // Admin settings panels (src/components/admin/settings/).
+  aiAssistantSettings: () => ['ai-assistant-settings'] as const,
+  aiAuthoringSettings: () => ['ai-authoring-settings'] as const,
+
+  // Admin "Cruscotto" dashboard (src/app/admin/metrics/MetricsClient.tsx).
+  metricsDaily: (days: number) => ['metrics-daily', days] as const,
+  metricsGates: () => ['metrics-gates'] as const,
+
+  // Provider applications review panel (src/components/admin/ProviderApplicationsPanel.tsx).
+  providerApplications: () => ['provider-applications'] as const,
 
   // Admin detail views — first element matches the list views' existing invalidation key.
   adminPayment: (paymentId: string) => ['transactions', paymentId] as const,

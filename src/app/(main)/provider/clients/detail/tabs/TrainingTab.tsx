@@ -1,7 +1,8 @@
 'use client';
 
 import type { MessageKey } from '@/i18n/messages';
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Edit, Trash2, Dumbbell, Sparkles, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/Spinner';
@@ -18,6 +19,7 @@ import {
 import type { TrainingProgram, TrainingParams } from '@/types/clientPlans';
 import TrainingProgramEditor from './editors/TrainingProgramEditor';
 import { aiGenerateErrorMessage } from './aiGenerateError';
+import { queryKeys } from '@/lib/queryKeys';
 
 const aiInput =
   'w-full bg-surface-input border border-hairline rounded-lg px-3 py-2 text-sm text-content placeholder-gray-500 outline-none focus:border-section-primary';
@@ -25,8 +27,12 @@ const aiLabel = 'block text-xs font-medium text-content-muted mb-1';
 
 export default function TrainingTab({ clientId }: { clientId: string }) {
   const { t, locale } = useI18n();
-  const [programs, setPrograms] = useState<TrainingProgram[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const queryKey = queryKeys.clientTrainingPrograms(clientId);
+  const { data: programs, isLoading: loading } = useQuery({
+    queryKey,
+    queryFn: () => listTrainingPrograms(clientId),
+  });
   const [saving, setSaving] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
   const [editing, setEditing] = useState<TrainingProgram | null>(null);
@@ -49,12 +55,16 @@ export default function TrainingTab({ clientId }: { clientId: string }) {
    */
   const handlePublish = async (programId: string) => {
     await updateTrainingProgram(clientId, programId, { status: 'published' });
-    setPrograms((prev) => prev.map((p) => (p.id === programId ? { ...p, status: 'published' } : p)));
+    queryClient.setQueryData(queryKey, (prev: TrainingProgram[] | undefined) =>
+      prev?.map((p) => (p.id === programId ? { ...p, status: 'published' } : p)),
+    );
   };
 
   const handleArchive = async (programId: string) => {
     await updateTrainingProgram(clientId, programId, { status: 'archived' });
-    setPrograms((prev) => prev.map((p) => (p.id === programId ? { ...p, status: 'archived' } : p)));
+    queryClient.setQueryData(queryKey, (prev: TrainingProgram[] | undefined) =>
+      prev?.map((p) => (p.id === programId ? { ...p, status: 'archived' } : p)),
+    );
   };
 
   const handleGenerate = async () => {
@@ -76,26 +86,13 @@ export default function TrainingTab({ clientId }: { clientId: string }) {
       setShowAi(false);
       setEditing(created);
       setShowEditor(true);
-      reload().catch(console.error);
+      queryClient.invalidateQueries({ queryKey }).catch(console.error);
     } catch (e) {
       setAiError(aiGenerateErrorMessage(e, t));
     } finally {
       setGenerating(false);
     }
   };
-
-  const reload = useCallback(async () => {
-    setLoading(true);
-    try {
-      setPrograms(await listTrainingPrograms(clientId));
-    } finally {
-      setLoading(false);
-    }
-  }, [clientId]);
-
-  useEffect(() => {
-    void reload();
-  }, [reload]);
 
   const openNew = () => {
     setEditing(null);
@@ -128,7 +125,7 @@ export default function TrainingTab({ clientId }: { clientId: string }) {
         await createTrainingProgram(clientId, { ...data, status: 'published' });
       }
       closeEditor();
-      await reload();
+      await queryClient.invalidateQueries({ queryKey });
     } finally {
       setSaving(false);
     }
@@ -139,7 +136,7 @@ export default function TrainingTab({ clientId }: { clientId: string }) {
     setSaving(true);
     try {
       await deleteTrainingProgram(clientId, id);
-      await reload();
+      await queryClient.invalidateQueries({ queryKey });
     } catch (e) {
       console.error('[TrainingTab] delete failed', e);
     } finally {
@@ -246,7 +243,7 @@ export default function TrainingTab({ clientId }: { clientId: string }) {
         <div className="flex justify-center py-10">
           <Spinner size="md" />
         </div>
-      ) : programs.length === 0 ? (
+      ) : !programs || programs.length === 0 ? (
         <p className="text-content-muted text-sm">{t('clients.training.empty')}</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

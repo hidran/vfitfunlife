@@ -9,15 +9,17 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, CheckCircle, Clock, Euro, Users, XCircle } from 'lucide-react';
 import { useI18n } from '@/hooks/useI18n';
 import { getPilotGates, getRecentMetrics, toWeeklyPoints } from '@/lib/firebase/metrics';
-import { gateStatus, type MetricsDaily, type PilotGates } from '@/types/metrics';
+import { gateStatus, type MetricsDaily } from '@/types/metrics';
 import { WeeklyTrendChart } from '@/components/admin/metrics/WeeklyTrendChart';
 import { Spinner } from '@/components/ui/Spinner';
 import { toLocaleTag } from '@/types/locale';
 import { cn } from '@/lib/utils';
 import type { MessageKey } from '@/i18n/messages';
+import { queryKeys } from '@/lib/queryKeys';
 
 const GATE_TONE = {
   green: 'border-success/40 bg-success/10 text-success',
@@ -57,30 +59,31 @@ function StatTile(props: {
 
 export default function MetricsClient() {
   const { t, locale } = useI18n();
-  const [daily, setDaily] = useState<MetricsDaily[] | null>(null);
-  const [gates, setGates] = useState<PilotGates | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  // Captured once on mount rather than read during render: reading the clock while
-  // rendering is impure and makes the Gate banner non-deterministic across renders.
-  const [now, setNow] = useState<Date | null>(null);
 
+  // Independent reads, fetched in parallel (two concurrent queries) instead of a waterfall —
+  // the daily snapshots and the Gate 1 targets have no dependency on each other.
+  const dailyQuery = useQuery({
+    queryKey: queryKeys.metricsDaily(90),
+    queryFn: () => getRecentMetrics(90),
+  });
+  const gatesQuery = useQuery({
+    queryKey: queryKeys.metricsGates(),
+    queryFn: getPilotGates,
+  });
+  const daily = dailyQuery.data ?? null;
+  const gates = gatesQuery.data ?? null;
+  // Surfaced rather than swallowed: an empty dashboard that is actually a permission error is
+  // indistinguishable from a pilot with no activity.
+  const queryError = dailyQuery.error ?? gatesQuery.error;
+  const error = queryError ? (queryError instanceof Error ? queryError.message : String(queryError)) : null;
+
+  // Captured once when both queries first resolve, rather than read during render: reading
+  // the clock while rendering is impure and makes the Gate banner non-deterministic across
+  // renders. The `now === null` guard keeps this from re-firing on a background refetch.
+  const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const [d, g] = await Promise.all([getRecentMetrics(90), getPilotGates()]);
-        if (cancelled) return;
-        setDaily(d);
-        setGates(g);
-        setNow(new Date());
-      } catch (e) {
-        // Surfaced rather than swallowed: an empty dashboard that is actually a permission
-        // error is indistinguishable from a pilot with no activity.
-        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+    if (now === null && dailyQuery.isSuccess && gatesQuery.isSuccess) setNow(new Date());
+  }, [now, dailyQuery.isSuccess, gatesQuery.isSuccess]);
 
   const latest = daily?.[0] ?? null;
   const weekly = useMemo(() => (daily ? toWeeklyPoints([...daily].reverse(), 12) : []), [daily]);
@@ -104,7 +107,7 @@ export default function MetricsClient() {
     );
   }
 
-  if (!daily) {
+  if (dailyQuery.isPending || gatesQuery.isPending) {
     return <div className="flex justify-center py-16"><Spinner size="md" /></div>;
   }
 
