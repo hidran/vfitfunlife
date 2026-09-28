@@ -28,7 +28,7 @@ export function PhotoGallery({ photos, className }: PhotoGalleryProps) {
             key={url}
             type="button"
             onClick={() => setLightboxIndex(i)}
-            className="relative h-56 w-72 flex-shrink-0 snap-center overflow-hidden rounded-2xl bg-slate-200"
+            className="relative h-56 w-72 flex-shrink-0 snap-center overflow-hidden rounded-2xl bg-content/10"
             aria-label={t('gallery.openPhoto', { index: i + 1 })}
           >
             <img

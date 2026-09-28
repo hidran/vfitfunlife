@@ -111,7 +111,7 @@ export default function GymsPage() {
                 className={cn(
                   'flex items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold transition-colors',
                   view === 'list'
-                    ? 'bg-section-primary text-background-dark'
+                    ? 'bg-section-primary text-background-dark light:text-content'
                     : 'text-text-tertiary'
                 )}
                   >
@@ -124,7 +124,7 @@ export default function GymsPage() {
                 className={cn(
                   'flex items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold transition-colors',
                   view === 'map'
-                    ? 'bg-section-primary text-background-dark'
+                    ? 'bg-section-primary text-background-dark light:text-content'
                     : 'text-text-tertiary'
                 )}
                   >
@@ -165,12 +165,12 @@ export default function GymsPage() {
                     }
                   />
                   {gym.isPartner && (
-                    <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold uppercase text-background-dark">
+                    <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold uppercase text-background-dark light:text-content">
                       {t('fit.gyms.partner')}
                     </span>
                   )}
                   <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-background-dark/80 px-2 py-1 text-[11px] text-content">
-                    <Star className="h-3 w-3 text-yellow-400" />
+                    <Star className="h-3 w-3 text-yellow-400 light:text-amber-700" />
                     {gym.rating.toFixed(1)}
                   </div>
                 </div>
@@ -238,7 +238,7 @@ export default function GymsPage() {
                   </div>
                   <div className="text-right text-xs text-text-tertiary">
                     <div className="flex items-center justify-end gap-1 text-text-inverse">
-                      <Star className="h-3 w-3 text-yellow-400" />
+                      <Star className="h-3 w-3 text-yellow-400 light:text-amber-700" />
                       {gym.rating.toFixed(1)}
                     </div>
                     {Number.isFinite((gym as unknown as { distanceKm?: number }).distanceKm) && (

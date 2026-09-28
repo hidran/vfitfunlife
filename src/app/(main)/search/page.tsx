@@ -67,7 +67,7 @@ export default function SearchPage() {
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('search.input.placeholder')}
             className={cn(
-              'w-full pl-12 pr-12 py-3 bg-background-secondary/10 border border-border/20',
+              'w-full pl-12 pr-12 py-3 bg-content/10 border border-border/20 light:border-hairline',
               'rounded-xl text-text-inverse placeholder:text-text-tertiary',
               'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background-dark',
               'focus:ring-[var(--section-primary)]'
@@ -85,11 +85,11 @@ export default function SearchPage() {
 
         {/* Location & Filter */}
         <div className="flex gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 bg-background-secondary/10 rounded-full text-sm text-text-secondary">
+          <button className="flex items-center gap-2 px-4 py-2 bg-content/10 rounded-full text-sm text-text-secondary">
             <MapPin className="w-4 h-4" />
             <span>{t('search.location.default')}</span>
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-background-secondary/10 rounded-full text-sm text-text-secondary">
+          <button className="flex items-center gap-2 px-4 py-2 bg-content/10 rounded-full text-sm text-text-secondary">
             <Filter className="w-4 h-4" />
             <span>{t('search.filters')}</span>
           </button>
@@ -106,7 +106,7 @@ export default function SearchPage() {
                 <button
                   key={index}
                   onClick={() => setQuery(search)}
-                  className="flex items-center gap-3 w-full p-3 bg-background-secondary/5 rounded-lg text-left hover:bg-background-secondary/10 transition-colors"
+                  className="flex items-center gap-3 w-full p-3 bg-content/5 rounded-lg text-left hover:bg-content/10 transition-colors"
                 >
                   <Search className="w-4 h-4 text-text-tertiary" />
                   <span className="text-text-inverse">{search}</span>

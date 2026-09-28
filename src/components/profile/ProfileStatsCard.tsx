@@ -79,7 +79,7 @@ export function ProfileStatsCard({ className }: { className?: string }) {
           icon={Users}
           labelKey="profile.gamification.stats.referralsCount"
           value={gamification.referralCount}
-          accentClass="bg-vfun-primary/15 text-vfun-primary"
+          accentClass="bg-vfun-primary/15 text-vfun-primary light:text-purple-700"
           isLoading={isLoading}
         />
         <StatTile

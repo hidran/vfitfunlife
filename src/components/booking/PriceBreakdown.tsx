@@ -31,13 +31,13 @@ export function PriceBreakdown({
 
   return (
     <div className={cn('bg-surface-elevated/50 rounded-2xl p-4', className)}>
-      <h3 className="font-semibold text-white mb-4">{t('booking.price.summary')}</h3>
+      <h3 className="font-semibold text-content mb-4">{t('booking.price.summary')}</h3>
 
       <div className="space-y-3">
         {/* Service price */}
         <div className="flex items-center justify-between text-sm">
           <span className="text-text-secondary">{t('booking.price.service')}</span>
-          <span className="text-white">{formatPrice(servicePrice)}</span>
+          <span className="text-content">{formatPrice(servicePrice)}</span>
         </div>
 
         {/* Platform fee */}
@@ -47,14 +47,14 @@ export function PriceBreakdown({
               <Tag className="w-3.5 h-3.5" />
               {t('booking.price.platformFee')}
             </span>
-            <span className="text-white">{formatPrice(platformFee)}</span>
+            <span className="text-content">{formatPrice(platformFee)}</span>
           </div>
         )}
 
         {/* Subtotal */}
-        <div className="flex items-center justify-between text-sm pt-2 border-t border-white/10">
+        <div className="flex items-center justify-between text-sm pt-2 border-t border-hairline">
           <span className="text-text-secondary">{t('booking.price.subtotal')}</span>
-          <span className="text-white">{formatPrice(subtotal)}</span>
+          <span className="text-content">{formatPrice(subtotal)}</span>
         </div>
 
         {/* Discount */}
@@ -80,8 +80,8 @@ export function PriceBreakdown({
         )}
 
         {/* Total */}
-        <div className="flex items-center justify-between pt-3 border-t border-white/10">
-          <span className="font-semibold text-white">{t('common.total')}</span>
+        <div className="flex items-center justify-between pt-3 border-t border-hairline">
+          <span className="font-semibold text-content">{t('common.total')}</span>
           <span className="text-xl font-bold text-[var(--section-primary)]">
             {formatPrice(totalPrice)}
           </span>

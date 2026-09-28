@@ -84,11 +84,11 @@ export default function VenueDetailClient() {
         )}
       </div>
 
-      <div className="-mt-6 rounded-t-3xl bg-white p-5">
+      <div className="-mt-6 rounded-t-3xl bg-surface p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-xl font-bold text-slate-900">{venue.name}</h1>
-            <p className="mt-1 inline-flex items-center gap-1 text-sm text-slate-500">
+            <h1 className="text-xl font-bold text-content">{venue.name}</h1>
+            <p className="mt-1 inline-flex items-center gap-1 text-sm text-content-muted">
               <MapPin className="h-3.5 w-3.5" />
               {venue.address}
             </p>
@@ -99,11 +99,11 @@ export default function VenueDetailClient() {
           </div>
         </div>
 
-        <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 p-3">
-          <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+        <div className="mt-4 rounded-2xl border border-hairline bg-content/5 p-3">
+          <div className="flex items-center gap-2 text-sm font-semibold text-content/80">
             <Clock className="h-4 w-4" /> {t('venueDetail.hours.title')}
           </div>
-          <ul className="mt-2 space-y-1 text-sm text-slate-600">
+          <ul className="mt-2 space-y-1 text-sm text-content/80">
             {visibleHours.map((h) => (
               <li key={h.day} className="flex justify-between">
                 <span>{h.day}</span>
@@ -115,7 +115,7 @@ export default function VenueDetailClient() {
             <button
               type="button"
               onClick={() => setShowAllHours((v) => !v)}
-              className="mt-2 text-xs font-medium text-vfit-accent"
+              className="mt-2 text-xs font-medium text-vfit-accent light:text-violet-700"
             >
               {showAllHours ? t('venueDetail.hours.showLess') : t('venueDetail.hours.showAll', { count: venue.hours.length })}
             </button>
@@ -128,7 +128,7 @@ export default function VenueDetailClient() {
             return (
               <span
                 key={a.kind}
-                className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700"
+                className="inline-flex items-center gap-1 rounded-full bg-content/5 px-3 py-1 text-xs font-medium text-content/80"
               >
                 <Icon className="h-3.5 w-3.5" /> {a.kind.replace(/_/g, ' ')}
               </span>
@@ -136,28 +136,28 @@ export default function VenueDetailClient() {
           })}
         </div>
 
-        <p className={cn('mt-4 text-sm text-slate-600', !showDescription && 'line-clamp-3')}>
+        <p className={cn('mt-4 text-sm text-content/80', !showDescription && 'line-clamp-3')}>
           {venue.description}
         </p>
         {venue.description.length > 160 && (
           <button
             type="button"
             onClick={() => setShowDescription((v) => !v)}
-            className="mt-1 text-xs font-medium text-vfit-accent"
+            className="mt-1 text-xs font-medium text-vfit-accent light:text-violet-700"
           >
             {showDescription ? t('venueDetail.description.showLess') : t('venueDetail.description.readAll')}
           </button>
         )}
 
-        <div className="mt-6 flex gap-2 border-b border-slate-100">
+        <div className="mt-6 flex gap-2 border-b border-hairline">
           <button
             type="button"
             onClick={() => setActiveTab('services')}
             className={cn(
               'border-b-2 px-3 py-2 text-sm font-medium',
               activeTab === 'services'
-                ? 'border-vfit-accent text-vfit-accent'
-                : 'border-transparent text-slate-500'
+                ? 'border-vfit-accent text-vfit-accent light:text-violet-700'
+                : 'border-transparent text-content-muted'
             )}
           >
             {t('venueDetail.tab.services')}
@@ -168,8 +168,8 @@ export default function VenueDetailClient() {
             className={cn(
               'border-b-2 px-3 py-2 text-sm font-medium',
               activeTab === 'classes'
-                ? 'border-vfit-accent text-vfit-accent'
-                : 'border-transparent text-slate-500'
+                ? 'border-vfit-accent text-vfit-accent light:text-violet-700'
+                : 'border-transparent text-content-muted'
             )}
           >
             {t('venueDetail.tab.classes')}
@@ -182,14 +182,14 @@ export default function VenueDetailClient() {
             {services.map((s) => (
               <li
                 key={s.id}
-                className="flex items-center justify-between rounded-xl border border-slate-100 bg-white p-3"
+                className="flex items-center justify-between rounded-xl border border-hairline bg-surface p-3"
               >
-                <span className="text-sm font-medium text-slate-800">{s.name}</span>
-                <span className="text-sm font-semibold text-slate-900">{formatPrice(s.price)}</span>
+                <span className="text-sm font-medium text-content">{s.name}</span>
+                <span className="text-sm font-semibold text-content">{formatPrice(s.price)}</span>
               </li>
             ))}
             {!servicesQuery.isLoading && services.length === 0 && (
-              <li className="text-sm text-slate-500">{t('venueDetail.services.empty')}</li>
+              <li className="text-sm text-content-muted">{t('venueDetail.services.empty')}</li>
             )}
           </ul>
         )}
@@ -200,19 +200,19 @@ export default function VenueDetailClient() {
             {courses.map((c) => (
               <li
                 key={c.id}
-                className="flex items-center justify-between rounded-xl border border-slate-100 bg-white p-3"
+                className="flex items-center justify-between rounded-xl border border-hairline bg-surface p-3"
               >
                 <div>
-                  <p className="text-sm font-semibold text-slate-800">{c.name}</p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-sm font-semibold text-content">{c.name}</p>
+                  <p className="text-xs text-content-muted">
                     {c.time} · {c.coach}
                   </p>
                 </div>
-                <span className="text-xs font-medium text-slate-700">{t('venueDetail.classes.spots', { count: c.spots })}</span>
+                <span className="text-xs font-medium text-content/80">{t('venueDetail.classes.spots', { count: c.spots })}</span>
               </li>
             ))}
             {!coursesQuery.isLoading && courses.length === 0 && (
-              <li className="text-sm text-slate-500">{t('venueDetail.classes.empty')}</li>
+              <li className="text-sm text-content-muted">{t('venueDetail.classes.empty')}</li>
             )}
           </ul>
         )}

@@ -42,13 +42,13 @@ export default function FitClassesPage() {
         <div className="mt-4 flex flex-wrap gap-2">
           <Link
             href="/bookings"
-            className="rounded-full bg-section-primary px-4 py-2 text-xs font-semibold text-background-dark"
+            className="rounded-full bg-section-primary px-4 py-2 text-xs font-semibold text-background-dark light:text-content"
           >
             {t('fit.classes.myBookings')}
           </Link>
           <Link
             href="/fit/gyms"
-            className="rounded-full border border-white/20 bg-surface-2 px-4 py-2 text-xs font-semibold text-text-inverse"
+            className="rounded-full border border-content/20 bg-surface-2 px-4 py-2 text-xs font-semibold text-text-inverse"
           >
             {t('fit.classes.viewGyms')}
           </Link>
@@ -66,8 +66,8 @@ export default function FitClassesPage() {
               className={cn(
                 'rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
                 category === key
-                  ? 'border-section-primary bg-section-primary text-background-dark'
-                  : 'border-white/15 bg-surface-2 text-text-tertiary'
+                  ? 'border-section-primary bg-section-primary text-background-dark light:text-content'
+                  : 'border-content/15 bg-surface-2 text-text-tertiary'
               )}
             >
               {categoryLabels[key]}
@@ -101,7 +101,7 @@ export default function FitClassesPage() {
                   {t('fit.classes.spots', { count: item.spotsLeft })}
                 </span>
                 <span className="inline-flex items-center gap-1">
-                  <Star className="h-3.5 w-3.5 text-yellow-400" />
+                  <Star className="h-3.5 w-3.5 text-yellow-400 light:text-amber-700" />
                   {item.rating.toFixed(1)}
                 </span>
               </div>

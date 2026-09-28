@@ -159,8 +159,8 @@ export default function BookingReviewClient() {
                     className={cn(
                       'rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
                       selectedTags.includes(tag)
-                        ? 'border-[var(--section-primary)] bg-[var(--section-primary)]/20 text-white'
-                        : 'border-white/20 text-text-secondary hover:text-content'
+                        ? 'border-[var(--section-primary)] bg-[var(--section-primary)]/20 text-content'
+                        : 'border-content/20 text-text-secondary hover:text-content'
                     )}
                   >
                     {tag}
@@ -183,7 +183,7 @@ export default function BookingReviewClient() {
                 value={comment}
                 onChange={(event) => setComment(event.target.value)}
                 placeholder={t('bookings.review.commentPlaceholder')}
-                className="w-full resize-none rounded-xl border border-white/15 bg-surface-sunken p-3 text-sm text-content outline-none transition-colors focus:border-[var(--section-primary)]"
+                className="w-full resize-none rounded-xl border border-content/15 bg-surface-sunken p-3 text-sm text-content outline-none transition-colors focus:border-[var(--section-primary)]"
               />
               <p className="mt-2 text-xs text-text-tertiary">
                 {t('bookings.review.minChars', { count: comment.trim().length })}

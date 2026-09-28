@@ -499,11 +499,11 @@ export function LifeRouteScreen({ slug }: { slug: LifeRouteSlug }) {
 
   return (
     <div className="container-mobile py-6 pb-24 space-y-6">
-      <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-5">
+      <section className="relative overflow-hidden rounded-3xl border border-hairline bg-content/5 p-5">
         <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-section-primary/20 blur-2xl" />
         <div className="absolute -bottom-12 left-0 h-32 w-32 rounded-full bg-section-secondary/20 blur-3xl" />
         <div className="relative">
-          <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">
+          <span className="inline-flex items-center rounded-full border border-content/15 bg-content/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">
             {t('lifeRoute.badge')}
           </span>
           <div className="mt-4 flex items-start gap-3">
@@ -520,13 +520,13 @@ export function LifeRouteScreen({ slug }: { slug: LifeRouteSlug }) {
           <div className="mt-4 flex flex-wrap gap-2">
             <Link
               href="/home"
-              className="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold text-text-inverse"
+              className="rounded-full border border-content/15 bg-content/10 px-4 py-2 text-xs font-semibold text-text-inverse"
             >
               {t('common.backToHome')}
             </Link>
             <Link
               href="/booking"
-              className="rounded-full bg-section-primary px-4 py-2 text-xs font-semibold text-background-dark"
+              className="rounded-full bg-section-primary px-4 py-2 text-xs font-semibold text-background-dark light:text-content"
             >
               {t('lifeRoute.actions.bookService')}
             </Link>
@@ -552,7 +552,7 @@ export function LifeRouteScreen({ slug }: { slug: LifeRouteSlug }) {
                 const currentIndex = providerSortOptions.indexOf(sortBy);
                 setSortBy(providerSortOptions[(currentIndex + 1) % providerSortOptions.length]);
               }}
-              className="rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold text-text-inverse"
+              className="rounded-xl border border-content/15 bg-content/5 px-4 py-3 text-sm font-semibold text-text-inverse"
             >
               {t('lifeRoute.sort.label')}: {t(providerSortLabels[sortBy])}
             </button>
@@ -563,14 +563,14 @@ export function LifeRouteScreen({ slug }: { slug: LifeRouteSlug }) {
       {isProviderRoute && (
         <section className="space-y-3">
           {filteredProviders.map((provider) => (
-            <article key={provider.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <article key={provider.id} className="rounded-2xl border border-hairline bg-content/5 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h2 className="text-sm font-semibold text-text-inverse">{provider.name}</h2>
                   <p className="mt-1 text-xs text-text-tertiary">{provider.specialty}</p>
                 </div>
                 {provider.homeService && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2 py-1 text-[10px] font-semibold uppercase text-emerald-300">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2 py-1 text-[10px] font-semibold uppercase text-emerald-300 light:text-emerald-700">
                     <Home className="h-3 w-3" />
                     {t('lifeRoute.provider.homeService')}
                   </span>
@@ -578,7 +578,7 @@ export function LifeRouteScreen({ slug }: { slug: LifeRouteSlug }) {
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-text-tertiary">
                 <span className="inline-flex items-center gap-1">
-                  <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                  <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400 light:text-amber-600" />
                   {provider.rating.toFixed(1)} ({numberFormatter.format(provider.reviews)})
                 </span>
                 <span className="inline-flex items-center gap-1">
@@ -604,7 +604,7 @@ export function LifeRouteScreen({ slug }: { slug: LifeRouteSlug }) {
             </article>
           ))}
           {filteredProviders.length === 0 && (
-            <p className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-text-tertiary">
+            <p className="rounded-2xl border border-hairline bg-content/5 p-4 text-sm text-text-tertiary">
               {t('lifeRoute.provider.empty')}
             </p>
           )}
@@ -614,14 +614,14 @@ export function LifeRouteScreen({ slug }: { slug: LifeRouteSlug }) {
       {slug === 'centers' && (
         <section className="space-y-3">
           {filteredCenters.map((center) => (
-            <article key={center.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <article key={center.id} className="rounded-2xl border border-hairline bg-content/5 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h2 className="text-sm font-semibold text-text-inverse">{center.name}</h2>
                   <p className="mt-1 text-xs text-text-tertiary">{center.city}</p>
                 </div>
                 {center.isPartner && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-white/90 px-2 py-1 text-[10px] font-semibold uppercase text-background-dark">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-content/90 px-2 py-1 text-[10px] font-semibold uppercase text-background-dark">
                     <ShieldCheck className="h-3 w-3" />
                     {t('lifeRoute.partnerBadge')}
                   </span>
@@ -629,7 +629,7 @@ export function LifeRouteScreen({ slug }: { slug: LifeRouteSlug }) {
               </div>
               <div className="mt-2 flex items-center gap-3 text-xs text-text-tertiary">
                 <span className="inline-flex items-center gap-1">
-                  <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                  <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400 light:text-amber-600" />
                   {center.rating.toFixed(1)}
                 </span>
                 <span className="inline-flex items-center gap-1">
@@ -639,7 +639,7 @@ export function LifeRouteScreen({ slug }: { slug: LifeRouteSlug }) {
               </div>
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {center.specialties.map((specialty) => (
-                  <span key={specialty} className="rounded-full bg-white/10 px-2 py-1 text-[10px] text-text-tertiary">
+                  <span key={specialty} className="rounded-full bg-content/10 px-2 py-1 text-[10px] text-text-tertiary">
                     {specialty}
                   </span>
                 ))}
@@ -654,7 +654,7 @@ export function LifeRouteScreen({ slug }: { slug: LifeRouteSlug }) {
             </article>
           ))}
           {filteredCenters.length === 0 && (
-            <p className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-text-tertiary">
+            <p className="rounded-2xl border border-hairline bg-content/5 p-4 text-sm text-text-tertiary">
               {t('lifeRoute.centers.empty')}
             </p>
           )}
@@ -676,7 +676,7 @@ export function LifeRouteScreen({ slug }: { slug: LifeRouteSlug }) {
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             {homeServiceCategories.map((category) => (
-              <article key={category.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <article key={category.id} className="rounded-2xl border border-hairline bg-content/5 p-4">
                 <h3 className="text-sm font-semibold text-text-inverse">{t(category.nameKey)}</h3>
                 <p className="mt-1 text-xs text-text-tertiary">{t(category.etaKey)}</p>
                 <p className="mt-2 text-sm font-bold text-section-primary">
@@ -699,28 +699,28 @@ export function LifeRouteScreen({ slug }: { slug: LifeRouteSlug }) {
         <section className="space-y-4">
           <div className="rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-4">
             <div className="flex items-center gap-2">
-              <Wind className="h-5 w-5 text-cyan-300" />
+              <Wind className="h-5 w-5 text-cyan-300 light:text-cyan-700" />
               <h2 className="text-base font-semibold text-text-inverse">{t('lifeRoute.hyperbaric.title')}</h2>
             </div>
             <p className="mt-2 text-sm text-text-secondary">{t('lifeRoute.hyperbaric.description')}</p>
             <div className="mt-3 grid grid-cols-3 gap-2">
-              <div className="rounded-xl bg-white/5 p-2 text-center">
-                <p className="text-lg font-bold text-cyan-300">90</p>
+              <div className="rounded-xl bg-content/5 p-2 text-center">
+                <p className="text-lg font-bold text-cyan-300 light:text-cyan-700">90</p>
                 <p className="text-[10px] text-text-tertiary">{t('lifeRoute.hyperbaric.metric.minutes')}</p>
               </div>
-              <div className="rounded-xl bg-white/5 p-2 text-center">
-                <p className="text-lg font-bold text-cyan-300">2.0</p>
+              <div className="rounded-xl bg-content/5 p-2 text-center">
+                <p className="text-lg font-bold text-cyan-300 light:text-cyan-700">2.0</p>
                 <p className="text-[10px] text-text-tertiary">{t('lifeRoute.hyperbaric.metric.ata')}</p>
               </div>
-              <div className="rounded-xl bg-white/5 p-2 text-center">
-                <p className="text-lg font-bold text-cyan-300">100%</p>
+              <div className="rounded-xl bg-content/5 p-2 text-center">
+                <p className="text-lg font-bold text-cyan-300 light:text-cyan-700">100%</p>
                 <p className="text-[10px] text-text-tertiary">{t('lifeRoute.hyperbaric.metric.o2')}</p>
               </div>
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             {hyperbaricPlans.map((plan) => (
-              <article key={plan.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <article key={plan.id} className="rounded-2xl border border-hairline bg-content/5 p-4">
                 <h3 className="text-sm font-semibold text-text-inverse">{t(plan.nameKey)}</h3>
                 <p className="mt-1 text-xs text-text-tertiary">{t(plan.durationKey)}</p>
                 <p className="mt-2 text-sm font-bold text-section-primary">
@@ -730,7 +730,7 @@ export function LifeRouteScreen({ slug }: { slug: LifeRouteSlug }) {
               </article>
             ))}
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div className="rounded-2xl border border-hairline bg-content/5 p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">
               {t('lifeRoute.hyperbaric.medicalNote.title')}
             </p>
@@ -746,10 +746,10 @@ export function LifeRouteScreen({ slug }: { slug: LifeRouteSlug }) {
                 <span
                   key={benefitKey}
                   className={cn(
-                    'inline-flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-xs text-text-tertiary'
+                    'inline-flex items-center gap-1 rounded-full bg-content/10 px-2.5 py-1 text-xs text-text-tertiary'
                   )}
                 >
-                  <Sparkles className="h-3 w-3 text-cyan-300" />
+                  <Sparkles className="h-3 w-3 text-cyan-300 light:text-cyan-700" />
                   {t(benefitKey as MessageKey)}
                 </span>
               ))}

@@ -243,9 +243,9 @@ export function GoogleMap({ gyms, userLocation, onGymSelect, className }: Google
 
   if (error) {
     return (
-      <div className={cn("flex items-center justify-center bg-background-dark rounded-2xl border border-white/10", className)}>
+      <div className={cn("flex items-center justify-center bg-background-dark rounded-2xl border border-hairline", className)}>
         <div className="text-center p-6">
-          <p className="text-red-400 text-sm mb-2">{error}</p>
+          <p className="text-red-400 light:text-red-600 text-sm mb-2">{error}</p>
           <p className="text-text-tertiary text-xs">{t('map.google.error.checkConfig')}</p>
         </div>
       </div>
@@ -253,11 +253,11 @@ export function GoogleMap({ gyms, userLocation, onGymSelect, className }: Google
   }
 
   return (
-    <div className={cn("relative rounded-2xl overflow-hidden border border-white/10", className)}>
+    <div className={cn("relative rounded-2xl overflow-hidden border border-hairline", className)}>
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-background-dark z-10">
           <div className="flex flex-col items-center gap-3">
-            <div className="w-8 h-8 border-2 border-white/20 border-t-section-primary rounded-full animate-spin" />
+            <div className="w-8 h-8 border-2 border-content/20 border-t-section-primary rounded-full animate-spin" />
             <p className="text-text-tertiary text-sm">{t('map.google.loading')}</p>
           </div>
         </div>
@@ -265,7 +265,7 @@ export function GoogleMap({ gyms, userLocation, onGymSelect, className }: Google
       <div 
         ref={mapRef} 
         className="w-full h-full min-h-[400px]"
-        style={{ background: '#1a1d29' }}
+        style={{ background: 'var(--color-background-dark)' }}
       />
     </div>
   );

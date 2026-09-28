@@ -22,7 +22,7 @@ export function AssistantSheet() {
       <div className="relative z-10 w-full sm:max-w-md h-[80vh] sm:h-[600px] bg-background-dark sm:rounded-2xl rounded-t-2xl border border-hairline flex flex-col overflow-hidden">
         <header className="flex items-center justify-between px-4 py-3 border-b border-hairline bg-surface">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-[#00C9FF]" />
+            <Sparkles className="w-5 h-5 text-[#00C9FF] light:text-vfit-secondary" />
             <span className="font-semibold text-content">{t("assistant.title")}</span>
           </div>
           <div className="flex items-center gap-2">
@@ -43,7 +43,7 @@ export function AssistantSheet() {
             <MessageBubble key={m.id} message={m} />
           ))}
           {error && (
-            <p className="text-red-400 text-xs text-center">
+            <p className="text-red-400 light:text-red-600 text-xs text-center">
               {t(`assistant.error.${error}` as MessageKey) || t("assistant.error.internal")}
             </p>
           )}

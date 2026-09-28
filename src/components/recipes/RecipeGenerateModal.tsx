@@ -371,7 +371,7 @@ export function RecipeGenerateModal({
           )}
         </div>
 
-        {error && <p className="text-sm text-red-400">{error}</p>}
+        {error && <p className="text-sm text-red-400 light:text-red-600">{error}</p>}
 
         <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-1">
           <Button size="sm" variant="outline" onClick={close} disabled={generating}>

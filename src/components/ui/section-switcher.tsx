@@ -21,8 +21,8 @@ export function SectionSwitcher() {
           className={cn(
             'px-4 py-2 text-sm font-bold rounded-full transition-colors',
             section === s.id
-              ? 'bg-white text-gray-900 shadow'
-              : 'text-gray-500 hover:text-gray-700'
+              ? 'bg-surface text-content shadow'
+              : 'text-content-faint light:text-content-muted hover:text-content/80'
           )}
         >
           {s.label}

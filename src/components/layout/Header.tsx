@@ -15,28 +15,28 @@ const sectionBranding = {
     label: 'VFit',
     icon: Dumbbell,
     gradient: 'from-vfit-primary via-vfit-secondary to-vfit-accent',
-    headerBg: 'bg-white/95 border-slate-200/80',
-    iconBg: 'hover:bg-slate-100',
-    iconColor: 'text-slate-700',
-    ringOffset: 'focus-visible:ring-offset-white',
+    headerBg: 'bg-surface/95 border-hairline',
+    iconBg: 'hover:bg-content/5',
+    iconColor: 'text-content/80',
+    ringOffset: 'focus-visible:ring-offset-background-dark',
   },
   fun: {
     label: 'VFun',
     icon: PartyPopper,
     gradient: 'from-vfun-primary via-vfun-secondary to-vfun-accent',
-    headerBg: 'bg-white/95 border-slate-200/80',
-    iconBg: 'hover:bg-slate-100',
-    iconColor: 'text-slate-700',
-    ringOffset: 'focus-visible:ring-offset-white',
+    headerBg: 'bg-surface/95 border-hairline',
+    iconBg: 'hover:bg-content/5',
+    iconColor: 'text-content/80',
+    ringOffset: 'focus-visible:ring-offset-background-dark',
   },
   life: {
     label: 'VLife',
     icon: Sparkles,
     gradient: 'from-vlife-primary via-vlife-secondary to-vlife-accent',
-    headerBg: 'bg-white/95 border-slate-200/80',
-    iconBg: 'hover:bg-slate-100',
-    iconColor: 'text-slate-700',
-    ringOffset: 'focus-visible:ring-offset-white',
+    headerBg: 'bg-surface/95 border-hairline',
+    iconBg: 'hover:bg-content/5',
+    iconColor: 'text-content/80',
+    ringOffset: 'focus-visible:ring-offset-background-dark',
   },
 } as const;
 
@@ -135,7 +135,7 @@ export function Header({ onMenuClick, notificationCount = 0, userAvatarUrl }: He
                   : t('header.notifications')
               }
             >
-              <Bell size={20} className="text-slate-700" />
+              <Bell size={20} className="text-content/80" />
 
               {notificationCount > 0 && (
                 <span
@@ -166,8 +166,8 @@ export function Header({ onMenuClick, notificationCount = 0, userAvatarUrl }: He
                   className="w-8 h-8 rounded-full object-cover"
                 />
               ) : (
-                <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center">
-                  <User size={16} className="text-slate-500" />
+                <div className="w-8 h-8 rounded-full bg-content/5 border border-hairline flex items-center justify-center">
+                  <User size={16} className="text-content-muted" />
                 </div>
               )}
             </Link>

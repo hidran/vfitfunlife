@@ -426,7 +426,7 @@ export default function BookingDetailPage() {
           {!isPast && isActive(booking.status) && (
             <button
               onClick={handleAddToCalendar}
-              className="w-full mt-2 py-2.5 bg-surface-2 rounded-xl text-sm font-medium text-content hover:bg-white/20 transition-colors flex items-center justify-center gap-2"
+              className="w-full mt-2 py-2.5 bg-surface-2 rounded-xl text-sm font-medium text-content hover:bg-content/20 transition-colors flex items-center justify-center gap-2"
             >
               <Calendar className="w-4 h-4" />
               {t('bookings.detail.addToCalendar')}
@@ -498,7 +498,7 @@ export default function BookingDetailPage() {
             </div>
           )}
 
-          <button className="w-full mt-2 py-2.5 bg-surface-2 rounded-xl text-sm font-medium text-content hover:bg-white/20 transition-colors flex items-center justify-center gap-2">
+          <button className="w-full mt-2 py-2.5 bg-surface-2 rounded-xl text-sm font-medium text-content hover:bg-content/20 transition-colors flex items-center justify-center gap-2">
             <Download className="w-4 h-4" />
             {t('bookings.detail.downloadReceipt')}
           </button>

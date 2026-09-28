@@ -133,7 +133,7 @@ export function EducationHistory({
           {education.map((edu) => (
             <div
               key={edu.id}
-              className="flex items-start gap-3 p-3 rounded-xl bg-background-secondary/5 border border-hairline"
+              className="flex items-start gap-3 p-3 rounded-xl bg-content/5 border border-hairline"
             >
               <div className="w-10 h-10 rounded-lg bg-section-gradient/10 flex items-center justify-center flex-shrink-0">
                 <GraduationCap className="text-section-primary" size={18} />
@@ -173,7 +173,7 @@ export function EducationHistory({
 
       {/* Add New Form */}
       {isAdding && (
-        <div className="p-4 rounded-xl bg-background-secondary/5 border border-hairline space-y-4">
+        <div className="p-4 rounded-xl bg-content/5 border border-hairline space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-medium text-text-inverse">{t('profile.education.addTitle')}</h4>
             <button
@@ -231,7 +231,7 @@ export function EducationHistory({
                 id="ongoing"
                 checked={newEducation.isOngoing}
                 onChange={(e) => setNewEducation({ ...newEducation, isOngoing: e.target.checked })}
-                className="w-4 h-4 rounded border-white/20 bg-background-secondary/10 text-section-primary focus:ring-section-primary"
+                className="w-4 h-4 rounded border-content/20 bg-content/10 text-section-primary focus:ring-section-primary"
               />
               <label htmlFor="ongoing" className="text-sm text-text-secondary">
                 {t('profile.education.ongoing')}
@@ -272,7 +272,7 @@ export function EducationHistory({
       )}
 
       {education.length === 0 && !isAdding && (
-        <div className="text-center py-6 bg-background-secondary/5 rounded-xl">
+        <div className="text-center py-6 bg-content/5 rounded-xl">
           <p className="text-text-tertiary text-sm">{t('profile.education.empty')}</p>
           <p className="text-text-tertiary/70 text-xs mt-1">
             {t('profile.education.emptyHint')}

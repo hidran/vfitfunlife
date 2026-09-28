@@ -93,7 +93,7 @@ export default function ChatClient() {
           </div>
           <Link
             href="/bookings"
-            className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors hover:text-content"
+            className="rounded-full border border-content/15 px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors hover:text-content"
           >
             {t('chat.header.bookings')}
           </Link>
@@ -137,7 +137,7 @@ export default function ChatClient() {
             <button
               key={reply}
               onClick={() => sendQuickReply(reply)}
-              className="rounded-full border border-white/20 px-3 py-1.5 text-xs text-text-secondary transition-colors hover:text-content"
+              className="rounded-full border border-content/20 px-3 py-1.5 text-xs text-text-secondary transition-colors hover:text-content"
             >
               {reply}
             </button>
@@ -152,7 +152,7 @@ export default function ChatClient() {
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             placeholder={t('chat.input.placeholder')}
-            className="max-h-32 min-h-[44px] flex-1 resize-none rounded-xl border border-white/15 bg-surface-sunken px-3 py-2.5 text-sm text-content outline-none transition-colors focus:border-[var(--section-primary)]"
+            className="max-h-32 min-h-[44px] flex-1 resize-none rounded-xl border border-content/15 bg-surface-sunken px-3 py-2.5 text-sm text-content outline-none transition-colors focus:border-[var(--section-primary)]"
           />
           <Button onClick={handleSend} disabled={!draft.trim()} aria-label={t('chat.send.aria')} className="h-11 px-4">
             <Send className="h-4 w-4" />

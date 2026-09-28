@@ -27,7 +27,7 @@ export function ServiceCategoryCard({
       onClick={onClick}
       className={cn(
         'flex flex-col items-center justify-center transition-all duration-200 touch-target',
-        'rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10',
+        'rounded-2xl border border-hairline bg-content/5 hover:bg-content/10',
         'active:scale-[0.97]',
         isActive && 'border-vlife-primary bg-vlife-primary/10',
         isCompact ? 'p-3 gap-2' : 'p-4 gap-3',
@@ -43,7 +43,7 @@ export function ServiceCategoryCard({
       >
         <span
           className={cn(
-            'text-vlife-primary',
+            'text-vlife-primary light:text-emerald-700',
             isCompact ? 'text-lg' : 'text-xl'
           )}
         >

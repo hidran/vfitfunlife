@@ -162,7 +162,7 @@ export function NotificationSettings({
             );
           })}
           {enabledCount > 4 && (
-            <span className="inline-flex items-center px-2 py-1 rounded-full bg-background-secondary/10 text-text-tertiary text-xs">
+            <span className="inline-flex items-center px-2 py-1 rounded-full bg-content/10 text-text-tertiary text-xs">
               {t('profile.notifications.more', { count: enabledCount - 4 })}
             </span>
           )}
@@ -213,13 +213,13 @@ export function NotificationSettings({
                 'w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-200 text-left',
                 isEnabled
                   ? 'bg-section-gradient/10 border border-section-primary/30'
-                  : 'bg-background-secondary/5 border border-transparent hover:bg-background-secondary/10'
+                  : 'bg-content/5 border border-transparent hover:bg-content/10'
               )}
             >
               <div
                 className={cn(
                   'w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors',
-                  isEnabled ? 'bg-section-gradient text-white' : 'bg-background-secondary/20 text-text-tertiary'
+                  isEnabled ? 'bg-section-gradient text-white' : 'bg-content/20 text-text-tertiary'
                 )}
               >
                 <option.icon size={18} />
@@ -240,12 +240,12 @@ export function NotificationSettings({
               <div
                 className={cn(
                   'w-12 h-6 rounded-full relative transition-colors duration-200',
-                  isEnabled ? 'bg-section-primary' : 'bg-background-secondary/30'
+                  isEnabled ? 'bg-section-primary' : 'bg-content/30'
                 )}
               >
                 <div
                   className={cn(
-                    'absolute top-1 w-4 h-4 rounded-full bg-white transition-transform duration-200',
+                    'absolute top-1 w-4 h-4 rounded-full bg-white transition-transform duration-200 light:shadow-sm',
                     isEnabled ? 'translate-x-7' : 'translate-x-1'
                   )}
                 />

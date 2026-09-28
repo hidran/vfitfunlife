@@ -14,13 +14,13 @@ export function VenueNotFound({ onRetry, message }: VenueNotFoundProps) {
 
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-6 text-center">
-      <div className="rounded-full bg-slate-100 p-4">
-        <MapPinOff className="h-8 w-8 text-slate-500" />
+      <div className="rounded-full bg-content/5 p-4">
+        <MapPinOff className="h-8 w-8 text-content-muted" />
       </div>
-      <h2 className="text-lg font-semibold text-slate-900">
+      <h2 className="text-lg font-semibold text-content">
         {message ?? t('venue.notFound.title')}
       </h2>
-      <p className="max-w-sm text-sm text-slate-500">
+      <p className="max-w-sm text-sm text-content-muted">
         {t('venue.notFound.message')}
       </p>
       <div className="flex gap-2">
@@ -34,7 +34,7 @@ export function VenueNotFound({ onRetry, message }: VenueNotFoundProps) {
           <button
             type="button"
             onClick={onRetry}
-            className="inline-flex h-10 items-center rounded-full border border-slate-200 px-4 text-sm font-medium text-slate-700"
+            className="inline-flex h-10 items-center rounded-full border border-hairline px-4 text-sm font-medium text-content/80"
           >
             {t('common.retry')}
           </button>

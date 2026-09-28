@@ -38,7 +38,7 @@ export function FeatureCard({
         onClick={onClick}
         className={cn(
           'flex items-center gap-4 p-4 rounded-2xl w-full text-left',
-          'bg-white/5 border border-white/10 hover:bg-white/10',
+          'bg-content/5 border border-hairline hover:bg-content/10',
           'transition-all duration-200 active:scale-[0.98]',
           className
         )}
@@ -61,7 +61,7 @@ export function FeatureCard({
             {title}
           </h4>
           {subtitle && (
-            <p className="text-vlife-primary text-sm font-medium mt-0.5">
+            <p className="text-vlife-primary light:text-emerald-700 text-sm font-medium mt-0.5">
               {subtitle}
             </p>
           )}
@@ -130,7 +130,7 @@ export function FeatureCard({
                 <span className="text-vlife-primary">{icon}</span>
               </div>
             )}
-            <h3 className="font-bold text-text-inverse text-xl mb-1">
+            <h3 className="font-bold text-white text-xl mb-1">
               {title}
             </h3>
             {subtitle && (
@@ -139,7 +139,7 @@ export function FeatureCard({
               </p>
             )}
             {description && (
-              <p className="text-text-inverse/80 text-sm line-clamp-2">
+              <p className="text-white/80 text-sm line-clamp-2">
                 {description}
               </p>
             )}
@@ -150,7 +150,7 @@ export function FeatureCard({
                 </span>
               )}
               {duration && (
-                <span className="text-text-tertiary text-sm">
+                <span className="text-white/60 text-sm">
                   {duration} min
                 </span>
               )}
@@ -167,7 +167,7 @@ export function FeatureCard({
       onClick={onClick}
       className={cn(
         'flex flex-col rounded-2xl overflow-hidden w-full',
-        'bg-white/5 border border-white/10 hover:bg-white/10',
+        'bg-content/5 border border-hairline hover:bg-content/10',
         'transition-all duration-200 active:scale-[0.98]',
         className
       )}
@@ -197,7 +197,7 @@ export function FeatureCard({
           {title}
         </h4>
         {subtitle && (
-          <p className="text-vlife-primary text-xs font-medium mt-0.5">
+          <p className="text-vlife-primary light:text-emerald-700 text-xs font-medium mt-0.5">
             {subtitle}
           </p>
         )}

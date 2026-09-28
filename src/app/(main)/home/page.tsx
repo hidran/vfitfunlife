@@ -177,21 +177,21 @@ function VFitHome() {
     .slice(0, 4);
 
   return (
-    <div className="min-h-full bg-[#f3f4f6] pb-24">
+    <div className="min-h-full bg-background-dark pb-24">
       <div className="container-mobile py-4 space-y-5">
         <section>
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-base font-bold text-slate-900">
-              <Dumbbell className="h-4 w-4 text-vfit-accent" />
+            <h2 className="flex items-center gap-2 text-base font-bold text-content">
+              <Dumbbell className="h-4 w-4 text-vfit-accent light:text-violet-700" />
               {t('home.fit.section.gymsLocations')}
             </h2>
-            <Link href="/fit/gyms" className="text-sm font-medium text-vfit-accent">
+            <Link href="/fit/gyms" className="text-sm font-medium text-vfit-accent light:text-violet-700">
               {t('home.fit.gyms.viewAll')}
             </Link>
           </div>
           <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
             {loadingGyms ? (
-              <div className="flex h-44 min-w-[240px] items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="flex h-44 min-w-[240px] items-center justify-center rounded-2xl border border-hairline bg-surface shadow-sm">
                 <Spinner size="md" />
               </div>
             ) : displayGyms.length > 0 ? (
@@ -199,7 +199,7 @@ function VFitHome() {
                 <Link
                   key={gym.id}
                   href={`/venue?id=${gym.id}`}
-                  className="min-w-[240px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                  className="min-w-[240px] overflow-hidden rounded-2xl border border-hairline bg-surface shadow-sm"
                 >
                   <div
                     className={cn(
@@ -210,16 +210,16 @@ function VFitHome() {
                     )}
                   >
                     <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(0,0,0,0.2))]" />
-                    <div className="absolute left-4 top-4 h-12 w-20 rounded-md border border-white/20 bg-surface-2" />
+                    <div className="absolute left-4 top-4 h-12 w-20 rounded-md border border-white/20 light:border-white/20 bg-white/5 light:bg-white/5" />
                     <div className="absolute left-4 top-20 h-1.5 w-28 rounded-full bg-white/15" />
-                    <div className="absolute right-3 top-3 flex items-center gap-1 rounded-lg bg-white/90 px-2 py-1 text-[10px] font-bold text-yellow-500">
+                    <div className="absolute right-3 top-3 flex items-center gap-1 rounded-lg bg-white/90 px-2 py-1 text-[10px] font-bold text-amber-600">
                       <Star className="h-3 w-3 fill-current" />
                       {gym.rating.toFixed(1)}
                     </div>
                   </div>
                   <div className="p-3">
-                    <h3 className="truncate text-sm font-semibold text-slate-900">{gym.name}</h3>
-                    <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-500">
+                    <h3 className="truncate text-sm font-semibold text-content">{gym.name}</h3>
+                    <p className="mt-0.5 flex items-center gap-1 text-xs text-content-muted">
                       <MapPin className="h-3.5 w-3.5" />
                       {gym.city}
                     </p>
@@ -227,9 +227,9 @@ function VFitHome() {
                 </Link>
               ))
             ) : (
-              <div className="flex min-w-[240px] flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm">
-                <p className="text-sm text-slate-500">{t('home.fit.gyms.empty')}</p>
-                <Link href="/booking" className="mt-2 text-sm font-medium text-vfit-accent">
+              <div className="flex min-w-[240px] flex-col items-center justify-center rounded-2xl border border-hairline bg-surface p-4 text-center shadow-sm">
+                <p className="text-sm text-content-muted">{t('home.fit.gyms.empty')}</p>
+                <Link href="/booking" className="mt-2 text-sm font-medium text-vfit-accent light:text-violet-700">
                   {t('home.fit.gyms.findTrainer')}
                 </Link>
               </div>
@@ -237,8 +237,8 @@ function VFitHome() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h3 className="mb-3 flex items-center gap-2 text-base font-bold text-slate-900">
+        <section className="rounded-2xl border border-hairline bg-surface p-4 shadow-sm">
+          <h3 className="mb-3 flex items-center gap-2 text-base font-bold text-content">
             <Zap className="h-4 w-4 text-success-DEFAULT" />
             {t('home.fit.section.activeClasses')}
           </h3>
@@ -253,10 +253,10 @@ function VFitHome() {
                   key={`${tag}-${index}`}
                   className={cn(
                     'rounded-full px-3 py-1 text-xs font-medium',
-                    index === 0 && 'bg-purple-100 text-purple-700',
-                    index === 1 && 'bg-blue-100 text-blue-700',
-                    index === 2 && 'bg-pink-100 text-pink-700',
-                    index === 3 && 'bg-orange-100 text-orange-700'
+                    index === 0 && 'bg-purple-500/15 text-purple-300 light:text-purple-700',
+                    index === 1 && 'bg-blue-500/15 text-blue-300 light:text-blue-700',
+                    index === 2 && 'bg-pink-500/15 text-pink-300 light:text-pink-700',
+                    index === 3 && 'bg-orange-500/15 text-orange-300 light:text-orange-700'
                   )}
                 >
                   {tag}
@@ -264,11 +264,11 @@ function VFitHome() {
               ))}
             </div>
           ) : (
-            <div className="text-sm text-slate-500">{t('home.fit.classes.emptyToday')}</div>
+            <div className="text-sm text-content-muted">{t('home.fit.classes.emptyToday')}</div>
           )}
         </section>
 
-        <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <section className="relative overflow-hidden rounded-2xl border border-hairline bg-surface shadow-sm">
           <div className="relative h-44 bg-[linear-gradient(135deg,#d8e4ea,#a6bdc8)]">
             <div className="absolute inset-0 opacity-55 [background-image:linear-gradient(to_right,rgba(255,255,255,0.45)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.45)_1px,transparent_1px)] [background-size:28px_28px]" />
             <div className="absolute left-12 top-10 h-16 w-20 rounded-lg bg-white/50" />
@@ -279,22 +279,22 @@ function VFitHome() {
               <p className="text-[11px] text-white/80">{t('home.fit.map.subtitle')}</p>
             </div>
             <div className="absolute right-4 top-4 rounded-full bg-white p-2 shadow">
-              <MapPin className="h-4 w-4 text-vfit-accent" />
+              <MapPin className="h-4 w-4 text-vfit-accent light:text-violet-700" />
             </div>
             <div className="absolute bottom-4 right-4 rounded-lg bg-yellow-400 px-2 py-1 text-[10px] font-bold text-slate-900">
               {t('home.fit.partnerBadge')}
             </div>
           </div>
           <div className="flex items-center justify-between px-4 py-3">
-            <div className="text-xs text-slate-500">{t('home.fit.map.locations', { count: 12 })}</div>
-            <Link href="/fit/gyms" className="text-sm font-semibold text-vfit-accent">
+            <div className="text-xs text-content-muted">{t('home.fit.map.locations', { count: 12 })}</div>
+            <Link href="/fit/gyms" className="text-sm font-semibold text-vfit-accent light:text-violet-700">
               {t('home.fit.map.open')}
             </Link>
           </div>
         </section>
 
         <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-900 to-purple-900 p-5 text-white shadow-lg">
-          <div className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-surface-2 blur-2xl" />
+          <div className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-white/5 light:bg-white/5 blur-2xl" />
           <div className="absolute -left-8 -bottom-8 h-24 w-24 rounded-full bg-vfit-accent/35 blur-xl" />
           <div className="relative">
             <h3 className="text-xl font-bold">{t('home.fit.onlineCoach.title')}</h3>
@@ -310,12 +310,12 @@ function VFitHome() {
                   <Link
                     key={`coach-${trainer.id}`}
                     href={`/provider/${trainer.id}`}
-                    className="flex items-center gap-3 rounded-xl border border-hairline bg-surface-2 p-3 backdrop-blur-sm transition-colors hover:bg-white/15"
+                    className="flex items-center gap-3 rounded-xl border border-white/10 light:border-white/10 bg-white/5 light:bg-white/5 p-3 backdrop-blur-sm transition-colors hover:bg-white/15"
                   >
                     <Avatar name={trainer.fullName} size="md" src={trainer.avatarUrl} />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="truncate text-sm font-semibold text-content">{trainer.fullName}</p>
+                        <p className="truncate text-sm font-semibold text-white">{trainer.fullName}</p>
                         <div className="flex items-center gap-0.5 text-yellow-300">
                           <Star className="h-3.5 w-3.5 fill-current" />
                           <span className="text-[11px] font-semibold">{trainer.rating.toFixed(1)}</span>
@@ -331,7 +331,7 @@ function VFitHome() {
                   </Link>
                 ))
               ) : (
-                <div className="rounded-xl border border-hairline bg-surface-2 p-4 text-sm text-indigo-100">
+                <div className="rounded-xl border border-white/10 light:border-white/10 bg-white/5 light:bg-white/5 p-4 text-sm text-indigo-100">
                   {t('home.fit.trainers.empty')}
                 </div>
               )}
@@ -372,13 +372,13 @@ function VFunHome() {
   ];
 
   return (
-    <div className="min-h-full bg-[#f3f4f6] pb-24">
+    <div className="min-h-full bg-background-dark pb-24">
       <div className="container-mobile py-4 space-y-4">
         <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#4f1d95] via-[#5f2fb6] to-[#8b5cf6] p-5 text-white shadow-lg">
           <div className="absolute -top-8 right-0 h-28 w-28 rounded-full bg-pink-400/20 blur-2xl" />
           <div className="absolute -bottom-8 left-0 h-28 w-28 rounded-full bg-orange-400/20 blur-2xl" />
           <div className="relative text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-surface-2 ring-4 ring-white/10">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white/5 light:bg-white/5 ring-4 ring-white/10">
               <PartyPopper className="h-7 w-7 text-pink-300" />
             </div>
             <h2 className="mt-4 text-2xl font-bold leading-tight">
@@ -394,14 +394,14 @@ function VFunHome() {
             <div className="mt-4 grid grid-cols-2 gap-3">
               <Link
                 href="/fun/party-mode"
-                className="flex flex-col items-center gap-1 rounded-xl border border-white/15 bg-surface-2 px-3 py-3 text-xs font-semibold backdrop-blur-sm"
+                className="flex flex-col items-center gap-1 rounded-xl border border-white/15 bg-white/5 light:bg-white/5 px-3 py-3 text-xs font-semibold backdrop-blur-sm"
               >
                 <PartyPopper className="h-4 w-4 text-pink-300" />
                 {t('home.fun.hero.party')}
               </Link>
               <Link
                 href="/fun/vr"
-                className="flex flex-col items-center gap-1 rounded-xl border border-white/15 bg-surface-2 px-3 py-3 text-xs font-semibold backdrop-blur-sm"
+                className="flex flex-col items-center gap-1 rounded-xl border border-white/15 bg-white/5 light:bg-white/5 px-3 py-3 text-xs font-semibold backdrop-blur-sm"
               >
                 <Glasses className="h-4 w-4 text-orange-300" />
                 {t('home.fun.hero.vr')}
@@ -424,7 +424,7 @@ function VFunHome() {
                 'whitespace-nowrap rounded-full border px-4 py-2 text-xs font-medium shadow-sm',
                 tab.active
                   ? 'border-vfun-primary bg-vfun-primary text-white shadow-vfun-primary/20'
-                  : 'border-slate-200 bg-white text-slate-500'
+                  : 'border-hairline bg-surface text-content-muted'
               )}
             >
               {t(tab.key)}
@@ -432,10 +432,10 @@ function VFunHome() {
           ))}
         </div>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <section className="rounded-2xl border border-hairline bg-surface p-4 shadow-sm">
           <div className="flex items-center justify-between">
-            <h3 className="text-base font-bold text-slate-900">{t('home.fun.schedule.title')}</h3>
-            <Link href="/fun/events" className="text-xs font-semibold text-vfun-primary">
+            <h3 className="text-base font-bold text-content">{t('home.fun.schedule.title')}</h3>
+            <Link href="/fun/events" className="text-xs font-semibold text-vfun-primary light:text-purple-700">
               {t('home.fun.upcoming.viewAll')}
             </Link>
           </div>
@@ -446,32 +446,32 @@ function VFunHome() {
                 <Link
                   key={event.id}
                   href="/fun/events"
-                  className="flex items-start gap-3 rounded-xl bg-slate-50 px-3 py-3 transition-colors hover:bg-slate-100"
+                  className="flex items-start gap-3 rounded-xl bg-content/5 px-3 py-3 transition-colors hover:bg-content/5"
                 >
-                  <div className="flex w-12 flex-shrink-0 flex-col items-center rounded-lg bg-white px-2 py-2 shadow-sm">
-                    <span className="text-[9px] font-bold uppercase tracking-wide text-slate-400">
+                  <div className="flex w-12 flex-shrink-0 flex-col items-center rounded-lg bg-surface px-2 py-2 shadow-sm">
+                    <span className="text-[9px] font-bold uppercase tracking-wide text-content-muted">
                       {month}
                     </span>
                     <span
                       className={cn(
                         'text-lg font-bold leading-none',
-                        index === 0 && 'text-vfun-primary',
-                        index === 1 && 'text-vfun-secondary',
-                        index === 2 && 'text-vfun-accent'
+                        index === 0 && 'text-vfun-primary light:text-purple-700',
+                        index === 1 && 'text-vfun-secondary light:text-fuchsia-700',
+                        index === 2 && 'text-vfun-accent light:text-pink-700'
                       )}
                     >
                       {day}
                     </span>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-slate-800">{t(event.titleKey)}</p>
-                    <p className="mt-1 flex items-center gap-1 text-[11px] text-slate-500">
+                    <p className="truncate text-sm font-semibold text-content">{t(event.titleKey)}</p>
+                    <p className="mt-1 flex items-center gap-1 text-[11px] text-content-muted">
                       <Clock className="h-3 w-3" />
                       {event.time || '--'}
                     </p>
-                    <p className="mt-1 truncate text-[11px] text-slate-500">{t(event.locationKey)}</p>
+                    <p className="mt-1 truncate text-[11px] text-content-muted">{t(event.locationKey)}</p>
                   </div>
-                  <ChevronRight className="mt-1 h-4 w-4 text-slate-300" />
+                  <ChevronRight className="mt-1 h-4 w-4 text-content-faint" />
                 </Link>
               );
             })}
@@ -479,16 +479,16 @@ function VFunHome() {
         </section>
 
         {vfunIsStreamingLive && (
-          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="flex items-center justify-between border-b border-slate-100 px-3 py-3">
+          <section className="overflow-hidden rounded-2xl border border-hairline bg-surface shadow-sm">
+            <div className="flex items-center justify-between border-b border-hairline px-3 py-3">
               <div className="flex items-center gap-2">
                 <span className="relative flex h-2.5 w-2.5">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
                   <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
                 </span>
-                <p className="text-sm font-bold text-slate-800">{t('home.fun.live.badge')}</p>
+                <p className="text-sm font-bold text-content">{t('home.fun.live.badge')}</p>
               </div>
-              <span className="rounded-md bg-purple-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-purple-600">
+              <span className="rounded-md bg-purple-500/15 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-purple-300 light:text-purple-700">
                 TWITCH
               </span>
             </div>
@@ -510,8 +510,8 @@ function VFunHome() {
               </div>
             </div>
             <div className="p-3">
-              <p className="truncate text-sm font-semibold text-slate-800">{t('home.fun.live.title')}</p>
-              <p className="mt-1 flex items-center gap-1 text-xs text-slate-500">
+              <p className="truncate text-sm font-semibold text-content">{t('home.fun.live.title')}</p>
+              <p className="mt-1 flex items-center gap-1 text-xs text-content-muted">
                 <Radio className="h-3.5 w-3.5" />
                 {t(liveShow.channelKey)} · {t('home.fun.tv.onAir')}
               </p>
@@ -520,7 +520,7 @@ function VFunHome() {
         )}
 
         <section>
-          <h3 className="text-sm font-bold tracking-wide text-slate-800">{t('home.fun.crew.title')}</h3>
+          <h3 className="text-sm font-bold tracking-wide text-content">{t('home.fun.crew.title')}</h3>
           <div className="mt-3 flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
             {crewMembers.map((member) => (
               <div key={`${member.name}-${member.roleKey}`} className="w-[86px] flex-shrink-0 text-center">
@@ -529,20 +529,20 @@ function VFunHome() {
                     'mx-auto flex h-16 w-16 items-center justify-center rounded-full border p-0.5',
                     member.accent
                       ? 'border-pink-300 bg-gradient-to-br from-pink-300/40 to-orange-300/40'
-                      : 'border-slate-200 bg-white'
+                      : 'border-hairline bg-surface'
                   )}
                 >
                   <div
                     className={cn(
                       'flex h-full w-full items-center justify-center rounded-full',
-                      member.accent ? 'bg-white' : 'bg-gradient-to-br from-emerald-100 to-emerald-200'
+                      member.accent ? 'bg-surface' : 'bg-gradient-to-br from-emerald-100 to-emerald-200'
                     )}
                   >
                     <Avatar name={member.name} size="sm" />
                   </div>
                 </div>
-                <p className="mt-2 text-xs font-semibold text-slate-800">{member.name}</p>
-                <p className="text-[10px] text-slate-500">{t(member.roleKey)}</p>
+                <p className="mt-2 text-xs font-semibold text-content">{member.name}</p>
+                <p className="text-[10px] text-content-muted">{t(member.roleKey)}</p>
               </div>
             ))}
           </div>
@@ -609,17 +609,17 @@ function VLifeHome() {
   ];
 
   return (
-    <div className="min-h-full bg-[#f8fafc] pb-24">
+    <div className="min-h-full bg-background-dark pb-24">
       <div className="container-mobile py-4 space-y-4">
         <section className="grid grid-cols-2 gap-3">
-          <div className="col-span-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="col-span-2 rounded-2xl border border-hairline bg-surface p-4 shadow-sm">
             <div className="mb-2 flex items-start justify-between">
-              <h2 className="text-base font-semibold text-slate-800">{t('home.life.wellness.title')}</h2>
-              <span className="rounded-lg bg-vlife-primary/10 p-1.5 text-vlife-primary">
+              <h2 className="text-base font-semibold text-content">{t('home.life.wellness.title')}</h2>
+              <span className="rounded-lg bg-vlife-primary/10 p-1.5 text-vlife-primary light:text-emerald-700">
                 <Flower2 className="h-4 w-4" />
               </span>
             </div>
-            <ul className="space-y-1.5 text-sm text-slate-600">
+            <ul className="space-y-1.5 text-sm text-content/80">
               {wellnessHighlights.map((item) => (
                 <li key={item.href} className="flex items-center gap-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-vlife-primary" />
@@ -631,28 +631,28 @@ function VLifeHome() {
 
           <Link
             href="/life/centers"
-            className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-4 text-center shadow-sm"
+            className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-hairline bg-surface px-3 py-4 text-center shadow-sm"
           >
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-300 light:text-emerald-700">
               <MapPin className="h-4 w-4" />
             </span>
-            <span className="text-sm font-medium text-slate-700">{t('home.life.quickLocation')}</span>
+            <span className="text-sm font-medium text-content/80">{t('home.life.quickLocation')}</span>
           </Link>
 
           <Link
             href="/life/home-services"
-            className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-4 text-center shadow-sm"
+            className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-hairline bg-surface px-3 py-4 text-center shadow-sm"
           >
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/15 text-blue-300 light:text-blue-700">
               <HomeIcon className="h-4 w-4" />
             </span>
-            <span className="text-sm font-medium text-slate-700">{t('home.life.quickHome')}</span>
+            <span className="text-sm font-medium text-content/80">{t('home.life.quickHome')}</span>
           </Link>
         </section>
 
         <Link
           href="/life/massaggi"
-          className="relative block overflow-hidden rounded-2xl border border-slate-200 shadow-sm"
+          className="relative block overflow-hidden rounded-2xl border border-hairline shadow-sm"
         >
           <div className="h-28 bg-[linear-gradient(120deg,#3b2d24,#5a4033,_#1e3428)]">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_right,_rgba(255,255,255,0.2),_transparent_45%)]" />
@@ -669,21 +669,21 @@ function VLifeHome() {
 
         <section>
           <div className="relative mb-4 flex items-center justify-center">
-            <div className="absolute inset-x-0 top-1/2 border-t border-slate-200" />
-            <span className="relative bg-[#f8fafc] px-4 font-serif text-2xl italic text-vlife-primary">
+            <div className="absolute inset-x-0 top-1/2 border-t border-hairline" />
+            <span className="relative bg-background-dark px-4 font-serif text-2xl italic text-vlife-primary light:text-emerald-700">
               {t('home.life.beauty.title')}
             </span>
           </div>
 
           <div className="space-y-4">
-            <div className="rounded-2xl border-2 border-vlife-primary/20 bg-white p-1 shadow-sm">
-              <div className="relative rounded-[14px] border border-vlife-primary/10 bg-white p-4">
+            <div className="rounded-2xl border-2 border-vlife-primary/20 bg-surface p-1 shadow-sm">
+              <div className="relative rounded-[14px] border border-vlife-primary/10 bg-surface p-4">
                 <div className="pointer-events-none absolute left-2 top-2 h-3.5 w-3.5 rounded-tl-md border-l-2 border-t-2 border-vlife-primary/60" />
                 <div className="pointer-events-none absolute right-2 top-2 h-3.5 w-3.5 rounded-tr-md border-r-2 border-t-2 border-vlife-primary/60" />
                 <div className="pointer-events-none absolute bottom-2 left-2 h-3.5 w-3.5 rounded-bl-md border-b-2 border-l-2 border-vlife-primary/60" />
                 <div className="pointer-events-none absolute bottom-2 right-2 h-3.5 w-3.5 rounded-br-md border-b-2 border-r-2 border-vlife-primary/60" />
 
-                <h3 className="text-center text-sm font-bold uppercase tracking-wide text-slate-800">
+                <h3 className="text-center text-sm font-bold uppercase tracking-wide text-content">
                   {t('home.life.beauty.menuTitle')}
                 </h3>
                 <div className="mt-4 space-y-2">
@@ -691,20 +691,20 @@ function VLifeHome() {
                     <Link
                       key={`${item.labelKey}-${item.href}`}
                       href={item.href}
-                      className="flex items-center justify-between rounded-lg px-1 py-1 text-sm text-slate-700 hover:text-vlife-primary"
+                      className="flex items-center justify-between rounded-lg px-1 py-1 text-sm text-content/80 hover:text-vlife-primary light:hover:text-emerald-700"
                     >
                       <span>{t(item.labelKey)}</span>
-                      <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
+                      <ChevronRight className="h-3.5 w-3.5 text-content-muted" />
                     </Link>
                   ))}
                 </div>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="rounded-2xl border border-hairline bg-surface p-4 shadow-sm">
               <div className="mb-3 flex items-center gap-2">
                 <Quote className="h-4 w-4 text-amber-500" />
-                <h4 className="text-sm font-semibold text-slate-800">{t('home.life.recentReviews.title')}</h4>
+                <h4 className="text-sm font-semibold text-content">{t('home.life.recentReviews.title')}</h4>
               </div>
               {loadingTestimonials ? (
                 <div className="flex items-center justify-center py-4">
@@ -713,19 +713,19 @@ function VLifeHome() {
               ) : (
                 <div className="space-y-3">
                   {recentTestimonials.map((testimonial) => (
-                    <div key={testimonial.id} className="rounded-xl bg-slate-50 p-3">
+                    <div key={testimonial.id} className="rounded-xl bg-content/5 p-3">
                       <div className="mb-1 flex items-center gap-0.5 text-amber-400">
                         {Array.from({ length: 5 }).map((_, i) => (
                           <Star
                             key={`${testimonial.id}-${i}`}
                             className={cn(
                               'h-3 w-3',
-                              i < testimonial.rating ? 'fill-current' : 'fill-none text-slate-300'
+                              i < testimonial.rating ? 'fill-current' : 'fill-none text-content/25'
                             )}
                           />
                         ))}
                       </div>
-                      <p className="line-clamp-2 text-xs italic text-slate-600">
+                      <p className="line-clamp-2 text-xs italic text-content/80">
                         &quot;{testimonial.text}&quot;
                       </p>
                     </div>
@@ -750,7 +750,7 @@ function VLifeHome() {
 
               <Link
                 href="/life/unghie"
-                className="relative flex-[1.9] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                className="relative flex-[1.9] overflow-hidden rounded-2xl border border-hairline bg-surface shadow-sm"
               >
                 <div className="h-full min-h-[92px] bg-[linear-gradient(135deg,#f5c0b6,#c97d64,#9f5038)]">
                   <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.45),_transparent_50%)]" />
@@ -774,30 +774,30 @@ function VLifeHome() {
 
         <section className="grid grid-cols-2 gap-3">
           {loadingCenters ? (
-            <div className="col-span-2 flex items-center justify-center rounded-2xl border border-slate-200 bg-white py-6 shadow-sm">
+            <div className="col-span-2 flex items-center justify-center rounded-2xl border border-hairline bg-surface py-6 shadow-sm">
               <Spinner size="md" />
             </div>
           ) : (
             <>
               <Link
                 href={displayCenters[0] ? `/venue?id=${displayCenters[0].id}` : '/life/centers'}
-                className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-sm"
+                className="overflow-hidden rounded-2xl border border-hairline bg-surface p-2 shadow-sm"
               >
                 <div className="h-20 rounded-xl bg-[linear-gradient(135deg,#3e8d68,#86c8a4)]" />
-                <p className="mt-2 text-[11px] font-semibold text-slate-700">
+                <p className="mt-2 text-[11px] font-semibold text-content/80">
                   {displayCenters[0]?.name || t('home.life.gallery.rehabPhoto')}
                 </p>
               </Link>
               <Link
                 href={displayCenters[1] ? `/venue?id=${displayCenters[1].id}` : '/life/hyperbaric'}
-                className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-sm"
+                className="overflow-hidden rounded-2xl border border-hairline bg-surface p-2 shadow-sm"
               >
                 <div className="relative h-20 rounded-xl bg-[linear-gradient(135deg,#dbe3ef,#aab7d2)]">
                   <div className="absolute right-2 top-2 rounded-full bg-white/80 p-1 text-vlife-primary">
                     <Wind className="h-3.5 w-3.5" />
                   </div>
                 </div>
-                <p className="mt-2 text-[11px] font-semibold text-slate-700">
+                <p className="mt-2 text-[11px] font-semibold text-content/80">
                   {displayCenters[1]?.name || t('home.life.gallery.hyperbaricPhoto')}
                 </p>
               </Link>

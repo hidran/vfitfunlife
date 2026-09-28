@@ -61,13 +61,13 @@ export default function ReferralPage() {
       <section className="rounded-2xl border border-hairline bg-surface-2 p-4">
         <p className="text-xs uppercase tracking-wide text-text-tertiary">{t('referral.yourCode')}</p>
         <div className="mt-2 flex items-center gap-2">
-          <code className="rounded-xl border border-white/15 bg-surface-sunken px-3 py-2 text-sm text-text-inverse">
+          <code className="rounded-xl border border-content/15 bg-surface-sunken px-3 py-2 text-sm text-text-inverse">
             {referralCode}
           </code>
           <button
             type="button"
             onClick={handleCopy}
-            className="inline-flex items-center gap-1 rounded-xl border border-white/15 px-3 py-2 text-xs font-semibold text-text-secondary transition-colors hover:text-text-inverse"
+            className="inline-flex items-center gap-1 rounded-xl border border-content/15 px-3 py-2 text-xs font-semibold text-text-secondary transition-colors hover:text-text-inverse"
           >
             <Copy className="h-3.5 w-3.5" />
             {copied ? t('referral.copied') : t('referral.copy')}
