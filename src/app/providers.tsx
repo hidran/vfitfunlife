@@ -8,6 +8,7 @@ import { SectionProvider } from '@/contexts/SectionContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { I18nProvider } from '@/contexts/I18nContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
+import { ProfilePreferencesSync } from '@/hooks/useProfilePreferencesSync';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { initializeCapacitor } from '@/lib/capacitor';
 
@@ -45,6 +46,7 @@ export function Providers({ children }: { children: ReactNode }) {
         <ThemeProvider>
           <I18nProvider>
             <AuthProvider>
+              <ProfilePreferencesSync />
               <SectionProvider>{children}</SectionProvider>
               <FloatingAssistantButton />
             </AuthProvider>

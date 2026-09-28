@@ -19,7 +19,7 @@ export default function MainAppLayout({ children }: MainAppLayoutProps) {
   const isLoading = useAuthStore((state) => state.isLoading);
   const isInitialized = useAuthStore((state) => state.isInitialized);
 
-  const { t, setLocale } = useI18n();
+  const { t } = useI18n();
   const notificationCount = useNotificationStore((state) =>
     state.notifications.reduce((count, notification) => count + (notification.read ? 0 : 1), 0)
   );
@@ -38,11 +38,8 @@ export default function MainAppLayout({ children }: MainAppLayoutProps) {
     }
   }, [firebaseUser, user, isInitialized, router]);
 
-  useEffect(() => {
-    if (user?.preferredLanguage) {
-      setLocale(user.preferredLanguage);
-    }
-  }, [setLocale, user?.preferredLanguage]);
+  // The profile's preferredLanguage is applied app-wide by ProfilePreferencesSync
+  // (src/app/providers.tsx), which also covers the admin and provider shells.
 
   // Show loading state while checking authentication
   if (!isInitialized || isLoading) {

@@ -160,8 +160,9 @@ export interface User {
   preferredLanguage: AppLocale;
   preferredSection: Section;
   notificationsEnabled: boolean;
-  // UI theme preference (synced across devices); absent ⇒ device default (dark)
-  theme?: 'dark' | 'light';
+  // UI theme preference (synced across devices); 'system' follows the OS;
+  // absent ⇒ device default
+  theme?: 'dark' | 'light' | 'system';
 
   // Push tokens
   fcmTokens: FcmToken[];

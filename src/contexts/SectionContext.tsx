@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from 'react';
 
 export type Section = 'fit' | 'fun' | 'life';
 
@@ -64,11 +64,12 @@ export function SectionProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  return (
-    <SectionContext.Provider value={{ section, setSection: handleSetSection }}>
-      {children}
-    </SectionContext.Provider>
+  const value = useMemo<SectionContextValue>(
+    () => ({ section, setSection: handleSetSection }),
+    [section, handleSetSection],
   );
+
+  return <SectionContext.Provider value={value}>{children}</SectionContext.Provider>;
 }
 
 export function useSection() {

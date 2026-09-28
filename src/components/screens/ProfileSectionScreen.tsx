@@ -97,7 +97,7 @@ const CARD_BRANDS: Array<{ value: string; labelKey: MessageKey }> = [
 
 export function ProfileSectionScreen({ section }: { section: ProfileRouteSection }) {
   const { user, refreshUserProfile } = useAuthStore();
-  const { t, setLocale, locale } = useI18n();
+  const { t, locale } = useI18n();
   const [addresses, setAddresses] = useState<LocalAddress[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<LocalPaymentMethod[]>([]);
   const [addressForm, setAddressForm] = useState({
@@ -124,8 +124,7 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
     if (!user?.id) return;
 
     setPreferredSection(user.preferredSection || 'fit');
-    const selectedLocale = user.preferredLanguage || 'it';
-    setLocale(selectedLocale);
+    // The UI locale follows user.preferredLanguage via ProfilePreferencesSync (providers.tsx).
     setPrivacySettings(user.privacySettings || defaultPrivacySettings);
 
     if (addressesStorageKey) {
@@ -151,10 +150,8 @@ export function ProfileSectionScreen({ section }: { section: ProfileRouteSection
     addressesStorageKey,
     paymentStorageKey,
     user?.id,
-    user?.preferredLanguage,
     user?.preferredSection,
     user?.privacySettings,
-    setLocale,
   ]);
 
   useEffect(() => {
