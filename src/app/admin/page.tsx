@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/utils";
 import { useI18n } from "@/hooks/useI18n";
+import { trace } from "@/lib/perf";
 import type { MessageKey } from "@/i18n/messages";
 import {
   Users,
@@ -39,7 +40,7 @@ export default function AdminDashboardPage() {
   } = useAdminStore();
 
   useEffect(() => {
-    fetchDashboardStats();
+    trace("admin_dashboard_stats", fetchDashboardStats).catch(() => {});
     fetchPendingVerifications();
     fetchProviders({ limit: 5, sortBy: 'bookings' });
   }, [fetchDashboardStats, fetchPendingVerifications, fetchProviders]);

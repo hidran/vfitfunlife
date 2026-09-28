@@ -21,6 +21,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { fetchMyAvailabilityStatus } from '@/lib/firebase/availability';
 import { dashboardBannerKind } from '@/lib/availability/adapter';
 import { useI18n } from '@/hooks/useI18n';
+import { trace } from '@/lib/perf';
 import { toLocaleTag } from '@/types/locale';
 import Link from 'next/link';
 
@@ -37,7 +38,7 @@ export default function ProviderDashboardPage() {
   } = useProviderStore();
 
   useEffect(() => {
-    fetchDashboardStats();
+    trace('provider_dashboard_stats', () => fetchDashboardStats()).catch(() => {});
     fetchBookings({ status: 'all' });
     fetchActivities(5);
   }, [fetchDashboardStats, fetchBookings, fetchActivities]);
