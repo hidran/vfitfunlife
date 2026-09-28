@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { haversineKm, annotateAndSortByDistance, filterByRadius } from './geo';
+import {
+  haversineKm,
+  annotateAndSortByDistance,
+  filterByRadius,
+  geohashFor,
+  geoQueryBounds,
+  mergeGeoResults,
+  coordsOf,
+  roundLocation,
+} from './geo';
 
 describe('haversineKm', () => {
   it('computes Milano↔Roma ≈ 477 km', () => {
@@ -50,5 +59,63 @@ describe('filterByRadius', () => {
     ];
     const out = filterByRadius(items, 10);
     expect(out.map((i) => i.id)).toEqual(['near']);
+  });
+});
+
+describe('geohash search helpers', () => {
+  const bari = { lat: 41.1171, lng: 16.8719 };
+
+  it('geohashFor writes precision 10, matching the functions trigger', () => {
+    // Same value asserted in functions/src/geo/geohashPatch.test.ts (ngeohash).
+    expect(geohashFor(bari)).toBe('sr7czvjsry');
+  });
+
+  it('geoQueryBounds covers every point inside the radius', () => {
+    const bounds = geoQueryBounds(bari, 10);
+    expect(bounds.length).toBeGreaterThan(0);
+    expect(bounds.length).toBeLessThanOrEqual(9);
+    // Points ~7 km away in each direction must fall in some [start, end] range.
+    for (const p of [
+      { lat: bari.lat + 0.06, lng: bari.lng },
+      { lat: bari.lat - 0.06, lng: bari.lng },
+      { lat: bari.lat, lng: bari.lng + 0.08 },
+      { lat: bari.lat, lng: bari.lng - 0.08 },
+    ]) {
+      const h = geohashFor(p);
+      expect(bounds.some(([s, e]) => h >= s && h <= e)).toBe(true);
+    }
+  });
+
+  it('geoQueryBounds excludes a far city (Napoli is ~220 km from Bari)', () => {
+    const h = geohashFor({ lat: 40.8518, lng: 14.2681 });
+    expect(geoQueryBounds(bari, 25).some(([s, e]) => h >= s && h <= e)).toBe(false);
+  });
+
+  it('mergeGeoResults dedupes overlapping pages, drops box corners and no-coords, sorts nearest-first', () => {
+    const near = { id: 'near', lat: 41.12, lng: 16.875 };
+    const mid = { id: 'mid', lat: 41.16, lng: 16.87 };
+    const corner = { id: 'corner', lat: 41.2, lng: 16.99 }; // in the box, ~13 km: outside 10
+    const noCoords = { id: 'none' } as { id: string; lat?: number; lng?: number };
+    const out = mergeGeoResults<{ id: string; lat?: number; lng?: number }>(
+      [[mid, near], [near, corner], [noCoords]],
+      bari,
+      10,
+      coordsOf
+    );
+    expect(out.map((i) => i.id)).toEqual(['near', 'mid']);
+    expect(out[0].distanceKm).toBeLessThan(out[1].distanceKm);
+  });
+
+  it('coordsOf only trusts finite numeric flat lat/lng', () => {
+    expect(coordsOf({ lat: 1, lng: 2 })).toEqual({ lat: 1, lng: 2 });
+    expect(coordsOf({ lat: '1', lng: 2 })).toBeNull();
+    expect(coordsOf({ lat: NaN, lng: 2 })).toBeNull();
+    expect(coordsOf({})).toBeNull();
+  });
+
+  it('roundLocation keeps cache keys stable under GPS jitter', () => {
+    expect(roundLocation({ lat: 41.11712, lng: 16.87194 })).toEqual(
+      roundLocation({ lat: 41.11708, lng: 16.8719 })
+    );
   });
 });

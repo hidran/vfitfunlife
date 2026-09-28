@@ -13,6 +13,7 @@ import {
   Timestamp,
   serverTimestamp,
   writeBatch,
+  type DocumentData,
   type QueryConstraint,
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
@@ -23,6 +24,8 @@ import {
   cancelBooking as cancelBookingFn,
 } from './firebase/functions';
 import { fetchProviderSlots } from './firebase/availability';
+import { geoRangeQuery } from './firebase/geoQuery';
+import type { LatLng } from './geo';
 import { localDateKey } from './availability/dates';
 import type {
   Booking,
@@ -57,38 +60,78 @@ export async function searchProviders(params: SearchParams): Promise<ProviderSea
   const providersQuery = query(collection(db, INSTRUCTORS_COLLECTION), ...constraints);
 
   const snapshot = await getDocs(providersQuery);
-  let providers = snapshot.docs
+  const providers = snapshot.docs
     .filter((doc) => !doc.data().activityKind)
-    .map((doc) => {
-    const data = doc.data();
-    const profile = data.providerProfile || {};
+    .map((doc) => providerSearchResultFromDoc(doc.id, doc.data()));
 
-    return {
-      id: doc.id,
-      fullName: data.fullName || 'Unknown',
-      avatarUrl: data.avatarUrl || undefined,
-      rating: profile.rating || 0,
-      reviewCount: profile.reviewCount || 0,
-      isVerified: profile.isVerified || false,
-      specialties: profile.specialties || [],
-      categoryIds: (data.categoryIds as string[]) || [],
-      yearsOfExperience: profile.yearsOfExperience || 0,
-      languages: profile.languages || [],
-      // Denormalized cheapest service price (written by the seeder from the
-      // /services subcollection) so cards can show "Da X €" without fetching
-      // every provider's services.
-      lowestPrice: typeof data.lowestPrice === 'number' ? data.lowestPrice : undefined,
-      location:
-        typeof data.lat === 'number' && typeof data.lng === 'number'
-          ? { lat: data.lat, lng: data.lng, address: (data.city as string) ?? '' }
-          : undefined,
-      // Services live in the /instructors/{id}/services subcollection and are
-      // fetched lazily on the detail page (useProviderServices). Search cards
-      // don't render service-level info, so we return an empty array here.
-      services: [],
-    } as ProviderSearchResult;
+  return applyProviderSearchFilters(providers, params);
+}
+
+/**
+ * Verified providers within `radiusKm` of `center`, nearest-first with `distanceKm`: a
+ * bounded geohash range search instead of the first 50 by doc id (which, located in Bari,
+ * could all be in Milano). The same category constraint and in-memory filters as
+ * searchProviders apply; distance, not `sortBy`, orders the result, as the near-me list
+ * always has. Needs the (isVerified, geohash) and (isVerified, categoryIds, geohash)
+ * composite indexes; the isVerified equality is also what the /instructors read rule needs.
+ */
+export async function searchProvidersNear(
+  params: SearchParams,
+  center: LatLng,
+  radiusKm: number
+): Promise<(ProviderSearchResult & { distanceKm: number })[]> {
+  const filters: QueryConstraint[] = [where('providerProfile.isVerified', '==', true)];
+  if (params.category) filters.push(where('categoryIds', 'array-contains', params.category));
+  const near = await geoRangeQuery<ProviderSearchResult>({
+    collectionPath: INSTRUCTORS_COLLECTION,
+    filters,
+    center,
+    radiusKm,
+    fromDoc: (id, data) => (data.activityKind ? null : providerSearchResultFromDoc(id, data)),
+    getCoords: (p) => (p.location ? { lat: p.location.lat, lng: p.location.lng } : null),
   });
+  return applyProviderSearchFilters(near, { ...params, sortBy: undefined });
+}
 
+/** Map an /instructors document to a search card. */
+export function providerSearchResultFromDoc(
+  id: string,
+  data: DocumentData
+): ProviderSearchResult {
+  const profile = data.providerProfile || {};
+
+  return {
+    id,
+    fullName: data.fullName || 'Unknown',
+    avatarUrl: data.avatarUrl || undefined,
+    rating: profile.rating || 0,
+    reviewCount: profile.reviewCount || 0,
+    isVerified: profile.isVerified || false,
+    specialties: profile.specialties || [],
+    categoryIds: (data.categoryIds as string[]) || [],
+    yearsOfExperience: profile.yearsOfExperience || 0,
+    languages: profile.languages || [],
+    // Denormalized cheapest service price (written by the seeder from the
+    // /services subcollection) so cards can show "Da X €" without fetching
+    // every provider's services.
+    lowestPrice: typeof data.lowestPrice === 'number' ? data.lowestPrice : undefined,
+    location:
+      typeof data.lat === 'number' && typeof data.lng === 'number'
+        ? { lat: data.lat, lng: data.lng, address: (data.city as string) ?? '' }
+        : undefined,
+    // Services live in the /instructors/{id}/services subcollection and are
+    // fetched lazily on the detail page (useProviderServices). Search cards
+    // don't render service-level info, so we return an empty array here.
+    services: [],
+  } as ProviderSearchResult;
+}
+
+/** The in-memory filters and sort shared by the list and the radius search. */
+export function applyProviderSearchFilters<T extends ProviderSearchResult>(
+  input: T[],
+  params: SearchParams
+): T[] {
+  let providers = [...input];
   // Apply text search filter
   if (params.query) {
     const queryLower = params.query.toLowerCase();

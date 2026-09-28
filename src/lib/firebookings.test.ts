@@ -13,6 +13,8 @@ vi.mock('firebase/firestore', () => ({
   where: vi.fn(),
   orderBy: vi.fn(),
   limit: vi.fn(),
+  startAt: vi.fn(),
+  endAt: vi.fn(),
   Timestamp: { fromDate: vi.fn((d) => d) },
   serverTimestamp: vi.fn(() => null),
   writeBatch: vi.fn(() => ({
@@ -26,7 +28,7 @@ vi.mock('./firebase/availability', () => ({ fetchProviderSlots: vi.fn() }));
 
 import { getDocs } from 'firebase/firestore';
 import { fetchProviderSlots } from './firebase/availability';
-import { bookingFromDoc, getProviderAvailability, searchProviders } from './firebookings';
+import { bookingFromDoc, getProviderAvailability, searchProviders, searchProvidersNear } from './firebookings';
 
 const mockGetDocs = vi.mocked(getDocs);
 beforeEach(() => vi.clearAllMocks());
@@ -41,6 +43,28 @@ describe('searchProviders activity exclusion', () => {
     } as never);
     const results = await searchProviders({});
     expect(results.map((p) => p.id)).toEqual(['trainer-1']);
+  });
+});
+
+describe('searchProvidersNear', () => {
+  it('returns verified providers in the radius, nearest-first, excluding activities, filtered in memory', async () => {
+    mockGetDocs.mockResolvedValue({
+      docs: [
+        { id: 'far', data: () => ({ fullName: 'Far Trainer', lat: 41.2, lng: 16.9, providerProfile: { isVerified: true, rating: 5 } }) },
+        { id: 'near', data: () => ({ fullName: 'Near Trainer', lat: 41.12, lng: 16.875, providerProfile: { isVerified: true, rating: 3 } }) },
+        { id: 'party', data: () => ({ fullName: 'Party', activityKind: 'event', lat: 41.118, lng: 16.872, providerProfile: { isVerified: true } }) },
+        { id: 'napoli', data: () => ({ fullName: 'Napoli Trainer', lat: 40.85, lng: 14.27, providerProfile: { isVerified: true } }) },
+      ],
+    } as never);
+    const bari = { lat: 41.1171, lng: 16.8719 };
+
+    const all = await searchProvidersNear({}, bari, 25);
+    expect(all.map((p) => p.id)).toEqual(['near', 'far']);
+    expect(all[0].distanceKm).toBeLessThan(1);
+
+    // sortBy doesn't override distance; rating still filters.
+    const rated = await searchProvidersNear({ rating: 4, sortBy: 'rating' }, bari, 25);
+    expect(rated.map((p) => p.id)).toEqual(['far']);
   });
 });
 

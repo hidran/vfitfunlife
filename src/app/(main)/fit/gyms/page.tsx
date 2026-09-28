@@ -9,12 +9,11 @@ import { MapPlaceholder } from '@/components/map/MapPlaceholder';
 import { useRouter } from 'next/navigation';
 import { useI18n } from '@/hooks/useI18n';
 import type { MessageKey } from '@/i18n/messages';
-import { useVenues } from '@/hooks/useVenues';
+import { useNearbyVenues, type VenueWithDistance } from '@/hooks/useVenues';
 import { Spinner } from '@/components/ui/Spinner';
 import { PhotoCover } from '@/components/gallery/PhotoCover';
 import { useNearMe } from '@/hooks/useNearMe';
 import { RadiusFilter } from '@/components/map/RadiusFilter';
-import { annotateAndSortByDistance, filterByRadius } from '@/lib/geo';
 
 const filterKeys: MessageKey[] = [
   'fit.gyms.filter.distance',
@@ -30,15 +29,19 @@ const GoogleMap = dynamic(() => import('@/components/map/GoogleMap').then((mod) 
   loading: () => <MapPlaceholder className="h-[60vh] min-h-[500px]" />,
 });
 
+const NO_GYMS: VenueWithDistance[] = [];
+
 export default function GymsPage() {
   const router = useRouter();
   const { t } = useI18n();
   const [view, setView] = useState<'list' | 'map'>('list');
   const [query, setQuery] = useState('');
 
-  const { data: gyms = [], isLoading: gymsLoading } = useVenues({ type: 'gym' });
-
   const { userLocation, radiusKm, isLocating, error, requestLocation, clearLocation, setRadiusKm } = useNearMe();
+
+  // Bounded read either way: a geohash radius search when located, else the top-rated gyms.
+  // Results arrive already distance-sorted (and radius-filtered) when a location is known.
+  const { data: gyms = NO_GYMS, isLoading: gymsLoading } = useNearbyVenues({ type: 'gym', userLocation, radiusKm });
 
   const handleGymSelect = useCallback((gymId: string) => {
     router.push(`/venue?id=${gymId}`);
@@ -46,23 +49,13 @@ export default function GymsPage() {
 
   const filteredGyms = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    const results = gyms.filter((gym) => {
-      if (!normalizedQuery) return true;
-      return (
+    if (!normalizedQuery) return gyms;
+    return gyms.filter(
+      (gym) =>
         gym.name.toLowerCase().includes(normalizedQuery) ||
         gym.city.toLowerCase().includes(normalizedQuery)
-      );
-    });
-
-    if (userLocation) {
-      const annotated = annotateAndSortByDistance(results, userLocation, (g) =>
-        typeof g.lat === 'number' && typeof g.lng === 'number' ? { lat: g.lat, lng: g.lng } : null
-      );
-      return radiusKm == null ? annotated : filterByRadius(annotated, radiusKm);
-    }
-
-    return [...results].sort((a, b) => b.rating - a.rating);
-  }, [query, gyms, userLocation, radiusKm]);
+    );
+  }, [query, gyms]);
 
   return (
     <div className="min-h-screen bg-background-dark pb-24">
@@ -190,9 +183,9 @@ export default function GymsPage() {
                       </h3>
                       <p className="text-xs text-text-tertiary">{gym.city}</p>
                     </div>
-                    {Number.isFinite((gym as unknown as { distanceKm?: number }).distanceKm) && (
+                    {gym.distanceKm != null && Number.isFinite(gym.distanceKm) && (
                       <span className="text-xs text-text-tertiary">
-                        {(gym as unknown as { distanceKm: number }).distanceKm.toFixed(1)} km
+                        {gym.distanceKm.toFixed(1)} km
                       </span>
                     )}
                   </div>
@@ -249,10 +242,8 @@ export default function GymsPage() {
                       <Star className="h-3 w-3 text-yellow-400 light:text-amber-700" />
                       {gym.rating.toFixed(1)}
                     </div>
-                    {Number.isFinite((gym as unknown as { distanceKm?: number }).distanceKm) && (
-                      <span>
-                        {(gym as unknown as { distanceKm: number }).distanceKm.toFixed(1)} km
-                      </span>
+                    {gym.distanceKm != null && Number.isFinite(gym.distanceKm) && (
+                      <span>{gym.distanceKm.toFixed(1)} km</span>
                     )}
                   </div>
                 </Link>

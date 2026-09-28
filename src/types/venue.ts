@@ -39,6 +39,8 @@ export interface Venue {
   address: string;
   lat: number;
   lng: number;
+  /** geofire-common geohash (precision 10) of lat/lng, kept in sync by syncVenueGeohash. */
+  geohash?: string;
   rating: number;
   reviewCount: number;
   isPartner: boolean;
@@ -74,4 +76,6 @@ export interface VenueListOptions {
   type?: VenueType;
   city?: string;
   limit?: number;
+  /** Highest-rated first: the bounded list shown when the user's location is unknown. */
+  orderByRating?: boolean;
 }
