@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAdminStore } from "@/stores/adminStore";
+import { useShallow } from "zustand/react/shallow";
 import { useAuthStore } from "@/stores/authStore";
 import {
   DataTable,
@@ -52,6 +53,7 @@ export function UsersListView() {
   const {
     users,
     usersTotal,
+    usersFilters,
     isLoadingUsers,
     error,
     fetchUsers,
@@ -59,7 +61,20 @@ export function UsersListView() {
     bulkUpdateUserRoleAction,
     exportDataAction,
     clearError,
-  } = useAdminStore();
+  } = useAdminStore(
+    useShallow((s) => ({
+      users: s.users,
+      usersTotal: s.usersTotal,
+      usersFilters: s.usersFilters,
+      isLoadingUsers: s.isLoadingUsers,
+      error: s.error,
+      fetchUsers: s.fetchUsers,
+      bulkUpdateUsersAction: s.bulkUpdateUsersAction,
+      bulkUpdateUserRoleAction: s.bulkUpdateUserRoleAction,
+      exportDataAction: s.exportDataAction,
+      clearError: s.clearError,
+    }))
+  );
   const authUser = useAuthStore((s) => s.user);
 
   const searchParams = useSearchParams();
@@ -312,6 +327,20 @@ export function UsersListView() {
   ];
 
   const totalPages = Math.ceil(usersTotal / (filters.limit || 20));
+
+  // A `?page=N` past the end (a stale link, or the list shrank) would show an empty table with
+  // no pager to get back: once this query's total is in, step back to its last page. Adjusted
+  // during render (React's "storing information from previous renders" pattern) rather than in
+  // an effect; `usersFilters === filters` makes sure the total belongs to these filters, and the
+  // new filters object makes the condition false on the very next render.
+  if (
+    usersFilters === filters &&
+    !isLoadingUsers &&
+    usersTotal > 0 &&
+    (filters.page || 1) > totalPages
+  ) {
+    setFilters({ ...filters, page: totalPages });
+  }
 
   return (
     <div className="space-y-6">

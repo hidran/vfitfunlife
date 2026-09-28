@@ -37,7 +37,10 @@ const mockAdminState = {
   fetchProviders: vi.fn(),
   fetchPendingVerifications: vi.fn(),
 };
-vi.mock('@/stores/adminStore', () => ({ useAdminStore: () => mockAdminState }));
+// The views subscribe through a selector (useShallow): run it, so a field it forgets fails here.
+vi.mock('@/stores/adminStore', () => ({
+  useAdminStore: (selector: (s: typeof mockAdminState) => unknown) => selector(mockAdminState),
+}));
 
 let mockSearchParams = new URLSearchParams();
 vi.mock('next/navigation', () => ({
@@ -74,6 +77,16 @@ describe('ProvidersListView', () => {
       expect.objectContaining({ verificationStatus: 'pending', status: 'suspended', search: 'anna' })
     );
     expect(screen.getByPlaceholderText(/cerca provider/i)).toHaveValue('anna');
+  });
+
+  it('takes the page and page size from the URL and keeps them there', () => {
+    mockSearchParams = new URLSearchParams('page=2&size=5');
+    render(<ProvidersListView />);
+
+    expect(mockAdminState.fetchProviders).toHaveBeenCalledWith(
+      expect.objectContaining({ page: 2, limit: 5 })
+    );
+    expect(window.location.search).toBe('?page=2&size=5');
   });
 
   it('writes filter changes back to the URL', () => {

@@ -38,6 +38,7 @@ export * from "./providers/onboardingSettingsCallables";
 export * from "./providers/backfillSelfRegisteredProviders";
 export * from "./availability";
 export * from "./users/migrateAudit";
+export { onUserWriteAdminIndex } from "./users/onUserWriteAdminIndex";
 export * from "./categories/seedCategories";
 export * from "./categories/backfillCategories";
 export * from "./categories/mergeCategories";

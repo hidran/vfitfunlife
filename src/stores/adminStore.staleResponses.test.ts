@@ -6,8 +6,11 @@ vi.mock('@/lib/firebase/admin', () => ({
 }));
 
 import { getUsers, getProviders } from '@/lib/firebase/admin';
-import { useAdminStore } from './adminStore';
+import { useAdminStore, resetAdminListPaging } from './adminStore';
 import type { AdminProvider, AdminUser } from '@/types/admin';
+
+type UsersResult = Awaited<ReturnType<typeof getUsers>>;
+type ProvidersResult = Awaited<ReturnType<typeof getProviders>>;
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -24,6 +27,7 @@ const provider = (id: string) => ({ id, uid: id, fullName: id }) as unknown as A
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetAdminListPaging();
   useAdminStore.setState({
     users: [],
     usersTotal: 0,
@@ -37,16 +41,16 @@ beforeEach(() => {
 
 describe('adminStore list fetches drop out-of-order responses', () => {
   it('fetchUsers: a slow earlier search never overwrites a later one', async () => {
-    const slow = deferred<{ users: AdminUser[]; total: number }>();
-    const fast = deferred<{ users: AdminUser[]; total: number }>();
+    const slow = deferred<UsersResult>();
+    const fast = deferred<UsersResult>();
     vi.mocked(getUsers).mockReturnValueOnce(slow.promise).mockReturnValueOnce(fast.promise);
 
     const first = useAdminStore.getState().fetchUsers({ search: 'm' });
     const second = useAdminStore.getState().fetchUsers({ search: 'mario' });
 
-    fast.resolve({ users: [user('mario')], total: 1 });
+    fast.resolve({ users: [user('mario')], total: 1, cursors: new Map() });
     await second;
-    slow.resolve({ users: [user('mario'), user('marta')], total: 2 });
+    slow.resolve({ users: [user('mario'), user('marta')], total: 2, cursors: new Map() });
     await first;
 
     const state = useAdminStore.getState();
@@ -56,10 +60,10 @@ describe('adminStore list fetches drop out-of-order responses', () => {
   });
 
   it('fetchUsers: a stale failure does not raise an error over fresh results', async () => {
-    const slow = deferred<{ users: AdminUser[]; total: number }>();
+    const slow = deferred<UsersResult>();
     vi.mocked(getUsers)
       .mockReturnValueOnce(slow.promise)
-      .mockResolvedValueOnce({ users: [user('a')], total: 1 });
+      .mockResolvedValueOnce({ users: [user('a')], total: 1, cursors: new Map() });
 
     const first = useAdminStore.getState().fetchUsers({ search: 'x' });
     await useAdminStore.getState().fetchUsers({ search: 'xy' });
@@ -71,14 +75,14 @@ describe('adminStore list fetches drop out-of-order responses', () => {
   });
 
   it('fetchProviders: keeps the latest response and remembers its filters', async () => {
-    const slow = deferred<{ providers: AdminProvider[]; total: number }>();
+    const slow = deferred<ProvidersResult>();
     vi.mocked(getProviders)
       .mockReturnValueOnce(slow.promise)
-      .mockResolvedValueOnce({ providers: [provider('p2')], total: 1 });
+      .mockResolvedValueOnce({ providers: [provider('p2')], total: 1, cursors: new Map() });
 
     const first = useAdminStore.getState().fetchProviders({ search: 'p' });
     await useAdminStore.getState().fetchProviders({ verificationStatus: 'pending' });
-    slow.resolve({ providers: [provider('p1'), provider('p2')], total: 2 });
+    slow.resolve({ providers: [provider('p1'), provider('p2')], total: 2, cursors: new Map() });
     await first;
 
     expect(useAdminStore.getState().providers.map((p) => p.id)).toEqual(['p2']);
@@ -86,11 +90,45 @@ describe('adminStore list fetches drop out-of-order responses', () => {
   });
 
   it('fetchProviders without filters reuses the last ones', async () => {
-    vi.mocked(getProviders).mockResolvedValue({ providers: [], total: 0 });
+    vi.mocked(getProviders).mockResolvedValue({ providers: [], total: 0, cursors: new Map() });
 
     await useAdminStore.getState().fetchProviders({ status: 'suspended' });
     await useAdminStore.getState().fetchProviders();
 
-    expect(getProviders).toHaveBeenLastCalledWith({ status: 'suspended' });
+    expect(getProviders).toHaveBeenLastCalledWith({ status: 'suspended' }, expect.any(Map));
+  });
+});
+
+describe('adminStore list paging', () => {
+  it('hands each page the cursors the previous pages returned, and keeps them for going back', async () => {
+    const cursorsAfterPage1 = new Map([[1, { id: 'u20' }]]) as unknown as UsersResult['cursors'];
+    const cursorsAfterPage2 = new Map([
+      [1, { id: 'u20' }],
+      [2, { id: 'u40' }],
+    ]) as unknown as UsersResult['cursors'];
+    vi.mocked(getUsers)
+      .mockResolvedValueOnce({ users: [user('a')], total: 50, cursors: cursorsAfterPage1 })
+      .mockResolvedValueOnce({ users: [user('b')], total: 50, cursors: cursorsAfterPage2 })
+      .mockResolvedValueOnce({ users: [user('a')], total: 50, cursors: cursorsAfterPage2 });
+
+    await useAdminStore.getState().fetchUsers({ role: 'customer', page: 1, limit: 20 });
+    await useAdminStore.getState().fetchUsers({ role: 'customer', page: 2, limit: 20 });
+    await useAdminStore.getState().fetchUsers({ role: 'customer', page: 1, limit: 20 });
+
+    expect(vi.mocked(getUsers).mock.calls[1][1]).toBe(cursorsAfterPage1);
+    expect(vi.mocked(getUsers).mock.calls[2][1]).toBe(cursorsAfterPage2);
+  });
+
+  it('starts a fresh cursor stack when anything but the page changes', async () => {
+    vi.mocked(getUsers).mockResolvedValue({
+      users: [],
+      total: 0,
+      cursors: new Map([[1, { id: 'x' }]]) as unknown as UsersResult['cursors'],
+    });
+
+    await useAdminStore.getState().fetchUsers({ role: 'customer', page: 1 });
+    await useAdminStore.getState().fetchUsers({ role: 'admin', page: 2 });
+
+    expect(vi.mocked(getUsers).mock.calls[1][1]?.size).toBe(0);
   });
 });

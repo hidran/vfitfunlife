@@ -1,4 +1,5 @@
 import type { ProviderFilters } from '@/types/admin';
+import { DEFAULT_PAGE_SIZE, pageSizeFromParams } from './usersListQuery';
 
 export const DEFAULT_PROVIDER_FILTERS: ProviderFilters = {
   verificationStatus: 'all',
@@ -32,6 +33,7 @@ export function providerFiltersFromParams(params: URLSearchParams): ProviderFilt
       ? (status as ProviderFilters['status'])
       : 'all',
     page: Number.isInteger(page) && page > 1 ? page : 1,
+    limit: pageSizeFromParams(params),
   };
 }
 
@@ -44,6 +46,7 @@ export function queryFromProviderFilters(filters: ProviderFilters): string {
   }
   if (filters.status && filters.status !== 'all') params.set('status', filters.status);
   if (filters.page && filters.page > 1) params.set('page', String(filters.page));
+  if (filters.limit && filters.limit !== DEFAULT_PAGE_SIZE) params.set('size', String(filters.limit));
   return params.toString();
 }
 

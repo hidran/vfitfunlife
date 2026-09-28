@@ -44,6 +44,7 @@ import {
   getPayoutRequests,
   processPayout,
   getAdminTransactions,
+  type PageCursors,
 } from "@/lib/firebase/admin";
 
 interface AdminState {
@@ -123,6 +124,36 @@ interface AdminState {
 let usersRequestSeq = 0;
 let providersRequestSeq = 0;
 
+/**
+ * Page cursors of the users/providers lists (see PageCursors in lib/firebase/admin): the cursor
+ * stack behind next/previous. Kept per filter combination — any filter, search or page-size
+ * change starts a fresh stack, since a cursor is only meaningful within the query that
+ * produced it. Held outside the reactive state: document snapshots aren't render data.
+ */
+interface PagingState {
+  key: string;
+  cursors: PageCursors;
+}
+let usersPaging: PagingState = { key: "", cursors: new Map() };
+let providersPaging: PagingState = { key: "", cursors: new Map() };
+
+/** Everything that defines the query except which page of it is shown. */
+export function listQueryKey(filters: object): string {
+  const { page: _page, ...rest } = filters as { page?: number };
+  return JSON.stringify(rest, Object.keys(rest).sort());
+}
+
+function pagingFor(current: PagingState, filters: object): PagingState {
+  const key = listQueryKey(filters);
+  return current.key === key ? current : { key, cursors: new Map() };
+}
+
+/** Test hook: forget every cursor. */
+export function resetAdminListPaging(): void {
+  usersPaging = { key: "", cursors: new Map() };
+  providersPaging = { key: "", cursors: new Map() };
+}
+
 export const useAdminStore = create<AdminState>((set, get) => ({
   // Initial state
   dashboardStats: null,
@@ -173,10 +204,12 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     const effective = filters ?? get().usersFilters;
     const seq = ++usersRequestSeq;
     set({ isLoadingUsers: true, error: null, usersFilters: effective });
+    const paging = (usersPaging = pagingFor(usersPaging, effective));
     try {
-      const result = await getUsers(effective);
+      const result = await getUsers(effective, paging.cursors);
       // A newer fetch started while this one was in flight: its answer is the one on screen.
       if (seq !== usersRequestSeq) return;
+      if (result.cursors) paging.cursors = result.cursors;
       set({
         users: result.users,
         usersTotal: result.total,
@@ -241,9 +274,11 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     const effective = filters ?? get().providersFilters;
     const seq = ++providersRequestSeq;
     set({ isLoadingProviders: true, error: null, providersFilters: effective });
+    const paging = (providersPaging = pagingFor(providersPaging, effective));
     try {
-      const result = await getProviders(effective);
+      const result = await getProviders(effective, paging.cursors);
       if (seq !== providersRequestSeq) return;
+      if (result.cursors) paging.cursors = result.cursors;
       set({
         providers: result.providers,
         providersTotal: result.total,

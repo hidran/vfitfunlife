@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAdminStore } from "@/stores/adminStore";
+import { useShallow } from "zustand/react/shallow";
 import { useAuthStore } from "@/stores/authStore";
 import { Button } from "@/components/ui/button";
 import { PlatformSettings } from "@/types/admin";
@@ -27,7 +28,13 @@ export default function SettingsPage() {
   const { t } = useI18n();
   const router = useRouter();
   const { user } = useAuthStore();
-  const { platformSettings, fetchPlatformSettings, updatePlatformSettingsAction } = useAdminStore();
+  const { platformSettings, fetchPlatformSettings, updatePlatformSettingsAction } = useAdminStore(
+    useShallow((s) => ({
+      platformSettings: s.platformSettings,
+      fetchPlatformSettings: s.fetchPlatformSettings,
+      updatePlatformSettingsAction: s.updatePlatformSettingsAction,
+    }))
+  );
 
   const [settings, setSettings] = useState<PlatformSettings>({
     platformName: "VFit",

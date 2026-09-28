@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAdminStore } from "@/stores/adminStore";
+import { useShallow } from "zustand/react/shallow";
 import { BOOKING_STATUS_META } from "@/lib/bookingStatus";
 import type { BookingStatus } from "@/types/firebase";
 import type { MessageKey } from "@/i18n/messages";
@@ -24,12 +25,14 @@ import {
 export function BookingsListView() {
   const { t } = useI18n();
   const router = useRouter();
-  const {
-    bookings,
-    bookingsTotal,
-    isLoadingBookings,
-    fetchBookings,
-  } = useAdminStore();
+  const { bookings, bookingsTotal, isLoadingBookings, fetchBookings } = useAdminStore(
+    useShallow((s) => ({
+      bookings: s.bookings,
+      bookingsTotal: s.bookingsTotal,
+      isLoadingBookings: s.isLoadingBookings,
+      fetchBookings: s.fetchBookings,
+    }))
+  );
 
   const [filters, setFilters] = useState<BookingFilters>({
     status: "all",

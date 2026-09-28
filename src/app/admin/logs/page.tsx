@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAdminStore } from "@/stores/adminStore";
+import { useShallow } from "zustand/react/shallow";
 import { useAuthStore } from "@/stores/authStore";
 import { DataTable, FilterBar } from "@/components/admin";
 import { Column } from "@/components/admin/DataTable";
@@ -22,7 +23,14 @@ export default function SystemLogsPage() {
   const { t } = useI18n();
   const router = useRouter();
   const { user } = useAuthStore();
-  const { systemLogs, logsTotal, isLoadingLogs, fetchSystemLogs } = useAdminStore();
+  const { systemLogs, logsTotal, isLoadingLogs, fetchSystemLogs } = useAdminStore(
+    useShallow((s) => ({
+      systemLogs: s.systemLogs,
+      logsTotal: s.logsTotal,
+      isLoadingLogs: s.isLoadingLogs,
+      fetchSystemLogs: s.fetchSystemLogs,
+    }))
+  );
 
   const [filters, setFilters] = useState<LogFilters>({
     severity: "all",

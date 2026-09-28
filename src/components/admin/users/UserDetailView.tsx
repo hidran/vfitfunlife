@@ -14,6 +14,7 @@ import {
 } from '@/components/admin';
 import { Button } from '@/components/ui/button';
 import { useAdminStore } from '@/stores/adminStore';
+import { useShallow } from 'zustand/react/shallow';
 import { useAuthStore } from '@/stores/authStore';
 import { useI18n } from '@/hooks/useI18n';
 import { formatDate, toDate } from '@/lib/utils';
@@ -30,7 +31,13 @@ interface Props {
 export function UserDetailView({ userId }: Props) {
   const router = useRouter();
   const { t } = useI18n();
-  const { updateUserRoleAction, suspendUserAction, activateUserAction } = useAdminStore();
+  const { updateUserRoleAction, suspendUserAction, activateUserAction } = useAdminStore(
+    useShallow((s) => ({
+      updateUserRoleAction: s.updateUserRoleAction,
+      suspendUserAction: s.suspendUserAction,
+      activateUserAction: s.activateUserAction,
+    }))
+  );
   const myUid = useAuthStore((s) => s.user?.uid);
 
   const [user, setUser] = useState<User | null>(null);

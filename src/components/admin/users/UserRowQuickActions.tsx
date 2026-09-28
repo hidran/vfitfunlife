@@ -19,6 +19,7 @@ import {
 } from '@/components/admin';
 import { UserRoleSelect } from './UserRoleSelect';
 import { useAdminStore } from '@/stores/adminStore';
+import { useShallow } from 'zustand/react/shallow';
 import { useI18n } from '@/hooks/useI18n';
 import type { AdminUser } from '@/types/admin';
 import type { UserRole } from '@/types/firebase';
@@ -34,11 +35,13 @@ export function UserRowQuickActions({ user, onDone }: Props) {
   const [open, setOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const {
-    suspendUserAction,
-    activateUserAction,
-    updateUserRoleAction,
-  } = useAdminStore();
+  const { suspendUserAction, activateUserAction, updateUserRoleAction } = useAdminStore(
+    useShallow((s) => ({
+      suspendUserAction: s.suspendUserAction,
+      activateUserAction: s.activateUserAction,
+      updateUserRoleAction: s.updateUserRoleAction,
+    }))
+  );
 
   useEffect(() => {
     function handler(e: MouseEvent) {

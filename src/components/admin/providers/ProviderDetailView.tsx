@@ -16,6 +16,7 @@ import {
 } from '@/components/admin';
 import { Button } from '@/components/ui/button';
 import { useAdminStore } from '@/stores/adminStore';
+import { useShallow } from 'zustand/react/shallow';
 import { notify } from '@/lib/notify';
 import { useI18n } from '@/hooks/useI18n';
 import { formatPrice } from '@/lib/utils';
@@ -45,7 +46,12 @@ interface Props {
 export function ProviderDetailView({ providerId }: Props) {
   const router = useRouter();
   const { t } = useI18n();
-  const { verifyProviderAction, rejectProviderAction } = useAdminStore();
+  const { verifyProviderAction, rejectProviderAction } = useAdminStore(
+    useShallow((s) => ({
+      verifyProviderAction: s.verifyProviderAction,
+      rejectProviderAction: s.rejectProviderAction,
+    }))
+  );
 
   const [provider, setProvider] = useState<AdminProvider | null>(null);
   const [loading, setLoading] = useState(true);
