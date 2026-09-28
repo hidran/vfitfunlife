@@ -5,6 +5,9 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/hooks/useI18n";
 import { toLocaleTag } from "@/types/locale";
+// Local calendar days both ways: `new Date("yyyy-mm-dd")` is UTC midnight and toISOString()
+// is UTC, which put the picked day one off for anyone east or west of UTC.
+import { fromDateParam, toDateParam } from "@/lib/admin/usersListQuery";
 import {
   Search,
   Filter,
@@ -156,10 +159,10 @@ export function FilterBar({
                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-faint" />
                     <input
                       type="date"
-                      value={dateRange.from ? dateRange.from.toISOString().split("T")[0] : ""}
+                      value={dateRange.from ? toDateParam(dateRange.from) : ""}
                       onChange={(e) =>
                         dateRange.onChange(
-                          e.target.value ? new Date(e.target.value) : null,
+                          fromDateParam(e.target.value) ?? null,
                           dateRange.to
                         )
                       }
@@ -171,11 +174,11 @@ export function FilterBar({
                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-faint" />
                     <input
                       type="date"
-                      value={dateRange.to ? dateRange.to.toISOString().split("T")[0] : ""}
+                      value={dateRange.to ? toDateParam(dateRange.to) : ""}
                       onChange={(e) =>
                         dateRange.onChange(
                           dateRange.from,
-                          e.target.value ? new Date(e.target.value) : null
+                          fromDateParam(e.target.value) ?? null
                         )
                       }
                       className="w-full pl-9 pr-3 py-2 bg-surface-elevated border border-hairline rounded-lg text-content text-sm focus:outline-none focus:border-[#00C9FF]/50"

@@ -26,6 +26,8 @@ import { httpsCallable } from "firebase/functions";
 import { auth, db, getFunctionsInstance } from "./config";
 import { countOrFallback, sumOrFallback } from "./firestore";
 import { normalizeSearchQuery } from "@/lib/admin/adminIndex";
+import { BOOKING_DISPUTED_FILTER } from "@/lib/admin/bookingsListQuery";
+import type { SystemLogAction } from "@/lib/admin/logsListQuery";
 import { cancelBooking as cancelBookingFn, decideProviderApplication } from "./functions";
 import {
   AdminDashboardStats,
@@ -208,21 +210,11 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
       ...convertTimestamps(doc.data()),
     })) as AdminDashboardStats["recentActivity"];
 
-    // Calculate growth percentages (mock for now - would compare with previous periods)
-    const userGrowth = 12.5;
-    const providerGrowth = 8.3;
-    const bookingGrowth = 15.2;
-    const revenueGrowth = 23.1;
-
     return {
       totalUsers,
-      userGrowth,
       activeProviders,
-      providerGrowth,
       todayBookings,
-      bookingGrowth,
       monthlyRevenue,
-      revenueGrowth,
       pendingVerifications,
       openTickets: 0, // Would come from support tickets collection
       recentActivity,
@@ -247,31 +239,37 @@ export interface ListPageResult {
 }
 
 /**
- * One page of `users`, filtered server-side and ordered newest first, plus the filtered total.
+ * One page of an admin list, filtered server-side and ordered newest first by `orderField`,
+ * plus the filtered total. Shared by the users, providers, bookings and system-logs lists.
  *
  * Page 1 and any page whose predecessor's cursor is known read exactly `pageSize` documents.
  * A page reached without one (a `?page=N` URL, the "last page" button) reads the N pages up to
  * it in one query and records every cursor on the way, so moving around from there is cheap
- * again. The total is a `getCountFromServer` over the same filters (no orderBy/limit).
+ * again. The total is a `getCountFromServer` over the same filters and orderBy (no limit).
  */
 async function fetchListPage(
+  collectionName: string,
+  orderField: string,
   filterConstraints: QueryConstraint[],
   page: number,
   pageSize: number,
   cursors: PageCursors = new Map()
 ): Promise<ListPageResult> {
-  const usersRef = collection(db, USERS_COLLECTION);
-  const ordered = [...filterConstraints, orderBy("createdAt", "desc")];
+  const listRef = collection(db, collectionName);
+  const ordered = [...filterConstraints, orderBy(orderField, "desc")];
   const before = page > 1 ? cursors.get(page - 1) : undefined;
   const direct = page === 1 || before !== undefined;
 
   const pageQuery = direct
-    ? query(usersRef, ...ordered, ...(before ? [startAfter(before)] : []), limit(pageSize))
-    : query(usersRef, ...ordered, limit(page * pageSize));
+    ? query(listRef, ...ordered, ...(before ? [startAfter(before)] : []), limit(pageSize))
+    : query(listRef, ...ordered, limit(page * pageSize));
 
   const [snapshot, count] = await Promise.all([
     getDocs(pageQuery),
-    getCountFromServer(query(usersRef, ...filterConstraints)),
+    // Counted with the same orderBy as the pages: it drops documents lacking the order field
+    // exactly as the pages do (so the total matches what paging can reach), and a date range
+    // on that field then uses the same descending index instead of needing an ascending twin.
+    getCountFromServer(query(listRef, ...ordered)),
   ]);
 
   const nextCursors: PageCursors = new Map(cursors);
@@ -332,6 +330,8 @@ export async function getUsers(
 ): Promise<{ users: AdminUser[]; total: number; cursors: PageCursors }> {
   try {
     const result = await fetchListPage(
+      USERS_COLLECTION,
+      "createdAt",
       userListConstraints(filters),
       filters.page || 1,
       filters.limit || 20,
@@ -451,6 +451,8 @@ export async function getProviders(
 ): Promise<{ providers: AdminProvider[]; total: number; cursors: PageCursors }> {
   try {
     const result = await fetchListPage(
+      USERS_COLLECTION,
+      "createdAt",
       providerListConstraints(filters),
       filters.page || 1,
       filters.limit || 20,
@@ -527,63 +529,112 @@ export async function rejectProvider(providerId: string, reason: string): Promis
   await logAdminAction("REJECT_PROVIDER", `Rejected provider ${providerId}. Reason: ${reason}`);
 }
 
-// Get bookings with filters
+/**
+ * Bookings are listed by session date, latest first: the date-range filter is on
+ * `scheduledAt`, and Firestore needs a range filter's field to be the first orderBy, so
+ * ordering by it too keeps every filter combination one indexed query.
+ */
+const BOOKINGS_ORDER_FIELD = "scheduledAt";
+
+/**
+ * What the bookings search box can find server-side. Firestore has no substring search and
+ * bookings carry no search tokens, so the box matches exact values only:
+ * - an email → `userEmail ==` (the customer's email, lowercased), paged like any filter;
+ * - anything else → a booking id (one document read), else a customer uid (`userId ==`),
+ *   else a provider uid (`instructorId ==`).
+ * Names and the short "#ABC123" code shown in the table are NOT searchable.
+ */
+export type BookingSearch = { kind: "email"; value: string } | { kind: "id"; value: string };
+
+export function bookingSearch(search: string | undefined): BookingSearch | null {
+  const value = (search ?? "").trim();
+  if (!value) return null;
+  if (value.includes("@")) return { kind: "email", value: value.toLowerCase() };
+  return { kind: "id", value };
+}
+
+/**
+ * The Firestore filters of a bookings list query, without the search (see getBookings).
+ * Each combination is served by firestore.indexes.json — checked by
+ * scripts/verify-admin-list-indexes.mjs.
+ */
+export function bookingListConstraints(filters: BookingFilters): QueryConstraint[] {
+  const constraints: QueryConstraint[] = [];
+  if (filters.status === BOOKING_DISPUTED_FILTER) {
+    constraints.push(where("paymentConfirmation.clientResponse", "==", "disputed"));
+  } else if (filters.status && filters.status !== "all") {
+    constraints.push(where("status", "==", filters.status));
+  }
+  // Bookings name their provider `instructorId` (there is no providerId field).
+  if (filters.providerId) constraints.push(where("instructorId", "==", filters.providerId));
+  if (filters.customerId) constraints.push(where("userId", "==", filters.customerId));
+  if (filters.dateFrom) {
+    constraints.push(where(BOOKINGS_ORDER_FIELD, ">=", Timestamp.fromDate(filters.dateFrom)));
+  }
+  if (filters.dateTo) {
+    constraints.push(where(BOOKINGS_ORDER_FIELD, "<=", Timestamp.fromDate(filters.dateTo)));
+  }
+  return constraints;
+}
+
+const toDateOrNull = (value: unknown): Date | null =>
+  value instanceof Date ? value : value instanceof Timestamp ? value.toDate() : null;
+
+/** bookingListConstraints evaluated in memory, for the single booking a by-id search found. */
+function bookingMatchesFilters(booking: Booking, filters: BookingFilters): boolean {
+  if (filters.status === BOOKING_DISPUTED_FILTER) {
+    if (booking.paymentConfirmation?.clientResponse !== "disputed") return false;
+  } else if (filters.status && filters.status !== "all" && booking.status !== filters.status) {
+    return false;
+  }
+  if (filters.providerId && booking.instructorId !== filters.providerId) return false;
+  if (filters.customerId && booking.userId !== filters.customerId) return false;
+  const at = toDateOrNull(booking.scheduledAt);
+  if (filters.dateFrom && (!at || at < filters.dateFrom)) return false;
+  if (filters.dateTo && (!at || at > filters.dateTo)) return false;
+  return true;
+}
+
+export interface BookingsPage {
+  bookings: Booking[];
+  total: number;
+  cursors: PageCursors;
+}
+
+// Get bookings with filters — one page, filtered, searched and counted server-side.
 export async function getBookings(
-  filters: BookingFilters
-): Promise<{ bookings: Booking[]; total: number }> {
+  filters: BookingFilters,
+  cursors?: PageCursors
+): Promise<BookingsPage> {
   try {
-    const constraints: QueryConstraint[] = [];
-
-    if (filters.status && filters.status !== "all") {
-      constraints.push(where("status", "==", filters.status));
-    }
-
-    if (filters.providerId) {
-      constraints.push(where("providerId", "==", filters.providerId));
-    }
-
-    if (filters.customerId) {
-      constraints.push(where("userId", "==", filters.customerId));
-    }
-
-    constraints.push(orderBy("createdAt", "desc"));
-
-    const q = query(collection(db, BOOKINGS_COLLECTION), ...constraints);
-    const snapshot = await getDocs(q);
-
-    let bookings = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...convertTimestamps(doc.data()),
-    })) as Booking[];
-
-    // Date filtering (scheduledAt is already converted to Date by convertTimestamps)
-    if (filters.dateFrom) {
-      bookings = bookings.filter((b) => (b.scheduledAt as unknown as Date) >= filters.dateFrom!);
-    }
-    if (filters.dateTo) {
-      bookings = bookings.filter((b) => (b.scheduledAt as unknown as Date) <= filters.dateTo!);
-    }
-
-    // Search
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
-      bookings = bookings.filter(
-        (b) =>
-          b.id.toLowerCase().includes(searchLower) ||
-          (b as any).userName?.toLowerCase().includes(searchLower) ||
-          (b as any).providerName?.toLowerCase().includes(searchLower)
-      );
-    }
-
-    const total = bookings.length;
-
-    // Pagination
     const page = filters.page || 1;
     const pageSize = filters.limit || 20;
-    const start = (page - 1) * pageSize;
-    bookings = bookings.slice(start, start + pageSize);
+    const base = bookingListConstraints(filters);
+    const toBookings = (result: ListPageResult): BookingsPage => ({
+      bookings: result.docs.map((d) => ({ ...convertTimestamps(d.data()), id: d.id }) as Booking),
+      total: result.total,
+      cursors: result.cursors,
+    });
+    const listPage = (extra: QueryConstraint[]) =>
+      fetchListPage(BOOKINGS_COLLECTION, BOOKINGS_ORDER_FIELD, [...base, ...extra], page, pageSize, cursors);
 
-    return { bookings, total };
+    const search = bookingSearch(filters.search);
+    if (!search) return toBookings(await listPage([]));
+    if (search.kind === "email") return toBookings(await listPage([where("userEmail", "==", search.value)]));
+
+    // A document id can't contain "/"; doc() would read it as a path.
+    if (!search.value.includes("/")) {
+      const snapshot = await getDoc(doc(db, BOOKINGS_COLLECTION, search.value));
+      if (snapshot.exists()) {
+        const booking = { ...convertTimestamps(snapshot.data()), id: snapshot.id } as Booking;
+        const hit = bookingMatchesFilters(booking, filters);
+        return { bookings: hit && page === 1 ? [booking] : [], total: hit ? 1 : 0, cursors: new Map() };
+      }
+    }
+    // Not a booking id: the customer's bookings, else the provider's.
+    const asCustomer = await listPage([where("userId", "==", search.value)]);
+    if (asCustomer.total > 0) return toBookings(asCustomer);
+    return toBookings(await listPage([where("instructorId", "==", search.value)]));
   } catch (error) {
     console.error("Error fetching bookings:", error);
     throw error;
@@ -670,48 +721,44 @@ export async function updatePlatformSettings(settings: PlatformSettings): Promis
   }
 }
 
-// Get system logs
+/**
+ * The Firestore filters of a system-logs list query. The actor is stored as `by` (the acting
+ * admin's uid, see logAdminAction); `userId` and the search box both filter on it — the search
+ * is an exact uid match, since log entries carry no search tokens. Each combination is served
+ * by firestore.indexes.json (scripts/verify-admin-list-indexes.mjs).
+ */
+export function logListConstraints(filters: LogFilters): QueryConstraint[] {
+  const constraints: QueryConstraint[] = [];
+  if (filters.severity && filters.severity !== "all") {
+    constraints.push(where("severity", "==", filters.severity));
+  }
+  if (filters.action && filters.action !== "all") constraints.push(where("action", "==", filters.action));
+  const actor = filters.userId || filters.search?.trim();
+  if (actor) constraints.push(where("by", "==", actor));
+  if (filters.dateFrom) constraints.push(where("timestamp", ">=", Timestamp.fromDate(filters.dateFrom)));
+  if (filters.dateTo) constraints.push(where("timestamp", "<=", Timestamp.fromDate(filters.dateTo)));
+  return constraints;
+}
+
+// Get system logs — one page, filtered and counted server-side, newest first.
 export async function getSystemLogs(
-  filters: LogFilters
-): Promise<{ logs: SystemLog[]; total: number }> {
+  filters: LogFilters,
+  cursors?: PageCursors
+): Promise<{ logs: SystemLog[]; total: number; cursors: PageCursors }> {
   try {
-    const constraints: QueryConstraint[] = [];
-
-    if (filters.severity && filters.severity !== "all") {
-      constraints.push(where("severity", "==", filters.severity));
-    }
-
-    if (filters.userId) {
-      constraints.push(where("userId", "==", filters.userId));
-    }
-
-    constraints.push(orderBy("timestamp", "desc"));
-
-    const q = query(collection(db, LOGS_COLLECTION), ...constraints);
-    const snapshot = await getDocs(q);
-
-    let logs = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...convertTimestamps(doc.data()),
-    })) as SystemLog[];
-
-    // Date filtering (timestamp is already converted to Date by convertTimestamps)
-    if (filters.dateFrom) {
-      logs = logs.filter((l) => (l.timestamp as unknown as Date) >= filters.dateFrom!);
-    }
-    if (filters.dateTo) {
-      logs = logs.filter((l) => (l.timestamp as unknown as Date) <= filters.dateTo!);
-    }
-
-    const total = logs.length;
-
-    // Pagination
-    const page = filters.page || 1;
-    const pageSize = filters.limit || 50;
-    const start = (page - 1) * pageSize;
-    logs = logs.slice(start, start + pageSize);
-
-    return { logs, total };
+    const result = await fetchListPage(
+      LOGS_COLLECTION,
+      "timestamp",
+      logListConstraints(filters),
+      filters.page || 1,
+      filters.limit || 50,
+      cursors
+    );
+    return {
+      logs: result.docs.map((d) => ({ ...convertTimestamps(d.data()), id: d.id }) as SystemLog),
+      total: result.total,
+      cursors: result.cursors,
+    };
   } catch (error) {
     console.error("Error fetching system logs:", error);
     throw error;
@@ -1039,7 +1086,7 @@ export async function processPayout(
 }
 
 // Log admin action
-async function logAdminAction(action: string, details: string): Promise<void> {
+async function logAdminAction(action: SystemLogAction, details: string): Promise<void> {
   try {
     await addDoc(collection(db, LOGS_COLLECTION), {
       action,

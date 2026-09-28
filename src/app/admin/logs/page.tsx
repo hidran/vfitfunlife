@@ -1,7 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
+import {
+  DEFAULT_LOG_FILTERS,
+  DEFAULT_LOGS_PAGE_SIZE,
+  SYSTEM_LOG_ACTIONS,
+  logFiltersFromParams,
+  queryFromLogFilters,
+} from "@/lib/admin/logsListQuery";
+import { fromDateParam, toDateParam } from "@/lib/admin/usersListQuery";
 import { useAdminStore } from "@/stores/adminStore";
 import { useShallow } from "zustand/react/shallow";
 import { useAuthStore } from "@/stores/authStore";
@@ -23,45 +32,84 @@ export default function SystemLogsPage() {
   const { t } = useI18n();
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
-  const { systemLogs, logsTotal, isLoadingLogs, fetchSystemLogs } = useAdminStore(
+  const { systemLogs, logsTotal, logsFilters, isLoadingLogs, error, fetchSystemLogs } = useAdminStore(
     useShallow((s) => ({
       systemLogs: s.systemLogs,
       logsTotal: s.logsTotal,
+      logsFilters: s.logsFilters,
       isLoadingLogs: s.isLoadingLogs,
+      error: s.error,
       fetchSystemLogs: s.fetchSystemLogs,
     }))
   );
 
-  const [filters, setFilters] = useState<LogFilters>({
-    severity: "all",
-    search: "",
-    page: 1,
-    limit: 50,
-  });
+  const searchParams = useSearchParams();
+  // Seeded from the URL so a reload keeps the filters (same contract as the users list).
+  const [filters, setFilters] = useState<LogFilters>(() => logFiltersFromParams(searchParams));
+  // What the search box shows; it reaches `filters` (the fetch and the URL) once typing pauses.
+  const [searchInput, setSearchInput] = useState(() => filters.search ?? "");
+  const applySearch = useDebouncedCallback((search: string) =>
+    setFilters((prev) => (prev.search === search ? prev : { ...prev, search, page: 1 }))
+  );
 
+  const isSuperadmin = user?.role === "superadmin";
   useEffect(() => {
-    if (user?.role !== "superadmin") {
+    if (!isSuperadmin) {
       router.push("/admin");
       return;
     }
     fetchSystemLogs(filters);
-  }, [user, router, fetchSystemLogs, filters]);
+  }, [isSuperadmin, router, fetchSystemLogs, filters]);
+
+  useEffect(() => {
+    // Not while the redirect above is in flight: a replaceState now would undo it.
+    if (!isSuperadmin) return;
+    const query = queryFromLogFilters(filters);
+    window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
+  }, [filters, isSuperadmin]);
+
+  const handleSearchChange = (search: string) => {
+    setSearchInput(search);
+    if (search) {
+      applySearch.run(search);
+    } else {
+      applySearch.cancel();
+      setFilters((prev) => (prev.search ? { ...prev, search: "", page: 1 } : prev));
+    }
+  };
 
   const handleSeverityChange = (severity: string) => {
-    setFilters((prev) => ({ ...prev, severity: severity as any, page: 1 }));
+    setFilters((prev) => ({ ...prev, severity: severity as LogFilters["severity"], page: 1 }));
+  };
+
+  const handleActionChange = (action: string) => {
+    setFilters((prev) => ({ ...prev, action, page: 1 }));
+  };
+
+  // FilterBar hands back local-midnight dates; the "to" day is included up to its last moment.
+  const handleDateRangeChange = (from: Date | null, to: Date | null) => {
+    setFilters((prev) => {
+      const next: LogFilters = { ...prev, page: 1 };
+      delete next.dateFrom;
+      delete next.dateTo;
+      if (from) next.dateFrom = fromDateParam(toDateParam(from));
+      if (to) next.dateTo = fromDateParam(toDateParam(to), true);
+      return next;
+    });
   };
 
   const handlePageChange = (page: number) => {
     setFilters((prev) => ({ ...prev, page }));
   };
 
+  const handlePageSizeChange = (limit: number) => {
+    setFilters((prev) => ({ ...prev, limit, page: 1 }));
+  };
+
   const handleClearFilters = () => {
-    setFilters({
-      severity: "all",
-      search: "",
-      page: 1,
-      limit: 50,
-    });
+    setSearchInput("");
+    applySearch.cancel();
+    setFilters(DEFAULT_LOG_FILTERS);
   };
 
   const getSeverityIcon = (severity: string) => {
@@ -141,6 +189,9 @@ export default function SystemLogsPage() {
               <p className="text-sm text-content">{log.userName}</p>
               <p className="text-xs text-content-muted">{log.userRole}</p>
             </>
+          ) : log.by ? (
+            // logAdminAction stores only the actor's uid — the value the search box filters on.
+            <span className="text-xs text-content-muted font-mono break-all">{log.by}</span>
           ) : (
             <span className="text-sm text-content-faint">{t('admin.logs.col.system')}</span>
           )}
@@ -165,7 +216,14 @@ export default function SystemLogsPage() {
     },
   ];
 
-  const totalPages = Math.ceil(logsTotal / (filters.limit || 50));
+  const pageSize = filters.limit || DEFAULT_LOGS_PAGE_SIZE;
+  const totalPages = Math.ceil(logsTotal / pageSize);
+
+  // A `?page=N` past the end steps back to the last page once this query's total is in —
+  // same render-time adjustment as UsersListView.
+  if (logsFilters === filters && !isLoadingLogs && logsTotal > 0 && (filters.page || 1) > totalPages) {
+    setFilters({ ...filters, page: totalPages });
+  }
 
   return (
     <div className="space-y-6">
@@ -188,8 +246,13 @@ export default function SystemLogsPage() {
       {/* Filters */}
       <FilterBar
         searchPlaceholder={t('admin.logs.search')}
-        searchValue={filters.search || ""}
-        onSearchChange={(search) => setFilters((prev) => ({ ...prev, search, page: 1 }))}
+        searchValue={searchInput}
+        onSearchChange={handleSearchChange}
+        dateRange={{
+          from: filters.dateFrom ?? null,
+          to: filters.dateTo ?? null,
+          onChange: handleDateRangeChange,
+        }}
         filters={[
           {
             key: "severity",
@@ -202,6 +265,16 @@ export default function SystemLogsPage() {
             ],
             value: filters.severity || "all",
             onChange: handleSeverityChange,
+          },
+          {
+            key: "action",
+            label: t('admin.logs.filter.action'),
+            options: [
+              { value: "all", label: t('admin.logs.filter.allActions') },
+              ...SYSTEM_LOG_ACTIONS.map((action) => ({ value: action, label: action })),
+            ],
+            value: filters.action || "all",
+            onChange: handleActionChange,
           },
         ]}
         onExport={() => console.log("Export logs")}
@@ -227,6 +300,7 @@ export default function SystemLogsPage() {
               <AlertTriangle className="w-5 h-5 text-[#F59E0B] light:text-amber-700" />
             </div>
             <div>
+              {/* Warnings/errors count the rows on this page, not the whole filtered log. */}
               <p className="text-xs text-content-faint">{t('admin.logs.stat.warnings')}</p>
               <p className="text-xl font-bold text-content">
                 {systemLogs.filter((l) => l.severity === "warning").length}
@@ -249,6 +323,13 @@ export default function SystemLogsPage() {
         </div>
       </div>
 
+      {error && (
+        <div role="alert" className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+          <p className="text-red-200 light:text-red-700 font-medium">{t('admin.table.loadError')}</p>
+          <p className="text-red-300/70 light:text-red-700 text-sm">{error}</p>
+        </div>
+      )}
+
       {/* Data Table */}
       <DataTable
         data={systemLogs}
@@ -259,8 +340,9 @@ export default function SystemLogsPage() {
           currentPage: filters.page || 1,
           totalPages,
           totalItems: logsTotal,
-          pageSize: filters.limit || 50,
+          pageSize,
           onPageChange: handlePageChange,
+          onPageSizeChange: handlePageSizeChange,
         }}
         emptyMessage={t('admin.logs.empty')}
       />

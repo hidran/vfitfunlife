@@ -33,6 +33,12 @@ export function seedUsers(docs: Record<string, Data>): void {
   );
 }
 
+/** Seeds documents exactly as given (bookings, system logs: no derived fields). */
+export function seedDocs(docs: Record<string, Data>): void {
+  fakeDb.reads = 0;
+  fakeDb.docs = { ...docs };
+}
+
 const get = (data: Data, path: string): unknown =>
   path.split('.').reduce<unknown>((v, k) => (v && typeof v === 'object' ? (v as Data)[k] : undefined), data);
 
@@ -105,8 +111,12 @@ export const firestoreFake = {
     const count = run(q.constraints).length;
     return { data: () => ({ count }) };
   }),
-  getDoc: vi.fn(),
-  doc: vi.fn(),
+  getDoc: vi.fn(async (ref: { id: string }) => {
+    const data = fakeDb.docs[ref.id];
+    if (data) fakeDb.reads += 1;
+    return { id: ref.id, exists: () => data !== undefined, data: () => data };
+  }),
+  doc: vi.fn((_db: unknown, _collection: string, id: string) => ({ id })),
   updateDoc: vi.fn(),
   setDoc: vi.fn(),
   writeBatch: vi.fn(),

@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
+import {
+  BOOKING_DISPUTED_FILTER,
+  DEFAULT_BOOKING_FILTERS,
+  bookingFiltersFromParams,
+  queryFromBookingFilters,
+} from "@/lib/admin/bookingsListQuery";
+import { fromDateParam, toDateParam } from "@/lib/admin/usersListQuery";
 import { useAdminStore } from "@/stores/adminStore";
 import { useShallow } from "zustand/react/shallow";
 import { BOOKING_STATUS_META } from "@/lib/bookingStatus";
@@ -25,45 +33,75 @@ import {
 export function BookingsListView() {
   const { t } = useI18n();
   const router = useRouter();
-  const { bookings, bookingsTotal, isLoadingBookings, fetchBookings } = useAdminStore(
-    useShallow((s) => ({
-      bookings: s.bookings,
-      bookingsTotal: s.bookingsTotal,
-      isLoadingBookings: s.isLoadingBookings,
-      fetchBookings: s.fetchBookings,
-    }))
-  );
+  const { bookings, bookingsTotal, bookingsFilters, isLoadingBookings, error, fetchBookings } =
+    useAdminStore(
+      useShallow((s) => ({
+        bookings: s.bookings,
+        bookingsTotal: s.bookingsTotal,
+        bookingsFilters: s.bookingsFilters,
+        isLoadingBookings: s.isLoadingBookings,
+        error: s.error,
+        fetchBookings: s.fetchBookings,
+      }))
+    );
 
-  const [filters, setFilters] = useState<BookingFilters>({
-    status: "all",
-    search: "",
-    page: 1,
-    limit: 20,
-  });
+  const searchParams = useSearchParams();
+  // Seeded from the URL so a reload, or coming back from a booking's page, keeps the filters.
+  const [filters, setFilters] = useState<BookingFilters>(() => bookingFiltersFromParams(searchParams));
+  // What the search box shows; it reaches `filters` (the fetch and the URL) once typing pauses.
+  const [searchInput, setSearchInput] = useState(() => filters.search ?? "");
+  const applySearch = useDebouncedCallback((search: string) =>
+    setFilters((prev) => (prev.search === search ? prev : { ...prev, search, page: 1 }))
+  );
 
   useEffect(() => {
     fetchBookings(filters);
   }, [filters, fetchBookings]);
 
+  // replaceState rather than router.replace: no navigation per filter change (see UsersListView).
+  useEffect(() => {
+    const query = queryFromBookingFilters(filters);
+    window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
+  }, [filters]);
+
   const handleSearchChange = (search: string) => {
-    setFilters((prev) => ({ ...prev, search, page: 1 }));
+    setSearchInput(search);
+    if (search) {
+      applySearch.run(search);
+    } else {
+      applySearch.cancel();
+      setFilters((prev) => (prev.search ? { ...prev, search: "", page: 1 } : prev));
+    }
   };
 
   const handleStatusChange = (status: string) => {
     setFilters((prev) => ({ ...prev, status: status as BookingFilters["status"], page: 1 }));
   };
 
+  // FilterBar hands back local-midnight dates; the "to" day is included up to its last moment.
+  const handleDateRangeChange = (from: Date | null, to: Date | null) => {
+    setFilters((prev) => {
+      const next: BookingFilters = { ...prev, page: 1 };
+      delete next.dateFrom;
+      delete next.dateTo;
+      if (from) next.dateFrom = fromDateParam(toDateParam(from));
+      if (to) next.dateTo = fromDateParam(toDateParam(to), true);
+      return next;
+    });
+  };
+
   const handlePageChange = (page: number) => {
     setFilters((prev) => ({ ...prev, page }));
   };
 
+  const handlePageSizeChange = (limit: number) => {
+    setFilters((prev) => ({ ...prev, limit, page: 1 }));
+  };
+
   const handleClearFilters = () => {
-    setFilters({
-      status: "all",
-      search: "",
-      page: 1,
-      limit: 20,
-    });
+    setSearchInput("");
+    applySearch.cancel();
+    setFilters(DEFAULT_BOOKING_FILTERS);
   };
 
   const columns: Column<BookingType>[] = [
@@ -168,7 +206,18 @@ export function BookingsListView() {
 
   const totalPages = Math.ceil(bookingsTotal / (filters.limit || 20));
 
-  // Calculate stats
+  // A `?page=N` past the end steps back to the last page once this query's total is in —
+  // same render-time adjustment as UsersListView.
+  if (
+    bookingsFilters === filters &&
+    !isLoadingBookings &&
+    bookingsTotal > 0 &&
+    (filters.page || 1) > totalPages
+  ) {
+    setFilters({ ...filters, page: totalPages });
+  }
+
+  // These three describe the rows on this page, not the whole filtered list.
   const totalRevenue = bookings.reduce((sum, b) => sum + (b.finalPrice || 0), 0);
   const pendingCount = bookings.filter((b) => b.status === "requested").length;
   const completedCount = bookings.filter((b) => b.status === "completed").length;
@@ -238,8 +287,13 @@ export function BookingsListView() {
       {/* Filters */}
       <FilterBar
         searchPlaceholder={t('admin.bookings.search')}
-        searchValue={filters.search || ""}
+        searchValue={searchInput}
         onSearchChange={handleSearchChange}
+        dateRange={{
+          from: filters.dateFrom ?? null,
+          to: filters.dateTo ?? null,
+          onChange: handleDateRangeChange,
+        }}
         filters={[
           {
             key: "status",
@@ -253,7 +307,7 @@ export function BookingsListView() {
                 value: s,
                 label: t(BOOKING_STATUS_META[s].labelKey),
               })),
-              { value: "disputed", label: t('admin.bookings.filter.disputes' as MessageKey) },
+              { value: BOOKING_DISPUTED_FILTER, label: t('admin.bookings.filter.disputes' as MessageKey) },
             ],
             value: filters.status || "all",
             onChange: handleStatusChange,
@@ -261,6 +315,13 @@ export function BookingsListView() {
         ]}
         onClearFilters={handleClearFilters}
       />
+
+      {error && (
+        <div role="alert" className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+          <p className="text-red-200 light:text-red-700 font-medium">{t('admin.table.loadError')}</p>
+          <p className="text-red-300/70 light:text-red-700 text-sm">{error}</p>
+        </div>
+      )}
 
       {/* Data Table */}
       <DataTable
@@ -275,6 +336,7 @@ export function BookingsListView() {
           totalItems: bookingsTotal,
           pageSize: filters.limit || 20,
           onPageChange: handlePageChange,
+          onPageSizeChange: handlePageSizeChange,
         }}
         emptyMessage={t('admin.bookings.empty')}
       />

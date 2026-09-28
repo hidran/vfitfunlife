@@ -60,3 +60,63 @@ describe('DataTable sorting', () => {
     expect(renderedIds()).toEqual(['Anna', 'bruno', 'carla']);
   });
 });
+
+describe('DataTable page-size selector', () => {
+  const columns: Column<Row>[] = [{ key: 'user', header: 'User', cell: (r) => r.name }];
+  const pagination = (extra: Record<string, unknown> = {}) => ({
+    currentPage: 1,
+    totalPages: 3,
+    totalItems: 45,
+    pageSize: 20,
+    onPageChange: () => {},
+    ...extra,
+  });
+
+  it('offers 10/20/50/100 and reports the chosen size', () => {
+    const sizes: number[] = [];
+    render(
+      <DataTable
+        data={rows}
+        columns={columns}
+        keyExtractor={(r) => r.id}
+        pagination={pagination({ onPageSizeChange: (n: number) => sizes.push(n) })}
+      />
+    );
+
+    const select = screen.getByRole('combobox') as HTMLSelectElement;
+    expect(Array.from(select.options).map((o) => o.value)).toEqual(['10', '20', '50', '100']);
+    expect(select.value).toBe('20');
+    fireEvent.change(select, { target: { value: '50' } });
+    expect(sizes).toEqual([50]);
+  });
+
+  it('keeps a size from the URL outside the offered ones selectable', () => {
+    render(
+      <DataTable
+        data={rows}
+        columns={columns}
+        keyExtractor={(r) => r.id}
+        pagination={pagination({ pageSize: 5, totalPages: 9, onPageSizeChange: () => {} })}
+      />
+    );
+    expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('5');
+  });
+
+  it('shows the selector on a single page when a smaller size would split it, but not without a handler', () => {
+    const { unmount } = render(
+      <DataTable
+        data={rows}
+        columns={columns}
+        keyExtractor={(r) => r.id}
+        pagination={pagination({ totalPages: 1, totalItems: 15, onPageSizeChange: () => {} })}
+      />
+    );
+    expect(screen.getByRole('combobox')).toBeInTheDocument();
+    // No pager buttons on a single page.
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    unmount();
+
+    render(<DataTable data={rows} columns={columns} keyExtractor={(r) => r.id} pagination={pagination()} />);
+    expect(screen.queryByRole('combobox')).toBeNull();
+  });
+});

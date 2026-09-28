@@ -4,13 +4,9 @@ import { UserRole, User, Booking } from "./firebase";
 // Admin Dashboard Stats
 export interface AdminDashboardStats {
   totalUsers: number;
-  userGrowth: number;
   activeProviders: number;
-  providerGrowth: number;
   todayBookings: number;
-  bookingGrowth: number;
   monthlyRevenue: number;
-  revenueGrowth: number;
   pendingVerifications: number;
   openTickets: number;
   recentActivity: ActivityItem[];
@@ -124,6 +120,8 @@ export interface SystemLog {
   id: string;
   timestamp: Timestamp;
   userId?: string;
+  /** Uid of the acting admin — what logAdminAction writes (and what the list filters on). */
+  by?: string | null;
   userName?: string;
   userRole?: UserRole;
   action: string;

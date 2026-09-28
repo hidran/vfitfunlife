@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAdminStore } from "@/stores/adminStore";
+import { useShallow } from "zustand/react/shallow";
 import { useAuthStore } from "@/stores/authStore";
 import {
   StatCard,
@@ -28,6 +29,8 @@ export default function AdminDashboardPage() {
   const router = useRouter();
   const { t } = useI18n();
   const user = useAuthStore((s) => s.user);
+  // Only the slices this page renders: a whole-store subscription re-rendered the dashboard on
+  // every unrelated admin-store write (users/bookings/logs fetches, errors, …).
   const {
     dashboardStats,
     isLoadingStats,
@@ -37,7 +40,18 @@ export default function AdminDashboardPage() {
     providers,
     fetchProviders,
     isLoadingProviders,
-  } = useAdminStore();
+  } = useAdminStore(
+    useShallow((s) => ({
+      dashboardStats: s.dashboardStats,
+      isLoadingStats: s.isLoadingStats,
+      fetchDashboardStats: s.fetchDashboardStats,
+      pendingVerifications: s.pendingVerifications,
+      fetchPendingVerifications: s.fetchPendingVerifications,
+      providers: s.providers,
+      fetchProviders: s.fetchProviders,
+      isLoadingProviders: s.isLoadingProviders,
+    }))
+  );
 
   useEffect(() => {
     trace("admin_dashboard_stats", fetchDashboardStats).catch(() => {});
@@ -96,8 +110,8 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Stats Grid. No trend line: the *Growth fields from getDashboardStats are
-          placeholders, not period-over-period values, so showing them would be fake data. */}
+      {/* Stats Grid. No trend line: there are no period-over-period values to show (the old
+          hardcoded *Growth placeholders were removed from getAdminDashboardStats). */}
       <StatsGrid>
         <StatCard
           title={t('admin.dashboard.stats.totalUsers')}

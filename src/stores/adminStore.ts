@@ -82,7 +82,11 @@ interface AdminState {
   /** The filters of the last providers fetch, reused by refetches that pass none. */
   providersFilters: ProviderFilters;
   bookingsTotal: number;
+  /** The filters of the last bookings fetch, reused by refetches that pass none. */
+  bookingsFilters: BookingFilters;
   logsTotal: number;
+  /** The filters of the last system-logs fetch, reused by refetches that pass none. */
+  logsFilters: LogFilters;
 
   // Actions
   fetchDashboardStats: () => Promise<void>;
@@ -123,9 +127,11 @@ interface AdminState {
  */
 let usersRequestSeq = 0;
 let providersRequestSeq = 0;
+let bookingsRequestSeq = 0;
+let logsRequestSeq = 0;
 
 /**
- * Page cursors of the users/providers lists (see PageCursors in lib/firebase/admin): the cursor
+ * Page cursors of the users/providers/bookings/logs lists (see PageCursors in lib/firebase/admin): the cursor
  * stack behind next/previous. Kept per filter combination — any filter, search or page-size
  * change starts a fresh stack, since a cursor is only meaningful within the query that
  * produced it. Held outside the reactive state: document snapshots aren't render data.
@@ -136,6 +142,8 @@ interface PagingState {
 }
 let usersPaging: PagingState = { key: "", cursors: new Map() };
 let providersPaging: PagingState = { key: "", cursors: new Map() };
+let bookingsPaging: PagingState = { key: "", cursors: new Map() };
+let logsPaging: PagingState = { key: "", cursors: new Map() };
 
 /** Everything that defines the query except which page of it is shown. */
 export function listQueryKey(filters: object): string {
@@ -152,6 +160,8 @@ function pagingFor(current: PagingState, filters: object): PagingState {
 export function resetAdminListPaging(): void {
   usersPaging = { key: "", cursors: new Map() };
   providersPaging = { key: "", cursors: new Map() };
+  bookingsPaging = { key: "", cursors: new Map() };
+  logsPaging = { key: "", cursors: new Map() };
 }
 
 export const useAdminStore = create<AdminState>((set, get) => ({
@@ -184,7 +194,9 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   providersTotal: 0,
   providersFilters: {},
   bookingsTotal: 0,
+  bookingsFilters: {},
   logsTotal: 0,
+  logsFilters: {},
 
   // Fetch dashboard stats
   fetchDashboardStats: async () => {
@@ -242,8 +254,8 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       // Update user in list
       set((state) => ({
         users: state.users.map((u) =>
-          u.id === userId ? { ...u, status: "suspended" } : u
-        ) as AdminUser[],
+          u.id === userId ? { ...u, isSuspended: true } : u
+        ),
       }));
     } catch (error: any) {
       set({ error: error.message || "Failed to suspend user" });
@@ -259,8 +271,8 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       // Update user in list
       set((state) => ({
         users: state.users.map((u) =>
-          u.id === userId ? { ...u, status: "active" } : u
-        ) as AdminUser[],
+          u.id === userId ? { ...u, isSuspended: false } : u
+        ),
       }));
     } catch (error: any) {
       set({ error: error.message || "Failed to activate user" });
@@ -330,15 +342,22 @@ export const useAdminStore = create<AdminState>((set, get) => ({
 
   // Fetch bookings
   fetchBookings: async (filters?: BookingFilters) => {
-    set({ isLoadingBookings: true, error: null });
+    // Same as fetchUsers: a refetch after a mutation (cancel, refund) keeps the page on screen.
+    const effective = filters ?? get().bookingsFilters;
+    const seq = ++bookingsRequestSeq;
+    set({ isLoadingBookings: true, error: null, bookingsFilters: effective });
+    const paging = (bookingsPaging = pagingFor(bookingsPaging, effective));
     try {
-      const result = await getBookings(filters || {});
-      set({ 
-        bookings: result.bookings, 
+      const result = await getBookings(effective, paging.cursors);
+      if (seq !== bookingsRequestSeq) return;
+      if (result.cursors) paging.cursors = result.cursors;
+      set({
+        bookings: result.bookings,
         bookingsTotal: result.total,
-        isLoadingBookings: false 
+        isLoadingBookings: false,
       });
     } catch (error: any) {
+      if (seq !== bookingsRequestSeq) return;
       set({ error: error.message || "Failed to fetch bookings", isLoadingBookings: false });
     }
   },
@@ -371,15 +390,21 @@ export const useAdminStore = create<AdminState>((set, get) => ({
 
   // Fetch system logs
   fetchSystemLogs: async (filters?: LogFilters) => {
-    set({ isLoadingLogs: true, error: null });
+    const effective = filters ?? get().logsFilters;
+    const seq = ++logsRequestSeq;
+    set({ isLoadingLogs: true, error: null, logsFilters: effective });
+    const paging = (logsPaging = pagingFor(logsPaging, effective));
     try {
-      const result = await getSystemLogs(filters || {});
-      set({ 
-        systemLogs: result.logs, 
+      const result = await getSystemLogs(effective, paging.cursors);
+      if (seq !== logsRequestSeq) return;
+      if (result.cursors) paging.cursors = result.cursors;
+      set({
+        systemLogs: result.logs,
         logsTotal: result.total,
-        isLoadingLogs: false 
+        isLoadingLogs: false,
       });
     } catch (error: any) {
+      if (seq !== logsRequestSeq) return;
       set({ error: error.message || "Failed to fetch system logs", isLoadingLogs: false });
     }
   },

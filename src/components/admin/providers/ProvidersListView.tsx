@@ -373,6 +373,7 @@ export function ProvidersListView() {
           totalItems: providersTotal,
           pageSize: filters.limit || 20,
           onPageChange: handlePageChange,
+          onPageSizeChange: (limit) => setFilters((prev) => ({ ...prev, limit, page: 1 })),
         }}
         emptyMessage={t("admin.providers.empty")}
       />
