@@ -185,7 +185,7 @@ export default function LandingPage() {
           <div className="relative min-h-[560px] lg:min-h-[650px]" aria-label="Vfitfunlife app preview">
             <div className="absolute left-[2%] top-10 w-[48%] overflow-hidden rounded-[2rem] border border-[#DCE5F2] bg-[#F8FAFC] shadow-[0_24px_70px_rgba(15,23,42,0.18)]">
               <Image
-                src="/landing/home.png"
+                src="/landing/home.webp"
                 alt="Vfitfunlife home screen showing the VFit hub"
                 width={414}
                 height={896}
@@ -195,7 +195,7 @@ export default function LandingPage() {
             </div>
             <div className="absolute right-[1%] top-0 w-[47%] overflow-hidden rounded-[2rem] border border-[#111827] bg-[#111827] shadow-[0_24px_70px_rgba(15,23,42,0.28)]">
               <Image
-                src="/landing/booking.png"
+                src="/landing/booking.webp"
                 alt="Vfitfunlife booking screen with provider search"
                 width={414}
                 height={896}
@@ -205,7 +205,7 @@ export default function LandingPage() {
             </div>
             <div className="absolute bottom-6 left-[27%] w-[46%] overflow-hidden rounded-[2rem] border border-[#111827] bg-[#111827] shadow-[0_24px_70px_rgba(15,23,42,0.24)]">
               <Image
-                src="/landing/trainer.png"
+                src="/landing/trainer.webp"
                 alt="Vfitfunlife provider profile and booking screen"
                 width={414}
                 height={896}
