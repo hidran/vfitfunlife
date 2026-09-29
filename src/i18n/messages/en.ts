@@ -2348,6 +2348,7 @@ export const enMessages: Messages = {
   'provider.payment.submit': 'Confirm payment',
   'provider.payment.cancel': 'Cancel',
   'provider.bookingDetail.clientConfirmation': 'Client confirmation',
+  'provider.bookingDetail.status.awaitingClient': 'Payment recorded · awaiting client',
   'provider.bookingDetail.clientConfirmation.pending': 'Pending',
   'provider.bookingDetail.clientConfirmation.confirmed': 'Service confirmed',
   'provider.bookingDetail.clientConfirmation.disputed': 'Disputed',

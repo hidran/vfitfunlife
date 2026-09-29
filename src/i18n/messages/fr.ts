@@ -2333,6 +2333,7 @@ export const frMessages: Messages = {
   'provider.payment.submit': 'Confirmer le paiement',
   'provider.payment.cancel': 'Annuler',
   'provider.bookingDetail.clientConfirmation': 'Confirmation du client',
+  'provider.bookingDetail.status.awaitingClient': 'Paiement enregistré · attente du client',
   'provider.bookingDetail.clientConfirmation.pending': 'En attente',
   'provider.bookingDetail.clientConfirmation.confirmed': 'Prestation confirmée',
   'provider.bookingDetail.clientConfirmation.disputed': 'Contesté',

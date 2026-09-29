@@ -180,8 +180,17 @@ export default function BookingDetailClient() {
   };
 
   const statusMeta = BOOKING_STATUS_META[booking.status];
-  const statusBadgeVariant = statusMeta.tone;
-  const statusBadgeLabel = t(statusMeta.labelKey);
+  // The trainer's "payment received" already moves the booking to payment_confirmed; until the
+  // client confirms (or the 48h auto-confirm), say so instead of claiming it is confirmed.
+  const awaitingClient =
+    booking.status === 'payment_confirmed' &&
+    !!booking.paymentConfirmation &&
+    !booking.paymentConfirmation.clientResponse &&
+    !booking.paymentConfirmation.autoConfirmed;
+  const statusBadgeVariant = awaitingClient ? 'warning' : statusMeta.tone;
+  const statusBadgeLabel = awaitingClient
+    ? t('provider.bookingDetail.status.awaitingClient')
+    : t(statusMeta.labelKey);
 
   return (
     <div className="space-y-6">

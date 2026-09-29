@@ -2324,6 +2324,7 @@ export const esMessages: Messages = {
   'provider.payment.submit': 'Confirmar pago',
   'provider.payment.cancel': 'Cancelar',
   'provider.bookingDetail.clientConfirmation': 'Confirmación del cliente',
+  'provider.bookingDetail.status.awaitingClient': 'Pago registrado · esperando al cliente',
   'provider.bookingDetail.clientConfirmation.pending': 'Pendiente',
   'provider.bookingDetail.clientConfirmation.confirmed': 'Servicio confirmado',
   'provider.bookingDetail.clientConfirmation.disputed': 'Reclamado',

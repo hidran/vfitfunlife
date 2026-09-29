@@ -2331,6 +2331,7 @@ export const deMessages: Messages = {
   'provider.payment.submit': 'Zahlung bestätigen',
   'provider.payment.cancel': 'Abbrechen',
   'provider.bookingDetail.clientConfirmation': 'Bestätigung des Kunden',
+  'provider.bookingDetail.status.awaitingClient': 'Zahlung erfasst · wartet auf Kunde',
   'provider.bookingDetail.clientConfirmation.pending': 'Ausstehend',
   'provider.bookingDetail.clientConfirmation.confirmed': 'Leistung bestätigt',
   'provider.bookingDetail.clientConfirmation.disputed': 'Beanstandet',

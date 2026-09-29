@@ -2348,6 +2348,7 @@ export const itMessages = {
   'provider.payment.submit': 'Conferma pagamento',
   'provider.payment.cancel': 'Annulla',
   'provider.bookingDetail.clientConfirmation': 'Conferma del cliente',
+  'provider.bookingDetail.status.awaitingClient': 'Pagamento registrato · attesa cliente',
   'provider.bookingDetail.clientConfirmation.pending': 'In attesa',
   'provider.bookingDetail.clientConfirmation.confirmed': 'Servizio confermato',
   'provider.bookingDetail.clientConfirmation.disputed': 'Contestato',
