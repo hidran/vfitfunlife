@@ -12,8 +12,30 @@ import { bookingDayRef, readDayDocs } from "../availability/dayReads";
 import { decideBookingStart, romeDateOf } from "../availability/slots";
 import { validateServiceDuration } from "../availability/validate";
 import { hotCallableOptions, region } from "../lib/runtimeOptions";
+import { logger } from "firebase-functions";
+import { EMAIL_SECRETS } from "../lib/email";
+import { notifyTransition } from "./notify";
+import { cancellationTarget, newRequestTarget, type NotifyTarget } from "./notifyTargets";
 
 const db = admin.firestore();
+
+/**
+ * Best-effort delivery after a write has committed. notifyTransition already swallows
+ * channel failures; this also catches anything thrown before it gets there, so a booking
+ * is never reported as failed because a notification was.
+ */
+async function notifySafely(target: NotifyTarget | null): Promise<void> {
+  if (!target) return;
+  try {
+    await notifyTransition(target);
+  } catch (err) {
+    logger.warn("[booking-notify] notification failed", {
+      bookingId: target.bookingId,
+      event: target.event,
+      reason: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
 
 interface BookingData {
   /** Absent for trainer sessions (home / online / outdoor), which have no venue. */
@@ -236,7 +258,7 @@ async function calculateBookingFinancials(
  * Customers can create bookings for themselves
  */
 export const createBooking = onCall<BookingData>(
-  hotCallableOptions<BookingData>(),
+  hotCallableOptions<BookingData>({ secrets: EMAIL_SECRETS }),
   async (request: CallableRequest<BookingData>) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Must be authenticated");
@@ -417,6 +439,17 @@ export const createBooking = onCall<BookingData>(
       }
     });
 
+    // After the commit: tell the trainer there is a request waiting (plan A1).
+    await notifySafely(newRequestTarget(bookingRef.id, {
+      userId,
+      instructorId: bookingData.instructorId,
+      userName: bookingData.userName,
+      instructorName: bookingData.instructorName,
+      serviceName: bookingData.serviceName,
+      venueName: bookingData.venueName,
+      scheduledAt: scheduledDate,
+    }));
+
     return {
       bookingId: bookingRef.id,
       finalPrice: financials.finalPrice,
@@ -540,7 +573,7 @@ export const listBookings = onCall<ListBookingsData>(
  * Admins can cancel any booking
  */
 export const cancelBooking = onCall<CancelBookingData>(
-  { region },
+  { region, secrets: EMAIL_SECRETS },
   async (request: CallableRequest<CancelBookingData>) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Must be authenticated");
@@ -600,6 +633,7 @@ export const cancelBooking = onCall<CancelBookingData>(
       actorRole = "admin";
     }
 
+    const late = isLateCancellation(scheduledAt, now);
     const batch = db.batch();
 
     batch.update(bookingRef, {
@@ -612,7 +646,7 @@ export const cancelBooking = onCall<CancelBookingData>(
         ...(reason ? { note: reason } : {}),
       }),
       // PILOT: flagged for data collection only — no cancellation fees in the pilot.
-      lateCancellation: isLateCancellation(scheduledAt, now),
+      lateCancellation: late,
       cancelledAt: FieldValue.serverTimestamp(),
       cancelledBy,
       cancellationReason: reason || null,
@@ -644,6 +678,18 @@ export const cancelBooking = onCall<CancelBookingData>(
     }
 
     await batch.commit();
+
+    // Tell the other side (plan A2): client cancel -> trainer (with late flag),
+    // trainer/admin cancel -> client (with reason).
+    await notifySafely(cancellationTarget(bookingId, {
+      userId: booking.userId,
+      instructorId: booking.instructorId ?? null,
+      userName: booking.userName ?? null,
+      instructorName: booking.instructorName ?? null,
+      serviceName: booking.serviceName ?? null,
+      venueName: booking.venueName ?? null,
+      scheduledAt,
+    }, { cancelledBy: cancelledBy as "user" | "provider" | "admin", late, reason: reason ?? null }));
 
     // Write to audit_logs collection (only when actor is admin/superadmin)
     if (isAdminUser) {

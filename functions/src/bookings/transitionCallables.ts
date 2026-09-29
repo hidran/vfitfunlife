@@ -17,6 +17,7 @@ import { writeAuditLog } from "../lib/audit";
 import { EMAIL_SECRETS } from "../lib/email";
 import { canTransition } from "./transitions";
 import { notifyTransition } from "./notify";
+import { pickTransitionNote } from "./notifyTargets";
 import type { BookingStatus, StatusActorRole, TransitionActorRole } from "./types";
 
 const db = admin.firestore();
@@ -25,6 +26,8 @@ import { region } from "../lib/runtimeOptions";
 interface TransitionRequest {
   bookingId: string;
   note?: string;
+  /** Older clients sent the note as `reason`; accepted as an alias of `note`. */
+  reason?: string;
 }
 
 interface BookingDoc {
@@ -87,7 +90,7 @@ export async function applyTransition(opts: ApplyTransitionOptions) {
   const bookingId = request.data?.bookingId;
   if (!bookingId) throw new HttpsError("invalid-argument", "Missing bookingId");
 
-  const note = typeof request.data.note === "string" ? request.data.note.slice(0, 500) : undefined;
+  const note = pickTransitionNote(request.data);
   const ref = db.collection("bookings").doc(bookingId);
   const now = new Date();
 
@@ -199,12 +202,19 @@ export const cancelBookingAsTrainer = onCall<TransitionRequest>(
     extraFields: (b) => ({
       cancelledAt: FieldValue.serverTimestamp(),
       cancelledBy: "provider",
-      cancellationReason: request.data?.note ?? null,
+      cancellationReason: pickTransitionNote(request.data) ?? null,
       // PILOT: flagged for data collection only — no fees in the pilot.
       lateCancellation:
         b.scheduledAt.toDate().getTime() - Date.now() < 24 * 60 * 60 * 1000,
     }),
-    notify: (b) => ({ recipientUid: b.userId, event: "cancelled_by_trainer" }),
+    notify: (b) => {
+      const reason = pickTransitionNote(request.data);
+      return {
+        recipientUid: b.userId,
+        event: "cancelled_by_trainer",
+        ...(reason ? { context: { reason } } : {}),
+      };
+    },
   })
 );
 
