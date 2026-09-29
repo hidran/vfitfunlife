@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Search, Filter, Download, Calendar, ChevronDown } from 'lucide-react';
 import { BookingTable } from '@/components/provider/BookingTable';
+import { CancelBookingDialog } from '@/components/provider/CancelBookingDialog';
 import { Button } from '@/components/ui/button';
 import { useProviderStore } from '@/stores/providerStore';
 import { useI18n } from '@/hooks/useI18n';
@@ -62,10 +63,15 @@ export default function ProviderBookingsPage() {
     await completeBooking(id);
   };
 
-  const handleCancel = async (id: string) => {
-    if (confirm(t('provider.bookings.confirm.cancel'))) {
-      await cancelBooking(id);
-    }
+  const [cancelTargetId, setCancelTargetId] = useState<string | null>(null);
+
+  const handleCancel = (id: string) => {
+    setCancelTargetId(id);
+  };
+
+  const handleCancelConfirmed = async (reason?: string) => {
+    if (!cancelTargetId) return;
+    await cancelBooking(cancelTargetId, reason);
   };
 
   const formatDate = (date: Date | { toDate(): Date }) => {
@@ -217,6 +223,12 @@ export default function ProviderBookingsPage() {
         onSelect={handleSelect}
         onSelectAll={handleSelectAll}
         loading={isLoadingBookings}
+      />
+
+      <CancelBookingDialog
+        open={cancelTargetId !== null}
+        onClose={() => setCancelTargetId(null)}
+        onConfirm={handleCancelConfirmed}
       />
     </div>
   );
