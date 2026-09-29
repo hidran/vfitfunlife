@@ -172,7 +172,7 @@ State machine: `functions/src/bookings/transitions.ts:22-44`; notifications on t
 - [-] **D2** (user: no — createPaymentIntent unused with off-platform payments) Keep `createPaymentIntent` and `checkIn` warm (minInstances 1 in prod, ~€2/month each)?
 - [x] **D3** (app-shell SW `out/sw.js` + offline page; all icons were the Capacitor placeholder → regenerated from `resources/brand/vfit-mark.svg`) Service worker / offline strategy (also required for web push background delivery → A5 needs at least `firebase-messaging-sw.js`).
 - [x] **D4** (`/provider/location` + missing-location banner; `scripts/notify-missing-location.mjs` not run yet) 70 prod instructors have no coordinates → invisible in "near me". Data task for ops.
-- [~] **D5** (`isDemo` + stats exclusion live; staging backfilled; prod backfill awaiting user) Hide demo accounts from prod stats/metrics? (15 demo bookings seeded on prod 2026-09-29.)
+- [x] **D5** (`isDemo` + stats exclusion; backfilled staging + prod) Hide demo accounts from prod stats/metrics? (15 demo bookings seeded on prod 2026-09-29.)
 
 ### Phase E — Carry-overs from the performance plan (lower priority)
 
@@ -220,3 +220,4 @@ it isn't in the env files.
 | 2026-09-29 | bug | in progress | — | Provider report: calendar "Aggiungi appuntamento" does nothing. Cause: schedule page buttons (add appointment, block time ×2, day off, sync) had no handlers; blocked_times read from an unwritten collection. Fix: trainer-created bookings (new callable), day off / block time via availability date overrides, .ics export. |
 | 2026-09-29 | bug + D3–D5 | staging+prod | (merges + fixes) | Schedule: add appointment (`createBookingAsTrainer`), day off / block time via date overrides, .ics export; calendar query fixed (bookings never showed); fits 390px (dots + day sheet list); private notes save via `updateBookingPrivateNotes` (rules keep `internalNotes` server-only). Staging smoke all PASS; prod: 118 functions ACTIVE, schedule/add sheet/manifest/SW verified. |
 | 2026-09-29 | D5 prod | awaiting user | — | Prod dry-run: users 4, instructors 322 (321 are seeded `demo-trainer-*` of 392 total → only ~71 real), bookings 32, clients 8, transactions 10. Stats-only; demo trainers stay searchable. |
+| 2026-09-29 | D5 prod | applied | — | User approved. Prod `--apply`: 376 written, re-dry-run 0. Demo bookings are all recent (seeded 2026-09-29), so the nightly metrics job (7-day window + ROLLUP_VERSION 2 rebuild) clears them from metrics; no backfillMetricsDaily run needed. |
