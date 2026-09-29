@@ -16,6 +16,8 @@ import {
   AlertCircle,
   Camera,
   Globe,
+  MapPin,
+  ChevronRight,
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { useAuthStore } from '@/stores/authStore';
@@ -47,6 +49,9 @@ import { useProvider, useProviderServices } from '@/hooks/useProviders';
 import { updateRequestedCategories } from '@/lib/firebase/providerApplication';
 import { canAccessProviderArea } from '@/lib/providerStatus';
 import { CategoryLeafPicker } from '@/components/provider/CategoryLeafPicker';
+import { MissingLocationBanner } from '@/components/provider/MissingLocationBanner';
+import { useMyLocation } from '@/hooks/useMyLocation';
+import Link from 'next/link';
 
 // Form validation
 interface FormErrors {
@@ -138,6 +143,7 @@ export default function EditProfilePage() {
     canEditProfessional && !isPendingApplicant ? user?.id : undefined
   );
   const [requestedCategoryIds, setRequestedCategoryIds] = useState<string[]>([]);
+  const { data: myLocation } = useMyLocation(canEditProfessional ? user?.id : undefined);
 
   // Personal Info State
   const [formData, setFormData] = useState({
@@ -504,6 +510,8 @@ export default function EditProfilePage() {
           )}
         </div>
 
+        {canEditProfessional && <MissingLocationBanner className="mb-5" />}
+
         {/* Personal Tab */}
         {activeTab === 'personal' && (
           <div className="space-y-5">
@@ -760,6 +768,26 @@ export default function EditProfilePage() {
               {errors.categories && (
                 <p className="mt-2 text-sm text-error">{errors.categories}</p>
               )}
+            </div>
+
+            {/* Search location: set on /provider/location, where "near me" search finds them */}
+            <div>
+              <span className="block text-sm font-medium text-text-tertiary mb-2">
+                {t('profile.edit.location.label')}
+              </span>
+              <Link
+                href="/provider/location"
+                className="flex min-h-[44px] items-center gap-3 rounded-xl border border-hairline bg-surface-elevated px-4 py-3 text-content transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-primary"
+              >
+                <MapPin size={18} className="flex-shrink-0 text-text-tertiary" aria-hidden />
+                <span className="flex-1 text-sm">
+                  {myLocation?.coords
+                    ? t('profile.edit.location.set', { city: myLocation.city || '—' })
+                    : t('profile.edit.location.notSet')}
+                </span>
+                <span className="text-sm font-medium text-section-primary">{t('profile.edit.location.edit')}</span>
+                <ChevronRight size={18} className="flex-shrink-0 text-text-tertiary" aria-hidden />
+              </Link>
             </div>
 
             {/* Years of Experience */}

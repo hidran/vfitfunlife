@@ -377,9 +377,11 @@ service cloud.firestore {
 
       // Update: admin can change anything; the owner may edit their profile but may
       // NOT change isVerified or applicationStatus (only admin verifies/rejects).
+      // Ownership by `uid` field or by path id, as for read: older provider docs lack a
+      // `uid`, and their owners must still be able to set their own location (D4).
       allow update: if isAdmin() ||
         (isAuthenticated() &&
-         resource.data.uid == request.auth.uid &&
+         (resource.data.get('uid', null) == request.auth.uid || request.auth.uid == instructorId) &&
          request.resource.data.get(['providerProfile', 'isVerified'], false) ==
            resource.data.get(['providerProfile', 'isVerified'], false) &&
          request.resource.data.get('applicationStatus', 'pending') ==

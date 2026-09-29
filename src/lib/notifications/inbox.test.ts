@@ -3,6 +3,7 @@ import {
   bookingDetailHref,
   categoryForType,
   countUnread,
+  inAppLink,
   isTrainerOnlyType,
   normalizeNotification,
   sortNewestFirst,
@@ -99,5 +100,20 @@ describe('booking routing', () => {
     expect(isTrainerOnlyType('booking_reminder')).toBe(false);
     expect(isTrainerOnlyType('booking_accepted')).toBe(false);
     expect(isTrainerOnlyType('booking_rescheduled')).toBe(false);
+  });
+});
+
+describe('inAppLink', () => {
+  it('opens the same-app route of a system notification', () => {
+    const n = normalizeNotification('d4', { type: 'system', data: { link: '/provider/location' } });
+    expect(n.category).toBe('system');
+    expect(inAppLink(n)).toBe('/provider/location');
+  });
+
+  it('refuses off-site and missing links', () => {
+    expect(inAppLink({ data: { link: 'https://evil.example' } })).toBeNull();
+    expect(inAppLink({ data: { link: '//evil.example' } })).toBeNull();
+    expect(inAppLink({ data: { link: '/\\evil.example' } })).toBeNull();
+    expect(inAppLink({ data: {} })).toBeNull();
   });
 });

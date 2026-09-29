@@ -115,3 +115,14 @@ export function bookingDetailHref(bookingId: string, asTrainer: boolean): string
   const base = asTrainer ? '/provider/bookings/detail' : '/bookings/detail';
   return `${base}?id=${encodeURIComponent(bookingId)}`;
 }
+
+/**
+ * The in-app route a non-booking notification points at (`data.link`, e.g. the D4
+ * missing-location nudge's `/provider/location`), or null. Same-app paths only: a
+ * notification must not be able to send the user off-site.
+ */
+export function inAppLink(notification: Pick<InboxNotification, 'data'>): string | null {
+  const link = notification.data?.link;
+  if (typeof link !== 'string') return null;
+  return link.startsWith('/') && !link.startsWith('//') && !link.includes('\\') ? link : null;
+}

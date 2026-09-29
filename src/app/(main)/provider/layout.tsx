@@ -16,6 +16,7 @@ import {
   MessageCircle,
   X,
   Clock,
+  MapPin,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -43,6 +44,7 @@ const NAV_ITEMS: { icon: LucideIcon; labelKey: MessageKey; href: string }[] = [
   { icon: Wallet, labelKey: 'provider.layout.nav.earnings', href: '/provider/earnings' },
   { icon: Briefcase, labelKey: 'provider.layout.nav.services', href: '/provider/services' },
   { icon: Settings, labelKey: 'provider.layout.nav.availability', href: '/provider/availability' },
+  { icon: MapPin, labelKey: 'provider.layout.nav.location', href: '/provider/location' },
 ];
 
 export default function ProviderLayout({ children }: ProviderLayoutProps) {

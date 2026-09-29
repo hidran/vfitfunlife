@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/Badge';
 import { useNotificationStore, type InboxNotification } from '@/stores/notificationStore';
-import type { InboxCategory } from '@/lib/notifications/inbox';
+import { inAppLink, type InboxCategory } from '@/lib/notifications/inbox';
 import { useI18n } from '@/hooks/useI18n';
 import type { MessageKey } from '@/i18n/messages';
 import { toLocaleTag } from '@/types/locale';
@@ -111,7 +111,12 @@ export default function NotificationsPage() {
         console.error('[notifications] mark read failed', error)
       );
     }
-    if (!notification.bookingId || !uid) return;
+    if (!notification.bookingId) {
+      const link = inAppLink(notification);
+      if (link) router.push(link);
+      return;
+    }
+    if (!uid) return;
     setOpeningId(notification.id);
     try {
       const { resolveNotificationHref } = await import('@/lib/firebase/notifications');
@@ -198,7 +203,7 @@ export default function NotificationsPage() {
             {visibleNotifications.map((notification) => {
               const meta = TYPE_META[notification.category];
               const Icon = meta.icon;
-              const hasTarget = Boolean(notification.bookingId);
+              const hasTarget = Boolean(notification.bookingId || inAppLink(notification));
               const title = notification.title || t(meta.labelKey);
 
               return (
