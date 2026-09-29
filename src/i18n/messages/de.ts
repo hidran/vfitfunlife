@@ -2372,6 +2372,7 @@ export const deMessages: Messages = {
   'clients.training.status.published': 'Veröffentlicht',
   'plans.title': 'Meine Pläne',
   'plans.subtitle': 'Von deinem Trainer erstellte Einheiten',
+  'plans.choosePlan': 'Plan auswählen',
   'plans.empty': 'Noch kein Plan. Dein Trainer weist dir einen zu.',
   'plans.draftBadge': 'Entwurf — noch nicht veröffentlicht',
   'plans.aiBadge': 'KI-generiert — vom Trainer geprüft',

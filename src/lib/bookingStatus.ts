@@ -28,6 +28,21 @@ export const BOOKING_STATUS_META: Record<BookingStatus, StatusMeta> = {
   payment_confirmed: { labelKey: 'booking.status.paymentConfirmed' as MessageKey, tone: 'success' },
 };
 
+const LEGACY_STATUS_META: Record<string, StatusMeta> = {
+  pending: { labelKey: 'booking.status.pending' as MessageKey, tone: 'warning' },
+  confirmed: { labelKey: 'booking.status.confirmed' as MessageKey, tone: 'success' },
+  in_progress: { labelKey: 'booking.status.inProgress' as MessageKey, tone: 'info' },
+  cancelled: { labelKey: 'booking.status.cancelled' as MessageKey, tone: 'error' },
+};
+
+/**
+ * Presentation for any stored status string, including the pre-P0-1 legacy values still
+ * present on old bookings. Unknown values get a neutral badge instead of crashing.
+ */
+export function bookingStatusMeta(status: string): StatusMeta | null {
+  return BOOKING_STATUS_META[status as BookingStatus] ?? LEGACY_STATUS_META[status] ?? null;
+}
+
 /** Terminal states — nothing transitions out of these. Mirrors the server-side guard. */
 export const TERMINAL_STATUSES: BookingStatus[] = [
   'declined',

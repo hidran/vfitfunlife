@@ -2365,6 +2365,7 @@ export const esMessages: Messages = {
   'clients.training.status.published': 'Publicada',
   'plans.title': 'Mis rutinas',
   'plans.subtitle': 'Entrenamientos preparados por tu entrenador',
+  'plans.choosePlan': 'Elige un plan',
   'plans.empty': 'Aún no hay rutina. Tu entrenador te asignará una.',
   'plans.draftBadge': 'Borrador — aún no publicado',
   'plans.aiBadge': 'Generada con IA — revisada por tu entrenador',

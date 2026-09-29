@@ -44,7 +44,9 @@
     "e2e:journey": "playwright test --config playwright.e2e.config.ts",
     "seed:demo-accounts": "node scripts/seed-demo-accounts.mjs",
     "seed:demo-accounts:staging": "node scripts/seed-demo-accounts.mjs --project vfit-app-staging",
-    "seed:demo-accounts:prod": "node scripts/seed-demo-accounts.mjs --project vfit-funlife"
+    "seed:demo-accounts:prod": "node scripts/seed-demo-accounts.mjs --project vfit-funlife",
+    "seed:demo-clients": "node scripts/seed-demo-clients.mjs",
+    "seed:demo-clients:staging": "node scripts/seed-demo-clients.mjs --project vfit-app-staging"
   },
   "dependencies": {
     "@capacitor-firebase/authentication": "^8.2.0",

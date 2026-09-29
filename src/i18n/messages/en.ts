@@ -2389,6 +2389,7 @@ export const enMessages: Messages = {
   'clients.training.status.published': 'Published',
   'plans.title': 'My plans',
   'plans.subtitle': 'Workouts prepared by your trainer',
+  'plans.choosePlan': 'Choose a plan',
   'plans.empty': 'No plan yet. Your trainer will assign one.',
   'plans.draftBadge': 'Draft — not published yet',
   'plans.aiBadge': 'AI-generated — reviewed by your trainer',

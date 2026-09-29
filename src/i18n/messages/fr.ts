@@ -2374,6 +2374,7 @@ export const frMessages: Messages = {
   'clients.training.status.published': 'Publié',
   'plans.title': 'Mes programmes',
   'plans.subtitle': 'Séances préparées par votre coach',
+  'plans.choosePlan': 'Choisir un programme',
   'plans.empty': 'Aucun programme pour le moment. Votre coach vous en attribuera un.',
   'plans.draftBadge': 'Brouillon — pas encore publié',
   'plans.aiBadge': 'Généré par IA — validé par votre coach',

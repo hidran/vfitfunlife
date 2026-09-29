@@ -1,16 +1,9 @@
 'use client';
 
-import { cn } from '@/lib/utils';
+import { StatusBadge } from './StatusBadge';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
 import type { ProviderClient, ClientBookingHistory } from '@/types/provider';
-
-const STATUS_COLORS: Record<string, string> = {
-  completed: 'bg-green-500/20 text-green-400 light:text-green-700',
-  confirmed: 'bg-blue-500/20 text-blue-400 light:text-blue-700',
-  pending: 'bg-yellow-500/20 text-yellow-400 light:text-yellow-700',
-  cancelled: 'bg-red-500/20 text-red-400 light:text-red-700',
-};
 
 interface OverviewTabProps {
   client: ProviderClient;
@@ -58,9 +51,7 @@ export default function OverviewTab({ client, bookingHistory }: OverviewTabProps
               </div>
               <div className="text-right">
                 <p className="font-medium text-content">€{entry.amount}</p>
-                <span className={cn('text-xs px-2 py-0.5 rounded', STATUS_COLORS[entry.status as keyof typeof STATUS_COLORS])}>
-                  {entry.status}
-                </span>
+                <StatusBadge status={entry.status} />
               </div>
             </div>
           ))}

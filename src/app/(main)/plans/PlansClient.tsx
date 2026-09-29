@@ -8,7 +8,7 @@
  * few places in the app where the client is the author rather than a Cloud Function.
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { CheckCircle2, Circle, Dumbbell, Info, Sparkles } from 'lucide-react';
 import { useI18n } from '@/hooks/useI18n';
@@ -49,7 +49,12 @@ export default function PlansClient() {
   });
   const plans = plansQuery.data ?? null;
   const library = libraryQuery.data ?? {};
-  const plan = plans?.[0] ?? null;
+  // A client can have several published plans (e.g. a new block while the old one is still
+  // running): newest first by default, the rest reachable through the selector below.
+  // Keyed by clientId + plan id: plan ids are only unique within one trainer relationship.
+  const [selectedPlanKey, setSelectedPlanKey] = useState<string | null>(null);
+  const planKey = (p: Plan) => `${p.clientId}/${p.id}`;
+  const plan = plans?.find((p) => planKey(p) === selectedPlanKey) ?? plans?.[0] ?? null;
 
   const progressQuery = useQuery({
     queryKey: queryKeys.planProgress(plan?.clientId, plan?.id),
@@ -59,9 +64,18 @@ export default function PlansClient() {
   // Optimistic local edits (ticking a set, saving day feedback) layer on top of the fetched
   // baseline so the UI updates instantly without waiting on a refetch.
   const [progressOverride, setProgressOverride] = useState<Record<string, PlanProgressEntry>>({});
-  const progress = { ...(progressQuery.data ?? {}), ...progressOverride };
+  const progress = useMemo(
+    () => ({ ...(progressQuery.data ?? {}), ...progressOverride }),
+    [progressQuery.data, progressOverride],
+  );
   const [openWeek, setOpenWeek] = useState(1);
   const [savingDay, setSavingDay] = useState<string | null>(null);
+
+  const selectPlan = (key: string) => {
+    setSelectedPlanKey(key);
+    setOpenWeek(1);
+    setProgressOverride({});
+  };
 
   const toggleExercise = useCallback(
     async (week: number, dayLabel: string, index: number, exerciseCount: number) => {
@@ -123,6 +137,31 @@ export default function PlansClient() {
           )}
         </div>
       </header>
+
+      {plans.length > 1 && (
+        <div
+          className="flex gap-2 overflow-x-auto pb-1"
+          role="tablist"
+          aria-label={t('plans.choosePlan' as MessageKey)}
+        >
+          {plans.map((p) => (
+            <button
+              key={planKey(p)}
+              role="tab"
+              aria-selected={planKey(p) === planKey(plan)}
+              onClick={() => selectPlan(planKey(p))}
+              className={cn(
+                'min-h-11 whitespace-nowrap rounded-full border px-4 text-sm font-medium',
+                planKey(p) === planKey(plan)
+                  ? 'border-transparent bg-content text-background-dark'
+                  : 'border-hairline bg-surface-elevated text-content-muted',
+              )}
+            >
+              {p.title}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Shown whenever the client flagged an injury. Deliberately prominent: a trainer
           cannot give medical advice, and this is the line that says so. */}

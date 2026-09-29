@@ -2389,6 +2389,7 @@ export const itMessages = {
   'clients.training.status.published': 'Pubblicata',
   'plans.title': 'Le mie schede',
   'plans.subtitle': 'Gli allenamenti preparati dal tuo trainer',
+  'plans.choosePlan': 'Scegli la scheda',
   'plans.empty': 'Nessuna scheda al momento. Il tuo trainer te ne assegnerà una.',
   'plans.draftBadge': 'Bozza — non ancora pubblicata',
   'plans.aiBadge': 'Generata con AI — rivista dal trainer',
