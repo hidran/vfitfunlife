@@ -2919,7 +2919,7 @@ export const itMessages = {
 
   // ─── Provider Reviews (public) ────────────────────────────────────────
   'providerReviews.title': 'Recensioni Provider',
-  'providerReviews.providerId': 'Provider ID',
+  'providerReviews.unknownProvider': 'Trainer',
   'providerReviews.totalReviews': '{{count}} recensioni totali',
   'providerReviews.filter.all': 'Tutte',
   'providerReviews.filter.stars': '{{count}} stelle',

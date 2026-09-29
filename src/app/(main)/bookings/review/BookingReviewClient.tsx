@@ -314,7 +314,13 @@ export default function BookingReviewClient() {
       </div>
 
       {showForm && (
-        <div className="fixed bottom-0 left-0 right-0 border-t border-hairline bg-background-dark/90 p-4 backdrop-blur-xl">
+        // Sits above the fixed TabBar (h-16 + safe area, z-50) so the submit button isn't covered;
+        // the content's pb-28 plus MainLayout's tab-bar padding keep the last field clear of it.
+        // pr-20 leaves room for the floating assistant button (same as profile/edit).
+        <div
+          data-testid="review-submit-bar"
+          className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] left-0 right-0 z-40 border-t border-hairline bg-background-dark/90 p-4 pr-20 backdrop-blur-xl"
+        >
           <Button
             className="w-full"
             onClick={handleSubmit}

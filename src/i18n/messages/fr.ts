@@ -2824,7 +2824,7 @@ export const frMessages: Messages = {
 
   // ─── Provider Reviews (public) ────────────────────────────────────────
   'providerReviews.title': 'Avis du prestataire',
-  'providerReviews.providerId': 'ID du prestataire',
+  'providerReviews.unknownProvider': 'Coach',
   'providerReviews.totalReviews': '{{count}} avis au total',
   'providerReviews.filter.all': 'Tous',
   'providerReviews.filter.stars': '{{count}} étoiles',

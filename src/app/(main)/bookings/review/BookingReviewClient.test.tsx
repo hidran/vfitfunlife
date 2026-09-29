@@ -101,6 +101,17 @@ describe('BookingReviewClient', () => {
     expect(updateBookingInList).not.toHaveBeenCalled();
   });
 
+  it('lifts the submit bar above the fixed tab bar (h-16 + safe area, z-50)', () => {
+    render(<BookingReviewClient />);
+    const bar = screen.getByTestId('review-submit-bar');
+    // jsdom has no layout: assert the offset/stacking classes the TabBar pattern relies on.
+    expect(bar.className).toContain('bottom-[calc(4rem+env(safe-area-inset-bottom))]');
+    expect(bar.className).toContain('z-40');
+    // Clear of the floating assistant launcher on the right.
+    expect(bar.className).toContain('pr-20');
+    expect(bar.className).not.toMatch(/(^|\s)bottom-0(\s|$)/);
+  });
+
   it('does not offer the form for a session that has not happened', () => {
     booking.status = 'accepted';
     render(<BookingReviewClient />);

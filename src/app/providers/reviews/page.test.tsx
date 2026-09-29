@@ -19,12 +19,25 @@ vi.mock('@/hooks/useCommunity', () => ({
   useInstructorReviews: (id: string | undefined) => useInstructorReviews(id),
 }));
 
+let mockProfile: { fullName: string; avatarUrl: string | null } | undefined;
+let mockProfileLoading = false;
+const useProviderPublicProfile = vi.fn((id: string | undefined) => {
+  void id;
+  return { data: mockProfile, isLoading: mockProfileLoading };
+});
+vi.mock('@/hooks/useProviderPublicProfile', () => ({
+  useProviderPublicProfile: (id: string | undefined) => useProviderPublicProfile(id),
+}));
+
 describe('/providers/reviews?id=', () => {
   beforeEach(() => {
     window.history.replaceState(null, '', '/providers/reviews/');
     mockReviews = [];
     mockLoading = false;
+    mockProfile = { fullName: 'Coach Marco', avatarUrl: null };
+    mockProfileLoading = false;
     useInstructorReviews.mockClear();
+    useProviderPublicProfile.mockClear();
   });
 
   it('renders the stored reviews of the provider in the id query param', () => {
@@ -38,13 +51,33 @@ describe('/providers/reviews?id=', () => {
     ];
     render(<ProviderReviewsPage />);
     expect(useInstructorReviews).toHaveBeenCalledWith('prov-42');
-    expect(screen.getByText('prov-42')).toBeInTheDocument();
+    expect(useProviderPublicProfile).toHaveBeenCalledWith('prov-42');
+    // The trainer's name, never the raw document id.
+    expect(screen.getByTestId('provider-name')).toHaveTextContent('Coach Marco');
+    expect(screen.queryByText('prov-42')).not.toBeInTheDocument();
     expect(screen.getByText('Allenamento perfetto')).toBeInTheDocument();
     expect(screen.getByText('Luca R.')).toBeInTheDocument();
     // Average of 5 and 3.
     expect(screen.getByText('4.0')).toBeInTheDocument();
     // Known tag keys are translated; unknown ones are dropped.
     expect(screen.queryByText('not-a-tag')).not.toBeInTheDocument();
+  });
+
+  it('falls back to a generic label when the provider profile is unavailable', () => {
+    mockSearchParams = new URLSearchParams('id=prov-42');
+    mockProfile = undefined;
+    render(<ProviderReviewsPage />);
+    expect(screen.getByTestId('provider-name')).toHaveTextContent('Trainer');
+    expect(screen.queryByText('prov-42')).not.toBeInTheDocument();
+  });
+
+  it('shows a placeholder instead of the id while the profile loads', () => {
+    mockSearchParams = new URLSearchParams('id=prov-42');
+    mockProfile = undefined;
+    mockProfileLoading = true;
+    render(<ProviderReviewsPage />);
+    expect(screen.queryByTestId('provider-name')).not.toBeInTheDocument();
+    expect(screen.queryByText('prov-42')).not.toBeInTheDocument();
   });
 
   it('filters by star rating', () => {

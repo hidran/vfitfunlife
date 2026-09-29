@@ -2815,7 +2815,7 @@ export const esMessages: Messages = {
 
   // ─── Provider Reviews (public) ────────────────────────────────────────
   'providerReviews.title': 'Reseñas del proveedor',
-  'providerReviews.providerId': 'ID del proveedor',
+  'providerReviews.unknownProvider': 'Entrenador',
   'providerReviews.totalReviews': '{{count}} reseñas en total',
   'providerReviews.filter.all': 'Todas',
   'providerReviews.filter.stars': '{{count}} estrellas',
