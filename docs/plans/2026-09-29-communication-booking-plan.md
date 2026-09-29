@@ -118,13 +118,13 @@ State machine: `functions/src/bookings/transitions.ts:22-44`; notifications on t
   (user `preferredLanguage`), uses service name / trainer name instead of `venueName` when null.
   *Done when:* unit test for trainer-session text; staging job run (or manual trigger) produces inbox entries.
 
-- [~] **A7 — Email check**: confirm `RESEND_API_KEY` secret exists on staging and prod
+- [x] **A7 — Email check**: confirm `RESEND_API_KEY` secret exists on staging and prod
   (`firebase functions:secrets:get RESEND_API_KEY -P <p>` — don't print the value). If missing, ask
   the user for a key; document in `docs/deployment/guide.md`. *Done when:* status recorded in Log.
 
 ### Phase B — Booking flow correctness (P1)
 
-- [~] (`e10a958`, staging backfilled; prod pending) **B1 — Auto-maintain the provider's client roster.** On booking create / status change
+- [x] (`e10a958`) **B1 — Auto-maintain the provider's client roster.** On booking create / status change
   (trigger `onDocumentWritten('bookings/{id}')` or inside callables), upsert
   `clients/{instructorId}_{userId}` (decide id scheme; migrate/merge the existing seeded
   `demo-client-*` ids or leave them) with `providerId,userId,name,email,phone,firstVisit,lastVisit,
@@ -136,7 +136,7 @@ State machine: `functions/src/bookings/transitions.ts:22-44`; notifications on t
 - [x] (`2f02ff4`) **B2 — Client booking note**: send the note from `booking/confirm/page.tsx:120` (add a
   textarea, max ~500 chars, i18n), show it on the trainer's booking detail.
 
-- [ ] **B3 — Honest checkout**: remove the UI-only 5% platform fee and mock saved cards from
+- [x] **B3 — Honest checkout**: remove the UI-only 5% platform fee and mock saved cards from
   `booking/confirm/page.tsx` (show "Pagamento al trainer" / pay-in-person explanation); make
   `pointsToUse` semantics match the server (toggle "use my points"). Price shown must equal the
   server's `finalPrice` (add a test around the price breakdown). **Decision needed from user
@@ -146,7 +146,7 @@ State machine: `functions/src/bookings/transitions.ts:22-44`; notifications on t
   `completed` **and** `payment_confirmed`; one review per booking; show on
   `/providers/reviews?id=`. Check rules and the rating aggregation on the instructor doc.
 
-- [ ] **B5 — Stripe webhook status**: make `stripeWebhook` stop writing legacy `confirmed`
+- [x] **B5 — Stripe webhook status**: make `stripeWebhook` stop writing legacy `confirmed`
   (map to current state machine or leave booking status untouched) — only if Stripe stays (D1).
 
 ### Phase C — Chat (P1, larger)
@@ -168,7 +168,7 @@ State machine: `functions/src/bookings/transitions.ts:22-44`; notifications on t
 
 ### Phase D — Decisions for the user (ask, don't assume)
 
-- [ ] **D1** Payments: keep off-platform "trainer records payment" or take payment via Stripe?
+- [x] **D1** (off-platform; client confirms service received → +50 XP) Payments: keep off-platform "trainer records payment" or take payment via Stripe?
 - [ ] **D2** Keep `createPaymentIntent` and `checkIn` warm (minInstances 1 in prod, ~€2/month each)?
 - [ ] **D3** Service worker / offline strategy (also required for web push background delivery → A5 needs at least `firebase-messaging-sw.js`).
 - [ ] **D4** 70 prod instructors have no coordinates → invisible in "near me". Data task for ops.
@@ -210,3 +210,8 @@ it isn't in the env files.
 | 2026-09-29 | fixes | done | (this commit + merges) | From staging smoke test: /book now populates booking store (profile → confirm no longer dead-ends); trainer cancel reason dialog (A3 UI); review + reschedule submit bars above bottom nav; trainer name on reviews page; "request sent" banner only while `requested`; accessible terms checkbox; translated payment status/type labels. |
 | 2026-09-29 | deploy | staging+prod | b05ee43+ | Staging smoke (Playwright, 390px): booking→trainer inbox, note, roster, cancel w/ reason, reviews, chat (7/7), fixes re-verified. Prod: rules+indexes (48 READY), functions (116 ACTIVE, new: syncClientRosterOnBookingWrite, unregisterFcmToken, onChatMessageCreated), hosting; prod smoke read-only: inbox/chat/clients/reviews/profile load, 0 console errors. |
 | 2026-09-29 | B1 prod | awaiting user | — | Prod dry-run: 32 bookings, 8 pairs → 1 create (demo-trainer-boxe-01_7MK6…), 7 updates (demo-client-*). Needs user OK before `--apply`. |
+| 2026-09-29 | D1 | decided | — | User: payment stays off-platform; trainer confirms paid, client confirms "service received" in app and earns XP. B3/B5 + XP-on-confirm in progress. |
+| 2026-09-29 | B1 prod | applied | — | User approved. Prod `--apply`: 8 written, re-dry-run 0. |
+| 2026-09-29 | A7 | done | — | User approved copying prod RESEND_API_KEY to staging (value never printed); staging functions redeployed. |
+| 2026-09-29 | A5 web | staging verified | (push fix) | VAPID key pairs generated in Firebase console for both projects (prod → .env, staging → .env.staging + .env.local; gitignored). Fixed getToken racing SW activation. Staging: token stored on demo-provider-vfit, FCM multicast success 1/1, foreground toast shown. iOS/Android still need native setup (see A5 notes). |
+| 2026-09-29 | B3,B5,XP | done | (D1 merge) | Checkout: no fee/mock cards, "pay the trainer" card, shared pricing (server `pricing.ts` ↔ `src/lib/bookingPrice.ts`), points toggle, real promo lookup. Webhook logs only. +50 XP (xp/level + xpTransactions) only on explicit client "service received", once (`xpAwarded`); auto-confirm gives no XP. |
