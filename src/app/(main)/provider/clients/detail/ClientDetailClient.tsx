@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, Mail, Phone, Calendar, MessageSquare } from 'lucide-react';
@@ -12,6 +12,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useProviderStore } from '@/stores/providerStore';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
+import { chatHref } from '@/lib/routes';
 import OverviewTab from './tabs/OverviewTab';
 import MeetingsTab from './tabs/MeetingsTab';
 import NotesTab from './tabs/NotesTab';
@@ -27,6 +28,7 @@ const TABS: TabId[] = ['overview', 'meetings', 'goals', 'training', 'recipes', '
 
 export default function ClientDetailClient() {
   const { t, locale } = useI18n();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const clientId = searchParams?.get('id') ?? undefined;
 
@@ -141,10 +143,20 @@ export default function ClientDetailClient() {
           </div>
 
           <div className="flex gap-2">
-            <Button variant="secondary">
-              <MessageSquare className="w-4 h-4 mr-2" />
-              {t('provider.clientDetail.message')}
-            </Button>
+            {/* clients/{id} is the roster entry; the chat is with the client's user account. */}
+            {client.userId && (
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  router.push(
+                    chatHref(client.userId, { name: client.name, photoUrl: client.photoUrl ?? null }),
+                  )
+                }
+              >
+                <MessageSquare className="w-4 h-4 mr-2" aria-hidden="true" />
+                {t('provider.clientDetail.message')}
+              </Button>
+            )}
             <Button>
               <Calendar className="w-4 h-4 mr-2" />
               {t('provider.clientDetail.bookSession')}
