@@ -993,7 +993,14 @@ and the rules only need to allow "set my own count to 0".
 ### conversations/{id}/messages/{messageId}
 
 `senderId` (must be the caller), `text` (1–2000 chars, not blank), `createdAt`
-(`request.time`). Immutable: no edits or deletes by anyone.
+(`request.time`). Immutable for clients: no edits or deletes by anyone. The trigger stamps
+`processedAt` (admin SDK) so a redelivered trigger neither double-counts nor re-notifies.
+
+**Notifications** (`functions/src/chat/onMessageCreated.ts`, `onChatMessageCreated`): on each
+message the other participant gets an in-app entry in `users/{uid}/notifications`
+(`type: "chat_message"`, `data: { conversationId, senderId }`) and a push (skipped when their
+`notificationSettings.push.chat` is false) — both at most once per conversation per recipient
+per 5 minutes (`lastPushAt`). Every message still increments `unread`.
 
 Index: `conversations` — `participantIds` ARRAY_CONTAINS, `lastMessageAt` DESC (the `/chat` inbox).
 
