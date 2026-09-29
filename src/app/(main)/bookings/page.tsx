@@ -93,7 +93,7 @@ export default function BookingsPage() {
   };
 
   const handleReview = (id: string) => {
-    router.push(`/bookings/${id}/review`);
+    router.push(`/bookings/review?id=${encodeURIComponent(id)}`);
   };
 
   return (

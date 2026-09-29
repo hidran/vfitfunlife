@@ -309,11 +309,17 @@ export async function getLeaderboard(data: {
   return result.data;
 }
 
+/**
+ * Publish the review of a delivered booking. The server allows one per booking and rejects
+ * with `functions/already-exists` on a second one — see src/lib/reviews/errors.ts.
+ */
 export async function submitReview(data: {
   bookingId: string;
+  /** Integer 1–5. */
   rating: number;
   comment?: string;
-  images?: string[];
+  /** Quick-tag keys (REVIEW_TAG_KEYS); unknown keys are dropped server-side. */
+  tags?: string[];
 }): Promise<ReviewResult> {
   const functions = await getFunctionsInstance();
   const fn = httpsCallable<typeof data, ReviewResult>(functions, "submitReview");

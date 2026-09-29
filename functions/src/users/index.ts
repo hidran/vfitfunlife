@@ -1,7 +1,6 @@
 import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import { getUserRoleInfo } from "../utils/roles";
-import { awardXp } from "./gamification";
 
 const db = admin.firestore();
 import { region } from "../lib/runtimeOptions";
@@ -30,6 +29,9 @@ export * from "./family";
 // Export admin-only mutation functions (superadmin-gated)
 export * from "./adminMutations";
 export * from "./bulkDelete";
+
+// Review callable (one review per delivered booking)
+export * from "./reviews";
 
 interface UserUpdateData {
   fullName?: string;
@@ -64,21 +66,6 @@ interface DeleteAddressData {
 interface LeaderboardData {
   type?: string;
   limit?: number;
-}
-
-interface ReviewData {
-  bookingId: string;
-  rating: number;
-  comment?: string;
-  images?: string[];
-}
-
-interface BookingData {
-  venueId: string;
-  instructorId?: string;
-  hasReviewed: boolean;
-  status: string;
-  userId: string;
 }
 
 /**
@@ -385,170 +372,3 @@ export const getLeaderboard = onCall<LeaderboardData>(
     return { leaderboard };
   }
 );
-
-/**
- * Submit a review
- */
-export const submitReview = onCall<ReviewData>(
-  { region },
-  async (request: CallableRequest<ReviewData>) => {
-    if (!request.auth) {
-      throw new HttpsError("unauthenticated", "Must be authenticated");
-    }
-
-    const userId = request.auth.uid;
-    const { bookingId, rating, comment, images } = request.data;
-
-    // Validate booking
-    const bookingDoc = await db.collection("bookings").doc(bookingId).get();
-    const booking = bookingDoc.data() as BookingData;
-
-    if (!booking) {
-      throw new HttpsError("not-found", "Booking not found");
-    }
-
-    if (booking.userId !== userId) {
-      throw new HttpsError("permission-denied", "Not authorized");
-    }
-
-    if (booking.hasReviewed) {
-      throw new HttpsError("already-exists", "Review already submitted");
-    }
-
-    if (booking.status !== "completed") {
-      throw new HttpsError("failed-precondition", "Booking not completed");
-    }
-
-    const userDoc = await db.collection("users").doc(userId).get();
-    const userData = userDoc.data();
-
-    // Create review
-    const reviewData = {
-      userId,
-      userName: userData?.fullName || "Utente",
-      userAvatarUrl: userData?.avatarUrl || null,
-      bookingId,
-      rating,
-      comment: comment || "",
-      images: images || [],
-      isVerified: true, // Verified because they have a booking
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    };
-
-    const batch = db.batch();
-
-    // Add to venue reviews
-    const venueReviewRef = db
-      .collection("venues")
-      .doc(booking.venueId)
-      .collection("reviews")
-      .doc();
-    batch.set(venueReviewRef, reviewData);
-
-    // Add to instructor reviews if applicable
-    if (booking.instructorId) {
-      const instructorReviewRef = db
-        .collection("instructors")
-        .doc(booking.instructorId)
-        .collection("reviews")
-        .doc();
-      batch.set(instructorReviewRef, reviewData);
-    }
-
-    // Update booking
-    batch.update(db.collection("bookings").doc(bookingId), {
-      hasReviewed: true,
-      reviewId: venueReviewRef.id,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-
-    // Award XP + points for review (vision doc §4: +10 XP, +10 points).
-    const reviewXp = 10;
-    const reviewPoints = 10;
-
-    batch.update(db.collection("users").doc(userId), {
-      pointsBalance: admin.firestore.FieldValue.increment(reviewPoints),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-
-    // XP is awarded outside the batch via awardXp (which also writes the xpTransactions ledger).
-    // We capture the updated points balance after the batch commits for the transaction record.
-    await batch.commit();
-
-    let pointsBalanceAfter: number;
-    try {
-      const afterSnap = await db.collection("users").doc(userId).get();
-      pointsBalanceAfter = (afterSnap.data()?.pointsBalance || 0) + reviewPoints;
-    } catch {
-      pointsBalanceAfter = (userData?.pointsBalance || 0) + reviewPoints;
-    }
-
-    const pointsTransactionRef = db
-      .collection("users")
-      .doc(userId)
-      .collection("pointsTransactions")
-      .doc();
-    await pointsTransactionRef.set({
-      points: reviewPoints,
-      type: "earned",
-      source: "review",
-      sourceId: venueReviewRef.id,
-      description: "Punti per recensione",
-      balanceAfter: pointsBalanceAfter,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-
-    // Award XP (server-side, idempotent-per-call).
-    try {
-      await awardXp(userId, reviewXp, "review", `Recensione ID ${venueReviewRef.id}`);
-    } catch (xpErr) {
-      // XP award is best-effort ancillary to the review write; log but don't fail the review.
-      console.error("Failed to award review XP", xpErr);
-    }
-
-    // Update venue rating (async)
-    updateVenueRating(booking.venueId);
-
-    // Update instructor rating if applicable
-    if (booking.instructorId) {
-      updateInstructorRating(booking.instructorId);
-    }
-
-    return { reviewId: venueReviewRef.id, pointsEarned: reviewPoints };
-  }
-);
-
-async function updateVenueRating(venueId: string) {
-  const reviews = await db
-    .collection("venues")
-    .doc(venueId)
-    .collection("reviews")
-    .get();
-
-  const totalRating = reviews.docs.reduce((sum, doc) => sum + doc.data().rating, 0);
-  const avgRating = reviews.size > 0 ? totalRating / reviews.size : 0;
-
-  await db.collection("venues").doc(venueId).update({
-    ratingAvg: Math.round(avgRating * 10) / 10,
-    reviewCount: reviews.size,
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-  });
-}
-
-async function updateInstructorRating(instructorId: string) {
-  const reviews = await db
-    .collection("instructors")
-    .doc(instructorId)
-    .collection("reviews")
-    .get();
-
-  const totalRating = reviews.docs.reduce((sum, doc) => sum + doc.data().rating, 0);
-  const avgRating = reviews.size > 0 ? totalRating / reviews.size : 0;
-
-  await db.collection("instructors").doc(instructorId).update({
-    ratingAvg: Math.round(avgRating * 10) / 10,
-    reviewCount: reviews.size,
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-  });
-}

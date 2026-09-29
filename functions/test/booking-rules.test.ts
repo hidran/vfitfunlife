@@ -103,6 +103,17 @@ describe('bookings — client update', () => {
     );
   });
 
+  it('denies the owner a note longer than createBooking would store', async () => {
+    const f = await seed();
+    const ctx = testEnv.authenticatedContext(f.client);
+    await assertFails(
+      ctx.firestore().collection('bookings').doc(f.booking).update({
+        userNotes: 'x'.repeat(501),
+        updatedAt: new Date(),
+      })
+    );
+  });
+
   it('denies the client writing status', async () => {
     const f = await seed();
     const ctx = testEnv.authenticatedContext(f.client);
@@ -206,5 +217,34 @@ describe('bookings — delete', () => {
     const f = await seed();
     const ctx = testEnv.authenticatedContext(f.trainer);
     await assertFails(ctx.firestore().collection('bookings').doc(f.booking).delete());
+  });
+});
+
+describe('reviews — server-only writes', () => {
+  it('lets anyone read an instructor review but no client write one', async () => {
+    const f = await seed();
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await ctx.firestore().doc(`instructors/${f.trainer}/reviews/${f.booking}`).set({
+        userId: f.client, rating: 5, text: 'Great',
+      });
+    });
+    const client = testEnv.authenticatedContext(f.client).firestore();
+    await assertSucceeds(client.doc(`instructors/${f.trainer}/reviews/${f.booking}`).get());
+    // Not even the review's own author: a review must be backed by a delivered booking.
+    await assertFails(
+      client.doc(`instructors/${f.trainer}/reviews/fake-${f.booking}`).set({
+        userId: f.client, rating: 5, text: 'Five stars from nobody',
+      })
+    );
+    await assertFails(client.doc(`instructors/${f.trainer}/reviews/${f.booking}`).update({ rating: 1 }));
+    await assertFails(client.doc(`instructors/${f.trainer}/reviews/${f.booking}`).delete());
+  });
+
+  it('denies a client writing a venue review', async () => {
+    const f = await seed();
+    const client = testEnv.authenticatedContext(f.client).firestore();
+    await assertFails(
+      client.doc(`venues/venue-${f.booking}/reviews/r-1`).set({ userId: f.client, rating: 5 })
+    );
   });
 });

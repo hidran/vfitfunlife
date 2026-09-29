@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ChevronLeft,
@@ -14,6 +14,7 @@ import {
   AlertCircle,
   Check,
   Loader2,
+  MessageSquare,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn, formatPrice } from '@/lib/utils';
@@ -28,6 +29,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { PriceBreakdown, PaymentMethodSelector } from '@/components/booking';
 import type { PaymentMethod } from '@/types/booking';
 import { isSlotUnavailableError } from '@/lib/availability/errors';
+import { BOOKING_NOTE_MAX_LENGTH } from '@/lib/bookingNote';
 
 export default function BookingConfirmPage() {
   const router = useRouter();
@@ -53,6 +55,10 @@ export default function BookingConfirmPage() {
   const [error, setError] = useState<string | null>(null);
   const [slotTaken, setSlotTaken] = useState(false);
   const [pointsToUse, setPointsToUse] = useState(0);
+  // Note for the trainer (B2). createBooking cleans and caps it again server-side.
+  const [userNotes, setUserNotes] = useState('');
+  const noteId = useId();
+  const noteHintId = useId();
 
   // Redirect if no selection
   if (!selectedProvider || !selectedService || !selectedDate || !selectedTime) {
@@ -117,7 +123,7 @@ export default function BookingConfirmPage() {
         scheduledAt,
         duration: selectedService.durationMinutes,
         locationType: 'in_person' as const,
-        userNotes: '',
+        userNotes: userNotes.trim() || undefined,
         promotionCode: appliedPromo?.code,
         pointsToUse,
         paymentMethod: 'card' as PaymentMethod,
@@ -219,6 +225,38 @@ export default function BookingConfirmPage() {
               </span>
             </div>
           </div>
+        </div>
+
+        {/* Note for the trainer */}
+        <div className="bg-surface-elevated/50 rounded-2xl p-4">
+          <label
+            htmlFor={noteId}
+            className="font-semibold text-content mb-1 flex items-center gap-2"
+          >
+            <MessageSquare className="w-4 h-4 text-[var(--section-primary)]" aria-hidden="true" />
+            {t('bookings.confirm.noteLabel')}
+          </label>
+          <p className="text-xs text-text-tertiary mb-3">{t('bookings.confirm.noteHint')}</p>
+          <textarea
+            id={noteId}
+            rows={3}
+            value={userNotes}
+            maxLength={BOOKING_NOTE_MAX_LENGTH}
+            onChange={(e) => setUserNotes(e.target.value)}
+            placeholder={t('bookings.confirm.notePlaceholder')}
+            aria-describedby={noteHintId}
+            className="w-full resize-none rounded-xl border border-content/15 bg-surface-sunken p-3 text-sm text-content outline-none transition-colors focus:border-[var(--section-primary)]"
+          />
+          <p
+            id={noteHintId}
+            aria-live="polite"
+            className={cn(
+              'mt-1 text-right text-xs',
+              userNotes.length >= BOOKING_NOTE_MAX_LENGTH ? 'text-warning' : 'text-text-tertiary'
+            )}
+          >
+            {t('bookings.confirm.noteCounter', { count: userNotes.length, max: BOOKING_NOTE_MAX_LENGTH })}
+          </p>
         </div>
 
         {/* Promo Code */}

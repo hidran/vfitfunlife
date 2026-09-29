@@ -12,6 +12,7 @@ import { bookingDayRef, readDayDocs } from "../availability/dayReads";
 import { decideBookingStart, romeDateOf } from "../availability/slots";
 import { validateServiceDuration } from "../availability/validate";
 import { hotCallableOptions, region } from "../lib/runtimeOptions";
+import { sanitizeUserNotes } from "./userNotes";
 
 const db = admin.firestore();
 
@@ -344,7 +345,8 @@ export const createBooking = onCall<BookingData>(
       stripePaymentIntentId: null,
 
       // Notes
-      userNotes: userNotes || null,
+      // Capped and cleaned server-side: the booking screen's limit is not a guarantee.
+      userNotes: sanitizeUserNotes(userNotes),
       internalNotes: null,
 
       // Cancellation
