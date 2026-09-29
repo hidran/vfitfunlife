@@ -171,7 +171,7 @@ export default function ProviderSchedulePage() {
       {/* Event Detail Modal */}
       {selectedEvent && (
         <Modal onClose={() => setSelectedEvent(null)}>
-          <div className="bg-surface-elevated rounded-xl p-6 max-w-md w-full mx-4">
+          <div className="bg-surface-elevated rounded-xl p-6 w-[calc(100%-2rem)] max-w-md">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-semibold text-content">
                 {selectedEvent.type === 'blocked' ? t('provider.schedule.modal.blockedTime') : t('provider.schedule.modal.appointment')}
@@ -280,7 +280,7 @@ export default function ProviderSchedulePage() {
       {/* Date Selection Modal */}
       {selectedDate && !selectedEvent && (
         <Modal onClose={() => setSelectedDate(null)}>
-          <div className="bg-surface-elevated rounded-xl p-6 max-w-md w-full mx-4">
+          <div className="bg-surface-elevated rounded-xl p-6 w-[calc(100%-2rem)] max-w-md">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-semibold text-content">
                 {selectedDate.toLocaleDateString(toLocaleTag(locale), {
