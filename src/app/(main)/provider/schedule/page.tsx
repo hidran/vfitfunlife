@@ -117,6 +117,12 @@ export default function ProviderSchedulePage() {
     setSelectedDate(date);
   };
 
+  const dayEvents = selectedDate
+    ? schedule
+        .filter((e) => new Date(e.start).toDateString() === selectedDate.toDateString())
+        .sort((x, y) => new Date(x.start).getTime() - new Date(y.start).getTime())
+    : [];
+
   const formatTime = (date: Date) => {
     return new Date(date).toLocaleTimeString(toLocaleTag(locale), {
       hour: '2-digit',
@@ -291,6 +297,30 @@ export default function ProviderSchedulePage() {
                 <X className="w-5 h-5 text-content-muted" />
               </button>
             </div>
+
+            {dayEvents.length > 0 && (
+              <ul className="mb-4 space-y-2" aria-label={t('provider.schedule.dateModal.dayEvents')}>
+                {dayEvents.map((event) => (
+                  <li key={event.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedDate(null);
+                        setSelectedEvent(event);
+                      }}
+                      className="flex min-h-11 w-full items-center gap-3 rounded-lg border border-hairline px-3 py-2 text-left hover:bg-surface-2"
+                    >
+                      <span className="text-sm font-medium tabular-nums text-content">
+                        {event.blockKind === 'dayOff' ? t('provider.calendar.dayOff') : formatTime(event.start)}
+                      </span>
+                      <span className="truncate text-sm text-content-muted">
+                        {event.blockKind === 'range' ? t('provider.calendar.legend.blocked') : event.blockKind === 'dayOff' ? '' : event.title}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
 
             <div className="space-y-3">
               <Button

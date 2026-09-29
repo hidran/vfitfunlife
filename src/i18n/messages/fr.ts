@@ -2223,6 +2223,7 @@ export const frMessages: Messages = {
   'provider.schedule.modal.notes': 'Notes',
   'provider.schedule.modal.viewBookingDetails': 'Voir les détails de la réservation',
   'provider.schedule.modal.close': 'Fermer',
+  'provider.schedule.dateModal.dayEvents': 'Rendez-vous du jour',
   'provider.schedule.dateModal.addAppointment': 'Ajouter un rendez-vous',
   'provider.schedule.dateModal.blockTime': 'Bloquer un créneau',
   'provider.schedule.dateModal.setDayOff': 'Définir un jour de congé',

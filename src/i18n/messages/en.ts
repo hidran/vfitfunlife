@@ -2238,6 +2238,7 @@ export const enMessages: Messages = {
   'provider.schedule.modal.notes': 'Notes',
   'provider.schedule.modal.viewBookingDetails': 'View Booking Details',
   'provider.schedule.modal.close': 'Close',
+  'provider.schedule.dateModal.dayEvents': "The day's appointments",
   'provider.schedule.dateModal.addAppointment': 'Add Appointment',
   'provider.schedule.dateModal.blockTime': 'Block Time',
   'provider.schedule.dateModal.setDayOff': 'Set Day Off',

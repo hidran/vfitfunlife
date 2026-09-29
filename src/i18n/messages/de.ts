@@ -2221,6 +2221,7 @@ export const deMessages: Messages = {
   'provider.schedule.modal.notes': 'Notizen',
   'provider.schedule.modal.viewBookingDetails': 'Buchungsdetails anzeigen',
   'provider.schedule.modal.close': 'Schließen',
+  'provider.schedule.dateModal.dayEvents': 'Termine des Tages',
   'provider.schedule.dateModal.addAppointment': 'Termin hinzufügen',
   'provider.schedule.dateModal.blockTime': 'Zeit blockieren',
   'provider.schedule.dateModal.setDayOff': 'Freien Tag setzen',

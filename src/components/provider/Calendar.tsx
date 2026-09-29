@@ -27,6 +27,14 @@ const STATUS_COLORS: Record<ScheduleEventStatus | string, string> = {
   blocked: 'bg-surface-input border-hairline text-content-muted',
 };
 
+const DOT_COLORS: Record<ScheduleEventStatus | 'blocked', string> = {
+  pending: 'bg-yellow-500',
+  confirmed: 'bg-green-500',
+  completed: 'bg-gray-400',
+  cancelled: 'bg-red-500',
+  blocked: 'bg-content/30',
+};
+
 export function Calendar({
   events,
   onEventClick,
@@ -277,7 +285,24 @@ export function Calendar({
                   {date.getDate()}
                 </div>
                 
-                <div className="space-y-1">
+                {/* Phones: coloured dots (chips don't fit a 50px cell); the day sheet lists them. */}
+                {dateEvents.length > 0 && (
+                  <div className="flex flex-wrap gap-0.5 sm:hidden" aria-hidden="true">
+                    {dateEvents.slice(0, 4).map((event) => (
+                      <span
+                        key={event.id}
+                        className={cn(
+                          'h-1.5 w-1.5 rounded-full',
+                          DOT_COLORS[event.type === 'blocked' ? 'blocked' : event.status ?? 'completed']
+                        )}
+                      />
+                    ))}
+                    {dateEvents.length > 4 && (
+                      <span className="text-[10px] leading-none text-content-muted">+{dateEvents.length - 4}</span>
+                    )}
+                  </div>
+                )}
+                <div className="hidden space-y-1 sm:block">
                   {dateEvents.slice(0, 3).map((event) => (
                     <div
                       key={event.id}

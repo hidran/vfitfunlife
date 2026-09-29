@@ -2214,6 +2214,7 @@ export const esMessages: Messages = {
   'provider.schedule.modal.notes': 'Notas',
   'provider.schedule.modal.viewBookingDetails': 'Ver detalles de la reserva',
   'provider.schedule.modal.close': 'Cerrar',
+  'provider.schedule.dateModal.dayEvents': 'Citas del día',
   'provider.schedule.dateModal.addAppointment': 'Añadir cita',
   'provider.schedule.dateModal.blockTime': 'Bloquear tiempo',
   'provider.schedule.dateModal.setDayOff': 'Marcar día libre',

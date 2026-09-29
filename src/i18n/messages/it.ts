@@ -2238,6 +2238,7 @@ export const itMessages = {
   'provider.schedule.modal.notes': 'Note',
   'provider.schedule.modal.viewBookingDetails': 'Vedi dettagli prenotazione',
   'provider.schedule.modal.close': 'Chiudi',
+  'provider.schedule.dateModal.dayEvents': 'Appuntamenti del giorno',
   'provider.schedule.dateModal.addAppointment': 'Aggiungi appuntamento',
   'provider.schedule.dateModal.blockTime': 'Blocca orario',
   'provider.schedule.dateModal.setDayOff': 'Imposta giorno libero',
