@@ -30,6 +30,8 @@ export interface ScheduleEvent {
   notes?: string;
   location?: string;
   meetingLink?: string;
+  /** type 'blocked' only: a whole day off, or a blocked range within the day. */
+  blockKind?: 'dayOff' | 'range';
 }
 
 // Availability Types

@@ -153,6 +153,25 @@ export function completeBooking(data: { bookingId: string; noShow?: boolean }) {
   return callTransition("completeBooking", data);
 }
 
+/**
+ * Trainer adds a session for one of their own clients ("Aggiungi appuntamento"). The server
+ * re-checks the slot, prices it from the service and creates it already `accepted`.
+ */
+export async function createBookingAsTrainer(data: {
+  clientUserId: string;
+  serviceId: string;
+  /** A getProviderSlots slot's own ISO instant. */
+  startsAt: string;
+  note?: string;
+}): Promise<{ bookingId: string; finalPrice: number }> {
+  const functions = await getFunctionsInstance();
+  const fn = httpsCallable<typeof data, { bookingId: string; finalPrice: number }>(
+    functions,
+    "createBookingAsTrainer"
+  );
+  return (await fn(data)).data;
+}
+
 /** Trainer records a payment received off-platform. Amount is revalidated server-side. */
 export function confirmBookingPayment(data: {
   bookingId: string;

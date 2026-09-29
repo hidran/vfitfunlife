@@ -19,6 +19,7 @@ import {
   QueryConstraint,
   DocumentSnapshot,
   onSnapshot,
+  documentId,
 } from "firebase/firestore";
 import { db } from "./config";
 import { countOrFallback, sumOrFallback } from "./firestore";
@@ -54,8 +55,10 @@ import {
   OUTCOME_STATUSES,
 } from "@/lib/bookingStatus";
 import { normalizeNotification } from "@/lib/notifications/inbox";
+import { overrideFromDoc, scheduleFromDoc } from "@/lib/availability/adapter";
+import { blockedIntervals } from "@/lib/availability/dayOverride";
+import { localDateKey } from "@/lib/availability/dates";
 
-const PROVIDER_COLLECTION = "providers";
 /** The provider catalogue. `providers` is a leftover name that holds no documents. */
 const INSTRUCTORS_COLLECTION = "instructors";
 const BOOKINGS_COLLECTION = "bookings";
@@ -83,12 +86,9 @@ async function getCurrentProviderId(): Promise<string> {
 export async function getProviderDashboardStats(): Promise<DashboardStats> {
   const providerId = await getCurrentProviderId();
 
-  // `instructors`, not PROVIDER_COLLECTION. The provider catalogue is `instructors`;
+  // `instructors`, not `providers`. The provider catalogue is `instructors`;
   // `providers` has never held a document in either project, so this read always missed and
-  // the early return below handed every provider a dashboard of zeros. The remaining
-  // PROVIDER_COLLECTION paths in this file (blocked_times) point at the same
-  // empty collection and want the same treatment, but moving where they read and write is a
-  // data question, not a counter fix.
+  // the early return below handed every provider a dashboard of zeros.
   const providerRef = doc(db, INSTRUCTORS_COLLECTION, providerId);
 
   // Get today's bookings
@@ -327,7 +327,10 @@ export async function getProviderSchedule(startDate: Date, endDate: Date): Promi
     collection(db, BOOKINGS_COLLECTION),
     where("instructorId", "==", providerId),
     where("scheduledAt", ">=", Timestamp.fromDate(startDate)),
-    where("scheduledAt", "<=", Timestamp.fromDate(endDate))
+    where("scheduledAt", "<=", Timestamp.fromDate(endDate)),
+    // desc matches the deployed (instructorId ASC, scheduledAt DESC) index; without an
+    // orderBy the query implies ASC, which has no index, so the calendar always came back empty.
+    orderBy("scheduledAt", "desc")
   );
 
   const bookingsSnap = await getDocs(bookingsQuery);
@@ -350,31 +353,86 @@ export async function getProviderSchedule(startDate: Date, endDate: Date): Promi
       bookingId: doc.id,
       location: booking.venueName,
       meetingLink: booking.meetingLink,
+      // The trainer's own note (sessions they added themselves), else the client's.
+      notes: booking.internalNotes || booking.userNotes || undefined,
     });
   });
 
-  // Get blocked time slots
-  const blockedQuery = query(
-    collection(db, PROVIDER_COLLECTION, providerId, "blocked_times"),
-    where("start", ">=", Timestamp.fromDate(startDate)),
-    where("start", "<=", Timestamp.fromDate(endDate))
-  );
-
-  const blockedSnap = await getDocs(blockedQuery);
-
-  blockedSnap.forEach(doc => {
-    const blocked = doc.data();
-    events.push({
-      id: `blocked-${doc.id}`,
-      title: blocked.title || 'Blocked Time',
-      start: blocked.start.toDate(),
-      end: blocked.end.toDate(),
-      type: 'blocked',
-      notes: blocked.notes,
+  // Days off and blocked ranges: the provider's date exceptions (the only thing besides the
+  // weekly hours the slot engine reads). `providers/{id}/blocked_times` was read here before,
+  // but nothing ever wrote it and the server ignored it.
+  const [instructorSnap, overridesSnap] = await Promise.all([
+    getDoc(doc(db, INSTRUCTORS_COLLECTION, providerId)),
+    getDocs(
+      query(
+        collection(db, INSTRUCTORS_COLLECTION, providerId, "availability"),
+        where(documentId(), ">=", localDateKey(startDate)),
+        where(documentId(), "<=", localDateKey(endDate))
+      )
+    ),
+  ]);
+  const weekly = scheduleFromDoc(instructorSnap.data()) ?? [];
+  overridesSnap.forEach((d) => {
+    const override = overrideFromDoc(d.id, d.data());
+    if (!override) return;
+    const [y, m, day] = override.date.split("-").map(Number);
+    const at = (hhmm: string) => {
+      const [h, min] = hhmm.split(":").map(Number);
+      return new Date(y, m - 1, day, h, min);
+    };
+    blockedIntervals(weekly, override).forEach((b, i) => {
+      events.push({
+        id: `blocked-${override.date}-${i}`,
+        // The schedule page replaces this with a translated label.
+        title: b.kind === "dayOff" ? "Day off" : "Blocked",
+        start: b.kind === "dayOff" ? at("00:00") : at(b.start),
+        end: b.kind === "dayOff" ? at("23:59") : at(b.end),
+        type: "blocked",
+        blockKind: b.kind,
+        notes: override.reason,
+      });
     });
   });
 
   return events.sort((a, b) => a.start.getTime() - b.start.getTime());
+}
+
+/** Statuses of a session that is agreed and still ahead — what the .ics export carries. */
+const UPCOMING_EXPORT_STATUSES = ["accepted", "payment_confirmed", "confirmed", "in_progress"];
+
+/** The trainer's confirmed sessions from now on, oldest first, for the calendar export. */
+export async function getUpcomingConfirmedSessions(): Promise<ScheduleEvent[]> {
+  const providerId = await getCurrentProviderId();
+  const snap = await getDocs(
+    query(
+      collection(db, BOOKINGS_COLLECTION),
+      where("instructorId", "==", providerId),
+      where("scheduledAt", ">=", Timestamp.fromDate(new Date())),
+      orderBy("scheduledAt", "desc") // matches the deployed (instructorId, scheduledAt DESC) index
+    )
+  );
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }) as Record<string, any>)
+    .filter((b) => UPCOMING_EXPORT_STATUSES.includes(b.status))
+    .map((b) => {
+      const start: Date = b.scheduledAt.toDate();
+      const end: Date = b.scheduledEndAt?.toDate?.() ??
+        new Date(start.getTime() + (b.durationMinutes ?? 60) * 60_000);
+      return {
+        id: b.id,
+        title: [b.serviceName, b.userName].filter(Boolean).join(" – "),
+        start,
+        end,
+        type: "booking" as const,
+        status: b.status,
+        clientName: b.userName,
+        serviceName: b.serviceName,
+        bookingId: b.id,
+        location: b.venueName ?? undefined,
+        notes: b.internalNotes || b.userNotes || undefined,
+      };
+    })
+    .sort((a, b) => a.start.getTime() - b.start.getTime());
 }
 
 /**

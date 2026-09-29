@@ -15,6 +15,7 @@ admin.initializeApp();
 export * from "./auth";
 export * from "./bookings";
 export * from "./bookings/clientRoster";
+export * from "./bookings/trainerBooking";
 export * from "./payments";
 export * from "./notifications";
 export * from "./notifications/tokens";

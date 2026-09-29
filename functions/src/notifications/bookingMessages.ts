@@ -25,7 +25,9 @@ export type BookingMessageEvent =
   | "completion_reminder"
   | "new_request"
   | "reminder_24h"
-  | "reminder_2h";
+  | "reminder_2h"
+  /** The trainer put a session in the client's calendar (createBookingAsTrainer). */
+  | "scheduled_by_trainer";
 
 export interface MessageContext {
   serviceName?: string;
@@ -157,6 +159,11 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
       title: "Tra poco!",
       body: `${svc(c, "La tua sessione")} inizia tra 2 ore${place(c, "presso", "con")}.`,
     }),
+    scheduled_by_trainer: (c) => ({
+      title: "Nuova sessione in calendario",
+      body: `${c.trainerName?.trim() || "Il tuo trainer"} ha fissato ${svc(c, "una sessione")}${when(c, "it")}.` +
+        " La trovi tra le tue prenotazioni.",
+    }),
   },
 
   en: {
@@ -214,6 +221,11 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
     reminder_2h: (c) => ({
       title: "Starting soon!",
       body: `${svc(c, "Your session")} starts in 2 hours${place(c, "at", "with")}.`,
+    }),
+    scheduled_by_trainer: (c) => ({
+      title: "New session booked",
+      body: `${c.trainerName?.trim() || "Your trainer"} booked ${svc(c, "a session")}${when(c, "en")} for you.` +
+        " You'll find it in your bookings.",
     }),
   },
 
@@ -273,6 +285,11 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
       title: "¡Falta poco!",
       body: `${svc(c, "Tu sesión")} empieza en 2 horas${place(c, "en", "con")}.`,
     }),
+    scheduled_by_trainer: (c) => ({
+      title: "Nueva sesión en tu calendario",
+      body: `${c.trainerName?.trim() || "Tu entrenador"} ha programado ${svc(c, "una sesión")}${when(c, "es")}.` +
+        " La encontrarás en tus reservas.",
+    }),
   },
 
   fr: {
@@ -331,6 +348,11 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
       title: "C'est bientôt !",
       body: `${svc(c, "Votre séance")} commence dans 2 heures${place(c, "à", "avec")}.`,
     }),
+    scheduled_by_trainer: (c) => ({
+      title: "Nouvelle séance au calendrier",
+      body: `${c.trainerName?.trim() || "Votre coach"} a planifié ${svc(c, "une séance")}${when(c, "fr")}.` +
+        " Vous la trouverez dans vos réservations.",
+    }),
   },
 
   de: {
@@ -388,6 +410,11 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
     reminder_2h: (c) => ({
       title: "Gleich geht's los!",
       body: `${svc(c, "Deine Einheit")} beginnt in 2 Stunden${place(c, "in", "mit")}.`,
+    }),
+    scheduled_by_trainer: (c) => ({
+      title: "Neue Einheit im Kalender",
+      body: `${c.trainerName?.trim() || "Dein Trainer"} hat ${svc(c, "eine Einheit")}${when(c, "de")}` +
+        " für dich eingetragen. Du findest sie in deinen Buchungen.",
     }),
   },
 };

@@ -11,6 +11,7 @@ import {
   type WeeklyWindow,
 } from '@/lib/availability/adapter';
 import { addDaysToKey, romeDateKey } from '@/lib/availability/dates';
+import { singleOverrideUpdate } from '@/lib/availability/dayOverride';
 
 /**
  * Provider availability: reads the provider's own instructor doc and date exceptions, writes
@@ -82,8 +83,26 @@ export async function fetchProviderSlots(input: {
    * the client is currently holding still shows up as free on the reschedule picker.
    */
   excludeBookingId?: string;
+  /**
+   * The provider asking for their own day (adding a session for a client): the server drops
+   * the customer-facing minimum notice. Ignored for anyone but the provider themselves.
+   */
+  asTrainer?: boolean;
 }): Promise<ProviderSlot[]> {
   const functions = await getFunctionsInstance();
   const fn = httpsCallable<typeof input, { slots: ProviderSlot[] }>(functions, 'getProviderSlots');
   return (await fn(input)).data.slots;
+}
+
+/**
+ * Saves one date's exception from /provider/schedule (day off, blocked range). Reads the
+ * provider's current hours and exceptions fresh, so `make` merges with what is really stored
+ * (not a stale copy), and sends only that date — every other exception is left as it is.
+ */
+export async function applyDateOverride(
+  uid: string,
+  make: (stored: StoredAvailability) => OverrideDoc,
+): Promise<void> {
+  const stored = await fetchMyAvailability(uid);
+  await saveMyAvailability(singleOverrideUpdate(stored, make(stored)));
 }
