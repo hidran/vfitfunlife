@@ -235,7 +235,7 @@ export default function ProviderSchedulePage() {
                         ${selectedEvent.status === 'completed' ? 'bg-gray-500/20 text-content-muted' : ''}
                         ${selectedEvent.status === 'cancelled' ? 'bg-red-500/20 text-red-400 light:text-red-700' : ''}
                       `}>
-                        {selectedEvent.status.charAt(0).toUpperCase() + selectedEvent.status.slice(1)}
+                        {t(`provider.calendar.legend.${selectedEvent.status}`)}
                       </span>
                     </div>
                   )}

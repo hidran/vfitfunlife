@@ -158,7 +158,7 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 lg:ml-0 pt-16 lg:pt-0">
+      <main className="min-w-0 flex-1 lg:ml-0 pt-16 lg:pt-0">
         <div className="p-4 lg:p-8 max-w-7xl mx-auto">
           {status === 'pending' && (
             <div className="mb-4 flex items-center gap-3 rounded-xl border border-[#F59E0B]/30 bg-[#F59E0B]/10 p-4">

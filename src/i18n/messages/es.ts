@@ -2323,6 +2323,7 @@ export const esMessages: Messages = {
   'provider.availabilityEditor.settings.buffer15': '15 minutos',
   'provider.availabilityEditor.settings.buffer30': '30 minutos',
   'provider.availabilityEditor.settings.advanceNotice': 'Antelación mínima (horas)',
+  'provider.availabilityEditor.settings.hoursBefore': '{{count}} h antes',
   'provider.availabilityEditor.settings.sameDay': 'Mismo día',
   'provider.availabilityEditor.settings.maxBookings': 'Máx. reservas por día',
   'provider.availabilityEditor.settings.timezone': 'Zona horaria',
@@ -2332,6 +2333,7 @@ export const esMessages: Messages = {
   // Calendar component
   'provider.calendar.prevMonth': 'Mes anterior',
   'provider.calendar.nextMonth': 'Mes siguiente',
+  'provider.calendar.dayOff': 'Día libre',
   'provider.calendar.today': 'Hoy',
   'provider.calendar.month.january': 'Enero',
   'provider.calendar.month.february': 'Febrero',
@@ -2830,6 +2832,7 @@ export const esMessages: Messages = {
   'provider.bookingDetail.privateNotesPlaceholder': 'Añade notas privadas sobre este cliente o reserva...',
   'provider.bookingDetail.privateNotesEmpty': 'No hay notas privadas añadidas.',
   'provider.bookingDetail.addNote': 'Añadir nota',
+  'provider.bookingDetail.noteSaveError': 'No se pudo guardar la nota. Inténtalo de nuevo.',
   'provider.bookingDetail.saveNote': 'Guardar nota',
   'provider.bookingDetail.cancelNote': 'Cancelar',
   'provider.bookingDetail.paymentSummary': 'Resumen de pago',

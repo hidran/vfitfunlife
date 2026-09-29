@@ -2330,6 +2330,7 @@ export const deMessages: Messages = {
   'provider.availabilityEditor.settings.buffer15': '15 Minuten',
   'provider.availabilityEditor.settings.buffer30': '30 Minuten',
   'provider.availabilityEditor.settings.advanceNotice': 'Mindestvorlaufzeit (Stunden)',
+  'provider.availabilityEditor.settings.hoursBefore': '{{count}} Std. vorher',
   'provider.availabilityEditor.settings.sameDay': 'Gleicher Tag',
   'provider.availabilityEditor.settings.maxBookings': 'Max. Buchungen pro Tag',
   'provider.availabilityEditor.settings.timezone': 'Zeitzone',
@@ -2339,6 +2340,7 @@ export const deMessages: Messages = {
   // Calendar component
   'provider.calendar.prevMonth': 'Vorheriger Monat',
   'provider.calendar.nextMonth': 'Nächster Monat',
+  'provider.calendar.dayOff': 'Freier Tag',
   'provider.calendar.today': 'Heute',
   'provider.calendar.month.january': 'Januar',
   'provider.calendar.month.february': 'Februar',
@@ -2837,6 +2839,7 @@ export const deMessages: Messages = {
   'provider.bookingDetail.privateNotesPlaceholder': 'Private Notizen zu diesem Kunden oder dieser Buchung hinzufügen...',
   'provider.bookingDetail.privateNotesEmpty': 'Noch keine privaten Notizen hinzugefügt.',
   'provider.bookingDetail.addNote': 'Notiz hinzufügen',
+  'provider.bookingDetail.noteSaveError': 'Die Notiz konnte nicht gespeichert werden. Bitte erneut versuchen.',
   'provider.bookingDetail.saveNote': 'Notiz speichern',
   'provider.bookingDetail.cancelNote': 'Abbrechen',
   'provider.bookingDetail.paymentSummary': 'Zahlungsübersicht',

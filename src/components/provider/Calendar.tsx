@@ -173,7 +173,7 @@ export function Calendar({
           </div>
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="flex bg-surface-input rounded-lg p-1">
             {VIEW_KEYS.map((v) => (
               <button
@@ -294,8 +294,12 @@ export function Calendar({
                           : 'bg-gray-500/20 text-content-muted'
                       )}
                     >
-                      {event.start.getHours().toString().padStart(2, '0')}:
-                      {event.start.getMinutes().toString().padStart(2, '0')} {event.title}
+                      {event.blockKind === 'dayOff'
+                        ? t('provider.calendar.dayOff')
+                        : `${event.start.getHours().toString().padStart(2, '0')}:${event.start
+                            .getMinutes()
+                            .toString()
+                            .padStart(2, '0')} ${event.blockKind === 'range' ? t('provider.calendar.legend.blocked') : event.title}`}
                     </div>
                   ))}
                   {dateEvents.length > 3 && (

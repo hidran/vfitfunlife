@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { bookingStatusMeta } from '@/lib/bookingStatus';
 import { useQuery } from '@tanstack/react-query';
 import {
   Calendar,
@@ -202,7 +203,7 @@ export default function ProviderDashboardPage() {
                         ${booking.status === 'accepted' ? 'bg-green-500/20 text-green-400 light:text-green-700' : ''}
                         ${booking.status === 'requested' ? 'bg-yellow-500/20 text-yellow-400 light:text-yellow-700' : ''}
                       `}>
-                        {booking.status}
+                        {bookingStatusMeta(booking.status) ? t(bookingStatusMeta(booking.status)!.labelKey) : booking.status}
                       </span>
                       <Link href={`/provider/bookings/detail?id=${booking.id}`}>
                         <Button variant="secondary" size="sm">

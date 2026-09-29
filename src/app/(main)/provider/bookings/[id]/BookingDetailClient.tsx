@@ -39,6 +39,7 @@ import { cn } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
 import { queryKeys } from '@/lib/queryKeys';
+import { updateBookingPrivateNotes } from '@/lib/firebase/functions';
 
 export default function BookingDetailClient() {
   const { t, locale } = useI18n();
@@ -100,7 +101,29 @@ export default function BookingDetailClient() {
 
   const [showNotes, setShowNotes] = useState(false);
   const [privateNotes, setPrivateNotes] = useState('');
+  // Saved in this session (undefined = use the booking's stored value).
+  const [savedNotes, setSavedNotes] = useState<string | null | undefined>(undefined);
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const [notesError, setNotesError] = useState(false);
 
+
+  const currentNotes =
+    savedNotes !== undefined ? savedNotes : ((booking as { internalNotes?: string | null } | undefined)?.internalNotes ?? null);
+
+  const handleSaveNotes = async () => {
+    if (!booking) return;
+    setIsSavingNotes(true);
+    setNotesError(false);
+    try {
+      const res = await updateBookingPrivateNotes(booking.id, privateNotes);
+      setSavedNotes(res.internalNotes);
+      setShowNotes(false);
+    } catch {
+      setNotesError(true);
+    } finally {
+      setIsSavingNotes(false);
+    }
+  };
 
   if (!booking && isLoadingBookings) {
     return (
@@ -406,7 +429,15 @@ export default function BookingDetailClient() {
           <div className="bg-surface-elevated rounded-xl border border-hairline p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-content">{t('provider.bookingDetail.privateNotes')}</h3>
-              <Button variant="secondary" size="sm" onClick={() => setShowNotes(!showNotes)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  if (!showNotes) setPrivateNotes(currentNotes ?? '');
+                  setNotesError(false);
+                  setShowNotes(!showNotes);
+                }}
+              >
                 <Edit className="w-4 h-4 mr-2" />
                 {showNotes ? t('provider.bookingDetail.cancelNote') : t('provider.bookingDetail.addNote')}
               </Button>
@@ -417,15 +448,26 @@ export default function BookingDetailClient() {
                   value={privateNotes}
                   onChange={(e) => setPrivateNotes(e.target.value)}
                   placeholder={t('provider.bookingDetail.privateNotesPlaceholder')}
+                  maxLength={2000}
+                  aria-label={t('provider.bookingDetail.privateNotes')}
                   className="w-full bg-surface-input border border-hairline rounded-lg px-4 py-3 text-content placeholder-gray-500 outline-none focus:border-section-primary min-h-[100px]"
                 />
+                {notesError && (
+                  <p role="alert" className="text-sm text-red-400 light:text-red-700">
+                    {t('provider.bookingDetail.noteSaveError')}
+                  </p>
+                )}
                 <div className="flex gap-2">
-                  <Button size="sm">{t('provider.bookingDetail.saveNote')}</Button>
+                  <Button size="sm" onClick={handleSaveNotes} disabled={isSavingNotes}>
+                    {t('provider.bookingDetail.saveNote')}
+                  </Button>
                   <Button variant="secondary" size="sm" onClick={() => setShowNotes(false)}>
                     {t('provider.bookingDetail.cancelNote')}
                   </Button>
                 </div>
               </div>
+            ) : currentNotes ? (
+              <p className="text-content/85 whitespace-pre-wrap break-words">{currentNotes}</p>
             ) : (
               <p className="text-content-faint light:text-content-muted text-sm">{t('provider.bookingDetail.privateNotesEmpty')}</p>
             )}

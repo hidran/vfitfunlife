@@ -218,3 +218,30 @@ export const createBookingAsTrainer = onCall(
     return { bookingId: bookingRef.id, finalPrice: pricing.finalPrice };
   },
 );
+
+/**
+ * updateBookingPrivateNotes — the trainer's private notes on one of their bookings
+ * ("Note private" on /provider/bookings/detail). Rules keep `internalNotes` server-only, so the
+ * write goes through here: only the assigned trainer, only that field, capped at 2000 chars.
+ */
+export const updateBookingPrivateNotes = onCall({ region }, async (req) => {
+  const uid = req.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Must be authenticated");
+  const { bookingId, notes } = (req.data ?? {}) as { bookingId?: unknown; notes?: unknown };
+  if (typeof bookingId !== "string" || !bookingId) {
+    throw new HttpsError("invalid-argument", "bookingId is required");
+  }
+  if (notes !== null && typeof notes !== "string") {
+    throw new HttpsError("invalid-argument", "notes must be a string");
+  }
+  const trimmed = typeof notes === "string" ? notes.trim().slice(0, 2000) : "";
+
+  const ref = getFirestore().collection("bookings").doc(bookingId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError("not-found", "Booking not found");
+  if (snap.get("instructorId") !== uid) {
+    throw new HttpsError("permission-denied", "Only the booking's trainer can edit its notes");
+  }
+  await ref.update({ internalNotes: trimmed || null, updatedAt: FieldValue.serverTimestamp() });
+  return { internalNotes: trimmed || null };
+});

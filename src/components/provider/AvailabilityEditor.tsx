@@ -531,12 +531,12 @@ export function AvailabilityEditor({ settings, onSave, loading }: AvailabilityEd
               className="w-full bg-surface-input border border-hairline rounded-lg px-4 py-2.5 text-content outline-none focus:border-section-primary"
             >
               <option value={0}>{t('provider.availabilityEditor.settings.sameDay')}</option>
-              <option value={1}>1 hour</option>
-              <option value={2}>2 hours</option>
-              <option value={6}>6 hours</option>
-              <option value={12}>12 hours</option>
-              <option value={24}>24 hours</option>
-              <option value={48}>48 hours</option>
+              <option value={1}>{t('provider.availabilityEditor.settings.hoursBefore', { count: 1 })}</option>
+              <option value={2}>{t('provider.availabilityEditor.settings.hoursBefore', { count: 2 })}</option>
+              <option value={6}>{t('provider.availabilityEditor.settings.hoursBefore', { count: 6 })}</option>
+              <option value={12}>{t('provider.availabilityEditor.settings.hoursBefore', { count: 12 })}</option>
+              <option value={24}>{t('provider.availabilityEditor.settings.hoursBefore', { count: 24 })}</option>
+              <option value={48}>{t('provider.availabilityEditor.settings.hoursBefore', { count: 48 })}</option>
             </select>
           </div>
           

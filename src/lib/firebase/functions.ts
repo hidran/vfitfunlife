@@ -172,6 +172,16 @@ export async function createBookingAsTrainer(data: {
   return (await fn(data)).data;
 }
 
+/** Trainer saves their private notes on one of their bookings (server-only field). */
+export async function updateBookingPrivateNotes(bookingId: string, notes: string) {
+  const functions = await getFunctionsInstance();
+  const fn = httpsCallable<{ bookingId: string; notes: string }, { internalNotes: string | null }>(
+    functions,
+    'updateBookingPrivateNotes'
+  );
+  return (await fn({ bookingId, notes })).data;
+}
+
 /** Trainer records a payment received off-platform. Amount is revalidated server-side. */
 export function confirmBookingPayment(data: {
   bookingId: string;

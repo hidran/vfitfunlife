@@ -2347,6 +2347,7 @@ export const itMessages = {
   'provider.availabilityEditor.settings.buffer15': '15 minuti',
   'provider.availabilityEditor.settings.buffer30': '30 minuti',
   'provider.availabilityEditor.settings.advanceNotice': 'Preavviso minimo (ore)',
+  'provider.availabilityEditor.settings.hoursBefore': '{{count}} h prima',
   'provider.availabilityEditor.settings.sameDay': 'Stesso giorno',
   'provider.availabilityEditor.settings.maxBookings': 'Max prenotazioni al giorno',
   'provider.availabilityEditor.settings.timezone': 'Fuso orario',
@@ -2356,6 +2357,7 @@ export const itMessages = {
   // Calendar component
   'provider.calendar.prevMonth': 'Mese precedente',
   'provider.calendar.nextMonth': 'Mese successivo',
+  'provider.calendar.dayOff': 'Giorno libero',
   'provider.calendar.today': 'Oggi',
   'provider.calendar.month.january': 'Gennaio',
   'provider.calendar.month.february': 'Febbraio',
@@ -2854,6 +2856,7 @@ export const itMessages = {
   'provider.bookingDetail.privateNotesPlaceholder': 'Aggiungi note private su questo cliente o questa prenotazione...',
   'provider.bookingDetail.privateNotesEmpty': 'Nessuna nota privata aggiunta.',
   'provider.bookingDetail.addNote': 'Aggiungi nota',
+  'provider.bookingDetail.noteSaveError': 'Impossibile salvare la nota. Riprova.',
   'provider.bookingDetail.saveNote': 'Salva nota',
   'provider.bookingDetail.cancelNote': 'Annulla',
   'provider.bookingDetail.paymentSummary': 'Riepilogo pagamento',

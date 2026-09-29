@@ -193,7 +193,8 @@ export function AvailabilityPicker({
         <div className="flex items-center justify-between mb-4">
           <button
             onClick={handlePrevMonth}
-            className="p-2 rounded-lg hover:bg-content/10 transition-colors"
+            aria-label={t('provider.calendar.prevMonth')}
+            className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-content/10 transition-colors"
           >
             <ChevronLeft className="w-5 h-5 text-text-secondary" />
           </button>
@@ -207,7 +208,8 @@ export function AvailabilityPicker({
 
           <button
             onClick={handleNextMonth}
-            className="p-2 rounded-lg hover:bg-content/10 transition-colors"
+            aria-label={t('provider.calendar.nextMonth')}
+            className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-content/10 transition-colors"
           >
             <ChevronRight className="w-5 h-5 text-text-secondary" />
           </button>

@@ -2347,6 +2347,7 @@ export const enMessages: Messages = {
   'provider.availabilityEditor.settings.buffer15': '15 minutes',
   'provider.availabilityEditor.settings.buffer30': '30 minutes',
   'provider.availabilityEditor.settings.advanceNotice': 'Min. Advance Notice (hours)',
+  'provider.availabilityEditor.settings.hoursBefore': '{{count}} h before',
   'provider.availabilityEditor.settings.sameDay': 'Same day',
   'provider.availabilityEditor.settings.maxBookings': 'Max Bookings per Day',
   'provider.availabilityEditor.settings.timezone': 'Timezone',
@@ -2356,6 +2357,7 @@ export const enMessages: Messages = {
   // Calendar component
   'provider.calendar.prevMonth': 'Previous month',
   'provider.calendar.nextMonth': 'Next month',
+  'provider.calendar.dayOff': 'Day off',
   'provider.calendar.today': 'Today',
   'provider.calendar.month.january': 'January',
   'provider.calendar.month.february': 'February',
@@ -2854,6 +2856,7 @@ export const enMessages: Messages = {
   'provider.bookingDetail.privateNotesPlaceholder': 'Add private notes about this client or booking...',
   'provider.bookingDetail.privateNotesEmpty': 'No private notes added yet.',
   'provider.bookingDetail.addNote': 'Add Note',
+  'provider.bookingDetail.noteSaveError': "Couldn't save the note. Try again.",
   'provider.bookingDetail.saveNote': 'Save Note',
   'provider.bookingDetail.cancelNote': 'Cancel',
   'provider.bookingDetail.paymentSummary': 'Payment Summary',
