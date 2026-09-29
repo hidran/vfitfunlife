@@ -2354,6 +2354,8 @@ export const enMessages: Messages = {
   'provider.availabilityEditor.save': 'Save Availability Settings',
 
   // Calendar component
+  'provider.calendar.prevMonth': 'Previous month',
+  'provider.calendar.nextMonth': 'Next month',
   'provider.calendar.today': 'Today',
   'provider.calendar.month.january': 'January',
   'provider.calendar.month.february': 'February',

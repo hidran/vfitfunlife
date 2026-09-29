@@ -2339,6 +2339,8 @@ export const frMessages: Messages = {
   'provider.availabilityEditor.save': 'Enregistrer les disponibilités',
 
   // Calendar component
+  'provider.calendar.prevMonth': 'Mois précédent',
+  'provider.calendar.nextMonth': 'Mois suivant',
   'provider.calendar.today': 'Aujourd\'hui',
   'provider.calendar.month.january': 'Janvier',
   'provider.calendar.month.february': 'Février',

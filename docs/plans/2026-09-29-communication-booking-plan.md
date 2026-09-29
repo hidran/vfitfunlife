@@ -169,10 +169,10 @@ State machine: `functions/src/bookings/transitions.ts:22-44`; notifications on t
 ### Phase D — Decisions for the user (ask, don't assume)
 
 - [x] **D1** (off-platform; client confirms service received → +50 XP) Payments: keep off-platform "trainer records payment" or take payment via Stripe?
-- [ ] **D2** Keep `createPaymentIntent` and `checkIn` warm (minInstances 1 in prod, ~€2/month each)?
-- [ ] **D3** Service worker / offline strategy (also required for web push background delivery → A5 needs at least `firebase-messaging-sw.js`).
-- [ ] **D4** 70 prod instructors have no coordinates → invisible in "near me". Data task for ops.
-- [ ] **D5** Hide demo accounts from prod stats/metrics? (15 demo bookings seeded on prod 2026-09-29.)
+- [-] **D2** (user: no — createPaymentIntent unused with off-platform payments) Keep `createPaymentIntent` and `checkIn` warm (minInstances 1 in prod, ~€2/month each)?
+- [~] **D3** (user: app-shell offline + fix assets/logo) Service worker / offline strategy (also required for web push background delivery → A5 needs at least `firebase-messaging-sw.js`).
+- [~] **D4** (user: trainers set their own location → editor + nudge) 70 prod instructors have no coordinates → invisible in "near me". Data task for ops.
+- [~] **D5** (user: yes, exclude demo data from stats via `isDemo`) Hide demo accounts from prod stats/metrics? (15 demo bookings seeded on prod 2026-09-29.)
 
 ### Phase E — Carry-overs from the performance plan (lower priority)
 
@@ -216,3 +216,5 @@ it isn't in the env files.
 | 2026-09-29 | A5 web | staging verified | (push fix) | VAPID key pairs generated in Firebase console for both projects (prod → .env, staging → .env.staging + .env.local; gitignored). Fixed getToken racing SW activation. Staging: token stored on demo-provider-vfit, FCM multicast success 1/1, foreground toast shown. iOS/Android still need native setup (see A5 notes). |
 | 2026-09-29 | B3,B5,XP | done | (D1 merge) | Checkout: no fee/mock cards, "pay the trainer" card, shared pricing (server `pricing.ts` ↔ `src/lib/bookingPrice.ts`), points toggle, real promo lookup. Webhook logs only. +50 XP (xp/level + xpTransactions) only on explicit client "service received", once (`xpAwarded`); auto-confirm gives no XP. |
 | 2026-09-29 | D1 deploy | staging+prod | 128e095 | Staging smoke: checkout (no fee/cards, points toggle 50→49,90), trainer records cash → client "+50 XP" notification → client confirms → xp 10→60, one xpTransactions entry, no double award on reload; trainer notified. Provider badge now "payment recorded · awaiting client" until client confirms. Prod: functions 116 ACTIVE, hosting with prod VAPID; prod web push verified (token on demo-customer-vfit, FCM success 1/1). |
+| 2026-09-29 | D2–D5 | decided | — | D2 no; D3 app-shell SW + asset/logo audit; D4 trainers self-serve location (nudge); D5 `isDemo` flag + exclude from stats. |
+| 2026-09-29 | bug | in progress | — | Provider report: calendar "Aggiungi appuntamento" does nothing. Cause: schedule page buttons (add appointment, block time ×2, day off, sync) had no handlers; blocked_times read from an unwritten collection. Fix: trainer-created bookings (new callable), day off / block time via availability date overrides, .ics export. |

@@ -2354,6 +2354,8 @@ export const itMessages = {
   'provider.availabilityEditor.save': 'Salva impostazioni disponibilità',
 
   // Calendar component
+  'provider.calendar.prevMonth': 'Mese precedente',
+  'provider.calendar.nextMonth': 'Mese successivo',
   'provider.calendar.today': 'Oggi',
   'provider.calendar.month.january': 'Gennaio',
   'provider.calendar.month.february': 'Febbraio',

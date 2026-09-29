@@ -150,21 +150,23 @@ export function Calendar({
   return (
     <div className="bg-surface-elevated rounded-xl border border-content/5 light:border-hairline overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-content/5 light:border-hairline">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 p-3 sm:p-4 border-b border-content/5 light:border-hairline">
+        <div className="flex items-center gap-2 sm:gap-4">
           <h2 className="text-lg font-semibold text-content">
             {MONTHS[month]} {year}
           </h2>
           <div className="flex items-center gap-1">
             <button
               onClick={handlePrevMonth}
-              className="p-1.5 rounded-lg hover:bg-content/10 transition-colors"
+              aria-label={t('provider.calendar.prevMonth')}
+              className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-content/10 transition-colors"
             >
               <ChevronLeft className="w-5 h-5 text-content-muted" />
             </button>
             <button
               onClick={handleNextMonth}
-              className="p-1.5 rounded-lg hover:bg-content/10 transition-colors"
+              aria-label={t('provider.calendar.nextMonth')}
+              className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-content/10 transition-colors"
             >
               <ChevronRight className="w-5 h-5 text-content-muted" />
             </button>
@@ -200,7 +202,7 @@ export function Calendar({
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 px-4 py-2 border-b border-content/5 light:border-hairline text-xs">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 sm:px-4 py-2 border-b border-content/5 light:border-hairline text-xs">
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-full bg-green-500/50" />
           <span className="text-content-muted">{t('provider.calendar.legend.confirmed')}</span>
@@ -223,14 +225,14 @@ export function Calendar({
         </div>
       </div>
 
-      {/* Calendar Grid */}
-      <div className="p-4">
+      {/* Calendar Grid — tighter on phones so 7 columns fit in 390px */}
+      <div className="p-2 sm:p-4">
         {/* Day Headers */}
         <div className="grid grid-cols-7 mb-2">
           {DAYS.map((day) => (
             <div
               key={day}
-              className="text-center text-sm font-medium text-content-muted py-2"
+              className="text-center text-xs sm:text-sm font-medium text-content-muted py-2"
             >
               {day}
             </div>
@@ -238,7 +240,7 @@ export function Calendar({
         </div>
 
         {/* Calendar Days */}
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-0.5 sm:gap-1">
           {calendarDays.map(({ date, isCurrentMonth }, index) => {
             const dateEvents = getEventsForDate(date);
             const isToday =
@@ -256,7 +258,7 @@ export function Calendar({
                 key={index}
                 onClick={() => handleDateClick(date)}
                 className={cn(
-                  'min-h-[100px] p-2 rounded-lg border transition-all cursor-pointer',
+                  'min-h-[64px] min-w-0 p-1 sm:min-h-[100px] sm:p-2 rounded-lg border transition-all cursor-pointer overflow-hidden',
                   isCurrentMonth
                     ? 'bg-surface-input border-content/5 light:border-hairline'
                     : 'bg-surface-input/50 border-transparent',

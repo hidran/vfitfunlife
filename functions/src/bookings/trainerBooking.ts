@@ -10,6 +10,7 @@
  */
 
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { bookingInvolvesDemo } from "../lib/demo";
 import { getFirestore, FieldValue, Timestamp, type Firestore } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
 import { addMinutes } from "date-fns";
@@ -148,6 +149,8 @@ export const createBookingAsTrainer = onCall(
         },
       ],
       createdBy: "trainer",
+      // Same rule as createBooking: a demo customer or demo trainer makes it demo data (D5).
+      isDemo: bookingInvolvesDemo(input.clientUserId, client, trainerId, instructor),
       lateCancellation: false,
       paymentConfirmation: null,
       completionReminderSentAt: null,

@@ -2337,6 +2337,8 @@ export const deMessages: Messages = {
   'provider.availabilityEditor.save': 'Verfügbarkeitseinstellungen speichern',
 
   // Calendar component
+  'provider.calendar.prevMonth': 'Vorheriger Monat',
+  'provider.calendar.nextMonth': 'Nächster Monat',
   'provider.calendar.today': 'Heute',
   'provider.calendar.month.january': 'Januar',
   'provider.calendar.month.february': 'Februar',

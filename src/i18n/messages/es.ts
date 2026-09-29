@@ -2330,6 +2330,8 @@ export const esMessages: Messages = {
   'provider.availabilityEditor.save': 'Guardar configuración de disponibilidad',
 
   // Calendar component
+  'provider.calendar.prevMonth': 'Mes anterior',
+  'provider.calendar.nextMonth': 'Mes siguiente',
   'provider.calendar.today': 'Hoy',
   'provider.calendar.month.january': 'Enero',
   'provider.calendar.month.february': 'Febrero',
