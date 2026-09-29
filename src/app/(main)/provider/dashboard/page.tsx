@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { StatCard } from '@/components/provider/StatCard';
 import { NoHoursBanner } from '@/components/provider/NoHoursBanner';
+import { MissingLocationBanner } from '@/components/provider/MissingLocationBanner';
 import { Button } from '@/components/ui/button';
 import { useProviderStore } from '@/stores/providerStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -111,6 +112,8 @@ export default function ProviderDashboardPage() {
       </div>
 
       {bannerKind && <NoHoursBanner kind={bannerKind} />}
+
+      <MissingLocationBanner />
 
       {/* Stats Grid. No trend lines until real period-over-period values exist. */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
