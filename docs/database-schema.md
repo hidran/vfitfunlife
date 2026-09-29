@@ -964,6 +964,39 @@ Note for anyone touching `purgeLegacyNutritionData`: `db.collectionGroup("recipe
 the new **top-level** `recipes` collection as well. The callable filters on
 `path.startsWith("clients/")` for exactly that reason. Do not remove that guard.
 
+## Chat (client ↔ trainer, 2026-09-29)
+
+### conversations/{minUid}_{maxUid}
+
+The id is deterministic (the two participant uids, sorted, joined by `_`), so every
+"Message" button lands on the same thread and a pair never gets two conversations.
+
+| Field | Type | Written by |
+|---|---|---|
+| `participantIds` | `[minUid, maxUid]` (sorted) | creator |
+| `participants` | `{ [uid]: { name, photoUrl } }` | creator; each participant may refresh their own entry |
+| `createdAt` | timestamp (`request.time`) | creator |
+| `lastMessageAt` | timestamp — `createdAt` until the first message, then the last message's time | creator, then `onChatMessageCreated` |
+| `lastMessage` | string (≤ 140 chars preview) | `onChatMessageCreated` |
+| `lastSenderId` | uid | `onChatMessageCreated` |
+| `unread` | `{ [uid]: number }` | `onChatMessageCreated` increments the recipient; a participant resets only their own to 0 |
+| `lastPushAt` | `{ [uid]: timestamp }` — push throttle, ≤ 1 push / conversation / recipient / 5 min | `onChatMessageCreated` only |
+| `bookingId` | string, optional — the booking the chat was opened from | creator |
+
+Created by a participant in the same batch as its first message. A customer may only open a
+conversation with a provider/staff user; providers and staff may open one with anyone.
+
+**Unread is server-side**: the trigger increments `unread[recipient]` (admin SDK, one
+`FieldValue.increment`), so the client never has to be trusted with the other side's counter
+and the rules only need to allow "set my own count to 0".
+
+### conversations/{id}/messages/{messageId}
+
+`senderId` (must be the caller), `text` (1–2000 chars, not blank), `createdAt`
+(`request.time`). Immutable: no edits or deletes by anyone.
+
+Index: `conversations` — `participantIds` ARRAY_CONTAINS, `lastMessageAt` DESC (the `/chat` inbox).
+
 ## Security Rules
 
 See `firestore.rules` file for complete security rules implementation.

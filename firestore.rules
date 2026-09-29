@@ -854,6 +854,101 @@ service cloud.firestore {
     }
 
     // ============================================
+    // CONVERSATIONS (client ↔ trainer chat) — Phase C of
+    // docs/plans/2026-09-29-communication-booking-plan.md
+    // ============================================
+    //
+    // conversations/{minUid_maxUid}: participantIds [minUid, maxUid] (sorted), participants
+    // { uid: { name, photoUrl } }, lastMessage/lastMessageAt/lastSenderId, unread { uid: n },
+    // optional bookingId. The id is deterministic so "Message" never makes a duplicate.
+    //
+    // Who writes what:
+    //  - a participant CREATES the doc (with its first message, in one batch);
+    //  - the onChatMessageCreated trigger (admin SDK) maintains lastMessage*, unread[other]
+    //    and the push throttle (lastPushAt);
+    //  - a participant may only reset their OWN unread count to 0 and refresh their OWN
+    //    participants entry.
+
+    /** participantIds is exactly [a, b], sorted, and the doc id is `${a}_${b}`. */
+    function isValidConversationKey(conversationId, ids) {
+      return ids is list && ids.size() == 2 &&
+        ids[0] is string && ids[1] is string &&
+        ids[0] < ids[1] &&
+        conversationId == ids[0] + '_' + ids[1];
+    }
+
+    /**
+     * Anti-spam: a conversation must involve a professional. Customers can open a chat
+     * with a provider (or staff); providers and staff can open one with anyone.
+     */
+    function canStartChatWith(otherUid) {
+      return isProvider() || isAdmin() ||
+        get(/databases/$(database)/documents/users/$(otherUid)).data.get('role', '')
+          in ['provider', 'admin', 'superadmin'];
+    }
+
+    function isValidConversationCreate(conversationId) {
+      let data = request.resource.data;
+      let ids = data.participantIds;
+      return data.keys().hasAll(['participantIds', 'participants', 'createdAt', 'lastMessageAt']) &&
+        data.keys().hasOnly(['participantIds', 'participants', 'createdAt', 'lastMessageAt', 'bookingId']) &&
+        isValidConversationKey(conversationId, ids) &&
+        request.auth.uid in ids &&
+        data.participants is map &&
+        data.participants.keys().hasOnly(ids) &&
+        data.createdAt == request.time &&
+        data.lastMessageAt == request.time &&
+        (!('bookingId' in data) || (data.bookingId is string && data.bookingId.size() <= 128)) &&
+        canStartChatWith(ids[0] == request.auth.uid ? ids[1] : ids[0]);
+    }
+
+    /** The only client update: my unread back to 0 and/or my own participants entry. */
+    function isValidConversationSelfUpdate() {
+      let uid = request.auth.uid;
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      let unreadAfter = request.resource.data.get('unread', {});
+      let participantsAfter = request.resource.data.get('participants', {});
+      return changed.hasOnly(['unread', 'participants']) &&
+        unreadAfter.diff(resource.data.get('unread', {})).affectedKeys().hasOnly([uid]) &&
+        (!(uid in unreadAfter) || unreadAfter[uid] == 0) &&
+        participantsAfter.diff(resource.data.get('participants', {})).affectedKeys().hasOnly([uid]);
+    }
+
+    match /conversations/{conversationId} {
+      // get: a participant — also for a conversation that does not exist yet, so the thread
+      // screen can listen on it before the first message creates it.
+      allow get: if isAuthenticated() && (
+        resource == null
+          ? request.auth.uid in conversationId.split('_')
+          : request.auth.uid in resource.data.participantIds
+      );
+      // list: the inbox query must filter `participantIds array-contains <my uid>`.
+      allow list: if isAuthenticated() && request.auth.uid in resource.data.participantIds;
+      allow create: if isAuthenticated() && isValidConversationCreate(conversationId);
+      allow update: if isAuthenticated() &&
+        request.auth.uid in resource.data.participantIds &&
+        isValidConversationSelfUpdate();
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if isAuthenticated() &&
+          request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
+        // getAfter: the first message is written in the same batch that creates the
+        // conversation.
+        allow create: if isAuthenticated() &&
+          request.auth.uid in getAfter(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds &&
+          request.resource.data.keys().hasOnly(['senderId', 'text', 'createdAt']) &&
+          request.resource.data.senderId == request.auth.uid &&
+          request.resource.data.text is string &&
+          request.resource.data.text.trim().size() > 0 &&
+          request.resource.data.text.size() <= 2000 &&
+          request.resource.data.createdAt == request.time;
+        // Messages are immutable: nobody edits or deletes one (not even the sender).
+        allow update, delete: if false;
+      }
+    }
+
+    // ============================================
     // USER TYPES (snake_case alias — admin CRUD)
     // ============================================
 
