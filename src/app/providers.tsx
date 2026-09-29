@@ -11,6 +11,7 @@ import { ThemeProvider } from '@/contexts/ThemeContext';
 import { ProfilePreferencesSync } from '@/hooks/useProfilePreferencesSync';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { initializeCapacitor } from '@/lib/capacitor';
+import { scheduleAppShellRegistration } from '@/lib/sw/appShell';
 import { PushRegistrar } from '@/components/push/PushRegistrar';
 
 const FloatingAssistantButton = dynamic(
@@ -39,6 +40,8 @@ export function Providers({ children }: { children: ReactNode }) {
     initializeCapacitor().catch((error) => {
       console.error('[Providers] Failed to initialize Capacitor:', error);
     });
+    // Offline app shell (web only; no-op on native and in dev).
+    scheduleAppShellRegistration();
   }, []);
 
   return (

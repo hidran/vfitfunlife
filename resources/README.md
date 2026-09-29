@@ -24,7 +24,14 @@ This folder contains assets for the native mobile apps (iOS & Android).
 
 ## Generating Assets
 
-Once you have the source files, run:
+`icon.png` and `splash.png` (and every web icon/favicon plus the native iOS/Android icons
+and splashes) are generated from the brand mark `brand/vfit-mark.svg`:
+
+```bash
+node scripts/generate-brand-assets.mjs
+```
+
+Alternatively, from the source files:
 
 ```bash
 # Install the asset generator globally

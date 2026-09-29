@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1A1D29">
+  <meta name="robots" content="noindex">
+  <title>Vfitfunlife — Offline</title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      padding: 24px 16px; background: #1A1D29; color: #F5F7FA; text-align: center;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    main { max-width: 360px; }
+    svg { width: 72px; height: 72px; margin-bottom: 24px; }
+    h1 { font-size: 22px; margin: 0 0 12px; font-weight: 700; }
+    p { margin: 0 0 28px; line-height: 1.5; color: #B8BFCC; }
+    button {
+      min-height: 44px; min-width: 160px; padding: 12px 24px; border: 0; border-radius: 12px;
+      background: linear-gradient(90deg, #7B61FF, #00C9FF); color: #fff; font-size: 16px;
+      font-weight: 600; cursor: pointer;
+    }
+    button:focus-visible { outline: 2px solid #00C9FF; outline-offset: 3px; }
+  </style>
+</head>
+<body>
+  <main>
+    <svg viewBox="0 0 80 80" aria-hidden="true">
+      <defs>
+        <linearGradient id="g" x1="12" x2="68" y1="18" y2="66" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#7B61FF"/><stop offset="0.46" stop-color="#00C9FF"/><stop offset="1" stop-color="#00E676"/>
+        </linearGradient>
+      </defs>
+      <path d="M17 21L40 64L63 21" fill="none" stroke="url(#g)" stroke-linecap="round" stroke-linejoin="round" stroke-width="8"/>
+      <path d="M30 22L40 43L50 22" fill="none" stroke="url(#g)" stroke-linecap="round" stroke-linejoin="round" stroke-width="4" opacity="0.58"/>
+    </svg>
+    <h1 id="title">Sei offline</h1>
+    <p id="body">Questa pagina non è ancora disponibile senza connessione. Controlla la rete e riprova.</p>
+    <button id="retry" type="button">Riprova</button>
+  </main>
+  <script>
+    (function () {
+      // Served by the app-shell service worker (out/sw.js) when a page was never cached.
+      var copy = {
+        it: ['Sei offline', 'Questa pagina non è ancora disponibile senza connessione. Controlla la rete e riprova.', 'Riprova'],
+        en: ['You are offline', "This page isn't available without a connection yet. Check your network and try again.", 'Try again'],
+        es: ['Sin conexión', 'Esta página aún no está disponible sin conexión. Comprueba la red e inténtalo de nuevo.', 'Reintentar'],
+        fr: ['Vous êtes hors ligne', "Cette page n'est pas encore disponible hors connexion. Vérifiez votre réseau et réessayez.", 'Réessayer'],
+        de: ['Du bist offline', 'Diese Seite ist ohne Verbindung noch nicht verfügbar. Prüfe dein Netzwerk und versuche es erneut.', 'Erneut versuchen']
+      };
+      var lang = 'it';
+      try {
+        var saved = localStorage.getItem('vfit.locale');
+        var candidates = [saved].concat(navigator.languages || [navigator.language]);
+        for (var i = 0; i < candidates.length; i++) {
+          var c = String(candidates[i] || '').slice(0, 2).toLowerCase();
+          if (copy[c]) { lang = c; break; }
+        }
+      } catch (e) {}
+      var t = copy[lang];
+      document.documentElement.lang = lang;
+      document.getElementById('title').textContent = t[0];
+      document.getElementById('body').textContent = t[1];
+      document.getElementById('retry').textContent = t[2];
+      document.getElementById('retry').addEventListener('click', function () { location.reload(); });
+      window.addEventListener('online', function () { location.reload(); });
+    })();
+  </script>
+</body>
+</html>

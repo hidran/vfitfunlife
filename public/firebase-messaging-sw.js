@@ -70,8 +70,8 @@ if (firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.messagin
     const title = data.title || 'V Fitness';
     return self.registration.showNotification(title, {
       body: data.body || '',
-      icon: '/icons/icon-192x192.png',
-      badge: '/icons/icon-192x192.png',
+      icon: '/icons/app-icon-192.png',
+      badge: '/icons/badge-72.png',
       tag: data.bookingId || data.type || 'default',
       data,
     });
