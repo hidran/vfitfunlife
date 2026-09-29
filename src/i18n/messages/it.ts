@@ -2510,8 +2510,8 @@ export const itMessages = {
 
   // bookings/[id]/BookingDetailClient.tsx
   'bookings.detail.title': 'Dettaglio prenotazione',
-  'bookings.detail.confirmedTitle': 'Prenotazione confermata!',
-  'bookings.detail.confirmedSubtitle': 'Riceverai una conferma via email.',
+  'bookings.detail.requestSentTitle': 'Richiesta inviata, in attesa del trainer',
+  'bookings.detail.requestSentSubtitle': 'Ti avviseremo appena il trainer risponde.',
   'bookings.detail.rescheduledTitle': 'Prenotazione riprogrammata',
   'bookings.detail.rescheduledSubtitle': 'Il nuovo slot è stato salvato con successo.',
   'bookings.detail.reviewedTitle': 'Recensione inviata',

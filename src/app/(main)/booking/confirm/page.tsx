@@ -59,6 +59,8 @@ export default function BookingConfirmPage() {
   const [userNotes, setUserNotes] = useState('');
   const noteId = useId();
   const noteHintId = useId();
+  const termsId = useId();
+  const termsTextId = useId();
 
   // Redirect if no selection
   if (!selectedProvider || !selectedService || !selectedDate || !selectedTime) {
@@ -362,20 +364,37 @@ export default function BookingConfirmPage() {
           />
         </div>
 
-        {/* Terms */}
-        <div className="flex items-start gap-3">
-          <button
-            onClick={() => setTermsAccepted(!termsAccepted)}
-            className={cn(
-              'mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors',
-              termsAccepted
-                ? 'bg-[var(--section-primary)] border-[var(--section-primary)]'
-                : 'border-content/30 hover:border-content/50'
-            )}
+        {/* Terms — a real checkbox with a label: its name is read out, and the tap target is
+            44px around the 20px box (the negative margins keep the box where it was). */}
+        <div className="flex items-start">
+          <label
+            htmlFor={termsId}
+            className="relative -ml-3 -mt-2.5 flex h-11 w-11 flex-shrink-0 cursor-pointer items-center justify-center"
           >
-            {termsAccepted && <Check className="w-3 h-3 text-white" />}
-          </button>
-          <p className="text-sm text-text-secondary leading-relaxed">
+            <input
+              id={termsId}
+              type="checkbox"
+              checked={termsAccepted}
+              onChange={(e) => setTermsAccepted(e.target.checked)}
+              aria-describedby={termsTextId}
+              className="peer absolute inset-0 h-full w-full cursor-pointer opacity-0"
+            />
+            <span
+              aria-hidden="true"
+              className={cn(
+                'w-5 h-5 rounded border-2 flex items-center justify-center transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--section-primary)] peer-focus-visible:ring-offset-2',
+                termsAccepted
+                  ? 'bg-[var(--section-primary)] border-[var(--section-primary)]'
+                  : 'border-content/30 peer-hover:border-content/50'
+              )}
+            >
+              {termsAccepted && <Check className="w-3 h-3 text-white" />}
+            </span>
+            <span className="sr-only">
+              {`${t('bookings.confirm.termsPrefix')} ${t('bookings.confirm.termsOfService')} ${t('bookings.confirm.termsAnd')} ${t('bookings.confirm.cancellationPolicy')}`}
+            </span>
+          </label>
+          <p id={termsTextId} className="text-sm text-text-secondary leading-relaxed">
             {t('bookings.confirm.termsPrefix')}{' '}
             <button className="text-[var(--section-primary)] underline">
               {t('bookings.confirm.termsOfService')}

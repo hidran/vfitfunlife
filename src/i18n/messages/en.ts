@@ -2510,8 +2510,8 @@ export const enMessages: Messages = {
 
   // bookings/[id]/BookingDetailClient.tsx
   'bookings.detail.title': 'Booking detail',
-  'bookings.detail.confirmedTitle': 'Booking confirmed!',
-  'bookings.detail.confirmedSubtitle': 'You will receive a confirmation by email.',
+  'bookings.detail.requestSentTitle': 'Request sent, waiting for the trainer',
+  'bookings.detail.requestSentSubtitle': 'We\'ll let you know as soon as the trainer replies.',
   'bookings.detail.rescheduledTitle': 'Booking rescheduled',
   'bookings.detail.rescheduledSubtitle': 'The new slot has been saved successfully.',
   'bookings.detail.reviewedTitle': 'Review submitted',
