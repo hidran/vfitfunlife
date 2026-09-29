@@ -1,17 +1,31 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Bell, Calendar, CheckCheck, Gift, MessageCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import {
+  AlertCircle,
+  Bell,
+  BellOff,
+  Calendar,
+  Check,
+  CheckCheck,
+  ChevronRight,
+  Gift,
+  MessageCircle,
+  RotateCcw,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/Badge';
-import { useNotificationStore, type AppNotificationType } from '@/stores/notificationStore';
+import { useNotificationStore, type InboxNotification } from '@/stores/notificationStore';
+import type { InboxCategory } from '@/lib/notifications/inbox';
 import { useI18n } from '@/hooks/useI18n';
 import type { MessageKey } from '@/i18n/messages';
 import { toLocaleTag } from '@/types/locale';
+import { notify } from '@/lib/notify';
 
 const TYPE_META: Record<
-  AppNotificationType,
+  InboxCategory,
   { icon: typeof Calendar; labelKey: MessageKey; colorClass: string; bgClass: string }
 > = {
   booking: {
@@ -42,48 +56,106 @@ const TYPE_META: Record<
 
 export default function NotificationsPage() {
   const { t, locale } = useI18n();
+  const router = useRouter();
+  const uid = useNotificationStore((state) => state.uid);
+  const status = useNotificationStore((state) => state.status);
   const notifications = useNotificationStore((state) => state.notifications);
-  const markAllAsRead = useNotificationStore((state) => state.markAllAsRead);
-  const toggleRead = useNotificationStore((state) => state.toggleRead);
+  const unreadCount = useNotificationStore((state) => state.unreadCount);
+  const markRead = useNotificationStore((state) => state.markRead);
+  const markAllRead = useNotificationStore((state) => state.markAllRead);
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
-
-  const unreadCount = useMemo(
-    () => notifications.filter((notification) => !notification.read).length,
-    [notifications]
-  );
+  const [markingAll, setMarkingAll] = useState(false);
+  const [openingId, setOpeningId] = useState<string | null>(null);
 
   const visibleNotifications = useMemo(
-    () =>
-      showUnreadOnly
-        ? notifications.filter((notification) => !notification.read)
-        : notifications,
+    () => (showUnreadOnly ? notifications.filter((n) => !n.isRead) : notifications),
     [notifications, showUnreadOnly]
   );
+
+  const localeTag = toLocaleTag(locale);
+  const formatWhen = (date: Date | null) => {
+    if (!date || Date.now() - date.getTime() < 60_000) return t('notifications.inbox.justNow');
+    return date.toLocaleString(localeTag, {
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const handleMarkAll = async () => {
+    setMarkingAll(true);
+    try {
+      const count = await markAllRead();
+      if (count > 0) notify.success(t('notifications.inbox.markAllDone', { count }));
+    } catch (error) {
+      console.error('[notifications] mark all read failed', error);
+      notify.error(t('notifications.inbox.actionError'));
+    } finally {
+      setMarkingAll(false);
+    }
+  };
+
+  const handleToggleRead = async (notification: InboxNotification) => {
+    try {
+      await markRead(notification.id, !notification.isRead);
+    } catch (error) {
+      console.error('[notifications] toggle read failed', error);
+      notify.error(t('notifications.inbox.actionError'));
+    }
+  };
+
+  const handleOpen = async (notification: InboxNotification) => {
+    if (!notification.isRead) {
+      markRead(notification.id, true).catch((error) =>
+        console.error('[notifications] mark read failed', error)
+      );
+    }
+    if (!notification.bookingId || !uid) return;
+    setOpeningId(notification.id);
+    try {
+      const { resolveNotificationHref } = await import('@/lib/firebase/notifications');
+      const href = await resolveNotificationHref(uid, notification);
+      if (href) router.push(href);
+    } catch (error) {
+      console.error('[notifications] open failed', error);
+      notify.error(t('notifications.inbox.actionError'));
+    } finally {
+      setOpeningId(null);
+    }
+  };
+
+  const isLoading = status === 'idle' || status === 'loading';
 
   return (
     <div className="container-mobile py-6 space-y-4">
       <header className="space-y-2">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <h1 className="text-2xl font-bold text-text-inverse">{t('notifications.title')}</h1>
           <Badge variant={unreadCount > 0 ? 'info' : 'default'}>
-            {t('notifications.unreadCount', { count: unreadCount })}
+            <span aria-live="polite">{t('notifications.unreadCount', { count: unreadCount })}</span>
           </Badge>
         </div>
-        <p className="text-sm text-text-secondary">
-          {t('notifications.subtitle')}
-        </p>
+        <p className="text-sm text-text-secondary">{t('notifications.subtitle')}</p>
       </header>
 
-      <section className="flex flex-wrap items-center gap-2">
-        <Button variant="secondary" size="sm" onClick={markAllAsRead} disabled={unreadCount === 0}>
-          <CheckCheck className="mr-2 h-4 w-4" />
+      <section className="flex flex-wrap items-center gap-2" aria-label={t('notifications.title')}>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={handleMarkAll}
+          isLoading={markingAll}
+          disabled={unreadCount === 0 || markingAll}
+        >
+          <CheckCheck className="mr-2 h-4 w-4" aria-hidden="true" />
           {t('notifications.markAllRead')}
         </Button>
         <button
           type="button"
           onClick={() => setShowUnreadOnly((prev) => !prev)}
+          aria-pressed={showUnreadOnly}
           className={cn(
-            'rounded-full border px-3 py-2 text-xs font-semibold transition-colors',
+            'min-h-11 rounded-full border px-4 text-xs font-semibold transition-colors focus-ring',
             showUnreadOnly
               ? 'border-section-primary bg-section-primary/15 text-section-primary'
               : 'border-content/15 bg-surface-2 text-text-secondary'
@@ -93,58 +165,127 @@ export default function NotificationsPage() {
         </button>
       </section>
 
-      <section className="space-y-3 pb-20">
-        {visibleNotifications.length === 0 ? (
-          <div className="rounded-2xl border border-hairline bg-surface-2 p-5 text-center text-sm text-text-secondary">
-            {t('notifications.emptyFiltered')}
+      <section className="pb-20" aria-busy={isLoading}>
+        {isLoading ? (
+          <div role="status" className="space-y-3">
+            <span className="sr-only">{t('notifications.inbox.loading')}</span>
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-20 animate-pulse rounded-2xl bg-surface-2" aria-hidden="true" />
+            ))}
+          </div>
+        ) : status === 'error' ? (
+          <div
+            role="alert"
+            className="flex flex-col items-center gap-2 rounded-2xl border border-hairline bg-surface-2 p-5 text-center text-sm text-text-secondary"
+          >
+            <AlertCircle className="h-6 w-6 text-error" aria-hidden="true" />
+            {t('notifications.inbox.loadError')}
+          </div>
+        ) : visibleNotifications.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 rounded-2xl border border-hairline bg-surface-2 p-6 text-center">
+            <BellOff className="h-6 w-6 text-text-tertiary" aria-hidden="true" />
+            <p className="font-semibold text-text-inverse">
+              {notifications.length === 0
+                ? t('notifications.inbox.emptyTitle')
+                : t('notifications.emptyFiltered')}
+            </p>
+            {notifications.length === 0 && (
+              <p className="text-sm text-text-secondary">{t('notifications.inbox.emptyBody')}</p>
+            )}
           </div>
         ) : (
-          visibleNotifications.map((notification) => {
-            const meta = TYPE_META[notification.type];
-            const Icon = meta.icon;
+          <ul className="space-y-3">
+            {visibleNotifications.map((notification) => {
+              const meta = TYPE_META[notification.category];
+              const Icon = meta.icon;
+              const hasTarget = Boolean(notification.bookingId);
+              const title = notification.title || t(meta.labelKey);
 
-            return (
-              <article
-                key={notification.id}
-                className={cn(
-                  'rounded-2xl border p-4 transition-colors',
-                  notification.read
-                    ? 'border-hairline bg-surface-2'
-                    : 'border-section-primary/30 bg-section-primary/10'
-                )}
-              >
-                <div className="flex items-start gap-3">
-                  <div className={cn('mt-0.5 rounded-full p-2', meta.bgClass)}>
-                    <Icon className={cn('h-4 w-4', meta.colorClass)} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="truncate font-semibold text-text-inverse">{notification.title}</p>
-                      <Badge size="sm" variant="default">
-                        {t(meta.labelKey)}
-                      </Badge>
-                    </div>
-                    <p className="mt-1 text-sm text-text-secondary">{notification.body}</p>
-                    <p className="mt-2 text-xs text-text-tertiary">
-                      {new Date(notification.timestamp).toLocaleString(toLocaleTag(locale), {
-                        day: 'numeric',
-                        month: 'short',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </p>
-                  </div>
+              return (
+                <li
+                  key={notification.id}
+                  className={cn(
+                    'flex items-stretch rounded-2xl border transition-colors',
+                    notification.isRead
+                      ? 'border-hairline bg-surface-2'
+                      : 'border-section-primary/30 bg-section-primary/10'
+                  )}
+                >
                   <button
                     type="button"
-                    onClick={() => toggleRead(notification.id)}
-                    className="rounded-lg border border-content/15 px-2 py-1 text-[11px] text-text-tertiary transition-colors hover:text-text-inverse"
+                    onClick={() => handleOpen(notification)}
+                    disabled={openingId === notification.id}
+                    className="flex min-h-11 min-w-0 flex-1 items-start gap-3 rounded-l-2xl p-4 text-left focus-ring disabled:opacity-70"
                   >
-                    {notification.read ? t('notifications.unread') : t('notifications.read')}
+                    <span className={cn('mt-0.5 shrink-0 rounded-full p-2', meta.bgClass)}>
+                      <Icon className={cn('h-4 w-4', meta.colorClass)} aria-hidden="true" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center gap-2">
+                        {!notification.isRead && (
+                          <>
+                            <span
+                              className="h-2 w-2 shrink-0 rounded-full bg-section-primary"
+                              aria-hidden="true"
+                            />
+                            <span className="sr-only">{t('notifications.unread')}: </span>
+                          </>
+                        )}
+                        <span
+                          className={cn(
+                            'truncate text-text-inverse',
+                            notification.isRead ? 'font-medium' : 'font-semibold'
+                          )}
+                        >
+                          {title}
+                        </span>
+                      </span>
+                      {notification.body && (
+                        <span className="mt-1 block text-sm text-text-secondary">
+                          {notification.body}
+                        </span>
+                      )}
+                      <span className="mt-2 flex items-center gap-2 text-xs text-text-tertiary">
+                        <Badge size="sm" variant="default">
+                          {t(meta.labelKey)}
+                        </Badge>
+                        <time dateTime={notification.createdAt?.toISOString()}>
+                          {formatWhen(notification.createdAt)}
+                        </time>
+                      </span>
+                    </span>
+                    {hasTarget && (
+                      <ChevronRight
+                        className="mt-1 h-4 w-4 shrink-0 self-center text-text-tertiary"
+                        aria-hidden="true"
+                      />
+                    )}
                   </button>
-                </div>
-              </article>
-            );
-          })
+                  <button
+                    type="button"
+                    onClick={() => handleToggleRead(notification)}
+                    aria-label={
+                      notification.isRead
+                        ? t('notifications.inbox.markUnread', { title })
+                        : t('notifications.inbox.markRead', { title })
+                    }
+                    title={
+                      notification.isRead
+                        ? t('notifications.inbox.markUnreadShort')
+                        : t('notifications.inbox.markReadShort')
+                    }
+                    className="flex w-12 shrink-0 items-center justify-center rounded-r-2xl border-l border-hairline text-text-tertiary transition-colors hover:text-text-inverse focus-ring"
+                  >
+                    {notification.isRead ? (
+                      <RotateCcw className="h-4 w-4" aria-hidden="true" />
+                    ) : (
+                      <Check className="h-4 w-4" aria-hidden="true" />
+                    )}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
         )}
       </section>
     </div>

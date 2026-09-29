@@ -53,6 +53,7 @@ import {
   DELIVERED_STATUSES,
   OUTCOME_STATUSES,
 } from "@/lib/bookingStatus";
+import { normalizeNotification } from "@/lib/notifications/inbox";
 
 const PROVIDER_COLLECTION = "providers";
 /** The provider catalogue. `providers` is a leftover name that holds no documents. */
@@ -85,7 +86,7 @@ export async function getProviderDashboardStats(): Promise<DashboardStats> {
   // `instructors`, not PROVIDER_COLLECTION. The provider catalogue is `instructors`;
   // `providers` has never held a document in either project, so this read always missed and
   // the early return below handed every provider a dashboard of zeros. The remaining
-  // PROVIDER_COLLECTION paths in this file (blocked_times, notifications) point at the same
+  // PROVIDER_COLLECTION paths in this file (blocked_times) point at the same
   // empty collection and want the same treatment, but moving where they read and write is a
   // data question, not a counter fix.
   const providerRef = doc(db, INSTRUCTORS_COLLECTION, providerId);
@@ -661,44 +662,47 @@ export async function requestWithdrawal(amount: number): Promise<void> {
   });
 }
 
+// Provider notifications live in the same per-user inbox as everyone else's —
+// users/{uid}/notifications, written by the booking notifier and the scheduled jobs.
+// providers/{id}/notifications never had a writer (2026-09-29 audit).
+function providerInbox(providerId: string) {
+  return collection(db, USERS_COLLECTION, providerId, NOTIFICATIONS_COLLECTION);
+}
+
+function toProviderNotification(id: string, raw: Record<string, unknown>): ProviderNotification {
+  const n = normalizeNotification(id, raw);
+  return {
+    id: n.id,
+    type: n.type as ProviderNotification["type"],
+    title: n.title,
+    message: n.body,
+    bookingId: n.bookingId ?? undefined,
+    clientId: typeof n.data.clientId === "string" ? n.data.clientId : undefined,
+    isRead: n.isRead,
+    createdAt: n.createdAt as unknown as ProviderNotification["createdAt"],
+    data: n.data,
+  };
+}
+
 // Get Provider Notifications
 export async function getProviderNotifications(): Promise<ProviderNotification[]> {
   const providerId = await getCurrentProviderId();
-  
+
   const notificationsQuery = query(
-    collection(db, PROVIDER_COLLECTION, providerId, NOTIFICATIONS_COLLECTION),
+    providerInbox(providerId),
     orderBy("createdAt", "desc"),
     limit(50)
   );
 
   const notificationsSnap = await getDocs(notificationsQuery);
-  const notifications: ProviderNotification[] = [];
-
-  notificationsSnap.forEach(doc => {
-    const data = doc.data();
-    notifications.push({
-      id: doc.id,
-      ...data,
-      createdAt: data.createdAt?.toDate(),
-    } as ProviderNotification);
-  });
-
-  return notifications;
+  return notificationsSnap.docs.map((d) => toProviderNotification(d.id, d.data()));
 }
 
 // Mark Notification as Read
 export async function markNotificationAsRead(notificationId: string): Promise<void> {
   const providerId = await getCurrentProviderId();
-  
-  const notificationRef = doc(
-    db, 
-    PROVIDER_COLLECTION, 
-    providerId, 
-    NOTIFICATIONS_COLLECTION, 
-    notificationId
-  );
-  
-  await updateDoc(notificationRef, {
+
+  await updateDoc(doc(providerInbox(providerId), notificationId), {
     isRead: true,
     readAt: serverTimestamp(),
   });
@@ -738,21 +742,16 @@ export function subscribeToProviderNotifications(
   callback: (notifications: ProviderNotification[]) => void
 ): () => void {
   const notificationsQuery = query(
-    collection(db, PROVIDER_COLLECTION, providerId, NOTIFICATIONS_COLLECTION),
+    providerInbox(providerId),
     orderBy("createdAt", "desc"),
     limit(20)
   );
 
   return onSnapshot(notificationsQuery, (snapshot) => {
-    const notifications: ProviderNotification[] = [];
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      notifications.push({
-        id: doc.id,
-        ...data,
-        createdAt: data.createdAt?.toDate(),
-      } as ProviderNotification);
-    });
-    callback(notifications);
+    callback(
+      snapshot.docs.map((d) =>
+        toProviderNotification(d.id, d.data({ serverTimestamps: "estimate" }))
+      )
+    );
   });
 }

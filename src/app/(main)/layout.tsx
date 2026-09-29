@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
-import { useNotificationStore } from '@/stores/notificationStore';
+import { startNotificationInbox, useNotificationStore } from '@/stores/notificationStore';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useI18n } from '@/hooks/useI18n';
 import type { ReactNode } from 'react';
@@ -20,10 +20,16 @@ export default function MainAppLayout({ children }: MainAppLayoutProps) {
   const isInitialized = useAuthStore((state) => state.isInitialized);
 
   const { t } = useI18n();
-  const notificationCount = useNotificationStore((state) =>
-    state.notifications.reduce((count, notification) => count + (notification.read ? 0 : 1), 0)
-  );
+  const notificationCount = useNotificationStore((state) => state.unreadCount);
   const router = useRouter();
+  const uid = firebaseUser?.uid;
+
+  // One realtime listener on users/{uid}/notifications for the whole signed-in shell; the
+  // Header badge and /notifications both read it.
+  useEffect(() => {
+    if (!uid) return;
+    return startNotificationInbox(uid);
+  }, [uid]);
 
   useEffect(() => {
     // Only redirect after auth is initialized
