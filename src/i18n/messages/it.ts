@@ -2792,7 +2792,7 @@ export const itMessages = {
   'chat.hint': 'Usa la chat per conferme rapide su orari, accesso e preparazione.',
   'chat.input.placeholder': 'Scrivi un messaggio…',
   'chat.send.aria': 'Invia messaggio',
-  'chat.quickReply.confirmTime': "Confirmiamo l'orario?",
+  'chat.quickReply.confirmTime': "Confermiamo l'orario?",
   'chat.quickReply.bringFriend': 'Posso portare un amico?',
   'chat.quickReply.materials': 'Ci sono materiali da portare?',
   'chat.list.title': 'Messaggi',
