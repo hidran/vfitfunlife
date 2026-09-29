@@ -38,6 +38,10 @@ export async function notifyTransition(opts: {
   event: BookingMessageEvent;
   bookingId: string;
   context?: MessageContext;
+  /** Overrides the default `booking_${event}` type stored on the inbox doc / push data. */
+  type?: string;
+  /** Set false to skip the email channel (e.g. hourly reminders). Default true. */
+  email?: boolean;
 }): Promise<void> {
   const { recipientUid, event, bookingId, context = {} } = opts;
 
@@ -50,7 +54,7 @@ export async function notifyTransition(opts: {
   }
 
   const message = buildMessage(event, recipient.locale, context);
-  const type = `booking_${event}`;
+  const type = opts.type ?? `booking_${event}`;
 
   await Promise.allSettled([
     sendPushToUser(recipientUid, {
@@ -69,7 +73,7 @@ export async function notifyTransition(opts: {
       createdAt: FieldValue.serverTimestamp(),
     }),
 
-    recipient.email ?
+    recipient.email && opts.email !== false ?
       sendEmail({ to: recipient.email, subject: message.title, body: message.body }) :
       Promise.resolve(false),
   ]).then((results) => {

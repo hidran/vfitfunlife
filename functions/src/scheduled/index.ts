@@ -4,6 +4,8 @@ import { onDocumentUpdated } from "firebase-functions/v2/firestore";
 import * as admin from "firebase-admin";
 import { subHours, addDays } from "date-fns";
 import { sendPushToUser } from "../notifications";
+import { notifyTransition } from "../bookings/notify";
+import { reminderContext, reminderKind } from "../bookings/notifyTargets";
 import { buildMessage } from "../notifications/bookingMessages";
 import {
   applyChallengeProgress,
@@ -26,7 +28,9 @@ function guardWrite(p: Promise<unknown>): void {
 interface BookingData {
   userId: string;
   serviceName: string;
-  venueName: string;
+  /** Null for trainer sessions — reminders then name the trainer instead. */
+  venueName?: string | null;
+  instructorName?: string | null;
   scheduledAt: admin.firestore.Timestamp;
   scheduledEndAt?: admin.firestore.Timestamp;
   reminder24hSent?: boolean;
@@ -63,8 +67,9 @@ export const sendBookingReminders = onSchedule(
       .where("scheduledAt", "<=", reminderWindow.end)
       .get();
 
-    // Pushes go out concurrently; each booking's flag is only set once its push succeeded,
-    // and all flag updates are written together at the end.
+    // Notifications (push + in-app, localized per recipient) go out concurrently. The flag
+    // is set once delivery was attempted: the in-app doc is the durable record, and a
+    // missing FCM token must not make the same reminder repeat every hour.
     const writer = db.bulkWriter();
     let sent = 0;
     const sends: Promise<void>[] = [];
@@ -74,34 +79,25 @@ export const sendBookingReminders = onSchedule(
       const scheduledAt = booking.scheduledAt.toDate();
       const hoursUntil = (scheduledAt.getTime() - now.getTime()) / (1000 * 60 * 60);
 
-      let payload: Parameters<typeof sendPushToUser>[1] | null = null;
-      let flag: "reminder24hSent" | "reminder2hSent" | null = null;
+      const kind = reminderKind(hoursUntil, booking);
+      if (!kind) continue;
+      const field = kind === "reminder_24h" ? "reminder24hSent" : "reminder2hSent";
 
-      if (hoursUntil >= 23 && hoursUntil <= 25 && !booking.reminder24hSent) {
-        payload = {
-          title: "Promemoria prenotazione",
-          body: `Ricorda: domani hai ${booking.serviceName} presso ${booking.venueName}`,
-          data: { bookingId: doc.id, type: "booking_reminder" },
-        };
-        flag = "reminder24hSent";
-      } else if (hoursUntil >= 1.5 && hoursUntil <= 2.5 && !booking.reminder2hSent) {
-        payload = {
-          title: "Tra poco!",
-          body: `${booking.serviceName} inizia tra 2 ore presso ${booking.venueName}`,
-          data: { bookingId: doc.id, type: "booking_reminder" },
-        };
-        flag = "reminder2hSent";
-      }
-      if (!payload || !flag) continue;
-
-      const field = flag;
       sends.push(
-        sendPushToUser(booking.userId, payload).then(
+        notifyTransition({
+          recipientUid: booking.userId,
+          event: kind,
+          bookingId: doc.id,
+          context: reminderContext(booking),
+          // Keeps the type the client already knows; no email for hourly reminders.
+          type: "booking_reminder",
+          email: false,
+        }).then(
           () => {
             guardWrite(writer.update(doc.ref, { [field]: true }));
             sent++;
           },
-          (err) => logger.error(`Booking reminder push failed for ${doc.id}`, err)
+          (err) => logger.error(`Booking reminder failed for ${doc.id}`, err)
         )
       );
     }

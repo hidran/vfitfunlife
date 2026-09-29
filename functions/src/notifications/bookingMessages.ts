@@ -22,13 +22,24 @@ export type BookingMessageEvent =
   | "payment_confirmed"
   | "payment_client_confirmed"
   | "payment_disputed"
-  | "completion_reminder";
+  | "completion_reminder"
+  | "new_request"
+  | "reminder_24h"
+  | "reminder_2h";
 
 export interface MessageContext {
   serviceName?: string;
   trainerName?: string;
   clientName?: string;
   amount?: number;
+  /** Free-text cancellation reason, shown to the other side when present. */
+  reason?: string;
+  /** Client cancelled inside the late-cancellation window (pilot: informational only). */
+  late?: boolean;
+  /** Venue bookings only; trainer sessions have no venue and fall back to the trainer. */
+  venueName?: string;
+  /** Session start, rendered in Europe/Rome time in the recipient's locale. */
+  startsAt?: Date;
 }
 
 export interface RenderedMessage {
@@ -41,6 +52,40 @@ type Template = (ctx: MessageContext) => RenderedMessage;
 /** Neutral fallbacks so a missing context field never renders "undefined" to a user. */
 function svc(ctx: MessageContext, fallback: string): string {
   return ctx.serviceName?.trim() || fallback;
+}
+
+/** " (lun 5 ott, 10:00)" in the recipient's language, or "" when the start is unknown. */
+function when(ctx: MessageContext, locale: AppLocale): string {
+  const d = ctx.startsAt;
+  if (!(d instanceof Date) || Number.isNaN(d.getTime())) return "";
+  const formatted = new Intl.DateTimeFormat(locale, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Rome",
+  }).format(d);
+  return ` (${formatted})`;
+}
+
+/** The late-cancellation sentence when the client cancelled late, else "". */
+function late(ctx: MessageContext, sentence: string): string {
+  return ctx.late ? sentence : "";
+}
+
+/** " Motivo: …" suffix, or "" when no reason was given. */
+function reason(ctx: MessageContext, label: string): string {
+  const r = ctx.reason?.trim();
+  return r ? ` ${label} ${r}` : "";
+}
+
+/** Where the session happens: the venue when there is one, else who it is with. */
+function place(ctx: MessageContext, atVenue: string, withTrainer: string): string {
+  const venue = ctx.venueName?.trim();
+  if (venue) return ` ${atVenue} ${venue}`;
+  const trainer = ctx.trainerName?.trim();
+  return trainer ? ` ${withTrainer} ${trainer}` : "";
 }
 
 function money(amount: number | undefined): string {
@@ -60,11 +105,12 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
     }),
     cancelled_by_client: (c) => ({
       title: "Prenotazione cancellata",
-      body: `La prenotazione per ${svc(c, "la sessione")} è stata cancellata dal cliente.`,
+      body: `La prenotazione per ${svc(c, "la sessione")} è stata cancellata dal cliente.` +
+        late(c, " Cancellazione tardiva: meno di 24 ore dall'inizio."),
     }),
     cancelled_by_trainer: (c) => ({
       title: "Prenotazione cancellata",
-      body: `La prenotazione per ${svc(c, "la sessione")} è stata cancellata dal trainer.`,
+      body: `La prenotazione per ${svc(c, "la sessione")} è stata cancellata dal trainer.${reason(c, "Motivo:")}`,
     }),
     rescheduled: (c) => ({
       title: "Prenotazione spostata",
@@ -90,6 +136,19 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
       title: "Sessione svolta?",
       body: `Segna come svolta la sessione di ${svc(c, "allenamento")} e registra il pagamento.`,
     }),
+    new_request: (c) => ({
+      title: "Nuova richiesta di prenotazione",
+      body: `${c.clientName?.trim() || "Un cliente"} ha richiesto ${svc(c, "una sessione")}${when(c, "it")}.` +
+        " Accetta o rifiuta dall'app.",
+    }),
+    reminder_24h: (c) => ({
+      title: "Promemoria prenotazione",
+      body: `Ricorda: domani hai ${svc(c, "una sessione")}${place(c, "presso", "con")}.`,
+    }),
+    reminder_2h: (c) => ({
+      title: "Tra poco!",
+      body: `${svc(c, "La tua sessione")} inizia tra 2 ore${place(c, "presso", "con")}.`,
+    }),
   },
 
   en: {
@@ -103,11 +162,12 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
     }),
     cancelled_by_client: (c) => ({
       title: "Booking cancelled",
-      body: `The booking for ${svc(c, "the session")} was cancelled by the client.`,
+      body: `The booking for ${svc(c, "the session")} was cancelled by the client.` +
+        late(c, " Late cancellation: less than 24 hours before the start."),
     }),
     cancelled_by_trainer: (c) => ({
       title: "Booking cancelled",
-      body: `The booking for ${svc(c, "the session")} was cancelled by the trainer.`,
+      body: `The booking for ${svc(c, "the session")} was cancelled by the trainer.${reason(c, "Reason:")}`,
     }),
     rescheduled: (c) => ({
       title: "Booking moved",
@@ -133,6 +193,19 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
       title: "Session done?",
       body: `Mark your ${svc(c, "training")} session as done and record the payment.`,
     }),
+    new_request: (c) => ({
+      title: "New booking request",
+      body: `${c.clientName?.trim() || "A client"} requested ${svc(c, "a session")}${when(c, "en")}.` +
+        " Accept or decline it in the app.",
+    }),
+    reminder_24h: (c) => ({
+      title: "Booking reminder",
+      body: `Reminder: tomorrow you have ${svc(c, "a session")}${place(c, "at", "with")}.`,
+    }),
+    reminder_2h: (c) => ({
+      title: "Starting soon!",
+      body: `${svc(c, "Your session")} starts in 2 hours${place(c, "at", "with")}.`,
+    }),
   },
 
   es: {
@@ -146,11 +219,12 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
     }),
     cancelled_by_client: (c) => ({
       title: "Reserva cancelada",
-      body: `La reserva de ${svc(c, "la sesión")} ha sido cancelada por el cliente.`,
+      body: `La reserva de ${svc(c, "la sesión")} ha sido cancelada por el cliente.` +
+        late(c, " Cancelación tardía: menos de 24 horas antes del inicio."),
     }),
     cancelled_by_trainer: (c) => ({
       title: "Reserva cancelada",
-      body: `La reserva de ${svc(c, "la sesión")} ha sido cancelada por el entrenador.`,
+      body: `La reserva de ${svc(c, "la sesión")} ha sido cancelada por el entrenador.${reason(c, "Motivo:")}`,
     }),
     rescheduled: (c) => ({
       title: "Reserva cambiada",
@@ -176,6 +250,19 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
       title: "¿Sesión realizada?",
       body: `Marca la sesión de ${svc(c, "entrenamiento")} como realizada y registra el pago.`,
     }),
+    new_request: (c) => ({
+      title: "Nueva solicitud de reserva",
+      body: `${c.clientName?.trim() || "Un cliente"} ha solicitado ${svc(c, "una sesión")}${when(c, "es")}.` +
+        " Acéptala o recházala en la app.",
+    }),
+    reminder_24h: (c) => ({
+      title: "Recordatorio de reserva",
+      body: `Recuerda: mañana tienes ${svc(c, "una sesión")}${place(c, "en", "con")}.`,
+    }),
+    reminder_2h: (c) => ({
+      title: "¡Falta poco!",
+      body: `${svc(c, "Tu sesión")} empieza en 2 horas${place(c, "en", "con")}.`,
+    }),
   },
 
   fr: {
@@ -189,11 +276,12 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
     }),
     cancelled_by_client: (c) => ({
       title: "Réservation annulée",
-      body: `La réservation pour ${svc(c, "la séance")} a été annulée par le client.`,
+      body: `La réservation pour ${svc(c, "la séance")} a été annulée par le client.` +
+        late(c, " Annulation tardive : moins de 24 heures avant le début."),
     }),
     cancelled_by_trainer: (c) => ({
       title: "Réservation annulée",
-      body: `La réservation pour ${svc(c, "la séance")} a été annulée par le coach.`,
+      body: `La réservation pour ${svc(c, "la séance")} a été annulée par le coach.${reason(c, "Motif :")}`,
     }),
     rescheduled: (c) => ({
       title: "Réservation déplacée",
@@ -219,6 +307,19 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
       title: "Séance effectuée ?",
       body: `Marquez la séance de ${svc(c, "training")} comme effectuée et enregistrez le paiement.`,
     }),
+    new_request: (c) => ({
+      title: "Nouvelle demande de réservation",
+      body: `${c.clientName?.trim() || "Un client"} a demandé ${svc(c, "une séance")}${when(c, "fr")}.` +
+        " Acceptez-la ou refusez-la dans l'app.",
+    }),
+    reminder_24h: (c) => ({
+      title: "Rappel de réservation",
+      body: `Rappel : demain vous avez ${svc(c, "une séance")}${place(c, "à", "avec")}.`,
+    }),
+    reminder_2h: (c) => ({
+      title: "C'est bientôt !",
+      body: `${svc(c, "Votre séance")} commence dans 2 heures${place(c, "à", "avec")}.`,
+    }),
   },
 
   de: {
@@ -232,11 +333,12 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
     }),
     cancelled_by_client: (c) => ({
       title: "Buchung storniert",
-      body: `Die Buchung für ${svc(c, "die Einheit")} wurde vom Kunden storniert.`,
+      body: `Die Buchung für ${svc(c, "die Einheit")} wurde vom Kunden storniert.` +
+        late(c, " Kurzfristige Stornierung: weniger als 24 Stunden vor Beginn."),
     }),
     cancelled_by_trainer: (c) => ({
       title: "Buchung storniert",
-      body: `Die Buchung für ${svc(c, "die Einheit")} wurde vom Trainer storniert.`,
+      body: `Die Buchung für ${svc(c, "die Einheit")} wurde vom Trainer storniert.${reason(c, "Grund:")}`,
     }),
     rescheduled: (c) => ({
       title: "Buchung verschoben",
@@ -261,6 +363,19 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
     completion_reminder: (c) => ({
       title: "Einheit durchgeführt?",
       body: `Markiere die ${svc(c, "Trainings")}-Einheit als durchgeführt und erfasse die Zahlung.`,
+    }),
+    new_request: (c) => ({
+      title: "Neue Buchungsanfrage",
+      body: `${c.clientName?.trim() || "Ein Kunde"} hat angefragt: ${svc(c, "eine Einheit")}${when(c, "de")}.` +
+        " Nimm sie in der App an oder lehne sie ab.",
+    }),
+    reminder_24h: (c) => ({
+      title: "Buchungserinnerung",
+      body: `Erinnerung: Morgen hast du ${svc(c, "eine Einheit")}${place(c, "in", "mit")}.`,
+    }),
+    reminder_2h: (c) => ({
+      title: "Gleich geht's los!",
+      body: `${svc(c, "Deine Einheit")} beginnt in 2 Stunden${place(c, "in", "mit")}.`,
     }),
   },
 };
