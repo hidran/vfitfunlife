@@ -245,7 +245,7 @@ export default function BookingRescheduleClient() {
       </div>
 
       {isReschedulable && !isComplete && (
-        <div className="fixed bottom-0 left-0 right-0 border-t border-hairline bg-background-dark/90 p-4 backdrop-blur-xl">
+        <div className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] left-0 right-0 z-40 border-t border-hairline bg-background-dark/90 p-4 pr-20 backdrop-blur-xl">
           <Button
             className={cn('w-full', hasChanged ? '' : 'opacity-70')}
             onClick={handleConfirm}

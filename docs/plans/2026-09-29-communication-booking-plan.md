@@ -78,7 +78,7 @@ State machine: `functions/src/bookings/transitions.ts:22-44`; notifications on t
 
 ### Phase A — Notifications that actually arrive (priority: P0)
 
-- [ ] **A1 — Notify trainer on new booking request.**
+- [x] (`8df2b6e`) **A1 — Notify trainer on new booking request.**
   In `createBooking` after the transaction commits, call the same notifier used by transitions
   (`notifyTransition` in `functions/src/bookings/notify.ts`, or a sibling `notifyNewRequest`) →
   trainer's `users/{instructorId}/notifications` + push + email, localized via
@@ -86,14 +86,14 @@ State machine: `functions/src/bookings/transitions.ts:22-44`; notifications on t
   *Done when:* unit test asserts one notification to the trainer with bookingId; staging: customer
   books demo.provider → trainer's inbox doc exists.
 
-- [ ] **A2 — Notify trainer when the client cancels** (legacy `cancelBooking`, `functions/src/bookings/index.ts:542`),
+- [x] (`8df2b6e`) **A2 — Notify trainer when the client cancels** (legacy `cancelBooking`, `functions/src/bookings/index.ts:542`),
   including whether it was a late cancellation. *Done when:* test + staging check.
 
-- [ ] **A3 — Fix trainer cancel reason** (`reason` vs `note`): accept both in
+- [x] (`8df2b6e`, UI dialog in follow-up merge) **A3 — Fix trainer cancel reason** (`reason` vs `note`): accept both in
   `cancelBookingAsTrainer`, send `note` from `src/lib/firebase/provider.ts:408`. Reason appears in
   the client notification. *Done when:* test covers both names.
 
-- [ ] **A4 — Real notification inbox (client + provider).**
+- [x] (`457bc19`) **A4 — Real notification inbox (client + provider).**
   Replace mock `src/stores/notificationStore.ts` with a TanStack query / `onSnapshot` on
   `users/{uid}/notifications` (orderBy createdAt desc, limit 50); unread badge in Header from the
   same source; wire `markNotificationRead` / `markAllNotificationsRead`
@@ -104,7 +104,7 @@ State machine: `functions/src/bookings/transitions.ts:22-44`; notifications on t
   Check field names written by functions (`title/body/type/data/isRead/createdAt`) and localize
   display. *Done when:* staging: actions from A1/A2 appear live in both inboxes; mark-read persists.
 
-- [ ] **A5 — Register FCM tokens (web + native).**
+- [~] (`468954d`, code shipped; needs VAPID keys + iOS setup) **A5 — Register FCM tokens (web + native).**
   Web: after permission granted, `getToken(messaging, { vapidKey })` (needs
   `NEXT_PUBLIC_FIREBASE_VAPID_KEY` in `.env`, `.env.staging`, `.env.local`; and
   `public/firebase-messaging-sw.js`) → `registerFcmToken`. Native: `@capacitor/push-notifications`
@@ -114,17 +114,17 @@ State machine: `functions/src/bookings/transitions.ts:22-44`; notifications on t
   *Done when:* token stored on demo.customer on staging; a test push from
   `sendPushToUser` arrives in the browser. iOS/Android need a device build — note result in Log.
 
-- [ ] **A6 — Reminders fixed**: `sendBookingReminders` also writes in-app notification, localized
+- [x] (`8df2b6e`) **A6 — Reminders fixed**: `sendBookingReminders` also writes in-app notification, localized
   (user `preferredLanguage`), uses service name / trainer name instead of `venueName` when null.
   *Done when:* unit test for trainer-session text; staging job run (or manual trigger) produces inbox entries.
 
-- [ ] **A7 — Email check**: confirm `RESEND_API_KEY` secret exists on staging and prod
+- [~] **A7 — Email check**: confirm `RESEND_API_KEY` secret exists on staging and prod
   (`firebase functions:secrets:get RESEND_API_KEY -P <p>` — don't print the value). If missing, ask
   the user for a key; document in `docs/deployment/guide.md`. *Done when:* status recorded in Log.
 
 ### Phase B — Booking flow correctness (P1)
 
-- [ ] **B1 — Auto-maintain the provider's client roster.** On booking create / status change
+- [~] (`e10a958`, staging backfilled; prod pending) **B1 — Auto-maintain the provider's client roster.** On booking create / status change
   (trigger `onDocumentWritten('bookings/{id}')` or inside callables), upsert
   `clients/{instructorId}_{userId}` (decide id scheme; migrate/merge the existing seeded
   `demo-client-*` ids or leave them) with `providerId,userId,name,email,phone,firstVisit,lastVisit,
@@ -133,7 +133,7 @@ State machine: `functions/src/bookings/transitions.ts:22-44`; notifications on t
   providerId+lastVisit exists). *Done when:* customer booking on staging makes the client appear in
   `/provider/clients`; backfill staging applied; prod dry-run counts shown to user.
 
-- [ ] **B2 — Client booking note**: send the note from `booking/confirm/page.tsx:120` (add a
+- [x] (`2f02ff4`) **B2 — Client booking note**: send the note from `booking/confirm/page.tsx:120` (add a
   textarea, max ~500 chars, i18n), show it on the trainer's booking detail.
 
 - [ ] **B3 — Honest checkout**: remove the UI-only 5% platform fee and mock saved cards from
@@ -142,7 +142,7 @@ State machine: `functions/src/bookings/transitions.ts:22-44`; notifications on t
   server's `finalPrice` (add a test around the price breakdown). **Decision needed from user
   (see D1) before adding any card payment.**
 
-- [ ] **B4 — Reviews that save**: `BookingReviewClient.tsx` calls `submitReview`; server accepts
+- [x] (`2f02ff4`) **B4 — Reviews that save**: `BookingReviewClient.tsx` calls `submitReview`; server accepts
   `completed` **and** `payment_confirmed`; one review per booking; show on
   `/providers/reviews?id=`. Check rules and the rating aggregation on the instructor doc.
 
@@ -151,19 +151,19 @@ State machine: `functions/src/bookings/transitions.ts:22-44`; notifications on t
 
 ### Phase C — Chat (P1, larger)
 
-- [ ] **C1 — Data model + rules.** `conversations/{id}` with `participantIds: [a,b]` (sorted),
+- [x] (`69966bf`) **C1 — Data model + rules.** `conversations/{id}` with `participantIds: [a,b]` (sorted),
   `participants` map (name/photo), `lastMessage`, `lastMessageAt`, `unread: {uid: n}`, optional
   `bookingId`; messages in `conversations/{id}/messages` (`senderId,text,createdAt`, max 2000
   chars). Deterministic id `${minUid}_${maxUid}` so "Message" never duplicates. Rules: only
   participants read/write; sender must be auth uid; no edits to others' messages. Index:
   `conversations` participantIds array-contains + lastMessageAt desc. Rules unit tests in
   `functions/test/*-rules.test.ts` style (need emulator).
-- [ ] **C2 — Chat UI.** Static-export-safe routes: `/chat` (list) and `/chat/detail?id=` (thread),
+- [x] (`69966bf`) **C2 — Chat UI.** Static-export-safe routes: `/chat` (list) and `/chat/detail?id=` (thread),
   `onSnapshot` realtime, optimistic send, i18n (5 locales), mobile-first, a11y. Delete the stub
   `src/app/(main)/chat/[id]/` (+ redirect old links like the provider-legacy page did if needed).
-- [ ] **C3 — Entry points**: "Messaggio" on provider client detail, chat button on customer booking
+- [x] (`69966bf`) **C3 — Entry points**: "Messaggio" on provider client detail, chat button on customer booking
   detail (use `instructorId`), provider public profile. Helper `chatHref(otherUid)` in `src/lib/routes.ts`.
-- [ ] **C4 — New-message notification**: trigger on message create → in-app + push to the other
+- [x] (`69966bf`) **C4 — New-message notification**: trigger on message create → in-app + push to the other
   participant (throttle: max 1 push per conversation per ~5 min).
 
 ### Phase D — Decisions for the user (ask, don't assume)
@@ -198,3 +198,13 @@ it isn't in the env files.
 | Date | Task | Status | Commit | Notes |
 |---|---|---|---|---|
 | 2026-09-29 | plan | created | — | Based on audit of booking/communication flows; demo clients seeded on staging + prod. |
+| 2026-09-29 | A1,A2,A6 | done | 8df2b6e, f15969d | Trainer notified on new request + client cancel (late flag); reminders write localized in-app docs; notifications carry role-aware `link`. Staging verified: request + cancel notifications arrive in inbox. Late-cancel wording not exercised on staging. |
+| 2026-09-29 | A3 | in progress | 8df2b6e | Server accepts `note`+`reason` (frontend wrapper already mapped reason→note). Provider UI had no reason input (window.confirm) — reason dialog being added. |
+| 2026-09-29 | A4 | done | 457bc19 | Live inbox via onSnapshot; mark-read direct updateDoc; staging verified (badge, tap → /provider/bookings/detail, read persists). |
+| 2026-09-29 | A5 | code shipped | 468954d | No VAPID key in env files → web push no-op until `NEXT_PUBLIC_FIREBASE_VAPID_KEY` added (staging: .env.staging+.env.local; prod: .env). Android needs google-services.json; iOS needs Firebase Messaging pod + AppDelegate + APNs key (device build). New callable `unregisterFcmToken`. |
+| 2026-09-29 | A7 | status | — | RESEND_API_KEY: prod looks real (`re_…`); **staging holds a placeholder** → emails skipped on staging. Awaiting user decision. |
+| 2026-09-29 | B1 | staging done | e10a958 | Trigger `syncClientRosterOnBookingWrite`; ids: existing (providerId,userId) doc updated in place, else `{instructorId}_{userId}`. Staging backfill: 1 create + 7 updates applied, re-dry-run 0. totalBookings counts all statuses (incl. cancelled). Prod dry-run pending. |
+| 2026-09-29 | B2,B4 | done | 2f02ff4 | Note textarea + server sanitize; review route moved to `/bookings/review?id=`, real submitReview (completed+payment_confirmed, one per booking, transactional); review writes server-only in rules. Staging verified. Mobile submit bar overlapped by bottom nav → fix in progress. |
+| 2026-09-29 | C1–C4 | done | 69966bf | conversations/{minUid_maxUid}, rules (customer↔customer blocked), server-side unread, push+in-app throttled 5 min. Deployed to staging. |
+| 2026-09-29 | D1 | asked | — | User didn't answer yet → B3/B5 on hold. |
+| 2026-09-29 | fixes | done | (this commit + merges) | From staging smoke test: /book now populates booking store (profile → confirm no longer dead-ends); trainer cancel reason dialog (A3 UI); review + reschedule submit bars above bottom nav; trainer name on reviews page; "request sent" banner only while `requested`; accessible terms checkbox; translated payment status/type labels. |
