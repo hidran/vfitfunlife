@@ -176,7 +176,7 @@ State machine: `functions/src/bookings/transitions.ts:22-44`; notifications on t
 
 ### Phase E — Carry-overs from the performance plan (lower priority)
 
-- [ ] **E1** Firestore SDK still eager on every route (~352 KB): make ThemeContext/auth profile
+- [x] **E1** Firestore SDK still eager on every route (~352 KB): make ThemeContext/auth profile
   tolerate a lazily resolved Firestore (see `docs/performance/baseline.md`).
 - [x] **E2** Client-detail tabs (Goals/Training/Recipes) have no browser e2e test — add Playwright
   spec using the seeded demo clients.
@@ -222,3 +222,4 @@ it isn't in the env files.
 | 2026-09-29 | D5 prod | awaiting user | — | Prod dry-run: users 4, instructors 322 (321 are seeded `demo-trainer-*` of 392 total → only ~71 real), bookings 32, clients 8, transactions 10. Stats-only; demo trainers stay searchable. |
 | 2026-09-29 | D5 prod | applied | — | User approved. Prod `--apply`: 376 written, re-dry-run 0. Demo bookings are all recent (seeded 2026-09-29), so the nightly metrics job (7-day window + ROLLUP_VERSION 2 rebuild) clears them from metrics; no backfillMetricsDaily run needed. |
 | 2026-09-29 | E2,E3 | done | — | Emulator journey specs `client-detail-tabs.spec.ts` (Goals/Training/Recipes incl. draft + unshared recipe) and `admin-logs-paging.spec.ts` (size=5, pages 1→3→1, deep link); 5/5 pass, existing admin-counters+dashboard still green. No app bugs found. |
+| 2026-09-29 | E1 | done | 3cef152 | Firestore SDK off the root bundle (lib/firebase/app.ts + lazyFirestore). `/` 1391→1040 KB raw (414→309 gzip), `/terms` 1339→988; budgets tightened, check:bundle fails if `/`/`/terms` load Firestore. Staging + prod hosting deployed; signed-in profile + theme verified. |
