@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>VFit</title>
+<!--
+  Legacy chat links /chat/<otherUid> (the pre-2026-09-29 stub route) -> /chat/detail/?with=<otherUid>.
+  Served by the firebase.json rewrite for /chat/*. Rewrites run AFTER exact-match static files,
+  so the real /chat/ and /chat/detail/ pages are never touched. Same rule as chatHref in
+  src/lib/routes.ts.
+-->
+<script>
+(function () {
+  var m = /^\/chat\/([^/]+)\/?$/.exec(location.pathname);
+  var id = null;
+  try { id = m ? decodeURIComponent(m[1]) : null; } catch (e) { id = null; }
+  var dest = '/chat/';
+  if (id === 'detail') {
+    // /chat/detail without its static file (no trailing slash): keep the query string.
+    dest = '/chat/detail/' + location.search;
+  } else if (id && id !== 'undefined' && id !== 'null' && id !== 'placeholder') {
+    dest = '/chat/detail/?with=' + encodeURIComponent(id);
+  }
+  if (dest === location.pathname + location.search) dest = '/chat/';
+  location.replace(dest);
+})();
+</script>
+</head>
+<body style="background:#1A1D29"></body>
+</html>

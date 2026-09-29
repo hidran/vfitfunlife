@@ -46,6 +46,7 @@ import {
 } from '@/lib/bookingStatus';
 import type { Booking, BookingStatus } from '@/types/booking';
 import { queryKeys } from '@/lib/queryKeys';
+import { chatHref } from '@/lib/routes';
 
 const statusIcons: Record<BookingStatus, LucideIcon> = {
   requested: AlertCircle,
@@ -228,8 +229,19 @@ export default function BookingDetailPage() {
     }
   };
 
+  // Trainer sessions carry the trainer's uid in instructorId (booking.providerId is never
+  // written). Venue bookings have no one to chat with, so the button is hidden for them.
+  const chatWith = booking.instructorId || null;
+  const chatName = booking.instructorName || booking.providerName || '';
   const handleChat = () => {
-    router.push(`/chat/${booking.providerId}`);
+    if (!chatWith) return;
+    router.push(
+      chatHref(chatWith, {
+        name: chatName,
+        photoUrl: booking.providerAvatar ?? null,
+        bookingId: booking.id,
+      }),
+    );
   };
 
   const handleReview = () => {
@@ -371,14 +383,18 @@ export default function BookingDetailPage() {
               <h2 className="font-semibold text-content">{booking.providerName}</h2>
               <p className="text-text-secondary">{booking.serviceName}</p>
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={handleChat}
-                className="p-2 rounded-full bg-[var(--section-primary)]/20 text-[var(--section-primary)] hover:bg-[var(--section-primary)]/30 transition-colors"
-              >
-                <MessageCircle className="w-5 h-5" />
-              </button>
-            </div>
+            {chatWith && (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleChat}
+                  aria-label={t('chat.cta.messageAria', { name: chatName || t('chat.unknownUser') })}
+                  className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--section-primary)]/20 text-[var(--section-primary)] hover:bg-[var(--section-primary)]/30 transition-colors"
+                >
+                  <MessageCircle className="w-5 h-5" aria-hidden="true" />
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

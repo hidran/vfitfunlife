@@ -63,3 +63,34 @@ export function readIdParam(searchParams: { get(name: string): string | null } |
   if (typeof window === 'undefined') return null;
   return new URLSearchParams(window.location.search).get('id') || null;
 }
+
+/**
+ * Chat: `/chat` (inbox) and `/chat/detail` (thread) — query strings, not `/chat/<id>`, for
+ * the same `output: 'export'` reason as the provider pages above.
+ *
+ * `chatHref(otherUid)` opens the thread with that user whether or not a conversation exists
+ * yet; the page derives the deterministic `${minUid}_${maxUid}` id from the signed-in uid.
+ * The optional hints are written into the conversation on first contact (a customer cannot
+ * read a trainer's users doc, nor a trainer a customer's), and `bookingId` records where the
+ * chat was opened from.
+ */
+export const CHAT_INBOX_PATH = '/chat';
+export const CHAT_THREAD_PATH = '/chat/detail';
+
+export interface ChatHrefHints {
+  name?: string | null;
+  photoUrl?: string | null;
+  bookingId?: string | null;
+}
+
+export function chatHref(otherUid: string, hints: ChatHrefHints = {}): string {
+  const params = new URLSearchParams({ with: otherUid });
+  if (hints.name) params.set('name', hints.name);
+  if (hints.photoUrl) params.set('photo', hints.photoUrl);
+  if (hints.bookingId) params.set('booking', hints.bookingId);
+  return `${CHAT_THREAD_PATH}?${params.toString()}`;
+}
+
+export function conversationHref(conversationId: string): string {
+  return `${CHAT_THREAD_PATH}?id=${encodeURIComponent(conversationId)}`;
+}

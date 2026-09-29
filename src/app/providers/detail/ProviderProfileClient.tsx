@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { readIdParam } from '@/lib/routes';
+import { chatHref, readIdParam } from '@/lib/routes';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
 import {
@@ -53,7 +53,9 @@ export default function ProviderProfileClient() {
   };
 
   const handleContact = () => {
-    router.push(`/chat/${providerId}`);
+    if (!providerId) return;
+    // The public profile id is the provider's uid (instructors/{uid}).
+    router.push(chatHref(providerId, { name: profile?.fullName, photoUrl: profile?.avatarUrl }));
   };
 
   const handleShare = async () => {

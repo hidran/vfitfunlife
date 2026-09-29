@@ -1,5 +1,6 @@
 "use client";
 import { Sparkles } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/stores/authStore";
 import { useAssistantStore } from "@/stores/assistantStore";
 import { useI18n } from "@/hooks/useI18n";
@@ -11,13 +12,16 @@ export function FloatingAssistantButton() {
   const isInitialized = useAuthStore((s) => s.isInitialized);
   const open = useAssistantStore((s) => s.open);
   const isOpen = useAssistantStore((s) => s.isOpen);
+  const pathname = usePathname();
 
   // Any logged-in user (customers, providers, and staff/superadmin).
   if (!isInitialized || !user) return null;
+  // A chat thread's composer sits exactly where the button floats (it covered "Send").
+  const hideLauncher = pathname?.startsWith("/chat/detail") ?? false;
 
   return (
     <>
-      {!isOpen && (
+      {!isOpen && !hideLauncher && (
         <button
           onClick={open}
           aria-label={t("assistant.title")}

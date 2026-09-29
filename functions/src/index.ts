@@ -46,3 +46,4 @@ export * from "./categories/backfillCategories";
 export * from "./categories/mergeCategories";
 export * from "./config/pilotFlags";
 export * from "./geo/syncGeohash";
+export * from "./chat/onMessageCreated";
