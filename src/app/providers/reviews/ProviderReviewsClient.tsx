@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/Badge';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
 import { useInstructorReviews } from '@/hooks/useCommunity';
+import { useProviderPublicProfile } from '@/hooks/useProviderPublicProfile';
 import { Spinner } from '@/components/ui/Spinner';
 import { isReviewTagKey, reviewTagLabelKey } from '@/lib/reviews/errors';
 
@@ -25,6 +26,10 @@ export default function ProviderReviewsClient() {
 
   // Written by the submitReview callable, one per delivered booking.
   const { data: reviews = [], isLoading } = useInstructorReviews(providerId ?? undefined);
+  // Same query (and cache entry) as the provider detail page: name + avatar from instructors/{id}.
+  // Unknown/unverified providers fall back to a generic label rather than the raw id.
+  const { data: profile, isLoading: profileLoading } = useProviderPublicProfile(providerId ?? undefined);
+  const providerName = profile?.fullName ?? t('providerReviews.unknownProvider');
 
   const filteredReviews = useMemo(() => {
     if (ratingFilter === 'all') return reviews;
@@ -49,22 +54,35 @@ export default function ProviderReviewsClient() {
 
   return (
     <div className="min-h-screen bg-background-dark">
-      <div className="sticky top-0 z-20 border-b border-white/10 bg-background-dark/95 backdrop-blur-md">
+      <div className="sticky top-0 z-20 border-b border-hairline bg-background-dark/95 backdrop-blur-md">
         <div className="flex items-center gap-3 p-4">
           <button
+            type="button"
             onClick={() => router.back()}
-            className="rounded-full p-2 transition-colors hover:bg-white/10"
+            aria-label={t('providerProfile.goBack')}
+            className="flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-content/10"
           >
-            <ArrowLeft className="h-5 w-5 text-white" />
+            <ArrowLeft className="h-5 w-5 text-content" />
           </button>
-          <h1 className="text-lg font-semibold text-white">{t('providerReviews.title')}</h1>
+          <h1 className="text-lg font-semibold text-content">{t('providerReviews.title')}</h1>
         </div>
       </div>
 
       <div className="space-y-4 p-4 pb-10">
-        <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
-          <p className="text-xs uppercase tracking-wide text-text-tertiary">{t('providerReviews.providerId')}</p>
-          <p className="font-medium text-white">{providerId}</p>
+        <section className="rounded-2xl border border-hairline bg-surface-2 p-4">
+          <div className="flex items-center gap-3">
+            {profileLoading ? (
+              <>
+                <div className="h-10 w-10 animate-pulse rounded-full bg-content/10" aria-hidden="true" />
+                <div className="h-5 w-32 animate-pulse rounded bg-content/10" aria-hidden="true" />
+              </>
+            ) : (
+              <>
+                <Avatar src={profile?.avatarUrl ?? undefined} name={providerName} size="md" />
+                <p className="font-medium text-content" data-testid="provider-name">{providerName}</p>
+              </>
+            )}
+          </div>
           <div className="mt-3 flex items-center gap-3">
             <div className="inline-flex items-center gap-1 rounded-full bg-warning/20 px-3 py-1 text-warning">
               <Star className="h-4 w-4 fill-warning" />
@@ -82,8 +100,8 @@ export default function ProviderReviewsClient() {
               className={cn(
                 'rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
                 ratingFilter === value
-                  ? 'border-[var(--section-primary)] bg-[var(--section-primary)]/20 text-white'
-                  : 'border-white/20 text-text-secondary hover:text-white'
+                  ? 'border-[var(--section-primary)] bg-[var(--section-primary)]/20 text-content'
+                  : 'border-hairline text-text-secondary hover:text-content'
               )}
             >
               {value === 'all' ? t('providerReviews.filter.all') : t('providerReviews.filter.stars', { count: value })}
@@ -97,7 +115,7 @@ export default function ProviderReviewsClient() {
               <Spinner size="md" />
             </div>
           ) : filteredReviews.length === 0 ? (
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-center text-text-secondary">
+            <div className="rounded-2xl border border-hairline bg-surface-2 p-5 text-center text-text-secondary">
               {reviews.length === 0 ? t('providerReviews.emptyAll') : t('providerReviews.noReviews')}
             </div>
           ) : (
@@ -105,12 +123,12 @@ export default function ProviderReviewsClient() {
               const date = review.createdAt?.toDate?.();
               const tags = (review.tags ?? []).filter(isReviewTagKey);
               return (
-                <article key={review.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <article key={review.id} className="rounded-2xl border border-hairline bg-surface-2 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <Avatar src={review.avatarUrl ?? undefined} name={review.userName} size="md" />
                       <div>
-                        <p className="font-medium text-white">{review.userName}</p>
+                        <p className="font-medium text-content">{review.userName}</p>
                         <p className="text-xs text-text-tertiary">
                           {date
                             ? date.toLocaleDateString(toLocaleTag(locale), {
@@ -145,7 +163,7 @@ export default function ProviderReviewsClient() {
                       {tags.map((tag) => (
                         <li
                           key={tag}
-                          className="rounded-full border border-white/15 px-2.5 py-1 text-xs text-text-secondary"
+                          className="rounded-full border border-hairline px-2.5 py-1 text-xs text-text-secondary"
                         >
                           {t(reviewTagLabelKey(tag))}
                         </li>

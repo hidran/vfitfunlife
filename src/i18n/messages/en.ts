@@ -2823,7 +2823,7 @@ export const enMessages: Messages = {
 
   // ─── Provider Reviews (public) ────────────────────────────────────────
   'providerReviews.title': 'Provider Reviews',
-  'providerReviews.providerId': 'Provider ID',
+  'providerReviews.unknownProvider': 'Trainer',
   'providerReviews.totalReviews': '{{count}} total reviews',
   'providerReviews.filter.all': 'All',
   'providerReviews.filter.stars': '{{count}} stars',

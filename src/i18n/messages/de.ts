@@ -2806,7 +2806,7 @@ export const deMessages: Messages = {
 
   // ─── Provider Reviews (public) ────────────────────────────────────────
   'providerReviews.title': 'Anbieterbewertungen',
-  'providerReviews.providerId': 'Anbieter-ID',
+  'providerReviews.unknownProvider': 'Trainer',
   'providerReviews.totalReviews': '{{count}} Bewertungen insgesamt',
   'providerReviews.filter.all': 'Alle',
   'providerReviews.filter.stars': '{{count}} Sterne',
