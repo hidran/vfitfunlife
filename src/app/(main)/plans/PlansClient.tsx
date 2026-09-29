@@ -207,7 +207,7 @@ export default function PlansClient() {
           const key = progressKey(plan.id, week.weekNumber, day.label);
           const dayProgress = progress[key];
           return (
-            <section key={day.label} className="rounded-2xl border border-hairline bg-surface-elevated p-4">
+            <section key={key} className="rounded-2xl border border-hairline bg-surface-elevated p-4">
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <h2 className="font-semibold text-content">{day.label}</h2>
@@ -252,6 +252,9 @@ export default function PlansClient() {
               </ul>
 
               <DayFeedback
+                // Remount when the plan/day or the loaded values change: the form copies
+                // RPE and notes into local state once, and progress arrives asynchronously.
+                key={`${plan.clientId}:${key}:${dayProgress?.rpe ?? ''}:${dayProgress?.notes ?? ''}`}
                 planId={plan.id}
                 clientId={plan.clientId}
                 weekNumber={week.weekNumber}

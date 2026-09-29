@@ -55,4 +55,23 @@ describe('PlansClient plan selector', () => {
     expect(screen.getByRole('tab', { name: 'Blocco precedente' }).getAttribute('aria-selected')).toBe('true');
     await waitFor(() => expect(getPlanProgress).toHaveBeenCalledWith('c2', 'p1'));
   });
+
+  it('shows the saved RPE of the selected plan, even though progress loads after first render', async () => {
+    getMyWorkoutPlans.mockResolvedValue([
+      plan('p1', 'c1', 'Nuovo blocco', 'Squat'),
+      plan('p2', 'c1', 'Blocco precedente', 'Panca'),
+    ]);
+    getPlanProgress.mockImplementation(async (_c: string, planId: string) =>
+      planId === 'p2'
+        ? { 'p2__w1__Giorno_A': { id: 'p2__w1__Giorno_A', planId: 'p2', weekNumber: 1, dayLabel: 'Giorno A', exercises: {}, rpe: 6, notes: 'Bene' } }
+        : {});
+    render(<PlansClient />, { wrapper: makeQueryClientWrapper().wrapper });
+
+    await screen.findByRole('heading', { name: 'Nuovo blocco' });
+    expect((screen.getByRole('spinbutton') as HTMLInputElement).value).toBe('');
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Blocco precedente' }));
+    await waitFor(() => expect((screen.getByRole('spinbutton') as HTMLInputElement).value).toBe('6'));
+    expect((screen.getByPlaceholderText('plans.sessionNotes') as HTMLTextAreaElement).value).toBe('Bene');
+  });
 });
