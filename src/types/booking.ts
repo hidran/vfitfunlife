@@ -150,6 +150,8 @@ export interface Service {
   description: string;
   durationMinutes: number;
   price: number;
+  /** Charged instead of `price` to VIP clients, when set (server: createBooking). */
+  vipPrice?: number | null;
   isActive: boolean;
 }
 
@@ -192,11 +194,12 @@ export interface BookingData {
   paymentMethod: import('./firebase').PaymentMethod;
 }
 
+/** A usable promotion's terms, as read from `promotions`. The amount depends on the price. */
 export interface Discount {
   code: string;
   type: 'percentage' | 'fixed_amount';
   value: number;
-  amount: number;
+  maxDiscount?: number | null;
 }
 
 export interface PaymentMethodInfo {

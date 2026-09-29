@@ -65,6 +65,15 @@ describe("buildMessage", () => {
     expect(m.body).toMatch(/45/);
   });
 
+  it("names the XP the client earns by confirming the service, in every locale", () => {
+    for (const l of SUPPORTED_LOCALES) {
+      const m = buildMessage("payment_confirmed", l, { serviceName: "Yoga", amount: 45, xp: 50 });
+      expect(m.body).toMatch(/\+50 XP/);
+    }
+    const noXp = buildMessage("payment_confirmed", "it", { serviceName: "Yoga", amount: 45 });
+    expect(noXp.body).not.toMatch(/XP|undefined/);
+  });
+
   it("falls back to the default locale for an unknown one", () => {
     const unknown = buildMessage("accepted", "pt", { serviceName: "Yoga" });
     const italian = buildMessage("accepted", "it", { serviceName: "Yoga" });

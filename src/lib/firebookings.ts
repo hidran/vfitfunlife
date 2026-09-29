@@ -354,34 +354,54 @@ export async function rescheduleBooking(bookingId: string, startsAt: string): Pr
   return (await fn({ bookingId, startsAt })).data;
 }
 
-// Apply promotion code
-export async function applyPromoCode(
-  code: string,
-  bookingId: string
-): Promise<Discount> {
-  // In a real implementation, this would validate against a promotions collection
-  // and check usage limits, validity dates, etc.
-  
-  // Mock implementation for now
-  const mockDiscounts: Record<string, Discount> = {
-    'WELCOME10': { code: 'WELCOME10', type: 'percentage', value: 10, amount: 0 },
-    'SAVE20': { code: 'SAVE20', type: 'percentage', value: 20, amount: 0 },
-    'FLAT15': { code: 'FLAT15', type: 'fixed_amount', value: 15, amount: 15 },
+/**
+ * Look up a promotion code the way `createBooking` will apply it: active, inside its
+ * validity window, and not used up. Returns the terms; the checkout turns them into an
+ * amount with computeBookingPrice (a percentage depends on the price).
+ *
+ * This used to be a hardcoded mock that also wrote to a non-existent `bookings/temp`, so no
+ * code ever applied — and the server ignored the mock codes anyway.
+ */
+export async function applyPromoCode(code: string): Promise<Discount> {
+  const normalized = code.trim().toUpperCase();
+  if (!normalized) throw new Error('Invalid promo code');
+
+  const snap = await getDocs(
+    query(
+      collection(db, 'promotions'),
+      where('code', '==', normalized),
+      where('isActive', '==', true),
+      limit(1)
+    )
+  );
+  const data = snap.docs[0]?.data() as
+    | {
+        discountType?: string;
+        discountValue?: number;
+        maxDiscount?: number | null;
+        validFrom?: Timestamp;
+        validUntil?: Timestamp;
+        maxUses?: number | null;
+        currentUses?: number;
+      }
+    | undefined;
+  if (!data) throw new Error('Invalid promo code');
+
+  const now = Date.now();
+  const usable =
+    (data.discountType === 'percentage' || data.discountType === 'fixed_amount') &&
+    typeof data.discountValue === 'number' &&
+    (!data.validFrom || data.validFrom.toMillis() <= now) &&
+    (!data.validUntil || data.validUntil.toMillis() >= now) &&
+    (data.maxUses == null || (data.currentUses ?? 0) < data.maxUses);
+  if (!usable) throw new Error('Invalid promo code');
+
+  return {
+    code: normalized,
+    type: data.discountType as Discount['type'],
+    value: data.discountValue as number,
+    maxDiscount: data.maxDiscount ?? null,
   };
-
-  const discount = mockDiscounts[code.toUpperCase()];
-  if (!discount) {
-    throw new Error('Invalid promo code');
-  }
-
-  // Update booking with discount
-  const bookingRef = doc(db, BOOKINGS_COLLECTION, bookingId);
-  await updateDoc(bookingRef, {
-    promotionCode: code.toUpperCase(),
-    updatedAt: serverTimestamp(),
-  });
-
-  return discount;
 }
 
 // Calculate refund amount based on cancellation policy

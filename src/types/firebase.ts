@@ -462,6 +462,8 @@ export interface BookingPaymentConfirmation {
   /** True when the 48h job closed it rather than the client responding. */
   autoConfirmed: boolean;
   disputeReason?: string;
+  /** XP paid to the client for confirming the service was received; set once, server-side. */
+  xpAwarded?: number;
 }
 
 export interface Booking {

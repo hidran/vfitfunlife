@@ -7,6 +7,7 @@ import type {
   SearchParams,
   BookingData,
   BookingFilters,
+  Discount,
 } from '@/types/booking';
 import {
   searchProviders,
@@ -43,7 +44,8 @@ interface BookingState {
   bookingsError: string | null;
 
   // Promo code
-  appliedPromo: { code: string; discount: number } | null;
+  /** Terms of the applied promotion; the checkout computes the amount (computeBookingPrice). */
+  appliedPromo: Discount | null;
   isApplyingPromo: boolean;
 
   // Actions
@@ -73,7 +75,7 @@ interface BookingState {
   cancelBooking: (id: string, reason?: string) => Promise<void>;
   /** `startsAt` is a getProviderSlots slot's own ISO instant, never one assembled locally. */
   rescheduleBooking: (id: string, startsAt: string) => Promise<void>;
-  applyPromoCode: (code: string, bookingId?: string) => Promise<void>;
+  applyPromoCode: (code: string) => Promise<void>;
   clearPromoCode: () => void;
   getBooking: (bookingId: string) => Promise<Booking | null>;
 
@@ -298,17 +300,11 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     }));
   },
 
-  applyPromoCode: async (code: string, bookingId?: string) => {
+  applyPromoCode: async (code: string) => {
     set({ isApplyingPromo: true });
     try {
-      const discount = await applyPromoCodeApi(code, bookingId || 'temp');
-      set({
-        appliedPromo: {
-          code: discount.code,
-          discount: discount.amount,
-        },
-        isApplyingPromo: false,
-      });
+      const discount = await applyPromoCodeApi(code);
+      set({ appliedPromo: discount, isApplyingPromo: false });
     } catch (error: any) {
       set({ isApplyingPromo: false });
       throw error;

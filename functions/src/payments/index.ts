@@ -1,5 +1,6 @@
 import { onCall, onRequest, HttpsError, CallableRequest } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
+import { logger } from "firebase-functions";
 import type Stripe from "stripe";
 import { region } from "../lib/runtimeOptions";
 import { getStripe } from "../lib/stripeClient";
@@ -230,11 +231,11 @@ export const stripeWebhook = onRequest(
     try {
       switch (event.type) {
       case "payment_intent.succeeded":
-        await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent);
+        handleBookingPaymentIntent("succeeded", event.data.object as Stripe.PaymentIntent);
         break;
 
       case "payment_intent.payment_failed":
-        await handlePaymentIntentFailed(event.data.object as Stripe.PaymentIntent);
+        handleBookingPaymentIntent("failed", event.data.object as Stripe.PaymentIntent);
         break;
 
       case "customer.subscription.created":
@@ -262,81 +263,28 @@ export const stripeWebhook = onRequest(
   }
 );
 
-async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent) {
-  const { bookingId, userId, isDeposit } = paymentIntent.metadata;
-
+/**
+ * Booking payment intents are acknowledged and logged, never applied.
+ *
+ * Booking payments are off-platform (decision D1, 2026-09-29): the trainer records them via
+ * `confirmBookingPayment` and the client confirms via `respondToPaymentConfirmation`. This
+ * handler used to write the legacy `confirmed` status (not in the state machine) and award
+ * points that `completeBooking` already awards, so it now writes nothing: the booking's
+ * status, payment fields and the client's points are owned by the booking callables.
+ */
+export function handleBookingPaymentIntent(
+  outcome: "succeeded" | "failed",
+  paymentIntent: Pick<Stripe.PaymentIntent, "id" | "amount" | "metadata">
+): void {
+  const { bookingId, userId, isDeposit } = paymentIntent.metadata ?? {};
   if (!bookingId) return;
-
-  const bookingRef = db.collection("bookings").doc(bookingId);
-
-  if (isDeposit === "true") {
-    await bookingRef.update({
-      depositPaid: true,
-      paymentStatus: "deposit_paid",
-      paymentMethod: "card",
-      status: "confirmed",
-      confirmedAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-  } else {
-    const booking = (await bookingRef.get()).data();
-
-    await bookingRef.update({
-      paymentStatus: "paid",
-      paymentMethod: "card",
-      status: "confirmed",
-      confirmedAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-
-    // Award points after full payment
-    if (booking && booking.pointsEarned > 0) {
-      const userRef = db.collection("users").doc(userId);
-      const userDoc = await userRef.get();
-      const userData = userDoc.data();
-
-      await userRef.update({
-        pointsBalance: admin.firestore.FieldValue.increment(booking.pointsEarned),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-
-      await db.collection("users").doc(userId).collection("pointsTransactions").add({
-        points: booking.pointsEarned,
-        type: "earned",
-        source: "booking",
-        sourceId: bookingId,
-        description: `Punti guadagnati per ${booking.serviceName}`,
-        balanceAfter: (userData?.pointsBalance || 0) + booking.pointsEarned,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-    }
-  }
-
-  // Send confirmation notification
-  await db.collection("users").doc(userId).collection("notifications").add({
-    title: "Pagamento confermato",
-    body: "Il tuo pagamento è stato elaborato con successo",
-    type: "booking_confirmed",
-    data: { bookingId },
-    imageUrl: null,
-    isRead: false,
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-  });
-}
-
-async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
-  const { bookingId, userId } = paymentIntent.metadata;
-
-  if (!bookingId) return;
-
-  await db.collection("users").doc(userId).collection("notifications").add({
-    title: "Pagamento non riuscito",
-    body: "Il pagamento non è andato a buon fine. Riprova.",
-    type: "system",
-    data: { bookingId },
-    imageUrl: null,
-    isRead: false,
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  logger.info("[stripeWebhook] booking payment intent ignored (payments are off-platform)", {
+    outcome,
+    paymentIntentId: paymentIntent.id,
+    amount: paymentIntent.amount,
+    bookingId,
+    userId,
+    isDeposit: isDeposit === "true",
   });
 }
 

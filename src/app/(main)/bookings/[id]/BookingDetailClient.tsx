@@ -102,6 +102,7 @@ export default function BookingDetailPage() {
     })),
   );
   const user = useAuthStore((s) => s.user);
+  const refreshUserProfile = useAuthStore((s) => s.refreshUserProfile);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [localBookingOverride, setLocalBookingOverride] = useState<Booking | null>(null);
 
@@ -149,16 +150,20 @@ export default function BookingDetailPage() {
     response: 'confirmed' | 'disputed',
     disputeReason?: string,
   ) => {
-    await respondToPaymentConfirmation({ bookingId, response, disputeReason });
+    const result = await respondToPaymentConfirmation({ bookingId, response, disputeReason });
+    const xpAwarded = result.xpAwarded ?? 0;
     const updated = {
       ...booking,
       paymentConfirmation: {
         ...booking.paymentConfirmation!,
         clientResponse: response,
+        ...(xpAwarded > 0 ? { xpAwarded } : {}),
       },
     } as typeof booking;
     updateBookingInList(updated);
     updateCurrentBooking(updated);
+    // The XP landed on the user doc server-side; pull it so level/XP elsewhere catch up.
+    if (xpAwarded > 0) void refreshUserProfile().catch(() => undefined);
   };
 
   const handleCancel = async () => {
@@ -339,8 +344,8 @@ export default function BookingDetailPage() {
       </div>
 
       <div className="p-4 space-y-4 pb-32">
-        {/* The trainer recorded an off-platform payment; the client confirms or disputes.
-            Optional — silence auto-confirms after 48h. */}
+        {/* The trainer recorded the off-platform payment; the client confirms the service was
+            received (+XP, once) or disputes. Silence auto-confirms after 48h, without XP. */}
         {booking.paymentConfirmation && (
           <PaymentConfirmationBanner
             confirmation={booking.paymentConfirmation}

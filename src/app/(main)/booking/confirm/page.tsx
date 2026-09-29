@@ -7,10 +7,11 @@ import {
   Calendar,
   Clock,
   MapPin,
-  CreditCard,
+  Wallet,
   Ticket,
   Coins,
   Shield,
+  Sparkles,
   AlertCircle,
   Check,
   Loader2,
@@ -26,8 +27,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/Spinner';
 import { Avatar } from '@/components/ui/Avatar';
-import { PriceBreakdown, PaymentMethodSelector } from '@/components/booking';
+import { PriceBreakdown } from '@/components/booking';
 import type { PaymentMethod } from '@/types/booking';
+import { computeBookingPrice } from '@/lib/bookingPrice';
+import { xpForBooking } from '@/lib/gamification';
 import { isSlotUnavailableError } from '@/lib/availability/errors';
 import { BOOKING_NOTE_MAX_LENGTH } from '@/lib/bookingNote';
 
@@ -49,18 +52,19 @@ export default function BookingConfirmPage() {
   } = useBookingStore();
 
   const [promoCode, setPromoCode] = useState('');
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('card-1');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [slotTaken, setSlotTaken] = useState(false);
-  const [pointsToUse, setPointsToUse] = useState(0);
+  // The server's semantics: all-or-nothing "use my points" (as many as cover the price).
+  const [usePoints, setUsePoints] = useState(false);
   // Note for the trainer (B2). createBooking cleans and caps it again server-side.
   const [userNotes, setUserNotes] = useState('');
   const noteId = useId();
   const noteHintId = useId();
   const termsId = useId();
   const termsTextId = useId();
+  const usePointsId = useId();
 
   // Redirect if no selection
   if (!selectedProvider || !selectedService || !selectedDate || !selectedTime) {
@@ -80,19 +84,31 @@ export default function BookingConfirmPage() {
     );
   }
 
-  // Calculate pricing
-  const servicePrice = selectedService.price;
-  const platformFee = servicePrice * 0.05;
-  const discountAmount = appliedPromo?.discount || 0;
-  const pointsValue = pointsToUse * 0.01;
-  const totalPrice = Math.max(0, servicePrice + platformFee - discountAmount - pointsValue);
+  // Exactly what createBooking will store as finalPrice (same formula, src/lib/bookingPrice).
+  // No platform fee and no card: the client pays the trainer directly.
+  const bookingType = 'in_venue'; // locationType 'in_person' below, see toBookingType
+  const price = computeBookingPrice({
+    service: selectedService,
+    user,
+    bookingType,
+    promo: appliedPromo
+      ? {
+          discountType: appliedPromo.type,
+          discountValue: appliedPromo.value,
+          maxDiscount: appliedPromo.maxDiscount,
+        }
+      : null,
+    usePoints,
+  });
+  const totalPrice = price.finalPrice;
+  const pointsBalance = user?.pointsBalance ?? 0;
 
   const handleApplyPromo = async () => {
     if (!promoCode.trim()) return;
     try {
       await applyPromoCode(promoCode);
-    } catch (err: any) {
-      setError(err.message || t('bookings.confirm.promoInvalid'));
+    } catch {
+      setError(t('bookings.confirm.promoInvalid'));
     }
   };
 
@@ -127,8 +143,10 @@ export default function BookingConfirmPage() {
         locationType: 'in_person' as const,
         userNotes: userNotes.trim() || undefined,
         promotionCode: appliedPromo?.code,
-        pointsToUse,
-        paymentMethod: 'card' as PaymentMethod,
+        // Mapped to the callable's boolean `usePoints`; the server picks the amount.
+        pointsToUse: price.pointsUsed,
+        // Off-platform: paid to the trainer in person / as agreed.
+        paymentMethod: 'cash' as PaymentMethod,
       };
 
       const booking = await createBooking(bookingData);
@@ -148,28 +166,6 @@ export default function BookingConfirmPage() {
   const scheduledAt = new Date(selectedDate);
   const [hours, minutes] = selectedTime.split(':').map(Number);
   scheduledAt.setHours(hours, minutes, 0, 0);
-
-  // Mock payment methods
-  const paymentMethods = [
-    {
-      id: 'card-1',
-      type: 'card' as const,
-      last4: '4242',
-      brand: 'visa',
-      expiryMonth: 12,
-      expiryYear: 26,
-      isDefault: true,
-    },
-    {
-      id: 'card-2',
-      type: 'card' as const,
-      last4: '8888',
-      brand: 'mastercard',
-      expiryMonth: 8,
-      expiryYear: 27,
-      isDefault: false,
-    },
-  ];
 
   return (
     <div className="min-h-screen bg-background-dark">
@@ -303,65 +299,63 @@ export default function BookingConfirmPage() {
           )}
         </div>
 
-        {/* Points Redemption */}
-        {user && user.pointsBalance > 0 && (
+        {/* Points — the server's "use my points": all or nothing, as many as cover the price */}
+        {pointsBalance > 0 && (
           <div className="bg-surface-elevated/50 rounded-2xl p-4">
-            <h3 className="font-semibold text-content mb-3 flex items-center gap-2">
-              <Coins className="w-4 h-4 text-[var(--section-accent)]" />
-              {t('bookings.confirm.pointsTitle')}
-            </h3>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-text-secondary text-sm">
-                  {t('bookings.confirm.pointsBalance', { count: user.pointsBalance.toLocaleString() })}
-                </p>
-                <p className="text-xs text-text-tertiary">
-                  {t('bookings.confirm.pointsValue', { price: formatPrice(user.pointsBalance * 0.01) })}
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <input
-                  type="range"
-                  min="0"
-                  max={Math.min(user.pointsBalance, (totalPrice + pointsValue) * 100)}
-                  step={100}
-                  value={pointsToUse}
-                  onChange={(e) => setPointsToUse(Number(e.target.value))}
-                  className="w-24 accent-[var(--section-accent)]"
-                />
-                <span className="text-sm text-content w-16 text-right">
-                  {pointsToUse.toLocaleString()}
+            <label htmlFor={usePointsId} className="flex min-h-11 cursor-pointer items-center justify-between gap-3">
+              <span>
+                <span className="font-semibold text-content flex items-center gap-2">
+                  <Coins className="w-4 h-4 text-[var(--section-accent)]" aria-hidden="true" />
+                  {t('bookings.confirm.usePoints')}
                 </span>
-              </div>
-            </div>
+                <span className="block text-sm text-text-secondary">
+                  {t('bookings.confirm.pointsBalance', { count: pointsBalance.toLocaleString() })}
+                  {' · '}
+                  {t('bookings.confirm.pointsValue', { price: formatPrice(pointsBalance * 0.01) })}
+                </span>
+              </span>
+              <input
+                id={usePointsId}
+                type="checkbox"
+                role="switch"
+                checked={usePoints}
+                onChange={(e) => setUsePoints(e.target.checked)}
+                className="h-6 w-6 flex-shrink-0 cursor-pointer accent-[var(--section-accent)]"
+              />
+            </label>
+            {usePoints && price.pointsUsed > 0 && (
+              <p className="mt-2 text-sm text-[var(--section-accent)]">
+                {t('bookings.confirm.usePointsApplied', {
+                  count: price.pointsUsed.toLocaleString(),
+                  price: formatPrice(price.pointsValue),
+                })}
+              </p>
+            )}
           </div>
         )}
 
         {/* Price Breakdown */}
         <PriceBreakdown
-          servicePrice={servicePrice}
-          platformFee={platformFee}
-          discountAmount={discountAmount}
-          pointsUsed={pointsToUse}
-          pointsValue={pointsValue}
+          servicePrice={price.originalPrice}
+          discountAmount={price.discountAmount}
+          pointsUsed={price.pointsUsed}
+          pointsValue={price.pointsValue}
           totalPrice={totalPrice}
         />
 
-        {/* Payment Method */}
-        <div className="bg-surface-elevated/50 rounded-2xl p-4">
-          <h3 className="font-semibold text-content mb-3 flex items-center gap-2">
-            <CreditCard className="w-4 h-4 text-[var(--section-primary)]" />
+        {/* Payment — off-platform, straight to the trainer (decision D1). Nothing is charged here. */}
+        <div className="bg-surface-elevated/50 rounded-2xl p-4 space-y-3" data-testid="pay-trainer">
+          <h3 className="font-semibold text-content flex items-center gap-2">
+            <Wallet className="w-4 h-4 text-[var(--section-primary)]" aria-hidden="true" />
             {t('bookings.confirm.paymentTitle')}
           </h3>
-          <PaymentMethodSelector
-            methods={paymentMethods}
-            selectedMethod={selectedPaymentMethod}
-            onSelect={setSelectedPaymentMethod}
-            walletBalance={user?.walletBalance || 0}
-            allowCashAtVenue={true}
-            venueName={selectedProvider.fullName}
-            totalAmount={totalPrice}
-          />
+          <p className="text-sm text-text-secondary">
+            {t('bookings.confirm.payTrainerBody', { price: formatPrice(totalPrice) })}
+          </p>
+          <p className="text-sm text-content flex items-start gap-2">
+            <Sparkles className="w-4 h-4 mt-0.5 flex-shrink-0 text-[var(--section-accent)]" aria-hidden="true" />
+            {t('bookings.confirm.payTrainerXp', { xp: xpForBooking() })}
+          </p>
         </div>
 
         {/* Terms — a real checkbox with a label: its name is read out, and the tap target is
