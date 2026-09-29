@@ -26,6 +26,7 @@ export const deMessages: Messages = {
   'common.bookNow': 'Jetzt buchen',
   'common.cancel': 'Abbrechen',
   'common.close': 'Schließen',
+  'push.toast.open': 'Öffnen',
   'common.retry': 'Wiederholen',
   'common.total': 'Gesamt',
   'common.select': 'Auswählen',

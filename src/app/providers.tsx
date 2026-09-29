@@ -11,6 +11,7 @@ import { ThemeProvider } from '@/contexts/ThemeContext';
 import { ProfilePreferencesSync } from '@/hooks/useProfilePreferencesSync';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { initializeCapacitor } from '@/lib/capacitor';
+import { PushRegistrar } from '@/components/push/PushRegistrar';
 
 const FloatingAssistantButton = dynamic(
   () =>
@@ -47,6 +48,7 @@ export function Providers({ children }: { children: ReactNode }) {
           <I18nProvider>
             <AuthProvider>
               <ProfilePreferencesSync />
+              <PushRegistrar />
               <SectionProvider>{children}</SectionProvider>
               <FloatingAssistantButton />
             </AuthProvider>

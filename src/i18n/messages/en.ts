@@ -26,6 +26,7 @@ export const enMessages: Messages = {
   'common.bookNow': 'Book now',
   'common.cancel': 'Cancel',
   'common.close': 'Close',
+  'push.toast.open': 'Open',
   'common.retry': 'Retry',
   'common.total': 'Total',
   'common.select': 'Select',

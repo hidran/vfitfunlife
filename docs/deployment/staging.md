@@ -118,6 +118,15 @@ users in a separate Identity Platform tenant, with different passwords.
    key is unset, so nothing crashes — staging simply sends no mail, which is usually what
    you want.
 
+5. **Web push (FCM) VAPID key**, per project. Firebase console → Project settings → Cloud
+   Messaging → Web Push certificates → *Generate key pair*, then put the public key in the
+   env file that builds for that project and rebuild:
+   `NEXT_PUBLIC_FIREBASE_VAPID_KEY=<key>` in `.env.staging` + `.env.local` (vfit-app-staging)
+   and in `.env` (vfit-funlife). Without it the client skips web-push registration (dev
+   console warning); native iOS/Android tokens are unaffected. The service worker
+   (`public/firebase-messaging-sw.js`) needs no per-project edits — the app passes the
+   Firebase config to it as query parameters when registering it.
+
 ## Re-seeding
 
 ```bash

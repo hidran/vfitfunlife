@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import type { NotificationSettings } from '@/types/profile';
 import { Button } from '@/components/ui/button';
 import { useUpdateNotificationSettings } from '@/lib/profile-mutations';
@@ -56,6 +57,21 @@ export function NotificationSettingsForm({ initial, onSaved }: Props) {
       className="space-y-6"
       onSubmit={async (e) => {
         e.preventDefault();
+        // Any push channel on → make sure this device is registered (asks for permission
+        // if undecided; this submit is the user gesture browsers require).
+        if (Object.values(state.push ?? {}).some(Boolean)) {
+          const webPrompt =
+            !Capacitor.isNativePlatform() &&
+            typeof window !== 'undefined' &&
+            'Notification' in window &&
+            Notification.permission === 'default'
+              ? Notification.requestPermission().catch(() => undefined)
+              : Promise.resolve(undefined);
+          void webPrompt
+            .then(() => import('@/lib/push/fcmRegistration'))
+            .then((m) => m.enablePush({ requestPermission: true }))
+            .catch(() => {});
+        }
         await mut.mutateAsync(state);
         onSaved?.();
       }}

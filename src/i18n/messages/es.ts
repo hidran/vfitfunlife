@@ -26,6 +26,7 @@ export const esMessages: Messages = {
   'common.bookNow': 'Reservar ahora',
   'common.cancel': 'Cancelar',
   'common.close': 'Cerrar',
+  'push.toast.open': 'Abrir',
   'common.retry': 'Reintentar',
   'common.total': 'Total',
   'common.select': 'Seleccionar',
