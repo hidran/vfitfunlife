@@ -1,5 +1,5 @@
 import { httpsCallable } from "firebase/functions";
-import { getFunctionsInstance } from "./config";
+import { getFunctionsInstance } from "./app";
 import type { AppLocale } from "@/types/locale";
 import type {
   AiStreamChunk,

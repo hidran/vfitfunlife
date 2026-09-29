@@ -16,7 +16,7 @@
  */
 import { Capacitor } from '@capacitor/core';
 import { httpsCallable } from 'firebase/functions';
-import { app, auth, getFunctionsInstance, initializeMessaging } from '@/lib/firebase/config';
+import { app, auth, getFunctionsInstance, initializeMessaging } from '@/lib/firebase/app';
 import { registerFcmToken } from '@/lib/firebase/functions';
 import { pushTargetUrl } from './pushTarget';
 

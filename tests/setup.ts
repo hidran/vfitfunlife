@@ -27,6 +27,18 @@ vi.mock('@/lib/firebase/config', () => ({
   getStorageInstance: vi.fn(async () => ({})),
   getFunctionsInstance: vi.fn(async () => ({})),
 }));
+// The Firestore-free core that root-path modules (authStore, lib/firebase/auth, push
+// registration) import instead of ./config. Firestore itself is reached via
+// lib/firebase/lazyFirestore, which dynamic-imports the mocked config above.
+vi.mock('@/lib/firebase/app', () => ({
+  app: {},
+  auth: {},
+  useEmulators: false,
+  getStorageInstance: vi.fn(async () => ({})),
+  getFunctionsInstance: vi.fn(async () => ({})),
+  initializeAnalytics: vi.fn(async () => null),
+  initializeMessaging: vi.fn(async () => null),
+}));
 
 // Mock Capacitor
 vi.mock('@capacitor/core', () => ({

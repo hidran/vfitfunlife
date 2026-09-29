@@ -51,7 +51,7 @@ describe('ThemeProvider', () => {
 
     act(() => result.current.setTheme('system'));
 
-    expect(updateDoc).toHaveBeenCalledWith({ col: 'users', id: 'u1' }, { theme: 'system' });
+    await waitFor(() => expect(updateDoc).toHaveBeenCalledWith({ col: 'users', id: 'u1' }, { theme: 'system' }));
     await waitFor(() => expect(store.getState().user?.theme).toBe('system'));
     expect(result.current.preference).toBe('system');
   });
@@ -84,7 +84,7 @@ describe('ThemeProvider', () => {
 
     setUser({ id: 'u1', uid: 'u1', theme: 'dark' });
 
-    expect(updateDoc).toHaveBeenCalledWith({ col: 'users', id: 'u1' }, { theme: 'light' });
+    await waitFor(() => expect(updateDoc).toHaveBeenCalledWith({ col: 'users', id: 'u1' }, { theme: 'light' }));
     await waitFor(() => expect(store.getState().user?.theme).toBe('light'));
     expect(result.current.preference).toBe('light');
     expect(result.current.theme).toBe('light');

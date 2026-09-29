@@ -17,15 +17,22 @@ import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
 
-// KB = 1024 bytes. Measured 2026-09-28 after P2-10/P3-1/P3-5 (see baseline.md).
+// KB = 1024 bytes. Measured 2026-09-28 after P2-10/P3-1/P3-5 (see baseline.md);
+// '/' and '/terms' re-measured 2026-09-29 after E1 (Firestore SDK off the root path).
 const BUDGETS = {
-  '/': { raw: 1446, gzip: 431 },
-  '/terms': { raw: 1391, gzip: 412 },
+  '/': { raw: 1093, gzip: 324 },
+  '/terms': { raw: 1038, gzip: 306 },
   '/home': { raw: 1545, gzip: 457 },
   '/admin': { raw: 1546, gzip: 454 },
   '/fit/gyms': { raw: 1510, gzip: 450 },
   '/booking': { raw: 1668, gzip: 501 },
 };
+
+// Routes that must not load the Firestore SDK on first load (E1). The SDK is ~350 KB raw;
+// it belongs in route chunks of pages that read Firestore, never in the shared root bundle.
+// A chunk is identified as Firestore by the backend host string the SDK embeds.
+const NO_FIRESTORE = ['/', '/terms'];
+const FIRESTORE_MARKER = 'firestore.googleapis.com';
 
 const args = process.argv.slice(2);
 const json = args.includes('--json');
@@ -47,14 +54,16 @@ function measure(route) {
   );
   let raw = 0;
   let gzip = 0;
+  let firestore = false;
   for (const src of srcs) {
     const file = path.join(outDir, src.replace(/^\//, ''));
     const buf = fs.readFileSync(file);
     raw += buf.length;
+    if (buf.includes(FIRESTORE_MARKER)) firestore = true;
     if (!gzCache.has(file)) gzCache.set(file, zlib.gzipSync(buf, { level: 9 }).length);
     gzip += gzCache.get(file);
   }
-  return { route, scripts: srcs.size, raw, gzip };
+  return { route, scripts: srcs.size, raw, gzip, firestore };
 }
 
 const results = Object.keys(BUDGETS).map((route) => {
@@ -62,7 +71,8 @@ const results = Object.keys(BUDGETS).map((route) => {
   const b = BUDGETS[route];
   const overRaw = kb(m.raw) > b.raw;
   const overGzip = kb(m.gzip) > b.gzip;
-  return { ...m, budget: b, ok: !overRaw && !overGzip, overRaw, overGzip };
+  const eagerFirestore = m.firestore && NO_FIRESTORE.includes(route);
+  return { ...m, budget: b, ok: !overRaw && !overGzip && !eagerFirestore, overRaw, overGzip, eagerFirestore };
 });
 
 if (json) {
@@ -75,7 +85,7 @@ if (json) {
   );
   for (const r of results) {
     console.log(
-      `${pad(r.route, 11)} ${lpad(r.scripts, 7)} ${lpad(fmt(r.raw), 10)} ${lpad(`${r.budget.raw} KB`, 10)} ${lpad(fmt(r.gzip), 9)} ${lpad(`${r.budget.gzip} KB`, 9)}  ${r.ok ? 'ok' : `OVER (${[r.overRaw && 'raw', r.overGzip && 'gzip'].filter(Boolean).join(', ')})`}`
+      `${pad(r.route, 11)} ${lpad(r.scripts, 7)} ${lpad(fmt(r.raw), 10)} ${lpad(`${r.budget.raw} KB`, 10)} ${lpad(fmt(r.gzip), 9)} ${lpad(`${r.budget.gzip} KB`, 9)}  ${r.ok ? 'ok' : `OVER (${[r.overRaw && 'raw', r.overGzip && 'gzip', r.eagerFirestore && 'loads Firestore SDK'].filter(Boolean).join(', ')})`}`
     );
   }
 }

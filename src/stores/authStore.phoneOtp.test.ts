@@ -9,7 +9,7 @@ vi.mock('firebase/auth', () => ({
   RecaptchaVerifier: vi.fn(),
 }));
 
-vi.mock('@/lib/firebase/config', () => ({ auth: {} }));
+vi.mock('@/lib/firebase/app', () => ({ auth: {} }));
 
 vi.mock('@/lib/capacitor', () => ({
   isNativePlatform: () => false,

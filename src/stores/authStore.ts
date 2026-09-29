@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { User as FirebaseUser, onAuthStateChanged, setPersistence, indexedDBLocalPersistence } from 'firebase/auth';
 import { User } from '@/types/firebase';
-import { auth } from '@/lib/firebase/config';
+import { auth } from '@/lib/firebase/app';
 import {
   signInWithGoogle,
   signInWithApple,

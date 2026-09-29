@@ -161,6 +161,61 @@ P3-1 (lazy Performance Monitoring) and P3-5 (WebP landing images):
 If a change legitimately grows a route, re-measure and raise that budget in the same
 commit, and give the reason in the commit message.
 
+The `/` and `/terms` budgets were lowered on 2026-09-29 by E1 (see below): `/` is now
+1093 KB raw / 324 KB gzip and `/terms` 1038 KB raw / 306 KB gzip. The script also fails if
+`/` or `/terms` loads any script containing `firestore.googleapis.com` (the Firestore SDK).
+
+## Firestore off the root bundle (E1)
+
+Before E1, the Firestore SDK chunk (about 352 KB raw / 105 KB gzip) was loaded by every
+route, including static pages. The reason was the root providers: `ThemeContext`,
+`useProfilePreferencesSync`, and `authStore` → `lib/firebase/auth` all imported `db` from
+`lib/firebase/config` or imported `firebase/firestore` directly.
+
+How it is split now:
+
+- `src/lib/firebase/app.ts` is the core with no Firestore: the app, Auth, and the lazy
+  Storage/Functions/Analytics/Messaging getters. Root-path modules import from here.
+- `src/lib/firebase/config.ts` re-exports the core and adds the eagerly initialized `db`.
+  Page-level modules keep importing `db` from here, and it stays in their route chunks.
+- `src/lib/firebase/lazyFirestore.ts` provides `loadFirestore()` and `getDb()`. They
+  dynamic-import `firestoreKit.ts`, which re-exports the Firestore functions the root path
+  uses plus `db` from `config`. There is still only one Firestore instance.
+- Moved to the lazy path: `ThemeContext`, `useProfilePreferencesSync`, `useChangeLocale`
+  (the language switcher on the landing page), `lib/firebase/auth`, `authStore`,
+  `lib/push/fcmRegistration`, and `lib/firebase/functions`, which now takes
+  `getFunctionsInstance` from `app`. The last one matters for runtime loading, not
+  first-load HTML: `FloatingAssistantButton` is a `next/dynamic` import that mounts on
+  every route, and through `assistantStore` → `lib/firebase/functions` → `config` it was
+  still downloading the Firestore chunk after hydration. `types/firebase.ts` now uses
+  `import type`.
+- Rule: nothing reachable from `src/app/layout.tsx` may import `@/lib/firebase/config` or
+  import `firebase/firestore` as a value. Use `loadFirestore()` in that code.
+
+Measured with `npm run build:staging && npm run check:bundle`, same commit, before and after:
+
+| Route       | Before raw | After raw | Before gzip | After gzip |
+|-------------|-----------:|----------:|------------:|-----------:|
+| `/`         | 1391.4 KB  | 1040.6 KB | 414.0 KB    | 308.6 KB   |
+| `/terms`    | 1338.6 KB  | 987.8 KB  | 396.6 KB    | 291.2 KB   |
+| `/home`     | 1493.2 KB  | 1493.6 KB | 442.4 KB    | 442.6 KB   |
+| `/admin`    | 1498.1 KB  | 1498.6 KB | 440.8 KB    | 441.0 KB   |
+| `/fit/gyms` | 1459.0 KB  | 1459.5 KB | 434.9 KB    | 435.1 KB   |
+| `/booking`  | 1614.2 KB  | 1614.7 KB | 485.2 KB    | 485.5 KB   |
+
+The Firestore chunk is no longer loaded on first visit to `/`, `/terms`, `/privacy`,
+`/auth` or `/auth/login`. `/home`, `/admin`, `/fit/gyms`, `/booking` and `/auth/register`
+still load it, because their own page code reads Firestore. That is expected: it is part
+of those routes' chunks, not the shared bundle. On those routes the loader adds about
+0.5 KB.
+
+Runtime check: the static export was served locally and loaded in a fresh browser
+context with no user signed in. `/terms` and `/privacy` never request the Firestore chunk.
+`/` and `/auth/login` request it only after load, when the Next router prefetches the
+RSC payload of a linked route that uses Firestore (such as `/auth/register`). It is not
+on the critical path. When a user is signed in, the chunk loads when the profile is
+fetched.
+
 ## Performance Monitoring (P3-1)
 
 `src/lib/perf.ts` sets up Firebase Performance Monitoring for the web. The SDK

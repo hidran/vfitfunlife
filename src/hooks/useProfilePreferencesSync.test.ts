@@ -63,9 +63,12 @@ describe('useProfilePreferencesSync', () => {
     login({ uid: 'u1', id: 'u1', preferredLanguage: 'it' });
 
     expect(i18n.setLocale).not.toHaveBeenCalledWith('it');
-    expect(updateDoc).toHaveBeenCalledWith(
-      { col: 'users', id: 'u1' },
-      expect.objectContaining({ preferredLanguage: 'fr' }),
+    // Firestore is loaded lazily, so the write lands a tick later.
+    await waitFor(() =>
+      expect(updateDoc).toHaveBeenCalledWith(
+        { col: 'users', id: 'u1' },
+        expect.objectContaining({ preferredLanguage: 'fr' }),
+      ),
     );
     expect(readExplicitChoice('locale')).toBeNull();
     await waitFor(() => expect(storeUser()?.preferredLanguage).toBe('fr'));

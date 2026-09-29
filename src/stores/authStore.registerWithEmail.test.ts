@@ -12,7 +12,7 @@ vi.mock('firebase/auth', () => ({
   RecaptchaVerifier: vi.fn(),
 }));
 
-vi.mock('@/lib/firebase/config', () => ({ auth: {} }));
+vi.mock('@/lib/firebase/app', () => ({ auth: {} }));
 
 vi.mock('@/lib/firebase/auth', () => ({
   registerWithEmail: (...args: unknown[]) => mockRegisterWithEmail(...args),

@@ -33,7 +33,7 @@ vi.mock('@capacitor/core', () => ({
   },
 }));
 
-vi.mock('@/lib/firebase/config', () => ({
+vi.mock('@/lib/firebase/app', () => ({
   app: {
     options: {
       apiKey: 'key',

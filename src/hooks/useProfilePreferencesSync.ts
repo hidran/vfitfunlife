@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { doc, serverTimestamp, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+// Lazy Firestore: mounted app-wide (root providers), so no static firebase/firestore import.
+import { loadFirestore } from '@/lib/firebase/lazyFirestore';
 import { useI18n } from '@/hooks/useI18n';
 import { useAuthStore } from '@/stores/authStore';
 import { clearExplicitChoice, readExplicitChoice } from '@/lib/preferences/explicitChoice';
@@ -49,10 +49,13 @@ export function useProfilePreferencesSync(): void {
         clearExplicitChoice('locale');
         if (localeRef.current !== chosen) void setLocale(chosen);
         if (profileLocale !== chosen) {
-          void updateDoc(doc(db, 'users', uid), {
-            preferredLanguage: chosen,
-            updatedAt: serverTimestamp(),
-          })
+          void loadFirestore()
+            .then(({ db, doc, serverTimestamp, updateDoc }) =>
+              updateDoc(doc(db, 'users', uid), {
+                preferredLanguage: chosen,
+                updatedAt: serverTimestamp(),
+              }),
+            )
             .then(() => {
               // Mirror the write locally so the profile and the UI agree without a re-read.
               useAuthStore.setState((state) =>

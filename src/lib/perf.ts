@@ -1,7 +1,7 @@
 /**
  * Firebase Performance Monitoring (web), loaded lazily (P3-1).
  *
- * This module is imported by the root Firebase config, so it must stay tiny: it never
+ * This module is imported by the root Firebase core (lib/firebase/app), so it must stay tiny: it never
  * imports `firebase/performance` statically. The SDK is fetched with a dynamic import once
  * the page has loaded and the main thread is idle, so it adds nothing to any route's
  * initial JS and does not compete with first paint / hydration.
@@ -78,7 +78,7 @@ function record(m: PendingMeasurement) {
 
 /**
  * Schedules Performance Monitoring to load after first paint. Safe to call repeatedly and
- * on the server (no-op). Called once from lib/firebase/config after the app is created.
+ * on the server (no-op). Called once from lib/firebase/app after the app is created.
  */
 export function schedulePerformanceMonitoring(app: FirebaseApp): void {
   if (scheduled || !isPerformanceMonitoringEnabled()) return;

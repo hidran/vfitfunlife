@@ -10,8 +10,9 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+// Firestore is resolved lazily: this provider wraps every route, and a static
+// firebase/firestore import would put the whole SDK in the shared root bundle.
+import { loadFirestore } from '@/lib/firebase/lazyFirestore';
 import { useAuthStore } from '@/stores/authStore';
 import {
   clearExplicitChoice,
@@ -103,7 +104,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // device + logged-out case). 'system' is persisted too, so choosing it sticks instead of
   // being overridden by a previously saved light/dark on the next load.
   const persistRemote = useCallback((userId: string, next: ThemePreference) => {
-    void updateDoc(doc(db, 'users', userId), { theme: next })
+    void loadFirestore()
+      .then(({ db, doc, updateDoc }) => updateDoc(doc(db, 'users', userId), { theme: next }))
       .then(() => {
         // Mirror locally so the store's profile matches what was written.
         useAuthStore.setState((state) =>

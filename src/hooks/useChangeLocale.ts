@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+// Lazy Firestore: the language switcher is on the landing page and other signed-out
+// routes, which must not pay for the Firestore SDK up front.
+import { loadFirestore } from '@/lib/firebase/lazyFirestore';
 import { useI18n } from '@/hooks/useI18n';
 import { useAuthStore } from '@/stores/authStore';
 import { clearExplicitChoice, markExplicitChoice } from '@/lib/preferences/explicitChoice';
@@ -26,6 +27,7 @@ export function useChangeLocale() {
       }
       clearExplicitChoice('locale');
       try {
+        const { db, doc, updateDoc, serverTimestamp } = await loadFirestore();
         await updateDoc(doc(db, 'users', user.uid), {
           preferredLanguage: locale,
           updatedAt: serverTimestamp(),

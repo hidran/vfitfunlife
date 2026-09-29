@@ -21,8 +21,10 @@ import {
   reauthenticateWithCredential,
 } from "firebase/auth";
 import { Capacitor } from "@capacitor/core";
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp, arrayUnion, arrayRemove } from "firebase/firestore";
-import { auth, db, getFunctionsInstance } from "./config";
+// Firestore is loaded lazily (see ./lazyFirestore): this module is on the root render path
+// via authStore, so a static firebase/firestore import would put the SDK in every route.
+import { auth, getFunctionsInstance } from "./app";
+import { loadFirestore } from "./lazyFirestore";
 import { nativeGoogleSignIn, nativeAppleSignIn } from "./nativeAuth";
 import { ProviderProfile, Certification, Education, SocialLinks, NotificationSettings, PrivacySettings } from "@/types/firebase";
 import { DEFAULT_LOCALE, LOCALE_STORAGE_KEY, isSupportedLocale, type AppLocale } from "@/types/locale";
@@ -236,6 +238,7 @@ export function onAuthChange(callback: (user: User | null) => void): () => void 
  */
 export async function isProfileComplete(userId: string): Promise<boolean> {
   try {
+    const { db, doc, getDoc } = await loadFirestore();
     const userDoc = await getDoc(doc(db, "users", userId));
 
     if (!userDoc.exists()) {
@@ -262,6 +265,7 @@ export async function isProfileComplete(userId: string): Promise<boolean> {
  */
 async function updateUserLastLogin(userId: string): Promise<void> {
   try {
+    const { db, doc, getDoc, updateDoc, serverTimestamp } = await loadFirestore();
     const userRef = doc(db, "users", userId);
     const userDoc = await getDoc(userRef);
 
@@ -309,6 +313,7 @@ export async function completeRegistration(
     preferredLanguage?: AppLocale;
   }
 ): Promise<void> {
+  const { db, doc, getDoc, setDoc, updateDoc, serverTimestamp } = await loadFirestore();
   const userRef = doc(db, "users", userId);
   const userDoc = await getDoc(userRef);
   const preferredLanguage = data.preferredLanguage ?? currentUiLocale();
@@ -388,6 +393,7 @@ export async function initializeUserProfile(): Promise<{ success: boolean; isNew
  */
 export async function getUserData(userId: string) {
   try {
+    const { db, doc, getDoc } = await loadFirestore();
     const userDoc = await getDoc(doc(db, "users", userId));
     return userDoc.exists() ? userDoc.data() : null;
   } catch (error: any) {
@@ -502,6 +508,7 @@ export async function updateUserProfile(
     avatarUrl?: string;
   }
 ): Promise<void> {
+  const { db, doc, updateDoc, serverTimestamp } = await loadFirestore();
   const userRef = doc(db, "users", userId);
 
   const updateData: Record<string, any> = {
@@ -531,6 +538,7 @@ export async function updateSocialLinks(
   userId: string,
   socialLinks: SocialLinks
 ): Promise<void> {
+  const { db, doc, updateDoc, serverTimestamp } = await loadFirestore();
   const userRef = doc(db, "users", userId);
   await updateDoc(userRef, {
     socialLinks,
@@ -545,6 +553,7 @@ export async function updateNotificationSettings(
   userId: string,
   settings: NotificationSettings
 ): Promise<void> {
+  const { db, doc, updateDoc, serverTimestamp } = await loadFirestore();
   const userRef = doc(db, "users", userId);
   await updateDoc(userRef, {
     notificationSettings: settings,
@@ -559,6 +568,7 @@ export async function updatePrivacySettings(
   userId: string,
   settings: PrivacySettings
 ): Promise<void> {
+  const { db, doc, updateDoc, serverTimestamp } = await loadFirestore();
   const userRef = doc(db, "users", userId);
   await updateDoc(userRef, {
     privacySettings: settings,
@@ -573,6 +583,7 @@ export async function verifyPhoneNumber(
   userId: string,
   verified: boolean = true
 ): Promise<void> {
+  const { db, doc, updateDoc, serverTimestamp } = await loadFirestore();
   const userRef = doc(db, "users", userId);
   await updateDoc(userRef, {
     phoneVerified: verified,
@@ -589,6 +600,7 @@ export async function updateProviderProfile(
   userId: string,
   data: Partial<ProviderProfile>
 ): Promise<void> {
+  const { db, doc, getDoc, updateDoc, serverTimestamp } = await loadFirestore();
   const userRef = doc(db, "users", userId);
 
   const userDoc = await getDoc(userRef);
@@ -619,6 +631,7 @@ export async function getProviderProfile(
   providerId: string
 ): Promise<ProviderProfile | null> {
   try {
+    const { db, doc, getDoc } = await loadFirestore();
     const userDoc = await getDoc(doc(db, "users", providerId));
 
     if (!userDoc.exists()) {
@@ -646,6 +659,7 @@ export async function addCertification(
   userId: string,
   certification: Omit<Certification, "id">
 ): Promise<string> {
+  const { db, doc, updateDoc, serverTimestamp, arrayUnion } = await loadFirestore();
   const userRef = doc(db, "users", userId);
 
   const certificationWithId = {
@@ -668,6 +682,7 @@ export async function removeCertification(
   userId: string,
   certification: Certification
 ): Promise<void> {
+  const { db, doc, updateDoc, serverTimestamp, arrayRemove } = await loadFirestore();
   const userRef = doc(db, "users", userId);
 
   await updateDoc(userRef, {
@@ -683,6 +698,7 @@ export async function addEducation(
   userId: string,
   education: Omit<Education, "id">
 ): Promise<string> {
+  const { db, doc, updateDoc, serverTimestamp, arrayUnion } = await loadFirestore();
   const userRef = doc(db, "users", userId);
 
   const educationWithId = {
@@ -705,6 +721,7 @@ export async function removeEducation(
   userId: string,
   education: Education
 ): Promise<void> {
+  const { db, doc, updateDoc, serverTimestamp, arrayRemove } = await loadFirestore();
   const userRef = doc(db, "users", userId);
 
   await updateDoc(userRef, {
@@ -720,6 +737,7 @@ export async function updateProviderSpecialties(
   userId: string,
   specialties: string[]
 ): Promise<void> {
+  const { db, doc, updateDoc, serverTimestamp } = await loadFirestore();
   const userRef = doc(db, "users", userId);
 
   await updateDoc(userRef, {
@@ -735,6 +753,7 @@ export async function updateProviderLanguages(
   userId: string,
   languages: string[]
 ): Promise<void> {
+  const { db, doc, updateDoc, serverTimestamp } = await loadFirestore();
   const userRef = doc(db, "users", userId);
 
   await updateDoc(userRef, {
@@ -750,6 +769,7 @@ export async function addPortfolioImage(
   userId: string,
   imageUrl: string
 ): Promise<void> {
+  const { db, doc, updateDoc, serverTimestamp, arrayUnion } = await loadFirestore();
   const userRef = doc(db, "users", userId);
 
   await updateDoc(userRef, {
@@ -765,6 +785,7 @@ export async function removePortfolioImage(
   userId: string,
   imageUrl: string
 ): Promise<void> {
+  const { db, doc, updateDoc, serverTimestamp, arrayRemove } = await loadFirestore();
   const userRef = doc(db, "users", userId);
 
   await updateDoc(userRef, {
@@ -778,6 +799,7 @@ export async function removePortfolioImage(
  */
 export async function isProvider(userId: string): Promise<boolean> {
   try {
+    const { db, doc, getDoc } = await loadFirestore();
     const userDoc = await getDoc(doc(db, "users", userId));
 
     if (!userDoc.exists()) {
@@ -796,6 +818,7 @@ export async function isProvider(userId: string): Promise<boolean> {
  * Update user avatar URL
  */
 export async function updateUserAvatar(userId: string, avatarUrl: string): Promise<void> {
+  const { db, doc, updateDoc, serverTimestamp } = await loadFirestore();
   const userRef = doc(db, "users", userId);
   await updateDoc(userRef, {
     avatarUrl,
