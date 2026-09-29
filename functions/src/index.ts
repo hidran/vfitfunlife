@@ -14,6 +14,7 @@ admin.initializeApp();
 // Export all function modules
 export * from "./auth";
 export * from "./bookings";
+export * from "./bookings/clientRoster";
 export * from "./payments";
 export * from "./notifications";
 export * from "./users";
