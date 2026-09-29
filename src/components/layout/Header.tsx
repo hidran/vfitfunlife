@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
 import { canAccessProviderArea } from '@/lib/providerStatus';
 import { PROVIDER_HOME } from '@/lib/auth/postAuthRoute';
+import { useAssistantStore } from '@/stores/assistantStore';
 
 const sectionBranding = {
   fit: {
@@ -54,6 +55,8 @@ export function Header({ onMenuClick, notificationCount = 0, userAvatarUrl }: He
   // One tap to the provider dashboard from anywhere; the drawer entry is two taps deep.
   const providerStatus = useAuthStore((state) => state.user?.providerStatus);
   const showProviderShortcut = canAccessProviderArea(providerStatus);
+  const signedIn = useAuthStore((state) => !!state.user);
+  const openAssistant = useAssistantStore((state) => state.open);
 
   return (
     <header
@@ -122,6 +125,23 @@ export function Header({ onMenuClick, notificationCount = 0, userAvatarUrl }: He
           </div>
 
           <div className="flex items-center gap-2">
+            {signedIn && (
+              // Hidden below 360px: with the provider shortcut the bar has no room left there;
+              // the side drawer has the same entry.
+              <button
+                type="button"
+                onClick={openAssistant}
+                className={cn(
+                  'touch-target hidden min-[360px]:flex items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--section-primary)] focus-visible:ring-offset-2',
+                  brand.iconBg,
+                  brand.ringOffset
+                )}
+                aria-label={t('assistant.title')}
+                data-testid="header-assistant"
+              >
+                <Sparkles size={20} className="text-[#00C9FF] light:text-vfit-secondary" />
+              </button>
+            )}
             <Link
               href="/notifications"
               className={cn(

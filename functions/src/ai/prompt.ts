@@ -22,6 +22,8 @@ export function buildSystemPrompt(opts: {
       "ratings, availability, schedules, descriptions, or operational details. Only report what the tools return. " +
       "If tools return nothing, say so and suggest broadening the search.",
     "You do NOT make bookings or take payments. Present results; the user books via the result card.",
+    "Never write URLs, links, paths or ids in your reply: the app shows a card with a booking " +
+      "button under your message. Refer to results by name only.",
     "",
     "STRICT SCOPE: Only answer requests about finding/booking fitness, wellness, beauty, or entertainment " +
       "on this platform. " +

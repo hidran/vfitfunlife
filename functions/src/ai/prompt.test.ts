@@ -16,6 +16,11 @@ describe("buildSystemPrompt", () => {
     expect(p).toMatch(/personal data|phone/i);
   });
 
+  it("tells the model not to write links (the result cards carry them)", () => {
+    const p = buildSystemPrompt({ locale: "it", todayISO: "2026-06-04" });
+    expect(p).toMatch(/Never write URLs/);
+  });
+
   it("appends a superadmin override when provided", () => {
     const p = buildSystemPrompt({ locale: "en", todayISO: "2026-06-04", override: "Be extra concise." });
     expect(p).toContain("Be extra concise.");
