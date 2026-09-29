@@ -155,7 +155,7 @@ function intIn(v: unknown, min: number, max: number, fallback: number): number {
  * permanently block the next save with no way to fix it from the UI — falling back to the
  * default here, same as a missing value, keeps the page saveable.
  */
-function toRules(raw: Partial<BookingRules> | null): BookingRules {
+export function toRules(raw: Partial<BookingRules> | null): BookingRules {
   const r = raw ?? {};
   return {
     bufferMinutes: intIn(r.bufferMinutes, 0, 120, DEFAULT_BOOKING_RULES.bufferMinutes),

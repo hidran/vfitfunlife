@@ -124,12 +124,20 @@ export function Calendar({
     });
   };
 
+  /** Moves the visible month and tells the parent which range to load for it. */
+  const goTo = (target: Date) => {
+    setCurrentDate(target);
+    const y = target.getFullYear();
+    const m = target.getMonth();
+    onRangeChange?.(new Date(y, m, 1), new Date(y, m + 1, 0, 23, 59, 59, 999));
+  };
+
   const handlePrevMonth = () => {
-    setCurrentDate(new Date(year, month - 1, 1));
+    goTo(new Date(year, month - 1, 1));
   };
 
   const handleNextMonth = () => {
-    setCurrentDate(new Date(year, month + 1, 1));
+    goTo(new Date(year, month + 1, 1));
   };
 
   const handleDateClick = (date: Date) => {
@@ -183,7 +191,7 @@ export function Calendar({
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => setCurrentDate(new Date())}
+            onClick={() => goTo(new Date())}
           >
             <CalendarIcon className="w-4 h-4 mr-1" />
             {t('provider.calendar.today')}

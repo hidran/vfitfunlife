@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Calendar } from '@/components/provider/Calendar';
 import { ScheduleEvent, CalendarView } from '@/types/provider';
 import { useShallow } from 'zustand/react/shallow';
@@ -10,6 +10,26 @@ import { Button } from '@/components/ui/button';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
 import { X, Clock, MapPin, User, FileText } from 'lucide-react';
+import { useAuthStore } from '@/stores/authStore';
+import { AddAppointmentSheet } from '@/components/provider/schedule/AddAppointmentSheet';
+import { BlockTimeSheet } from '@/components/provider/schedule/BlockTimeSheet';
+import { DayOffDialog } from '@/components/provider/schedule/DayOffDialog';
+import { localDateKey, romeDateKey } from '@/lib/availability/dates';
+import { getUpcomingConfirmedSessions } from '@/lib/firebase/provider';
+import { buildIcs, canExportIcs, deliverIcs } from '@/lib/calendar/ics';
+import { notify } from '@/lib/notify';
+
+/** Which schedule action sheet is open, and for which day ("YYYY-MM-DD"). */
+type Sheet =
+  | { kind: 'add'; date: string }
+  | { kind: 'block'; date: string; dateEditable: boolean }
+  | { kind: 'dayOff'; date: string };
+
+function monthRange(anchor: Date): { start: Date; end: Date } {
+  const y = anchor.getFullYear();
+  const m = anchor.getMonth();
+  return { start: new Date(y, m, 1), end: new Date(y, m + 1, 0, 23, 59, 59, 999) };
+}
 
 export default function ProviderSchedulePage() {
   const { t, locale } = useI18n();
@@ -23,13 +43,71 @@ export default function ProviderSchedulePage() {
   const [view, setView] = useState<CalendarView>('month');
   const [selectedEvent, setSelectedEvent] = useState<ScheduleEvent | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [sheet, setSheet] = useState<Sheet | null>(null);
+  const [range, setRange] = useState(() => monthRange(new Date()));
+  const [exporting, setExporting] = useState(false);
+  const [showExport, setShowExport] = useState(false);
+  const uid = useAuthStore((s) => s.user?.id);
 
   useEffect(() => {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), 1);
-    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    fetchSchedule(start, end);
-  }, [fetchSchedule]);
+    fetchSchedule(range.start, range.end);
+  }, [fetchSchedule, range]);
+
+  // Decided after mount: it depends on the platform, which the static export cannot know.
+  useEffect(() => {
+    setShowExport(canExportIcs());
+  }, []);
+
+  const refresh = useCallback(() => {
+    fetchSchedule(range.start, range.end);
+  }, [fetchSchedule, range]);
+
+  // Blocked entries carry a placeholder title from the data layer; label them here.
+  const events = useMemo(
+    () => schedule.map((e) => (e.type === 'blocked'
+      ? { ...e, title: e.blockKind === 'dayOff' ? t('provider.schedule.event.dayOff') : t('provider.schedule.event.blocked') }
+      : e)),
+    [schedule, t],
+  );
+
+  /** A tapped past day still opens on today: nothing can be booked or blocked in the past. */
+  const actionDate = (date: Date) => {
+    const key = localDateKey(date);
+    const today = romeDateKey(new Date());
+    return key < today ? today : key;
+  };
+
+  const openSheet = (next: Sheet) => {
+    setSelectedDate(null);
+    setSheet(next);
+  };
+
+  const handleExport = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const sessions = await getUpcomingConfirmedSessions();
+      if (sessions.length === 0) {
+        notify.info(t('provider.schedule.ics.empty'));
+        return;
+      }
+      const ics = buildIcs(sessions.map((s) => ({
+        id: s.id,
+        start: s.start,
+        end: s.end,
+        summary: s.title,
+        location: s.location,
+        description: s.notes,
+      })));
+      await deliverIcs(ics, `vfit-agenda-${romeDateKey(new Date())}.ics`);
+      notify.success(t('provider.schedule.ics.done'));
+    } catch (err) {
+      // Closing the native share sheet rejects with AbortError: not a failure.
+      if ((err as { name?: string })?.name !== 'AbortError') notify.error(t('provider.schedule.ics.error'));
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const handleEventClick = (event: ScheduleEvent) => {
     setSelectedEvent(event);
@@ -57,10 +135,17 @@ export default function ProviderSchedulePage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="secondary" size="sm">
-            {t('provider.schedule.btn.syncCalendar')}
-          </Button>
-          <Button size="sm">
+          {showExport && (
+            <Button variant="secondary" size="sm" className="min-h-11" onClick={handleExport} isLoading={exporting}>
+              {t('provider.schedule.btn.syncCalendar')}
+            </Button>
+          )}
+          <Button
+            size="sm"
+            className="min-h-11"
+            disabled={!uid}
+            onClick={() => openSheet({ kind: 'block', date: romeDateKey(new Date()), dateEditable: true })}
+          >
             {t('provider.schedule.btn.blockTime')}
           </Button>
         </div>
@@ -68,9 +153,10 @@ export default function ProviderSchedulePage() {
 
       {/* Calendar */}
       <Calendar
-        events={schedule}
+        events={events}
         onEventClick={handleEventClick}
         onDateSelect={handleDateSelect}
+        onRangeChange={(start, end) => setRange({ start, end })}
         view={view}
         onViewChange={setView}
         loading={isLoadingSchedule}
@@ -86,7 +172,8 @@ export default function ProviderSchedulePage() {
               </h3>
               <button
                 onClick={() => setSelectedEvent(null)}
-                className="p-2 rounded-lg hover:bg-surface-2"
+                aria-label={t('common.close')}
+                className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-surface-2"
               >
                 <X className="w-5 h-5 text-content-muted" />
               </button>
@@ -198,25 +285,80 @@ export default function ProviderSchedulePage() {
               </h3>
               <button
                 onClick={() => setSelectedDate(null)}
-                className="p-2 rounded-lg hover:bg-surface-2"
+                aria-label={t('common.close')}
+                className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-surface-2"
               >
                 <X className="w-5 h-5 text-content-muted" />
               </button>
             </div>
 
             <div className="space-y-3">
-              <Button fullWidth>
+              <Button
+                fullWidth
+                className="min-h-11"
+                disabled={!uid}
+                onClick={() => openSheet({ kind: 'add', date: actionDate(selectedDate) })}
+              >
                 {t('provider.schedule.dateModal.addAppointment')}
               </Button>
-              <Button variant="secondary" fullWidth>
+              <Button
+                variant="secondary"
+                fullWidth
+                className="min-h-11"
+                disabled={!uid}
+                onClick={() => openSheet({ kind: 'block', date: actionDate(selectedDate), dateEditable: false })}
+              >
                 {t('provider.schedule.dateModal.blockTime')}
               </Button>
-              <Button variant="outline" fullWidth>
+              <Button
+                variant="outline"
+                fullWidth
+                className="min-h-11"
+                disabled={!uid}
+                onClick={() => openSheet({ kind: 'dayOff', date: actionDate(selectedDate) })}
+              >
                 {t('provider.schedule.dateModal.setDayOff')}
               </Button>
             </div>
           </div>
         </Modal>
+      )}
+
+      {sheet?.kind === 'add' && uid && (
+        <AddAppointmentSheet
+          instructorId={uid}
+          initialDate={sheet.date}
+          onClose={() => setSheet(null)}
+          onCreated={() => {
+            notify.success(t('provider.schedule.add.success'));
+            refresh();
+          }}
+        />
+      )}
+      {sheet?.kind === 'block' && uid && (
+        <BlockTimeSheet
+          uid={uid}
+          initialDate={sheet.date}
+          dateEditable={sheet.dateEditable}
+          events={schedule}
+          onClose={() => setSheet(null)}
+          onSaved={() => {
+            notify.success(t('provider.schedule.block.success'));
+            refresh();
+          }}
+        />
+      )}
+      {sheet?.kind === 'dayOff' && uid && (
+        <DayOffDialog
+          uid={uid}
+          date={sheet.date}
+          events={schedule}
+          onClose={() => setSheet(null)}
+          onSaved={() => {
+            notify.success(t('provider.schedule.dayOff.success'));
+            refresh();
+          }}
+        />
       )}
     </div>
   );

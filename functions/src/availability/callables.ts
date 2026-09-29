@@ -4,6 +4,7 @@ import { getUserRoleInfo } from "../utils/roles";
 import { dayContextFrom } from "./dayContext";
 import { readDayDocs } from "./dayReads";
 import { freeSlots } from "./slots";
+import { trainerSlotRules } from "../bookings/trainerBookingCore";
 import {
   canManageOwnAvailability,
   isBookableInstructor,
@@ -58,10 +59,17 @@ export const getProviderSlots = onCall(hotCallableOptions(), async (req) => {
   if (!docs.instructor) throw new HttpsError("not-found", "instructor_not_found");
   if (!isBookableInstructor(docs.instructor)) throw new HttpsError("failed-precondition", "instructor_not_bookable");
 
+  const ctx = dayContextFrom(docs, date, excludeBookingId);
+  // The trainer asking for their own day ("Aggiungi appuntamento" on /provider/schedule) gets
+  // the rules createBookingAsTrainer applies: no customer-facing minimum notice. Anyone else
+  // asking with the flag is ignored rather than refused, so it reveals nothing.
+  const asTrainer = (req.data as { asTrainer?: unknown } | undefined)?.asTrainer === true &&
+    req.auth.uid === instructorId;
   const slots = freeSlots({
     // The booking being rescheduled must not hide the slot it currently occupies from its
     // own picker; rescheduleBooking re-checks the chosen start with the same exclusion.
-    ...dayContextFrom(docs, date, excludeBookingId),
+    ...ctx,
+    rules: asTrainer ? trainerSlotRules(ctx.rules) : ctx.rules,
     durationMinutes: validateServiceDuration(service.durationMinutes),
     date,
     now: new Date(),
