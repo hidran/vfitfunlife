@@ -25,6 +25,7 @@ import {
 import { httpsCallable } from "firebase/functions";
 import { auth, db, getFunctionsInstance } from "./config";
 import { countOrFallback, sumOrFallback } from "./firestore";
+import { demoDashboardShare } from "@/lib/demo";
 import { normalizeSearchQuery } from "@/lib/admin/adminIndex";
 import { BOOKING_DISPUTED_FILTER } from "@/lib/admin/bookingsListQuery";
 import type { SystemLogAction } from "@/lib/admin/logsListQuery";
@@ -187,6 +188,11 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
     // aggregation needs the summed field in the index, which a filter-only index doesn't carry.
     // These fall back to the getDocs()-computed answer on any aggregation failure, so a missing
     // or still-building index costs reads, not a broken dashboard.
+    //
+    // D5: demo accounts and their bookings/transactions (`isDemo: true`) must not count. The
+    // demo documents are a handful, read with one single-field equality query per collection,
+    // and their share of each counter (same predicates, see demoDashboardShare) is subtracted.
+    const isDemo = where("isDemo", "==", true);
     const [
       totalUsers,
       activeProviders,
@@ -194,6 +200,9 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
       monthlyRevenue,
       pendingCandidates,
       activitySnapshot,
+      demoUsers,
+      demoBookings,
+      demoTransactions,
     ] = await Promise.all([
       countOrFallback(usersRef),
       countOrFallback(providersQuery),
@@ -201,7 +210,18 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
       sumOrFallback(revenueQuery, "amount"),
       fetchPendingVerificationCandidates(),
       getDocs(activityQuery),
+      getDocs(query(usersRef, isDemo)),
+      getDocs(query(collection(db, BOOKINGS_COLLECTION), isDemo)),
+      getDocs(query(collection(db, TRANSACTIONS_COLLECTION), isDemo)),
     ]);
+
+    const demo = demoDashboardShare({
+      users: demoUsers.docs.map((d) => d.data()),
+      bookings: demoBookings.docs.map((d) => d.data()),
+      transactions: demoTransactions.docs.map((d) => d.data()),
+      todayStart: today,
+      monthStart: firstDayOfMonth,
+    });
 
     const pendingVerifications = filterNeedsVerificationDecision(pendingCandidates).length;
 
@@ -210,11 +230,13 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
       ...convertTimestamps(doc.data()),
     })) as AdminDashboardStats["recentActivity"];
 
+    // Clamped: a count that raced a write can momentarily be below its demo share.
+    const real = (all: number, demoPart: number) => Math.max(0, all - demoPart);
     return {
-      totalUsers,
-      activeProviders,
-      todayBookings,
-      monthlyRevenue,
+      totalUsers: real(totalUsers, demo.totalUsers),
+      activeProviders: real(activeProviders, demo.activeProviders),
+      todayBookings: real(todayBookings, demo.todayBookings),
+      monthlyRevenue: real(monthlyRevenue, demo.monthlyRevenue),
       pendingVerifications,
       openTickets: 0, // Would come from support tickets collection
       recentActivity,

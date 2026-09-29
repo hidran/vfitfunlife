@@ -153,6 +153,8 @@ async function writeUser(uid, data) {
       notificationsEnabled: true,
       pointsBalance: 0,
       walletBalance: 0,
+      // D5: demo accounts are excluded from every stat and metric (functions/src/lib/demo.ts).
+      isDemo: true,
       ...data,
     },
     // Set on create only, so a re-run never silently un-suspends an account an admin suspended.
@@ -200,6 +202,8 @@ await mergeWithCreatedAt(
     uid: providerUid,
     name: PROVIDER.fullName,
     fullName: PROVIDER.fullName,
+    // D5: bookings WITH this trainer inherit isDemo in createBooking, which reads this doc.
+    isDemo: true,
     isActive: true,
     applicationStatus: "verified",
     providerProfile: {

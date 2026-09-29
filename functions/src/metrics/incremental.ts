@@ -46,7 +46,8 @@ import {
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Bump when the rollup's shape or semantics change; a mismatch forces a full rebuild. */
-export const ROLLUP_VERSION = 1;
+// 2: demo bookings (D5) are excluded — a v1 rollup may hold their events, so it is rebuilt.
+export const ROLLUP_VERSION = 2;
 
 /** Before any possible event. The starting point of a rebuild. */
 export const BEGINNING_OF_TIME = new Date(-8.64e15);
@@ -124,13 +125,15 @@ export function foldIntoRollup(
 ): BookingsRollup {
   const from = rollup.settledBefore.getTime();
   const to = until.getTime();
+  // Demo bookings (D5) contribute nothing — not even a trainer identity for byTrainer.
+  const real = bookings.filter((b) => !b.isDemo);
   if (to <= from) {
-    for (const b of bookings) noteTrainer(rollup.trainers, b);
+    for (const b of real) noteTrainer(rollup.trainers, b);
     return rollup;
   }
   const inRange = (d: Date) => d.getTime() >= from && d.getTime() < to;
 
-  for (const b of bookings) {
+  for (const b of real) {
     if (!b.instructorId) continue;
     noteTrainer(rollup.trainers, b);
     const t = rollup.trainers.get(b.instructorId)!;
@@ -189,8 +192,8 @@ export interface UserQueryResults {
   providerUsers: number;
   /** The user documents (those that exist) of the trainers on the recent bookings. */
   recentTrainerUsers: MetricsUser[];
-  /** Every user that could be hidden: isDeleted == true, deletedAt != null, or a seeded id
-   *  prefix. Overlaps are fine — de-duplicated by uid. */
+  /** Every user that could be hidden: isDeleted == true, deletedAt != null, isDemo == true, or
+   *  a seeded id prefix (provider_, customer_, demo-). Overlaps are fine — de-duplicated by uid. */
   hiddenCandidates: MetricsUser[];
   /** Users with createdAt >= the window's lower bound. */
   recentUsers: MetricsUser[];
@@ -246,7 +249,7 @@ export function computeMetricsForDayIncremental(args: IncrementalArgs): MetricsD
 
   // Id order is the order the full scan iterated in; the trainer map's order depends on it.
   const recent = args.recent
-    .filter((b) => Boolean(b.instructorId))
+    .filter((b) => Boolean(b.instructorId) && !b.isDemo)
     .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 
   // Daily events, activeTrainers, medianTimeToAccept and the per-trainer windows only see

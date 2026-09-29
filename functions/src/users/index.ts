@@ -4,6 +4,7 @@ import { getUserRoleInfo } from "../utils/roles";
 
 const db = admin.firestore();
 import { region } from "../lib/runtimeOptions";
+import { isDemoAccount } from "../lib/demo";
 
 // Re-export all role management functions
 export * from "./roles";
@@ -328,6 +329,9 @@ export const deleteAddress = onCall<DeleteAddressData>(
   }
 );
 
+/** Extra rows read so filtering out the demo accounts (a handful) still fills the board. */
+const LEADERBOARD_DEMO_HEADROOM = 20;
+
 /**
  * Get leaderboard
  * Public endpoint - anyone can view
@@ -337,6 +341,9 @@ export const getLeaderboard = onCall<LeaderboardData>(
   async (request: CallableRequest<LeaderboardData>) => {
     // Allow unauthenticated access to leaderboard
     const { type = "points", limit = 10 } = request.data;
+    // D5: demo accounts never rank. They are filtered after the read (a `!=` filter would drop
+    // every real user without the field), so read enough extra rows to still fill the board.
+    const readLimit = limit + LEADERBOARD_DEMO_HEADROOM;
 
     let query;
 
@@ -344,20 +351,21 @@ export const getLeaderboard = onCall<LeaderboardData>(
       query = db
         .collection("users")
         .orderBy("pointsBalance", "desc")
-        .limit(limit);
+        .limit(readLimit);
     } else if (type === "bookings") {
       // This would need a counter field on user document
       query = db
         .collection("users")
         .orderBy("totalBookings", "desc")
-        .limit(limit);
+        .limit(readLimit);
     } else {
       throw new HttpsError("invalid-argument", "Invalid leaderboard type");
     }
 
     const snapshot = await query.get();
 
-    const leaderboard = snapshot.docs.map((doc, index) => {
+    const ranked = snapshot.docs.filter((doc) => !isDemoAccount(doc.id, doc.data())).slice(0, limit);
+    const leaderboard = ranked.map((doc, index) => {
       const userData = doc.data();
       return {
         rank: index + 1,

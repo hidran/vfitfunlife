@@ -105,6 +105,8 @@ function bookingDoc(client, i, { offsetDays, status }) {
   const now = Timestamp.now();
   return [id, {
     id,
+    // D5: demo bookings never count in a stat or metric.
+    isDemo: true,
     userId: client.userId,
     userName: client.name,
     userPhone: client.phone,
@@ -228,6 +230,7 @@ for (const c of CLIENTS) {
   const bookings = TIMELINE.map((t, i) => bookingDoc(c, i, t));
   const completed = TIMELINE.filter((t) => ["completed", "payment_confirmed"].includes(t.status)).length;
   set(clientRef, {
+    isDemo: true,
     providerId: providerUid,
     userId: c.userId,
     name: c.name,

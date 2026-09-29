@@ -2,6 +2,7 @@ import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https
 import * as admin from "firebase-admin";
 import { region } from "../lib/runtimeOptions";
 import { awardXp } from "./gamification";
+import { isDemoBooking, isDemoAccount, ratingsForSummary } from "../lib/demo";
 import {
   checkReviewable,
   computeRatingSummary,
@@ -91,6 +92,8 @@ export const submitReview = onCall(
         text: comment,
         tags,
         isVerified: true, // backed by a delivered booking
+        // D5: a review on a demo booking stays readable but never moves a real rating.
+        isDemo: isDemoBooking(bookingId, booking as Record<string, unknown> | undefined),
         createdAt: now,
         updatedAt: now,
       };
@@ -154,8 +157,11 @@ export const submitReview = onCall(
  */
 export async function updateInstructorRating(instructorId: string): Promise<void> {
   const ref = db.collection("instructors").doc(instructorId);
-  const reviews = await ref.collection("reviews").get();
-  const { ratingAvg, reviewCount } = computeRatingSummary(reviews.docs.map((d) => d.data().rating));
+  const [instructor, reviews] = await Promise.all([ref.get(), ref.collection("reviews").get()]);
+  const { ratingAvg, reviewCount } = computeRatingSummary(ratingsForSummary(
+    reviews.docs.map((d) => d.data()),
+    isDemoAccount(instructorId, instructor.data()),
+  ));
   await ref.update({
     "ratingAvg": ratingAvg,
     "reviewCount": reviewCount,
@@ -168,7 +174,10 @@ export async function updateInstructorRating(instructorId: string): Promise<void
 async function updateVenueRating(venueId: string): Promise<void> {
   const ref = db.collection("venues").doc(venueId);
   const reviews = await ref.collection("reviews").get();
-  const { ratingAvg, reviewCount } = computeRatingSummary(reviews.docs.map((d) => d.data().rating));
+  // Venues are never demo accounts: a demo customer's review is always left out.
+  const { ratingAvg, reviewCount } = computeRatingSummary(
+    ratingsForSummary(reviews.docs.map((d) => d.data()), false),
+  );
   await ref.update({
     ratingAvg,
     reviewCount,

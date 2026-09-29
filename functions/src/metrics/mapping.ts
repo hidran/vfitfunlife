@@ -8,16 +8,19 @@
 import { Timestamp } from "firebase-admin/firestore";
 import type { MetricsBooking, MetricsUser } from "./types";
 import type { BookingStatus, StatusActorRole } from "../bookings/types";
+import { isDemoAccount, isDemoBooking } from "../lib/demo";
 
 const DEMO_EMAIL_DOMAIN = "@demo.vfit";
 
 /**
  * Mirrors `hiddenAccountKind`/`isHiddenAccount` in src/lib/firebase/admin.ts: soft-deleted
  * and seeded demo accounts (provider_* and customer_* ids, or an @demo.vfit email) must not
- * inflate trainer or client counts on a dashboard partners read.
+ * inflate trainer or client counts on a dashboard partners read. Plus the D5 demo accounts
+ * (`isDemo`, @vitfitdemo.dev, demo-* ids — see lib/demo.ts).
  */
 export function isHidden(id: string, data: FirebaseFirestore.DocumentData): boolean {
   if (data.isDeleted === true || data.deletedAt) return true;
+  if (isDemoAccount(id, data)) return true;
   const email = typeof data.email === "string" ? data.email.toLowerCase() : "";
   if (email.endsWith(DEMO_EMAIL_DOMAIN)) return true;
   if (id.startsWith("provider_") || id.startsWith("customer_")) return true;
@@ -77,6 +80,7 @@ export function toMetricsBooking(id: string, b: FirebaseFirestore.DocumentData):
       ),
     finalPrice: typeof b.finalPrice === "number" ? b.finalPrice : undefined,
     lateCancellation: b.lateCancellation === true,
+    isDemo: isDemoBooking(id, b),
     paymentConfirmation: b.paymentConfirmation ?
       {
         amount: Number(b.paymentConfirmation.amount ?? 0),

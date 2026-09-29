@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/utils";
 import { useI18n } from "@/hooks/useI18n";
 import { trace } from "@/lib/perf";
+import { isDemoDoc } from "@/lib/demo";
 import type { MessageKey } from "@/i18n/messages";
 import {
   Users,
@@ -60,6 +61,8 @@ export default function AdminDashboardPage() {
   }, [fetchDashboardStats, fetchPendingVerifications, fetchProviders]);
 
   const isSuperadmin = user?.role === "superadmin";
+  // A ranking, so demo providers (D5) never place in it; they stay in the providers list.
+  const topProviders = providers.filter((p) => !isDemoDoc(p as unknown as Record<string, unknown>));
 
   const quickActions = [
     {
@@ -319,12 +322,12 @@ export default function AdminDashboardPage() {
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#00C9FF]" />
               </div>
-            ) : providers.length === 0 ? (
+            ) : topProviders.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-content-muted">{t('admin.dashboard.topProviders.empty')}</p>
               </div>
             ) : (
-              providers.slice(0, 5).map((provider, index) => (
+              topProviders.slice(0, 5).map((provider, index) => (
                 <div
                   key={provider.id}
                   className="flex items-center gap-4 p-3 bg-surface-sunken rounded-xl"
