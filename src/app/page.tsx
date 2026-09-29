@@ -52,7 +52,9 @@ function BrandMark({ compact = false, idSuffix }: { compact?: boolean; idSuffix:
       >
         <svg viewBox="0 0 80 80" className={compact ? 'h-7 w-7' : 'h-9 w-9'}>
           <defs>
-            <linearGradient id={gradientId} x1="12" x2="68" y1="18" y2="66">
+            {/* userSpaceOnUse: in the default objectBoundingBox units these coordinates lie far
+                outside the shape and the whole mark rendered as flat #7B61FF. */}
+            <linearGradient id={gradientId} x1="12" x2="68" y1="18" y2="66" gradientUnits="userSpaceOnUse">
               <stop stopColor="#7B61FF" />
               <stop offset="0.46" stopColor="#00C9FF" />
               <stop offset="1" stopColor="#00E676" />

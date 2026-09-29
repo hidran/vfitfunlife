@@ -61,10 +61,19 @@ export const metadata: Metadata = {
     images: ['/landing/home.png'],
   },
   manifest: '/manifest.json',
+  // Generated from resources/brand/vfit-mark.svg by scripts/generate-brand-assets.mjs.
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: '16x16 32x32 48x48' },
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/icons/favicon-32.png', type: 'image/png', sizes: '32x32' },
+    ],
+    apple: [{ url: '/icons/apple-touch-icon.png', sizes: '180x180' }],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'VFit',
+    title: 'Vfitfunlife',
   },
 };
 
