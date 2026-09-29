@@ -80,22 +80,21 @@ export default function PermissionsPage() {
   };
 
   const handleRequestNotifications = async () => {
-    if (!Capacitor.isNativePlatform()) {
-      // Web: Use browser Notification API
-      try {
-        if ('Notification' in window) {
-          const permission = await Notification.requestPermission();
-          if (permission === 'granted') {
-            updatePermission('notifications', true);
-          }
-        }
-      } catch (err) {
-        console.error('Notification permission error:', err);
-      }
-    } else {
-      // Native: Will be handled by FCM setup
-      // For now, just mark as granted
-      updatePermission('notifications', true);
+    try {
+      if (!Capacitor.isNativePlatform() && !('Notification' in window)) return;
+      // Web: ask synchronously inside the click so browsers treat it as a user gesture.
+      const webPermission = Capacitor.isNativePlatform()
+        ? null
+        : await Notification.requestPermission();
+      // Registers the FCM token (web + native; native asks for permission here).
+      const { enablePush } = await import('@/lib/push/fcmRegistration');
+      const result = await enablePush({ requestPermission: true });
+      const granted = webPermission
+        ? webPermission === 'granted'
+        : result === 'pending' || result === 'registered' || result === 'signed-out';
+      if (granted) updatePermission('notifications', true);
+    } catch (err) {
+      console.error('Notification permission error:', err);
     }
   };
 

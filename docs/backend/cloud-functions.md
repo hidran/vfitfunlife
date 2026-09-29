@@ -115,7 +115,15 @@ Cloud Functions for V Fitness handle server-side business logic including:
 #### `registerFcmToken`
 - **Type:** Callable
 - **Parameters:** `{ token: string, platform: 'ios' | 'android' | 'web' }`
-- **Description:** Registers FCM token for push notifications
+- **Description:** Registers FCM token for push notifications. Called by the client
+  (`src/lib/push/fcmRegistration.ts`) on every sign-in / auth restore.
+
+#### `unregisterFcmToken` (`notifications/tokens.ts`)
+- **Type:** Callable
+- **Parameters:** `{ token: string }`
+- **Returns:** `{ success: true, removed: boolean }`
+- **Description:** Removes one token from the caller's `fcmTokens`. The client calls it on
+  logout, before signing out. Idempotent.
 
 #### `markNotificationRead`
 - **Type:** Callable

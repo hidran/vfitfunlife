@@ -16,7 +16,6 @@ import { Network } from '@capacitor/network';
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 import { Share } from '@capacitor/share';
 import { LocalNotifications } from '@capacitor/local-notifications';
-import { PushNotifications } from '@capacitor/push-notifications';
 import { legacyProviderPathToHref } from '@/lib/routes';
 
 // Check if running on native platform
@@ -203,40 +202,8 @@ export const scheduleNotification = async (options: {
   });
 };
 
-// Push Notifications Setup
-export const initializePushNotifications = async () => {
-  if (!isNativePlatform()) return null;
-
-  // Request permission
-  const permission = await PushNotifications.requestPermissions();
-  
-  if (permission.receive === 'granted') {
-    // Register with FCM/APNs
-    await PushNotifications.register();
-
-    // Set up listeners
-    PushNotifications.addListener('registration', (token) => {
-      console.log('[Capacitor] Push registration token:', token.value);
-      // Send this token to your backend
-    });
-
-    PushNotifications.addListener('registrationError', (error) => {
-      console.error('[Capacitor] Push registration error:', error);
-    });
-
-    PushNotifications.addListener('pushNotificationReceived', (notification) => {
-      console.log('[Capacitor] Push received:', notification);
-    });
-
-    PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
-      console.log('[Capacitor] Push action performed:', action);
-    });
-
-    return true;
-  }
-
-  return false;
-};
+// Push notifications: permission, token registration and listeners live in
+// src/lib/push/fcmRegistration.ts (driven by <PushRegistrar /> after sign-in).
 
 // Device Info
 export const getDeviceInfo = async () => {
@@ -293,9 +260,6 @@ export const initializeCapacitor = async () => {
   setTimeout(() => {
     hideSplashScreen();
   }, 2000);
-
-  // Initialize push notifications
-  await initializePushNotifications();
 
   console.log('[Capacitor] Initialization complete');
 };

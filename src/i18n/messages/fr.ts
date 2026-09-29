@@ -26,6 +26,7 @@ export const frMessages: Messages = {
   'common.bookNow': 'Réserver maintenant',
   'common.cancel': 'Annuler',
   'common.close': 'Fermer',
+  'push.toast.open': 'Ouvrir',
   'common.retry': 'Réessayer',
   'common.total': 'Total',
   'common.select': 'Sélectionner',

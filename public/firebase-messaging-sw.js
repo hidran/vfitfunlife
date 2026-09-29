@@ -1,122 +1,81 @@
-// Firebase Cloud Messaging Service Worker
-// This file must be at the root of your public directory
+// Firebase Cloud Messaging service worker (web push).
+//
+// Registered by src/lib/push/fcmRegistration.ts with the Firebase web config passed as
+// URL query parameters (…/firebase-messaging-sw.js?apiKey=…&projectId=…). The static
+// export has no per-environment build step for files in public/, so the config comes
+// from the page bundle that registered the worker — the same NEXT_PUBLIC_FIREBASE_*
+// values that assert-build-project.mjs checks — and staging/prod can never diverge.
+//
+// Keep the compat SDK major in step with package.json's `firebase` dependency.
 
-importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/12.8.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/12.8.0/firebase-messaging-compat.js');
 
-// Initialize Firebase in the service worker
-// Note: These values will be replaced during build or you can use environment-specific config
-firebase.initializeApp({
-  apiKey: self.FIREBASE_API_KEY || 'YOUR_API_KEY',
-  authDomain: self.FIREBASE_AUTH_DOMAIN || 'YOUR_AUTH_DOMAIN',
-  projectId: self.FIREBASE_PROJECT_ID || 'YOUR_PROJECT_ID',
-  storageBucket: self.FIREBASE_STORAGE_BUCKET || 'YOUR_STORAGE_BUCKET',
-  messagingSenderId: self.FIREBASE_MESSAGING_SENDER_ID || 'YOUR_SENDER_ID',
-  appId: self.FIREBASE_APP_ID || 'YOUR_APP_ID',
-});
+// Keep in sync with pushTargetUrl() in src/lib/push/pushTarget.ts.
+function pushTargetUrl(data) {
+  if (!data) return '/notifications';
+  if (typeof data.link === 'string' && data.link.startsWith('/') && !data.link.startsWith('//')) return data.link;
+  const type = data.type || '';
+  if (type.startsWith('booking_') && data.bookingId) {
+    return '/bookings/detail?id=' + encodeURIComponent(data.bookingId);
+  }
+  return '/notifications';
+}
 
-const messaging = firebase.messaging();
-
-// Handle background messages
-messaging.onBackgroundMessage((payload) => {
-  console.log('[firebase-messaging-sw.js] Received background message:', payload);
-
-  const notificationTitle = payload.notification?.title || 'V Fitness';
-  const notificationOptions = {
-    body: payload.notification?.body || '',
-    icon: '/icons/icon-192x192.png',
-    badge: '/icons/badge-72x72.png',
-    tag: payload.data?.type || 'default',
-    data: payload.data,
-    actions: getNotificationActions(payload.data?.type),
-    vibrate: [100, 50, 100],
-    requireInteraction: shouldRequireInteraction(payload.data?.type),
-  };
-
-  return self.registration.showNotification(notificationTitle, notificationOptions);
-});
-
-// Handle notification click
+// Registered before firebase.messaging() so it runs ahead of the SDK's own click handler
+// (which only follows webpush.fcmOptions.link and otherwise does nothing).
 self.addEventListener('notificationclick', (event) => {
-  console.log('[firebase-messaging-sw.js] Notification clicked:', event);
-
+  event.stopImmediatePropagation();
   event.notification.close();
-
-  const data = event.notification.data || {};
-  let url = '/';
-
-  // Route based on notification type
-  switch (data.type) {
-    case 'booking_confirmed':
-    case 'booking_reminder':
-    case 'booking_cancelled':
-      url = `/bookings/${data.bookingId}`;
-      break;
-    case 'event':
-      url = `/events/${data.eventId}`;
-      break;
-    case 'challenge':
-      url = `/challenges/${data.challengeId}`;
-      break;
-    case 'vip':
-      url = '/vip';
-      break;
-    case 'promo':
-      url = '/promotions';
-      break;
-    default:
-      url = '/notifications';
-  }
-
-  // Handle action clicks
-  if (event.action === 'view') {
-    // Already handled above
-  } else if (event.action === 'dismiss') {
-    return;
-  }
+  // SDK-displayed notifications keep the FCM payload under data.FCM_MSG.
+  const raw = event.notification.data || {};
+  const data = (raw.FCM_MSG && raw.FCM_MSG.data) || raw;
+  const url = new URL(pushTargetUrl(data), self.location.origin).href;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      // Check if there's already a window open
+      // This worker lives under its own scope and does not control the app's pages, so
+      // client.navigate() is unavailable: ask an open tab to route itself instead
+      // (handled in src/lib/push/fcmRegistration.ts), then focus it.
       for (const client of windowClients) {
-        if (client.url.includes(self.registration.scope) && 'focus' in client) {
-          client.navigate(url);
+        if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+          client.postMessage({ type: 'vfit:push-click', url: pushTargetUrl(data) });
           return client.focus();
         }
       }
-      // Open a new window
-      if (clients.openWindow) {
-        return clients.openWindow(url);
-      }
+      return clients.openWindow ? clients.openWindow(url) : undefined;
     })
   );
 });
 
-// Helper functions
-function getNotificationActions(type) {
-  const defaultActions = [
-    { action: 'view', title: 'Visualizza' },
-    { action: 'dismiss', title: 'Ignora' },
-  ];
+const params = new URL(self.location.href).searchParams;
+const firebaseConfig = {
+  apiKey: params.get('apiKey'),
+  authDomain: params.get('authDomain'),
+  projectId: params.get('projectId'),
+  storageBucket: params.get('storageBucket'),
+  messagingSenderId: params.get('messagingSenderId'),
+  appId: params.get('appId'),
+};
 
-  switch (type) {
-    case 'booking_reminder':
-      return [
-        { action: 'view', title: 'Vedi Dettagli' },
-        { action: 'dismiss', title: 'OK' },
-      ];
-    case 'booking_confirmed':
-      return [
-        { action: 'view', title: 'Vedi Prenotazione' },
-        { action: 'dismiss', title: 'OK' },
-      ];
-    default:
-      return defaultActions;
-  }
-}
+if (firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.messagingSenderId && firebaseConfig.appId) {
+  firebase.initializeApp(firebaseConfig);
+  const messaging = firebase.messaging();
 
-function shouldRequireInteraction(type) {
-  // These notification types should stay visible until user interacts
-  const importantTypes = ['booking_reminder', 'booking_cancelled'];
-  return importantTypes.includes(type);
+  // Messages that carry a `notification` payload are displayed automatically by the SDK
+  // when the page is in the background. This handler covers data-only messages.
+  messaging.onBackgroundMessage((payload) => {
+    if (payload.notification) return;
+    const data = payload.data || {};
+    const title = data.title || 'V Fitness';
+    return self.registration.showNotification(title, {
+      body: data.body || '',
+      icon: '/icons/icon-192x192.png',
+      badge: '/icons/icon-192x192.png',
+      tag: data.bookingId || data.type || 'default',
+      data,
+    });
+  });
+} else {
+  console.warn('[firebase-messaging-sw] missing Firebase config query params; push disabled');
 }

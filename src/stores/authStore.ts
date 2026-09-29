@@ -491,6 +491,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: async () => {
     set({ isLoading: true, error: null });
     try {
+      // Detach this device's push token while still authenticated (the callable needs
+      // auth). Best-effort and time-boxed: logout must never hang on it.
+      let pushTimer: ReturnType<typeof setTimeout> | undefined;
+      await Promise.race([
+        import('@/lib/push/fcmRegistration').then((m) => m.disablePush()).catch(() => {}),
+        new Promise<void>((resolve) => { pushTimer = setTimeout(resolve, 3000); }),
+      ]);
+      clearTimeout(pushTimer);
       await firebaseSignOut();
       set({
         firebaseUser: null,

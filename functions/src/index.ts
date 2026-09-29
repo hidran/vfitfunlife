@@ -17,6 +17,7 @@ export * from "./bookings";
 export * from "./bookings/clientRoster";
 export * from "./payments";
 export * from "./notifications";
+export * from "./notifications/tokens";
 export * from "./users";
 export * from "./scheduled";
 export * from "./seed/seedData";

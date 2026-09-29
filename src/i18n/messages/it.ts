@@ -24,6 +24,7 @@ export const itMessages = {
   'common.bookNow': 'Prenota ora',
   'common.cancel': 'Annulla',
   'common.close': 'Chiudi',
+  'push.toast.open': 'Apri',
   'common.retry': 'Riprova',
   'common.total': 'Totale',
   'common.select': 'Seleziona',
