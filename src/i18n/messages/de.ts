@@ -2493,8 +2493,8 @@ export const deMessages: Messages = {
 
   // bookings/[id]/BookingDetailClient.tsx
   'bookings.detail.title': 'Buchungsdetails',
-  'bookings.detail.confirmedTitle': 'Buchung bestätigt!',
-  'bookings.detail.confirmedSubtitle': 'Sie erhalten eine Bestätigung per E-Mail.',
+  'bookings.detail.requestSentTitle': 'Anfrage gesendet, warte auf den Trainer',
+  'bookings.detail.requestSentSubtitle': 'Wir benachrichtigen Sie, sobald der Trainer antwortet.',
   'bookings.detail.rescheduledTitle': 'Buchung umgebucht',
   'bookings.detail.rescheduledSubtitle': 'Der neue Termin wurde erfolgreich gespeichert.',
   'bookings.detail.reviewedTitle': 'Bewertung abgeschickt',

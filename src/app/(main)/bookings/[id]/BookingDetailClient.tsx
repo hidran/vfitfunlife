@@ -129,6 +129,11 @@ export default function BookingDetailPage() {
 
   const booking = localBookingOverride ?? storeBooking ?? buildFallbackBooking(bookingId);
   const isFallbackBooking = !localBookingOverride && !storeBooking;
+  // `confirmed=true` only says the client just sent the request; the trainer has not
+  // accepted it yet. Show it while the booking is still waiting: not once it is cancelled,
+  // declined or accepted, and not over a placeholder booking.
+  const showRequestSent =
+    justConfirmed && !isFallbackBooking && booking.status === 'requested';
 
   const qrCells = useMemo(() => {
     const source = `${booking.id}-${booking.providerId ?? ''}-${booking.scheduledAt.toDate().toISOString()}`;
@@ -260,7 +265,7 @@ export default function BookingDetailPage() {
 
   return (
     <div className="min-h-screen bg-background-dark">
-      {(justConfirmed || justRescheduled || justReviewed || isFallbackBooking) && (
+      {(showRequestSent || justRescheduled || justReviewed || isFallbackBooking) && (
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -269,12 +274,12 @@ export default function BookingDetailPage() {
             isFallbackBooking ? 'border-warning/30 bg-warning/15' : 'border-success/30 bg-success/20'
           )}
         >
-          {justConfirmed && (
+          {showRequestSent && (
             <div className="mb-2 flex items-center gap-3 last:mb-0">
-              <CheckCircle className="h-6 w-6 text-success" />
+              <Clock className="h-6 w-6 text-success" />
               <div>
-                <p className="font-semibold text-success">{t('bookings.detail.confirmedTitle')}</p>
-                <p className="text-sm text-success/80">{t('bookings.detail.confirmedSubtitle')}</p>
+                <p className="font-semibold text-success">{t('bookings.detail.requestSentTitle')}</p>
+                <p className="text-sm text-success/80">{t('bookings.detail.requestSentSubtitle')}</p>
               </div>
             </div>
           )}

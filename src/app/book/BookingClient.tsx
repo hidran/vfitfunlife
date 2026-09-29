@@ -30,6 +30,7 @@ import { VenueNotFound } from '@/components/venue/VenueNotFound';
 import { PhotoGallery } from '@/components/gallery/PhotoGallery';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
+import { providerSearchResultFromProvider } from '@/lib/bookingProvider';
 
 export default function ProviderBookingPage() {
   const { t, locale } = useI18n();
@@ -38,6 +39,7 @@ export default function ProviderBookingPage() {
   const providerId = searchParams?.get('providerId') ?? undefined;
 
   const {
+    selectedProvider,
     selectedService,
     selectedDate,
     selectedTime,
@@ -47,6 +49,7 @@ export default function ProviderBookingPage() {
     selectService,
     selectDateTime,
     fetchAvailability,
+    ensureSelectedProvider,
   } = useBookingStore();
 
   const firebaseUser = useAuthStore((s) => s.firebaseUser);
@@ -57,13 +60,23 @@ export default function ProviderBookingPage() {
   const { data: reviews = [] } = useInstructorReviews(providerId);
   const [activeTab, setActiveTab] = useState<'services' | 'reviews' | 'about'>('services');
 
+  // The confirm page books for the store's selected provider. Only the search page used to
+  // set it, so arriving here from a trainer profile or a link dead-ended at "no booking in
+  // progress". A different provider than the stored one also drops a stale service/slot.
+  useEffect(() => {
+    if (provider) ensureSelectedProvider(providerSearchResultFromProvider(provider));
+  }, [provider, ensureSelectedProvider]);
+
   // Slots depend on the service (its duration) as well as the date, and only signed-in users
   // may ask for them.
+  // Not until the store holds this provider: a service left over from another provider's
+  // flow is about to be cleared and must not be asked about here.
+  const providerSelected = !!provider && selectedProvider?.id === provider.id;
   useEffect(() => {
-    if (provider && selectedService && selectedDate && firebaseUser) {
+    if (provider && providerSelected && selectedService && selectedDate && firebaseUser) {
       fetchAvailability(provider.id, selectedService.id, selectedDate);
     }
-  }, [provider, selectedService, selectedDate, firebaseUser, fetchAvailability]);
+  }, [provider, providerSelected, selectedService, selectedDate, firebaseUser, fetchAvailability]);
 
   const slotsNotice = (authReady && !firebaseUser) || availabilityError === 'signin' ? (
     <>
@@ -97,13 +110,13 @@ export default function ProviderBookingPage() {
     }
   };
 
+  const canContinue = providerSelected && selectedService && selectedDate && selectedTime;
+
   const handleContinue = () => {
-    if (selectedService && selectedDate && selectedTime) {
+    if (canContinue) {
       router.push('/booking/confirm');
     }
   };
-
-  const canContinue = selectedService && selectedDate && selectedTime;
 
   if (!providerId) {
     return <VenueNotFound message={t('booking.error.noProvider')} />;

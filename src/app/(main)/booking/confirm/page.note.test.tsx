@@ -27,11 +27,12 @@ vi.mock('@/stores/bookingStore', () => ({
 }));
 
 function acceptTermsAndConfirm() {
-  // The terms checkbox is the button right before the terms paragraph; confirm is the last.
-  const buttons = screen.getAllByRole('button');
-  const terms = buttons.find((b) => b.nextElementSibling?.tagName === 'P' && b.className.includes('rounded border-2'));
-  fireEvent.click(terms!);
-  fireEvent.click(buttons.at(-1)!);
+  // The terms checkbox is found by its label; confirm is the last button.
+  const terms = screen.getByRole('checkbox', { name: /Termini di servizio/ });
+  expect(terms).not.toBeChecked();
+  fireEvent.click(terms);
+  expect(terms).toBeChecked();
+  fireEvent.click(screen.getAllByRole('button').at(-1)!);
 }
 
 describe('booking confirm — note for the trainer (B2)', () => {

@@ -2495,8 +2495,8 @@ export const frMessages: Messages = {
 
   // bookings/[id]/BookingDetailClient.tsx
   'bookings.detail.title': 'Détail de la réservation',
-  'bookings.detail.confirmedTitle': 'Réservation confirmée !',
-  'bookings.detail.confirmedSubtitle': 'Vous recevrez une confirmation par e-mail.',
+  'bookings.detail.requestSentTitle': 'Demande envoyée, en attente du coach',
+  'bookings.detail.requestSentSubtitle': 'Nous vous préviendrons dès que le coach répondra.',
   'bookings.detail.rescheduledTitle': 'Réservation reprogrammée',
   'bookings.detail.rescheduledSubtitle': 'Le nouveau créneau a été enregistré avec succès.',
   'bookings.detail.reviewedTitle': 'Avis envoyé',

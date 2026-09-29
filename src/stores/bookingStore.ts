@@ -52,6 +52,11 @@ interface BookingState {
   clearSearchResults: () => void;
 
   selectProvider: (provider: ProviderSearchResult | null) => void;
+  /**
+   * Make `provider` the selected one without wiping a selection already made for it (coming
+   * back to /book from the confirm page). A different provider resets the flow.
+   */
+  ensureSelectedProvider: (provider: ProviderSearchResult) => void;
   selectService: (service: Service | null) => void;
   selectDateTime: (date: Date, time: string | null) => Promise<void>;
   fetchAvailability: (
@@ -142,6 +147,12 @@ export const useBookingStore = create<BookingState>((set, get) => ({
       availability: [],
       availabilityError: null,
     });
+  },
+
+  ensureSelectedProvider: (provider: ProviderSearchResult) => {
+    // Same provider: keep what is there (a search card may also know its distance).
+    if (get().selectedProvider?.id === provider.id) return;
+    get().selectProvider(provider);
   },
 
   selectService: (service: Service | null) => {

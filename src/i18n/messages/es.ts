@@ -2486,8 +2486,8 @@ export const esMessages: Messages = {
 
   // bookings/[id]/BookingDetailClient.tsx
   'bookings.detail.title': 'Detalle de reserva',
-  'bookings.detail.confirmedTitle': '¡Reserva confirmada!',
-  'bookings.detail.confirmedSubtitle': 'Recibirás una confirmación por correo electrónico.',
+  'bookings.detail.requestSentTitle': 'Solicitud enviada, esperando al entrenador',
+  'bookings.detail.requestSentSubtitle': 'Te avisaremos en cuanto el entrenador responda.',
   'bookings.detail.rescheduledTitle': 'Reserva reprogramada',
   'bookings.detail.rescheduledSubtitle': 'El nuevo horario se ha guardado correctamente.',
   'bookings.detail.reviewedTitle': 'Reseña enviada',
