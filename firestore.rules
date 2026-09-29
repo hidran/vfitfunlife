@@ -886,9 +886,13 @@ service cloud.firestore {
      * with a provider (or staff); providers and staff can open one with anyone.
      */
     function canStartChatWith(otherUid) {
-      return isProvider() || isAdmin() ||
+      // The other side must be a real user — a stale or typed `/chat/<x>` link must not open
+      // a conversation with nobody.
+      return exists(/databases/$(database)/documents/users/$(otherUid)) && (
+        isProvider() || isAdmin() ||
         get(/databases/$(database)/documents/users/$(otherUid)).data.get('role', '')
-          in ['provider', 'admin', 'superadmin'];
+          in ['provider', 'admin', 'superadmin']
+      );
     }
 
     function isValidConversationCreate(conversationId) {

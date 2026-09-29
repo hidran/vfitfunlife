@@ -198,12 +198,13 @@ export default function ProviderProfileClient() {
         )}
 
         {/* Action Buttons */}
-        <div className="flex gap-3 mt-6">
+        {/* Stacked on phones: side by side the long "Contatta" label is clipped at 390px. */}
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <Button variant="primary" size="lg" fullWidth onClick={handleBookNow}>
             <Calendar size={20} className="mr-2" />
             {t('providerProfile.bookNow')}
           </Button>
-          <Button variant="secondary" size="lg" className="flex-1" onClick={handleContact}>
+          <Button variant="secondary" size="lg" fullWidth onClick={handleContact}>
             <MessageSquare size={20} className="mr-2" />
             {t('providerProfile.contact')}
           </Button>

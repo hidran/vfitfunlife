@@ -139,6 +139,19 @@ describe('conversations — create', () => {
     }));
   });
 
+  it('a trainer cannot open a conversation with a user that does not exist', async () => {
+    const f = await fixture();
+    const ghost = 'zz-ghost-user';
+    const ids = [f.trainer, ghost].sort();
+    const db = testEnv.authenticatedContext(f.trainer).firestore();
+    await assertFails(db.doc(`conversations/${convIdOf(f.trainer, ghost)}`).set({
+      participantIds: ids,
+      participants: {},
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
+    }));
+  });
+
   it('a non-participant cannot create a conversation between two others', async () => {
     const f = await fixture();
     const db = testEnv.authenticatedContext(f.outsider).firestore();
