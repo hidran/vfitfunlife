@@ -3,3 +3,4 @@ export { Calendar } from './Calendar';
 export { BookingTable } from './BookingTable';
 export { EarningsChart } from './EarningsChart';
 export { AvailabilityEditor } from './AvailabilityEditor';
+export { CancelBookingDialog } from './CancelBookingDialog';

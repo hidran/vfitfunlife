@@ -30,6 +30,8 @@ import { Badge } from '@/components/ui/Badge';
 import { useProviderStore } from '@/stores/providerStore';
 import { useAuthStore } from '@/stores/authStore';
 import { RecordPaymentSheet } from '@/components/provider/RecordPaymentSheet';
+import { CancelBookingDialog } from '@/components/provider/CancelBookingDialog';
+import { bookingTypeLabel, paymentStatusLabel } from '@/lib/bookingLabels';
 import { BOOKING_STATUS_META } from '@/lib/bookingStatus';
 import { Spinner } from '@/components/ui/Spinner';
 import type { MessageKey } from '@/i18n/messages';
@@ -72,6 +74,7 @@ export default function BookingDetailClient() {
   );
   const user = useAuthStore((s) => s.user);
   const [showPaymentSheet, setShowPaymentSheet] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
 
   const booking = bookings.find((entry) => entry.id === id);
   // Mirrors the server guard in canTransition: completed/no_show are only valid once the
@@ -146,10 +149,8 @@ export default function BookingDetailClient() {
     await completeBooking(booking.id);
   };
 
-  const handleCancel = async () => {
-    if (confirm(t('provider.bookingDetail.cancelConfirm'))) {
-      await cancelBooking(booking.id);
-    }
+  const handleCancel = async (reason?: string) => {
+    await cancelBooking(booking.id, reason);
   };
 
   const formatDate = (date: Date | { toDate(): Date } | null | undefined) => {
@@ -250,13 +251,19 @@ export default function BookingDetailClient() {
             </>
           )}
           {(booking.status === 'accepted' || booking.status === 'requested') && (
-            <Button variant="outline" onClick={handleCancel} className="border-red-500/50 text-red-400 light:text-red-700 hover:bg-red-500/10">
+            <Button variant="outline" onClick={() => setShowCancelDialog(true)} className="border-red-500/50 text-red-400 light:text-red-700 hover:bg-red-500/10">
               <XCircle className="w-4 h-4 mr-2" />
               {t('provider.bookingDetail.cancel')}
             </Button>
           )}
         </div>
       </div>
+
+      <CancelBookingDialog
+        open={showCancelDialog}
+        onClose={() => setShowCancelDialog(false)}
+        onConfirm={handleCancel}
+      />
 
       {showPaymentSheet && (
         <RecordPaymentSheet
@@ -332,12 +339,12 @@ export default function BookingDetailClient() {
               <div className="flex items-center justify-between">
                 <span className="text-content-muted">{t('provider.bookingDetail.type')}</span>
                 <span className={cn(
-                  'text-sm capitalize',
+                  'text-sm',
                   booking.bookingType === 'virtual' && 'text-blue-400 light:text-blue-700',
                   booking.bookingType === 'home_service' && 'text-green-400 light:text-green-700',
                   booking.bookingType === 'in_venue' && 'text-purple-400 light:text-purple-700',
                 )}>
-                  {booking.bookingType.replace('_', ' ')}
+                  {bookingTypeLabel(t, booking.bookingType)}
                 </span>
               </div>
               {booking.venueName && (
@@ -453,7 +460,7 @@ export default function BookingDetailClient() {
                     booking.paymentStatus === 'pending' ? 'text-yellow-400 light:text-yellow-700' :
                     'text-content-muted'
                   )}>
-                    {booking.paymentStatus.replace('_', ' ')}
+                    {paymentStatusLabel(t, booking.paymentStatus)}
                   </span>
                 </div>
               </div>
