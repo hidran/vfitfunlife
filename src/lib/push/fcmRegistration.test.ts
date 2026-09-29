@@ -308,3 +308,25 @@ describe('disablePush', () => {
     warn.mockRestore();
   });
 });
+
+describe('waitForActiveWorker', () => {
+  it('resolves immediately when a worker is already active', async () => {
+    const { waitForActiveWorker } = await import('./fcmRegistration');
+    await expect(waitForActiveWorker({ active: {} } as unknown as ServiceWorkerRegistration)).resolves.toBeUndefined();
+  });
+
+  it('waits for the installing worker to activate', async () => {
+    const { waitForActiveWorker } = await import('./fcmRegistration');
+    let onChange: () => void = () => {};
+    const worker = { state: 'installing', addEventListener: (_: string, cb: () => void) => { onChange = cb; } };
+    let done = false;
+    const p = waitForActiveWorker({ active: null, installing: worker } as unknown as ServiceWorkerRegistration)
+      .then(() => { done = true; });
+    await Promise.resolve();
+    expect(done).toBe(false);
+    worker.state = 'activated';
+    onChange();
+    await p;
+    expect(done).toBe(true);
+  });
+});

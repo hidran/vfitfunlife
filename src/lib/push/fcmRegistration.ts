@@ -175,6 +175,10 @@ async function enableWebPush(opts: EnablePushOptions): Promise<PushResult> {
     { scope: SW_SCOPE, updateViaCache: 'none' }
   );
 
+  // A freshly registered worker is still installing; PushManager.subscribe() (inside getToken)
+  // fails with "no active Service Worker" until it activates.
+  await waitForActiveWorker(registration);
+
   const { getToken, onMessage } = await import('firebase/messaging');
   const token = await getToken(messaging, { vapidKey, serviceWorkerRegistration: registration });
   if (!token) return 'error';
@@ -297,4 +301,20 @@ export async function disablePush(): Promise<void> {
       console.warn('[push] deleteToken failed:', err);
     }
   }
+}
+
+/** Resolves once the registration has an active worker (or after `timeoutMs`, letting getToken report the error). */
+export function waitForActiveWorker(registration: ServiceWorkerRegistration, timeoutMs = 10000): Promise<void> {
+  if (registration.active) return Promise.resolve();
+  const worker = registration.installing ?? registration.waiting;
+  if (!worker) return Promise.resolve();
+  return new Promise((resolve) => {
+    const timer = setTimeout(resolve, timeoutMs);
+    worker.addEventListener('statechange', () => {
+      if (worker.state === 'activated' || worker.state === 'redundant') {
+        clearTimeout(timer);
+        resolve();
+      }
+    });
+  });
 }
