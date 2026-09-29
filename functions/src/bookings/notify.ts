@@ -27,6 +27,23 @@ async function loadRecipient(uid: string): Promise<Recipient> {
   return { uid, email: data?.email ?? null, locale: data?.preferredLanguage };
 }
 
+/** Route a tap should open: the trainer sees the provider booking detail, anyone else the client one. */
+export function bookingLink(recipientUid: string, bookingId: string, instructorId?: string | null): string {
+  const id = encodeURIComponent(bookingId);
+  return instructorId && instructorId === recipientUid ?
+    `/provider/bookings/detail?id=${id}` :
+    `/bookings/detail?id=${id}`;
+}
+
+async function bookingLinkFor(recipientUid: string, bookingId: string): Promise<string> {
+  try {
+    const snap = await db.collection("bookings").doc(bookingId).get();
+    return bookingLink(recipientUid, bookingId, snap.data()?.instructorId);
+  } catch {
+    return bookingLink(recipientUid, bookingId);
+  }
+}
+
 /**
  * Delivers one transition notification across all three channels.
  *
@@ -55,19 +72,20 @@ export async function notifyTransition(opts: {
 
   const message = buildMessage(event, recipient.locale, context);
   const type = opts.type ?? `booking_${event}`;
+  const link = await bookingLinkFor(recipientUid, bookingId);
 
   await Promise.allSettled([
     sendPushToUser(recipientUid, {
       title: message.title,
       body: message.body,
-      data: { bookingId, type },
+      data: { bookingId, type, link },
     }),
 
     db.collection("users").doc(recipientUid).collection("notifications").add({
       title: message.title,
       body: message.body,
       type,
-      data: { bookingId },
+      data: { bookingId, link },
       imageUrl: null,
       isRead: false,
       createdAt: FieldValue.serverTimestamp(),

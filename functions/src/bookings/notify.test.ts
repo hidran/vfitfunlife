@@ -37,7 +37,11 @@ import { sendPushToUser } from "../notifications";
 import { sendEmail } from "../lib/email";
 
 beforeEach(() => {
-  h.users = { "trainer-1": { email: "t@example.com", preferredLanguage: "en" } };
+  // The fake ignores collection names, so the booking doc lives in the same map.
+  h.users = {
+    "trainer-1": { email: "t@example.com", preferredLanguage: "en" },
+    "bk-1": { instructorId: "trainer-1" },
+  };
   h.inbox = [];
   h.failInbox = false;
   vi.mocked(sendPushToUser).mockClear();
@@ -66,7 +70,11 @@ describe("notifyTransition for a new booking request (A1)", () => {
     });
     expect(h.inbox[0].doc.body).toContain("Giulia requested Yoga");
     expect(sendPushToUser).toHaveBeenCalledWith("trainer-1", expect.objectContaining({
-      data: { bookingId: "bk-1", type: "booking_new_request" },
+      data: {
+        bookingId: "bk-1",
+        type: "booking_new_request",
+        link: "/provider/bookings/detail?id=bk-1",
+      },
     }));
     expect(sendEmail).toHaveBeenCalledTimes(1);
   });
@@ -88,5 +96,14 @@ describe("notifyTransition for a new booking request (A1)", () => {
     });
     expect(h.inbox[0].doc).toMatchObject({ type: "booking_reminder", data: { bookingId: "bk-2" } });
     expect(sendEmail).not.toHaveBeenCalled();
+  });
+});
+
+describe("bookingLink", () => {
+  it("sends the trainer to the provider booking detail and everyone else to the client one", async () => {
+    const { bookingLink } = await import("./notify");
+    expect(bookingLink("trainer-1", "bk 1", "trainer-1")).toBe("/provider/bookings/detail?id=bk%201");
+    expect(bookingLink("client-1", "bk-1", "trainer-1")).toBe("/bookings/detail?id=bk-1");
+    expect(bookingLink("client-1", "bk-1")).toBe("/bookings/detail?id=bk-1");
   });
 });
