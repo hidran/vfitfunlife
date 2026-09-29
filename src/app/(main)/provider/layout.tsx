@@ -13,6 +13,7 @@ import {
   Settings,
   Briefcase,
   Menu,
+  MessageCircle,
   X,
   Clock,
   type LucideIcon,
@@ -35,6 +36,8 @@ const NAV_ITEMS: { icon: LucideIcon; labelKey: MessageKey; href: string }[] = [
   { icon: CalendarDays, labelKey: 'provider.layout.nav.schedule', href: '/provider/schedule' },
   { icon: Calendar, labelKey: 'provider.layout.nav.bookings', href: '/provider/bookings' },
   { icon: Users, labelKey: 'provider.layout.nav.clients', href: '/provider/clients' },
+  // The inbox lives outside /provider (clients and trainers share it); the sidebar links to it.
+  { icon: MessageCircle, labelKey: 'provider.layout.nav.messages', href: '/chat' },
   // Next to `clients`: the library exists to be shared with them (spec §9).
   { icon: ChefHat, labelKey: 'provider.layout.nav.recipes', href: '/provider/recipes' },
   { icon: Wallet, labelKey: 'provider.layout.nav.earnings', href: '/provider/earnings' },

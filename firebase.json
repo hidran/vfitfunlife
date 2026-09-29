@@ -39,6 +39,10 @@
         "destination": "/provider-legacy-redirect.html"
       },
       {
+        "source": "/chat/*{,/}",
+        "destination": "/chat-legacy-redirect.html"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

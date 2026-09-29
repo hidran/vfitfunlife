@@ -15,6 +15,7 @@ import {
   Home,
   Instagram,
   LogOut,
+  MessageCircle,
   Search,
   ShieldCheck,
   Sparkles,
@@ -63,6 +64,7 @@ const drawerLinks: DrawerLinkItem[] = [
   { href: '/home', icon: Home, labelKey: 'common.home' },
   { href: '/search', icon: Search, labelKey: 'common.search' },
   { href: '/bookings', icon: Calendar, labelKey: 'common.bookings' },
+  { href: '/chat', icon: MessageCircle, labelKey: 'chat.list.title' },
   { href: '/recipes', icon: ChefHat, labelKey: 'common.recipes' },
   // P2-5 shipped /plans without ever linking it; it was reachable only by typing the URL.
   { href: '/plans', icon: Dumbbell, labelKey: 'common.myPlans' },
