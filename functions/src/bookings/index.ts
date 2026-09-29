@@ -17,6 +17,7 @@ import { EMAIL_SECRETS } from "../lib/email";
 import { notifyTransition } from "./notify";
 import { cancellationTarget, newRequestTarget, type NotifyTarget } from "./notifyTargets";
 import { sanitizeUserNotes } from "./userNotes";
+import { computeBookingPricing, type PromoTerms } from "./pricing";
 
 const db = admin.firestore();
 
@@ -178,20 +179,8 @@ async function calculateBookingFinancials(
   promotionCode?: string,
   usePoints?: boolean
 ) {
-  let originalPrice = service.price;
-  let discountAmount = 0;
-  let homeServiceFee = 0;
-  let promotionId = null;
-
-  // Apply VIP discount
-  if (userData.isVip && service.vipPrice) {
-    originalPrice = service.vipPrice;
-  }
-
-  // Apply home service fee
-  if (bookingType === "home_service" && service.isHomeService) {
-    homeServiceFee = service.homeServiceFee || 0;
-  }
+  let promotionId: string | null = null;
+  let promo: PromoTerms | null = null;
 
   // Apply promotion code
   if (promotionCode) {
@@ -203,53 +192,27 @@ async function calculateBookingFinancials(
       .get();
 
     if (!promoSnapshot.empty) {
-      const promo = promoSnapshot.docs[0].data() as PromotionData;
+      const data = promoSnapshot.docs[0].data() as PromotionData;
       const now = new Date();
 
       if (
-        promo.validFrom.toDate() <= now &&
-        promo.validUntil.toDate() >= now &&
-        (promo.maxUses === null || promo.currentUses < promo.maxUses)
+        data.validFrom.toDate() <= now &&
+        data.validUntil.toDate() >= now &&
+        (data.maxUses === null || data.currentUses < data.maxUses)
       ) {
         promotionId = promoSnapshot.docs[0].id;
-
-        if (promo.discountType === "percentage") {
-          discountAmount = (originalPrice * promo.discountValue) / 100;
-          if (promo.maxDiscount) {
-            discountAmount = Math.min(discountAmount, promo.maxDiscount);
-          }
-        } else if (promo.discountType === "fixed_amount") {
-          discountAmount = promo.discountValue;
-        }
+        promo = {
+          discountType: data.discountType,
+          discountValue: data.discountValue,
+          maxDiscount: data.maxDiscount ?? null,
+        };
       }
     }
   }
 
-  // Calculate points usage
-  let pointsUsed = 0;
-  let pointsValue = 0;
-  const pointsRate = 0.01; // 1 point = €0.01
-
-  if (usePoints && userData.pointsBalance > 0) {
-    const maxPointsToUse = Math.floor((originalPrice - discountAmount) / pointsRate);
-    pointsUsed = Math.min(userData.pointsBalance, maxPointsToUse);
-    pointsValue = pointsUsed * pointsRate;
-  }
-
-  // Calculate final price
-  const finalPrice = Math.max(0, originalPrice - discountAmount - pointsValue + homeServiceFee);
-  const depositAmount = service.requiresDeposit ? (service.depositAmount || finalPrice * 0.3) : 0;
-  const pointsEarned = Math.floor(finalPrice);
-
+  // The arithmetic lives in ./pricing so the checkout screen can mirror it exactly.
   return {
-    originalPrice,
-    discountAmount,
-    homeServiceFee,
-    finalPrice,
-    depositAmount,
-    pointsUsed,
-    pointsValue,
-    pointsEarned,
+    ...computeBookingPricing({ service, user: userData, bookingType, promo, usePoints }),
     promotionId,
   };
 }

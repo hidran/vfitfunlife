@@ -3,8 +3,9 @@
  *
  * Payments in the pilot happen off-platform, directly to the trainer (cash / Satispay /
  * bank transfer). The platform only *records* them — no Stripe, no funds held. The trainer
- * attests to receipt; the client optionally confirms, and silence for 48h is treated as
- * agreement (see `autoConfirmPayments`). A dispute flags the booking for admin review.
+ * attests to receipt; the client confirms the service was received (earning XP — see
+ * ./serviceReceived), and silence for 48h is treated as agreement (see
+ * `autoConfirmPayments`, which awards no XP). A dispute flags the booking for admin review.
  *
  * Spec: docs/superpowers/specs/2026-08-08-booking-manual-payment-design.md §8
  */
@@ -16,6 +17,7 @@ import { EMAIL_SECRETS } from "../lib/email";
 import { notifyTransition } from "./notify";
 import { applyTransition } from "./transitionCallables";
 import { PAYMENT_CONFIRMATION_METHODS, type PaymentConfirmationMethod } from "./types";
+import { planPaymentResponse, SERVICE_RECEIVED_XP, type RespondableBooking } from "./serviceReceived";
 
 const db = admin.firestore();
 import { region } from "../lib/runtimeOptions";
@@ -85,7 +87,8 @@ export const confirmBookingPayment = onCall<ConfirmPaymentRequest>(
       notify: (b) => ({
         recipientUid: b.userId,
         event: "payment_confirmed",
-        context: { amount },
+        // The client's prompt names the XP they earn by confirming the service.
+        context: { amount, xp: SERVICE_RECEIVED_XP },
       }),
     });
   }
@@ -98,8 +101,11 @@ interface RespondToPaymentRequest {
 }
 
 /**
- * The client's optional confirm-or-dispute. This does NOT change `status` — the booking
- * stays `payment_confirmed` — so it does not go through `applyTransition`.
+ * The client's confirm-or-dispute. Confirming says "I received the service (and paid)"
+ * and earns the client SERVICE_RECEIVED_XP, exactly once — see ./serviceReceived.
+ *
+ * This does NOT change `status` — the booking stays `payment_confirmed` — so it does not
+ * go through `applyTransition`.
  */
 export const respondToPaymentConfirmation = onCall<RespondToPaymentRequest>(
   { region, secrets: EMAIL_SECRETS },
@@ -119,39 +125,54 @@ export const respondToPaymentConfirmation = onCall<RespondToPaymentRequest>(
       undefined;
 
     const ref = db.collection("bookings").doc(bookingId);
-    const booking = await db.runTransaction(async (tx) => {
-      const snap = await tx.get(ref);
-      if (!snap.exists) throw new HttpsError("not-found", "Booking not found");
+    const userRef = db.collection("users").doc(uid);
+    const { booking, xpAwarded } = await db.runTransaction(async (tx) => {
+      // All reads before any write.
+      const [snap, userSnap] = await Promise.all([tx.get(ref), tx.get(userRef)]);
+      const doc = snap.exists ?
+        (snap.data() as RespondableBooking & {
+          instructorId?: string | null;
+          serviceName?: string;
+        }) :
+        undefined;
 
-      const doc = snap.data() as {
-        userId: string;
-        instructorId?: string | null;
-        status: string;
-        serviceName?: string;
-        paymentConfirmation?: { clientResponse?: string | null } | null;
-      };
+      const plan = planPaymentResponse({
+        booking: doc,
+        uid,
+        response,
+        disputeReason,
+        user: userSnap.exists ? (userSnap.data() ?? {}) : null,
+      });
+      if (!plan.ok) throw new HttpsError(plan.code, plan.message);
 
-      // Only the client this booking belongs to may respond — not the trainer, not an admin.
-      if (doc.userId !== uid) {
-        throw new HttpsError("permission-denied", "Only the booking's client can respond");
-      }
-      if (doc.status !== "payment_confirmed") {
-        throw new HttpsError("failed-precondition", "No payment confirmation is pending");
-      }
-      if (doc.paymentConfirmation?.clientResponse) {
-        throw new HttpsError("failed-precondition", "Already responded");
-      }
-
+      const now = FieldValue.serverTimestamp();
       tx.update(ref, {
-        "paymentConfirmation.clientResponse": response,
-        "paymentConfirmation.clientRespondedAt": FieldValue.serverTimestamp(),
-        ...(disputeReason ? { "paymentConfirmation.disputeReason": disputeReason } : {}),
-        // A dispute is surfaced to admin via the Disputes filter; it does not revert status.
-        ...(response === "disputed" ? { needsAdminReview: true } : {}),
-        "updatedAt": FieldValue.serverTimestamp(),
+        ...plan.bookingPatch,
+        "paymentConfirmation.clientRespondedAt": now,
+        "updatedAt": now,
       });
 
-      return doc;
+      if (plan.xpAward) {
+        const award = plan.xpAward;
+        tx.update(userRef, {
+          xp: award.xp,
+          level: award.level,
+          xpToNextLevel: award.xpToNextLevel,
+          updatedAt: now,
+        });
+        // Same ledger awardXp writes; the id is per booking, so a retry cannot add a second row.
+        tx.set(userRef.collection("xpTransactions").doc(`service_received_${bookingId}`), {
+          delta: award.delta,
+          source: "service_received",
+          sourceId: bookingId,
+          description: `Servizio ricevuto ${bookingId}`,
+          xpAfter: award.xp,
+          levelAfter: award.level,
+          createdAt: now,
+        });
+      }
+
+      return { booking: doc!, xpAwarded: plan.xpAward?.delta ?? 0 };
     });
 
     // Tell the trainer either way — a dispute especially should not be silent.
@@ -164,6 +185,6 @@ export const respondToPaymentConfirmation = onCall<RespondToPaymentRequest>(
       });
     }
 
-    return { success: true, bookingId, response };
+    return { success: true, bookingId, response, xpAwarded };
   }
 );

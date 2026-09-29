@@ -256,6 +256,10 @@ export const remindTrainerToComplete = onSchedule(
  * Client confirmation is optional by design; silence for 48h is treated as agreement so
  * a booking is not left hanging. A dispute, by contrast, flags it for admin review.
  * Spec §8.
+ *
+ * Awards NO XP: the "service received" XP is earned only by the client's own confirmation
+ * (see bookings/serviceReceived.ts). `clientResponse` stays null here, so the client can
+ * still confirm afterwards and collect it.
  */
 export const autoConfirmPayments = onSchedule(
   {
@@ -273,8 +277,14 @@ export const autoConfirmPayments = onSchedule(
       .where("paymentConfirmation.confirmedByTrainerAt", "<=", cutoff)
       .get();
 
+    // clientResponse stays null after auto-confirming, so the query keeps matching these;
+    // skip the ones already closed rather than re-stamping them every hour.
+    const toClose = pending.docs.filter(
+      (doc) => doc.get("paymentConfirmation.autoConfirmed") !== true
+    );
+
     const batch = db.batch();
-    for (const doc of pending.docs) {
+    for (const doc of toClose) {
       batch.update(doc.ref, {
         "paymentConfirmation.autoConfirmed": true,
         "paymentConfirmation.clientRespondedAt": admin.firestore.FieldValue.serverTimestamp(),
@@ -283,7 +293,7 @@ export const autoConfirmPayments = onSchedule(
     }
     await batch.commit();
 
-    logger.info(`Auto-confirmed ${pending.size} payments after the 48h window`);
+    logger.info(`Auto-confirmed ${toClose.length} payments after the 48h window`);
   }
 );
 

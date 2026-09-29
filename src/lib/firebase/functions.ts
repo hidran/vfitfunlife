@@ -162,14 +162,25 @@ export function confirmBookingPayment(data: {
   return callTransition("confirmBookingPayment", data);
 }
 
-/** Client's optional confirm-or-dispute. Silence auto-confirms after 48h. */
+export interface RespondToPaymentResult {
+  success: boolean;
+  bookingId: string;
+  response: string;
+  /** XP the client just earned for confirming the service (0 on a dispute or a repeat). */
+  xpAwarded?: number;
+}
+
+/**
+ * Client's "service received" confirmation (earns XP, once) or dispute. Silence
+ * auto-confirms after 48h without XP; the client can still confirm afterwards.
+ */
 export async function respondToPaymentConfirmation(data: {
   bookingId: string;
   response: "confirmed" | "disputed";
   disputeReason?: string;
-}): Promise<{ success: boolean; bookingId: string; response: string }> {
+}): Promise<RespondToPaymentResult> {
   const functions = await getFunctionsInstance();
-  const fn = httpsCallable<typeof data, { success: boolean; bookingId: string; response: string }>(
+  const fn = httpsCallable<typeof data, RespondToPaymentResult>(
     functions,
     "respondToPaymentConfirmation"
   );

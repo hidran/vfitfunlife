@@ -40,6 +40,8 @@ export interface MessageContext {
   venueName?: string;
   /** Session start, rendered in Europe/Rome time in the recipient's locale. */
   startsAt?: Date;
+  /** XP the client earns by confirming the service was received. */
+  xp?: number;
 }
 
 export interface RenderedMessage {
@@ -88,6 +90,11 @@ function place(ctx: MessageContext, atVenue: string, withTrainer: string): strin
   return trainer ? ` ${withTrainer} ${trainer}` : "";
 }
 
+/** " +50 XP" style suffix sentence, or "" when no XP is on offer. */
+function xpLine(ctx: MessageContext, render: (xp: number) => string): string {
+  return typeof ctx.xp === "number" && ctx.xp > 0 ? ` ${render(ctx.xp)}` : "";
+}
+
 function money(amount: number | undefined): string {
   if (typeof amount !== "number" || !Number.isFinite(amount)) return "—";
   return `${amount.toFixed(2).replace(/\.00$/, "")} €`;
@@ -121,12 +128,13 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
       body: `La sessione di ${svc(c, "allenamento")} è stata segnata come svolta.`,
     }),
     payment_confirmed: (c) => ({
-      title: "Conferma il pagamento",
-      body: `Il trainer ha confermato il pagamento di ${money(c.amount)} per ${svc(c, "la sessione")}. Confermi?`,
+      title: "Conferma il servizio ricevuto",
+      body: `Il trainer ha registrato il pagamento di ${money(c.amount)} per ${svc(c, "la sessione")}. ` +
+        `Conferma di aver ricevuto il servizio.${xpLine(c, (xp) => `Guadagni +${xp} XP.`)}`,
     }),
     payment_client_confirmed: (c) => ({
-      title: "Pagamento confermato",
-      body: `Il cliente ha confermato il pagamento per ${svc(c, "la sessione")}.`,
+      title: "Servizio confermato",
+      body: `Il cliente ha confermato di aver ricevuto ${svc(c, "la sessione")} e il pagamento.`,
     }),
     payment_disputed: (c) => ({
       title: "Pagamento contestato",
@@ -178,12 +186,13 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
       body: `Your ${svc(c, "training")} session has been marked as done.`,
     }),
     payment_confirmed: (c) => ({
-      title: "Confirm the payment",
-      body: `Your trainer recorded a payment of ${money(c.amount)} for ${svc(c, "the session")}. Confirm?`,
+      title: "Confirm you received the service",
+      body: `Your trainer recorded a payment of ${money(c.amount)} for ${svc(c, "the session")}. ` +
+        `Confirm you received the service.${xpLine(c, (xp) => `You earn +${xp} XP.`)}`,
     }),
     payment_client_confirmed: (c) => ({
-      title: "Payment confirmed",
-      body: `The client confirmed the payment for ${svc(c, "the session")}.`,
+      title: "Service confirmed",
+      body: `The client confirmed they received ${svc(c, "the session")} and the payment.`,
     }),
     payment_disputed: (c) => ({
       title: "Payment disputed",
@@ -235,12 +244,13 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
       body: `La sesión de ${svc(c, "entrenamiento")} se ha marcado como realizada.`,
     }),
     payment_confirmed: (c) => ({
-      title: "Confirma el pago",
-      body: `Tu entrenador ha registrado un pago de ${money(c.amount)} por ${svc(c, "la sesión")}. ¿Lo confirmas?`,
+      title: "Confirma el servicio recibido",
+      body: `Tu entrenador ha registrado un pago de ${money(c.amount)} por ${svc(c, "la sesión")}. ` +
+        `Confirma que has recibido el servicio.${xpLine(c, (xp) => `Ganas +${xp} XP.`)}`,
     }),
     payment_client_confirmed: (c) => ({
-      title: "Pago confirmado",
-      body: `El cliente ha confirmado el pago de ${svc(c, "la sesión")}.`,
+      title: "Servicio confirmado",
+      body: `El cliente ha confirmado que ha recibido ${svc(c, "la sesión")} y el pago.`,
     }),
     payment_disputed: (c) => ({
       title: "Pago cuestionado",
@@ -292,12 +302,13 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
       body: `La séance de ${svc(c, "training")} a été marquée comme effectuée.`,
     }),
     payment_confirmed: (c) => ({
-      title: "Confirmez le paiement",
-      body: `Votre coach a enregistré un paiement de ${money(c.amount)} pour ${svc(c, "la séance")}. Confirmez-vous ?`,
+      title: "Confirmez la prestation reçue",
+      body: `Votre coach a enregistré un paiement de ${money(c.amount)} pour ${svc(c, "la séance")}. ` +
+        `Confirmez avoir reçu la prestation.${xpLine(c, (xp) => `Vous gagnez +${xp} XP.`)}`,
     }),
     payment_client_confirmed: (c) => ({
-      title: "Paiement confirmé",
-      body: `Le client a confirmé le paiement pour ${svc(c, "la séance")}.`,
+      title: "Prestation confirmée",
+      body: `Le client a confirmé avoir reçu ${svc(c, "la séance")} et le paiement.`,
     }),
     payment_disputed: (c) => ({
       title: "Paiement contesté",
@@ -349,12 +360,13 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
       body: `Die ${svc(c, "Trainings")}-Einheit wurde als durchgeführt markiert.`,
     }),
     payment_confirmed: (c) => ({
-      title: "Zahlung bestätigen",
-      body: `Dein Trainer hat eine Zahlung von ${money(c.amount)} für ${svc(c, "die Einheit")} erfasst. Bestätigen?`,
+      title: "Erhaltene Leistung bestätigen",
+      body: `Dein Trainer hat eine Zahlung von ${money(c.amount)} für ${svc(c, "die Einheit")} erfasst. ` +
+        `Bestätige, dass du die Leistung erhalten hast.${xpLine(c, (xp) => `Du erhältst +${xp} XP.`)}`,
     }),
     payment_client_confirmed: (c) => ({
-      title: "Zahlung bestätigt",
-      body: `Der Kunde hat die Zahlung für ${svc(c, "die Einheit")} bestätigt.`,
+      title: "Leistung bestätigt",
+      body: `Der Kunde hat bestätigt, ${svc(c, "die Einheit")} erhalten und bezahlt zu haben.`,
     }),
     payment_disputed: (c) => ({
       title: "Zahlung beanstandet",

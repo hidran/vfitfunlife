@@ -464,6 +464,28 @@ export default function BookingDetailClient() {
                   </span>
                 </div>
               </div>
+              {/* After "Pagamento ricevuto" the client confirms the service was received. */}
+              {booking.paymentConfirmation && (
+                <div className="flex items-center justify-between" data-testid="client-confirmation">
+                  <span className="text-content-muted">
+                    {t('provider.bookingDetail.clientConfirmation')}
+                  </span>
+                  <span className={cn(
+                    'text-sm font-medium',
+                    booking.paymentConfirmation.clientResponse === 'confirmed' ? 'text-green-400 light:text-green-700' :
+                    booking.paymentConfirmation.clientResponse === 'disputed' ? 'text-red-400 light:text-red-700' :
+                    booking.paymentConfirmation.autoConfirmed ? 'text-content-muted' :
+                    'text-yellow-400 light:text-yellow-700'
+                  )}>
+                    {t(
+                      booking.paymentConfirmation.clientResponse === 'confirmed' ? 'provider.bookingDetail.clientConfirmation.confirmed' :
+                      booking.paymentConfirmation.clientResponse === 'disputed' ? 'provider.bookingDetail.clientConfirmation.disputed' :
+                      booking.paymentConfirmation.autoConfirmed ? 'provider.bookingDetail.clientConfirmation.auto' :
+                      'provider.bookingDetail.clientConfirmation.pending'
+                    )}
+                  </span>
+                </div>
+              )}
               {booking.depositPaid && (
                 <div className="flex items-center justify-between">
                   <span className="text-content-muted">{t('provider.bookingDetail.deposit')}</span>

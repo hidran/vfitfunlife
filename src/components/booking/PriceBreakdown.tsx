@@ -1,13 +1,16 @@
 'use client';
 
 import React from 'react';
-import { Tag, Ticket, Coins } from 'lucide-react';
+import { Ticket, Coins } from 'lucide-react';
 import { cn, formatPrice } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
 
+/**
+ * Checkout price summary. There is no platform fee: payment is off-platform, straight to
+ * the trainer, so the total is exactly the booking's server-side `finalPrice`.
+ */
 interface PriceBreakdownProps {
   servicePrice: number;
-  platformFee?: number;
   discountAmount?: number;
   pointsUsed?: number;
   pointsValue?: number;
@@ -17,7 +20,6 @@ interface PriceBreakdownProps {
 
 export function PriceBreakdown({
   servicePrice,
-  platformFee = 0,
   discountAmount = 0,
   pointsUsed = 0,
   pointsValue = 0,
@@ -25,7 +27,6 @@ export function PriceBreakdown({
   className,
 }: PriceBreakdownProps) {
   const { t } = useI18n();
-  const subtotal = servicePrice + platformFee;
   const hasDiscount = discountAmount > 0;
   const hasPoints = pointsUsed > 0;
 
@@ -38,23 +39,6 @@ export function PriceBreakdown({
         <div className="flex items-center justify-between text-sm">
           <span className="text-text-secondary">{t('booking.price.service')}</span>
           <span className="text-content">{formatPrice(servicePrice)}</span>
-        </div>
-
-        {/* Platform fee */}
-        {platformFee > 0 && (
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-text-secondary flex items-center gap-1.5">
-              <Tag className="w-3.5 h-3.5" />
-              {t('booking.price.platformFee')}
-            </span>
-            <span className="text-content">{formatPrice(platformFee)}</span>
-          </div>
-        )}
-
-        {/* Subtotal */}
-        <div className="flex items-center justify-between text-sm pt-2 border-t border-hairline">
-          <span className="text-text-secondary">{t('booking.price.subtotal')}</span>
-          <span className="text-content">{formatPrice(subtotal)}</span>
         </div>
 
         {/* Discount */}
