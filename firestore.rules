@@ -340,12 +340,12 @@ service cloud.firestore {
         allow write: if isAdmin() || isVenueStaff(venueId);
       }
 
+      // Reviews are written only by the submitReview callable (Admin SDK), which checks the
+      // booking was delivered and allows one review per booking. A client-side create let
+      // anyone post (and delete) unverified reviews that then counted in the rating.
       match /reviews/{reviewId} {
         allow read: if true;
-        allow create: if isAuthenticated() &&
-          request.resource.data.userId == request.auth.uid;
-        allow update, delete: if isAuthenticated() &&
-          resource.data.userId == request.auth.uid;
+        allow write: if false;
       }
 
       match /staff/{staffId} {
@@ -387,12 +387,12 @@ service cloud.firestore {
 
       allow delete: if isAdmin();
 
+      // Reviews are written only by the submitReview callable (Admin SDK), which checks the
+      // booking was delivered and allows one review per booking. A client-side create let
+      // anyone post (and delete) unverified reviews that then counted in the rating.
       match /reviews/{reviewId} {
         allow read: if true;
-        allow create: if isAuthenticated() &&
-          request.resource.data.userId == request.auth.uid;
-        allow update, delete: if isAuthenticated() &&
-          resource.data.userId == request.auth.uid;
+        allow write: if false;
       }
 
       match /services/{serviceId} {
@@ -450,7 +450,11 @@ service cloud.firestore {
         resource.data.userId == request.auth.uid &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'userNotes', 'updatedAt'
-        ])
+        ]) &&
+        // Same cap as createBooking's sanitizeUserNotes.
+        (request.resource.data.get('userNotes', null) == null ||
+          (request.resource.data.userNotes is string &&
+           request.resource.data.userNotes.size() <= 500))
       );
 
       // Delete: Superadmin only

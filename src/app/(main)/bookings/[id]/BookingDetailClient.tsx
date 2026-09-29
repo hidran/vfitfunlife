@@ -233,7 +233,7 @@ export default function BookingDetailPage() {
   };
 
   const handleReview = () => {
-    router.push(`/bookings/${bookingId}/review`);
+    router.push(`/bookings/review?id=${encodeURIComponent(bookingId)}`);
   };
 
   const statusEntry = BOOKING_STATUS_META[booking.status];
@@ -491,6 +491,14 @@ export default function BookingDetailPage() {
                 />
               </div>
             )}
+          </div>
+        )}
+
+        {/* The client's own note to the trainer, as sent with the booking */}
+        {booking.userNotes && (
+          <div className="bg-surface-elevated/50 rounded-2xl p-4 space-y-2">
+            <h3 className="font-semibold text-content">{t('bookings.detail.yourNote')}</h3>
+            <p className="text-sm text-text-secondary whitespace-pre-wrap break-words">{booking.userNotes}</p>
           </div>
         )}
 

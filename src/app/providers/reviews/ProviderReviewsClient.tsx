@@ -10,45 +10,9 @@ import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
-
-interface ProviderReview {
-  id: string;
-  author: string;
-  rating: number;
-  comment: string;
-  date: string;
-}
-
-const REVIEWS: ProviderReview[] = [
-  {
-    id: 'r1',
-    author: 'Marco R.',
-    rating: 5,
-    comment: 'Professionale, puntuale e molto chiaro nella spiegazione del trattamento.',
-    date: '2026-02-10',
-  },
-  {
-    id: 'r2',
-    author: 'Giulia B.',
-    rating: 5,
-    comment: 'Esperienza ottima. Ambiente pulito e percorso personalizzato.',
-    date: '2026-02-08',
-  },
-  {
-    id: 'r3',
-    author: 'Luca M.',
-    rating: 4,
-    comment: 'Seduta utile e comunicazione rapida in chat prima dell\'appuntamento.',
-    date: '2026-02-04',
-  },
-  {
-    id: 'r4',
-    author: 'Sara T.',
-    rating: 4,
-    comment: 'Molto disponibile. Avrei preferito solo una durata leggermente maggiore.',
-    date: '2026-01-30',
-  },
-];
+import { useInstructorReviews } from '@/hooks/useCommunity';
+import { Spinner } from '@/components/ui/Spinner';
+import { isReviewTagKey, reviewTagLabelKey } from '@/lib/reviews/errors';
 
 type RatingFilter = 'all' | 5 | 4 | 3;
 
@@ -59,15 +23,18 @@ export default function ProviderReviewsClient() {
   const providerId = readIdParam(useSearchParams());
   const [ratingFilter, setRatingFilter] = useState<RatingFilter>('all');
 
+  // Written by the submitReview callable, one per delivered booking.
+  const { data: reviews = [], isLoading } = useInstructorReviews(providerId ?? undefined);
+
   const filteredReviews = useMemo(() => {
-    if (ratingFilter === 'all') return REVIEWS;
-    return REVIEWS.filter((review) => review.rating === ratingFilter);
-  }, [ratingFilter]);
+    if (ratingFilter === 'all') return reviews;
+    return reviews.filter((review) => Math.round(review.rating) === ratingFilter);
+  }, [ratingFilter, reviews]);
 
   const averageRating = useMemo(() => {
-    const sum = REVIEWS.reduce((acc, review) => acc + review.rating, 0);
-    return REVIEWS.length > 0 ? sum / REVIEWS.length : 0;
-  }, []);
+    const sum = reviews.reduce((acc, review) => acc + review.rating, 0);
+    return reviews.length > 0 ? sum / reviews.length : 0;
+  }, [reviews]);
 
   if (!providerId) {
     return (
@@ -103,7 +70,7 @@ export default function ProviderReviewsClient() {
               <Star className="h-4 w-4 fill-warning" />
               <span className="text-sm font-semibold">{averageRating.toFixed(1)}</span>
             </div>
-            <span className="text-sm text-text-secondary">{t('providerReviews.totalReviews', { count: REVIEWS.length })}</span>
+            <span className="text-sm text-text-secondary">{t('providerReviews.totalReviews', { count: reviews.length })}</span>
           </div>
         </section>
 
@@ -125,37 +92,69 @@ export default function ProviderReviewsClient() {
         </section>
 
         <section className="space-y-3">
-          {filteredReviews.length === 0 ? (
+          {isLoading ? (
+            <div className="flex justify-center p-6">
+              <Spinner size="md" />
+            </div>
+          ) : filteredReviews.length === 0 ? (
             <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-center text-text-secondary">
-              {t('providerReviews.noReviews')}
+              {reviews.length === 0 ? t('providerReviews.emptyAll') : t('providerReviews.noReviews')}
             </div>
           ) : (
-            filteredReviews.map((review) => (
-              <article key={review.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <Avatar name={review.author} size="md" />
-                    <div>
-                      <p className="font-medium text-white">{review.author}</p>
-                      <p className="text-xs text-text-tertiary">
-                        {new Date(review.date).toLocaleDateString(toLocaleTag(locale), {
-                          day: 'numeric',
-                          month: 'long',
-                          year: 'numeric',
-                        })}
-                      </p>
+            filteredReviews.map((review) => {
+              const date = review.createdAt?.toDate?.();
+              const tags = (review.tags ?? []).filter(isReviewTagKey);
+              return (
+                <article key={review.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <Avatar src={review.avatarUrl ?? undefined} name={review.userName} size="md" />
+                      <div>
+                        <p className="font-medium text-white">{review.userName}</p>
+                        <p className="text-xs text-text-tertiary">
+                          {date
+                            ? date.toLocaleDateString(toLocaleTag(locale), {
+                              day: 'numeric',
+                              month: 'long',
+                              year: 'numeric',
+                            })
+                            : null}
+                          {review.isVerified ? (
+                            <span className="ml-2 text-success">{t('providerReviews.verified')}</span>
+                          ) : null}
+                        </p>
+                      </div>
                     </div>
+                    <Badge variant="warning" size="sm">
+                      <span
+                        className="inline-flex items-center gap-1"
+                        aria-label={t('providerReviews.ratingAria', { value: review.rating })}
+                      >
+                        <Star className="h-3 w-3 fill-warning" aria-hidden="true" />
+                        {review.rating}
+                      </span>
+                    </Badge>
                   </div>
-                  <Badge variant="warning" size="sm">
-                    <span className="inline-flex items-center gap-1">
-                      <Star className="h-3 w-3 fill-warning" />
-                      {review.rating}
-                    </span>
-                  </Badge>
-                </div>
-                <p className="mt-3 text-sm leading-relaxed text-text-secondary">{review.comment}</p>
-              </article>
-            ))
+                  {review.text ? (
+                    <p className="mt-3 whitespace-pre-line break-words text-sm leading-relaxed text-text-secondary">
+                      {review.text}
+                    </p>
+                  ) : null}
+                  {tags.length > 0 && (
+                    <ul className="mt-3 flex flex-wrap gap-2">
+                      {tags.map((tag) => (
+                        <li
+                          key={tag}
+                          className="rounded-full border border-white/15 px-2.5 py-1 text-xs text-text-secondary"
+                        >
+                          {t(reviewTagLabelKey(tag))}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </article>
+              );
+            })
           )}
         </section>
       </div>

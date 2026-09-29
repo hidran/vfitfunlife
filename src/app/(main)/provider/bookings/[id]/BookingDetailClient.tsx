@@ -381,7 +381,7 @@ export default function BookingDetailClient() {
             <div className="bg-surface-elevated rounded-xl border border-hairline p-6">
               <h3 className="text-lg font-semibold text-content mb-4">{t('provider.bookingDetail.clientNotes')}</h3>
               <div className="bg-surface-input rounded-lg p-4">
-                <p className="text-content/85">{booking.userNotes}</p>
+                <p className="text-content/85 whitespace-pre-wrap break-words">{booking.userNotes}</p>
               </div>
             </div>
           )}

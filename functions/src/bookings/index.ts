@@ -16,6 +16,7 @@ import { logger } from "firebase-functions";
 import { EMAIL_SECRETS } from "../lib/email";
 import { notifyTransition } from "./notify";
 import { cancellationTarget, newRequestTarget, type NotifyTarget } from "./notifyTargets";
+import { sanitizeUserNotes } from "./userNotes";
 
 const db = admin.firestore();
 
@@ -366,7 +367,8 @@ export const createBooking = onCall<BookingData>(
       stripePaymentIntentId: null,
 
       // Notes
-      userNotes: userNotes || null,
+      // Capped and cleaned server-side: the booking screen's limit is not a guarantee.
+      userNotes: sanitizeUserNotes(userNotes),
       internalNotes: null,
 
       // Cancellation
