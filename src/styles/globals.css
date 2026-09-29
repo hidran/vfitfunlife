@@ -649,3 +649,9 @@
     border-color: var(--color-hairline);
   }
 }
+
+/* Staging login gate: set by the boot script in app/layout.tsx on vfit-app-staging.* hosts,
+   removed by components/staging/StagingGate once the visitor is allowed. */
+html[data-staging-gate] body {
+  visibility: hidden;
+}

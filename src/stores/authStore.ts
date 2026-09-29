@@ -559,9 +559,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           console.error('[Firebase] Email/Password auth not enabled in Firebase Console. See docs/backend/firebase-auth-setup.md');
           break;
         default:
-          errorMessage = error.message || 'Failed to sign in';
+          // Staging's Auth blocking function (functions/src/staging) rejects accounts that
+          // are not on the staging allowlist; the SDK wraps it in auth/internal-error.
+          errorMessage = String(error?.message ?? '').includes('staging-access-denied')
+            ? 'This account is not enabled on the staging environment'
+            : error.message || 'Failed to sign in';
       }
-      
+
       set({
         error: errorMessage,
         isLoading: false

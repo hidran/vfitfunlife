@@ -840,6 +840,27 @@ const result = await getPerms();
 console.log(result.data); // { role: 'customer', permissions: [...], ... }
 ```
 
+## Staging Login Allowlist
+
+Staging (`vfit-app-staging`, https://vfit-app-staging.web.app) is only for people on an allowlist. Production (`vfit-funlife`) has none of this.
+
+- **Data:** `stagingAllowlist/{emailLowercase}` holds `{ email, note?, addedBy, addedByUid?, addedAt }`. Rules: a superadmin can read and write. A signed-in user can `get` only the doc whose id is `request.auth.token.email.lower()`. Nobody else can read or list it. Tests: `functions/test/staging-allowlist-rules.test.ts`.
+- **Server enforcement:** `stagingBeforeUserCreated` and `stagingBeforeUserSignedIn` (Auth blocking functions, `firebase-functions/v2/identity`) throw `permission-denied` / `staging-access-denied`. They pass only if the lowercased email has an allowlist doc or `users/{uid}.role == 'superadmin'`. The logic is `isStagingAccessAllowed` in `functions/src/staging/allowlist.ts`, which has unit tests.
+- **Staging-only exports:** `functions/src/index.ts` `require()`s `functions/src/staging/functions.ts` only when `stagingAllowlistEnabled()` is true:
+  - on a deploy, when `GCLOUD_PROJECT === 'vfit-app-staging'`. `firebase deploy` sets this variable during discovery;
+  - in the functions emulator, only when `STAGING_ALLOWLIST_IN_EMULATOR=true`.
+
+  A production build therefore never defines the blocking functions or the callables. Production has no Identity Platform, so a blocking function there would fail the deploy.
+- **Management:** `/admin/staging-access` (superadmin). Its sidebar item shows only when `NEXT_PUBLIC_FIREBASE_PROJECT_ID === 'vfit-app-staging'`. The page lists entries straight from Firestore. Adds and removes go through the `addStagingAccess({ email, note? })` / `removeStagingAccess({ email })` callables. These are superadmin-only: they validate and lowercase the email and write an `audit_logs` entry (`entityType: 'staging_access'`).
+- **Client gate:** `src/components/staging/StagingGate.tsx` is mounted in `Providers` and runs only when the hostname starts with `vfit-app-staging.`, so localhost and the emulator are never gated. What it does:
+  - A signed-out visitor can see `/auth/login` and `/auth/forgot-password` only. Every other route `location.replace`s to the same path and query on https://vfit-funlife.web.app. `/auth/register` always redirects.
+  - A signed-in user who is neither allowlisted nor a superadmin is signed out and redirected.
+  - A boot script in `app/layout.tsx` hides `<body>` until the gate decides, so no app content flashes. A 15-second failsafe shows the page anyway.
+  - If the allowlist lookup fails, the gate lets the user through ("fails open"), because the blocking functions are the real enforcement.
+  - The decision rules are in `src/lib/staging/stagingGate.ts`, with unit tests.
+- **Seeding:** `node scripts/seed-staging-allowlist.mjs --project vfit-app-staging [--apply]`. It is a dry run unless you pass `--apply`, and it refuses any other project. Seed **before** the first deploy of the blocking functions. Otherwise every non-superadmin sign-in on staging is refused.
+- **Removing someone** does not revoke their current session on the server. The client gate signs them out on their next load, and the blocking function refuses their next sign-in.
+
 ## Migration Notes
 
 When migrating existing users:

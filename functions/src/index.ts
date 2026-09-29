@@ -48,3 +48,20 @@ export * from "./categories/mergeCategories";
 export * from "./config/pilotFlags";
 export * from "./geo/syncGeohash";
 export * from "./chat/onMessageCreated";
+
+// Staging-only: Auth blocking functions (the login allowlist) and the superadmin callables
+// that manage it. Loaded conditionally because production (vfit-funlife) has no Identity
+// Platform — a blocking function in its build would fail the deploy — and nothing of this
+// feature should exist there. `firebase deploy` sets GCLOUD_PROJECT to the target project
+// during discovery; see staging/allowlist.ts for the emulator rule.
+import { stagingAllowlistEnabled } from "./staging/allowlist";
+if (stagingAllowlistEnabled()) {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
+  const staging = require("./staging/functions") as typeof import("./staging/functions");
+  Object.assign(exports, {
+    stagingBeforeUserCreated: staging.stagingBeforeUserCreated,
+    stagingBeforeUserSignedIn: staging.stagingBeforeUserSignedIn,
+    addStagingAccess: staging.addStagingAccess,
+    removeStagingAccess: staging.removeStagingAccess,
+  });
+}

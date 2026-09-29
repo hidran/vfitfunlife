@@ -39,6 +39,7 @@ export const AUDIT_ENTITY_TYPES = [
   "feature_flag",
   "platform_settings",
   "admin_job",
+  "staging_access",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

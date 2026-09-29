@@ -589,6 +589,20 @@ service cloud.firestore {
       allow write: if isSuperAdmin();
     }
 
+    // Staging login allowlist, doc id = lowercased email. Only meaningful on
+    // vfit-app-staging (the blocking functions and client gate that read it exist only
+    // there), but the rules file is shared, so the block ships everywhere and is inert in
+    // production. Superadmins manage it (the /admin/staging-access callables write through
+    // the Admin SDK; direct writes are allowed for parity). A signed-in user may `get` only
+    // their own entry — the client gate needs that to decide whether to sign them out —
+    // and can never list the collection or learn about other emails.
+    match /stagingAllowlist/{emailId} {
+      allow read, write: if isSuperAdmin();
+      allow get: if isAuthenticated()
+        && request.auth.token.email is string
+        && emailId == request.auth.token.email.lower();
+    }
+
     // Shared exercise library. Readable by anyone signed in (clients see the movements in
     // their scheda); written only by the seed callable.
     match /exercises/{exerciseId} {

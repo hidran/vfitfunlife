@@ -18,6 +18,9 @@
       "predeploy": [
         "npm --prefix \"$RESOURCE_DIR\" run lint",
         "npm --prefix \"$RESOURCE_DIR\" run build"
+      ],
+      "postdeploy": [
+        "node scripts/fix-staging-blocking-uris.mjs"
       ]
     }
   ],

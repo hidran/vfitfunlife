@@ -31,7 +31,9 @@ import {
   Dumbbell,
   UserCircle,
   UserCheck,
+  KeyRound,
 } from "lucide-react";
+import { isStagingProject } from "@/lib/staging/stagingGate";
 
 interface SidebarProps {
   userRole: UserRole;
@@ -134,6 +136,18 @@ export function Sidebar({
       icon: <FileText className="w-5 h-5" />,
       allowedRoles: ["superadmin"],
     },
+    // Staging login allowlist: the callables behind it are only deployed to
+    // vfit-app-staging, so the item exists only in staging builds.
+    ...(isStagingProject()
+      ? [
+          {
+            label: t('admin.sidebar.nav.stagingAccess'),
+            href: "/admin/staging-access",
+            icon: <KeyRound className="w-5 h-5" />,
+            allowedRoles: ["superadmin"] as UserRole[],
+          },
+        ]
+      : []),
     {
       label: t('admin.sidebar.nav.myProfile'),
       href: "/profile",

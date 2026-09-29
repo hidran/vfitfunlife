@@ -13,6 +13,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { initializeCapacitor } from '@/lib/capacitor';
 import { scheduleAppShellRegistration } from '@/lib/sw/appShell';
 import { PushRegistrar } from '@/components/push/PushRegistrar';
+import { StagingGate } from '@/components/staging/StagingGate';
 import { useAssistantStore } from '@/stores/assistantStore';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -57,6 +58,7 @@ export function Providers({ children }: { children: ReactNode }) {
         <ThemeProvider>
           <I18nProvider>
             <AuthProvider>
+              <StagingGate />
               <ProfilePreferencesSync />
               <PushRegistrar />
               <SectionProvider>{children}</SectionProvider>

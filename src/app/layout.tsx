@@ -100,6 +100,15 @@ export default function RootLayout({
               "(function(){try{var t=localStorage.getItem('vfit.theme');var s=window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';document.documentElement.dataset.theme=(t==='light'||t==='dark')?t:s;}catch(e){document.documentElement.dataset.theme='dark';}})();",
           }}
         />
+        {/* Staging only: hide the page until StagingGate has decided whether this visitor may
+            see it (allowlisted) or is being sent to production — no flash of app content.
+            Hostname-based, like the gate itself; StagingGate also has a reveal failsafe. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{if(location.hostname.indexOf('vfit-app-staging.')===0){document.documentElement.setAttribute('data-staging-gate','pending');}}catch(e){}})();",
+          }}
+        />
         <Providers>{children}</Providers>
       </body>
     </html>
