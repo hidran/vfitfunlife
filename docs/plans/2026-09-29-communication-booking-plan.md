@@ -170,9 +170,9 @@ State machine: `functions/src/bookings/transitions.ts:22-44`; notifications on t
 
 - [x] **D1** (off-platform; client confirms service received → +50 XP) Payments: keep off-platform "trainer records payment" or take payment via Stripe?
 - [-] **D2** (user: no — createPaymentIntent unused with off-platform payments) Keep `createPaymentIntent` and `checkIn` warm (minInstances 1 in prod, ~€2/month each)?
-- [~] **D3** (user: app-shell offline + fix assets/logo) Service worker / offline strategy (also required for web push background delivery → A5 needs at least `firebase-messaging-sw.js`).
-- [~] **D4** (user: trainers set their own location → editor + nudge) 70 prod instructors have no coordinates → invisible in "near me". Data task for ops.
-- [~] **D5** (user: yes, exclude demo data from stats via `isDemo`) Hide demo accounts from prod stats/metrics? (15 demo bookings seeded on prod 2026-09-29.)
+- [x] **D3** (app-shell SW `out/sw.js` + offline page; all icons were the Capacitor placeholder → regenerated from `resources/brand/vfit-mark.svg`) Service worker / offline strategy (also required for web push background delivery → A5 needs at least `firebase-messaging-sw.js`).
+- [x] **D4** (`/provider/location` + missing-location banner; `scripts/notify-missing-location.mjs` not run yet) 70 prod instructors have no coordinates → invisible in "near me". Data task for ops.
+- [~] **D5** (`isDemo` + stats exclusion live; staging backfilled; prod backfill awaiting user) Hide demo accounts from prod stats/metrics? (15 demo bookings seeded on prod 2026-09-29.)
 
 ### Phase E — Carry-overs from the performance plan (lower priority)
 
@@ -218,3 +218,5 @@ it isn't in the env files.
 | 2026-09-29 | D1 deploy | staging+prod | 128e095 | Staging smoke: checkout (no fee/cards, points toggle 50→49,90), trainer records cash → client "+50 XP" notification → client confirms → xp 10→60, one xpTransactions entry, no double award on reload; trainer notified. Provider badge now "payment recorded · awaiting client" until client confirms. Prod: functions 116 ACTIVE, hosting with prod VAPID; prod web push verified (token on demo-customer-vfit, FCM success 1/1). |
 | 2026-09-29 | D2–D5 | decided | — | D2 no; D3 app-shell SW + asset/logo audit; D4 trainers self-serve location (nudge); D5 `isDemo` flag + exclude from stats. |
 | 2026-09-29 | bug | in progress | — | Provider report: calendar "Aggiungi appuntamento" does nothing. Cause: schedule page buttons (add appointment, block time ×2, day off, sync) had no handlers; blocked_times read from an unwritten collection. Fix: trainer-created bookings (new callable), day off / block time via availability date overrides, .ics export. |
+| 2026-09-29 | bug + D3–D5 | staging+prod | (merges + fixes) | Schedule: add appointment (`createBookingAsTrainer`), day off / block time via date overrides, .ics export; calendar query fixed (bookings never showed); fits 390px (dots + day sheet list); private notes save via `updateBookingPrivateNotes` (rules keep `internalNotes` server-only). Staging smoke all PASS; prod: 118 functions ACTIVE, schedule/add sheet/manifest/SW verified. |
+| 2026-09-29 | D5 prod | awaiting user | — | Prod dry-run: users 4, instructors 322 (321 are seeded `demo-trainer-*` of 392 total → only ~71 real), bookings 32, clients 8, transactions 10. Stats-only; demo trainers stay searchable. |
