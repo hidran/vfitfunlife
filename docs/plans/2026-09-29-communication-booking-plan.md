@@ -104,7 +104,7 @@ State machine: `functions/src/bookings/transitions.ts:22-44`; notifications on t
   Check field names written by functions (`title/body/type/data/isRead/createdAt`) and localize
   display. *Done when:* staging: actions from A1/A2 appear live in both inboxes; mark-read persists.
 
-- [~] (`468954d`, code shipped; needs VAPID keys + iOS setup) **A5 — Register FCM tokens (web + native).**
+- [~] (`468954d`, web done on staging+prod; native iOS/Android pending) **A5 — Register FCM tokens (web + native).**
   Web: after permission granted, `getToken(messaging, { vapidKey })` (needs
   `NEXT_PUBLIC_FIREBASE_VAPID_KEY` in `.env`, `.env.staging`, `.env.local`; and
   `public/firebase-messaging-sw.js`) → `registerFcmToken`. Native: `@capacitor/push-notifications`
@@ -215,3 +215,4 @@ it isn't in the env files.
 | 2026-09-29 | A7 | done | — | User approved copying prod RESEND_API_KEY to staging (value never printed); staging functions redeployed. |
 | 2026-09-29 | A5 web | staging verified | (push fix) | VAPID key pairs generated in Firebase console for both projects (prod → .env, staging → .env.staging + .env.local; gitignored). Fixed getToken racing SW activation. Staging: token stored on demo-provider-vfit, FCM multicast success 1/1, foreground toast shown. iOS/Android still need native setup (see A5 notes). |
 | 2026-09-29 | B3,B5,XP | done | (D1 merge) | Checkout: no fee/mock cards, "pay the trainer" card, shared pricing (server `pricing.ts` ↔ `src/lib/bookingPrice.ts`), points toggle, real promo lookup. Webhook logs only. +50 XP (xp/level + xpTransactions) only on explicit client "service received", once (`xpAwarded`); auto-confirm gives no XP. |
+| 2026-09-29 | D1 deploy | staging+prod | 128e095 | Staging smoke: checkout (no fee/cards, points toggle 50→49,90), trainer records cash → client "+50 XP" notification → client confirms → xp 10→60, one xpTransactions entry, no double award on reload; trainer notified. Provider badge now "payment recorded · awaiting client" until client confirms. Prod: functions 116 ACTIVE, hosting with prod VAPID; prod web push verified (token on demo-customer-vfit, FCM success 1/1). |
