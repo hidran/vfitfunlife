@@ -394,7 +394,15 @@ export default function BookingConfirmPage() {
               {`${t('bookings.confirm.termsPrefix')} ${t('bookings.confirm.termsOfService')} ${t('bookings.confirm.termsAnd')} ${t('bookings.confirm.cancellationPolicy')}`}
             </span>
           </label>
-          <p id={termsTextId} className="text-sm text-text-secondary leading-relaxed">
+          {/* Tapping the sentence toggles too (the link buttons inside keep their own clicks). */}
+          <p
+            id={termsTextId}
+            className="cursor-pointer text-sm text-text-secondary leading-relaxed"
+            onClick={(e) => {
+              if ((e.target as HTMLElement).closest('button')) return;
+              setTermsAccepted((v) => !v);
+            }}
+          >
             {t('bookings.confirm.termsPrefix')}{' '}
             <button className="text-[var(--section-primary)] underline">
               {t('bookings.confirm.termsOfService')}

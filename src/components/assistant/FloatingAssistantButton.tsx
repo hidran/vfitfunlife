@@ -6,6 +6,8 @@ import { useAssistantStore } from "@/stores/assistantStore";
 import { useI18n } from "@/hooks/useI18n";
 import { AssistantSheet } from "./AssistantSheet";
 
+const HIDE_LAUNCHER_ON = ["/chat/detail", "/booking/confirm", "/bookings/review", "/bookings/reschedule"];
+
 export function FloatingAssistantButton() {
   const { t } = useI18n();
   const user = useAuthStore((s) => s.user);
@@ -16,8 +18,9 @@ export function FloatingAssistantButton() {
 
   // Any logged-in user (customers, providers, and staff/superadmin).
   if (!isInitialized || !user) return null;
-  // A chat thread's composer sits exactly where the button floats (it covered "Send").
-  const hideLauncher = pathname?.startsWith("/chat/detail") ?? false;
+  // Pages with a sticky bottom CTA (chat composer, booking confirm, review, reschedule): the
+  // button floats exactly where their primary action sits and covered it.
+  const hideLauncher = HIDE_LAUNCHER_ON.some((p) => pathname?.startsWith(p));
 
   return (
     <>
