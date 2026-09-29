@@ -348,7 +348,7 @@ export default function ProviderServicesPage() {
       {/* Edit Modal */}
       {editingService && (
         <Modal onClose={() => setEditingService(null)}>
-          <div className="bg-surface-elevated rounded-xl p-6 max-w-md w-full mx-4">
+          <div className="bg-surface-elevated rounded-xl p-6 w-[calc(100%-2rem)] max-w-md">
             <h3 className="text-xl font-semibold text-content mb-6">{t('provider.services.edit.title')}</h3>
 
             <div className="space-y-4">
@@ -442,7 +442,7 @@ export default function ProviderServicesPage() {
       {/* Add Modal */}
       {showAddModal && (
         <Modal onClose={() => setShowAddModal(false)}>
-          <div className="bg-surface-elevated rounded-xl p-6 max-w-md w-full mx-4">
+          <div className="bg-surface-elevated rounded-xl p-6 w-[calc(100%-2rem)] max-w-md">
             <h3 className="text-xl font-semibold text-content mb-6">{t('provider.services.add.title')}</h3>
 
             <div className="space-y-4">
