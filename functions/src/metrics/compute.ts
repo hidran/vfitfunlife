@@ -205,7 +205,8 @@ export function computeMetricsForDay(args: ComputeArgs): MetricsDaily {
   // processCompletedBookings, which writes a real `completed` history entry with
   // actorUid "system" — including them would inflate the headline card with sessions no
   // trainer performed. Venue bookings are out of scope for the pilot dashboard entirely.
-  const bookings = args.bookings.filter((b) => Boolean(b.instructorId));
+  // Demo bookings (D5) never count: not in a daily figure, a cumulative one or a trainer row.
+  const bookings = args.bookings.filter((b) => Boolean(b.instructorId) && !b.isDemo);
 
   // Only events up to the end of this day count toward cumulative values, so recomputing
   // an old day yields the same numbers it did originally.

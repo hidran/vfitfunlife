@@ -16,6 +16,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { useTransactions } from "@/hooks/useTransactions";
+import { isDemoDoc } from "@/lib/demo";
 import { Spinner } from "@/components/ui/Spinner";
 
 // Local shape: createdAt as Date for formatDate compatibility
@@ -132,14 +133,17 @@ export function PaymentsListView() {
     return matchesSearch && matchesStatus && matchesType;
   });
 
-  // Calculate stats
-  const totalRevenue = transactions
+  // Calculate stats. Demo transactions (D5) stay in the table but never in a total.
+  const realTransactions = transactions.filter(
+    (tx) => !isDemoDoc(tx as unknown as Record<string, unknown>)
+  );
+  const totalRevenue = realTransactions
     .filter((tx) => tx.type === "booking_payment" && tx.status === "completed")
     .reduce((sum, tx) => sum + tx.amount, 0);
-  const totalPayouts = transactions
+  const totalPayouts = realTransactions
     .filter((tx) => tx.type === "payout" && tx.status === "completed")
     .reduce((sum, tx) => sum + tx.amount, 0);
-  const totalCommissions = transactions
+  const totalCommissions = realTransactions
     .filter((tx) => tx.type === "commission" && tx.status === "completed")
     .reduce((sum, tx) => sum + tx.amount, 0);
 

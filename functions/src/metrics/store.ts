@@ -123,9 +123,10 @@ export async function writeMetricsForDay(opts: {
  *     only documents that can make the count() disagree with the visible-customer total;
  *   - users created from `recentSince` on (newClients, and registeredClients for past days).
  *
- * Known gap: an account hidden ONLY by an @demo.vfit email (normal id, not deleted) cannot
- * be found by a query. The seeder always pairs that domain with a provider_/customer_ id,
- * and no such account exists on staging or prod (2026-09-28).
+ * Known gap: an account hidden ONLY by an @demo.vfit / @vitfitdemo.dev email (normal id, not
+ * deleted, no `isDemo`) cannot be found by a query. The old seeder always pairs @demo.vfit
+ * with a provider_/customer_ id; a @vitfitdemo.dev account on an adopted uid is found through
+ * `isDemo`, which the D5 seed scripts write and scripts/backfill-demo-flag.mjs backfills.
  */
 export async function loadUserAggregates(
   recentSince: Date,
@@ -139,7 +140,10 @@ export async function loadUserAggregates(
   const trainerRefs = [...new Set(recentBookings.map((b) => b.instructorId).filter(Boolean))]
     .map((id) => users.doc(id as string));
 
-  const [total, nonCustomer, providers, trainerDocs, deleted, deletedAt, seededC, seededP, recent] =
+  const [
+    total, nonCustomer, providers, trainerDocs, deleted, deletedAt, seededC, seededP,
+    demoFlagged, demoIds, recent,
+  ] =
     await Promise.all([
       users.count().get(),
       // `!=` skips documents where role is absent or null — exactly the users the metrics
@@ -151,6 +155,9 @@ export async function loadUserAggregates(
       users.where("deletedAt", "!=", null).get(),
       users.where(docId, ">=", "customer_").where(docId, "<", "customer`").get(),
       users.where(docId, ">=", "provider_").where(docId, "<", "provider`").get(),
+      // D5 demo accounts: flagged ones, plus the demo-* ids ('.' is the character after '-').
+      users.where("isDemo", "==", true).get(),
+      users.where(docId, ">=", "demo-").where(docId, "<", "demo.").get(),
       users.where("createdAt", ">=", admin.firestore.Timestamp.fromDate(recentSince)).get(),
     ]);
 
@@ -163,6 +170,7 @@ export async function loadUserAggregates(
       .map((d) => toMetricsUser(d.id, d.data() as FirebaseFirestore.DocumentData)),
     hiddenCandidates: [
       ...toUsers(deleted), ...toUsers(deletedAt), ...toUsers(seededC), ...toUsers(seededP),
+      ...toUsers(demoFlagged), ...toUsers(demoIds),
     ],
     recentUsers: toUsers(recent),
   });

@@ -22,6 +22,9 @@ export interface MetricsBooking {
   }>;
   finalPrice?: number;
   lateCancellation?: boolean;
+  /** Made by a demo customer or with a demo trainer (D5, see lib/demo.ts). Excluded from
+   *  every metric, including the all-time rollup. */
+  isDemo?: boolean;
   paymentConfirmation?: {
     amount: number;
     clientResponse: "confirmed" | "disputed" | null;
@@ -35,7 +38,7 @@ export interface MetricsUser {
   role: string;
   createdAt: Date | null;
   fullName?: string;
-  /** Soft-deleted or seeded demo accounts, excluded from trainer/client counts. */
+  /** Soft-deleted or seeded demo accounts (incl. `isDemo`), excluded from trainer/client counts. */
   hidden?: boolean;
 }
 

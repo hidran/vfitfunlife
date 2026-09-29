@@ -1324,6 +1324,8 @@ export async function generateDemoData(): Promise<SeedingResult[]> {
           uid: id,
           fullName: `${firstName} ${lastName}`,
           avatarUrl: null,
+          // D5: seeded trainers are demo data — searchable, but never counted in a stat.
+          isDemo: true,
           userType: userTypeForSpecialty(specialty),
           city,
           specialties: providerSpecialties,
@@ -1869,7 +1871,8 @@ export async function generateDemoContent(): Promise<SeedingResult[]> {
       const created = Timestamp.fromMillis(baseTime - i * 24 * 60 * 60 * 1000);
       batch.set(
         db.collection("transactions").doc(t.id),
-        { ...t, createdAt: created },
+        // D5: fake ledger rows must not reach the dashboard's monthly revenue.
+        { ...t, isDemo: true, createdAt: created },
         { merge: true }
       );
     }
@@ -2047,6 +2050,7 @@ export async function generateDemoClients(): Promise<SeedingResult[]> {
         db.collection("clients").doc(c.id),
         {
           ...rest,
+          isDemo: true,
           lastVisit: Timestamp.fromMillis(nowMs - lastVisitDaysAgo * dayMs),
           firstVisit: Timestamp.fromMillis(nowMs - firstVisitDaysAgo * dayMs),
           createdAt: now,
@@ -2107,6 +2111,7 @@ export async function generateDemoClients(): Promise<SeedingResult[]> {
           db.collection("bookings").doc(bookingId),
           {
             id: bookingId,
+            isDemo: true,
             userId: c.userId,
             userName: c.name,
             userPhone: c.phone,

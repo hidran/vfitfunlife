@@ -80,6 +80,8 @@ function asQuery(q: Ref | Query): Query {
 }
 
 let users: Record<string, Record<string, unknown>>;
+let demoBookings: Record<string, unknown>[];
+let demoTransactions: Record<string, unknown>[];
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -100,6 +102,8 @@ beforeEach(() => {
     // Would need a decision on the merits, but is a hidden seed account.
     hiddenPendingPro: { role: 'provider', isDeleted: true },
   };
+  demoBookings = [];
+  demoTransactions = [];
 
   vi.mocked(getDocs).mockImplementation((async (raw: Ref | Query) => {
     const q = asQuery(raw);
@@ -112,6 +116,12 @@ beforeEach(() => {
           .filter(([, data]) => q.constraints.every((c) => matches(data, c)))
           .map(([id, data]) => ({ id, data: () => data })),
       };
+    }
+    if (q.ref.name === 'bookings' || q.ref.name === 'transactions') {
+      // Only the D5 demo read touches these collections with getDocs.
+      expect(q.constraints).toEqual([{ field: 'isDemo', op: '==', value: true }]);
+      const rows = q.ref.name === 'bookings' ? demoBookings : demoTransactions;
+      return { docs: rows.map((data, i) => ({ id: `${q.ref.name}-${i}`, data: () => data })) };
     }
     if (q.ref.name === 'systemLogs') {
       return {
@@ -153,9 +163,39 @@ describe('getAdminDashboardStats', () => {
 
     expect(getCountFromServer).toHaveBeenCalledTimes(3);
     expect(getAggregateFromServer).toHaveBeenCalledTimes(1);
-    // Two precise queries for the pending-verification candidates, one for recent activity —
-    // never a bare scan of `users`.
-    expect(getDocs).toHaveBeenCalledTimes(3);
+    // Two precise queries for the pending-verification candidates, one for recent activity,
+    // three `isDemo == true` reads (users, bookings, transactions) — never a bare scan of `users`.
+    expect(getDocs).toHaveBeenCalledTimes(6);
+  });
+
+  it('leaves demo accounts, bookings and transactions out of every counter (D5)', async () => {
+    users.demoCustomer = { role: 'customer', isDemo: true };
+    users.demoProvider = { role: 'provider', isDemo: true, providerProfile: { isVerified: true, isActive: true } };
+    const future = { toMillis: () => Date.now() + 86_400_000 };
+    const past = { toMillis: () => Date.now() - 40 * 86_400_000 };
+    // Two demo bookings from today on, one long past (not in "today's bookings" to begin with).
+    demoBookings = [
+      { isDemo: true, scheduledAt: future },
+      { isDemo: true, scheduledAt: future },
+      { isDemo: true, scheduledAt: past },
+    ];
+    demoTransactions = [
+      { isDemo: true, type: 'booking_payment', status: 'completed', amount: 150, createdAt: { toMillis: () => Date.now() } },
+      // Not revenue: wrong type / status / month — never in the sum, so never subtracted.
+      { isDemo: true, type: 'refund', status: 'completed', amount: 70, createdAt: { toMillis: () => Date.now() } },
+      { isDemo: true, type: 'booking_payment', status: 'pending', amount: 60, createdAt: { toMillis: () => Date.now() } },
+      { isDemo: true, type: 'booking_payment', status: 'completed', amount: 90, createdAt: past },
+    ];
+
+    const stats = await getAdminDashboardStats();
+
+    // The 8 real users of the fixture; the two demo ones are counted, then subtracted.
+    expect(stats.totalUsers).toBe(8);
+    expect(stats.activeProviders).toBe(1);
+    expect(stats.todayBookings).toBe(4 - 2);
+    expect(stats.monthlyRevenue).toBe(999 - 150);
+    // The demo provider is verified; it never needed a decision.
+    expect(stats.pendingVerifications).toBe(2);
   });
 
   it('treats a missing monthly-revenue sum as zero, same as the old `|| 0`', async () => {

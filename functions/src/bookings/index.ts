@@ -18,6 +18,7 @@ import { notifyTransition } from "./notify";
 import { cancellationTarget, newRequestTarget, type NotifyTarget } from "./notifyTargets";
 import { sanitizeUserNotes } from "./userNotes";
 import { computeBookingPricing, type PromoTerms } from "./pricing";
+import { bookingInvolvesDemo } from "../lib/demo";
 
 const db = admin.firestore();
 
@@ -279,6 +280,9 @@ export const createBooking = onCall<BookingData>(
     const trainerId = !venueId && instructorId ? instructorId : null;
 
     const bookingRef = db.collection("bookings").doc();
+    // D5: a booking made BY a demo customer or WITH a demo trainer is demo data too, so every
+    // stat that counts bookings can drop it without joining back to the two accounts.
+    const isDemo = bookingInvolvesDemo(userId, userData, instructorId ?? null, instructor);
     const bookingData = {
       userId,
       venueId: venueId || null,
@@ -339,6 +343,8 @@ export const createBooking = onCall<BookingData>(
       cancelledBy: null,
       cancellationReason: null,
       refundAmount: null,
+
+      isDemo,
 
       // Review
       hasReviewed: false,
