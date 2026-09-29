@@ -36,6 +36,7 @@ import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import { useAuthStore } from '@/stores/authStore';
 import { canAccessProviderArea } from '@/lib/providerStatus';
 import { useShallow } from 'zustand/react/shallow';
+import { useAssistantStore } from '@/stores/assistantStore';
 import type { MessageKey } from '@/i18n/messages';
 
 interface SideDrawerProps {
@@ -120,6 +121,8 @@ export function SideDrawer({
   const logout = useAuthStore((state) => state.logout);
   const isLoading = useAuthStore((state) => state.isLoading);
   const role = useAuthStore((state) => state.user?.role);
+  const signedIn = useAuthStore((state) => !!state.user);
+  const openAssistant = useAssistantStore((state) => state.open);
   const isStaff = role === 'admin' || role === 'superadmin';
   // Mirrors the guard on /provider/layout.tsx, so the button never leads to a redirect.
   const providerStatus = useAuthStore((state) => state.user?.providerStatus);
@@ -383,6 +386,20 @@ export function SideDrawer({
             </div>
 
             <nav className="mt-4 space-y-2">
+              {signedIn && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    openAssistant();
+                  }}
+                  className="w-full rounded-xl border border-hairline bg-surface px-3 py-3 text-left text-content/80 transition-colors hover:bg-content/5 flex items-center gap-3"
+                  data-testid="drawer-assistant"
+                >
+                  <Sparkles className="h-5 w-5 text-[#00C9FF] light:text-vfit-secondary" />
+                  <span className="text-sm font-medium">{t('assistant.title')}</span>
+                </button>
+              )}
               {drawerLinks.map((item) => {
                 const Icon = item.icon;
                 const isActive =

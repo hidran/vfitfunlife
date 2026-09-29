@@ -13,14 +13,21 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { initializeCapacitor } from '@/lib/capacitor';
 import { scheduleAppShellRegistration } from '@/lib/sw/appShell';
 import { PushRegistrar } from '@/components/push/PushRegistrar';
+import { useAssistantStore } from '@/stores/assistantStore';
+import { useAuthStore } from '@/stores/authStore';
 
-const FloatingAssistantButton = dynamic(
-  () =>
-    import('@/components/assistant/FloatingAssistantButton').then(
-      (mod) => mod.FloatingAssistantButton
-    ),
+// Opened from the menus (side drawer, provider nav, admin sidebar); the sheet's chunk is
+// only fetched the first time someone opens it.
+const AssistantSheet = dynamic(
+  () => import('@/components/assistant/AssistantSheet').then((mod) => mod.AssistantSheet),
   { ssr: false, loading: () => null }
 );
+
+function AssistantHost() {
+  const isOpen = useAssistantStore((s) => s.isOpen);
+  const signedIn = useAuthStore((s) => !!s.user);
+  return isOpen && signedIn ? <AssistantSheet /> : null;
+}
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -53,7 +60,7 @@ export function Providers({ children }: { children: ReactNode }) {
               <ProfilePreferencesSync />
               <PushRegistrar />
               <SectionProvider>{children}</SectionProvider>
-              <FloatingAssistantButton />
+              <AssistantHost />
             </AuthProvider>
           </I18nProvider>
         </ThemeProvider>

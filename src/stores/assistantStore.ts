@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { streamAssistant } from "@/lib/firebase/functions";
 import type { ChatMessage, ResultCard } from "@/types/assistant";
 
 interface AssistantState {
@@ -45,6 +44,8 @@ export const useAssistantStore = create<AssistantState>()((set, get) => ({
       set((s) => ({ messages: s.messages.map((m) => (m.id === asstId ? fn(m) : m)) }));
 
     try {
+      // Loaded on first send: the store is imported by every menu that opens the assistant.
+      const { streamAssistant } = await import("@/lib/firebase/functions");
       const { stream, data } = await streamAssistant({
         chatId: get().currentChatId,
         message,

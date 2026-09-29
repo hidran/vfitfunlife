@@ -9,6 +9,7 @@ import { UserRole } from "@/types/firebase";
 import { useI18n } from "@/hooks/useI18n";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
+import { AssistantMenuButton } from "@/components/assistant/AssistantMenuButton";
 import {
   LayoutDashboard,
   Users,
@@ -265,6 +266,13 @@ export function Sidebar({
                 </Link>
               </li>
             ))}
+            <li>
+              <AssistantMenuButton
+                onOpen={() => setIsMobileOpen(false)}
+                hideLabel={isCollapsed}
+                className="flex w-full items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-content-muted hover:text-content hover:bg-surface-2 transition-all duration-200"
+              />
+            </li>
           </ul>
         </nav>
 

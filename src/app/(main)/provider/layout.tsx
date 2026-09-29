@@ -27,6 +27,7 @@ import { canAccessProviderArea } from '@/lib/providerStatus';
 import type { MessageKey } from '@/i18n/messages';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
+import { AssistantMenuButton } from '@/components/assistant/AssistantMenuButton';
 
 interface ProviderLayoutProps {
   children: ReactNode;
@@ -98,6 +99,7 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
               </Link>
             );
           })}
+          <AssistantMenuButton className="flex w-full items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors mb-1 text-content-muted hover:bg-surface-2 hover:text-content" />
         </nav>
 
         <div
@@ -149,6 +151,10 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
                 </Link>
               );
             })}
+            <AssistantMenuButton
+              onOpen={() => setMobileMenuOpen(false)}
+              className="flex w-full items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors mb-1 text-content-muted hover:bg-surface-2 hover:text-content"
+            />
             <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-hairline px-1 pt-3">
               <LanguageSwitcher variant="menu" />
               <ThemeToggle compact />
