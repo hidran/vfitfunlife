@@ -8,6 +8,7 @@ import {
   rosterPairsForWrite,
   type RosterBooking,
   type RosterPair,
+  type RosterSyncOptions,
   type RosterWrite,
   type UserProfileLike,
 } from "./clientRosterCore";
@@ -20,7 +21,11 @@ import {
  * flight) serialize: whichever commits last has read the latest bookings. The write is
  * derived purely from what was read, so a retry or replay produces the same document.
  */
-export async function syncClientRoster(db: Firestore, pair: RosterPair): Promise<RosterWrite | null> {
+export async function syncClientRoster(
+  db: Firestore,
+  pair: RosterPair,
+  options: RosterSyncOptions = {},
+): Promise<RosterWrite | null> {
   return db.runTransaction(async (tx) => {
     const plan = await planRosterSync(
       {
@@ -46,6 +51,7 @@ export async function syncClientRoster(db: Firestore, pair: RosterPair): Promise
         },
       },
       pair,
+      options,
     );
     if (!plan) return null;
 

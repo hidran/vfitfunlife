@@ -6,12 +6,18 @@ const h = vi.hoisted(() => ({
   fetchProviderServices: vi.fn(),
   fetchProviderSlots: vi.fn(),
   createBookingAsTrainer: vi.fn(),
+  addClientByEmail: vi.fn(),
+  inviteClientToPlatform: vi.fn(),
 }));
 
 vi.mock('@/lib/firebase/provider', () => ({ getProviderClients: h.getProviderClients }));
 vi.mock('@/lib/firebase/providers', () => ({ fetchProviderServices: h.fetchProviderServices }));
 vi.mock('@/lib/firebase/availability', () => ({ fetchProviderSlots: h.fetchProviderSlots }));
-vi.mock('@/lib/firebase/functions', () => ({ createBookingAsTrainer: h.createBookingAsTrainer }));
+vi.mock('@/lib/firebase/functions', () => ({
+  createBookingAsTrainer: h.createBookingAsTrainer,
+  addClientByEmail: h.addClientByEmail,
+  inviteClientToPlatform: h.inviteClientToPlatform,
+}));
 
 import { AddAppointmentSheet } from './AddAppointmentSheet';
 
@@ -104,11 +110,97 @@ describe('AddAppointmentSheet', () => {
     expect(props.onClose).not.toHaveBeenCalled();
   });
 
-  it('explains an empty roster instead of showing an empty picker', async () => {
+  it('explains an empty roster and opens straight on "Nuovo cliente (email)"', async () => {
     h.getProviderClients.mockResolvedValue([]);
     renderSheet();
     expect(await screen.findByText(/Non hai ancora clienti/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Nuovo cliente (email)' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByLabelText('Email del cliente')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Aggiungi' })).toBeDisabled();
+  });
+
+  it('says why Aggiungi is disabled, listing only what is still missing', async () => {
+    renderSheet();
+    fireEvent.change(await screen.findByLabelText('Cliente'), { target: { value: 'u-anna' } });
+    expect(screen.getByText("Per aggiungere l'appuntamento manca: il servizio, l'orario.")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Servizio'), { target: { value: 'svc-pt' } });
+    fireEvent.click(await screen.findByRole('button', { name: '10:00' }));
+    expect(screen.queryByText(/Per aggiungere l'appuntamento manca/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Aggiungi' })).toBeEnabled();
+  });
+
+  it('adds a client by email, preselects them and books them', async () => {
+    h.getProviderClients.mockResolvedValueOnce([]).mockResolvedValue([
+      { id: 'trainer-1_u-luca', userId: 'u-luca', name: 'Luca Verdi', email: 'luca@example.com', totalBookings: 0, totalSpent: 0 },
+    ]);
+    h.addClientByEmail.mockResolvedValue({
+      status: 'added',
+      alreadyClient: false,
+      client: { id: 'trainer-1_u-luca', userId: 'u-luca', name: 'Luca Verdi', email: 'luca@example.com' },
+    });
+    const props = renderSheet();
+    fireEvent.change(await screen.findByLabelText('Email del cliente'), { target: { value: ' Luca@Example.com ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Cerca e aggiungi' }));
+
+    expect(await screen.findByText('Luca Verdi è ora tra i tuoi clienti.')).toBeInTheDocument();
+    expect(h.addClientByEmail).toHaveBeenCalledWith('luca@example.com');
+    await waitFor(() => expect(h.getProviderClients).toHaveBeenCalledTimes(2));
+    // On "Cliente esistente" the new client is the one selected.
+    fireEvent.click(screen.getByRole('button', { name: 'Cliente esistente' }));
+    await waitFor(() => expect(screen.getByLabelText('Cliente')).toHaveValue('u-luca'));
+
+    fireEvent.change(screen.getByLabelText('Servizio'), { target: { value: 'svc-pt' } });
+    fireEvent.click(await screen.findByRole('button', { name: '10:00' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Aggiungi' }));
+    await waitFor(() => expect(props.onCreated).toHaveBeenCalled());
+    expect(h.createBookingAsTrainer).toHaveBeenCalledWith({ clientUserId: 'u-luca', serviceId: 'svc-pt', startsAt: SLOT.startsAt });
+
+  });
+
+  it('offers the invitation only as an explicit choice when the email has no account', async () => {
+    h.addClientByEmail.mockResolvedValue({ status: 'not_found' });
+    h.inviteClientToPlatform.mockResolvedValue({ status: 'invited' });
+    renderSheet();
+    await screen.findByLabelText('Cliente');
+    fireEvent.click(screen.getByRole('button', { name: 'Nuovo cliente (email)' }));
+    fireEvent.change(screen.getByLabelText('Email del cliente'), { target: { value: 'nuovo@example.com' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Cerca e aggiungi' }));
+
+    expect(await screen.findByText('Non ha ancora un account VFit.')).toBeInTheDocument();
+    expect(h.inviteClientToPlatform).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Invita a unirsi a VFit' }));
+    expect(await screen.findByText(/Invito inviato/)).toBeInTheDocument();
+    expect(h.inviteClientToPlatform).toHaveBeenCalledWith('nuovo@example.com');
+  });
+
+  it('maps server refusals to messages', async () => {
+    renderSheet();
+    await screen.findByLabelText('Cliente');
+    fireEvent.click(screen.getByRole('button', { name: 'Nuovo cliente (email)' }));
+    const field = screen.getByLabelText('Email del cliente');
+
+    fireEvent.change(field, { target: { value: 'non-una-email' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Cerca e aggiungi' }));
+    expect(await screen.findByText('Inserisci un indirizzo email valido.')).toBeInTheDocument();
+    expect(h.addClientByEmail).not.toHaveBeenCalled();
+
+    h.addClientByEmail.mockRejectedValueOnce(Object.assign(new Error('rate_limited'), { code: 'functions/resource-exhausted' }));
+    fireEvent.change(field, { target: { value: 'a@b.it' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Cerca e aggiungi' }));
+    expect(await screen.findByText(/limite di clienti aggiunti/)).toBeInTheDocument();
+
+    h.addClientByEmail.mockRejectedValueOnce(Object.assign(new Error('self'), { code: 'functions/invalid-argument' }));
+    fireEvent.change(field, { target: { value: 'me@b.it' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Cerca e aggiungi' }));
+    expect(await screen.findByText('Non puoi aggiungere te stesso come cliente.')).toBeInTheDocument();
+  });
+
+  it('"Blocca solo l\'orario" hands over to the block sheet for the chosen day', async () => {
+    const onSwitchToBlock = vi.fn();
+    renderSheet({ onSwitchToBlock });
+    await screen.findByLabelText('Cliente');
+    fireEvent.click(screen.getByRole('button', { name: "Blocca solo l'orario" }));
+    expect(onSwitchToBlock).toHaveBeenCalledWith('2099-01-05');
   });
 
   it('closes on Escape and via Annulla', async () => {

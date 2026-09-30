@@ -16,6 +16,7 @@ export * from "./auth";
 export * from "./bookings";
 export * from "./bookings/clientRoster";
 export * from "./bookings/trainerBooking";
+export * from "./bookings/addClientByEmail";
 export * from "./payments";
 export * from "./notifications";
 export * from "./notifications/tokens";

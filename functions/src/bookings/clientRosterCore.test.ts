@@ -258,3 +258,65 @@ describe("planRosterSync", () => {
     expect(plan?.data).toEqual({ totalBookings: 1 });
   });
 });
+
+describe("planRosterSync with ensure (addClientByEmail)", () => {
+  const profile = { fullName: "Giulia Bianchi", email: "giulia@example.com", phone: "+39 333 2" };
+
+  it("creates the trigger's shape with zeroed totals and null (not missing) visit dates", async () => {
+    const plan = await planRosterSync(
+      deps({ getUserProfile: vi.fn(async () => profile) }),
+      PAIR,
+      { ensure: true, createFields: { source: "trainer" } },
+    );
+    expect(plan).toEqual({
+      kind: "create",
+      id: "trainer1_cust1",
+      data: {
+        providerId: "trainer1",
+        userId: "cust1",
+        name: "Giulia Bianchi",
+        email: "giulia@example.com",
+        phone: "+39 333 2",
+        totalBookings: 0,
+        totalSpent: 0,
+        firstVisit: null,
+        lastVisit: null,
+        photoUrl: "",
+        tags: [],
+        notes: "",
+        source: "trainer",
+      },
+    });
+    // The list query orders by lastVisit: the field must be present so the doc is returned.
+    expect(plan && "lastVisit" in plan.data).toBe(true);
+  });
+
+  it("has exactly the keys a booking-derived create has, plus the createFields", async () => {
+    const derived = await planRosterSync(deps({ getBookings: vi.fn(async () => [booking()]) }), PAIR);
+    const manual = await planRosterSync(deps(), PAIR, { ensure: true, createFields: { source: "trainer" } });
+    expect(Object.keys(manual!.data).sort()).toEqual([...Object.keys(derived!.data), "source"].sort());
+  });
+
+  it("reuses an existing doc for the pair under any id instead of creating one", async () => {
+    const plan = await planRosterSync(
+      deps({
+        findClientDocs: vi.fn(async () => [
+          {
+            id: "demo-client-7",
+            data: {
+              providerId: "trainer1", userId: "cust1", name: "Mario Rossi", email: "mario@example.com",
+              phone: "", totalBookings: 0, totalSpent: 0, firstVisit: null, lastVisit: null,
+            },
+          },
+        ]),
+      }),
+      PAIR,
+      { ensure: true, createFields: { source: "trainer" } },
+    );
+    expect(plan).toBeNull(); // already up to date; nothing written, createFields not applied
+  });
+
+  it("without ensure, still writes nothing for a pair with no bookings and no doc", async () => {
+    expect(await planRosterSync(deps(), PAIR, { createFields: { source: "trainer" } })).toBeNull();
+  });
+});

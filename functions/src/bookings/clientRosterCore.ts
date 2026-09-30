@@ -224,10 +224,26 @@ export interface RosterSyncDeps {
  * keeps its document (it may hold notes/goals/programs), just with zeroed totals; a pair
  * with no bookings and no document gets none.
  */
-export async function planRosterSync(deps: RosterSyncDeps, pair: RosterPair): Promise<RosterWrite | null> {
+export interface RosterSyncOptions {
+  /**
+   * Create the pair's doc even when it has no bookings yet — the trainer added the client by
+   * hand (addClientByEmail). The doc is the same shape the trigger writes, with zeroed totals
+   * and `firstVisit` / `lastVisit` null (null, not missing, so the list query still returns
+   * it); the trigger later fills it in from bookings.
+   */
+  ensure?: boolean;
+  /** Extra fields set only when the doc is CREATED (e.g. `source: "trainer"`). */
+  createFields?: Record<string, unknown>;
+}
+
+export async function planRosterSync(
+  deps: RosterSyncDeps,
+  pair: RosterPair,
+  options: RosterSyncOptions = {},
+): Promise<RosterWrite | null> {
   const [docs, bookings] = await Promise.all([deps.findClientDocs(), deps.getBookings()]);
   const existing = pickRosterDoc(docs, pair);
-  if (!existing && bookings.length === 0) return null;
+  if (!existing && bookings.length === 0 && !options.ensure) return null;
 
   const stats = computeRosterStats(bookings);
   const prev = existing?.data ?? {};
@@ -258,7 +274,7 @@ export async function planRosterSync(deps: RosterSyncDeps, pair: RosterPair): Pr
     return {
       kind: "create",
       id: rosterClientId(pair.instructorId, pair.userId),
-      data: { ...derived, photoUrl: "", tags: [], notes: "" },
+      data: { ...derived, photoUrl: "", tags: [], notes: "", ...(options.createFields ?? {}) },
     };
   }
 

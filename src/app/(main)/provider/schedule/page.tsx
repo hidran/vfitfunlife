@@ -363,6 +363,7 @@ export default function ProviderSchedulePage() {
             notify.success(t('provider.schedule.add.success'));
             refresh();
           }}
+          onSwitchToBlock={(date) => setSheet({ kind: 'block', date, dateEditable: true })}
         />
       )}
       {sheet?.kind === 'block' && uid && (

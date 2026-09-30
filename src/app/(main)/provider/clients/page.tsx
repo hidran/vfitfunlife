@@ -9,6 +9,7 @@ import { useProviderStore } from '@/stores/providerStore';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
 import { ProviderClient } from '@/types/provider';
+import { AddClientByEmail } from '@/components/provider/AddClientByEmail';
 import Link from 'next/link';
 
 // Real data is fetched from Firestore via providerStore
@@ -62,6 +63,9 @@ export default function ProviderClientsPage() {
           </div>
         </div>
       </div>
+
+      {/* Add a client by email (existing account → roster; otherwise an optional invite) */}
+      <AddClientByEmail collapsible onAdded={() => fetchClients()} className="max-w-md" />
 
       {/* Search */}
       <div className="flex flex-col sm:flex-row gap-4">

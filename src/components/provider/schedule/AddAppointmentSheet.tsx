@@ -7,7 +7,8 @@
  * syncClientRosterOnBookingWrite trigger), services from instructors/{uid}/services, and the
  * times from getProviderSlots — the same slot engine the customer /book flow uses, asked with
  * `asTrainer` so the customer-facing minimum notice does not hide later-today slots. The
- * server (createBookingAsTrainer) re-checks all of it.
+ * server (createBookingAsTrainer) re-checks all of it. A client not yet on the roster can be
+ * added by email right here (AddClientByEmail → addClientByEmail callable).
  */
 
 import { useEffect, useId, useRef, useState } from 'react';
@@ -23,6 +24,7 @@ import { BOOKING_NOTE_MAX_LENGTH } from '@/lib/bookingNote';
 import type { ProviderClient } from '@/types/provider';
 import type { InstructorService } from '@/types/instructor';
 import { ScheduleSheet, callableErrorMessage, fieldClass } from './ScheduleSheet';
+import { AddClientByEmail } from '../AddClientByEmail';
 
 interface AddAppointmentSheetProps {
   instructorId: string;
@@ -31,7 +33,15 @@ interface AddAppointmentSheetProps {
   onClose: () => void;
   /** After the booking exists; the page refreshes the calendar. */
   onCreated: () => void;
+  /**
+   * "Blocca solo l'orario": the page swaps this sheet for BlockTimeSheet on the given day
+   * (the block logic lives there only). Without it the option is not offered.
+   */
+  onSwitchToBlock?: (date: string) => void;
 }
+
+/** Who the appointment is for — or no one ("block"), which hands over to BlockTimeSheet. */
+type ClientMode = 'existing' | 'new';
 
 type SlotsState =
   | { kind: 'idle' }
@@ -51,15 +61,30 @@ function bookableClients(clients: ProviderClient[]): ProviderClient[] {
     .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
 }
 
-export function AddAppointmentSheet({ instructorId, initialDate, onClose, onCreated }: AddAppointmentSheetProps) {
+export function AddAppointmentSheet({
+  instructorId,
+  initialDate,
+  onClose,
+  onCreated,
+  onSwitchToBlock,
+}: AddAppointmentSheetProps) {
   const { t } = useI18n();
-  const ids = { client: useId(), service: useId(), date: useId(), time: useId(), note: useId() };
+  const ids = {
+    client: useId(),
+    service: useId(),
+    date: useId(),
+    time: useId(),
+    note: useId(),
+    mode: useId(),
+    missing: useId(),
+  };
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [clients, setClients] = useState<ProviderClient[]>([]);
   const [services, setServices] = useState<InstructorService[]>([]);
 
+  const [mode, setMode] = useState<ClientMode>('existing');
   const [clientUserId, setClientUserId] = useState('');
   const [serviceId, setServiceId] = useState('');
   const [date, setDate] = useState(initialDate);
@@ -70,12 +95,36 @@ export function AddAppointmentSheet({ instructorId, initialDate, onClose, onCrea
   const [error, setError] = useState<string | null>(null);
   const slotRequest = useRef(0);
 
+  /** After "Nuovo cliente (email)" added someone: reload the roster and pick them. */
+  const handleClientAdded = (added: { userId: string; name: string; email: string }) => {
+    setClientUserId(added.userId);
+    getProviderClients()
+      .then((roster) => {
+        const next = bookableClients(roster);
+        // Keep the new client selectable even if the read raced the server write.
+        if (!next.some((c) => c.userId === added.userId)) {
+          next.push({ id: added.userId, userId: added.userId, name: added.name, email: added.email, totalBookings: 0, totalSpent: 0 });
+        }
+        setClients(next);
+      })
+      .catch(() => {
+        setClients((prev) =>
+          prev.some((c) => c.userId === added.userId)
+            ? prev
+            : [...prev, { id: added.userId, userId: added.userId, name: added.name, email: added.email, totalBookings: 0, totalSpent: 0 }],
+        );
+      });
+  };
+
   useEffect(() => {
     let cancelled = false;
     Promise.all([getProviderClients(), fetchProviderServices(instructorId)])
       .then(([roster, catalogue]) => {
         if (cancelled) return;
-        setClients(bookableClients(roster));
+        const bookable = bookableClients(roster);
+        setClients(bookable);
+        // Nobody to pick yet: start on adding one.
+        if (bookable.length === 0) setMode('new');
         setServices(catalogue.filter((s) => s.isActive !== false));
         setLoading(false);
       })
@@ -107,6 +156,11 @@ export function AddAppointmentSheet({ instructorId, initialDate, onClose, onCrea
   };
 
   const canSubmit = Boolean(clientUserId && serviceId && startsAt) && !submitting;
+  const missing = [
+    !clientUserId && t('provider.schedule.add.missing.client'),
+    !serviceId && t('provider.schedule.add.missing.service'),
+    !startsAt && t('provider.schedule.add.missing.time'),
+  ].filter((m): m is string => Boolean(m));
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -147,40 +201,103 @@ export function AddAppointmentSheet({ instructorId, initialDate, onClose, onCrea
           <Button variant="outline" onClick={onClose} disabled={submitting} className="flex-1 min-h-11">
             {t('common.cancel')}
           </Button>
-          <Button onClick={handleSubmit} disabled={!canSubmit} isLoading={submitting} className="flex-1 min-h-11">
+          <Button
+            onClick={handleSubmit}
+            disabled={!canSubmit}
+            isLoading={submitting}
+            aria-describedby={!canSubmit && missing.length > 0 ? ids.missing : undefined}
+            className="flex-1 min-h-11"
+          >
             {t('provider.schedule.add.submit')}
           </Button>
         </>
       }
     >
+      <div className="space-y-2">
+        <p id={ids.mode} className="text-sm font-medium text-content">{t('provider.schedule.add.mode.label')}</p>
+        <div
+          role="group"
+          aria-labelledby={ids.mode}
+          className={cn('grid gap-1 rounded-lg border border-hairline p-1', onSwitchToBlock ? 'grid-cols-3' : 'grid-cols-2')}
+        >
+          {(
+            [
+              ['existing', t('provider.schedule.add.mode.existing')],
+              ['new', t('provider.schedule.add.mode.new')],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={mode === value}
+              disabled={submitting}
+              onClick={() => {
+                if (value === mode) return;
+                setMode(value);
+                // A client picked in the other mode would be invisible here.
+                if (value === 'new') setClientUserId('');
+              }}
+              className={cn(
+                'min-h-11 px-2 py-1 rounded-md text-xs sm:text-sm font-medium leading-tight transition-colors',
+                mode === value
+                  ? 'bg-[var(--section-primary)]/15 text-content'
+                  : 'text-content-muted hover:text-content',
+              )}
+            >
+              {label}
+            </button>
+          ))}
+          {onSwitchToBlock && (
+            <button
+              type="button"
+              aria-pressed={false}
+              disabled={submitting}
+              onClick={() => onSwitchToBlock(date || initialDate)}
+              className="min-h-11 px-2 py-1 rounded-md text-xs sm:text-sm font-medium leading-tight text-content-muted hover:text-content transition-colors"
+            >
+              {t('provider.schedule.add.mode.block')}
+            </button>
+          )}
+        </div>
+      </div>
+
       {loading ? (
         <p className="text-sm text-content-muted" role="status">{t('common.loading')}</p>
       ) : loadError ? (
         <p className="text-sm text-error" role="alert">{t('provider.schedule.add.loadError')}</p>
       ) : (
         <div className="space-y-4">
-          <div className="space-y-2">
-            <label htmlFor={ids.client} className="text-sm font-medium text-content">
-              {t('provider.schedule.add.client')}
-            </label>
-            {clients.length === 0 ? (
-              <p className="text-sm text-content-muted">{t('provider.schedule.add.noClients')}</p>
-            ) : (
-              <select
-                id={ids.client}
-                value={clientUserId}
-                onChange={(e) => setClientUserId(e.target.value)}
-                className={fieldClass}
-              >
-                <option value="">{t('provider.schedule.add.clientPlaceholder')}</option>
-                {clients.map((c) => (
-                  <option key={c.userId} value={c.userId}>
-                    {c.name || c.email || c.userId}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
+          {mode === 'existing' ? (
+            <div className="space-y-2">
+              <label htmlFor={ids.client} className="text-sm font-medium text-content">
+                {t('provider.schedule.add.client')}
+              </label>
+              {clients.length === 0 ? (
+                <p className="text-sm text-content-muted">{t('provider.schedule.add.noClients')}</p>
+              ) : (
+                <select
+                  id={ids.client}
+                  value={clientUserId}
+                  onChange={(e) => setClientUserId(e.target.value)}
+                  className={fieldClass}
+                >
+                  <option value="">{t('provider.schedule.add.clientPlaceholder')}</option>
+                  {clients.map((c) => (
+                    <option key={c.userId} value={c.userId}>
+                      {c.name || c.email || c.userId}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {clients.length === 0 && (
+                <p className="text-sm text-content-muted">{t('provider.schedule.add.noClients')}</p>
+              )}
+              <AddClientByEmail onAdded={handleClientAdded} />
+            </div>
+          )}
 
           <div className="space-y-2">
             <label htmlFor={ids.service} className="text-sm font-medium text-content">
@@ -281,6 +398,12 @@ export function AddAppointmentSheet({ instructorId, initialDate, onClose, onCrea
             />
           </div>
         </div>
+      )}
+
+      {!loading && !loadError && !submitting && missing.length > 0 && (
+        <p id={ids.missing} className="text-sm text-content-muted">
+          {t('provider.schedule.add.missing', { items: missing.join(', ') })}
+        </p>
       )}
 
       {error && <p className="text-sm text-error" role="alert">{error}</p>}

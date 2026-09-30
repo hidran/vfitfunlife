@@ -172,6 +172,40 @@ export async function createBookingAsTrainer(data: {
   return (await fn(data)).data;
 }
 
+export interface AddedRosterClient {
+  id: string;
+  userId: string;
+  name: string;
+  email: string;
+}
+
+export type AddClientByEmailResult =
+  | { status: 'added'; alreadyClient: boolean; client: AddedRosterClient }
+  | { status: 'not_found' };
+
+/**
+ * Trainer adds a client by email ("Nuovo cliente"). An existing account joins the trainer's
+ * roster (`added`); an unknown address answers `not_found` and nothing is sent — inviting is
+ * a separate, explicit step (inviteClientToPlatform). Errors carry the server's code in
+ * `message`: invalid_email, self, rate_limited, instructor_not_bookable.
+ */
+export async function addClientByEmail(email: string): Promise<AddClientByEmailResult> {
+  const functions = await getFunctionsInstance();
+  const fn = httpsCallable<{ email: string }, AddClientByEmailResult>(functions, 'addClientByEmail');
+  return (await fn({ email })).data;
+}
+
+/**
+ * Trainer chose "Invita a unirsi a VFit" for an address with no account: sends the localized
+ * invitation email. Shares addClientByEmail's rate limit; extra error codes:
+ * already_registered, email_failed.
+ */
+export async function inviteClientToPlatform(email: string): Promise<{ status: 'invited' }> {
+  const functions = await getFunctionsInstance();
+  const fn = httpsCallable<{ email: string }, { status: 'invited' }>(functions, 'inviteClientToPlatform');
+  return (await fn({ email })).data;
+}
+
 /** Trainer saves their private notes on one of their bookings (server-only field). */
 export async function updateBookingPrivateNotes(bookingId: string, notes: string) {
   const functions = await getFunctionsInstance();
