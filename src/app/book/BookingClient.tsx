@@ -153,9 +153,9 @@ export default function ProviderBookingPage() {
             onClick={() => router.back()}
             className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors"
           >
-            <ChevronLeft className="w-6 h-6 text-white" />
+            <ChevronLeft className="w-6 h-6 text-content" />
           </button>
-          <h1 className="text-lg font-semibold text-white truncate">
+          <h1 className="text-lg font-semibold text-content truncate">
             {provider.fullName}
           </h1>
         </div>
@@ -173,7 +173,7 @@ export default function ProviderBookingPage() {
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-2xl font-bold text-white">{provider.fullName}</h2>
+              <h2 className="text-2xl font-bold text-content">{provider.fullName}</h2>
               {provider.isVerified && (
                 <Badge variant="partner" size="sm">
                   <Shield className="w-3 h-3 mr-1" />
@@ -185,7 +185,7 @@ export default function ProviderBookingPage() {
             <div className="flex items-center gap-2 mt-1">
               <div className="flex items-center gap-1">
                 <Star className="w-4 h-4 text-warning fill-warning" />
-                <span className="font-semibold text-white">{provider.rating.toFixed(1)}</span>
+                <span className="font-semibold text-content">{provider.rating.toFixed(1)}</span>
               </div>
               <span className="text-text-secondary">
                 {t('booking.provider.reviews', { count: provider.reviewCount })}
@@ -255,7 +255,7 @@ export default function ProviderBookingPage() {
                 'flex-1 py-3 text-sm font-medium transition-colors relative',
                 activeTab === tab.id
                   ? 'text-[var(--section-primary)]'
-                  : 'text-text-secondary hover:text-white'
+                  : 'text-text-secondary hover:text-content'
               )}
             >
               {tab.label}
@@ -281,7 +281,7 @@ export default function ProviderBookingPage() {
               exit={{ opacity: 0, y: -10 }}
               className="space-y-4"
             >
-              <h3 className="font-semibold text-white mb-4">{t('booking.services.selectService')}</h3>
+              <h3 className="font-semibold text-content mb-4">{t('booking.services.selectService')}</h3>
               {/* A deactivated service must not be bookable, or the provider-side toggle
                   is decorative. */}
               {services.filter((s) => s.isActive !== false).map((service) => (
@@ -299,7 +299,7 @@ export default function ProviderBookingPage() {
                   animate={{ opacity: 1, height: 'auto' }}
                   className="mt-6"
                 >
-                  <h3 className="font-semibold text-white mb-4">{t('booking.services.selectDateTime')}</h3>
+                  <h3 className="font-semibold text-content mb-4">{t('booking.services.selectDateTime')}</h3>
                   <AvailabilityPicker
                     availability={availability}
                     selectedDate={selectedDate}
@@ -335,10 +335,10 @@ export default function ProviderBookingPage() {
                     className="bg-surface-elevated/50 rounded-xl p-4"
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-white">{review.userName}</span>
+                      <span className="font-medium text-content">{review.userName}</span>
                       <div className="flex items-center gap-1">
                         <Star className="w-4 h-4 text-warning fill-warning" />
-                        <span className="text-white">{review.rating}</span>
+                        <span className="text-content">{review.rating}</span>
                       </div>
                     </div>
                     <p className="text-text-secondary text-sm">{review.text}</p>
@@ -358,7 +358,7 @@ export default function ProviderBookingPage() {
               className="space-y-4"
             >
               <div className="bg-surface-elevated/50 rounded-xl p-4">
-                <h3 className="font-semibold text-white mb-2">{t('booking.about.bio')}</h3>
+                <h3 className="font-semibold text-content mb-2">{t('booking.about.bio')}</h3>
                 <p className="text-text-secondary text-sm leading-relaxed">
               Personal trainer certificato CONI con 8 anni di esperienza. Specializzato in 
                   bodybuilding, nutrizione sportiva e riabilitazione post-infortunio. 
@@ -368,7 +368,7 @@ export default function ProviderBookingPage() {
               </div>
 
               <div className="bg-surface-elevated/50 rounded-xl p-4">
-                <h3 className="font-semibold text-white mb-2">{t('booking.about.education')}</h3>
+                <h3 className="font-semibold text-content mb-2">{t('booking.about.education')}</h3>
                 <ul className="space-y-2 text-sm text-text-secondary">
                   <li className="flex items-start gap-2">
                     <Award className="w-4 h-4 text-[var(--section-primary)] mt-0.5" />
@@ -403,7 +403,7 @@ export default function ProviderBookingPage() {
                 <p className="text-text-secondary text-sm">
                   {selectedService?.name}
                 </p>
-                <p className="text-lg font-bold text-white">
+                <p className="text-lg font-bold text-content">
                   {selectedDate?.toLocaleDateString(toLocaleTag(locale), {
                     weekday: 'short',
                     day: 'numeric',
