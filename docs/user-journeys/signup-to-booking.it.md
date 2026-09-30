@@ -7,6 +7,7 @@ Come un **provider** (trainer) e un **cliente** passano dalla creazione dell'acc
 | | |
 |--------|----------------------------|
 | **Registrato** | 30 settembre 2026 (seconda registrazione, dopo il passaggio responsive), sul backend di staging (`vfit-app-staging`), app compilata da `main` @ `9f9af27` |
+| **Aggiornato** | 1 ottobre 2026: le schermate cambiate dalle correzioni UI sono state rifatte sull'app di staging pubblicata (`main` @ `9a2fcae`), vedi [Nuove schermate del 1 ottobre 2026](#nuove-schermate-del-1-ottobre-2026) |
 | **Dispositivo** | Viewport mobile 390 × 844 (formato iPhone 12/13/14). Le schermate lunghe sono catturate a tutta altezza |
 | **Tema** | Scuro |
 | **Lingua** | Italiano (l'app è disponibile anche in inglese, spagnolo, francese e tedesco) |
@@ -15,6 +16,8 @@ Come un **provider** (trainer) e un **cliente** passano dalla creazione dell'acc
 | **Prenotazione risultante** | `Yjj9j70g14gVAQzUJAMd`: Personal Training, ven 2 ott 2026, 10:00–11:00, 50 € |
 
 Entrambi gli account sono stati creati da zero per questa guida. Niente è stato precaricato o simulato.
+
+> **Sulle schermate del 1 ottobre.** A quella data la richiesta di ven 2 ott era già confermata, quindi le schermate che richiedono una richiesta aperta (B10–B13, A14–A15) sono state rifatte con una seconda richiesta dello stesso cliente allo stesso trainer: **ven 9 ott 2026, 10:00** (`tAVqith6fgV9DYh1VZSt`), confermata dal trainer e poi annullata dal cliente. Quelle schermate mostrano il 9 ottobre; il resto della guida non cambia.
 
 ---
 
@@ -49,7 +52,7 @@ Il visitatore apre l'app. La sezione principale offre due ingressi: **Registrati
 
 ### A2. Modulo di registrazione (modalità provider)
 
-**Registrati come provider** apre `/auth/register?as=provider`, direttamente sul modulo con email, con l'opzione professionista già spuntata. In alto ci sono il selettore della lingua e l'interruttore del tema chiaro / scuro / di sistema.
+**Registrati come provider** apre `/auth/register?as=provider`, direttamente sul modulo con email, con l'opzione professionista già spuntata. Una riga in alto contiene il selettore della lingua e l'interruttore del tema chiaro / scuro / di sistema; il link **Indietro** sta sotto.
 
 ![Modulo di registrazione provider vuoto](screenshots-it/provider/02-register-start.png)
 
@@ -66,7 +69,7 @@ Il provider inserisce:
 
 ### A4. Opzione professionista e servizi offerti
 
-Con **Voglio anche offrire servizi come professionista** spuntato, il provider sceglie i servizi che offre dal catalogo della piattaforma: prima una categoria (es. *Forza e Condizionamento*), poi uno o più servizi. Qui: **Personal Training** e **Functional Training**. Accetta i Termini di Servizio e la Privacy Policy e tocca **Crea account**.
+Con **Voglio anche offrire servizi come professionista** spuntato, il provider sceglie i servizi che offre dal catalogo della piattaforma: prima una categoria (es. *Forza e Condizionamento*), poi uno o più servizi. Qui: **Personal Training** e **Functional Training**. Spunta la casella per accettare i Termini di Servizio e la Privacy Policy (spuntata è piena, del colore della sezione, con il testo subito accanto) e tocca **Crea account**.
 
 ![Opzione professionista con due servizi selezionati](screenshots-it/provider/04-register-professional-optin.png)
 
@@ -85,11 +88,15 @@ Il provider arriva direttamente nel **Portale provider**. La dashboard conferma 
 
 ![Dashboard del provider al primo accesso](screenshots-it/provider/06-provider-dashboard.png)
 
+*Questo screenshot è del 30 settembre e mostra ancora il vecchio saluto. Ora un nuovo provider viene accolto con **Benvenuto!** ("Bentornato!" solo dopo aver svolto una sessione); vedi A16.*
+
 ### A7. Servizi: le bozze create alla registrazione
 
 **Portale provider → Servizi** elenca una bozza per ogni servizio scelto alla registrazione. Le bozze sono **Non attivo** a **0 €**, quindi i clienti non possono prenotarle finché il provider non imposta un prezzo.
 
 ![Elenco servizi con due bozze non attive](screenshots-it/provider/07-services-drafts.png)
+
+*Gli screenshot A7 e A8 sono del 30 settembre (lo stato con le bozze non si può ricreare). Ora i prezzi sulle schermate del provider sono in formato italiano, es. **0,00 €** e **50,00 €** (vedi A10).*
 
 ### A8. Aprire le azioni del servizio
 
@@ -99,14 +106,14 @@ Il menu **⋮** di un servizio offre **Modifica**, **Duplica**, **Attiva** ed **
 
 ### A9. Prezzo e attivazione del servizio
 
-In **Modifica servizio** il provider aggiunge una descrizione, imposta **Prezzo (€)** a **50** e lascia **Durata (min)** a **60**. Spunta **Servizio attivo** e tocca **Salva modifiche**.
+In **Modifica servizio** il provider aggiunge una descrizione, imposta **Prezzo (€)** a **50** e lascia **Durata (min)** a **60**. Spunta **Servizio attivo** e tocca **Salva modifiche**. La finestra è centrata sul telefono; **Esc** o **Annulla** la chiudono senza salvare.
 (Con **Aggiungi servizio** si possono anche creare nuovi servizi, dal catalogo o personalizzati.)
 
 ![Finestra Modifica servizio](screenshots-it/provider/09-edit-service-form.png)
 
 ### A10. Il servizio è attivo
 
-*Personal Training* ora mostra **50 € / 60 min** e la descrizione, senza il badge *Non attivo*. Il provider compare nei risultati di ricerca con **Da 50,00 €**.
+*Personal Training* ora mostra **50,00 € / 60 min** e la descrizione, senza il badge *Non attivo*. Il provider compare nei risultati di ricerca con **Da 50,00 €**.
 
 ![Personal Training attivo a 50 €](screenshots-it/provider/10-service-active.png)
 
@@ -125,7 +132,7 @@ In **Modifica servizio** il provider aggiunge una descrizione, imposta **Prezzo 
 
 ### A12. Posizione (consigliata)
 
-**Portale provider → Posizione** imposta dove lavora il provider. Cerca un indirizzo (qui *Piazza Gae Aulenti, Milano*), sistema il segnaposto sulla mappa, controlla la **Città** e tocca **Salva posizione**. La conferma dice *"Posizione salvata: ora compari nelle ricerche vicino a te."* Viene salvata solo una posizione approssimata (circa 100 m).
+**Portale provider → Posizione** imposta dove lavora il provider. Cerca un indirizzo (qui *Piazza Gae Aulenti, Milano*), sistema il segnaposto sulla mappa, controlla la **Città** e tocca **Salva posizione**. La conferma dice *"Posizione salvata: ora compari nelle ricerche vicino a te."* Viene salvata solo una posizione approssimata (circa 100 m). La mappa segue il tema dell'app: scura qui, chiara con il tema chiaro.
 
 ![Selezione della posizione](screenshots-it/provider/12-location.png)
 
@@ -135,13 +142,15 @@ In **Modifica servizio** il provider aggiunge una descrizione, imposta **Prezzo 
 
 ### A13. Notifica di nuova richiesta
 
-Quando il cliente prenota, la campanella mostra un badge. **Notifiche** riporta *"Nuova richiesta di prenotazione — Francesca Riva ha richiesto Personal Training (ven 2 ott, 10:00). Accetta o rifiuta dall'app."*
+Quando il cliente prenota, la campanella mostra un badge. **Notifiche** riporta *"Nuova richiesta di prenotazione — Francesca Riva ha richiesto Personal Training (ven 2 ott, 10:00). Accetta o rifiuta dall'app."*, con il tag **PRENOTAZIONE**
 
 ![Notifica di nuova richiesta di prenotazione](screenshots-it/provider/13-new-booking-notification.png)
 
 ### A14. Prenotazioni: la richiesta in attesa di conferma
 
-**Portale provider → Prenotazioni** mostra su telefono ogni prenotazione come una scheda: nome ed email del cliente, stato **IN ATTESA DI CONFERMA**, servizio e durata, data, ora e prezzo, con i pulsanti **Conferma** e **Rifiuta** sempre visibili. Le schede filtrano per Tutte, In attesa, Confermate, Completate e Cancellate; ci sono anche la ricerca per nome del cliente, **Filtri** ed **Esporta**.
+**Portale provider → Prenotazioni** mostra su telefono ogni prenotazione come una scheda: avatar, nome ed email del cliente, stato **IN ATTESA DI CONFERMA** (sotto il nome su telefono), servizio e durata, data, ora e prezzo (**50,00 €**), con i pulsanti **Conferma** e **Rifiuta** sempre visibili. Le schede filtrano per Tutte, In attesa, Confermate, Completate e Annullate; ci sono anche la ricerca per nome del cliente, **Filtri** ed **Esporta**.
+
+*(Rifatta con la richiesta del 9 ottobre; la prenotazione confermata del 2 ottobre è la scheda sotto.)*
 
 ![Prenotazioni del provider, richiesta in attesa](screenshots-it/provider/14-booking-request-list.png)
 
@@ -153,7 +162,7 @@ Il provider tocca **Conferma**. Il pulsante mostra un indicatore di caricamento,
 
 ### A16. Dashboard: prossimo appuntamento
 
-La dashboard ora conta **1** in *Prenotazioni settimana*. *Prossimi appuntamenti* elenca **2 ott · 10:00 · Francesca Riva · Personal Training · Confermato**, con il pulsante **Dettagli**.
+Il saluto è **Benvenuto!**, perché il provider non ha ancora svolto una sessione. La dashboard conta **1** in *Prenotazioni settimana*. *Prossimi appuntamenti* elenca **2 ott · 10:00 · Francesca Riva · Personal Training · Confermato**, con il pulsante **Dettagli**. *Attività recente* elenca **Prenotazione confermata** e **Nuova richiesta di prenotazione** per *Francesca Riva · Personal Training*, dalla più recente; ogni voce apre la prenotazione.
 
 ![Dashboard con il prossimo appuntamento](screenshots-it/provider/16-dashboard-upcoming.png)
 
@@ -210,7 +219,7 @@ Il pulsante **Prenota ora** (al centro della barra in basso) o **Cerca** apre **
 
 ### B8. Trovare il trainer
 
-Il cliente tocca **Vicino a me**, che usa la posizione del dispositivo (qui vicino a Porta Nuova, Milano) con un raggio predefinito di 25 km, e scrive il nome del trainer. **Stefano Longo** compare a **0.1 km**, **VERIFICATO**, **Da 50,00 €**. Tocca **Controlla disponibilità**.
+Il cliente tocca **Vicino a me**, che usa la posizione del dispositivo (qui vicino a Porta Nuova, Milano) con un raggio predefinito di 25 km, e scrive il nome del trainer. **Stefano Longo** compare **VERIFICATO**, **Da 50,00 €** con la distanza (**0.1 km**) accanto al prezzo. Tocca **Verifica disponibilità**.
 
 ![Risultato Vicino a me per il trainer](screenshots-it/customer/08-near-me-results.png)
 
@@ -222,13 +231,13 @@ La pagina del trainer (`/book?providerId=…`) ha le schede **Servizi**, **Recen
 
 ### B10. Scegliere la data
 
-Il calendario si apre sul mese corrente. Il provider richiede 24 ore di preavviso, quindi il cliente passa a **ottobre** con la freccia › e tocca **venerdì 2**. Si possono toccare solo i giorni con almeno un orario libero: weekend, giorni di chiusura e giorni dentro il preavviso sono in grigio (lampeggiano un attimo mentre il calendario controlla il mese).
+Il calendario si apre sul mese corrente e il cliente tocca **venerdì 2** (nello screenshot rifatto, **venerdì 9**). Si possono toccare solo i giorni con almeno un orario libero: weekend, giorni di chiusura e giorni dentro le 24 ore di preavviso del provider (qui oggi, gio 1) sono in grigio. Lampeggiano un attimo mentre il calendario controlla il mese.
 
 ![Selezione della data](screenshots-it/customer/10-pick-date.png)
 
 ### B11. Scegliere l'orario
 
-*Orari disponibili* elenca gli inizi liberi ogni 30 minuti, divisi in **Mattina** e **Pomeriggio** (ora di Europe/Rome). Il cliente sceglie **10:00**. In basso compare il riepilogo *Personal Training · ven 2 ott · 10:00*; tocca **Continua**.
+*Orari disponibili* elenca gli inizi liberi ogni 30 minuti, divisi in **Mattina** e **Pomeriggio** (ora di Europe/Rome). Il cliente sceglie **10:00**. In basso compare il riepilogo *Personal Training · ven 2 ott · 10:00* (*ven 9 ott* nello screenshot); tocca **Continua**.
 
 ![Selezione dell'orario](screenshots-it/customer/11-pick-time.png)
 
@@ -236,7 +245,7 @@ Il calendario si apre sul mese corrente. Il provider richiede 24 ore di preavvis
 
 La schermata di conferma (`/booking/confirm`) mostra:
 
-- trainer, servizio, data e ora (venerdì 2 ottobre · 10:00 · 60 min) e città (Milano)
+- trainer, servizio, data e ora (venerdì 2 ottobre · 10:00 · 60 min; 9 ottobre nello screenshot) e città (Milano)
 - **Nota per il trainer (facoltativa)**, fino a 500 caratteri
 - **Codice promozionale** e **Usa i miei punti** (100 punti = 1,00 €)
 - **Riepilogo prezzi**: Servizio 50,00 €, Totale 50,00 €
@@ -255,7 +264,7 @@ L'app apre il dettaglio della prenotazione con un banner verde: *"Richiesta invi
 
 Il dettaglio della prenotazione mostra:
 
-- lo stato **In attesa di conferma**
+- lo stato **In attesa di conferma**, con il badge sotto l'etichetta
 - nome del trainer e servizio, con un pulsante per scrivergli in chat
 - un **QR TICKET** per il check-in da mostrare in reception
 - data e ora, con **Aggiungi al calendario**
@@ -269,13 +278,13 @@ Il dettaglio della prenotazione mostra:
 
 ### B14. Notifica di prenotazione accettata
 
-Quando il trainer conferma, il cliente riceve *"Prenotazione accettata — Il trainer ha accettato la tua richiesta per Personal Training."*
+Quando il trainer conferma, il cliente riceve *"Prenotazione accettata — Il trainer ha accettato la tua richiesta per Personal Training."*, con il tag **PRENOTAZIONE**.
 
 ![Notifica di prenotazione accettata](screenshots-it/customer/14-notification-confirmed.png)
 
 ### B15. Le mie prenotazioni
 
-**Le mie prenotazioni** (`/bookings`) ha le schede In arrivo, Passate e Annullate, più un pulsante di aggiornamento e **+ Nuova**. In *In arrivo* la sessione compare come **VFIT · CONFERMATO · Personal Training · Stefano Longo · 2 ott, 10:00**.
+**Le mie prenotazioni** (`/bookings`) ha le schede In arrivo, Passate e Annullate, più un pulsante di aggiornamento e **+ Nuova**. In *In arrivo* la sessione compare come **VFIT · CONFERMATO · Personal Training · Stefano Longo · 2 ott, 10:00**, con la freccia › a destra della scheda.
 
 ![Le mie prenotazioni](screenshots-it/customer/15-my-bookings-confirmed.png)
 
@@ -302,26 +311,37 @@ La prima registrazione (sempre il 30 settembre 2026, in tema chiaro) aveva trova
 
 Schermate diverse dalla prima registrazione: le schermate prenotazioni del provider (A14–A16) usano le schede mobile; *Le mie prenotazioni* ha tre schede (In arrivo, Passate, Annullate) più **+ Nuova** invece della scheda *Nuove*; il dettaglio di una prenotazione confermata aggiunge **Riprogramma**; il dettaglio ha un pulsante chat accanto al trainer.
 
+## Nuove schermate del 1 ottobre 2026
+
+I problemi trovati in questa registrazione sono stati corretti il 1 ottobre 2026 (piano `docs/plans/2026-10-01-journey-ui-fixes-plan.md`, attività F1–F9) e pubblicati su staging e produzione. Le schermate che cambiavano sono state rifatte su staging, tema scuro, 390 × 844:
+
+- **Registrazione** (A2–A4, B2–B4): lingua e tema stanno in una riga sopra il link **Indietro** / **Torna al login** invece di coprirlo; la casella dei termini sta accanto al testo ed è piena quando è spuntata.
+- **Modifica servizio** (A9): centrata sul telefono, campi con etichetta, una vera finestra di dialogo che si chiude con Esc.
+- **Prezzi del provider** (A10, A14, A15): in formato italiano (50,00 €).
+- **Mappa della posizione** (A12): scura con il tema scuro.
+- **Prenotazioni del provider** (A14, A15): l'avatar del cliente è un cerchio; il badge di stato va sotto il nome su telefono; la scheda si chiama *Annullate*.
+- **Notifiche** (A13, B14): il tag è *PRENOTAZIONE*.
+- **Dashboard del provider** (A16): **Benvenuto!** per un provider che non ha ancora svolto una sessione, e *Attività recente* ora elenca gli eventi delle prenotazioni.
+- **Prenota un servizio** (B7, B8): il badge *VERIFICATO* resta intero, la distanza sta accanto al prezzo e l'azione si chiama *Verifica disponibilità* come sulla pagina del trainer.
+- **Calendario** (B10, B11): si possono scegliere solo i giorni con almeno un orario libero.
+- **Dettaglio prenotazione** (B13): il badge *IN ATTESA DI CONFERMA* sta sotto l'etichetta di stato invece di uscire dalla scheda.
+- **Le mie prenotazioni** (B15): la freccia › è a destra della scheda.
+
+B12, B13a e B16 sono stati rifatti insieme a queste. La pagina del trainer (B9) era identica con il tema scuro ed è rimasta. A6, A7 e A8 sono rimasti perché lo stato del primo accesso non si può ricreare (vedi le note sotto).
+
 ## Problemi osservati durante questa registrazione
 
-Nessuno di questi ha impedito la prenotazione.
+Nessuno di questi ha impedito la prenotazione. I problemi 1–12 e 14 dell'elenco del 30 settembre sono stati corretti (vedi sopra) e rimossi. Quello rimasto è ora il n. 1; i n. 2–7 sono stati notati rifacendo le schermate il 1 ottobre.
 
 | # | Gravità | Dove | Cosa è successo |
 |--|--------|-----------|-------------------------------------|
-| 1 | Media | Calendario di prenotazione (B10) | Tutti i giorni futuri sono attivi, anche i weekend e i giorni esclusi dal preavviso di 24 ore. Selezionandoli compare *"Nessun orario disponibile"*. I giorni senza orari liberi andrebbero disattivati. |
-| 2 | Media | Modulo di registrazione, riga dei termini (A4, B4) | Il contenitore della casella occupa tutta la larghezza, quindi il testo *Accetto i Termini…* finisce nella metà destra del riquadro. Quando è spuntata, la casella perde lo sfondo e resta solo il segno di spunta. |
-| 3 | Bassa | Prenotazioni del provider, italiano (A14) | Il prezzo appare come `€50.00` (formato inglese) invece di `50,00 €`. |
-| 4 | Bassa | Schermate di registrazione, italiano | Il link **Indietro** / **Torna al login** finisce sotto il selettore della lingua a 390 px. |
-| 5 | Bassa | Dettaglio prenotazione (B13) | Il badge *IN ATTESA DI CONFERMA* esce dal bordo destro della scheda di stato. |
-| 6 | Bassa | Prenotazioni del provider (A14) | L'avatar del cliente è schiacciato in un ovale stretto. |
-| 7 | Bassa | Prenota un servizio (B7, B8) | Il badge *VERIFICATO* viene tagliato sul bordo della scheda con i nomi lunghi. Nei risultati con la distanza, "0.1 km" va a capo tra il prezzo e *Controlla disponibilità*. |
-| 8 | Bassa | Finestra Modifica servizio (A9) | La finestra non è centrata su telefono (16 px di margine a sinistra, circa 48 px a destra). Le etichette non sono collegate ai campi e manca `role="dialog"`. |
-| 9 | Bassa | Dashboard del provider (A6, A16) | Un provider appena registrato viene accolto con *"Bentornato!"*. *Attività recente* resta vuota dopo una richiesta e una conferma. |
-| 10 | Bassa | Testi italiani | Il tag delle notifiche resta *BOOKING* e la descrizione dice "per booking"; la stessa azione si chiama *Controlla disponibilità* nei risultati e *Verifica disponibilità* sulla pagina del trainer; lo stato annullato è *Cancellate* nel portale provider e *Annullate* per il cliente. |
-| 11 | Bassa | Le mie prenotazioni (B15) | La freccia › della scheda sta sotto l'avatar, in basso a sinistra. |
-| 12 | Info | Pagine provider | Il layout provider annida due landmark `<main>`. |
-| 13 | Info | Staging | Su staging non arriva nessuna email di verifica (i secret email sono segnaposto per scelta), quindi il banner *Conferma la tua email* resta visibile. Non blocca registrazione, configurazione dei servizi o prenotazione. |
-| 14 | Info | Mappa della posizione (A12) | La mappa Google resta in stile chiaro con il tema scuro. |
+| 1 | Info | Staging | Su staging non arriva nessuna email di verifica (i secret email sono segnaposto per scelta), quindi il banner *Conferma la tua email* resta visibile. Non blocca registrazione, configurazione dei servizi o prenotazione. |
+| 2 | Bassa | Dashboard del provider (A16) | *Guadagni mese* è composto a mano come `€0` (`provider/dashboard/page.tsx`), quindi in italiano appare *€0* invece di *0 €*. |
+| 3 | Bassa | Testi italiani | Il sottotitolo delle Notifiche dice ancora *"Centro notifiche per booking, …"* (`notifications.subtitle`). |
+| 4 | Bassa | Prenota un servizio (B8) | La distanza usa il punto decimale (*0.1 km*) invece di *0,1 km*. |
+| 5 | Bassa | Prenota un servizio (B8) | Accessibilità: né la scheda del risultato né il testo *Verifica disponibilità* sono un link o un pulsante, quindi chi usa tastiera o screen reader non può aprire un trainer dai risultati. |
+| 6 | Bassa | Schermate cliente, inglese | In inglese i prezzi lato cliente restano in formato italiano (*From 50,00 €*), mentre le schermate del provider mostrano *€50.00*. |
+| 7 | Info | Dettaglio prenotazione, Annulla prenotazione | Accessibilità: la conferma *Mantieni / Annulla* che si apre da **Annulla prenotazione** non è marcata come finestra di dialogo (manca `role="dialog"`). |
 
 ---
 
