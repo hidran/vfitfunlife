@@ -61,7 +61,7 @@ function PaymentSettingsForm({ initial }: { initial: PaymentSettings }) {
   return (
     <div className="bg-surface rounded-2xl border border-hairline p-6 lg:col-span-2">
       <div className="flex items-center gap-3 mb-2">
-        <div className="w-10 h-10 rounded-xl bg-[#10B981]/20 flex items-center justify-center">
+        <div className="w-10 h-10 shrink-0 rounded-xl bg-[#10B981]/20 flex items-center justify-center">
           <CreditCard className="w-5 h-5 text-[#10B981] light:text-emerald-700" />
         </div>
         <div>
@@ -82,7 +82,15 @@ function PaymentSettingsForm({ initial }: { initial: PaymentSettings }) {
             : "admin.settings.paymentSwitches.stripe.offHint"
         }
         checked={draft.stripePaymentsEnabled}
-        onChange={(v) => setDraft((d) => ({ ...d, stripePaymentsEnabled: v }))}
+        // Subscriptions can't outlive Stripe: switching Stripe off clears the stored flag too, so
+        // re-enabling Stripe later never silently re-arms VIP sales.
+        onChange={(v) =>
+          setDraft((d) => ({
+            ...d,
+            stripePaymentsEnabled: v,
+            subscriptionsEnabled: v ? d.subscriptionsEnabled : false,
+          }))
+        }
       />
 
       <SwitchRow
