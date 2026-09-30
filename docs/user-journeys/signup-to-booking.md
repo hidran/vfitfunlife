@@ -2,14 +2,17 @@
 
 How a **provider** (trainer) and a **customer** get from creating an account to a confirmed appointment, step by step, with a screenshot of every screen.
 
+*Italian version: [signup-to-booking.it.md](signup-to-booking.it.md).*
+
 | | |
 |--------|----------------------------|
-| **Recorded** | 30 September 2026, against the staging backend (`vfit-app-staging`), app built from `main` @ `a79f758` |
-| **Device** | Mobile viewport 390 × 844 (iPhone 12/13/14 size). The provider's booking-management screens are also shown at desktop width (1280 px) |
+| **Recorded** | 30 September 2026 (second recording, after the responsive pass), against the staging backend (`vfit-app-staging`), app built from `main` @ `9f9af27` |
+| **Device** | Mobile viewport 390 × 844 (iPhone 12/13/14 size). Long screens are captured at full height |
+| **Theme** | Dark |
 | **Language** | English (the app also ships in Italian, Spanish, French and German) |
-| **Provider used** | Luca Bianchi, `journey.provider@vitfitdemo.dev` |
-| **Customer used** | Giulia Verdi, `journey.customer@vitfitdemo.dev` |
-| **Resulting booking** | `Q2scEOoU5bsCjsaqgB18`: Personal Training, Fri 2 Oct 2026, 10:00–11:00, €50 |
+| **Provider used** | Davide Moretti, `journey.en.provider@vitfitdemo.dev` |
+| **Customer used** | Elena Gallo, `journey.en.customer@vitfitdemo.dev` |
+| **Resulting booking** | `Dfi6vOZj7RoHLRkQkNn0`: Personal Training, Fri 2 Oct 2026, 10:00–11:00, €50 |
 
 Both accounts were created fresh for this walkthrough. Nothing in it was seeded or mocked.
 
@@ -46,7 +49,7 @@ The visitor opens the app. The hero offers two entry points: **Register as a cus
 
 ### A2. Signup form (provider mode)
 
-**Register as a provider** opens `/auth/register?as=provider`. It goes straight to the email signup form, with the professional opt-in already ticked.
+**Register as a provider** opens `/auth/register?as=provider`. It goes straight to the email signup form, with the professional opt-in already ticked. The header has the language picker and the light / dark / system theme switch.
 
 ![Empty provider signup form](screenshots/provider/02-register-start.png)
 
@@ -78,7 +81,7 @@ After signup the app asks for **Location** (to find nearby gyms, events and serv
 
 ### A6. Provider dashboard
 
-The provider lands directly in the **Provider portal**. The dashboard confirms they are already bookable (*"You're bookable Mon–Fri 9:00–17:00 — check your hours"*) and suggests adding a location. A **Confirm your email** banner asks them to click the verification link sent to their inbox. It does not block anything in this journey.
+The provider lands directly in the **Provider portal**. The dashboard confirms they are already bookable (*"You're bookable Mon–Fri 9:00–17:00 — check your hours"*) and suggests adding a location. A **Confirm your email** banner above the *Provider portal* bar asks them to click the verification link sent to their inbox. It does not block anything in this journey.
 
 ![Provider dashboard on first login](screenshots/provider/06-provider-dashboard.png)
 
@@ -90,7 +93,7 @@ The provider lands directly in the **Provider portal**. The dashboard confirms t
 
 ### A8. Open the service actions
 
-The **⋮** menu on a service card offers **Edit**, **Duplicate**, **Activate** and **Delete**. The provider opens it on *Personal Training* and taps **Edit**. (The screenshot shows the same menu on the *Functional Training* draft, taken after *Personal Training* had been priced.)
+The **⋮** menu on a service card offers **Edit**, **Duplicate**, **Activate** and **Delete**. The provider opens it on *Personal Training* and taps **Edit**.
 
 ![Service actions menu](screenshots/provider/08-service-actions-menu.png)
 
@@ -103,7 +106,7 @@ In **Edit Service** the provider adds a description, sets **Price (€)** to **5
 
 ### A10. The service is live
 
-*Personal Training* now shows **€50 / 60 min** with no *Inactive* badge. The provider appears in search results with **From 50,00 €**.
+*Personal Training* now shows **€50 / 60 min** and its description, with no *Inactive* badge. The provider appears in search results with **From 50,00 €**.
 
 ![Personal Training active at €50](screenshots/provider/10-service-active.png)
 
@@ -122,38 +125,37 @@ In **Edit Service** the provider adds a description, sets **Price (€)** to **5
 
 ### A12. Location (recommended)
 
-**Provider portal → Location** sets where the provider works. They search an address (here *Piazza del Duomo, Milano*), fine-tune the pin on the map and tap **Save location**. The confirmation reads *"Location saved: you now show up in 'near me' searches."* Only an approximate position (~100 m) is stored.
+**Provider portal → Location** sets where the provider works. They search an address (here *Piazza Gae Aulenti, Milano*), fine-tune the pin on the map, check the **City** and tap **Save location**. The confirmation reads *"Location saved: you now show up in 'near me' searches."* Only an approximate position (~100 m) is stored.
 
 ![Location picker](screenshots/provider/12-location.png)
 
-> **Why this step matters:** in the current build, **Near me** is the reliable way for a customer to find a brand-new provider (see [Issue 1](#issues-observed-during-the-walkthrough)).
+> Customers can find the provider by typing their name even without a location. The location adds them to **Near me** results and shows the distance.
 
 *The provider is now live. [Part B](#part-b-customer-journey) shows the customer booking them. The provider's side then resumes at A13.*
 
 ### A13. New booking request notification
 
-When the customer books, the bell shows an unread badge. **Notifications** shows *"New booking request — Giulia Verdi requested Personal Training (Fri, Oct 2, 10:00 AM). Accept or decline it in the app."*
+When the customer books, the bell shows an unread badge. **Notifications** shows *"New booking request — Elena Gallo requested Personal Training (Fri, Oct 2, 10:00 AM). Accept or decline it in the app."*
 
 ![New booking request notification](screenshots/provider/13-new-booking-notification.png)
 
 ### A14. Bookings: the request awaiting confirmation
 
-**Provider portal → Bookings** lists the request with client, service, date and time, price, status **AWAITING CONFIRMATION**, and the **Confirm** and **Decline** actions. The tabs filter by All, Pending, Confirmed, Completed and Cancelled.
-(Shown at desktop width. On a phone the table scrolls sideways and the actions start off-screen; see [Issue 2](#issues-observed-during-the-walkthrough).)
+**Provider portal → Bookings** shows each booking as a card on a phone: client name and email, status **AWAITING CONFIRMATION**, service and duration, date, time and price, with the **Confirm** and **Decline** buttons always visible. The tabs filter by All, Pending, Confirmed, Completed and Cancelled; there is also a client-name search, **Filters** and **Export**.
 
-![Provider bookings, request awaiting confirmation](screenshots/provider/14-booking-request-list-desktop.png)
+![Provider bookings, request awaiting confirmation](screenshots/provider/14-booking-request-list.png)
 
 ### A15. Confirm the booking
 
-The provider taps **Confirm**. The status becomes **CONFIRMED** and the row action changes to **Complete**, which is used after the session. The customer is notified.
+The provider taps **Confirm**. The button shows a spinner, then the card switches to **CONFIRMED** and a toast reads *"Booking confirmed: the client will be notified."* The card action becomes **Complete**, which is used after the session.
 
-![Booking confirmed](screenshots/provider/15-booking-accepted-desktop.png)
+![Booking confirmed](screenshots/provider/15-booking-accepted.png)
 
 ### A16. Dashboard: upcoming appointment
 
-The dashboard now counts **1** under *This Week's Bookings*. *Upcoming Appointments* lists **Oct 2 · 10:00 AM · Giulia Verdi · Personal Training · Confirmed**.
+The dashboard now counts **1** under *This Week's Bookings*. *Upcoming Appointments* lists **Oct 2 · 10:00 AM · Elena Gallo · Personal Training · Confirmed**, with a **Details** button.
 
-![Dashboard with the upcoming appointment](screenshots/provider/16-dashboard-upcoming-desktop.png)
+![Dashboard with the upcoming appointment](screenshots/provider/16-dashboard-upcoming.png)
 
 ---
 
@@ -200,7 +202,7 @@ The customer lands on **Home**, which shows gyms and locations, active classes, 
 The **Book now** button (centre of the bottom bar) or **Search** opens **Book a service** (`/booking`). The customer can:
 
 - search by trainer or service name
-- filter by category (Strength & Conditioning, Cardio & Endurance, Combat Sports, Mind & Body, Dance & Group, Therapy & Recovery, Nutrition & Lifestyle, Mental Wellness)
+- filter by category (Strength & Conditioning, Cardio & Endurance, Combat Sports, Mind & Body, Dance & Group, Therapy & Recovery, Nutrition & Lifestyle, Mental Wellness) and with **Filters**
 - use **Near me** with a radius (5 / 10 / 25 / 50 km / All)
 - switch between list and map view
 
@@ -208,19 +210,19 @@ The **Book now** button (centre of the bottom bar) or **Search** opens **Book a 
 
 ### B8. Find the trainer
 
-The customer taps **Near me**, which uses the device location (here central Milan), and types the trainer's name. **Luca Bianchi** appears **0.1 km** away, marked **VERIFIED**, **From 50,00 €**. They tap **Check availability**.
+The customer taps **Near me**, which uses the device location (here near Porta Nuova, Milan) with a default radius of 25 km, and types the trainer's name. **Davide Moretti** appears first, **0.1 km** away, marked **VERIFIED**, **From 50,00 €**. (A seeded trainer with the same name shows up further down, 1.3 km away.) They tap **Check availability**.
 
 ![Near-me result for the trainer](screenshots/customer/08-near-me-results.png)
 
 ### B9. Trainer page: select a service
 
-The trainer's page (`/book?providerId=…`) has **Services**, **Reviews** and **About** tabs and a **Message** button. Under *Select a service* the customer taps **Select** on *Personal Training (1 h, 50,00 €)*.
+The trainer's page (`/book?providerId=…`) has **Services**, **Reviews** and **About** tabs and the **Message** and **Check availability** buttons. Under *Select a service* the customer taps **Select** on *Personal Training (1 h, 50,00 €)*.
 
 ![Trainer booking page](screenshots/customer/09-provider-booking-page.png)
 
 ### B10. Pick a date
 
-The calendar opens on the current month. Only days with free slots are enabled. The provider requires 24 h notice, so the customer moves to **October** with the › arrow and taps **Friday 2**.
+The calendar opens on the current month. The provider requires 24 h notice, so the customer moves to **October** with the › arrow and taps **Friday 2**. Days are not greyed out by availability: a day without free slots (a weekend, or tomorrow once the notice period rules it out) opens with *"No times available"*.
 
 ![Date picker](screenshots/customer/10-pick-date.png)
 
@@ -241,7 +243,7 @@ The confirmation screen (`/booking/confirm`) shows:
 - **Pay your trainer**: nothing is paid in the app; the customer pays €50 directly, and earns +50 XP once the trainer records the payment after the session
 - the **Terms of service** and **Cancellation policy** checkbox (*free cancellation within 24 hours*), which is required
 
-The customer ticks the checkbox and taps **Confirm**.
+The customer writes a note, ticks the checkbox and taps **Confirm**.
 
 ![Confirm booking](screenshots/customer/12-confirm-booking.png)
 
@@ -254,6 +256,7 @@ The app opens the booking detail with a green banner: *"Request sent, waiting fo
 The booking detail shows:
 
 - status **Awaiting confirmation**
+- the trainer's name and service, with a chat button to message the trainer
 - a **check-in QR ticket** to show at reception
 - date and time, with **Add to calendar**
 - the note left for the trainer
@@ -272,13 +275,13 @@ Once the trainer confirms, the customer gets *"Booking accepted — Your trainer
 
 ### B15. My bookings
 
-**Bookings** (`/bookings`) has the tabs New, Upcoming, Past and Cancelled. It lists the session as **CONFIRMED · Personal Training · Oct 2, 10:00 AM**.
+**My bookings** (`/bookings`) has the tabs Upcoming, Past and Cancelled, plus a refresh button and **+ New**. Under *Upcoming* it lists the session as **VFIT · CONFIRMED · Personal Training · Davide Moretti · Oct 2, 10:00 AM**.
 
 ![My bookings](screenshots/customer/15-my-bookings-confirmed.png)
 
 ### B16. Booking detail: confirmed
 
-The booking detail now shows status **Confirmed**. The QR check-in ticket, calendar export, receipt and cancellation option are still available.
+The booking detail now shows status **Confirmed**. The QR check-in ticket, calendar export and receipt are still available, and the actions are now **Reschedule** and **Cancel booking**.
 
 ![Booking detail, confirmed](screenshots/customer/16-booking-detail-confirmed.png)
 
@@ -286,38 +289,53 @@ The booking detail now shows status **Confirmed**. The QR check-in ticket, calen
 
 ---
 
-## Issues observed during the walkthrough
+## What changed since the first recording
 
-These came up while recording the journeys on 30 Sep 2026. None of them stopped the booking from going through. **Issues 1–7 and 9 were fixed the same day**; see *Fixes* below the table. The screenshots above were taken before the fixes.
+The first recording (earlier on 30 Sep 2026, light theme) found nine issues; issues 1–7 and 9 were fixed the same day (commit `fa4ec61`). This recording confirms the fixes that show up in the flow:
+
+- **Search by name** finds a brand-new provider without a location (typing "Davide Moretti" with Near me off lists him).
+- **Provider bookings on a phone** are cards with Confirm / Decline / Complete always visible, so A14–A16 are now shown at phone width instead of desktop width.
+- **Confirm feedback**: the button shows a spinner, the card switches to *Confirmed* straight away and a toast confirms it.
+- **Trainer name** appears on the customer's booking card and booking detail (initials avatar instead of "?").
+- **Email banner** sits above the *Provider portal* bar instead of under it.
+- **Selected time slot** uses dark text on the section colour.
+
+Screens that differ from the first recording: the provider's booking screens (A14–A16) are the mobile card layout; *My bookings* has three tabs (Upcoming, Past, Cancelled) plus **+ New** instead of a *New* tab; the confirmed booking detail adds **Reschedule**; the booking detail has a chat button next to the trainer.
+
+## Issues observed during this walkthrough
+
+None of these stopped the booking from going through.
 
 | # | Severity | Where | What happened |
 |--|--------|-----------|-------------------------------------|
-| 1 | **High** | Book a service → search (`src/lib/firebookings.ts`, `searchProviders`) | **A brand-new provider cannot be found by name.** The search fetches the first 50 verified instructors *by document id* and only then filters by the text typed. Searching "Luca Bianchi" returned only an older seeded trainer with the same name. The new provider was reachable only through **Near me**, once they had set a location. A provider who skips the location step may not be findable by name at all. |
-| 2 | Medium | Provider → Bookings, mobile | The bookings table scrolls sideways on a phone, so the **Confirm / Decline** buttons start off-screen and nothing hints that they are there. |
-| 3 | Medium | Provider → Bookings | After tapping **Confirm**, the row still showed *Awaiting confirmation* ~5 s later. It showed *Confirmed* only after a page reload. There was no loading or success feedback in the meantime. |
-| 4 | Medium | Customer → Booking detail | The trainer's **name is missing** from the booking card: it shows only a "?" avatar and the service name. The confirm screen does show it. |
-| 5 | Low | Mobile provider portal | The sticky *Provider portal* header covers the top of the **Confirm your email** banner (its title and text are hidden). |
-| 6 | Low | Time-slot picker | The selected slot (white text on light cyan) has low contrast and may fail WCAG AA. |
-| 7 | Low | Console | `Query data cannot be undefined … ["user-bookings", <uid>]` (TanStack Query) on the customer's bookings, and a 404 for `/images/placeholder.jpg`. |
-| 8 | Info | Staging | No verification email arrives on staging (email secrets are placeholders by design), so the *Confirm your email* banner stays up. It did not block signup, service setup or booking. |
-| 9 | Info | E2E suite | The terms checkbox on the confirm screen is now a real `<input type="checkbox">`. `e2e/journey/journey.spec.ts` still clicks an unlabeled `<button>` inside `div.flex.items-start.gap-3` and may need updating (not run as part of this walkthrough). |
-
-### Fixes (30 Sep 2026)
-
-1. **Search by name:** a trigger (`onInstructorWriteSearchIndex`) now keeps a `searchTerms` array of name, specialty and category prefixes on every provider. A typed query becomes one indexed `array-contains` lookup, so every provider is findable by name without a location. Existing providers are indexed by `scripts/backfill-provider-search.mjs`.
-2. **Bookings on mobile:** below the `md` breakpoint each booking is a card, with Confirm / Decline / Complete always visible.
-3. **Action feedback:** the pressed button shows a spinner, and a toast reports success or failure. The row switches status as soon as the server answers, then the list refreshes quietly with the current tab. **Decline** now declines the request (status `declined`, "declined" notification) instead of cancelling it as the trainer.
-4. **Trainer name:** bookings are normalized so a trainer session's `instructorName` fills `providerName`. `Avatar` now takes initials from `alt` when no `name` is given, so cards show "LB" instead of "?".
-5. **Email banner:** the mobile *Provider portal* bar is sticky instead of fixed, so it sits below the banner instead of over it.
-6. **Slot contrast:** the selected slot and day use dark text on the section colour (6–12:1 contrast), with no hover tint once selected.
-7. **Console:** the booking-detail queries resolve to `null` instead of `undefined`, and the placeholder booking no longer points at a missing image.
-9. **E2E:** `journey.spec.ts` ticks the terms with `getByRole('checkbox', { name: /accetto i/i })`.
+| 1 | Medium | Booking calendar (B10) | Every future day is enabled, including weekends and days that the 24 h notice rules out. Picking one shows *"No times available"*. Days without free slots should be disabled. |
+| 2 | Medium | Signup form, terms row (A4, B4) | The checkbox wrapper takes the full width, so the *I accept the Terms…* text is pushed to the right half of the box. When ticked, the box loses its fill and only a bare check mark shows. |
+| 3 | Low | Provider bookings, Italian (A14) | The price is shown as `€50.00` (English format) instead of `50,00 €`. |
+| 4 | Low | Signup screens, Italian | The **Indietro** / **Torna al login** back link runs under the language picker at 390 px. |
+| 5 | Low | Booking detail (B13) | The *AWAITING CONFIRMATION* badge sticks out past the right edge of the status card. |
+| 6 | Low | Provider bookings (A14) | The client avatar is squashed into a narrow oval. |
+| 7 | Low | Book a service (B7, B8) | The *VERIFIED* badge is clipped at the card edge for long names. On results with a distance, "0.1 km" wraps between the price and *Check availability*. |
+| 8 | Low | Edit Service dialog (A9) | The dialog is not centred on a phone (16 px left margin, about 48 px right). Its field labels are not linked to their inputs, and it has no `role="dialog"`. |
+| 9 | Low | Provider dashboard (A6, A16) | A brand-new provider is greeted with *"Welcome back!"*. *Recent Activity* stays empty after a booking request and a confirmation. |
+| 10 | Low | My bookings (B15) | The card's › chevron sits under the avatar, at the bottom-left of the card. |
+| 11 | Low | Italian copy | The notification tag stays *BOOKING* and its description says "per booking"; the same action is *Controlla disponibilità* in results but *Verifica disponibilità* on the trainer page; the cancelled status is *Cancellate* in the provider portal but *Annullate* for the customer. |
+| 12 | Info | Provider pages | The provider layout nests two `<main>` landmarks. |
+| 13 | Info | Staging | No verification email arrives on staging (email secrets are placeholders by design), so the *Confirm your email* banner stays up. It does not block signup, service setup or booking. |
+| 14 | Info | Location map (A12) | The Google map stays in its light style in dark theme. |
 
 ---
 
 ## Reproducing this walkthrough
 
-1. Staging only lets in allowlisted emails. A superadmin adds them first at **Admin → Staging access** (`/admin/staging-access`).
+1. Staging only lets in allowlisted emails. A superadmin adds them first at **Admin → Staging access** (`/admin/staging-access`), or they are written to `stagingAllowlist/{email}` with the Admin SDK.
 2. Run the app locally against staging with `npm run dev` (`.env.local` points at `vfit-app-staging`). The staging gate is skipped on `localhost`, but sign-up is still checked against the allowlist on the server.
-3. Follow Part A, then Part B, then A13–A16 and B14–B16.
-4. Since the Issue 1 fix, the new provider can also be found by typing their name.
+3. Set dark theme with the theme switch (or `localStorage['vfit.theme'] = 'dark'`) and English with the language picker (`localStorage['vfit.locale'] = 'en'`).
+4. Follow Part A, then Part B, then A13–A16 and B14–B16.
+5. Regenerate the Word file (pandoc + Pillow; screenshots are sized like the first recording, 844 px = 14.1 cm, capped at 20 cm):
+
+   ```bash
+   cd docs/user-journeys
+   python3 build-docx.py signup-to-booking.md signup-to-booking.docx \
+     "VFit — Signup-to-Booking User Journeys" \
+     "Provider and customer, from account creation to a confirmed appointment" en-US
+   ```

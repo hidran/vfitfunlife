@@ -9,7 +9,7 @@ Index of project documentation. Each file is the canonical source for its topic;
 | [architecture.md](architecture.md) | System architecture, data flow, key technical decisions |
 | [features.md](features.md) | Feature catalog across VFit / VFun / VLife verticals |
 | [user-flows.md](user-flows.md) | End-to-end user journeys (auth, booking, payment, etc.) |
-| [user-journeys/signup-to-booking.md](user-journeys/signup-to-booking.md) | Screenshot walkthrough: provider and customer from signup to a confirmed booking (also as `.docx`) |
+| [user-journeys/signup-to-booking.md](user-journeys/signup-to-booking.md) · [Italiano](user-journeys/signup-to-booking.it.md) | Screenshot walkthrough (dark theme, mobile): provider and customer from signup to a confirmed booking, in English and Italian (each also as `.docx`) |
 | [database-schema.md](database-schema.md) | Firestore collections, document shapes, indexes |
 | [design-system.md](design-system.md) | Brand identity, color tokens, typography, component inventory, Tailwind v4 patterns |
 | [wireframe/](wireframe/) | Reference wireframes and layout mockups |
