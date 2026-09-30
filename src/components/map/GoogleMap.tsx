@@ -4,6 +4,8 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
+import { useTheme } from '@/contexts/ThemeContext';
+import { mapStylesFor } from './mapStyles';
 
 interface Gym {
   id: string;
@@ -26,6 +28,9 @@ interface GoogleMapProps {
 
 export function GoogleMap({ gyms, userLocation, onGymSelect, className }: GoogleMapProps) {
   const { t } = useI18n();
+  const { theme } = useTheme();
+  // Latest theme for the map's creation; later switches go through setOptions below.
+  const themeRef = useRef(theme);
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim();
   const hasPlaceholderKey = !apiKey || /your_|example|xxx/i.test(apiKey);
   const mapRef = useRef<HTMLDivElement>(null);
@@ -61,38 +66,7 @@ export function GoogleMap({ gyms, userLocation, onGymSelect, className }: Google
         streetViewControl: false,
         fullscreenControl: false,
         zoomControl: true,
-        styles: [
-          {
-            featureType: 'all',
-            elementType: 'geometry',
-            stylers: [{ color: '#1a1d29' }],
-          },
-          {
-            featureType: 'all',
-            elementType: 'labels.text.fill',
-            stylers: [{ color: '#8a8d99' }],
-          },
-          {
-            featureType: 'all',
-            elementType: 'labels.text.stroke',
-            stylers: [{ color: '#1a1d29' }],
-          },
-          {
-            featureType: 'road',
-            elementType: 'geometry',
-            stylers: [{ color: '#2a2d3a' }],
-          },
-          {
-            featureType: 'water',
-            elementType: 'geometry',
-            stylers: [{ color: '#151825' }],
-          },
-          {
-            featureType: 'poi',
-            elementType: 'labels',
-            stylers: [{ visibility: 'off' }],
-          },
-        ],
+        styles: mapStylesFor(themeRef.current, { hidePoiLabels: true }),
       };
 
       googleMapRef.current = new google.maps.Map(mapRef.current, mapOptions);
@@ -124,6 +98,13 @@ export function GoogleMap({ gyms, userLocation, onGymSelect, className }: Google
       markersRef.current = [];
     };
   }, [apiKey, hasPlaceholderKey, t, userLocation]);
+
+  // Follow the resolved theme live (the map is created once per location, not per theme).
+  useEffect(() => {
+    themeRef.current = theme;
+    if (isLoading) return;
+    googleMapRef.current?.setOptions({ styles: mapStylesFor(theme, { hidePoiLabels: true }) });
+  }, [theme, isLoading]);
 
   // Add/update markers when gyms change
   useEffect(() => {

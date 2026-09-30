@@ -6,6 +6,8 @@ import { Crosshair, MapPin, Save, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useI18n } from '@/hooks/useI18n';
+import { useTheme } from '@/contexts/ThemeContext';
+import { mapStylesFor } from '@/components/map/mapStyles';
 import type { MessageKey } from '@/i18n/messages';
 import type { LatLng } from '@/lib/geo';
 import { getDevicePosition } from '@/lib/deviceLocation';
@@ -33,6 +35,7 @@ interface LocationEditorProps {
  */
 export function LocationEditor({ initial, onSave }: LocationEditorProps) {
   const { t } = useI18n();
+  const { theme } = useTheme();
   const apiKey = mapsApiKey();
   const [point, setPoint] = useState<LatLng | null>(initial.coords);
   const [city, setCity] = useState(initial.city);
@@ -86,6 +89,7 @@ export function LocationEditor({ initial, onSave }: LocationEditorProps) {
           streetViewControl: false,
           fullscreenControl: false,
           clickableIcons: false,
+          styles: mapStylesFor(theme),
         });
         const marker = new google.maps.Marker({
           map,
@@ -119,9 +123,14 @@ export function LocationEditor({ initial, onSave }: LocationEditorProps) {
     return () => {
       cancelled = true;
     };
-    // initial/t only seed the first render of the map.
+    // initial/t/theme only seed the first render of the map (theme switches: effect below).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiKey]);
+
+  // Follow the resolved theme live.
+  useEffect(() => {
+    if (mapsReady) mapRef.current?.setOptions({ styles: mapStylesFor(theme) });
+  }, [mapsReady, theme]);
 
   // Keep the pin on the picked point.
   useEffect(() => {
