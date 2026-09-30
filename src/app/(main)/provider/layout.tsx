@@ -164,8 +164,8 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
         )}
       </div>
 
-      {/* Main Content */}
-      <main className="min-w-0 flex-1 lg:ml-0">
+      {/* Main Content — a div: MainLayout already provides the page's one <main> landmark */}
+      <div className="min-w-0 flex-1 lg:ml-0">
         <div className="p-4 lg:p-8 max-w-7xl mx-auto">
           {status === 'pending' && (
             <div className="mb-4 flex items-center gap-3 rounded-xl border border-[#F59E0B]/30 bg-[#F59E0B]/10 p-4">
@@ -177,7 +177,7 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
           )}
           {children}
         </div>
-      </main>
+      </div>
     </div>
   );
 }
