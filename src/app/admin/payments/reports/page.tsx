@@ -66,7 +66,7 @@ export default function PaymentReportsPage() {
             {t('admin.reports.subtitle')}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <select
             value={dateRange}
             onChange={(e) => setDateRange(e.target.value)}
@@ -87,7 +87,7 @@ export default function PaymentReportsPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 min-[400px]:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-surface rounded-xl border border-hairline p-5">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-xl bg-[#10B981]/20 flex items-center justify-center">

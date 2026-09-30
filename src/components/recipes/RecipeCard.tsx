@@ -44,12 +44,13 @@ export function RecipeCard({ recipe, onShare, onEdit, onDelete, shared }: Recipe
 
   return (
     <div className="bg-surface-elevated rounded-xl border border-hairline p-5">
-      <div className="flex items-start justify-between gap-3">
+      {/* Wraps on narrow phones: the actions drop under the title instead of squeezing it. */}
+      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          className="flex flex-1 items-center gap-3 text-left min-h-11 rounded-lg focus-ring"
+          className="flex min-w-[12rem] flex-1 items-center gap-3 text-left min-h-11 rounded-lg focus-ring"
         >
           <span className="w-10 h-10 rounded-lg bg-surface-input flex items-center justify-center shrink-0">
             <ChefHat className="w-5 h-5 text-section-primary" aria-hidden />
@@ -68,7 +69,7 @@ export function RecipeCard({ recipe, onShare, onEdit, onDelete, shared }: Recipe
         </button>
 
         {(onShare || onEdit || onDelete) && (
-          <div className="flex gap-1 shrink-0">
+          <div className="ml-auto flex gap-1 shrink-0">
             {onShare && (
               <button
                 type="button"

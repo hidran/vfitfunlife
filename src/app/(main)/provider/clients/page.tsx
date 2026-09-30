@@ -89,8 +89,8 @@ export default function ProviderClientsPage() {
             href={`/provider/clients/detail?id=${client.id}`}
             className="bg-surface-elevated rounded-xl border border-hairline p-5 hover:border-section-primary/50 transition-colors group"
           >
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-4">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-4">
                 {client.photoUrl ? (
                   <Image
                     src={client.photoUrl}
@@ -98,20 +98,20 @@ export default function ProviderClientsPage() {
                     width={56}
                     height={56}
                     unoptimized
-                    className="w-14 h-14 rounded-full object-cover"
+                    className="w-14 h-14 shrink-0 rounded-full object-cover"
                   />
                 ) : (
-                  <div className="w-14 h-14 rounded-full bg-section-gradient flex items-center justify-center">
+                  <div className="w-14 h-14 shrink-0 rounded-full bg-section-gradient flex items-center justify-center">
                     <span className="text-xl font-semibold text-white">
                       {client.name.charAt(0)}
                     </span>
                   </div>
                 )}
-                <div>
-                  <h3 className="font-semibold text-content group-hover:text-section-primary light:group-hover:text-primary-dark transition-colors">
+                <div className="min-w-0">
+                  <h3 className="truncate font-semibold text-content group-hover:text-section-primary light:group-hover:text-primary-dark transition-colors">
                     {client.name}
                   </h3>
-                  <p className="text-sm text-content-muted">{client.email}</p>
+                  <p className="truncate text-sm text-content-muted">{client.email}</p>
                   {client.accountStatus === 'invited' && (
                     <span className="inline-flex mt-1 px-2 py-0.5 rounded-full bg-warning/15 text-warning text-xs font-medium">
                       {t('provider.clients.pendingConfirmation')}
@@ -125,7 +125,7 @@ export default function ProviderClientsPage() {
                   )}
                 </div>
               </div>
-              <ChevronRight className="w-5 h-5 text-content-faint light:text-content-muted group-hover:text-section-primary light:group-hover:text-primary-dark transition-colors" />
+              <ChevronRight className="w-5 h-5 shrink-0 text-content-faint light:text-content-muted group-hover:text-section-primary light:group-hover:text-primary-dark transition-colors" />
             </div>
 
             <div className="grid grid-cols-3 gap-4 mt-5 pt-4 border-t border-hairline">

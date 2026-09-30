@@ -75,11 +75,11 @@ export function ActivityFeed({ activities, className }: ActivityFeedProps) {
             {/* Content */}
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-sm font-medium text-content">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-content break-words">
                     {activity.action}
                   </p>
-                  <p className="text-sm text-content-muted mt-0.5">
+                  <p className="text-sm text-content-muted mt-0.5 break-words">
                     {activity.description}
                   </p>
                   {activity.userName && (
@@ -88,7 +88,7 @@ export function ActivityFeed({ activities, className }: ActivityFeedProps) {
                     </p>
                   )}
                 </div>
-                <span className="text-xs text-content-faint whitespace-nowrap">
+                <span className="shrink-0 text-xs text-content-faint whitespace-nowrap">
                   {formatTimestamp(activity.timestamp, t, locale)}
                 </span>
               </div>

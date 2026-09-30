@@ -75,7 +75,7 @@ export function EarningsChart({ data, className }: EarningsChartProps) {
           </p>
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="flex bg-surface-input rounded-lg p-1">
             {(['7d', '30d', '90d', '1y'] as TimeRange[]).map((range) => (
               <button
@@ -181,7 +181,18 @@ export function EarningsChart({ data, className }: EarningsChartProps) {
                   className="flex-1 flex flex-col items-center gap-1 group relative"
                 >
                   {/* Tooltip */}
-                  <div className="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                  {/* display:none until hover: an invisible tooltip still widens the page, and
+                      edge bars anchor it inward so it stays on screen. */}
+                  <div
+                    className={cn(
+                      'absolute bottom-full mb-2 hidden group-hover:block pointer-events-none z-10',
+                      index < filteredData.length / 3
+                        ? 'left-0'
+                        : index >= (filteredData.length * 2) / 3
+                          ? 'right-0'
+                          : 'left-1/2 -translate-x-1/2'
+                    )}
+                  >
                     <div className="bg-surface-input rounded-lg border border-hairline p-2 text-xs whitespace-nowrap">
                       <p className="text-content-muted">{formatDate(item.date)}</p>
                       <p className="text-green-400 light:text-green-700 font-medium">

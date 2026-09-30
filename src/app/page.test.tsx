@@ -30,7 +30,8 @@ describe('public landing page', () => {
     expect(screen.getByRole('heading', { name: /Per i professionisti/i })).toBeInTheDocument();
     expect(screen.getByText(/Scegli le categorie, imposta la disponibilità e invia il profilo/i)).toBeInTheDocument();
     expect(screen.getByAltText('Vfitfunlife home screen showing the VFit hub')).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: /lingua/i })).toBeInTheDocument();
+    // Phone (code-only) and wider (labelled) pickers are both rendered; CSS shows one.
+    expect(screen.getAllByRole('combobox', { name: /lingua/i })).toHaveLength(2);
     expect(screen.getByRole('group', { name: /aspetto/i })).toBeInTheDocument();
     expect(screen.queryByText(/tap to continue/i)).not.toBeInTheDocument();
     expect(screen.queryByText('VFitFunLife')).not.toBeInTheDocument();

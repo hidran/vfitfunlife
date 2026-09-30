@@ -174,9 +174,9 @@ export default function ClientDetailClient() {
               </p>
             )}
             <div className="flex flex-col sm:flex-row gap-4 mt-3">
-              <a href={`mailto:${client.email}`} className="flex items-center gap-2 text-content-muted hover:text-content text-sm">
-                <Mail className="w-4 h-4" />
-                {client.email}
+              <a href={`mailto:${client.email}`} className="flex min-w-0 items-center gap-2 text-content-muted hover:text-content text-sm">
+                <Mail className="w-4 h-4 shrink-0" />
+                <span className="truncate">{client.email}</span>
               </a>
               {client.phone && (
                 <a href={`tel:${client.phone}`} className="flex items-center gap-2 text-content-muted hover:text-content text-sm">
@@ -200,7 +200,7 @@ export default function ClientDetailClient() {
             )}
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {/* clients/{id} is the roster entry; the chat is with the client's user account. */}
             {client.userId && (
               <Button

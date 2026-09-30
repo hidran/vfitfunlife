@@ -79,7 +79,9 @@ function BrandMark({ compact = false, idSuffix }: { compact?: boolean; idSuffix:
           />
         </svg>
       </span>
-      <span className={compact ? 'font-display text-lg font-black text-[#111827]' : 'font-display text-3xl font-black text-[#111827] sm:text-4xl'}>
+      {/* The nav drops the wordmark on phones — the hero right below spells it out — so the
+          language, theme and sign-in controls fit a 320px row. */}
+      <span className={compact ? 'hidden font-display text-lg font-black text-[#111827] min-[480px]:inline' : 'font-display text-3xl font-black text-[#111827] sm:text-4xl'}>
         Vfitfunlife
       </span>
     </span>
@@ -116,26 +118,30 @@ export default function LandingPage() {
         }}
       />
       <header className="landing-light-surface sticky top-0 z-40 border-b border-[#DCE8F7] bg-white/95 backdrop-blur-md">
-        <nav className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <nav className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-2 px-4 sm:px-6 lg:px-8">
           <Link href="/" aria-label={copy.homeLabel}>
             <BrandMark compact idSuffix="nav" />
           </Link>
 
-          <div className="flex items-center gap-2">
-            <LanguageSwitcher variant="menu" />
-            <ThemeToggle compact />
+          <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+            {/* Phones get the 44px code-only picker; the labelled select needs sm+ room. */}
+            <LanguageSwitcher variant="icon" className="sm:hidden" />
+            <LanguageSwitcher variant="menu" className="hidden sm:inline-flex" />
+            <ThemeToggle variant="cycle" className="sm:hidden" />
+            <ThemeToggle compact className="hidden sm:inline-flex" />
             <Link
               href="/auth/login"
-              className="inline-flex h-10 items-center gap-2 px-3 text-sm font-semibold text-[#475569] transition hover:text-[#111827]"
+              aria-label={copy.login}
+              className="inline-flex h-11 min-w-11 items-center justify-center gap-2 px-2 text-sm font-semibold text-[#475569] transition hover:text-[#111827] sm:px-3"
             >
-              <LogIn className="h-4 w-4" />
-              {copy.login}
+              <LogIn className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">{copy.login}</span>
             </Link>
             <Link
               href="/auth/register"
-              className="landing-header-cta inline-flex h-10 items-center gap-2 rounded-md px-4 text-sm font-bold text-white transition"
+              className="landing-header-cta inline-flex h-11 items-center gap-2 whitespace-nowrap rounded-md px-3 text-sm font-bold text-white transition sm:px-4"
             >
-              <UserPlus className="h-4 w-4" />
+              <UserPlus className="hidden h-4 w-4 min-[400px]:block" />
               {copy.signUp}
             </Link>
           </div>

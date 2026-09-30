@@ -95,7 +95,7 @@ export default function AdminDashboardPage() {
             {t('admin.dashboard.welcomeBack', { name: user?.fullName?.split(" ")[0] || '' })}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {quickActions
             .filter((a) => a.visible)
             .map((action) => (
@@ -206,9 +206,9 @@ export default function AdminDashboardPage() {
         <div className="lg:col-span-2 space-y-6">
           {/* Revenue Chart Placeholder */}
           <div className="bg-surface rounded-2xl border border-hairline p-6">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
               <h3 className="text-lg font-semibold text-content">{t('admin.dashboard.revenueOverview.title')}</h3>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button variant="ghost" size="sm" className="text-content-muted">
                   {t('admin.dashboard.period.week')}
                 </Button>
@@ -231,7 +231,7 @@ export default function AdminDashboardPage() {
 
           {/* User Growth Chart Placeholder */}
           <div className="bg-surface rounded-2xl border border-hairline p-6">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
               <h3 className="text-lg font-semibold text-content">{t('admin.dashboard.userTrend.title')}</h3>
               <span className="text-sm text-content-muted">{t('admin.dashboard.userTrend.last30Days')}</span>
             </div>

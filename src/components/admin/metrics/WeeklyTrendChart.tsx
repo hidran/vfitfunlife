@@ -107,8 +107,10 @@ export function WeeklyTrendChart({ data }: { data: WeeklyPoint[] }) {
         ))}
       </div>
 
-      {/* The chart must not be the only representation of the data. */}
-      <table className="sr-only">
+      {/* The chart must not be the only representation of the data. The wrapper carries
+          sr-only: a table ignores the 1px width and would widen the page on phones. */}
+      <div className="sr-only">
+      <table>
         <caption>{t('metrics.trend.title' as MessageKey)}</caption>
         <thead>
           <tr>
@@ -130,6 +132,7 @@ export function WeeklyTrendChart({ data }: { data: WeeklyPoint[] }) {
           ))}
         </tbody>
       </table>
+      </div>
     </figure>
   );
 }

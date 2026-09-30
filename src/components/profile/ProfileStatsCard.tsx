@@ -35,7 +35,7 @@ function StatTile({ icon: Icon, labelKey, value, accentClass, isLoading }: StatT
         >
           {isLoading ? '–' : value.toLocaleString()}
         </p>
-        <p className="text-[11px] leading-tight text-text-tertiary">{t(labelKey)}</p>
+        <p className="text-[11px] leading-tight text-text-tertiary break-words">{t(labelKey)}</p>
       </div>
     </div>
   );
@@ -43,7 +43,8 @@ function StatTile({ icon: Icon, labelKey, value, accentClass, isLoading }: StatT
 
 /**
  * Season 0 activity counters. XP and level live in ProfileGamificationCard,
- * so they are not repeated here. Two columns on phones, four from `sm`.
+ * so they are not repeated here. Two columns, four once the card itself is 32rem wide — a
+ * container query, because on tablets the card sits in a half-width column.
  */
 export function ProfileStatsCard({ className }: { className?: string }) {
   const { t } = useI18n();
@@ -53,14 +54,14 @@ export function ProfileStatsCard({ className }: { className?: string }) {
   return (
     <section
       aria-labelledby="profile-stats-title"
-      className={cn('rounded-2xl border border-hairline bg-surface p-4', className)}
+      className={cn('@container rounded-2xl border border-hairline bg-surface p-4', className)}
     >
       <h2 id="profile-stats-title" className="text-sm font-semibold text-text-inverse">
         {t('profile.gamification.statsTitle')}
       </h2>
       <p className="text-xs text-text-tertiary">{t('profile.gamification.statsSubtitle')}</p>
 
-      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="mt-3 grid grid-cols-2 gap-2 @lg:grid-cols-4">
         <StatTile
           icon={BookOpen}
           labelKey="profile.gamification.stats.bookings"

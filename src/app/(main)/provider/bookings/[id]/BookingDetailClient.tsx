@@ -233,8 +233,8 @@ export default function BookingDetailClient() {
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-2">
             <h1 className="text-2xl font-bold text-content">{t('provider.bookingDetail.title')}</h1>
             <Badge variant={statusBadgeVariant} size="md">
               {statusBadgeLabel}
@@ -245,7 +245,7 @@ export default function BookingDetailClient() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {booking.status === 'requested' && (
             <>
               <Button onClick={handleConfirm}>
@@ -324,20 +324,20 @@ export default function BookingDetailClient() {
                   width={64}
                   height={64}
                   unoptimized
-                  className="w-16 h-16 rounded-full object-cover"
+                  className="w-16 h-16 shrink-0 rounded-full object-cover"
                 />
               ) : (
-                <div className="w-16 h-16 rounded-full bg-section-gradient flex items-center justify-center">
+                <div className="w-16 h-16 shrink-0 rounded-full bg-section-gradient flex items-center justify-center">
                   <User className="w-8 h-8 text-white" />
                 </div>
               )}
-              <div className="flex-1">
-                <h4 className="text-xl font-medium text-content">{booking.userName}</h4>
+              <div className="min-w-0 flex-1">
+                <h4 className="text-xl font-medium text-content break-words">{booking.userName}</h4>
                 <div className="flex flex-col gap-1 mt-2">
                   {booking.userEmail && (
-                    <a href={`mailto:${booking.userEmail}`} className="flex items-center gap-2 text-content-muted hover:text-content text-sm">
-                      <Mail className="w-4 h-4" />
-                      {booking.userEmail}
+                    <a href={`mailto:${booking.userEmail}`} className="flex min-w-0 items-center gap-2 text-content-muted hover:text-content text-sm">
+                      <Mail className="w-4 h-4 shrink-0" />
+                      <span className="truncate">{booking.userEmail}</span>
                     </a>
                   )}
                   <a href={`tel:${booking.userPhone}`} className="flex items-center gap-2 text-content-muted hover:text-content text-sm">
@@ -345,7 +345,7 @@ export default function BookingDetailClient() {
                     {booking.userPhone}
                   </a>
                 </div>
-                <div className="flex items-center gap-2 mt-3">
+                <div className="flex flex-wrap items-center gap-2 mt-3">
                   <Link href={`/provider/clients/${booking.userId}`}>
                     <Button variant="secondary" size="sm">
                       <User className="w-4 h-4 mr-2" />
