@@ -87,7 +87,6 @@ export function CategoryLeafPicker({ value, onChange, disabled }: CategoryLeafPi
 
       {activeGroup && (
         <div role="tabpanel" aria-label={activeGroup.group.name} className="rounded-lg bg-surface-2 p-2">
-          <p className="mb-2 px-1 text-xs text-content-muted">{t('provider.optIn.tapLeafHint')}</p>
           <div className="grid grid-cols-2 gap-2">
             {activeGroup.leaves.map((leaf) => {
               const selected = value.includes(leaf.id);

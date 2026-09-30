@@ -2050,10 +2050,9 @@ export const deMessages: Messages = {
   // ─── Provider opt-in (BecomeProviderCard + ProviderOptInField) ───────
   'provider.optIn.toggle': 'Ich möchte auch Dienstleistungen als Fachkraft anbieten',
   'provider.optIn.pickType': 'Welche Art von Dienstleistung bieten Sie an?',
-  'provider.optIn.pickServices': 'Wähle eine oder mehrere Leistungen, die du anbietest',
+  'provider.optIn.pickServices': 'Wähle eine Kategorie und tippe dann die Leistungen an, die du anbietest',
   'provider.optIn.selectedCount': '{{count}} Services ausgewählt',
   'provider.optIn.errorNoCategory': 'Tippe mindestens eine konkrete Leistung an (z. B. Personal Training) – die Kategorie allein reicht nicht.',
-  'provider.optIn.tapLeafHint': 'Tippe die Leistungen an, die du anbietest:',
   'provider.card.cta.title': 'Werden Sie Fachkraft',
   'provider.card.cta.subtitle': 'Bieten Sie Ihre Dienste auf der Plattform an.',
   'provider.card.cta.start': 'Loslegen',

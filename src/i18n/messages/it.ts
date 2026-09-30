@@ -2067,10 +2067,9 @@ export const itMessages = {
   // ─── Provider opt-in (BecomeProviderCard + ProviderOptInField) ───────
   'provider.optIn.toggle': 'Voglio anche offrire servizi come professionista',
   'provider.optIn.pickType': 'Che tipo di servizio offri?',
-  'provider.optIn.pickServices': 'Seleziona uno o più servizi che offri',
+  'provider.optIn.pickServices': 'Scegli una categoria, poi tocca i servizi che offri',
   'provider.optIn.selectedCount': '{{count}} servizi selezionati',
   'provider.optIn.errorNoCategory': 'Tocca almeno un servizio specifico (es. Personal Training): la categoria da sola non basta.',
-  'provider.optIn.tapLeafHint': 'Tocca i servizi che offri:',
   'provider.card.cta.title': 'Diventa un professionista',
   'provider.card.cta.subtitle': 'Offri i tuoi servizi sulla piattaforma.',
   'provider.card.cta.start': 'Inizia',

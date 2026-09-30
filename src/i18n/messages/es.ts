@@ -2043,10 +2043,9 @@ export const esMessages: Messages = {
   // ─── Provider opt-in (BecomeProviderCard + ProviderOptInField) ───────
   'provider.optIn.toggle': 'También quiero ofrecer servicios como profesional',
   'provider.optIn.pickType': '¿Qué tipo de servicio ofreces?',
-  'provider.optIn.pickServices': 'Selecciona uno o más servicios que ofreces',
+  'provider.optIn.pickServices': 'Elige una categoría y toca los servicios que ofreces',
   'provider.optIn.selectedCount': '{{count}} servicios seleccionados',
   'provider.optIn.errorNoCategory': 'Toca al menos un servicio concreto (p. ej. Personal Training): la categoría sola no basta.',
-  'provider.optIn.tapLeafHint': 'Toca los servicios que ofreces:',
   'provider.card.cta.title': 'Conviértete en profesional',
   'provider.card.cta.subtitle': 'Ofrece tus servicios en la plataforma.',
   'provider.card.cta.start': 'Empezar',

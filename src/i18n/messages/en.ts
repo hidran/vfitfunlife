@@ -2069,10 +2069,9 @@ export const enMessages: Messages = {
   // ─── Provider dashboard ──────────────────────────────────────────────
   'provider.optIn.toggle': 'I also want to offer services as a professional',
   'provider.optIn.pickType': 'What type of service do you offer?',
-  'provider.optIn.pickServices': 'Select one or more services you offer',
+  'provider.optIn.pickServices': 'Choose a category, then tap the services you offer',
   'provider.optIn.selectedCount': '{{count}} services selected',
   'provider.optIn.errorNoCategory': "Tap at least one specific service (e.g. Personal Training) — the category alone isn't enough.",
-  'provider.optIn.tapLeafHint': 'Tap the services you offer:',
   'provider.card.cta.title': 'Become a professional',
   'provider.card.cta.subtitle': 'Offer your services on the platform.',
   'provider.card.cta.start': 'Get started',

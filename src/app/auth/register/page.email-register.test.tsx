@@ -113,7 +113,7 @@ describe('RegisterPage Email Registration', () => {
 
     expect(screen.getByText('Crea il tuo account')).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: /professionista/i })).toBeChecked();
-    expect(screen.getByText('Seleziona uno o più servizi che offri')).toBeInTheDocument();
+    expect(screen.getByText('Scegli una categoria, poi tocca i servizi che offri')).toBeInTheDocument();
   });
 
   it('keeps provider categories compact by showing one category group at a time', async () => {
