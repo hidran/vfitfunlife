@@ -15,7 +15,9 @@ const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
     const checkboxId = id || generatedId;
 
     return (
-      <div className="w-full">
+      // Standalone (label rendered by the caller next to it) the box must not grow,
+      // or it pushes the sibling label into the right half of a flex row.
+      <div className={label || error ? 'w-full' : 'flex-shrink-0'}>
         <label
           htmlFor={checkboxId}
           className={cn(
@@ -34,7 +36,8 @@ const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
             <div
               className={cn(
                 'w-5 h-5 rounded-md border-2 border-content/30 bg-transparent',
-                'peer-checked:bg-section-gradient peer-checked:border-transparent',
+                // bg-section-gradient is a components-layer class, so Tailwind can't prefix it with peer-checked:
+                'peer-checked:[background:var(--section-gradient)] peer-checked:border-transparent',
                 'peer-focus:ring-2 peer-focus:ring-section-primary peer-focus:ring-offset-2 peer-focus:ring-offset-background-dark',
                 'transition-all duration-200',
                 error && 'border-error',

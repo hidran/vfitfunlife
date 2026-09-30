@@ -53,7 +53,7 @@ Today every future day is clickable, incl. weekends and days inside the 24h mini
   day always lists ≥1 time; unit test for the day-availability helper.
 - Afterwards fix the B10 text in both guides if it describes the old behaviour.
 
-### F2 `[ ]` Signup terms checkbox layout + checked state (Medium)
+### F2 `[x]` Signup terms checkbox layout + checked state (Medium)
 The checkbox wrapper takes full width so "I accept…" sits in the right half; when ticked the box loses its fill
 (bare check mark only).
 - Files: `src/components/ui/checkbox.tsx`, usages `src/app/auth/register/RegisterClient.tsx:567` and `:727`.
@@ -138,3 +138,4 @@ then rebuild both docx with `python3 docs/user-journeys/build-docx.py` (see the 
 | 2026-09-30 | payments | done | 9f9af27 | Superadmin switches `systemSettings/payments` (Stripe + subscriptions, default off), callables gated, UI hides VIP/wallet. Staging + prod deployed; backend smoke on both; staging UI verified as demo.customer. |
 | 2026-09-30 | guides | done | dc89852 | Journey guides re-recorded EN + IT, dark theme, new layout; bug list above comes from this run. |
 | 2026-10-01 | F1 | done | (this commit) | Calendar asks getProviderSlots for each remaining day of the visible month (6 at a time, `useBookableDays` + `src/lib/availability/bookableDays.ts`, cached 1 min) and disables days with no slot (`disabled` + `aria-disabled`, muted; pulsing `aria-busy` while checking; a failed check leaves the day selectable). No backend change, so no functions deploy needed. Verified locally against staging as demo.customer → demo.provider: Oct 2026 weekends + today (Thu 1, inside 24 h) disabled, all 21 enabled days list ≥1 time, Nov opens with Sun 1 and weekends disabled, Tab skips disabled days. B10 text updated in both guides (issues-table row left for G2). Reschedule picker not wired (out of scope). |
+| 2026-10-01 | F2 | done | (this commit) | Two bugs in `src/components/ui/checkbox.tsx`: the wrapper was always `w-full`, so without its own label it took the flex row and pushed the caller's label to the right half — now `flex-shrink-0` when there is no label/error; checked fill used `peer-checked:bg-section-gradient`, a components-layer class Tailwind v4 can't variant-prefix, so no fill was generated — now `peer-checked:[background:var(--section-gradient)]`. RegisterClient is the only `Checkbox` user (booking terms / points toggle don't use it). Verified at 390×844 on the email signup: text starts 12px after the box; checked = gradient fill + white check in dark and light; unchecked = outlined box. |
