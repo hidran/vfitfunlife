@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
   decideStagingGate,
   isPublicStagingPath,
-  isRegistrationPath,
   isStagingHost,
   isStagingProject,
   prodUrlFor,
@@ -35,14 +34,8 @@ describe('paths', () => {
     expect(isPublicStagingPath('/auth/login/')).toBe(true);
     expect(isPublicStagingPath('/auth/forgot-password/')).toBe(true);
     expect(isPublicStagingPath('/')).toBe(false);
-    expect(isPublicStagingPath('/auth/register/')).toBe(false);
+    expect(isPublicStagingPath('/auth/register/')).toBe(true);
     expect(isPublicStagingPath('/auth/login-extra')).toBe(false);
-  });
-
-  it('recognises registration pages', () => {
-    expect(isRegistrationPath('/auth/register')).toBe(true);
-    expect(isRegistrationPath('/auth/register/')).toBe(true);
-    expect(isRegistrationPath('/auth/registered')).toBe(false);
   });
 
   it('builds the production URL with path and query', () => {
@@ -54,9 +47,11 @@ describe('paths', () => {
 describe('decideStagingGate', () => {
   const base = { authReady: true, signedIn: false, allowed: undefined };
 
-  it('redirects registration pages whatever the auth state', () => {
-    expect(decideStagingGate({ ...base, pathname: '/auth/register/', authReady: false })).toBe('redirect');
-    expect(decideStagingGate({ ...base, pathname: '/auth/register/', signedIn: true, allowed: true })).toBe('redirect');
+  it('keeps registration on staging (a first Google sign-in completes its profile there)', () => {
+    expect(decideStagingGate({ ...base, pathname: '/auth/register/', authReady: false })).toBe('allow');
+    expect(decideStagingGate({ ...base, pathname: '/auth/register/' })).toBe('allow');
+    expect(decideStagingGate({ ...base, pathname: '/auth/register/', signedIn: true, allowed: true })).toBe('allow');
+    expect(decideStagingGate({ ...base, pathname: '/auth/register/', signedIn: true, allowed: false })).toBe('signout-redirect');
   });
 
   it('shows public pages immediately, before auth settles', () => {

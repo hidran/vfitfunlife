@@ -33,17 +33,16 @@ function stripTrailingSlash(pathname: string): string {
   return pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
 }
 
-/** Routes a signed-out visitor may see on staging: sign-in, and the reset for a forgotten password. */
-const PUBLIC_PATHS = new Set(['/auth/login', '/auth/forgot-password']);
+/**
+ * Routes a signed-out visitor may see on staging: sign-in, password reset and registration.
+ * Registration has to stay reachable: a first Google sign-in lands on /auth/register to
+ * complete the profile. Creating an account is still refused server-side for anyone who is
+ * not allowlisted (the beforeUserCreated blocking function).
+ */
+const PUBLIC_PATHS = new Set(['/auth/login', '/auth/forgot-password', '/auth/register']);
 
 export function isPublicStagingPath(pathname: string): boolean {
   return PUBLIC_PATHS.has(stripTrailingSlash(pathname));
-}
-
-/** Nobody registers on staging: accounts are created for allowlisted emails only. */
-export function isRegistrationPath(pathname: string): boolean {
-  const p = stripTrailingSlash(pathname);
-  return p === '/auth/register' || p.startsWith('/auth/register/');
 }
 
 /** The same path + query on production. */
@@ -69,8 +68,6 @@ export interface StagingGateInput {
 }
 
 export function decideStagingGate({ pathname, authReady, signedIn, allowed }: StagingGateInput): StagingGateDecision {
-  // Decidable from the URL alone, before auth even starts.
-  if (isRegistrationPath(pathname)) return 'redirect';
   if (!authReady) return isPublicStagingPath(pathname) ? 'allow' : 'pending';
   if (!signedIn) return isPublicStagingPath(pathname) ? 'allow' : 'redirect';
   if (allowed === undefined) return 'pending';

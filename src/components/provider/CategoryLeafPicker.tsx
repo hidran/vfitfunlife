@@ -66,8 +66,10 @@ export function CategoryLeafPicker({ value, onChange, disabled }: CategoryLeafPi
               title={group.name}
               className={cn(
                 'flex min-h-11 items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-xs font-semibold transition-colors',
+                // A group is only a tab: it must not look chosen, or applicants tap it and
+                // think they picked a service (the error then says they picked nothing).
                 expanded
-                  ? 'border-vfit-primary bg-vfit-primary/10 text-content'
+                  ? 'border-content/40 bg-surface-2 text-content'
                   : 'border-hairline text-content-muted hover:bg-surface-2'
               )}
             >
@@ -85,6 +87,7 @@ export function CategoryLeafPicker({ value, onChange, disabled }: CategoryLeafPi
 
       {activeGroup && (
         <div role="tabpanel" aria-label={activeGroup.group.name} className="rounded-lg bg-surface-2 p-2">
+          <p className="mb-2 px-1 text-xs text-content-muted">{t('provider.optIn.tapLeafHint')}</p>
           <div className="grid grid-cols-2 gap-2">
             {activeGroup.leaves.map((leaf) => {
               const selected = value.includes(leaf.id);
@@ -98,10 +101,11 @@ export function CategoryLeafPicker({ value, onChange, disabled }: CategoryLeafPi
                   className={cn(
                     'min-h-10 rounded-md border px-2 py-2 text-left text-xs transition-colors',
                     selected
-                      ? 'border-vfit-primary bg-vfit-primary/10 font-semibold text-content'
-                      : 'border-hairline text-content-muted hover:bg-surface-2'
+                      ? 'border-vfit-primary bg-vfit-primary text-[#1A1D29] font-semibold'
+                      : 'border-hairline bg-surface text-content hover:bg-content/5'
                   )}
                 >
+                  {selected && <span className="mr-1" aria-hidden>✓</span>}
                   <span className="mr-1" aria-hidden>{leaf.icon}</span>
                   {leaf.name}
                 </button>

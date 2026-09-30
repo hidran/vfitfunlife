@@ -234,7 +234,7 @@ describe('RegisterPage Email Registration', () => {
     fireEvent.click(screen.getByRole('button', { name: /Crea account/i }));
 
     await waitFor(() => {
-      expect(screen.getByText('Seleziona il tipo di servizio che offri.')).toBeInTheDocument();
+      expect(screen.getByText('Tocca almeno un servizio specifico (es. Personal Training): la categoria da sola non basta.')).toBeInTheDocument();
     });
     expect(mockRegisterWithEmail).not.toHaveBeenCalled();
   });

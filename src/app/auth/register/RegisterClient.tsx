@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useShallow } from 'zustand/react/shallow';
@@ -70,6 +70,17 @@ export function RegisterClient() {
   const [showPassword, setShowPassword] = useState(false);
   const [wantsProvider, setWantsProvider] = useState(startsAsProvider);
   const [providerCategoryIds, setProviderCategoryIds] = useState<string[]>([]);
+
+  // Auth often restores after the first render (a Google redirect back from the login page):
+  // prefill from the signed-in account then, without overwriting anything already typed.
+  const socialUid = firebaseUser?.uid;
+  useEffect(() => {
+    if (!firebaseUser) return;
+    setRegistrationMethod((m) => m ?? 'social');
+    setFullName((v) => v || firebaseUser.displayName || '');
+    setEmail((v) => v || firebaseUser.email || '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [socialUid]);
 
   const handleSocialSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
