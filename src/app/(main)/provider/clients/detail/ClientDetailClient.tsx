@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { ArrowLeft, Mail, Phone, Calendar, MessageSquare, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/Spinner';
-import { cn } from '@/lib/utils';
+import { cn, formatPrice } from '@/lib/utils';
 import { useShallow } from 'zustand/react/shallow';
 import { useProviderStore } from '@/stores/providerStore';
 import { useI18n } from '@/hooks/useI18n';
@@ -229,7 +229,7 @@ export default function ClientDetailClient() {
             <p className="text-sm text-content-muted">{t('provider.clientDetail.totalBookings')}</p>
           </div>
           <div>
-            <p className="text-2xl font-bold text-content">€{client.totalSpent}</p>
+            <p className="text-2xl font-bold text-content">{formatPrice(client.totalSpent, locale)}</p>
             <p className="text-sm text-content-muted">{t('provider.clientDetail.totalSpent')}</p>
           </div>
           <div>

@@ -113,13 +113,13 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
       body: `Il trainer non può accettare la tua richiesta per ${svc(c, "la sessione")}.`,
     }),
     cancelled_by_client: (c) => ({
-      title: "Prenotazione cancellata",
-      body: `La prenotazione per ${svc(c, "la sessione")} è stata cancellata dal cliente.` +
-        late(c, " Cancellazione tardiva: meno di 24 ore dall'inizio."),
+      title: "Prenotazione annullata",
+      body: `La prenotazione per ${svc(c, "la sessione")} è stata annullata dal cliente.` +
+        late(c, " Annullamento tardivo: meno di 24 ore dall'inizio."),
     }),
     cancelled_by_trainer: (c) => ({
-      title: "Prenotazione cancellata",
-      body: `La prenotazione per ${svc(c, "la sessione")} è stata cancellata dal trainer.${reason(c, "Motivo:")}`,
+      title: "Prenotazione annullata",
+      body: `La prenotazione per ${svc(c, "la sessione")} è stata annullata dal trainer.${reason(c, "Motivo:")}`,
     }),
     rescheduled: (c) => ({
       title: "Prenotazione spostata",

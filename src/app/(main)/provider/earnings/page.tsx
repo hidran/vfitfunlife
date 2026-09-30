@@ -9,7 +9,7 @@ import { useProviderStore } from '@/stores/providerStore';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
 import { EarningsFilters } from '@/types/provider';
-import { cn } from '@/lib/utils';
+import { cn, formatPrice } from '@/lib/utils';
 import { Transaction } from '@/types/provider';
 
 // Helper function to generate chart data from actual transactions
@@ -167,7 +167,7 @@ export default function ProviderEarningsPage() {
             </span>
           </div>
           <p className="text-3xl font-bold text-content">
-            €{earningsData.availableBalance.toFixed(2)}
+            {formatPrice(earningsData.availableBalance, locale)}
           </p>
           <p className="text-sm text-content-muted mt-1">{t('provider.earnings.stat.availableLabel')}</p>
         </div>
@@ -182,7 +182,7 @@ export default function ProviderEarningsPage() {
             </span>
           </div>
           <p className="text-3xl font-bold text-content">
-            €{earningsData.pendingAmount.toFixed(2)}
+            {formatPrice(earningsData.pendingAmount, locale)}
           </p>
           <p className="text-sm text-content-muted mt-1">{t('provider.earnings.stat.pendingLabel')}</p>
         </div>
@@ -198,7 +198,7 @@ export default function ProviderEarningsPage() {
             </span>
           </div>
           <p className="text-3xl font-bold text-content">
-            €{earningsData.monthTotal.toFixed(2)}
+            {formatPrice(earningsData.monthTotal, locale)}
           </p>
           <p className="text-sm text-content-muted mt-1">{t('provider.earnings.stat.thisMonth')}</p>
         </div>
@@ -214,7 +214,7 @@ export default function ProviderEarningsPage() {
             </span>
           </div>
           <p className="text-3xl font-bold text-content">
-            €{earningsData.yearTotal.toFixed(2)}
+            {formatPrice(earningsData.yearTotal, locale)}
           </p>
           <p className="text-sm text-content-muted mt-1">{t('provider.earnings.stat.thisYear')}</p>
         </div>
@@ -278,7 +278,7 @@ export default function ProviderEarningsPage() {
                       'px-6 py-4 text-sm text-right font-medium',
                       transaction.amount > 0 ? 'text-green-400 light:text-green-700' : 'text-red-400 light:text-red-700'
                     )}>
-                      {transaction.amount > 0 ? '+' : ''}€{transaction.amount.toFixed(2)}
+                      {transaction.amount > 0 ? '+' : ''}{formatPrice(transaction.amount, locale)}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <span className={cn(
@@ -307,7 +307,7 @@ export default function ProviderEarningsPage() {
             <div className="mb-6">
               <p className="text-sm text-content-muted mb-2">{t('provider.earnings.withdraw.availableBalance')}</p>
               <p className="text-2xl font-bold text-content">
-                €{earningsData.availableBalance.toFixed(2)}
+                {formatPrice(earningsData.availableBalance, locale)}
               </p>
             </div>
 

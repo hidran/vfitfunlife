@@ -56,7 +56,7 @@ describe("cancellationTarget (A2)", () => {
       bookingId: "bk-1",
       context: { late: true },
     });
-    expect(buildMessage(t!.event, "it", t!.context).body).toContain("tardiva");
+    expect(buildMessage(t!.event, "it", t!.context).body).toContain("tardivo");
     expect(buildMessage(t!.event, "en", t!.context).body).toContain("Late cancellation");
   });
 

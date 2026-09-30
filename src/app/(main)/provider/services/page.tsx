@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Plus, Edit, Copy, Trash2, MoreVertical, Check, X, Clock, DollarSign, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/Modal';
-import { cn } from '@/lib/utils';
+import { cn, formatPrice } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
 import { useI18n } from '@/hooks/useI18n';
 import { useServiceCategoryGroups, useServiceCategoryMap } from '@/hooks/useServiceCategories';
@@ -32,7 +32,7 @@ const EMPTY_DRAFT: ProviderServiceInput = {
 };
 
 export default function ProviderServicesPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const firebaseUser = useAuthStore((s) => s.firebaseUser);
   const uid = firebaseUser?.uid;
 
@@ -349,7 +349,7 @@ export default function ProviderServicesPage() {
                   <DollarSign className="w-3 h-3" />
                   {t('provider.services.card.price')}
                 </div>
-                <p className="text-lg font-semibold text-content">€{service.price}</p>
+                <p className="text-lg font-semibold text-content">{formatPrice(service.price, locale)}</p>
               </div>
               <div className="bg-surface-input rounded-lg p-3">
                 <div className="flex items-center gap-1 text-content-muted text-xs mb-1">

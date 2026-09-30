@@ -4,6 +4,7 @@ import { Calendar } from 'lucide-react';
 import { StatusBadge } from './StatusBadge';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
+import { formatPrice } from '@/lib/utils';
 import type { ClientBookingHistory } from '@/types/provider';
 
 interface MeetingsTabProps {
@@ -45,7 +46,7 @@ export default function MeetingsTab({ bookingHistory }: MeetingsTabProps) {
             </div>
             <div className="flex items-center gap-4">
               <StatusBadge status={entry.status} />
-              <p className="font-medium text-content">€{entry.amount}</p>
+              <p className="font-medium text-content">{formatPrice(entry.amount, locale)}</p>
             </div>
           </div>
         ))}

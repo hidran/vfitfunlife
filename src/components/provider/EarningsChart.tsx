@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, BarChart3, LineChart as LineChartIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { cn, formatPrice } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
 
@@ -63,6 +63,14 @@ export function EarningsChart({ data, className }: EarningsChartProps) {
     const date = new Date(dateStr);
     return date.toLocaleDateString(toLocaleTag(locale), { month: 'short', day: 'numeric' });
   };
+
+  /** Axis labels: whole euros in the active locale ("50 €" in it, "€50" in en). */
+  const formatAxis = (amount: number) =>
+    new Intl.NumberFormat(toLocaleTag(locale), {
+      style: 'currency',
+      currency: 'EUR',
+      maximumFractionDigits: 0,
+    }).format(amount);
 
   return (
     <div className={cn('bg-surface-elevated rounded-xl border border-content/5 light:border-hairline p-6', className)}>
@@ -128,7 +136,7 @@ export function EarningsChart({ data, className }: EarningsChartProps) {
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-bold text-content">
-              €{stats.totalEarnings.toFixed(2)}
+              {formatPrice(stats.totalEarnings, locale)}
             </span>
             <span className={cn(
               'text-xs font-medium flex items-center gap-0.5',
@@ -158,7 +166,7 @@ export function EarningsChart({ data, className }: EarningsChartProps) {
             {t('provider.earningsChart.stat.avgPerBooking')}
           </div>
           <p className="text-2xl font-bold text-content">
-            €{stats.avgEarnings.toFixed(2)}
+            {formatPrice(stats.avgEarnings, locale)}
           </p>
         </div>
       </div>
@@ -196,7 +204,7 @@ export function EarningsChart({ data, className }: EarningsChartProps) {
                     <div className="bg-surface-input rounded-lg border border-hairline p-2 text-xs whitespace-nowrap">
                       <p className="text-content-muted">{formatDate(item.date)}</p>
                       <p className="text-green-400 light:text-green-700 font-medium">
-                        €{item.earnings.toFixed(2)}
+                        {formatPrice(item.earnings, locale)}
                       </p>
                       <p className="text-blue-400 light:text-blue-700 font-medium">
                         {t('provider.earningsChart.tooltip.bookings', { count: item.bookings })}
@@ -242,9 +250,9 @@ export function EarningsChart({ data, className }: EarningsChartProps) {
         
         {/* Y-axis labels */}
         <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-xs text-content-faint light:text-content-muted -translate-x-full pr-2">
-          <span>€{maxEarnings}</span>
-          <span>€{(maxEarnings / 2).toFixed(0)}</span>
-          <span>€0</span>
+          <span>{formatAxis(maxEarnings)}</span>
+          <span>{formatAxis(maxEarnings / 2)}</span>
+          <span>{formatAxis(0)}</span>
         </div>
       </div>
 

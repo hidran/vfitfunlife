@@ -3,6 +3,7 @@
 import { StatusBadge } from './StatusBadge';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
+import { formatPrice } from '@/lib/utils';
 import type { ProviderClient, ClientBookingHistory } from '@/types/provider';
 
 interface OverviewTabProps {
@@ -50,7 +51,7 @@ export default function OverviewTab({ client, bookingHistory }: OverviewTabProps
                 <p className="text-sm text-content-muted">{formatDate(entry.date)}</p>
               </div>
               <div className="text-right">
-                <p className="font-medium text-content">€{entry.amount}</p>
+                <p className="font-medium text-content">{formatPrice(entry.amount, locale)}</p>
                 <StatusBadge status={entry.status} />
               </div>
             </div>

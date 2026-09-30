@@ -35,7 +35,7 @@ import { bookingTypeLabel, paymentStatusLabel } from '@/lib/bookingLabels';
 import { BOOKING_STATUS_META } from '@/lib/bookingStatus';
 import { Spinner } from '@/components/ui/Spinner';
 import type { MessageKey } from '@/i18n/messages';
-import { cn } from '@/lib/utils';
+import { cn, formatPrice } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
 import { queryKeys } from '@/lib/queryKeys';
@@ -513,24 +513,24 @@ export default function BookingDetailClient() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-content-muted">{t('provider.bookingDetail.originalPrice')}</span>
-                <span className="text-content">€{booking.originalPrice.toFixed(2)}</span>
+                <span className="text-content">{formatPrice(booking.originalPrice, locale)}</span>
               </div>
               {booking.discountAmount > 0 && (
                 <div className="flex items-center justify-between">
                   <span className="text-content-muted">{t('provider.bookingDetail.discount')}</span>
-                  <span className="text-green-400 light:text-green-700">-€{booking.discountAmount.toFixed(2)}</span>
+                  <span className="text-green-400 light:text-green-700">-{formatPrice(booking.discountAmount, locale)}</span>
                 </div>
               )}
               {booking.homeServiceFee > 0 && (
                 <div className="flex items-center justify-between">
                   <span className="text-content-muted">{t('provider.bookingDetail.homeServiceFee')}</span>
-                  <span className="text-content">+€{booking.homeServiceFee.toFixed(2)}</span>
+                  <span className="text-content">+{formatPrice(booking.homeServiceFee, locale)}</span>
                 </div>
               )}
               <div className="border-t border-hairline pt-3">
                 <div className="flex items-center justify-between">
                   <span className="text-content font-medium">{t('provider.bookingDetail.total')}</span>
-                  <span className="text-xl font-bold text-content">€{booking.finalPrice.toFixed(2)}</span>
+                  <span className="text-xl font-bold text-content">{formatPrice(booking.finalPrice, locale)}</span>
                 </div>
               </div>
               <div className="pt-2">

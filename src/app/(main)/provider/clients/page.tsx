@@ -8,6 +8,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useProviderStore } from '@/stores/providerStore';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
+import { formatPrice } from '@/lib/utils';
 import { ProviderClient } from '@/types/provider';
 import { AddClientByEmail } from '@/components/provider/AddClientByEmail';
 import Link from 'next/link';
@@ -140,7 +141,7 @@ export default function ProviderClientsPage() {
                 <div className="flex items-center justify-center gap-1 text-content-muted mb-1">
                   <DollarSign className="w-4 h-4" />
                 </div>
-                <p className="text-lg font-semibold text-content">€{client.totalSpent}</p>
+                <p className="text-lg font-semibold text-content">{formatPrice(client.totalSpent, locale)}</p>
                 <p className="text-xs text-content-faint light:text-content-muted">{t('provider.clients.stat.totalSpent')}</p>
               </div>
               <div className="text-center">

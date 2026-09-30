@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { BOOKING_STATUS_META, isActive } from '@/lib/bookingStatus';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
-import { cn } from '@/lib/utils';
+import { cn, formatPrice } from '@/lib/utils';
 
 /** An action may return a promise; the row shows a spinner and locks its buttons until it settles. */
 type RowAction = (id: string) => Promise<unknown> | void;
@@ -258,7 +258,7 @@ export function BookingTable({
               <Clock className="w-4 h-4" />
               {formatTime(booking.scheduledAt)}
             </span>
-            <span className="font-medium text-content">€{booking.finalPrice.toFixed(2)}</span>
+            <span className="font-medium text-content">{formatPrice(booking.finalPrice, locale)}</span>
           </div>
           {renderActions(booking)}
         </li>
@@ -337,7 +337,7 @@ export function BookingTable({
                     </div>
                   </td>
                   <td className="px-4 py-4">
-                    <p className="text-content font-medium">€{booking.finalPrice.toFixed(2)}</p>
+                    <p className="text-content font-medium">{formatPrice(booking.finalPrice, locale)}</p>
                     {booking.depositPaid && (
                       <p className="text-xs text-green-400 light:text-green-700">{t('provider.bookingTable.depositPaid')}</p>
                     )}

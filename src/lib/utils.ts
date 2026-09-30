@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { toLocaleTag, type AppLocale } from '@/types/locale';
 
 /**
  * Merge Tailwind classes with clsx
@@ -9,10 +10,11 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Format price with euro symbol
+ * Format price with euro symbol in the given app locale (Italian by default):
+ * it → "50,00 €", en → "€50.00".
  */
-export function formatPrice(price: number): string {
-  return new Intl.NumberFormat('it-IT', {
+export function formatPrice(price: number, locale: AppLocale = 'it'): string {
+  return new Intl.NumberFormat(toLocaleTag(locale), {
     style: 'currency',
     currency: 'EUR',
   }).format(price);

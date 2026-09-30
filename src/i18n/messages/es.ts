@@ -2034,7 +2034,7 @@ export const esMessages: Messages = {
   'booking.price.from': 'Desde {{price}}',
   'booking.provider.viewAvailability': 'Ver disponibilidad',
   'booking.provider.availableFrom': 'Disponible desde {{date}}',
-  'booking.provider.checkAvailability': 'Comprobar disponibilidad',
+  'booking.provider.checkAvailability': 'Verificar disponibilidad',
   'booking.provider.yearsExp': '{{count}} años exp.',
   'booking.provider.verified': 'Verificado',
   'booking.provider.reviews': '({{count}} reseñas)',

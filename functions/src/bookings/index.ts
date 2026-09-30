@@ -642,7 +642,7 @@ export const cancelBooking = onCall<CancelBookingData>(
         type: "refund",
         source: "booking",
         sourceId: bookingId,
-        description: "Rimborso punti - prenotazione cancellata",
+        description: "Rimborso punti - prenotazione annullata",
         balanceAfter: (userData?.pointsBalance || 0) + booking.pointsUsed,
         createdAt: FieldValue.serverTimestamp(),
       });
@@ -835,8 +835,8 @@ export const updateBookingStatus = onCall<UpdateBookingStatusData>(
       accepted: "La tua prenotazione è stata confermata",
       completed: "La tua prenotazione è stata completata",
       declined: "La tua prenotazione è stata rifiutata",
-      cancelled_by_client: "La tua prenotazione è stata cancellata",
-      cancelled_by_trainer: "La tua prenotazione è stata cancellata",
+      cancelled_by_client: "La tua prenotazione è stata annullata",
+      cancelled_by_trainer: "La tua prenotazione è stata annullata",
     };
 
     if (statusMessages[nextStatus]) {
