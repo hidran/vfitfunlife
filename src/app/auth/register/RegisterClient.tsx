@@ -29,9 +29,11 @@ const SECTIONS = [
 
 type RegistrationMethod = 'social' | 'email' | null;
 
+// In the page flow (not absolute): the language + theme controls are ~270px wide, so on
+// phones they would sit on top of the back link / title below them.
 function AuthControls() {
   return (
-    <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
+    <div className="flex items-center justify-end gap-2 px-4 pt-4">
       <LanguageSwitcher variant="menu" />
       <ThemeToggle compact />
     </div>
@@ -234,7 +236,7 @@ export function RegisterClient() {
       <div className="auth-page auth-surface relative min-h-screen flex flex-col bg-gradient-to-br from-background-dark via-background-dark to-primary-dark/20">
         <AuthControls />
         {/* Header */}
-        <div className="px-6 pt-12 pb-6">
+        <div className="px-6 pt-4 pb-6">
           <button
             onClick={() => router.push('/auth/login')}
             className="flex items-center gap-2 text-text-secondary hover:text-text-inverse transition-colors mb-6"
@@ -344,7 +346,7 @@ export function RegisterClient() {
       <div className="auth-page auth-surface relative min-h-screen flex flex-col bg-gradient-to-br from-background-dark via-background-dark to-primary-dark/20">
         <AuthControls />
         {/* Header */}
-        <div className="px-6 pt-8 pb-6">
+        <div className="px-6 pt-4 pb-6">
           <button
             onClick={() => {
               setRegistrationMethod(null);
@@ -610,7 +612,7 @@ export function RegisterClient() {
     <div className="auth-page auth-surface relative min-h-screen flex flex-col bg-gradient-to-br from-background-dark via-background-dark to-primary-dark/20">
       <AuthControls />
       {/* Header */}
-      <div className="px-6 pt-12 pb-6">
+      <div className="px-6 pt-4 pb-6">
         <h1 className="text-3xl font-bold text-content mb-2">{t('auth.register.socialForm.title')}</h1>
         <p className="text-text-secondary">
           {t('auth.register.socialForm.subtitle')}
