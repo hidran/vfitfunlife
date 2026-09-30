@@ -253,13 +253,8 @@ test.describe('provider and customer journey', () => {
   });
 
   test('the customer confirms and the booking is created as a request', async () => {
-    // The terms control is an empty <button> with no text, role or aria-checked, so it can
-    // only be reached positionally, through the row that holds the wording.
-    await customerPage
-      .locator('div.flex.items-start.gap-3', { hasText: /accetto i/i })
-      .locator('button')
-      .first()
-      .click();
+    // A real, labelled checkbox (it used to be an empty <button> reachable only by position).
+    await customerPage.getByRole('checkbox', { name: /accetto i/i }).check();
     await customerPage.getByRole('button', { name: /^conferma$/i }).click();
 
     const [bookingId, booking] = await waitFor(

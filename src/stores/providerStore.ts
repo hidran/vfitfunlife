@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { PaymentConfirmationMethod } from '@/types/firebase';
+import type { BookingStatus, PaymentConfirmationMethod } from '@/types/firebase';
 import {
   getProviderDashboardStats,
   getProviderBookings,
@@ -70,6 +70,8 @@ interface ProviderState {
   // Error states
   error: string | null;
   bookingError: string | null;
+  /** The filters of the last fetchBookings, so a refresh after an action keeps the tab. */
+  lastBookingFilters: BookingFilters | undefined;
 
   // Actions - Dashboard
   /** `force: true` bypasses the 60s cache (e.g. a manual refresh control). */
@@ -77,11 +79,16 @@ interface ProviderState {
 
   // Actions - Bookings
   fetchBookings: (filters?: BookingFilters) => Promise<void>;
-  confirmBooking: (id: string) => Promise<void>;
-  declineBooking: (id: string, note?: string) => Promise<void>;
-  completeBooking: (id: string) => Promise<void>;
-  markBookingNoShow: (id: string) => Promise<void>;
-  cancelBooking: (id: string, reason?: string) => Promise<void>;
+  /**
+   * The booking actions resolve true on success and false on failure (the message lands in
+   * bookingError), and on success update the booking's status in place before refetching,
+   * so the row reflects the change the moment the server confirms it.
+   */
+  confirmBooking: (id: string) => Promise<boolean>;
+  declineBooking: (id: string, note?: string) => Promise<boolean>;
+  completeBooking: (id: string) => Promise<boolean>;
+  markBookingNoShow: (id: string) => Promise<boolean>;
+  cancelBooking: (id: string, reason?: string) => Promise<boolean>;
   confirmBookingPayment: (
     id: string,
     method: PaymentConfirmationMethod,
@@ -117,6 +124,37 @@ interface ProviderState {
   clearBookingError: () => void;
 }
 
+type StoreSet = (partial: Partial<ProviderState> | ((s: ProviderState) => Partial<ProviderState>)) => void;
+
+/**
+ * One booking transition: call the server, then show the new status on the row at once and
+ * refresh the list quietly (no loading spinner, same filters as the tab on screen), so the
+ * table neither blanks out nor keeps the old status until a reload.
+ */
+async function runBookingAction(
+  set: StoreSet,
+  get: () => ProviderState,
+  id: string,
+  nextStatus: BookingStatus,
+  call: () => Promise<void>,
+  fallbackError: string,
+): Promise<boolean> {
+  set({ bookingError: null });
+  try {
+    await call();
+  } catch (error: any) {
+    set({ bookingError: error?.message || fallbackError });
+    return false;
+  }
+  set((s) => ({ bookings: s.bookings.map((b) => (b.id === id ? { ...b, status: nextStatus } : b)) }));
+  try {
+    set({ bookings: await getProviderBookings(get().lastBookingFilters) });
+  } catch {
+    // The transition itself succeeded; a failed refresh just leaves the in-place update.
+  }
+  return true;
+}
+
 export const useProviderStore = create<ProviderState>((set, get) => ({
   // Initial state
   dashboardStats: null,
@@ -143,6 +181,7 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
 
   error: null,
   bookingError: null,
+  lastBookingFilters: undefined,
 
   // Dashboard
   fetchDashboardStats: async (force = false) => {
@@ -171,7 +210,7 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
 
   // Bookings
   fetchBookings: async (filters?: BookingFilters) => {
-    set({ isLoadingBookings: true, bookingError: null });
+    set({ isLoadingBookings: true, bookingError: null, lastBookingFilters: filters });
     try {
       const bookings = await getProviderBookings(filters);
       set({ bookings, isLoadingBookings: false });
@@ -180,53 +219,20 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
     }
   },
 
-  confirmBooking: async (id: string) => {
-    try {
-      await confirmBooking(id);
-      // Refresh bookings
-      await get().fetchBookings();
-    } catch (error: any) {
-      set({ bookingError: error.message || 'Failed to confirm booking' });
-    }
-  },
+  confirmBooking: (id: string) =>
+    runBookingAction(set, get, id, 'accepted', () => confirmBooking(id), 'Failed to confirm booking'),
 
-  completeBooking: async (id: string) => {
-    try {
-      await completeBooking(id);
-      // Refresh bookings
-      await get().fetchBookings();
-    } catch (error: any) {
-      set({ bookingError: error.message || 'Failed to complete booking' });
-    }
-  },
+  completeBooking: (id: string) =>
+    runBookingAction(set, get, id, 'completed', () => completeBooking(id), 'Failed to complete booking'),
 
-  cancelBooking: async (id: string, reason?: string) => {
-    try {
-      await cancelBooking(id, reason);
-      // Refresh bookings
-      await get().fetchBookings();
-    } catch (error: any) {
-      set({ bookingError: error.message || 'Failed to cancel booking' });
-    }
-  },
+  cancelBooking: (id: string, reason?: string) =>
+    runBookingAction(set, get, id, 'cancelled_by_trainer', () => cancelBooking(id, reason), 'Failed to cancel booking'),
 
-  declineBooking: async (id: string, note?: string) => {
-    try {
-      await declineBooking(id, note);
-      await get().fetchBookings();
-    } catch (error: any) {
-      set({ bookingError: error.message || 'Failed to decline booking' });
-    }
-  },
+  declineBooking: (id: string, note?: string) =>
+    runBookingAction(set, get, id, 'declined', () => declineBooking(id, note), 'Failed to decline booking'),
 
-  markBookingNoShow: async (id: string) => {
-    try {
-      await markBookingNoShow(id);
-      await get().fetchBookings();
-    } catch (error: any) {
-      set({ bookingError: error.message || 'Failed to record no-show' });
-    }
-  },
+  markBookingNoShow: (id: string) =>
+    runBookingAction(set, get, id, 'no_show', () => markBookingNoShow(id), 'Failed to record no-show'),
 
   /** Records a payment the client made off-platform. Rethrows so the sheet can show the error. */
   confirmBookingPayment: async (id, method, amount) => {

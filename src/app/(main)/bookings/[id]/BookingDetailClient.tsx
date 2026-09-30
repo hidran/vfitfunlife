@@ -117,7 +117,12 @@ export default function BookingDetailPage() {
   // fetched within the last staleTime, so navigating away and back doesn't re-fetch.
   useQuery({
     queryKey: queryKeys.userBookings(user?.uid),
-    queryFn: () => fetchUserBookings(user!.uid),
+    // The store action fills userBookings and returns nothing; TanStack Query rejects an
+    // undefined result ("Query data cannot be undefined"), so resolve to null.
+    queryFn: async () => {
+      await fetchUserBookings(user!.uid);
+      return null;
+    },
     enabled: !!user?.uid,
   });
 
@@ -166,6 +171,11 @@ export default function BookingDetailPage() {
     if (xpAwarded > 0) void refreshUserProfile().catch(() => undefined);
   };
 
+  // Who the session is with. Trainer sessions store the name as instructorName (createBooking
+  // never writes providerName, which only venue bookings carry), so reading providerName
+  // alone left the booking card with a "?" avatar and no name.
+  const providerDisplayName = booking.instructorName || booking.providerName || '';
+
   const handleCancel = async () => {
     try {
       if (isFallbackBooking) {
@@ -200,7 +210,7 @@ export default function BookingDetailPage() {
 
     const event = {
       title: booking.serviceName || t('bookings.detail.defaultBookingTitle'),
-      description: `Prenotazione con ${booking.providerName || 'Provider'}`,
+      description: `Prenotazione con ${providerDisplayName || 'Provider'}`,
       location: booking.location?.address || '',
       startTime: start.toISOString(),
       endTime: end.toISOString(),
@@ -222,7 +232,7 @@ export default function BookingDetailPage() {
   const handleShare = async () => {
     const shareData = {
       title: 'La mia prenotazione VFit',
-      text: `Ho prenotato ${booking.serviceName} con ${booking.providerName}`,
+      text: `Ho prenotato ${booking.serviceName} con ${providerDisplayName}`,
       url: window.location.href,
     };
 
@@ -242,12 +252,11 @@ export default function BookingDetailPage() {
   // Trainer sessions carry the trainer's uid in instructorId (booking.providerId is never
   // written). Venue bookings have no one to chat with, so the button is hidden for them.
   const chatWith = booking.instructorId || null;
-  const chatName = booking.instructorName || booking.providerName || '';
   const handleChat = () => {
     if (!chatWith) return;
     router.push(
       chatHref(chatWith, {
-        name: chatName,
+        name: providerDisplayName,
         photoUrl: booking.providerAvatar ?? null,
         bookingId: booking.id,
       }),
@@ -386,11 +395,11 @@ export default function BookingDetailPage() {
           <div className="flex items-center gap-4">
             <Avatar
               src={booking.providerAvatar}
-              alt={booking.providerName}
+              alt={providerDisplayName}
               size="xl"
             />
             <div className="flex-1">
-              <h2 className="font-semibold text-content">{booking.providerName}</h2>
+              <h2 className="font-semibold text-content">{providerDisplayName}</h2>
               <p className="text-text-secondary">{booking.serviceName}</p>
             </div>
             {chatWith && (
@@ -398,7 +407,7 @@ export default function BookingDetailPage() {
                 <button
                   type="button"
                   onClick={handleChat}
-                  aria-label={t('chat.cta.messageAria', { name: chatName || t('chat.unknownUser') })}
+                  aria-label={t('chat.cta.messageAria', { name: providerDisplayName || t('chat.unknownUser') })}
                   className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--section-primary)]/20 text-[var(--section-primary)] hover:bg-[var(--section-primary)]/30 transition-colors"
                 >
                   <MessageCircle className="w-5 h-5" aria-hidden="true" />
@@ -506,7 +515,7 @@ export default function BookingDetailPage() {
                 <GoogleMap
                   gyms={[{
                     id: booking.id,
-                    name: booking.providerName || 'Provider',
+                    name: providerDisplayName || 'Provider',
                     city: 'Milano',
                     rating: 5,
                     reviewCount: 0,

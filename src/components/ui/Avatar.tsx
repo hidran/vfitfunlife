@@ -75,8 +75,11 @@ const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
     const thumb = src && size !== 'xl' && !thumbFailed ? thumbnailUrl(src) : src;
     const usingThumb = !!thumb && thumb !== src;
     const showFallback = !src || imageError;
-    const initials = name ? getInitials(name) : '?';
-    const bgColor = name ? getColorFromName(name) : 'bg-[#6B7280] text-white';
+    // Most callers pass the person's name only as `alt`; without this fallback every provider
+    // card without a photo showed "?" instead of their initials.
+    const label = name || alt;
+    const initials = label ? getInitials(label) : '?';
+    const bgColor = label ? getColorFromName(label) : 'bg-[#6B7280] text-white';
 
     return (
       <div
@@ -103,7 +106,7 @@ const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
         ) : (
           <span
             className="font-semibold select-none"
-            aria-label={name || 'User avatar'}
+            aria-label={label || 'User avatar'}
           >
             {initials}
           </span>

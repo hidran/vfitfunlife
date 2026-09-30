@@ -12,10 +12,13 @@ import { BookingFilters, ProviderBooking } from '@/types/provider';
 import { BookingStatus } from '@/types/firebase';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { notify } from '@/lib/notify';
+import type { MessageKey } from '@/i18n/messages';
 
 export default function ProviderBookingsPage() {
   const { t, locale } = useI18n();
-  const { bookings, isLoadingBookings, fetchBookings, confirmBooking, completeBooking, cancelBooking } = useProviderStore();
+  const { bookings, isLoadingBookings, fetchBookings, confirmBooking, declineBooking, completeBooking, cancelBooking } =
+    useProviderStore();
   const [activeTab, setActiveTab] = useState<BookingStatus | 'all'>('all');
 
   const TABS: { id: BookingStatus | 'all'; label: string }[] = [
@@ -55,12 +58,26 @@ export default function ProviderBookingsPage() {
     }
   };
 
+  /** Tell the trainer how the action went: the table only shows a spinner while it runs. */
+  const report = (ok: boolean, successKey: MessageKey) => {
+    if (ok) {
+      notify.success(t(successKey));
+    } else {
+      const detail = useProviderStore.getState().bookingError;
+      notify.error(t('provider.bookingTable.toast.failed'), detail ? { description: detail } : undefined);
+    }
+  };
+
   const handleConfirm = async (id: string) => {
-    await confirmBooking(id);
+    report(await confirmBooking(id), 'provider.bookingTable.toast.confirmed');
+  };
+
+  const handleDecline = async (id: string) => {
+    report(await declineBooking(id), 'provider.bookingTable.toast.declined');
   };
 
   const handleComplete = async (id: string) => {
-    await completeBooking(id);
+    report(await completeBooking(id), 'provider.bookingTable.toast.completed');
   };
 
   const [cancelTargetId, setCancelTargetId] = useState<string | null>(null);
@@ -71,7 +88,7 @@ export default function ProviderBookingsPage() {
 
   const handleCancelConfirmed = async (reason?: string) => {
     if (!cancelTargetId) return;
-    await cancelBooking(cancelTargetId, reason);
+    report(await cancelBooking(cancelTargetId, reason), 'provider.bookingTable.toast.cancelled');
   };
 
   const formatDate = (date: Date | { toDate(): Date }) => {
@@ -216,6 +233,7 @@ export default function ProviderBookingsPage() {
       <BookingTable
         bookings={bookings}
         onConfirm={handleConfirm}
+        onDecline={handleDecline}
         onCancel={handleCancel}
         onComplete={handleComplete}
         onView={(id) => window.location.href = `/provider/bookings/detail?id=${id}`}

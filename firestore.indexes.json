@@ -449,6 +449,17 @@
         { "fieldPath": "categoryIds", "arrayConfig": "CONTAINS" }
       ]
     },
+    // Customer text search (searchProviders in src/lib/firebookings.ts): verified providers
+    // whose name/specialty/category prefixes contain the typed query. searchTerms is kept by
+    // the onInstructorWriteSearchIndex trigger.
+    {
+      "collectionGroup": "instructors",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "providerProfile.isVerified", "order": "ASCENDING" },
+        { "fieldPath": "searchTerms", "arrayConfig": "CONTAINS" }
+      ]
+    },
     // P2-6 geohash radius search (src/lib/firebase/geoQuery.ts): equality filters +
     // orderBy('geohash').startAt().endAt(). searchProvidersNear (booking, with and without
     // a category chip) and fetchVenuesNear (/fit/gyms, type == gym).

@@ -93,7 +93,9 @@ export function buildFallbackBooking(bookingId: string): Booking {
     serviceId: 'demo-service',
     serviceName: 'Sessione Personal Training',
     providerName: 'Coach Demo',
-    providerAvatar: '/images/placeholder.jpg',
+    // No avatar: the Avatar falls back to initials. (/images/placeholder.jpg never existed,
+    // so every detail page logged a 404 while the real booking loaded.)
+    providerAvatar: undefined,
     scheduledAt: toTimestampLike(scheduled),
     scheduledEndAt: toTimestampLike(scheduledEnd),
     duration: 60,

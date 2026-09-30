@@ -288,7 +288,7 @@ The booking detail now shows status **Confirmed**. The QR check-in ticket, calen
 
 ## Issues observed during the walkthrough
 
-These came up while recording the journeys on 30 Sep 2026. They are listed for follow-up. None of them stopped the booking from going through.
+These came up while recording the journeys on 30 Sep 2026. None of them stopped the booking from going through. **Issues 1–7 and 9 were fixed the same day**; see *Fixes* below the table. The screenshots above were taken before the fixes.
 
 | # | Severity | Where | What happened |
 |--|--------|-----------|-------------------------------------|
@@ -302,6 +302,17 @@ These came up while recording the journeys on 30 Sep 2026. They are listed for f
 | 8 | Info | Staging | No verification email arrives on staging (email secrets are placeholders by design), so the *Confirm your email* banner stays up. It did not block signup, service setup or booking. |
 | 9 | Info | E2E suite | The terms checkbox on the confirm screen is now a real `<input type="checkbox">`. `e2e/journey/journey.spec.ts` still clicks an unlabeled `<button>` inside `div.flex.items-start.gap-3` and may need updating (not run as part of this walkthrough). |
 
+### Fixes (30 Sep 2026)
+
+1. **Search by name:** a trigger (`onInstructorWriteSearchIndex`) now keeps a `searchTerms` array of name, specialty and category prefixes on every provider. A typed query becomes one indexed `array-contains` lookup, so every provider is findable by name without a location. Existing providers are indexed by `scripts/backfill-provider-search.mjs`.
+2. **Bookings on mobile:** below the `md` breakpoint each booking is a card, with Confirm / Decline / Complete always visible.
+3. **Action feedback:** the pressed button shows a spinner, and a toast reports success or failure. The row switches status as soon as the server answers, then the list refreshes quietly with the current tab. **Decline** now declines the request (status `declined`, "declined" notification) instead of cancelling it as the trainer.
+4. **Trainer name:** bookings are normalized so a trainer session's `instructorName` fills `providerName`. `Avatar` now takes initials from `alt` when no `name` is given, so cards show "LB" instead of "?".
+5. **Email banner:** the mobile *Provider portal* bar is sticky instead of fixed, so it sits below the banner instead of over it.
+6. **Slot contrast:** the selected slot and day use dark text on the section colour (6–12:1 contrast), with no hover tint once selected.
+7. **Console:** the booking-detail queries resolve to `null` instead of `undefined`, and the placeholder booking no longer points at a missing image.
+9. **E2E:** `journey.spec.ts` ticks the terms with `getByRole('checkbox', { name: /accetto i/i })`.
+
 ---
 
 ## Reproducing this walkthrough
@@ -309,4 +320,4 @@ These came up while recording the journeys on 30 Sep 2026. They are listed for f
 1. Staging only lets in allowlisted emails. A superadmin adds them first at **Admin → Staging access** (`/admin/staging-access`).
 2. Run the app locally against staging with `npm run dev` (`.env.local` points at `vfit-app-staging`). The staging gate is skipped on `localhost`, but sign-up is still checked against the allowlist on the server.
 3. Follow Part A, then Part B, then A13–A16 and B14–B16.
-4. To find the new provider, give the browser a location near theirs and use **Near me** (see Issue 1).
+4. Since the Issue 1 fix, the new provider can also be found by typing their name.

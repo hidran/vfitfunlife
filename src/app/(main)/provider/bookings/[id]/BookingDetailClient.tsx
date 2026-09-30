@@ -95,7 +95,12 @@ export default function BookingDetailClient() {
   // the cache's staleTime is instant instead of re-fetching.
   useQuery({
     queryKey: queryKeys.providerBookings(),
-    queryFn: () => fetchBookings(),
+    // The store action fills `bookings` and returns nothing; resolve to null because TanStack
+    // Query rejects undefined data.
+    queryFn: async () => {
+      await fetchBookings();
+      return null;
+    },
     enabled: !!user,
   });
 

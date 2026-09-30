@@ -163,6 +163,10 @@ export interface ProviderSearchResult {
   reviewCount: number;
   isVerified: boolean;
   specialties: string[];
+  /** Taxonomy ids, leaf and ancestors (instructors.categoryIds). */
+  categoryIds?: string[];
+  /** Search prefixes kept by the onInstructorWriteSearchIndex trigger. */
+  searchTerms?: string[];
   yearsOfExperience: number;
   languages: string[];
   services: Service[];

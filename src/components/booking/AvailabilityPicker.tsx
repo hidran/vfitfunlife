@@ -164,12 +164,14 @@ export function AvailabilityPicker({
               disabled={!slot.isAvailable}
               className={cn(
                 'py-2 px-3 rounded-lg text-sm font-medium transition-all duration-200',
-                slot.isAvailable && !slot.isBooked && [
+                slot.isAvailable && !slot.isBooked && selectedTime !== slot.time &&
                   'bg-surface-elevated text-content hover:bg-[var(--section-primary)]/20',
-                  selectedTime === slot.time && [
-                    'bg-[var(--section-primary)] text-white',
-                    'ring-2 ring-[var(--section-primary)] ring-offset-2 ring-offset-background-dark',
-                  ],
+                // Selected: no hover tint (a tap leaves :hover on touch screens, and the /20 tint
+                // then replaced the fill), and dark text — white on the section colours is
+                // ~2:1, dark is 6–12:1, WCAG AA in every section.
+                slot.isAvailable && !slot.isBooked && selectedTime === slot.time && [
+                  'bg-[var(--section-primary)] text-slate-950 font-semibold',
+                  'ring-2 ring-[var(--section-primary)] ring-offset-2 ring-offset-background-dark',
                 ],
                 (!slot.isAvailable || slot.isBooked) && [
                   'bg-surface-elevated/50 text-text-tertiary cursor-not-allowed',
@@ -237,14 +239,15 @@ export function AvailabilityPicker({
               className={cn(
                 'aspect-square rounded-lg text-sm font-medium transition-all duration-200',
                 !day.isCurrentMonth && 'text-text-tertiary/50',
-                day.isCurrentMonth && !day.isDisabled && 'text-content hover:bg-content/10',
+                day.isCurrentMonth && !day.isDisabled && !day.isSelected && 'text-content hover:bg-content/10',
                 day.isDisabled && 'text-text-tertiary/30 cursor-not-allowed',
                 day.isToday && [
                   'ring-1 ring-[var(--section-primary)]',
                   !day.isSelected && 'text-[var(--section-primary)]',
                 ],
                 day.isSelected && [
-                  'bg-[var(--section-primary)] text-white',
+                  // Dark on the section colour for AA contrast, as for the selected time slot.
+                  'bg-[var(--section-primary)] text-slate-950 font-semibold',
                   'ring-2 ring-[var(--section-primary)] ring-offset-2 ring-offset-background-dark',
                 ]
               )}

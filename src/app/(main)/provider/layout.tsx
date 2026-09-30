@@ -70,7 +70,7 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-64px)]">
+    <div className="flex flex-col lg:flex-row min-h-[calc(100vh-64px)]">
       {/* Desktop Sidebar */}
       <aside className="hidden lg:block w-64 bg-background-dark border-r border-hairline">
         <div className="p-6">
@@ -111,8 +111,9 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
         </div>
       </aside>
 
-      {/* Mobile Header */}
-      <div className="lg:hidden fixed top-16 left-0 right-0 z-30 bg-background-dark border-b border-hairline">
+      {/* Mobile Header. Sticky, not fixed: a fixed bar at top-16 sat on top of whatever the
+          app layout renders above this page (the email-verification banner), hiding it. */}
+      <div className="lg:hidden sticky top-16 z-30 bg-background-dark border-b border-hairline">
         <div className="flex items-center justify-between p-4">
           <h2 className="text-lg font-semibold text-content">{t('provider.layout.title')}</h2>
           <button
@@ -164,7 +165,7 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
       </div>
 
       {/* Main Content */}
-      <main className="min-w-0 flex-1 lg:ml-0 pt-16 lg:pt-0">
+      <main className="min-w-0 flex-1 lg:ml-0">
         <div className="p-4 lg:p-8 max-w-7xl mx-auto">
           {status === 'pending' && (
             <div className="mb-4 flex items-center gap-3 rounded-xl border border-[#F59E0B]/30 bg-[#F59E0B]/10 p-4">

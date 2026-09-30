@@ -26,9 +26,15 @@ vi.mock('firebase/firestore', () => ({
 
 vi.mock('./firebase/availability', () => ({ fetchProviderSlots: vi.fn() }));
 
-import { getDocs } from 'firebase/firestore';
+import { getDocs, where } from 'firebase/firestore';
 import { fetchProviderSlots } from './firebase/availability';
-import { bookingFromDoc, getProviderAvailability, searchProviders, searchProvidersNear } from './firebookings';
+import {
+  bookingFromDoc,
+  getProviderAvailability,
+  providerSearchKey,
+  searchProviders,
+  searchProvidersNear,
+} from './firebookings';
 
 const mockGetDocs = vi.mocked(getDocs);
 beforeEach(() => vi.clearAllMocks());
@@ -43,6 +49,57 @@ describe('searchProviders activity exclusion', () => {
     } as never);
     const results = await searchProviders({});
     expect(results.map((p) => p.id)).toEqual(['trainer-1']);
+  });
+});
+
+describe('searchProviders text query', () => {
+  it('normalizes the typed text the way searchTerms are stored', () => {
+    expect(providerSearchKey('  Luca  Bianchì ')).toBe('luca bianchi');
+    expect(providerSearchKey('')).toBe('');
+    expect(providerSearchKey(undefined)).toBe('');
+  });
+
+  it('looks the text up in searchTerms, so providers beyond the first 50 by id are found', async () => {
+    mockGetDocs.mockResolvedValueOnce({
+      docs: [
+        {
+          id: 'zz-new-trainer',
+          data: () => ({ fullName: 'Luca Bianchi', providerProfile: { isVerified: true }, searchTerms: ['luca bianchi'] }),
+        },
+      ],
+    } as never);
+    const results = await searchProviders({ query: 'Luca Bianchi' });
+    expect(vi.mocked(where)).toHaveBeenCalledWith('searchTerms', 'array-contains', 'luca bianchi');
+    expect(vi.mocked(where)).not.toHaveBeenCalledWith('categoryIds', 'array-contains', expect.anything());
+    expect(results.map((p) => p.id)).toEqual(['zz-new-trainer']);
+  });
+
+  it('keeps a match found through a category word, and applies the category in memory', async () => {
+    mockGetDocs.mockResolvedValueOnce({
+      docs: [
+        {
+          id: 'a',
+          data: () => ({
+            fullName: 'Anna',
+            providerProfile: { isVerified: true },
+            categoryIds: ['personal_training', 'strength_conditioning'],
+            searchTerms: ['training'],
+          }),
+        },
+        {
+          id: 'b',
+          data: () => ({ fullName: 'Bea', providerProfile: { isVerified: true }, categoryIds: ['yoga'], searchTerms: ['training'] }),
+        },
+      ],
+    } as never);
+    const results = await searchProviders({ query: 'training', category: 'strength_conditioning' });
+    expect(results.map((p) => p.id)).toEqual(['a']);
+  });
+
+  it('pushes the category into the query when there is no text', async () => {
+    mockGetDocs.mockResolvedValueOnce({ docs: [] } as never);
+    await searchProviders({ category: 'yoga' });
+    expect(vi.mocked(where)).toHaveBeenCalledWith('categoryIds', 'array-contains', 'yoga');
   });
 });
 
@@ -107,5 +164,13 @@ describe('bookingFromDoc', () => {
 
     expect(booking.duration).toBe(60);
     expect(booking.totalPrice).toBe(0);
+  });
+});
+
+describe('bookingFromDoc provider name', () => {
+  it("shows a trainer session's instructorName where cards read providerName", () => {
+    expect(bookingFromDoc('b1', { instructorName: 'Luca Bianchi' }).providerName).toBe('Luca Bianchi');
+    expect(bookingFromDoc('b2', { providerName: 'Gym Milano', instructorName: 'X' }).providerName).toBe('Gym Milano');
+    expect(bookingFromDoc('b3', {}).providerName).toBeUndefined();
   });
 });

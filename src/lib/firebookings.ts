@@ -27,6 +27,7 @@ import { fetchProviderSlots } from './firebase/availability';
 import { geoRangeQuery } from './firebase/geoQuery';
 import type { LatLng } from './geo';
 import { localDateKey } from './availability/dates';
+import { normalizeSearchText, SEARCH_TOKEN_MAX_LENGTH } from './admin/adminIndex';
 import type {
   Booking,
   BookingData,
@@ -41,28 +42,43 @@ import type {
 const BOOKINGS_COLLECTION = 'bookings';
 const INSTRUCTORS_COLLECTION = 'instructors';
 
+/**
+ * The key a search-box query is looked up by in `instructors.searchTerms`: the same
+ * normalization the onInstructorWriteSearchIndex trigger stores prefixes with, so any prefix
+ * of a provider's name (whole or per word), specialty or category matches. "" = no text query.
+ */
+export function providerSearchKey(raw: string | undefined): string {
+  return normalizeSearchText(raw ?? '').slice(0, SEARCH_TOKEN_MAX_LENGTH).trim();
+}
+
 // Search providers based on filters. Reads the public /instructors mirror
 // (allowed under firestore.rules for unauthenticated and authenticated users).
 export async function searchProviders(params: SearchParams): Promise<ProviderSearchResult[]> {
-  // When a category is specified, push it into the Firestore query as an
-  // array-contains constraint so the limit doesn't burn through unrelated docs
-  // before in-memory filtering can apply (with 300+ seeded trainers, plain
-  // limit(50) starves rare categories whose docs sort late by doc id).
-  // params.category is a TAXONOMY ID, not a display name. categoryIds holds the leaf and
-  // its ancestors, so this single array-contains matches whether the user picked a group
-  // or a leaf — and renaming or translating a category no longer changes who is findable,
-  // which the old name-matching version could not survive.
+  // A text query goes to Firestore as `searchTerms array-contains <key>`. It used to fetch the
+  // first 50 providers by doc id and filter the text in memory, so a provider whose id sorted
+  // after those 50 — every new signup, among 400+ — could not be found by their own name.
+  //
+  // Without text, a category is pushed into the query instead, so limit(50) doesn't burn
+  // through unrelated docs. params.category is a TAXONOMY ID; categoryIds holds the leaf and
+  // its ancestors, so one array-contains matches a group or a leaf. Firestore allows one
+  // array-contains per query, so with both, the category is applied in memory below.
+  const key = providerSearchKey(params.query);
   const constraints: QueryConstraint[] = [where('providerProfile.isVerified', '==', true)];
-  if (params.category) {
+  if (key) {
+    constraints.push(where('searchTerms', 'array-contains', key));
+  } else if (params.category) {
     constraints.push(where('categoryIds', 'array-contains', params.category));
   }
   constraints.push(limit(50));
   const providersQuery = query(collection(db, INSTRUCTORS_COLLECTION), ...constraints);
 
   const snapshot = await getDocs(providersQuery);
-  const providers = snapshot.docs
+  let providers = snapshot.docs
     .filter((doc) => !doc.data().activityKind)
     .map((doc) => providerSearchResultFromDoc(doc.id, doc.data()));
+  if (key && params.category) {
+    providers = providers.filter((p) => p.categoryIds?.includes(params.category!));
+  }
 
   return applyProviderSearchFilters(providers, params);
 }
@@ -109,6 +125,7 @@ export function providerSearchResultFromDoc(
     isVerified: profile.isVerified || false,
     specialties: profile.specialties || [],
     categoryIds: (data.categoryIds as string[]) || [],
+    searchTerms: Array.isArray(data.searchTerms) ? (data.searchTerms as string[]) : undefined,
     yearsOfExperience: profile.yearsOfExperience || 0,
     languages: profile.languages || [],
     // Denormalized cheapest service price (written by the seeder from the
@@ -135,8 +152,12 @@ export function applyProviderSearchFilters<T extends ProviderSearchResult>(
   // Apply text search filter
   if (params.query) {
     const queryLower = params.query.toLowerCase();
+    const key = providerSearchKey(params.query);
     providers = providers.filter(
       (p) =>
+        // What the query matched on in Firestore (category words included), then the
+        // substring fallback for documents the backfill hasn't reached.
+        (key !== '' && p.searchTerms?.includes(key)) ||
         p.fullName.toLowerCase().includes(queryLower) ||
         p.specialties.some((s) => s.toLowerCase().includes(queryLower)) ||
         p.services.some((s) => s.name.toLowerCase().includes(queryLower))
@@ -267,6 +288,9 @@ export function bookingFromDoc(id: string, data: Record<string, unknown>): Booki
     id,
     duration: raw.duration ?? raw.durationMinutes ?? 60,
     totalPrice: raw.totalPrice ?? raw.finalPrice ?? 0,
+    // Trainer sessions are written with instructorName only (providerName belongs to venue
+    // bookings), so every card that shows providerName rendered a "?" and no name for them.
+    providerName: raw.providerName || raw.instructorName || undefined,
   } as Booking;
 }
 

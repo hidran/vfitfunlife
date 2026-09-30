@@ -36,6 +36,7 @@ export * from "./exercises/seed";
 export * from "./recipes/generateRecipes";
 export * from "./recipes/purgeLegacyNutrition";
 export * from "./providers/onServiceWrite";
+export { onInstructorWriteSearchIndex } from "./providers/onInstructorWriteSearchIndex";
 export * from "./providers/backfillProviderStatus";
 export * from "./providers/decideProviderApplication";
 export * from "./providers/applyAsProvider";
