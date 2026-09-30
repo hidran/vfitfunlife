@@ -222,7 +222,7 @@ The trainer's page (`/book?providerId=…`) has **Services**, **Reviews** and **
 
 ### B10. Pick a date
 
-The calendar opens on the current month. The provider requires 24 h notice, so the customer moves to **October** with the › arrow and taps **Friday 2**. Days are not greyed out by availability: a day without free slots (a weekend, or tomorrow once the notice period rules it out) opens with *"No times available"*.
+The calendar opens on the current month. The provider requires 24 h notice, so the customer moves to **October** with the › arrow and taps **Friday 2**. Only days with at least one free slot can be tapped: weekends, days off and days inside the notice period are greyed out (they pulse briefly while the calendar checks the month).
 
 ![Date picker](screenshots/customer/10-pick-date.png)
 

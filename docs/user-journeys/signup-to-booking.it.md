@@ -222,7 +222,7 @@ La pagina del trainer (`/book?providerId=…`) ha le schede **Servizi**, **Recen
 
 ### B10. Scegliere la data
 
-Il calendario si apre sul mese corrente. Il provider richiede 24 ore di preavviso, quindi il cliente passa a **ottobre** con la freccia › e tocca **venerdì 2**. I giorni non vengono disattivati in base alla disponibilità: un giorno senza orari liberi (un weekend, o domani quando il preavviso lo esclude) si apre con *"Nessun orario disponibile"*.
+Il calendario si apre sul mese corrente. Il provider richiede 24 ore di preavviso, quindi il cliente passa a **ottobre** con la freccia › e tocca **venerdì 2**. Si possono toccare solo i giorni con almeno un orario libero: weekend, giorni di chiusura e giorni dentro il preavviso sono in grigio (lampeggiano un attimo mentre il calendario controlla il mese).
 
 ![Selezione della data](screenshots-it/customer/10-pick-date.png)
 

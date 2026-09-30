@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -26,6 +26,7 @@ import { ServiceCard, AvailabilityPicker } from '@/components/booking';
 import type { Service } from '@/types/booking';
 import { useProvider, useProviderServices } from '@/hooks/useProviders';
 import { useInstructorReviews } from '@/hooks/useCommunity';
+import { useBookableDays } from '@/hooks/useBookableDays';
 import { VenueNotFound } from '@/components/venue/VenueNotFound';
 import { PhotoGallery } from '@/components/gallery/PhotoGallery';
 import { useI18n } from '@/hooks/useI18n';
@@ -77,6 +78,16 @@ export default function ProviderBookingPage() {
       fetchAvailability(provider.id, selectedService.id, selectedDate);
     }
   }, [provider, providerSelected, selectedService, selectedDate, firebaseUser, fetchAvailability]);
+
+  // Which days of the month on show have a free start, so the calendar only offers those.
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
+  const handleMonthChange = useCallback((month: Date) => setCalendarMonth(month), []);
+  const { data: bookableDays, isFetching: isCheckingDays } = useBookableDays(
+    provider?.id,
+    selectedService?.id,
+    calendarMonth,
+    providerSelected && !!firebaseUser,
+  );
 
   const slotsNotice = (authReady && !firebaseUser) || availabilityError === 'signin' ? (
     <>
@@ -297,6 +308,9 @@ export default function ProviderBookingPage() {
                     onSelectTime={handleTimeSelect}
                     isLoading={isLoadingAvailability}
                     slotsNotice={slotsNotice}
+                    bookableDays={bookableDays}
+                    isCheckingDays={isCheckingDays && !bookableDays}
+                    onMonthChange={handleMonthChange}
                   />
                 </motion.div>
               )}

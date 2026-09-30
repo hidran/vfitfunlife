@@ -7,6 +7,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
 import type { TimeSlot } from '@/types/booking';
+import { dayAvailability, type BookableDays } from '@/lib/availability/bookableDays';
 
 interface AvailabilityPickerProps {
   availability: TimeSlot[];
@@ -21,6 +22,15 @@ interface AvailabilityPickerProps {
   className?: string;
   /** Shown instead of the time slots, e.g. "sign in to see times" or a load failure. */
   slotsNotice?: React.ReactNode;
+  /**
+   * Which days have ≥1 free start (see useBookableDays). A day answered `false` is disabled;
+   * a day not in the map stays selectable, so a failed check never locks the calendar.
+   */
+  bookableDays?: BookableDays;
+  /** While true, days not answered yet are shown as loading and can't be picked. */
+  isCheckingDays?: boolean;
+  /** The month on show, reported on mount and on every prev/next, so the caller can check its days. */
+  onMonthChange?: (month: Date) => void;
 }
 
 export function AvailabilityPicker({
@@ -35,9 +45,16 @@ export function AvailabilityPicker({
   timezone = 'Europe/Rome',
   className,
   slotsNotice,
+  bookableDays,
+  isCheckingDays = false,
+  onMonthChange,
 }: AvailabilityPickerProps) {
   const { t, locale } = useI18n();
   const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  useEffect(() => {
+    onMonthChange?.(currentMonth);
+  }, [currentMonth, onMonthChange]);
 
   const DAYS = [
     t('provider.calendar.day.sun'),
@@ -96,14 +113,20 @@ export function AvailabilityPicker({
     // Current month days
     for (let i = 1; i <= daysInMonth; i++) {
       const date = new Date(year, month, i);
-      const isDisabled =
+      const outOfRange =
         date < new Date(effectiveMinDate.setHours(0, 0, 0, 0)) ||
         (maxDate && date > maxDate);
+      const status = dayAvailability(bookableDays, date);
+      // Only days with a free start are pickable: a weekend or a day inside the minimum
+      // notice used to open an empty "no available times" list.
+      const isPending = !outOfRange && isCheckingDays && status === 'unknown';
+      const isDisabled = outOfRange || status === 'unavailable' || isPending;
 
       days.push({
         date,
         isCurrentMonth: true,
         isDisabled,
+        isPending,
         isToday: new Date().toDateString() === date.toDateString(),
         isSelected: selectedDate?.toDateString() === date.toDateString(),
       });
@@ -236,14 +259,18 @@ export function AvailabilityPicker({
               key={index}
               onClick={() => !day.isDisabled && onSelectDate(day.date)}
               disabled={day.isDisabled}
+              aria-disabled={day.isDisabled || undefined}
+              aria-busy={day.isPending || undefined}
               className={cn(
                 'aspect-square rounded-lg text-sm font-medium transition-all duration-200',
                 !day.isCurrentMonth && 'text-text-tertiary/50',
                 day.isCurrentMonth && !day.isDisabled && !day.isSelected && 'text-content hover:bg-content/10',
                 day.isDisabled && 'text-text-tertiary/30 cursor-not-allowed',
+                day.isPending && 'animate-pulse',
                 day.isToday && [
                   'ring-1 ring-[var(--section-primary)]',
-                  !day.isSelected && 'text-[var(--section-primary)]',
+                  // A disabled today keeps its ring but not the accent text, so it reads as off.
+                  !day.isSelected && !day.isDisabled && 'text-[var(--section-primary)]',
                 ],
                 day.isSelected && [
                   // Dark on the section colour for AA contrast, as for the selected time slot.

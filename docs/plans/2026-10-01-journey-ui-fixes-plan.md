@@ -42,7 +42,7 @@ the deltas are below.
 
 ## 1. Tasks
 
-### F1 `[ ]` Booking calendar: only days with free slots are selectable (Medium)
+### F1 `[x]` Booking calendar: only days with free slots are selectable (Medium)
 Today every future day is clickable, incl. weekends and days inside the 24h minimum notice; they open
 "No available times" (`booking.availability.noSlots`).
 - Files: `src/components/booking/AvailabilityPicker.tsx`, `src/app/book/BookingClient.tsx`.
@@ -137,3 +137,4 @@ then rebuild both docx with `python3 docs/user-journeys/build-docx.py` (see the 
 |---|---|---|---|---|
 | 2026-09-30 | payments | done | 9f9af27 | Superadmin switches `systemSettings/payments` (Stripe + subscriptions, default off), callables gated, UI hides VIP/wallet. Staging + prod deployed; backend smoke on both; staging UI verified as demo.customer. |
 | 2026-09-30 | guides | done | dc89852 | Journey guides re-recorded EN + IT, dark theme, new layout; bug list above comes from this run. |
+| 2026-10-01 | F1 | done | (this commit) | Calendar asks getProviderSlots for each remaining day of the visible month (6 at a time, `useBookableDays` + `src/lib/availability/bookableDays.ts`, cached 1 min) and disables days with no slot (`disabled` + `aria-disabled`, muted; pulsing `aria-busy` while checking; a failed check leaves the day selectable). No backend change, so no functions deploy needed. Verified locally against staging as demo.customer → demo.provider: Oct 2026 weekends + today (Thu 1, inside 24 h) disabled, all 21 enabled days list ≥1 time, Nov opens with Sun 1 and weekends disabled, Tab skips disabled days. B10 text updated in both guides (issues-table row left for G2). Reschedule picker not wired (out of scope). |
