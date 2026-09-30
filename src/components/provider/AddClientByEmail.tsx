@@ -8,8 +8,10 @@
  *
  * 1. addClientByEmail: an existing account joins the roster at once — `onAdded` gets the entry
  *    so the caller can reload and preselect it.
- * 2. No account (`not_found`): nothing is sent. The trainer sees "Non ha ancora un account
- *    VFit" and may choose "Invita a unirsi a VFit" → inviteClientToPlatform sends the email.
+ * 2. No account (`not_found`): nothing is sent yet. The trainer may
+ *    - create the account (name + optional phone → createClientAccount): the client joins the
+ *      roster at once (`onAdded`, like 1.) and gets an email to confirm the account; or
+ *    - just "Invita a unirsi a VFit" (secondary link) → inviteClientToPlatform sends an invite.
  */
 
 import { useId, useState, type FormEvent } from 'react';
@@ -17,10 +19,25 @@ import { Plus, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useI18n } from '@/hooks/useI18n';
 import { cn } from '@/lib/utils';
-import { addClientByEmail, inviteClientToPlatform, type AddedRosterClient } from '@/lib/firebase/functions';
+import {
+  addClientByEmail,
+  createClientAccount,
+  inviteClientToPlatform,
+  type AddedRosterClient,
+} from '@/lib/firebase/functions';
 import { callableErrorMessage, fieldClass } from './schedule/ScheduleSheet';
 
 const EMAIL_RE = /^[^\s@/]+@[^\s@/]+\.[^\s@/]+$/;
+// Same loose rules as the server (createClientAccountCore): 2..80 chars; 6..15 digits.
+const MIN_NAME = 2;
+const MAX_NAME = 80;
+const PHONE_RE = /^\+?\d{6,15}$/;
+
+function phoneLooksValid(raw: string): boolean {
+  const compact = raw.trim().replace(/[\s\-.()]/g, '');
+  if (compact === '') return true;
+  return PHONE_RE.test(compact.startsWith('00') ? `+${compact.slice(2)}` : compact);
+}
 
 interface AddClientByEmailProps {
   /** After an existing account was added (or already was a client). */
@@ -33,15 +50,21 @@ interface AddClientByEmailProps {
 type Outcome =
   | { kind: 'added'; name: string; already: boolean }
   | { kind: 'notFound'; email: string }
+  | { kind: 'created'; name: string; emailSent: boolean }
   | { kind: 'invited' }
   | { kind: 'error'; message: string };
 
 export function AddClientByEmail({ onAdded, collapsible = false, className }: AddClientByEmailProps) {
   const { t } = useI18n();
   const emailId = useId();
+  const nameId = useId();
+  const phoneId = useId();
   const [open, setOpen] = useState(!collapsible);
   const [email, setEmail] = useState('');
-  const [busy, setBusy] = useState<'lookup' | 'invite' | null>(null);
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [busy, setBusy] = useState<'lookup' | 'invite' | 'create' | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
 
   const errorFor = (err: unknown): string => {
@@ -52,6 +75,9 @@ export function AddClientByEmail({ onAdded, collapsible = false, className }: Ad
     if (message.includes('instructor_not_bookable')) return t('provider.addClient.error.notBookable');
     if (message.includes('already_registered')) return t('provider.addClient.error.alreadyRegistered');
     if (message.includes('email_failed')) return t('provider.addClient.error.emailFailed');
+    if (message.includes('invalid_name')) return t('provider.addClient.error.invalidName');
+    if (message.includes('invalid_phone')) return t('provider.addClient.error.invalidPhone');
+    if (message.includes('account_create_failed')) return t('provider.addClient.error.createFailed');
     return t('provider.addClient.error.generic');
   };
 
@@ -66,6 +92,7 @@ export function AddClientByEmail({ onAdded, collapsible = false, className }: Ad
     }
     setBusy('lookup');
     setOutcome(null);
+    setCreateError(null);
     try {
       const result = await addClientByEmail(normalized);
       if (result.status === 'added') {
@@ -78,6 +105,43 @@ export function AddClientByEmail({ onAdded, collapsible = false, className }: Ad
       }
     } catch (err) {
       setOutcome({ kind: 'error', message: errorFor(err) });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleCreate = async (address: string) => {
+    if (busy) return;
+    const name = fullName.trim().replace(/\s+/g, ' ');
+    if (name.length < MIN_NAME || name.length > MAX_NAME) {
+      setCreateError(t('provider.addClient.error.invalidName'));
+      return;
+    }
+    if (!phoneLooksValid(phone)) {
+      setCreateError(t('provider.addClient.error.invalidPhone'));
+      return;
+    }
+    setBusy('create');
+    setCreateError(null);
+    try {
+      const result = await createClientAccount({
+        email: address,
+        fullName: name,
+        ...(phone.trim() ? { phone: phone.trim() } : {}),
+      });
+      const shown = result.client.name || name;
+      setOutcome(
+        result.status === 'created'
+          ? { kind: 'created', name: shown, emailSent: result.emailSent }
+          : { kind: 'added', name: shown, already: result.alreadyClient },
+      );
+      setEmail('');
+      setFullName('');
+      setPhone('');
+      onAdded(result.client);
+    } catch (err) {
+      // Stay on the form so the trainer can fix the field and retry.
+      setCreateError(errorFor(err));
     } finally {
       setBusy(null);
     }
@@ -127,7 +191,10 @@ export function AddClientByEmail({ onAdded, collapsible = false, className }: Ad
           value={email}
           onChange={(e) => {
             setEmail(e.target.value);
-            if (outcome?.kind === 'notFound' || outcome?.kind === 'error') setOutcome(null);
+            if (outcome?.kind === 'notFound' || outcome?.kind === 'error') {
+              setOutcome(null);
+              setCreateError(null);
+            }
           }}
           placeholder={t('provider.addClient.emailPlaceholder')}
           disabled={busy !== null}
@@ -152,20 +219,77 @@ export function AddClientByEmail({ onAdded, collapsible = false, className }: Ad
         </p>
       )}
       {outcome?.kind === 'notFound' && (
-        <div className="rounded-lg border border-hairline p-3 space-y-2" role="status">
-          <p className="text-sm text-content">{t('provider.addClient.notFound')}</p>
+        <div className="rounded-lg border border-hairline p-3 space-y-3">
+          <p className="text-sm text-content" role="status">{t('provider.addClient.notFound')}</p>
+          <div className="space-y-1">
+            <label htmlFor={nameId} className="text-sm font-medium text-content">
+              {t('provider.addClient.create.nameLabel')}
+            </label>
+            <input
+              id={nameId}
+              type="text"
+              autoComplete="off"
+              required
+              maxLength={MAX_NAME}
+              value={fullName}
+              onChange={(e) => {
+                setFullName(e.target.value);
+                setCreateError(null);
+              }}
+              disabled={busy !== null}
+              className={cn(fieldClass, 'w-full')}
+            />
+          </div>
+          <div className="space-y-1">
+            <label htmlFor={phoneId} className="text-sm font-medium text-content">
+              {t('provider.addClient.create.phoneLabel')}
+            </label>
+            <input
+              id={phoneId}
+              type="tel"
+              inputMode="tel"
+              autoComplete="off"
+              value={phone}
+              onChange={(e) => {
+                setPhone(e.target.value);
+                setCreateError(null);
+              }}
+              placeholder={t('provider.addClient.create.phonePlaceholder')}
+              disabled={busy !== null}
+              className={cn(fieldClass, 'w-full')}
+            />
+          </div>
+          {createError && <p className="text-sm text-error" role="alert">{createError}</p>}
           <Button
             type="button"
-            variant="outline"
-            onClick={() => handleInvite(outcome.email)}
-            isLoading={busy === 'invite'}
-            disabled={busy !== null}
+            onClick={() => handleCreate(outcome.email)}
+            isLoading={busy === 'create'}
+            disabled={busy !== null || !fullName.trim()}
             className="min-h-11 w-full"
           >
             <UserPlus className="w-4 h-4 mr-1" aria-hidden="true" />
-            {t('provider.addClient.invite')}
+            {t('provider.addClient.create.submit')}
           </Button>
+          <button
+            type="button"
+            onClick={() => handleInvite(outcome.email)}
+            disabled={busy !== null}
+            aria-busy={busy === 'invite'}
+            className="min-h-11 w-full text-sm text-content-muted underline underline-offset-2 hover:text-content disabled:opacity-50"
+          >
+            {t('provider.addClient.invite')}
+          </button>
         </div>
+      )}
+      {outcome?.kind === 'created' && (
+        <p
+          className={cn('text-sm', outcome.emailSent ? 'text-content-muted' : 'text-warning')}
+          role={outcome.emailSent ? 'status' : 'alert'}
+        >
+          {t(outcome.emailSent ? 'provider.addClient.create.created' : 'provider.addClient.create.createdNoEmail', {
+            name: outcome.name,
+          })}
+        </p>
       )}
       {outcome?.kind === 'invited' && (
         <p className="text-sm text-content-muted" role="status">{t('provider.addClient.invited')}</p>

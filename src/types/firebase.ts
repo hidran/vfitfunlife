@@ -180,6 +180,11 @@ export interface User {
   bio: string | null;
   phoneVerified: boolean;
   emailVerified: boolean;
+  /**
+   * Only on accounts a trainer created for a client (createClientAccount): 'invited' until
+   * the first sign-in, then 'active'. Server-owned (flipped by syncEmailVerification).
+   */
+  accountStatus?: 'invited' | 'active';
   
   // Social links
   socialLinks: SocialLinks | null;

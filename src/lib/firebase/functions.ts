@@ -206,6 +206,44 @@ export async function inviteClientToPlatform(email: string): Promise<{ status: '
   return (await fn({ email })).data;
 }
 
+export type CreateClientAccountResult =
+  | { status: 'created'; emailSent: boolean; client: AddedRosterClient }
+  /** The address registered meanwhile: it was simply added to the roster. */
+  | { status: 'added'; alreadyExisted: true; alreadyClient: boolean; client: AddedRosterClient };
+
+/**
+ * Trainer creates the account of a client who has none (after `not_found`): the client joins
+ * the roster at once and gets an email to confirm the account by choosing a password.
+ * `emailSent: false` → the account exists but the email did not go out (resend from the
+ * client's page). Shares addClientByEmail's rate limit; extra error codes: invalid_name,
+ * invalid_phone, account_create_failed.
+ */
+export async function createClientAccount(data: {
+  email: string;
+  fullName: string;
+  phone?: string;
+}): Promise<CreateClientAccountResult> {
+  const functions = await getFunctionsInstance();
+  const fn = httpsCallable<typeof data, CreateClientAccountResult>(functions, 'createClientAccount');
+  return (await fn(data)).data;
+}
+
+/**
+ * Re-sends the confirmation email of an account this trainer created that is still waiting
+ * for confirmation. `already_active` → the client has signed in meanwhile (badge is stale).
+ * Errors: not_your_client, email_failed, rate_limited.
+ */
+export async function resendClientAccountEmail(
+  userId: string,
+): Promise<{ status: 'sent' | 'already_active' }> {
+  const functions = await getFunctionsInstance();
+  const fn = httpsCallable<{ userId: string }, { status: 'sent' | 'already_active' }>(
+    functions,
+    'resendClientAccountEmail',
+  );
+  return (await fn({ userId })).data;
+}
+
 /** Trainer saves their private notes on one of their bookings (server-only field). */
 export async function updateBookingPrivateNotes(bookingId: string, notes: string) {
   const functions = await getFunctionsInstance();

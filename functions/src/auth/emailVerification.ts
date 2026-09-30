@@ -3,6 +3,8 @@ import * as admin from "firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 
 import { region } from "../lib/runtimeOptions";
+import { ACCOUNT_STATUS_ACTIVE, ACCOUNT_STATUS_INVITED, isInvitedAccountClaimed } from "../users/customerProfile";
+import { activateInvitedAccount } from "../users/invitedAccount";
 
 /** Sign-in providers that only hand out email addresses they have verified. */
 const EMAIL_VERIFYING_PROVIDERS = new Set(["google.com", "apple.com"]);
@@ -43,6 +45,12 @@ export async function resolveEmailVerified(record: admin.auth.UserRecord): Promi
  *
  * Called after sign-in when the doc and Auth disagree, and after the user
  * opens the verification link.
+ *
+ * Also the "first sign-in" hook for accounts a trainer created (createClientAccount):
+ * the app calls it whenever the loaded profile has accountStatus "invited", and once the
+ * Auth record shows the owner has signed in (a password set via the emailed link, Google on
+ * that address, or a verified email) the account flips to "active" — see
+ * users/invitedAccount.ts. Returns the resulting accountStatus when the doc has one.
  */
 export const syncEmailVerification = onCall(
   { region },
@@ -64,6 +72,13 @@ export const syncEmailVerification = onCall(
       });
     }
 
-    return { emailVerified };
+    let accountStatus = snap.data()?.accountStatus as string | undefined;
+    const claimed = isInvitedAccountClaimed({ emailVerified, providerData: record.providerData });
+    if (accountStatus === ACCOUNT_STATUS_INVITED && claimed) {
+      await activateInvitedAccount(uid);
+      accountStatus = ACCOUNT_STATUS_ACTIVE;
+    }
+
+    return accountStatus ? { emailVerified, accountStatus } : { emailVerified };
   },
 );

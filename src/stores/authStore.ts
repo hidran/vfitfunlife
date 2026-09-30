@@ -315,13 +315,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // Google/Apple sign-ins, and email accounts verified since the last load,
       // get users/{uid}.emailVerified set server-side. Fire and forget.
+      // The same call is the first-sign-in hook of an account a trainer created
+      // (accountStatus 'invited'): the server flips it to 'active'.
       if (
         currentFirebaseUser.email &&
         !verificationAutoSynced.has(uid) &&
-        needsVerificationSync(
-          { ...currentFirebaseUser, providerData: currentFirebaseUser.providerData ?? [] },
-          user.emailVerified,
-        )
+        (user.accountStatus === 'invited' ||
+          needsVerificationSync(
+            { ...currentFirebaseUser, providerData: currentFirebaseUser.providerData ?? [] },
+            user.emailVerified,
+          ))
       ) {
         verificationAutoSynced.add(uid);
         get().checkEmailVerification().catch((err) => {
@@ -682,11 +685,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     // Pick up a verification link opened in another tab or the mail app.
     await current.reload();
-    if (!needsVerificationSync(current, user.emailVerified)) {
+    if (user.accountStatus !== 'invited' && !needsVerificationSync(current, user.emailVerified)) {
       return current.emailVerified || user.emailVerified === true;
     }
 
-    const { emailVerified } = await syncEmailVerification();
+    const { emailVerified, accountStatus } = await syncEmailVerification();
+    if (accountStatus && accountStatus !== user.accountStatus) {
+      set((state) => ({ user: state.user ? { ...state.user, accountStatus } : state.user }));
+    }
     if (emailVerified) {
       // The server may have just set emailVerified on the Auth record
       // (Google/Apple); reload so the SDK user and its token reflect it.

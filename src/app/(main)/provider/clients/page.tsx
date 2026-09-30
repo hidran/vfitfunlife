@@ -112,6 +112,11 @@ export default function ProviderClientsPage() {
                     {client.name}
                   </h3>
                   <p className="text-sm text-content-muted">{client.email}</p>
+                  {client.accountStatus === 'invited' && (
+                    <span className="inline-flex mt-1 px-2 py-0.5 rounded-full bg-warning/15 text-warning text-xs font-medium">
+                      {t('provider.clients.pendingConfirmation')}
+                    </span>
+                  )}
                   {client.notes && (
                     <div className="flex items-center gap-1 mt-1">
                       <FileText className="w-3 h-3 text-content-faint light:text-content-muted" />

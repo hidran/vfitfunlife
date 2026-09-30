@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Mail, Phone, Calendar, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, Calendar, MessageSquare, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/Spinner';
 import { cn } from '@/lib/utils';
@@ -13,6 +13,8 @@ import { useProviderStore } from '@/stores/providerStore';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
 import { chatHref } from '@/lib/routes';
+import { resendClientAccountEmail } from '@/lib/firebase/functions';
+import { callableErrorMessage } from '@/components/provider/schedule/ScheduleSheet';
 import OverviewTab from './tabs/OverviewTab';
 import MeetingsTab from './tabs/MeetingsTab';
 import NotesTab from './tabs/NotesTab';
@@ -49,6 +51,34 @@ export default function ClientDetailClient() {
   );
 
   const [activeTab, setActiveTab] = useState<TabId>('overview');
+  const [resending, setResending] = useState(false);
+  const [resendNotice, setResendNotice] = useState<{ ok: boolean; text: string } | null>(null);
+
+  // An account the trainer created that the client has not confirmed yet (roster badge).
+  const handleResend = async (userId: string) => {
+    if (resending) return;
+    setResending(true);
+    setResendNotice(null);
+    try {
+      const { status } = await resendClientAccountEmail(userId);
+      if (status === 'already_active') {
+        setResendNotice({ ok: true, text: t('provider.clients.resend.alreadyActive') });
+        if (clientId) void fetchClientDetails(clientId);
+      } else {
+        setResendNotice({ ok: true, text: t('provider.clients.resend.sent') });
+      }
+    } catch (err) {
+      const message = callableErrorMessage(err);
+      setResendNotice({
+        ok: false,
+        text: message.includes('rate_limited')
+          ? t('provider.addClient.error.rateLimited')
+          : t('provider.clients.resend.failed'),
+      });
+    } finally {
+      setResending(false);
+    }
+  };
 
   useEffect(() => {
     if (clientId) {
@@ -115,6 +145,34 @@ export default function ClientDetailClient() {
 
           <div className="flex-1">
             <h1 className="text-2xl font-bold text-content">{client.name}</h1>
+            {client.accountStatus === 'invited' && (
+              <div className="flex flex-wrap items-center gap-2 mt-2">
+                <span className="inline-flex px-2 py-0.5 rounded-full bg-warning/15 text-warning text-xs font-medium">
+                  {t('provider.clients.pendingConfirmation')}
+                </span>
+                {client.userId && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="min-h-11"
+                    isLoading={resending}
+                    disabled={resending}
+                    onClick={() => handleResend(client.userId)}
+                  >
+                    <Send className="w-4 h-4 mr-1" aria-hidden="true" />
+                    {t('provider.clients.resendEmail')}
+                  </Button>
+                )}
+              </div>
+            )}
+            {resendNotice && (
+              <p
+                className={cn('text-sm mt-2', resendNotice.ok ? 'text-content-muted' : 'text-error')}
+                role={resendNotice.ok ? 'status' : 'alert'}
+              >
+                {resendNotice.text}
+              </p>
+            )}
             <div className="flex flex-col sm:flex-row gap-4 mt-3">
               <a href={`mailto:${client.email}`} className="flex items-center gap-2 text-content-muted hover:text-content text-sm">
                 <Mail className="w-4 h-4" />

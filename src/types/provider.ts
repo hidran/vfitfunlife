@@ -119,6 +119,11 @@ export interface ProviderClient {
   firstVisit?: Date;
   notes?: string;
   tags?: string[];
+  /**
+   * Set only when the trainer created the client's account (createClientAccount):
+   * 'invited' until the client confirms it by signing in, then 'active'.
+   */
+  accountStatus?: 'invited' | 'active';
 }
 
 export interface ClientBookingHistory {

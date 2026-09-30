@@ -448,12 +448,19 @@ export async function sendVerificationEmail(user: User, locale?: AppLocale): Pro
  * Copy Auth's verified state onto users/{uid}.emailVerified; the server also
  * marks Google/Apple sign-ins verified. Returns the resulting state.
  */
-export async function syncEmailVerification(): Promise<{ emailVerified: boolean }> {
+export async function syncEmailVerification(): Promise<{
+  emailVerified: boolean;
+  /** Present when the profile has one (trainer-created accounts); 'active' once claimed. */
+  accountStatus?: 'invited' | 'active';
+}> {
   const [{ httpsCallable }, functions] = await Promise.all([
     import('firebase/functions'),
     getFunctionsInstance(),
   ]);
-  const sync = httpsCallable<void, { emailVerified: boolean }>(functions, "syncEmailVerification");
+  const sync = httpsCallable<void, { emailVerified: boolean; accountStatus?: 'invited' | 'active' }>(
+    functions,
+    "syncEmailVerification",
+  );
   const result = await sync();
   return result.data;
 }

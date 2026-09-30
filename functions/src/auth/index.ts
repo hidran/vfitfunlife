@@ -4,6 +4,7 @@ import * as admin from "firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import { generateReferralCode } from "../utils/helpers";
 import { resolveEmailVerified } from "./emailVerification";
+import { CUSTOMER_DEFAULT_PERMISSIONS } from "../users/customerProfile";
 
 export { syncEmailVerification } from "./emailVerification";
 
@@ -53,14 +54,7 @@ export const initializeUserProfile = onCall(
 
       // Role and permissions
       role: "customer",
-      permissions: [
-        "bookings:read",
-        "bookings:write",
-        "bookings:cancel",
-        "services:read",
-        "venues:read",
-        "promotions:read",
-      ],
+      permissions: [...CUSTOMER_DEFAULT_PERMISSIONS],
 
       // Status flags
       isActive: true,

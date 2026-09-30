@@ -8,6 +8,7 @@ const h = vi.hoisted(() => ({
   createBookingAsTrainer: vi.fn(),
   addClientByEmail: vi.fn(),
   inviteClientToPlatform: vi.fn(),
+  createClientAccount: vi.fn(),
 }));
 
 vi.mock('@/lib/firebase/provider', () => ({ getProviderClients: h.getProviderClients }));
@@ -17,6 +18,7 @@ vi.mock('@/lib/firebase/functions', () => ({
   createBookingAsTrainer: h.createBookingAsTrainer,
   addClientByEmail: h.addClientByEmail,
   inviteClientToPlatform: h.inviteClientToPlatform,
+  createClientAccount: h.createClientAccount,
 }));
 
 import { AddAppointmentSheet } from './AddAppointmentSheet';
@@ -166,11 +168,80 @@ describe('AddAppointmentSheet', () => {
     fireEvent.change(screen.getByLabelText('Email del cliente'), { target: { value: 'nuovo@example.com' } });
     fireEvent.click(screen.getByRole('button', { name: 'Cerca e aggiungi' }));
 
-    expect(await screen.findByText('Non ha ancora un account VFit.')).toBeInTheDocument();
+    expect(await screen.findByText(/Non ha ancora un account VFit\./)).toBeInTheDocument();
     expect(h.inviteClientToPlatform).not.toHaveBeenCalled();
+    expect(h.createClientAccount).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Invita a unirsi a VFit' }));
     expect(await screen.findByText(/Invito inviato/)).toBeInTheDocument();
     expect(h.inviteClientToPlatform).toHaveBeenCalledWith('nuovo@example.com');
+  });
+
+  it('creates the account of a client who has none, preselects them and can book them', async () => {
+    h.getProviderClients.mockResolvedValueOnce([]).mockResolvedValue([
+      {
+        id: 'trainer-1_u-new', userId: 'u-new', name: 'Giulia Neri', email: 'giulia@example.com',
+        totalBookings: 0, totalSpent: 0, accountStatus: 'invited',
+      },
+    ]);
+    h.addClientByEmail.mockResolvedValue({ status: 'not_found' });
+    h.createClientAccount.mockResolvedValue({
+      status: 'created',
+      emailSent: true,
+      client: { id: 'trainer-1_u-new', userId: 'u-new', name: 'Giulia Neri', email: 'giulia@example.com' },
+    });
+    const props = renderSheet();
+    fireEvent.change(await screen.findByLabelText('Email del cliente'), { target: { value: 'giulia@example.com' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Cerca e aggiungi' }));
+
+    expect(await screen.findByText(/Puoi crearlo tu: riceverà un'email per confermarlo/)).toBeInTheDocument();
+    const submit = screen.getByRole('button', { name: 'Aggiungi cliente e invia email' });
+    expect(submit).toBeDisabled(); // name is required
+
+    fireEvent.change(screen.getByLabelText('Nome e cognome'), { target: { value: 'G' } });
+    fireEvent.click(submit);
+    expect(await screen.findByText('Inserisci nome e cognome (da 2 a 80 caratteri).')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Nome e cognome'), { target: { value: ' Giulia  Neri ' } });
+    fireEvent.change(screen.getByLabelText('Telefono (facoltativo)'), { target: { value: 'abc' } });
+    fireEvent.click(submit);
+    expect(await screen.findByText(/numero di telefono valido/)).toBeInTheDocument();
+    expect(h.createClientAccount).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText('Telefono (facoltativo)'), { target: { value: '+39 333 1234567' } });
+    fireEvent.click(submit);
+    expect(await screen.findByText(/Giulia Neri è ora tra i tuoi clienti\. Gli abbiamo inviato un'email/)).toBeInTheDocument();
+    expect(h.createClientAccount).toHaveBeenCalledWith({
+      email: 'giulia@example.com',
+      fullName: 'Giulia Neri',
+      phone: '+39 333 1234567',
+    });
+    await waitFor(() => expect(h.getProviderClients).toHaveBeenCalledTimes(2));
+    fireEvent.click(screen.getByRole('button', { name: 'Cliente esistente' }));
+    await waitFor(() => expect(screen.getByLabelText('Cliente')).toHaveValue('u-new'));
+
+    fireEvent.change(screen.getByLabelText('Servizio'), { target: { value: 'svc-pt' } });
+    fireEvent.click(await screen.findByRole('button', { name: '10:00' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Aggiungi' }));
+    await waitFor(() => expect(props.onCreated).toHaveBeenCalled());
+    expect(h.createBookingAsTrainer).toHaveBeenCalledWith({ clientUserId: 'u-new', serviceId: 'svc-pt', startsAt: SLOT.startsAt });
+  });
+
+  it('warns when the account was created but the confirmation email did not go out', async () => {
+    h.addClientByEmail.mockResolvedValue({ status: 'not_found' });
+    h.createClientAccount.mockResolvedValue({
+      status: 'created',
+      emailSent: false,
+      client: { id: 'trainer-1_u-new', userId: 'u-new', name: 'Giulia Neri', email: 'giulia@example.com' },
+    });
+    renderSheet();
+    await screen.findByLabelText('Cliente');
+    fireEvent.click(screen.getByRole('button', { name: 'Nuovo cliente (email)' }));
+    fireEvent.change(screen.getByLabelText('Email del cliente'), { target: { value: 'giulia@example.com' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Cerca e aggiungi' }));
+    fireEvent.change(await screen.findByLabelText('Nome e cognome'), { target: { value: 'Giulia Neri' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Aggiungi cliente e invia email' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/l'email di conferma non è partita/);
+    expect(h.createClientAccount).toHaveBeenCalledWith({ email: 'giulia@example.com', fullName: 'Giulia Neri' });
   });
 
   it('maps server refusals to messages', async () => {
