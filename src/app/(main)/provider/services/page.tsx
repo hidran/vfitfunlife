@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { Plus, Edit, Copy, Trash2, MoreVertical, Check, X, Clock, DollarSign, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/Modal';
@@ -47,6 +47,9 @@ export default function ProviderServicesPage() {
   const createService = useCreateProviderService(uid);
   const updateService = useUpdateProviderService(uid);
   const deleteService = useDeleteProviderService(uid);
+  // Prefix for the dialog field ids so every label is tied to its control.
+  const fieldId = useId();
+  const fid = (name: string) => `${fieldId}-${name}`;
 
   const [editingService, setEditingService] = useState<InstructorService | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -366,14 +369,15 @@ export default function ProviderServicesPage() {
 
       {/* Edit Modal */}
       {editingService && (
-        <Modal onClose={() => setEditingService(null)}>
-          <div className="bg-surface-elevated rounded-xl p-6 w-[calc(100%-2rem)] max-w-md">
-            <h3 className="text-xl font-semibold text-content mb-6">{t('provider.services.edit.title')}</h3>
+        <Modal onClose={() => setEditingService(null)} labelledBy={fid('edit-title')} className="w-full max-w-md">
+          <div className="bg-surface-elevated rounded-xl p-6">
+            <h3 id={fid('edit-title')} className="text-xl font-semibold text-content mb-6">{t('provider.services.edit.title')}</h3>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-content-muted mb-2">{t('provider.services.edit.serviceName')}</label>
+                <label htmlFor={fid('edit-name')} className="block text-sm text-content-muted mb-2">{t('provider.services.edit.serviceName')}</label>
                 <input
+                  id={fid('edit-name')}
                   type="text"
                   value={editingService.name}
                   onChange={(e) => setEditingService({ ...editingService, name: e.target.value })}
@@ -382,8 +386,9 @@ export default function ProviderServicesPage() {
               </div>
 
               <div>
-                <label className="block text-sm text-content-muted mb-2">{t('provider.services.edit.description')}</label>
+                <label htmlFor={fid('edit-description')} className="block text-sm text-content-muted mb-2">{t('provider.services.edit.description')}</label>
                 <textarea
+                  id={fid('edit-description')}
                   value={editingService.description ?? ''}
                   onChange={(e) => setEditingService({ ...editingService, description: e.target.value })}
                   className="w-full bg-surface-input border border-hairline rounded-lg px-4 py-2.5 text-content outline-none focus:border-section-primary min-h-[80px]"
@@ -391,8 +396,9 @@ export default function ProviderServicesPage() {
               </div>
 
               <div>
-                <label className="block text-sm text-content-muted mb-2">{t('provider.services.edit.category')}</label>
+                <label htmlFor={fid('edit-category')} className="block text-sm text-content-muted mb-2">{t('provider.services.edit.category')}</label>
                 <select
+                  id={fid('edit-category')}
                   value={editingService.categoryId ?? ''}
                   onChange={(e) => setEditingService({ ...editingService, categoryId: e.target.value })}
                   className="w-full bg-surface-input border border-hairline rounded-lg px-4 py-2.5 text-content outline-none focus:border-section-primary"
@@ -410,8 +416,9 @@ export default function ProviderServicesPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-content-muted mb-2">{t('provider.services.edit.price')}</label>
+                  <label htmlFor={fid('edit-price')} className="block text-sm text-content-muted mb-2">{t('provider.services.edit.price')}</label>
                   <input
+                    id={fid('edit-price')}
                     type="number"
                     value={editingService.price}
                     onChange={(e) => setEditingService({ ...editingService, price: parseFloat(e.target.value) || 0 })}
@@ -419,8 +426,9 @@ export default function ProviderServicesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-content-muted mb-2">{t('provider.services.edit.duration')}</label>
+                  <label htmlFor={fid('edit-duration')} className="block text-sm text-content-muted mb-2">{t('provider.services.edit.duration')}</label>
                   <input
+                    id={fid('edit-duration')}
                     type="number"
                     value={editingService.durationMinutes}
                     onChange={(e) => setEditingService({ ...editingService, durationMinutes: parseInt(e.target.value) || 0 })}
@@ -432,12 +440,12 @@ export default function ProviderServicesPage() {
               <div className="flex items-center gap-3 pt-2">
                 <input
                   type="checkbox"
-                  id="isActive"
+                  id={fid('edit-active')}
                   checked={editingService.isActive}
                   onChange={(e) => setEditingService({ ...editingService, isActive: e.target.checked })}
                   className="w-5 h-5 rounded border-content/20 bg-transparent text-section-primary focus:ring-section-primary"
                 />
-                <label htmlFor="isActive" className="text-content">{t('provider.services.edit.isActive')}</label>
+                <label htmlFor={fid('edit-active')} className="text-content">{t('provider.services.edit.isActive')}</label>
               </div>
             </div>
 
@@ -460,9 +468,9 @@ export default function ProviderServicesPage() {
 
       {/* Add Modal */}
       {showAddModal && (
-        <Modal onClose={() => setShowAddModal(false)}>
-          <div className="bg-surface-elevated rounded-xl p-6 w-[calc(100%-2rem)] max-w-md">
-            <h3 className="text-xl font-semibold text-content mb-4">{t('provider.services.add.title')}</h3>
+        <Modal onClose={() => setShowAddModal(false)} labelledBy={fid('add-title')} className="w-full max-w-md">
+          <div className="bg-surface-elevated rounded-xl p-6">
+            <h3 id={fid('add-title')} className="text-xl font-semibold text-content mb-4">{t('provider.services.add.title')}</h3>
 
             <div className="mb-4 grid grid-cols-2 gap-1 rounded-lg bg-surface-2 p-1" role="tablist">
               {(['catalog', 'custom'] as const).map((mode) => (
@@ -486,11 +494,11 @@ export default function ProviderServicesPage() {
               {addMode === 'catalog' && (
                 <>
                   <div>
-                    <label htmlFor="catalog-group" className="block text-sm text-content-muted mb-2">
+                    <label htmlFor={fid('add-group')} className="block text-sm text-content-muted mb-2">
                       {t('provider.optIn.categoryLabel')}
                     </label>
                     <select
-                      id="catalog-group"
+                      id={fid('add-group')}
                       value={catalogGroup?.group.id ?? ''}
                       onChange={(e) => setCatalogGroupId(e.target.value)}
                       className="w-full bg-surface-input border border-hairline rounded-lg px-4 py-2.5 text-content outline-none focus:border-section-primary"
@@ -536,8 +544,9 @@ export default function ProviderServicesPage() {
 
               {addMode === 'custom' && (
               <div>
-                <label className="block text-sm text-content-muted mb-2">{t('provider.services.edit.serviceName')}</label>
+                <label htmlFor={fid('add-name')} className="block text-sm text-content-muted mb-2">{t('provider.services.edit.serviceName')}</label>
                 <input
+                  id={fid('add-name')}
                   type="text"
                   value={draft.name}
                   onChange={(e) => setDraft({ ...draft, name: e.target.value })}
@@ -548,8 +557,9 @@ export default function ProviderServicesPage() {
               )}
 
               <div>
-                <label className="block text-sm text-content-muted mb-2">{t('provider.services.edit.description')}</label>
+                <label htmlFor={fid('add-description')} className="block text-sm text-content-muted mb-2">{t('provider.services.edit.description')}</label>
                 <textarea
+                  id={fid('add-description')}
                   value={draft.description ?? ''}
                   onChange={(e) => setDraft({ ...draft, description: e.target.value })}
                   className="w-full bg-surface-input border border-hairline rounded-lg px-4 py-2.5 text-content outline-none focus:border-section-primary min-h-[80px]"
@@ -559,9 +569,10 @@ export default function ProviderServicesPage() {
 
               {addMode === 'custom' && (
               <div>
-                <label className="block text-sm text-content-muted mb-2">{t('provider.services.edit.category')}</label>
+                <label htmlFor={fid('add-category')} className="block text-sm text-content-muted mb-2">{t('provider.services.edit.category')}</label>
                 <p className="mb-2 text-xs text-content-muted">{t('provider.services.add.customCategoryHint')}</p>
                 <select
+                  id={fid('add-category')}
                   value={draft.categoryId ?? ''}
                   onChange={(e) => setDraft({ ...draft, categoryId: e.target.value })}
                   className="w-full bg-surface-input border border-hairline rounded-lg px-4 py-2.5 text-content outline-none focus:border-section-primary"
@@ -580,8 +591,9 @@ export default function ProviderServicesPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-content-muted mb-2">{t('provider.services.edit.price')}</label>
+                  <label htmlFor={fid('add-price')} className="block text-sm text-content-muted mb-2">{t('provider.services.edit.price')}</label>
                   <input
+                    id={fid('add-price')}
                     type="number"
                     value={draft.price}
                     onChange={(e) => setDraft({ ...draft, price: parseFloat(e.target.value) || 0 })}
@@ -590,8 +602,9 @@ export default function ProviderServicesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-content-muted mb-2">{t('provider.services.edit.duration')}</label>
+                  <label htmlFor={fid('add-duration')} className="block text-sm text-content-muted mb-2">{t('provider.services.edit.duration')}</label>
                   <select
+                    id={fid('add-duration')}
                     value={draft.durationMinutes}
                     onChange={(e) => setDraft({ ...draft, durationMinutes: parseInt(e.target.value) })}
                     className="w-full bg-surface-input border border-hairline rounded-lg px-4 py-2.5 text-content outline-none focus:border-section-primary"
