@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { useI18n } from '@/hooks/useI18n';
 import { useVisibleSections } from '@/hooks/usePilotFlags';
+import { usePaymentSettings } from '@/hooks/usePaymentSettings';
 import { useSection, type Section } from '@/contexts/SectionContext';
 import { cn, formatPrice } from '@/lib/utils';
 import { Avatar } from '@/components/ui/Avatar';
@@ -150,14 +151,19 @@ export function SideDrawer({
     };
   }, [isOpen, onClose]);
 
+  // The wallet is topped up by card, so it only appears once Stripe payments are switched on.
+  const { stripePaymentsEnabled } = usePaymentSettings();
+
   const accountItems = useMemo<DrawerAccountItem[]>(
     () => [
-      {
-        href: '/profile/payment',
-        icon: CircleDollarSign,
-        labelKey: 'profile.stats.balance',
-        value: formatPrice(walletBalance),
-      },
+      ...(stripePaymentsEnabled
+        ? [{
+            href: '/profile/payment',
+            icon: CircleDollarSign,
+            labelKey: 'profile.stats.balance' as MessageKey,
+            value: formatPrice(walletBalance),
+          }]
+        : []),
       {
         href: '/vip',
         icon: Star,
@@ -181,7 +187,7 @@ export function SideDrawer({
         labelKey: 'profile.social.title',
       },
     ],
-    [pointsBalance, walletBalance]
+    [pointsBalance, walletBalance, stripePaymentsEnabled]
   );
 
   const handleNavigate = (href: string, nextSection?: Section) => {

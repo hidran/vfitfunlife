@@ -574,6 +574,13 @@ service cloud.firestore {
       allow write: if isSuperAdmin();
     }
 
+    // Whether Stripe payments and subscription selling are on. Every client reads it to decide
+    // whether to show the VIP and wallet entry points; it holds nothing but two booleans.
+    // Written only by setPaymentSettings (superadmin, audited).
+    match /systemSettings/payments {
+      allow read: if true;
+    }
+
     match /systemSettings/{settingId} {
       allow read: if isSuperAdmin();
       allow write: if isSuperAdmin();

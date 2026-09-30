@@ -51,6 +51,9 @@ export const queryKeys = {
   // Pilot feature flags (Remote Config) — read by the public /fun and /life section guards.
   pilotFlags: () => ['pilot-flags'] as const,
 
+  // Stripe payments / subscription selling switches (systemSettings/payments).
+  paymentSettings: () => ['payment-settings'] as const,
+
   // Admin settings panels (src/components/admin/settings/).
   aiAssistantSettings: () => ['ai-assistant-settings'] as const,
   aiAuthoringSettings: () => ['ai-authoring-settings'] as const,

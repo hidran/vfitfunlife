@@ -4,9 +4,11 @@ import { logger } from "firebase-functions";
 import type Stripe from "stripe";
 import { region } from "../lib/runtimeOptions";
 import { getStripe } from "../lib/stripeClient";
+import { assertStripePaymentsEnabled, assertSubscriptionsEnabled } from "./paymentSettingsCallables";
 
 // Re-export admin-only payment mutations (superadmin-gated refunds)
 export * from "./admin";
+export { setPaymentSettings } from "./paymentSettingsCallables";
 
 const db = admin.firestore();
 
@@ -32,6 +34,7 @@ export const createStripeCustomer = onCall(
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Must be authenticated");
     }
+    await assertStripePaymentsEnabled();
 
     const userId = request.auth.uid;
     const userDoc = await db.collection("users").doc(userId).get();
@@ -74,6 +77,7 @@ export const createPaymentIntent = onCall<PaymentIntentData>(
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Must be authenticated");
     }
+    await assertStripePaymentsEnabled();
 
     const userId = request.auth.uid;
     const { bookingId, isDeposit } = request.data;
@@ -136,6 +140,7 @@ export const createVipSubscription = onCall<VipSubscriptionData>(
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Must be authenticated");
     }
+    await assertSubscriptionsEnabled();
 
     const userId = request.auth.uid;
     const { planId } = request.data;
@@ -346,6 +351,7 @@ export const addWalletFunds = onCall<WalletFundsData>(
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Must be authenticated");
     }
+    await assertStripePaymentsEnabled();
 
     const userId = request.auth.uid;
     const { amount } = request.data;

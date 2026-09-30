@@ -12,6 +12,7 @@ import { SuperadminOnly } from "@/components/admin/SuperadminOnly";
 import { AiAssistantSettings } from "@/components/admin/settings/AiAssistantSettings";
 import { AiAuthoringSettings } from "@/components/admin/settings/AiAuthoringSettings";
 import { PilotFlagsSettings } from "@/components/admin/settings/PilotFlagsSettings";
+import { PaymentSettingsPanel } from "@/components/admin/settings/PaymentSettingsPanel";
 import { recordAudit } from "@/components/admin/auditLog";
 import { useI18n } from "@/hooks/useI18n";
 import {
@@ -247,6 +248,11 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+
+        {/* Stripe payments / subscription selling switches */}
+        <SuperadminOnly>
+          <PaymentSettingsPanel />
+        </SuperadminOnly>
 
         {/* Pilot flags (Remote Config) */}
         <SuperadminOnly>

@@ -1,6 +1,7 @@
 import { httpsCallable } from "firebase/functions";
 import { getFunctionsInstance } from "./app";
 import type { AppLocale } from "@/types/locale";
+import type { PaymentSettings } from "@/hooks/usePaymentSettings";
 import type {
   AiStreamChunk,
   AiAssistantSettings,
@@ -726,6 +727,21 @@ export async function setProviderOnboardingSettings(
   const fn = httpsCallable<typeof data, { success: boolean; autoApprove: boolean }>(
     functions,
     "setProviderOnboardingSettings",
+  );
+  return (await fn(data)).data;
+}
+
+/**
+ * Turn Stripe payments and/or VIP subscription selling on or off. Superadmin only, audited.
+ * Returns the full stored settings after the change.
+ */
+export async function setPaymentSettings(
+  data: Partial<PaymentSettings>,
+): Promise<{ success: boolean } & PaymentSettings> {
+  const functions = await getFunctionsInstance();
+  const fn = httpsCallable<typeof data, { success: boolean } & PaymentSettings>(
+    functions,
+    "setPaymentSettings",
   );
   return (await fn(data)).data;
 }

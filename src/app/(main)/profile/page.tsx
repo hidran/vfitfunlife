@@ -48,6 +48,7 @@ import {
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { isProvider } from '@/lib/firebase/auth';
 import { formatPrice } from '@/lib/utils';
+import { usePaymentSettings } from '@/hooks/usePaymentSettings';
 import { useI18n } from '@/hooks/useI18n';
 import type { MessageKey } from '@/i18n/messages';
 import { providerProfileHref, providerReviewsHref } from '@/lib/routes';
@@ -230,6 +231,7 @@ export default function ProfilePage() {
   const contactInfo = user?.phone || user?.email || firebaseUser?.phoneNumber || firebaseUser?.email || '';
   const walletBalance = user?.walletBalance || 0;
   const isVip = user?.isVip || false;
+  const { subscriptionsEnabled } = usePaymentSettings();
   const emailVerified = firebaseUser?.emailVerified || user?.emailVerified || false;
   const phoneVerified = user?.phoneVerified || false;
   const bio = user?.bio;
@@ -429,24 +431,26 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* VIP Banner */}
-        <button
-          onClick={() => router.push('/vip')}
-          className="w-full bg-gradient-to-r from-vip-gold/20 to-vip-gold/5 border border-vip-gold/30 rounded-2xl p-4 flex items-center gap-4 mb-4"
-        >
-          <div className="w-12 h-12 rounded-full bg-vip-gold/20 flex items-center justify-center">
-            <Crown className="w-6 h-6 text-vip-gold light:text-amber-700" />
-          </div>
-          <div className="flex-1 text-left">
-            <h3 className="font-semibold text-vip-gold light:text-amber-700">
-              {isVip ? t('profile.vip.isVipTitle') : t('profile.vip.ctaTitle')}
-            </h3>
-            <p className="text-sm text-text-secondary">
-              {isVip ? t('profile.vip.isVipSubtitle') : t('profile.vip.ctaSubtitle')}
-            </p>
-          </div>
-          <ChevronRight className="w-5 h-5 text-vip-gold light:text-amber-700" />
-        </button>
+        {/* VIP Banner — only while VIP is on sale, or for someone who already has it */}
+        {(isVip || subscriptionsEnabled) && (
+          <button
+            onClick={() => router.push('/vip')}
+            className="w-full bg-gradient-to-r from-vip-gold/20 to-vip-gold/5 border border-vip-gold/30 rounded-2xl p-4 flex items-center gap-4 mb-4"
+          >
+            <div className="w-12 h-12 rounded-full bg-vip-gold/20 flex items-center justify-center">
+              <Crown className="w-6 h-6 text-vip-gold light:text-amber-700" />
+            </div>
+            <div className="flex-1 text-left">
+              <h3 className="font-semibold text-vip-gold light:text-amber-700">
+                {isVip ? t('profile.vip.isVipTitle') : t('profile.vip.ctaTitle')}
+              </h3>
+              <p className="text-sm text-text-secondary">
+                {isVip ? t('profile.vip.isVipSubtitle') : t('profile.vip.ctaSubtitle')}
+              </p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-vip-gold light:text-amber-700" />
+          </button>
+        )}
 
         {/* Gamification (Season 0): stacked on phones, side by side from md */}
         <div className="mb-4 grid gap-3 md:grid-cols-2">
