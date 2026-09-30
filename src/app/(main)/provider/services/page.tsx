@@ -51,6 +51,25 @@ export default function ProviderServicesPage() {
   const [editingService, setEditingService] = useState<InstructorService | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [draft, setDraft] = useState<ProviderServiceInput>(EMPTY_DRAFT);
+  // Add from the platform catalogue (name + category come from the picked service) or
+  // create an own service (free name, category still required so search can find it).
+  const [addMode, setAddMode] = useState<'catalog' | 'custom'>('catalog');
+  const [catalogGroupId, setCatalogGroupId] = useState<string | null>(null);
+  const catalogGroup =
+    categoryGroups.find(({ group }) => group.id === catalogGroupId) ?? categoryGroups[0];
+  const ownedCategoryIds = new Set(services.map((s) => s.categoryId).filter(Boolean));
+
+  const openAddModal = () => {
+    setDraft(EMPTY_DRAFT);
+    setAddMode('catalog');
+    setCatalogGroupId(null);
+    setShowAddModal(true);
+  };
+
+  const switchAddMode = (mode: 'catalog' | 'custom') => {
+    setAddMode(mode);
+    setDraft(EMPTY_DRAFT);
+  };
   const [error, setError] = useState<string | null>(null);
   // Tap-to-open action menu (hover menus never open on touch screens).
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -164,7 +183,7 @@ export default function ProviderServicesPage() {
             {t('provider.services.subtitle')}
           </p>
         </div>
-        <Button onClick={() => setShowAddModal(true)} disabled={!uid}>
+        <Button onClick={openAddModal} disabled={!uid}>
           <Plus className="w-4 h-4 mr-2" />
           {t('provider.services.btn.addService')}
         </Button>
@@ -231,7 +250,7 @@ export default function ProviderServicesPage() {
           <Briefcase className="w-10 h-10 mx-auto text-content-faint light:text-content-muted mb-3" />
           <h3 className="font-semibold text-content">{t('provider.services.empty.title')}</h3>
           <p className="text-sm text-content-muted mt-1 mb-4">{t('provider.services.empty.body')}</p>
-          <Button onClick={() => setShowAddModal(true)} disabled={!uid}>
+          <Button onClick={openAddModal} disabled={!uid}>
             <Plus className="w-4 h-4 mr-2" />
             {t('provider.services.btn.addService')}
           </Button>
@@ -443,9 +462,79 @@ export default function ProviderServicesPage() {
       {showAddModal && (
         <Modal onClose={() => setShowAddModal(false)}>
           <div className="bg-surface-elevated rounded-xl p-6 w-[calc(100%-2rem)] max-w-md">
-            <h3 className="text-xl font-semibold text-content mb-6">{t('provider.services.add.title')}</h3>
+            <h3 className="text-xl font-semibold text-content mb-4">{t('provider.services.add.title')}</h3>
 
-            <div className="space-y-4">
+            <div className="mb-4 grid grid-cols-2 gap-1 rounded-lg bg-surface-2 p-1" role="tablist">
+              {(['catalog', 'custom'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  role="tab"
+                  aria-selected={addMode === mode}
+                  onClick={() => switchAddMode(mode)}
+                  className={cn(
+                    'min-h-11 rounded-md px-2 text-sm font-medium transition-colors',
+                    addMode === mode ? 'bg-surface text-content shadow-sm' : 'text-content-muted'
+                  )}
+                >
+                  {t(mode === 'catalog' ? 'provider.services.add.modeCatalog' : 'provider.services.add.modeCustom')}
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+              {addMode === 'catalog' && (
+                <>
+                  <div>
+                    <label htmlFor="catalog-group" className="block text-sm text-content-muted mb-2">
+                      {t('provider.optIn.categoryLabel')}
+                    </label>
+                    <select
+                      id="catalog-group"
+                      value={catalogGroup?.group.id ?? ''}
+                      onChange={(e) => setCatalogGroupId(e.target.value)}
+                      className="w-full bg-surface-input border border-hairline rounded-lg px-4 py-2.5 text-content outline-none focus:border-section-primary"
+                    >
+                      {categoryGroups.map(({ group }) => (
+                        <option key={group.id} value={group.id}>{group.icon} {group.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <fieldset>
+                    <legend className="block text-sm text-content-muted mb-2">{t('provider.services.add.catalogPick')}</legend>
+                    <div className="grid grid-cols-2 gap-2">
+                      {catalogGroup?.leaves.map((leaf) => {
+                        const picked = draft.categoryId === leaf.id;
+                        const owned = ownedCategoryIds.has(leaf.id);
+                        return (
+                          <button
+                            key={leaf.id}
+                            type="button"
+                            aria-pressed={picked}
+                            onClick={() => setDraft({ ...draft, name: leaf.name, categoryId: leaf.id })}
+                            className={cn(
+                              'min-h-11 rounded-lg border px-3 py-2 text-left text-sm transition-colors',
+                              picked
+                                ? 'border-section-primary bg-section-primary/15 font-semibold text-content'
+                                : 'border-hairline bg-surface-input text-content hover:bg-content/5'
+                            )}
+                          >
+                            <span className="mr-1" aria-hidden>{picked ? '✓' : leaf.icon}</span>
+                            {leaf.name}
+                            {owned && (
+                              <span className="block text-[11px] font-normal text-content-muted">
+                                {t('provider.services.add.alreadyOffered')}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
+                </>
+              )}
+
+              {addMode === 'custom' && (
               <div>
                 <label className="block text-sm text-content-muted mb-2">{t('provider.services.edit.serviceName')}</label>
                 <input
@@ -456,6 +545,7 @@ export default function ProviderServicesPage() {
                   placeholder={t('provider.services.add.serviceNamePlaceholder')}
                 />
               </div>
+              )}
 
               <div>
                 <label className="block text-sm text-content-muted mb-2">{t('provider.services.edit.description')}</label>
@@ -467,8 +557,10 @@ export default function ProviderServicesPage() {
                 />
               </div>
 
+              {addMode === 'custom' && (
               <div>
                 <label className="block text-sm text-content-muted mb-2">{t('provider.services.edit.category')}</label>
+                <p className="mb-2 text-xs text-content-muted">{t('provider.services.add.customCategoryHint')}</p>
                 <select
                   value={draft.categoryId ?? ''}
                   onChange={(e) => setDraft({ ...draft, categoryId: e.target.value })}
@@ -484,6 +576,7 @@ export default function ProviderServicesPage() {
                   ))}
                 </select>
               </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
