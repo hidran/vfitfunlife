@@ -193,10 +193,10 @@ export function BookingTable({
         width={40}
         height={40}
         unoptimized
-        className="w-10 h-10 rounded-full object-cover"
+        className="w-10 h-10 shrink-0 rounded-full object-cover"
       />
     ) : (
-      <div className="w-10 h-10 rounded-full bg-surface-input flex items-center justify-center">
+      <div className="w-10 h-10 shrink-0 rounded-full bg-surface-input flex items-center justify-center">
         <User className="w-5 h-5 text-content-faint light:text-content-muted" />
       </div>
     );
@@ -236,8 +236,9 @@ export function BookingTable({
           key={booking.id}
           className="bg-surface-elevated rounded-xl border border-content/5 light:border-hairline p-4 space-y-3"
         >
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
+          {/* On narrow phones the status badge drops under the client instead of squeezing the name */}
+          <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+            <div className="flex flex-1 items-center gap-3 min-w-[10rem]">
               {clientAvatar(booking)}
               <div className="min-w-0">
                 <p className="font-medium text-content truncate">{booking.userName}</p>

@@ -414,8 +414,9 @@ export default function BookingPage() {
                     />
 
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
+                      {/* The badge drops under the name when both don't fit, instead of being clipped */}
+                      <div className="flex flex-wrap items-start justify-between gap-x-2 gap-y-1">
+                        <div className="min-w-[7rem] flex-1">
                           <h3 className="font-semibold text-content truncate">
                             {provider.fullName}
                           </h3>
@@ -432,7 +433,7 @@ export default function BookingPage() {
                           </div>
                         </div>
                         {provider.isVerified && (
-                          <Badge variant="partner" size="sm">{t('booking.provider.verified')}</Badge>
+                          <Badge variant="partner" size="sm" className="shrink-0">{t('booking.provider.verified')}</Badge>
                         )}
                       </div>
 
@@ -462,29 +463,31 @@ export default function BookingPage() {
                       </div>
 
                       {/* Price & Availability */}
-                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-hairline">
-                        <div>
+                      {/* Distance sits with the price; on narrow cards the availability link wraps
+                          to its own line as a unit instead of breaking between the two. */}
+                      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 mt-3 pt-3 border-t border-hairline">
+                        <div className="flex flex-wrap items-baseline gap-x-2">
                           {provider.lowestPrice != null ? (
-                            <span className="text-lg font-bold text-[var(--section-primary)]">
+                            <span className="text-lg font-bold text-[var(--section-primary)] whitespace-nowrap">
                               {t('booking.price.from', { price: formatPrice(provider.lowestPrice) })}
                             </span>
                           ) : (
                             <span className="text-sm text-text-secondary">{t('booking.provider.viewAvailability')}</span>
                           )}
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-text-secondary">
                           {provider.distanceKm != null && Number.isFinite(provider.distanceKm) && (
-                            <span className="text-xs text-text-tertiary">
+                            <span className="text-xs text-text-tertiary whitespace-nowrap">
                               {provider.distanceKm.toFixed(1)} km
                             </span>
                           )}
-                          <Clock className="w-4 h-4" />
+                        </div>
+                        <div className="ml-auto flex items-center gap-2 text-sm text-text-secondary">
+                          <Clock className="w-4 h-4 shrink-0" />
                           {provider.nextAvailable ? (
                             <span>{t('booking.provider.availableFrom', { date: provider.nextAvailable.toLocaleDateString(toLocaleTag(locale)) })}</span>
                           ) : (
                             <span>{t('booking.provider.checkAvailability')}</span>
                           )}
-                          <ChevronRight className="w-4 h-4" />
+                          <ChevronRight className="w-4 h-4 shrink-0" />
                         </div>
                       </div>
                     </div>

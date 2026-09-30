@@ -63,7 +63,7 @@ export function BookingCard({
       <button
         onClick={() => router.push(`/bookings/detail?id=${booking.id}`)}
         className={cn(
-          'group relative w-full overflow-hidden rounded-2xl border border-hairline bg-content/5 p-4 text-left',
+          'group relative flex w-full items-center gap-2 overflow-hidden rounded-2xl border border-hairline bg-content/5 p-4 text-left',
           'hover:bg-content/10 transition-colors',
           className
         )}
@@ -73,7 +73,7 @@ export function BookingCard({
           style={{ backgroundColor: sectionMeta.color }}
         />
 
-        <div className="flex flex-1 items-start gap-3 pl-2">
+        <div className="flex min-w-0 flex-1 items-start gap-3 pl-2">
           <Avatar
             src={booking.providerAvatar}
             alt={booking.providerName}
@@ -82,7 +82,7 @@ export function BookingCard({
           />
 
           <div className="min-w-0 flex-1">
-            <div className="mb-1 flex items-center gap-2">
+            <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1">
               <span
                 className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
                 style={{
@@ -141,15 +141,16 @@ export function BookingCard({
     >
       {/* Header */}
       <div className="p-4 border-b border-hairline">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+          <div className="flex min-w-0 items-center gap-3">
             <Avatar
               src={booking.providerAvatar}
               alt={booking.providerName}
               size="lg"
+              className="shrink-0"
             />
-            <div>
-              <h3 className="font-semibold text-content">{booking.providerName}</h3>
+            <div className="min-w-0">
+              <h3 className="font-semibold text-content break-words">{booking.providerName}</h3>
               <p className="text-sm text-text-secondary">{booking.serviceName}</p>
             </div>
           </div>

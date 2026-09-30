@@ -364,10 +364,11 @@ export default function BookingDetailPage() {
 
         {/* Status Card */}
         <div className="bg-surface-elevated/50 rounded-2xl p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          {/* Wraps the badge under the label on narrow phones instead of pushing it out of the card */}
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+            <div className="flex min-w-0 items-center gap-3">
               <div className={cn(
-                'w-12 h-12 rounded-full flex items-center justify-center',
+                'w-12 h-12 shrink-0 rounded-full flex items-center justify-center',
                 booking.status === 'accepted' && 'bg-success/20',
                 booking.status === 'requested' && 'bg-warning/20',
                 isCancelled(booking.status) && 'bg-error/20',
@@ -381,7 +382,7 @@ export default function BookingDetailPage() {
                   booking.status === 'completed' && 'text-[var(--section-primary)]',
                 )} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm text-text-secondary">{t('bookings.detail.statusLabel')}</p>
                 <p className="font-semibold text-content">{statusLabel}</p>
               </div>
@@ -397,13 +398,14 @@ export default function BookingDetailPage() {
               src={booking.providerAvatar}
               alt={providerDisplayName}
               size="xl"
+              className="shrink-0"
             />
-            <div className="flex-1">
-              <h2 className="font-semibold text-content">{providerDisplayName}</h2>
+            <div className="flex-1 min-w-0">
+              <h2 className="font-semibold text-content break-words">{providerDisplayName}</h2>
               <p className="text-text-secondary">{booking.serviceName}</p>
             </div>
             {chatWith && (
-              <div className="flex gap-2">
+              <div className="flex shrink-0 gap-2">
                 <button
                   type="button"
                   onClick={handleChat}
