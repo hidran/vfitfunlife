@@ -41,6 +41,7 @@ import { toLocaleTag } from '@/types/locale';
 import { queryKeys } from '@/lib/queryKeys';
 import { updateBookingPrivateNotes } from '@/lib/firebase/functions';
 import { findClientIdForUser } from '@/lib/firebase/provider';
+import { chatHref } from '@/lib/routes';
 
 export default function BookingDetailClient() {
   const { t, locale } = useI18n();
@@ -366,10 +367,21 @@ export default function BookingDetailClient() {
                       </Button>
                     </Link>
                   )}
-                  <Button variant="secondary" size="sm">
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    {t('provider.bookingDetail.message')}
-                  </Button>
+                  {/* Opens (or starts) the chat with the customer, tied to this booking. */}
+                  {booking.userId && booking.userId !== user?.uid && (
+                    <Link
+                      href={chatHref(booking.userId, {
+                        name: booking.userName,
+                        photoUrl: booking.clientPhotoUrl ?? null,
+                        bookingId: booking.id,
+                      })}
+                    >
+                      <Button variant="secondary" size="sm">
+                        <MessageSquare className="w-4 h-4 mr-2" />
+                        {t('provider.bookingDetail.message')}
+                      </Button>
+                    </Link>
+                  )}
                 </div>
               </div>
             </div>
