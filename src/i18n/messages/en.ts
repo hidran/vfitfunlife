@@ -838,6 +838,8 @@ export const enMessages: Messages = {
   'auth.register.error.acceptTerms': 'You must accept Terms and Conditions',
   'auth.register.error.userNotAuthenticated': 'User not authenticated',
   'auth.register.error.generic': 'Registration failed. Please try again.',
+  'auth.register.emailTaken.message': "An account with this email already exists.",
+  'auth.register.emailTaken.cta': "Log in",
   'auth.register.error.providerNotAllowed': "This account can't become a professional (protected admin account).",
   'auth.register.error.emailRequired': 'Email is required',
   'auth.register.error.passwordMinLength': 'Password must be at least 6 characters',

@@ -19,7 +19,7 @@ import { submitProviderApplication } from '@/lib/firebase/providerApplication';
 import { ProviderOptInField } from '@/components/auth/ProviderOptInField';
 import { validatePasswordStrength } from '@/lib/auth/passwordPolicy';
 import { PasswordRequirements } from '@/components/auth/PasswordRequirements';
-import { postAuthRoute } from '@/lib/auth/postAuthRoute';
+import { alreadyRegisteredRoute, postAuthRoute } from '@/lib/auth/postAuthRoute';
 
 const SECTIONS = [
   { id: 'fit' as const, label: 'VFit', color: 'from-vfit-primary to-vfit-secondary' },
@@ -68,6 +68,8 @@ export function RegisterClient() {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  // The email typed on the form already has an account: offer sign-in instead of an error.
+  const [emailTaken, setEmailTaken] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [wantsProvider, setWantsProvider] = useState(startsAsProvider);
   const [providerCategoryIds, setProviderCategoryIds] = useState<string[]>([]);
@@ -78,7 +80,7 @@ export function RegisterClient() {
   const submitting = useRef(false);
   useEffect(() => {
     if (submitting.current || !profile?.fullName?.trim()) return;
-    router.replace(postAuthRoute(profile));
+    router.replace(alreadyRegisteredRoute(profile));
   }, [profile, router]);
 
   // Auth often restores after the first render (a Google redirect back from the login page):
@@ -152,6 +154,7 @@ export function RegisterClient() {
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setEmailTaken(false);
     clearError();
 
     // Validation
@@ -210,6 +213,10 @@ export function RegisterClient() {
       router.push('/auth/permissions');
     } catch (err: any) {
       console.error('Registration error:', err);
+      if (err?.code === 'auth/email-already-in-use') {
+        setEmailTaken(true);
+        return;
+      }
       setError(
         err?.code === 'functions/permission-denied'
           ? t('auth.register.error.providerNotAllowed')
@@ -357,8 +364,21 @@ export function RegisterClient() {
         {/* Form */}
         <div className="flex-1 px-6 pb-8 overflow-y-auto">
           <form onSubmit={handleEmailSubmit} className="space-y-6 max-w-md mx-auto">
+            {/* The email already has an account: point to sign-in instead of an error. */}
+            {emailTaken && (
+              <div className="p-4 border rounded-lg bg-surface-2 border-hairline text-center" data-testid="register-email-taken">
+                <p className="text-sm text-content">{t('auth.register.emailTaken.message')}</p>
+                <Link
+                  href="/auth/login"
+                  className="mt-3 inline-flex min-h-11 items-center justify-center rounded-full bg-primary px-5 text-sm font-semibold text-[#1A1D29]"
+                >
+                  {t('auth.register.emailTaken.cta')}
+                </Link>
+              </div>
+            )}
+
             {/* Error Message */}
-            {(error || storeError) && (
+            {!emailTaken && (error || storeError) && (
               <div className={cn(
                 "p-4 border rounded-lg",
                 (error || storeError)?.includes('not enabled')

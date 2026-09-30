@@ -812,6 +812,8 @@ export const esMessages: Messages = {
   'auth.register.error.acceptTerms': 'Debes aceptar Terminos y Condiciones',
   'auth.register.error.userNotAuthenticated': 'Usuario no autenticado',
   'auth.register.error.generic': 'Error durante el registro. Intentalo de nuevo.',
+  'auth.register.emailTaken.message': "Ya existe una cuenta con este email.",
+  'auth.register.emailTaken.cta': "Iniciar sesión",
   'auth.register.error.providerNotAllowed': "Esta cuenta no puede ser profesional (cuenta de administrador protegida).",
   'auth.register.error.emailRequired': 'El email es obligatorio',
   'auth.register.error.passwordMinLength': 'La contrasena debe tener al menos 6 caracteres',

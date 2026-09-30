@@ -15,3 +15,17 @@ export function postAuthRoute(
   if (canAccessProviderArea(user?.providerStatus)) return PROVIDER_HOME;
   return '/home';
 }
+
+/**
+ * Where someone who is ALREADY registered goes when they open the registration page (or
+ * sign up with an account that exists): not the page, but their own space. Providers — and
+ * pending applicants, whom the provider layout lets in — to the dashboard; staff to the back
+ * office; everyone else to their profile.
+ */
+export function alreadyRegisteredRoute(
+  user: { role?: UserRole; providerStatus?: ProviderStatus } | null | undefined
+): string {
+  if (canAccessProviderArea(user?.providerStatus)) return PROVIDER_HOME;
+  if (user?.role === 'admin' || user?.role === 'superadmin') return '/admin';
+  return '/profile';
+}

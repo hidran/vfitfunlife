@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { postAuthRoute, PROVIDER_HOME } from './postAuthRoute';
+import { alreadyRegisteredRoute, postAuthRoute, PROVIDER_HOME } from './postAuthRoute';
 
 describe('postAuthRoute', () => {
   it('sends a plain customer home', () => {
@@ -28,5 +28,22 @@ describe('postAuthRoute', () => {
   it('falls back to home without a profile', () => {
     expect(postAuthRoute(null)).toBe('/home');
     expect(postAuthRoute(undefined)).toBe('/home');
+  });
+});
+
+describe('alreadyRegisteredRoute', () => {
+  it('sends providers and pending applicants to the dashboard', () => {
+    expect(alreadyRegisteredRoute({ role: 'provider', providerStatus: 'verified' })).toBe(PROVIDER_HOME);
+    expect(alreadyRegisteredRoute({ role: 'customer', providerStatus: 'pending' })).toBe(PROVIDER_HOME);
+    expect(alreadyRegisteredRoute({ role: 'superadmin', providerStatus: 'verified' })).toBe(PROVIDER_HOME);
+  });
+
+  it('sends customers to their profile', () => {
+    expect(alreadyRegisteredRoute({ role: 'customer' })).toBe('/profile');
+    expect(alreadyRegisteredRoute({ role: 'customer', providerStatus: 'rejected' })).toBe('/profile');
+  });
+
+  it('sends staff without a provider profile to admin', () => {
+    expect(alreadyRegisteredRoute({ role: 'admin' })).toBe('/admin');
   });
 });
