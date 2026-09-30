@@ -837,6 +837,7 @@ export const itMessages = {
   'auth.register.error.acceptTerms': 'Devi accettare i Termini e Condizioni',
   'auth.register.error.userNotAuthenticated': 'Utente non autenticato',
   'auth.register.error.generic': 'Errore durante la registrazione. Riprova.',
+  'auth.register.error.providerNotAllowed': "Questo account non può diventare professionista (account amministratore protetto).",
   'auth.register.error.emailRequired': "L'email è obbligatoria",
   'auth.register.error.passwordMinLength': 'La password deve essere di almeno 6 caratteri',
   'auth.register.error.passwordMismatch': 'Le password non coincidono',

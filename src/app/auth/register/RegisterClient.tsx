@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useShallow } from 'zustand/react/shallow';
@@ -42,9 +42,10 @@ export function RegisterClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t, locale } = useI18n();
-  const { firebaseUser, refreshUserProfile, registerWithEmail, clearError, error: storeError } = useAuthStore(
+  const { firebaseUser, profile, refreshUserProfile, registerWithEmail, clearError, error: storeError } = useAuthStore(
     useShallow((s) => ({
       firebaseUser: s.firebaseUser,
+      profile: s.user,
       refreshUserProfile: s.refreshUserProfile,
       registerWithEmail: s.registerWithEmail,
       clearError: s.clearError,
@@ -70,6 +71,15 @@ export function RegisterClient() {
   const [showPassword, setShowPassword] = useState(false);
   const [wantsProvider, setWantsProvider] = useState(startsAsProvider);
   const [providerCategoryIds, setProviderCategoryIds] = useState<string[]>([]);
+
+  // Someone who already has a profile (opened /auth/register by hand, or followed an old
+  // link) must not re-run registration over it: send them where a sign-in would. Skipped
+  // while this form is submitting, since registering creates the profile mid-submit.
+  const submitting = useRef(false);
+  useEffect(() => {
+    if (submitting.current || !profile?.fullName?.trim()) return;
+    router.replace(postAuthRoute(profile));
+  }, [profile, router]);
 
   // Auth often restores after the first render (a Google redirect back from the login page):
   // prefill from the signed-in account then, without overwriting anything already typed.
@@ -107,6 +117,7 @@ export function RegisterClient() {
     }
 
     setIsLoading(true);
+    submitting.current = true;
 
     try {
       await completeRegistration(firebaseUser.uid, {
@@ -127,8 +138,13 @@ export function RegisterClient() {
       router.push(postAuthRoute(useAuthStore.getState().user));
     } catch (err) {
       console.error('Registration error:', err);
-      setError(t('auth.register.error.generic'));
+      setError(
+        (err as { code?: string })?.code === 'functions/permission-denied'
+          ? t('auth.register.error.providerNotAllowed')
+          : t('auth.register.error.generic')
+      );
     } finally {
+      submitting.current = false;
       setIsLoading(false);
     }
   };
@@ -170,6 +186,7 @@ export function RegisterClient() {
     }
 
     setIsLoading(true);
+    submitting.current = true;
 
     try {
       // Register with email/password
@@ -193,8 +210,13 @@ export function RegisterClient() {
       router.push('/auth/permissions');
     } catch (err: any) {
       console.error('Registration error:', err);
-      setError(useAuthStore.getState().error || t('auth.register.error.generic'));
+      setError(
+        err?.code === 'functions/permission-denied'
+          ? t('auth.register.error.providerNotAllowed')
+          : useAuthStore.getState().error || t('auth.register.error.generic')
+      );
     } finally {
+      submitting.current = false;
       setIsLoading(false);
     }
   };

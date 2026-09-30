@@ -813,6 +813,7 @@ export const deMessages: Messages = {
   'auth.register.error.acceptTerms': 'Du musst die Bedingungen akzeptieren',
   'auth.register.error.userNotAuthenticated': 'Benutzer nicht authentifiziert',
   'auth.register.error.generic': 'Fehler bei der Registrierung. Bitte erneut versuchen.',
+  'auth.register.error.providerNotAllowed': "Dieses Konto kann kein Profi werden (geschütztes Administratorkonto).",
   'auth.register.error.emailRequired': 'E-Mail ist erforderlich',
   'auth.register.error.passwordMinLength': 'Das Passwort muss mindestens 6 Zeichen lang sein',
   'auth.register.error.passwordMismatch': 'Passwörter stimmen nicht überein',

@@ -815,6 +815,7 @@ export const frMessages: Messages = {
   'auth.register.error.acceptTerms': 'Vous devez accepter les conditions',
   'auth.register.error.userNotAuthenticated': 'Utilisateur non authentifié',
   'auth.register.error.generic': "Erreur pendant l'inscription. Réessayez.",
+  'auth.register.error.providerNotAllowed': "Ce compte ne peut pas devenir professionnel (compte administrateur protégé).",
   'auth.register.error.emailRequired': "L'email est obligatoire",
   'auth.register.error.passwordMinLength':
     'Le mot de passe doit contenir au moins 6 caractères',
