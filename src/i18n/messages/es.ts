@@ -2082,6 +2082,7 @@ export const esMessages: Messages = {
   'provider.banner.pending': 'Perfil en revisión — serás visible tras la aprobación.',
 
   'provider.dashboard.title': '¡Bienvenido de nuevo! 👋',
+  'provider.dashboard.titleNew': '¡Bienvenido! 👋',
   'provider.dashboard.subtitle': 'Aquí tienes lo que está pasando con tu negocio hoy.',
   'provider.dashboard.btn.setAvailability': 'Configurar disponibilidad',
   'provider.dashboard.btn.viewCalendar': 'Ver calendario',
@@ -2132,6 +2133,10 @@ export const esMessages: Messages = {
   'provider.dashboard.activity.title': 'Actividad reciente',
   'provider.dashboard.activity.empty.title': 'Sin actividad reciente',
   'provider.dashboard.activity.empty.subtitle': 'Las actividades aparecerán aquí cuando recibas reservas',
+  'provider.dashboard.activity.requested': 'Nueva solicitud de reserva',
+  'provider.dashboard.activity.confirmed': 'Reserva confirmada',
+  'provider.dashboard.activity.declined': 'Reserva rechazada',
+  'provider.dashboard.activity.cancelled': 'Reserva cancelada',
   'provider.dashboard.grow.title': '¿Listo para crecer?',
   'provider.dashboard.grow.subtitle': 'Completa tu perfil para atraer más clientes y aumentar tu visibilidad.',
   'provider.dashboard.grow.cta': 'Completar perfil',

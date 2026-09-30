@@ -30,7 +30,6 @@ import {
   ProviderBooking,
   ProviderNotification,
   AvailabilitySettings,
-  ActivityItem,
 } from '@/types/provider';
 import { useAuthStore } from '@/stores/authStore';
 import { fetchMyAvailability, saveMyAvailability } from '@/lib/firebase/availability';
@@ -52,7 +51,6 @@ interface ProviderState {
   clientBookingHistory: ClientBookingHistory[];
   clientNotes: ClientNote[];
   notifications: ProviderNotification[];
-  activities: ActivityItem[];
   availability: AvailabilitySettings | null;
   /** Bumped on every load. AvailabilityEditor copies its props once, so it is keyed on this. */
   availabilityVersion: number;
@@ -116,9 +114,6 @@ interface ProviderState {
   markNotificationAsRead: (notificationId: string) => Promise<void>;
   markAllNotificationsAsRead: () => Promise<void>;
 
-  // Actions - Activities
-  fetchActivities: (limit?: number) => Promise<void>;
-
   // Utility
   clearError: () => void;
   clearBookingError: () => void;
@@ -167,7 +162,6 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
   clientBookingHistory: [],
   clientNotes: [],
   notifications: [],
-  activities: [],
   availability: null,
   availabilityVersion: 0,
   availabilityLoadError: null,
@@ -389,18 +383,6 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
       }));
     } catch (error: any) {
       console.error('Failed to mark all notifications as read:', error);
-    }
-  },
-
-  // Activities
-  fetchActivities: async (limit: number = 10) => {
-    try {
-      // This would fetch from Firebase
-      // For now, return mock data
-      const mockActivities: ActivityItem[] = [];
-      set({ activities: mockActivities });
-    } catch (error: any) {
-      console.error('Failed to fetch activities:', error);
     }
   },
 

@@ -2106,6 +2106,7 @@ export const enMessages: Messages = {
   'provider.banner.pending': 'Profile under review — you will be visible after approval.',
 
   'provider.dashboard.title': 'Welcome back! 👋',
+  'provider.dashboard.titleNew': 'Welcome! 👋',
   'provider.dashboard.subtitle': "Here's what's happening with your business today.",
   'provider.dashboard.btn.setAvailability': 'Set Availability',
   'provider.dashboard.btn.viewCalendar': 'View Calendar',
@@ -2156,6 +2157,10 @@ export const enMessages: Messages = {
   'provider.dashboard.activity.title': 'Recent Activity',
   'provider.dashboard.activity.empty.title': 'No recent activity',
   'provider.dashboard.activity.empty.subtitle': 'Activities will appear here when you get bookings',
+  'provider.dashboard.activity.requested': 'New booking request',
+  'provider.dashboard.activity.confirmed': 'Booking confirmed',
+  'provider.dashboard.activity.declined': 'Booking declined',
+  'provider.dashboard.activity.cancelled': 'Booking cancelled',
   'provider.dashboard.grow.title': 'Ready to grow?',
   'provider.dashboard.grow.subtitle': 'Complete your profile to attract more clients and increase your visibility.',
   'provider.dashboard.grow.cta': 'Complete Profile',

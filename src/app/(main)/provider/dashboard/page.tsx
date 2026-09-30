@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { bookingStatusMeta } from '@/lib/bookingStatus';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -25,6 +25,7 @@ import { dashboardBannerKind } from '@/lib/availability/adapter';
 import { useI18n } from '@/hooks/useI18n';
 import { trace } from '@/lib/perf';
 import { toLocaleTag } from '@/types/locale';
+import { ACTIVITY_LABEL_KEYS, bookingActivity, isNewProvider } from '@/lib/providerActivity';
 import Link from 'next/link';
 
 export default function ProviderDashboardPage() {
@@ -32,18 +33,22 @@ export default function ProviderDashboardPage() {
   const {
     dashboardStats,
     bookings,
-    activities,
-    isLoading,
+    isLoadingBookings,
+    lastBookingFilters,
     fetchDashboardStats,
     fetchBookings,
-    fetchActivities,
   } = useProviderStore();
 
   useEffect(() => {
     trace('provider_dashboard_stats', () => fetchDashboardStats()).catch(() => {});
     fetchBookings({ status: 'all' });
-    fetchActivities(5);
-  }, [fetchDashboardStats, fetchBookings, fetchActivities]);
+  }, [fetchDashboardStats, fetchBookings]);
+
+  // Recent Activity and the greeting both come from the full booking list loaded above. Until
+  // that list is in, keep "Welcome back!" so a returning provider never sees the other greeting flash.
+  const bookingsLoaded = !isLoadingBookings && lastBookingFilters?.status === 'all';
+  const activities = useMemo(() => (bookingsLoaded ? bookingActivity(bookings, 5) : []), [bookingsLoaded, bookings]);
+  const isNew = bookingsLoaded && isNewProvider(bookings);
 
   // Whether to nudge the provider about their bookable hours: they have never reviewed the
   // default Mon–Fri 09:00–17:00 hours, or they have switched every day off. staleTime 0 so the
@@ -78,6 +83,14 @@ export default function ProviderDashboardPage() {
     });
   };
 
+  const formatActivityTime = (date: Date) =>
+    date.toLocaleString(toLocaleTag(locale), {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
   const formatDate = (date: Date | { toDate(): Date }) => {
     const d = typeof date === 'object' && 'toDate' in date ? date.toDate() : date;
     return new Date(d).toLocaleDateString(toLocaleTag(locale), {
@@ -91,7 +104,7 @@ export default function ProviderDashboardPage() {
       {/* Welcome Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-content">{t('provider.dashboard.title')}</h1>
+          <h1 className="text-2xl font-bold text-content">{t(isNew ? 'provider.dashboard.titleNew' : 'provider.dashboard.title')}</h1>
           <p className="text-content-muted mt-1">
             {t('provider.dashboard.subtitle')}
           </p>
@@ -237,17 +250,24 @@ export default function ProviderDashboardPage() {
                 </div>
               ) : (
                 activities.map((activity) => (
-                  <div key={activity.id} className="flex items-start gap-3">
+                  <Link
+                    key={activity.id}
+                    href={`/provider/bookings/detail?id=${activity.bookingId}`}
+                    className="flex items-start gap-3 rounded-lg -m-1 p-1 hover:bg-surface-input/30 transition-colors"
+                  >
                     <div className="w-8 h-8 rounded-full bg-section-primary/20 flex items-center justify-center flex-shrink-0">
                       <Bell className="w-4 h-4 text-section-primary light:text-primary-dark" />
                     </div>
-                    <div>
-                      <p className="text-sm text-content">{activity.action}</p>
-                      <p className="text-xs text-content-muted mt-0.5">
-                        {activity.description}
+                    <div className="min-w-0">
+                      <p className="text-sm text-content">{t(ACTIVITY_LABEL_KEYS[activity.kind])}</p>
+                      <p className="text-xs text-content-muted mt-0.5 break-words">
+                        {[activity.userName, activity.serviceName].filter(Boolean).join(' · ')}
+                      </p>
+                      <p className="text-xs text-content-faint light:text-content-muted mt-0.5">
+                        {formatActivityTime(activity.at)}
                       </p>
                     </div>
-                  </div>
+                  </Link>
                 ))
               )}
             </div>

@@ -2106,6 +2106,7 @@ export const itMessages = {
   'provider.banner.pending': "Profilo in revisione — sarai visibile dopo l'approvazione.",
 
   'provider.dashboard.title': 'Bentornato! 👋',
+  'provider.dashboard.titleNew': 'Benvenuto! 👋',
   'provider.dashboard.subtitle': "Ecco cosa sta succedendo nella tua attività oggi.",
   'provider.dashboard.btn.setAvailability': 'Imposta disponibilità',
   'provider.dashboard.btn.viewCalendar': 'Vedi calendario',
@@ -2156,6 +2157,10 @@ export const itMessages = {
   'provider.dashboard.activity.title': 'Attività recente',
   'provider.dashboard.activity.empty.title': 'Nessuna attività recente',
   'provider.dashboard.activity.empty.subtitle': "Le attività appariranno qui quando ricevi prenotazioni",
+  'provider.dashboard.activity.requested': 'Nuova richiesta di prenotazione',
+  'provider.dashboard.activity.confirmed': 'Prenotazione confermata',
+  'provider.dashboard.activity.declined': 'Prenotazione rifiutata',
+  'provider.dashboard.activity.cancelled': 'Prenotazione annullata',
   'provider.dashboard.grow.title': 'Pronto a crescere?',
   'provider.dashboard.grow.subtitle': 'Completa il tuo profilo per attirare più clienti e aumentare la visibilità.',
   'provider.dashboard.grow.cta': 'Completa profilo',

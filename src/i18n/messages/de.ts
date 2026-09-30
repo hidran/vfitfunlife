@@ -2089,6 +2089,7 @@ export const deMessages: Messages = {
   'provider.banner.pending': 'Profil wird geprüft — Sie werden nach der Genehmigung sichtbar sein.',
 
   'provider.dashboard.title': 'Willkommen zurück! 👋',
+  'provider.dashboard.titleNew': 'Willkommen! 👋',
   'provider.dashboard.subtitle': 'Hier ist, was heute in Ihrem Unternehmen passiert.',
   'provider.dashboard.btn.setAvailability': 'Verfügbarkeit festlegen',
   'provider.dashboard.btn.viewCalendar': 'Kalender anzeigen',
@@ -2139,6 +2140,10 @@ export const deMessages: Messages = {
   'provider.dashboard.activity.title': 'Neueste Aktivitäten',
   'provider.dashboard.activity.empty.title': 'Keine neuesten Aktivitäten',
   'provider.dashboard.activity.empty.subtitle': 'Aktivitäten erscheinen hier, wenn Sie Buchungen erhalten',
+  'provider.dashboard.activity.requested': 'Neue Buchungsanfrage',
+  'provider.dashboard.activity.confirmed': 'Buchung bestätigt',
+  'provider.dashboard.activity.declined': 'Buchung abgelehnt',
+  'provider.dashboard.activity.cancelled': 'Buchung storniert',
   'provider.dashboard.grow.title': 'Bereit zu wachsen?',
   'provider.dashboard.grow.subtitle': 'Vervollständigen Sie Ihr Profil, um mehr Kunden zu gewinnen und Ihre Sichtbarkeit zu erhöhen.',
   'provider.dashboard.grow.cta': 'Profil vervollständigen',
