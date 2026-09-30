@@ -113,22 +113,23 @@ describe('RegisterPage Email Registration', () => {
 
     expect(screen.getByText('Crea il tuo account')).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: /professionista/i })).toBeChecked();
-    expect(screen.getByText('Scegli una categoria, poi tocca i servizi che offri')).toBeInTheDocument();
+    expect(screen.getByText('Seleziona i servizi che offri')).toBeInTheDocument();
   });
 
-  it('keeps provider categories compact by showing one category group at a time', async () => {
+  it('picks a category from a dropdown and shows only its services below', async () => {
     mockSearchParams = new URLSearchParams('as=provider');
 
     render(<RegisterClient />);
 
+    const category = (await screen.findByLabelText('Categoria')) as HTMLSelectElement;
     await waitFor(() => {
-      expect(screen.getByRole('tab', { name: /Forza e Condizionamento/i })).toHaveAttribute('aria-expanded', 'true');
-      expect(screen.getByRole('tab', { name: /Cardio e Resistenza/i })).toHaveAttribute('aria-expanded', 'false');
+      expect(category.selectedOptions[0]?.textContent).toMatch(/Forza e Condizionamento/i);
     });
     expect(screen.getByRole('button', { name: /Personal Training/i })).toBeVisible();
     expect(screen.queryByRole('button', { name: /Nuoto/i })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('tab', { name: /Cardio e Resistenza/i }));
+    const cardio = screen.getByRole('option', { name: /Cardio e Resistenza/i }) as HTMLOptionElement;
+    fireEvent.change(category, { target: { value: cardio.value } });
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Nuoto/i })).toBeVisible();
