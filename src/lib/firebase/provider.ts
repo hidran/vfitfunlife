@@ -565,6 +565,25 @@ export async function getProviderClients(): Promise<ProviderClient[]> {
   return clients;
 }
 
+/**
+ * The `clients/{id}` roster entry linking a trainer to a customer, or null when there is none.
+ *
+ * Bookings carry the customer's uid, but the client detail screen is addressed by the roster
+ * document id — they differ (roster ids are generated). Same pair lookup the server uses in
+ * clientRoster.ts; the providerId filter is also what lets the security rules allow the query.
+ */
+export async function findClientIdForUser(providerId: string, userId: string): Promise<string | null> {
+  const snap = await getDocs(
+    query(
+      collection(db, CLIENTS_COLLECTION),
+      where("providerId", "==", providerId),
+      where("userId", "==", userId),
+      limit(1)
+    )
+  );
+  return snap.empty ? null : snap.docs[0].id;
+}
+
 // Get Client Details
 //
 // When `isAdmin` is true (caller is admin/superadmin), the provider-role

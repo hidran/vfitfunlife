@@ -21,6 +21,9 @@ export const queryKeys = {
   // src/stores/providerStore.ts keep owning the actual data + loading/error state).
   userBookings: (uid: string | undefined) => ['user-bookings', uid] as const,
   providerBookings: () => ['provider-bookings'] as const,
+  // Roster entry for a booking's customer (provider booking detail → client profile link).
+  providerClientForUser: (providerId: string | undefined, userId: string | undefined) =>
+    ['provider-client-for-user', providerId, userId] as const,
 
   // Client "Le mie schede" plans screen (src/app/(main)/plans/PlansClient.tsx)
   myWorkoutPlans: (uid: string | undefined) => ['my-workout-plans', uid] as const,

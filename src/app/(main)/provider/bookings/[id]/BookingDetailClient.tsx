@@ -40,6 +40,7 @@ import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
 import { queryKeys } from '@/lib/queryKeys';
 import { updateBookingPrivateNotes } from '@/lib/firebase/functions';
+import { findClientIdForUser } from '@/lib/firebase/provider';
 
 export default function BookingDetailClient() {
   const { t, locale } = useI18n();
@@ -102,6 +103,17 @@ export default function BookingDetailClient() {
       return null;
     },
     enabled: !!user,
+  });
+
+  // The profile link needs the roster document id, not the customer's uid. The booking's own
+  // trainer is the roster owner (an admin opening the page is not); the uid is the fallback
+  // for a booking without an instructorId.
+  const rosterOwnerId = booking?.instructorId ?? user?.uid;
+  const { data: clientDocId } = useQuery({
+    queryKey: queryKeys.providerClientForUser(rosterOwnerId, booking?.userId),
+    queryFn: () => findClientIdForUser(rosterOwnerId!, booking!.userId),
+    enabled: !!rosterOwnerId && !!booking?.userId,
+    staleTime: 5 * 60_000,
   });
 
   const [showNotes, setShowNotes] = useState(false);
@@ -346,12 +358,14 @@ export default function BookingDetailClient() {
                   </a>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 mt-3">
-                  <Link href={`/provider/clients/${booking.userId}`}>
-                    <Button variant="secondary" size="sm">
-                      <User className="w-4 h-4 mr-2" />
-                      {t('provider.bookingDetail.viewProfile')}
-                    </Button>
-                  </Link>
+                  {clientDocId && (
+                    <Link href={`/provider/clients/detail?id=${encodeURIComponent(clientDocId)}`}>
+                      <Button variant="secondary" size="sm">
+                        <User className="w-4 h-4 mr-2" />
+                        {t('provider.bookingDetail.viewProfile')}
+                      </Button>
+                    </Link>
+                  )}
                   <Button variant="secondary" size="sm">
                     <MessageSquare className="w-4 h-4 mr-2" />
                     {t('provider.bookingDetail.message')}
