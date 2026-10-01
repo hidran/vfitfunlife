@@ -650,6 +650,27 @@
   }
 }
 
+/* Google Maps InfoWindow chrome (bubble, tail, close icon) follows the theme. Unlayered and one
+   class more specific than the rules Maps injects at runtime, which would otherwise win. */
+.gm-style div.gm-style-iw-c {
+  background-color: var(--color-surface);
+  color: var(--color-content);
+}
+
+/* Maps sets an inline overflow: scroll, which paints empty (white) scrollbars where scrollbars
+   take space; auto only scrolls a pop-up that is actually taller than the map. */
+.gm-style div.gm-style-iw-d {
+  overflow: auto !important;
+}
+
+.gm-style div.gm-style-iw-tc::after {
+  background: var(--color-surface);
+}
+
+.gm-style div.gm-style-iw-chr button span {
+  background-color: var(--color-content) !important;
+}
+
 /* Staging login gate: set by the boot script in app/layout.tsx on vfit-app-staging.* hosts,
    removed by components/staging/StagingGate once the visitor is allowed. */
 html[data-staging-gate] body {

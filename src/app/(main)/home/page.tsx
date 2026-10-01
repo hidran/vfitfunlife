@@ -816,14 +816,15 @@ export default function HomePage() {
     onRefresh: () => new Promise(resolve => setTimeout(resolve, 2000)),
   });
 
+  // A div: MainLayout already provides the page's one <main> landmark.
   return (
-    <main
+    <div
       style={{
         transform: `translateY(${isRefreshing ? 60 : pullPosition}px)`,
         transition: 'transform 0.3s',
       }}
     >
-      {/* The transformed <main> makes this "fixed" box sit just above the page
+      {/* The transformed wrapper makes this "fixed" box sit just above the page
           content, so hide it (and let clicks through) unless a pull is under way —
           otherwise it covers whatever renders above the page, e.g. the email
           verification banner. */}
@@ -851,6 +852,6 @@ export default function HomePage() {
       {section === 'fit' && <VFitHome />}
       {section === 'fun' && <VFunHome />}
       {section === 'life' && <VLifeHome />}
-    </main>
+    </div>
   );
 }

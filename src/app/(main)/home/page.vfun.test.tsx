@@ -207,11 +207,10 @@ describe('VFun Home Page', () => {
       expect(containers.length).toBeGreaterThan(0);
     });
 
-    it('renders main content area', () => {
+    it('leaves the <main> landmark to MainLayout', () => {
       render(<HomePage />);
 
-      const main = document.querySelector('main');
-      expect(main).toBeInTheDocument();
+      expect(document.querySelector('main')).not.toBeInTheDocument();
     });
   });
 

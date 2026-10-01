@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Search,
@@ -129,6 +130,9 @@ export default function BookingPage() {
             </h1>
             <div className="flex items-center gap-2 bg-surface-elevated rounded-lg p-1">
               <button
+                type="button"
+                aria-label={t('booking.page.viewList')}
+                aria-pressed={viewMode === 'list'}
                 onClick={() => setViewMode('list')}
                 className={cn(
                   'p-2 rounded-md transition-colors',
@@ -137,9 +141,12 @@ export default function BookingPage() {
                     : 'text-text-secondary hover:text-content'
                 )}
               >
-                <List className="w-4 h-4" />
+                <List className="w-4 h-4" aria-hidden="true" />
               </button>
               <button
+                type="button"
+                aria-label={t('booking.page.viewMap')}
+                aria-pressed={viewMode === 'map'}
                 onClick={() => setViewMode('map')}
                 className={cn(
                   'p-2 rounded-md transition-colors',
@@ -148,7 +155,7 @@ export default function BookingPage() {
                     : 'text-text-secondary hover:text-content'
                 )}
               >
-                <MapIcon className="w-4 h-4" />
+                <MapIcon className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -392,106 +399,111 @@ export default function BookingPage() {
                   key={provider.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  onClick={() => handleProviderSelect(provider)}
-                  className="bg-surface-elevated/50 rounded-2xl overflow-hidden cursor-pointer hover:bg-surface-elevated transition-colors"
                 >
-                  {provider.photoUrls && provider.photoUrls[0] && (
-                    <div className="h-28 overflow-hidden rounded-t-2xl">
-                      <img
-                        src={provider.photoUrls[0]}
+                  {/* A real link, so Tab + Enter (and open-in-new-tab) reach the trainer */}
+                  <Link
+                    href={`/book?providerId=${provider.id}`}
+                    onClick={() => selectProvider(provider)}
+                    className="block bg-surface-elevated/50 rounded-2xl overflow-hidden hover:bg-surface-elevated transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-section-primary"
+                  >
+                    {provider.photoUrls && provider.photoUrls[0] && (
+                      <div className="h-28 overflow-hidden rounded-t-2xl">
+                        <img
+                          src={provider.photoUrls[0]}
+                          alt={provider.fullName}
+                          loading="lazy"
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                    )}
+                    <div className="flex gap-4 p-4">
+                      <Avatar
+                        src={provider.avatarUrl}
                         alt={provider.fullName}
-                        loading="lazy"
-                        className="h-full w-full object-cover"
+                        size="xl"
+                        className="flex-shrink-0"
                       />
-                    </div>
-                  )}
-                  <div className="flex gap-4 p-4">
-                    <Avatar
-                      src={provider.avatarUrl}
-                      alt={provider.fullName}
-                      size="xl"
-                      className="flex-shrink-0"
-                    />
 
-                    <div className="flex-1 min-w-0">
-                      {/* The badge drops under the name when both don't fit, instead of being clipped */}
-                      <div className="flex flex-wrap items-start justify-between gap-x-2 gap-y-1">
-                        <div className="min-w-[7rem] flex-1">
-                          <h3 className="font-semibold text-content truncate">
-                            {provider.fullName}
-                          </h3>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <div className="flex items-center gap-1">
-                              <Star className="w-3.5 h-3.5 text-warning fill-warning" />
-                              <span className="text-sm text-content">
-                                {provider.rating.toFixed(1)}
+                      <div className="flex-1 min-w-0">
+                        {/* The badge drops under the name when both don't fit, instead of being clipped */}
+                        <div className="flex flex-wrap items-start justify-between gap-x-2 gap-y-1">
+                          <div className="min-w-[7rem] flex-1">
+                            <h3 className="font-semibold text-content truncate">
+                              {provider.fullName}
+                            </h3>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <div className="flex items-center gap-1">
+                                <Star className="w-3.5 h-3.5 text-warning fill-warning" />
+                                <span className="text-sm text-content">
+                                  {provider.rating.toFixed(1)}
+                                </span>
+                              </div>
+                              <span className="text-text-tertiary text-sm">
+                                {t('booking.provider.reviews', { count: provider.reviewCount })}
                               </span>
                             </div>
-                            <span className="text-text-tertiary text-sm">
-                              {t('booking.provider.reviews', { count: provider.reviewCount })}
-                            </span>
                           </div>
-                        </div>
-                        {provider.isVerified && (
-                          <Badge variant="partner" size="sm" className="shrink-0">{t('booking.provider.verified')}</Badge>
-                        )}
-                      </div>
-
-                      {/* Specialties */}
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {provider.specialties.slice(0, 3).map((specialty) => (
-                          <span
-                            key={specialty}
-                            className="text-xs bg-surface-2 text-text-secondary px-2 py-0.5 rounded-full"
-                          >
-                            {specialty}
-                          </span>
-                        ))}
-                        {provider.specialties.length > 3 && (
-                          <span className="text-xs text-text-tertiary">
-                            +{provider.specialties.length - 3}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Languages & Experience */}
-                      <div className="flex items-center gap-3 mt-2 text-xs text-text-tertiary">
-                        <span>{t('booking.provider.yearsExp', { count: provider.yearsOfExperience })}</span>
-                        {provider.languages.length > 0 && (
-                          <span>{provider.languages.join(', ')}</span>
-                        )}
-                      </div>
-
-                      {/* Price & Availability */}
-                      {/* Distance sits with the price; on narrow cards the availability link wraps
-                          to its own line as a unit instead of breaking between the two. */}
-                      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 mt-3 pt-3 border-t border-hairline">
-                        <div className="flex flex-wrap items-baseline gap-x-2">
-                          {provider.lowestPrice != null ? (
-                            <span className="text-lg font-bold text-[var(--section-primary)] whitespace-nowrap">
-                              {t('booking.price.from', { price: formatPrice(provider.lowestPrice, locale) })}
-                            </span>
-                          ) : (
-                            <span className="text-sm text-text-secondary">{t('booking.provider.viewAvailability')}</span>
+                          {provider.isVerified && (
+                            <Badge variant="partner" size="sm" className="shrink-0">{t('booking.provider.verified')}</Badge>
                           )}
-                          {provider.distanceKm != null && Number.isFinite(provider.distanceKm) && (
-                            <span className="text-xs text-text-tertiary whitespace-nowrap">
-                              {formatDistance(provider.distanceKm, locale)}
+                        </div>
+
+                        {/* Specialties */}
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {provider.specialties.slice(0, 3).map((specialty) => (
+                            <span
+                              key={specialty}
+                              className="text-xs bg-surface-2 text-text-secondary px-2 py-0.5 rounded-full"
+                            >
+                              {specialty}
+                            </span>
+                          ))}
+                          {provider.specialties.length > 3 && (
+                            <span className="text-xs text-text-tertiary">
+                              +{provider.specialties.length - 3}
                             </span>
                           )}
                         </div>
-                        <div className="ml-auto flex items-center gap-2 text-sm text-text-secondary">
-                          <Clock className="w-4 h-4 shrink-0" />
-                          {provider.nextAvailable ? (
-                            <span>{t('booking.provider.availableFrom', { date: provider.nextAvailable.toLocaleDateString(toLocaleTag(locale)) })}</span>
-                          ) : (
-                            <span>{t('booking.provider.checkAvailability')}</span>
+
+                        {/* Languages & Experience */}
+                        <div className="flex items-center gap-3 mt-2 text-xs text-text-tertiary">
+                          <span>{t('booking.provider.yearsExp', { count: provider.yearsOfExperience })}</span>
+                          {provider.languages.length > 0 && (
+                            <span>{provider.languages.join(', ')}</span>
                           )}
-                          <ChevronRight className="w-4 h-4 shrink-0" />
+                        </div>
+
+                        {/* Price & Availability */}
+                        {/* Distance sits with the price; on narrow cards the availability link wraps
+                            to its own line as a unit instead of breaking between the two. */}
+                        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 mt-3 pt-3 border-t border-hairline">
+                          <div className="flex flex-wrap items-baseline gap-x-2">
+                            {provider.lowestPrice != null ? (
+                              <span className="text-lg font-bold text-[var(--section-primary)] whitespace-nowrap">
+                                {t('booking.price.from', { price: formatPrice(provider.lowestPrice, locale) })}
+                              </span>
+                            ) : (
+                              <span className="text-sm text-text-secondary">{t('booking.provider.viewAvailability')}</span>
+                            )}
+                            {provider.distanceKm != null && Number.isFinite(provider.distanceKm) && (
+                              <span className="text-xs text-text-tertiary whitespace-nowrap">
+                                {formatDistance(provider.distanceKm, locale)}
+                              </span>
+                            )}
+                          </div>
+                          <div className="ml-auto flex items-center gap-2 text-sm text-text-secondary">
+                            <Clock className="w-4 h-4 shrink-0" />
+                            {provider.nextAvailable ? (
+                              <span>{t('booking.provider.availableFrom', { date: provider.nextAvailable.toLocaleDateString(toLocaleTag(locale)) })}</span>
+                            ) : (
+                              <span>{t('booking.provider.checkAvailability')}</span>
+                            )}
+                            <ChevronRight className="w-4 h-4 shrink-0" />
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 </motion.div>
               ))
             )}

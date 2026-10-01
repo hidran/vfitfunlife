@@ -2021,6 +2021,8 @@ export const frMessages: Messages = {
   'profile.family.leaveConfirmConfirm': 'Quitter',
 
   'booking.page.title': 'Réserver un service',
+  'booking.page.viewList': 'Vue liste',
+  'booking.page.viewMap': 'Vue carte',
   'booking.search.placeholder': 'Rechercher des coachs, services...',
   'booking.category.all': 'Tous',
   'booking.filters.title': 'Filtres',

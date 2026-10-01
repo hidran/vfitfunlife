@@ -119,8 +119,9 @@ export function PilotFlagsSettings() {
               </div>
               <button
                 type="button"
+                role="switch"
                 aria-label={t(labelKey)}
-                aria-pressed={enabled}
+                aria-checked={enabled}
                 onClick={() => setDraft({ ...draft, [key]: !enabled })}
                 className={`relative w-12 h-6 shrink-0 rounded-full transition-colors ${
                   enabled ? "bg-[#10B981]" : "bg-content/20"

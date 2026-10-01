@@ -12,7 +12,7 @@ export default function NotificationSettingsPage() {
   const user = useAuthStore((s) => s.user);
 
   return (
-    <main className="container-mobile py-6">
+    <div className="container-mobile py-6">
       <button onClick={() => router.back()} aria-label="Back" className="mb-4 inline-flex items-center gap-1 text-sm">
         <ChevronLeft className="h-4 w-4" /> Back
       </button>
@@ -23,6 +23,6 @@ export default function NotificationSettingsPage() {
           onSaved={() => router.back()}
         />
       )}
-    </main>
+    </div>
   );
 }

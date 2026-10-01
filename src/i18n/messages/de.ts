@@ -2019,6 +2019,8 @@ export const deMessages: Messages = {
   'profile.family.leaveConfirmConfirm': 'Verlassen',
 
   'booking.page.title': 'Einen Service buchen',
+  'booking.page.viewList': 'Listenansicht',
+  'booking.page.viewMap': 'Kartenansicht',
   'booking.search.placeholder': 'Trainer, Services suchen...',
   'booking.category.all': 'Alle',
   'booking.filters.title': 'Filter',

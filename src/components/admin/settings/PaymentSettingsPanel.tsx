@@ -7,6 +7,7 @@ import { useI18n } from "@/hooks/useI18n";
 import { usePaymentSettings, type PaymentSettings } from "@/hooks/usePaymentSettings";
 import { Button } from "@/components/ui/button";
 import { setPaymentSettings } from "@/lib/firebase/functions";
+import { notify } from "@/lib/notify";
 import { queryKeys } from "@/lib/queryKeys";
 import type { MessageKey } from "@/i18n/messages";
 
@@ -51,6 +52,7 @@ function PaymentSettingsForm({ initial }: { initial: PaymentSettings }) {
         stripePaymentsEnabled,
         subscriptionsEnabled,
       });
+      notify.success(t("admin.settings.savedSuccess"));
     },
   });
 
@@ -154,8 +156,9 @@ function SwitchRow({
       </div>
       <button
         type="button"
+        role="switch"
         aria-label={t(labelKey)}
-        aria-pressed={checked}
+        aria-checked={checked}
         disabled={disabled}
         onClick={() => onChange(!checked)}
         className={`relative w-12 h-6 shrink-0 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${

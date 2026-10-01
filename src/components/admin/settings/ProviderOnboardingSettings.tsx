@@ -105,8 +105,9 @@ function ProviderOnboardingSettingsForm({
         </div>
         <button
           type="button"
+          role="switch"
           aria-label={t("admin.settings.providerOnboarding.autoApprove.label")}
-          aria-pressed={autoApprove}
+          aria-checked={autoApprove}
           onClick={() => setAutoApprove(!autoApprove)}
           className={`relative w-12 h-6 shrink-0 rounded-full transition-colors ${
             autoApprove ? "bg-[#10B981]" : "bg-content/20"

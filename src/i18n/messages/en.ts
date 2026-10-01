@@ -2038,6 +2038,8 @@ export const enMessages: Messages = {
   'profile.family.leaveConfirmConfirm': 'Leave',
 
   'booking.page.title': 'Book a service',
+  'booking.page.viewList': 'List view',
+  'booking.page.viewMap': 'Map view',
   'booking.search.placeholder': 'Search trainers, services...',
   'booking.category.all': 'All',
   'booking.filters.title': 'Filters',

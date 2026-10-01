@@ -2012,6 +2012,8 @@ export const esMessages: Messages = {
   'profile.family.leaveConfirmConfirm': 'Salir',
 
   'booking.page.title': 'Reservar un servicio',
+  'booking.page.viewList': 'Vista de lista',
+  'booking.page.viewMap': 'Vista de mapa',
   'booking.search.placeholder': 'Buscar entrenadores, servicios...',
   'booking.category.all': 'Todos',
   'booking.filters.title': 'Filtros',

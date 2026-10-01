@@ -2036,6 +2036,8 @@ export const itMessages = {
   'profile.family.leaveConfirmConfirm': 'Esci',
 
   'booking.page.title': 'Prenota un servizio',
+  'booking.page.viewList': 'Vista elenco',
+  'booking.page.viewMap': 'Vista mappa',
   'booking.search.placeholder': 'Cerca trainer, servizi...',
   'booking.category.all': 'Tutti',
   'booking.filters.title': 'Filtri',

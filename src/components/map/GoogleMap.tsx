@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
 import { useTheme } from '@/contexts/ThemeContext';
 import { mapStylesFor } from './mapStyles';
+import { markerInfoContent } from './markerInfoContent';
 
 interface Gym {
   id: string;
@@ -106,9 +107,10 @@ export function GoogleMap({ gyms, userLocation, onGymSelect, className }: Google
     googleMapRef.current?.setOptions({ styles: mapStylesFor(theme, { hidePoiLabels: true }) });
   }, [theme, isLoading]);
 
-  // Add/update markers when gyms change
+  // Add/update markers when gyms change, and once the map exists: the map is created
+  // asynchronously, so without isLoading the first pass would find no map and never repeat.
   useEffect(() => {
-    if (!googleMapRef.current) return;
+    if (isLoading || !googleMapRef.current) return;
 
     // Clear previous markers regardless of the new count
     markersRef.current.forEach(marker => marker.setMap(null));
@@ -170,25 +172,13 @@ export function GoogleMap({ gyms, userLocation, onGymSelect, className }: Google
 
       // Add info window
       const infoWindow = new google.maps.InfoWindow({
-        content: `
-          <div style="
-            padding: 12px;
-            min-width: 200px;
-            font-family: system-ui, -apple-system, sans-serif;
-            background: #1a1d29;
-            color: white;
-            border-radius: 8px;
-          ">
-            <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600;">${gym.name}</h3>
-            <p style="margin: 0 0 4px 0; font-size: 14px; color: #8a8d99;">${gym.city}</p>
-            <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
-              <span style="color: #fbbf24;">★</span>
-              <span style="font-weight: 600;">${gym.rating}</span>
-              <span style="color: #8a8d99;">(${t('map.google.reviews', { count: gym.reviewCount })})</span>
-            </div>
-            ${gym.isPartner ? `<span style="display: inline-block; margin-top: 8px; padding: 4px 8px; background: rgba(0, 201, 255, 0.2); color: #00C9FF; border-radius: 4px; font-size: 12px; font-weight: 500;">${t('map.google.partner')}</span>` : ''}
-          </div>
-        `,
+        content: markerInfoContent({
+          name: gym.name,
+          city: gym.city,
+          rating: gym.rating,
+          reviewsLabel: t('map.google.reviews', { count: gym.reviewCount }),
+          partnerLabel: gym.isPartner ? t('map.google.partner') : undefined,
+        }),
       });
 
       marker.addListener('click', () => {
@@ -220,7 +210,7 @@ export function GoogleMap({ gyms, userLocation, onGymSelect, className }: Google
     if (gyms.length > 0) {
       googleMapRef.current.fitBounds(bounds, 50);
     }
-  }, [gyms, onGymSelect, t, userLocation]);
+  }, [gyms, isLoading, onGymSelect, t, userLocation]);
 
   if (error) {
     return (
