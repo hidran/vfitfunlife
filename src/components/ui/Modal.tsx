@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useEffect, useRef } from 'react';
+import { ReactNode, RefObject, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 
@@ -15,6 +15,11 @@ export interface ModalProps {
   labelledBy?: string;
   /** Accessible name when there is no visible title to point at. */
   ariaLabel?: string;
+  /** Close on a click outside the box (default true). Pass false while e.g. a form is mid-submit. */
+  closeOnBackdrop?: boolean;
+  /** Where focus goes on close when the opener is gone, e.g. the menu button whose (now
+   *  unmounted) item opened the dialog. Defaults to the element focused when it opened. */
+  returnFocusRef?: RefObject<HTMLElement | null>;
 }
 
 const FOCUSABLE = [
@@ -30,15 +35,28 @@ const focusablesIn = (root: HTMLElement) =>
   Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((el) => !el.closest('[inert]'));
 
 /**
- * Modal dialog: portal + backdrop, `role="dialog"` with `aria-modal`, Escape and backdrop
- * click close it, Tab/Shift+Tab stay inside, and focus returns to the opener on close.
+ * Modal dialog: portal + backdrop, `role="dialog"` with `aria-modal`, Escape and a backdrop
+ * click close it (the backdrop unless `closeOnBackdrop` is false), Tab/Shift+Tab stay inside,
+ * and focus returns to the opener (or `returnFocusRef`) on close.
  */
-export function Modal({ children, onClose, className, labelledBy, ariaLabel }: ModalProps) {
+export function Modal({
+  children,
+  onClose,
+  className,
+  labelledBy,
+  ariaLabel,
+  closeOnBackdrop = true,
+  returnFocusRef,
+}: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   // Callers pass inline closures; keep the latest one without re-running the mount effect
   // (which would steal focus back to the first field on every keystroke).
   const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
+  const returnFocusRefRef = useRef(returnFocusRef);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+    returnFocusRefRef.current = returnFocusRef;
+  });
 
   useEffect(() => {
     const returnFocusTo = document.activeElement as HTMLElement | null;
@@ -75,7 +93,8 @@ export function Modal({ children, onClose, className, labelledBy, ariaLabel }: M
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = '';
-      if (returnFocusTo?.isConnected) returnFocusTo.focus();
+      const target = returnFocusRefRef.current?.current ?? returnFocusTo;
+      if (target?.isConnected) target.focus();
     };
   }, []);
 
@@ -84,16 +103,13 @@ export function Modal({ children, onClose, className, labelledBy, ariaLabel }: M
   }
 
   return createPortal(
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
-    >
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" aria-hidden />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop: it covers the whole wrapper, so this is where clicks outside the box land. */}
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        aria-hidden
+        onClick={closeOnBackdrop ? () => onClose() : undefined}
+      />
 
       {/* Modal Content */}
       <div

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useId } from 'react';
 import { Calendar } from '@/components/provider/Calendar';
 import { ScheduleEvent, CalendarView } from '@/types/provider';
 import { useShallow } from 'zustand/react/shallow';
@@ -48,6 +48,7 @@ export default function ProviderSchedulePage() {
   const [exporting, setExporting] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const uid = useAuthStore((s) => s.user?.id);
+  const titleId = useId();
 
   useEffect(() => {
     fetchSchedule(range.start, range.end);
@@ -170,10 +171,10 @@ export default function ProviderSchedulePage() {
 
       {/* Event Detail Modal */}
       {selectedEvent && (
-        <Modal onClose={() => setSelectedEvent(null)}>
-          <div className="bg-surface-elevated rounded-xl p-6 w-[calc(100%-2rem)] max-w-md">
+        <Modal onClose={() => setSelectedEvent(null)} labelledBy={`${titleId}-event`} className="w-full max-w-md">
+          <div className="bg-surface-elevated rounded-xl p-6">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold text-content">
+              <h3 id={`${titleId}-event`} className="text-xl font-semibold text-content">
                 {selectedEvent.type === 'blocked' ? t('provider.schedule.modal.blockedTime') : t('provider.schedule.modal.appointment')}
               </h3>
               <button
@@ -279,10 +280,10 @@ export default function ProviderSchedulePage() {
 
       {/* Date Selection Modal */}
       {selectedDate && !selectedEvent && (
-        <Modal onClose={() => setSelectedDate(null)}>
-          <div className="bg-surface-elevated rounded-xl p-6 w-[calc(100%-2rem)] max-w-md">
+        <Modal onClose={() => setSelectedDate(null)} labelledBy={`${titleId}-date`} className="w-full max-w-md">
+          <div className="bg-surface-elevated rounded-xl p-6">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold text-content">
+              <h3 id={`${titleId}-date`} className="text-xl font-semibold text-content">
                 {selectedDate.toLocaleDateString(toLocaleTag(locale), {
                   weekday: 'long',
                   month: 'long',

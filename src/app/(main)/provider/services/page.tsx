@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Plus, Edit, Copy, Trash2, MoreVertical, Check, X, Clock, DollarSign, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/Modal';
@@ -52,6 +52,8 @@ export default function ProviderServicesPage() {
   const fid = (name: string) => `${fieldId}-${name}`;
 
   const [editingService, setEditingService] = useState<InstructorService | null>(null);
+  // The Edit item unmounts with its menu, so the dialog hands focus back to the menu button.
+  const editReturnFocusRef = useRef<HTMLButtonElement | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [draft, setDraft] = useState<ProviderServiceInput>(EMPTY_DRAFT);
   // Add from the platform catalogue (name + category come from the picked service) or
@@ -302,7 +304,12 @@ export default function ProviderServicesPage() {
                 <div role="menu" className="absolute right-0 mt-1 w-48 bg-surface-input rounded-lg border border-hairline shadow-xl z-10 py-1">
                   <button
                     role="menuitem"
-                    onClick={fromMenu(() => setEditingService(service))}
+                    onClick={(event) => {
+                      editReturnFocusRef.current = event.currentTarget
+                        .closest('[data-service-menu]')
+                        ?.querySelector<HTMLButtonElement>('button[aria-haspopup]') ?? null;
+                      fromMenu(() => setEditingService(service))();
+                    }}
                     className="w-full min-h-11 px-4 py-2 text-left text-sm text-content hover:bg-surface-2 flex items-center gap-2"
                   >
                     <Edit className="w-4 h-4" />
@@ -369,7 +376,13 @@ export default function ProviderServicesPage() {
 
       {/* Edit Modal */}
       {editingService && (
-        <Modal onClose={() => setEditingService(null)} labelledBy={fid('edit-title')} className="w-full max-w-md">
+        <Modal
+          onClose={() => setEditingService(null)}
+          labelledBy={fid('edit-title')}
+          className="w-full max-w-md"
+          closeOnBackdrop={!updateService.isPending}
+          returnFocusRef={editReturnFocusRef}
+        >
           <div className="bg-surface-elevated rounded-xl p-6">
             <h3 id={fid('edit-title')} className="text-xl font-semibold text-content mb-6">{t('provider.services.edit.title')}</h3>
 
@@ -468,7 +481,12 @@ export default function ProviderServicesPage() {
 
       {/* Add Modal */}
       {showAddModal && (
-        <Modal onClose={() => setShowAddModal(false)} labelledBy={fid('add-title')} className="w-full max-w-md">
+        <Modal
+          onClose={() => setShowAddModal(false)}
+          labelledBy={fid('add-title')}
+          className="w-full max-w-md"
+          closeOnBackdrop={!createService.isPending}
+        >
           <div className="bg-surface-elevated rounded-xl p-6">
             <h3 id={fid('add-title')} className="text-xl font-semibold text-content mb-4">{t('provider.services.add.title')}</h3>
 

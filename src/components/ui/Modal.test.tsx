@@ -2,9 +2,9 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { Modal } from './Modal';
 
-function Dialog({ onClose }: { onClose: () => void }) {
+function Dialog({ onClose, closeOnBackdrop }: { onClose: () => void; closeOnBackdrop?: boolean }) {
   return (
-    <Modal onClose={onClose} labelledBy="dlg-title">
+    <Modal onClose={onClose} labelledBy="dlg-title" closeOnBackdrop={closeOnBackdrop}>
       <h3 id="dlg-title">Edit service</h3>
       <label htmlFor="dlg-name">Name</label>
       <input id="dlg-name" />
@@ -24,6 +24,27 @@ describe('Modal', () => {
   it('closes on Escape', () => {
     const onClose = vi.fn();
     render(<Dialog onClose={onClose} />);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes on a backdrop click but not on a click inside the box', () => {
+    const onClose = vi.fn();
+    render(<Dialog onClose={onClose} />);
+    const dialog = screen.getByRole('dialog');
+    fireEvent.click(screen.getByLabelText('Name'));
+    fireEvent.click(dialog);
+    expect(onClose).not.toHaveBeenCalled();
+    // The backdrop layer sits right before the box and covers everything around it.
+    fireEvent.click(dialog.previousElementSibling as HTMLElement);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores a backdrop click when closeOnBackdrop is false', () => {
+    const onClose = vi.fn();
+    render(<Dialog onClose={onClose} closeOnBackdrop={false} />);
+    fireEvent.click(screen.getByRole('dialog').previousElementSibling as HTMLElement);
+    expect(onClose).not.toHaveBeenCalled();
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(1);
   });
@@ -50,5 +71,22 @@ describe('Modal', () => {
     unmount();
     expect(opener).toHaveFocus();
     opener.remove();
+  });
+
+  it('returns focus to returnFocusRef when given', () => {
+    const opener = document.createElement('button');
+    const menuButton = document.createElement('button');
+    document.body.append(opener, menuButton);
+    opener.focus();
+    const ref = { current: menuButton };
+    const { unmount } = render(
+      <Modal onClose={vi.fn()} ariaLabel="Edit" returnFocusRef={ref}>
+        <button type="button">Save</button>
+      </Modal>
+    );
+    unmount();
+    expect(menuButton).toHaveFocus();
+    opener.remove();
+    menuButton.remove();
   });
 });

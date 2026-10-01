@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useShallow } from 'zustand/react/shallow';
 import dynamic from 'next/dynamic';
@@ -33,6 +33,7 @@ import type { MessageKey } from '@/i18n/messages';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
 import { Button } from '@/components/ui/button';
+import { Modal } from '@/components/ui/Modal';
 import { Badge, type BadgeProps } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
 import { MapPlaceholder } from '@/components/map/MapPlaceholder';
@@ -104,6 +105,7 @@ export default function BookingDetailPage() {
   const user = useAuthStore((s) => s.user);
   const refreshUserProfile = useAuthStore((s) => s.refreshUserProfile);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const cancelTitleId = useId();
   const [localBookingOverride, setLocalBookingOverride] = useState<Booking | null>(null);
 
   // Deep links (push notifications, emailed links, a shared URL) land here with an empty
@@ -622,13 +624,13 @@ export default function BookingDetailPage() {
 
       {/* Cancel Modal */}
       {showCancelModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="bg-surface-elevated rounded-2xl p-6 w-full max-w-sm"
-          >
-            <h3 className="text-lg font-semibold text-content mb-2">
+        <Modal
+          onClose={() => setShowCancelModal(false)}
+          labelledBy={cancelTitleId}
+          className="w-full max-w-sm"
+        >
+          <div className="bg-surface-elevated rounded-2xl p-6">
+            <h3 id={cancelTitleId} className="text-lg font-semibold text-content mb-2">
               {t('bookings.detail.cancelModal.title')}
             </h3>
             <p className="text-text-secondary text-sm mb-4">
@@ -655,8 +657,8 @@ export default function BookingDetailPage() {
                 {t('common.cancel')}
               </button>
             </div>
-          </motion.div>
-        </div>
+          </div>
+        </Modal>
       )}
     </div>
   );
