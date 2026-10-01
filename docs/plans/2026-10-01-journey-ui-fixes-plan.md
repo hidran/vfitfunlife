@@ -162,6 +162,19 @@ Same §0 rules. Each: staging deploy → staging check → prod.
 - Map marker pop-up in `GoogleMap.tsx` has a hard-coded dark card → theme tokens.
 - **Done when:** keyboard Tab+Enter opens a trainer from results; every page has exactly one `main`; switches announce as switches; pop-up follows the theme.
 
+### H5 `[ ]` Formatting leftovers from H1 (Low)
+- `formatDate` in `src/lib/utils.ts` is hard-coded to `it-IT` → take the app locale (same pattern as `formatPrice`, required arg); fix callers.
+- Ratings print with `toFixed(1)` ("4.8" in Italian) → locale-aware one-decimal format (`formatDecimal` from H1).
+- Privacy settings page "Back" button hard-coded in English (`profile/settings/privacy/page.tsx`) → i18n key, 5 locales.
+- **Done when:** in it, dates/ratings read Italian-style ("4,8"); in en, English-style; no hard-coded "Back".
+
+### H6 `[ ]` Map pop-up & cancel dialog leftovers (Low)
+- `GoogleMap.tsx`: marker click on `/booking` and `/fit/gyms` navigates immediately so the pop-up is never seen → first click opens the pop-up,
+  the pop-up has the link that navigates; only one pop-up open at a time; markers are not recreated on every re-render (diff by id) so an open pop-up survives.
+- Cancel dialog (`bookings/[id]/BookingDetailClient.tsx`): `Modal` gains a `describedBy` prop → body text announced; confirm button shows a
+  pending state and the dialog can't be closed while the cancel request is in flight (`closeOnBackdrop` / Esc blocked while pending).
+- **Done when:** clicking a marker shows its pop-up and the pop-up link opens the trainer/gym; opening another closes the first; cancel dialog has `aria-describedby`.
+
 ---
 
 ## 2. Log
