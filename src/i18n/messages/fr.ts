@@ -1926,6 +1926,7 @@ export const frMessages: Messages = {
   'map.google.loading': 'Chargement de la carte...',
   'map.google.reviews': '{{count}} avis',
   'map.google.partner': 'Partenaire',
+  'map.google.viewDetails': 'Voir les détails',
   'map.google.error.apiKeyInvalid': "La clé API Google Maps est invalide ou non configurée",
   'map.google.error.requestRejected':
     'Google Maps a refusé la requête. Vérifiez la clé API, le billing et les domaines autorisés.',
@@ -2696,6 +2697,7 @@ export const frMessages: Messages = {
   'bookings.detail.cancelModal.title': 'Annuler la réservation',
   'bookings.detail.cancelModal.body': "Êtes-vous sûr de vouloir annuler cette réservation ? L'annulation gratuite est disponible jusqu'à 24 heures avant.",
   'bookings.detail.cancelModal.keep': 'Conserver',
+  'bookings.detail.cancelModal.cancelling': 'Annulation…',
 
   // bookings/reschedule/BookingRescheduleClient.tsx
   'bookings.reschedule.title': 'Reprogrammer la réservation',

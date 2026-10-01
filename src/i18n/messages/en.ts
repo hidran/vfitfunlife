@@ -1943,6 +1943,7 @@ export const enMessages: Messages = {
   'map.google.loading': 'Loading map...',
   'map.google.reviews': '{{count}} reviews',
   'map.google.partner': 'Partner',
+  'map.google.viewDetails': 'View details',
   'map.google.error.apiKeyInvalid': 'Google Maps API key is invalid or not configured',
   'map.google.error.requestRejected':
     'Google Maps rejected the request. Check API key, billing, and allowed domains.',
@@ -2711,6 +2712,7 @@ export const enMessages: Messages = {
   'bookings.detail.cancelModal.title': 'Cancel booking',
   'bookings.detail.cancelModal.body': 'Are you sure you want to cancel this booking? Free cancellation is available up to 24 hours before.',
   'bookings.detail.cancelModal.keep': 'Keep',
+  'bookings.detail.cancelModal.cancelling': 'Cancelling…',
 
   // bookings/reschedule/BookingRescheduleClient.tsx
   'bookings.reschedule.title': 'Reschedule booking',

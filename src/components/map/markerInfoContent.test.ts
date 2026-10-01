@@ -30,3 +30,24 @@ describe('markerInfoContent', () => {
     expect(root.querySelector('h3')?.textContent).toBe('<img src=x onerror=alert(1)>');
   });
 });
+
+describe('markerInfoContent link', () => {
+  const base = { name: 'Elena', city: 'Milano', rating: '4,8', reviewsLabel: '12 reviews' };
+
+  it('has no link unless one is given', () => {
+    expect(markerInfoContent(base).querySelector('a')).toBeNull();
+  });
+
+  it('renders a real link with its label and hands clicks to onClick', () => {
+    let clicked = 0;
+    const root = markerInfoContent({
+      ...base,
+      link: { href: '/book?providerId=p1', label: 'Verifica disponibilità', onClick: (e) => { e.preventDefault(); clicked++; } },
+    });
+    const a = root.querySelector('a')!;
+    expect(a.getAttribute('href')).toBe('/book?providerId=p1');
+    expect(a.textContent).toBe('Verifica disponibilità');
+    a.click();
+    expect(clicked).toBe(1);
+  });
+});

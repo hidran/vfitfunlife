@@ -56,6 +56,11 @@ export default function GymsPage() {
         gym.city.toLowerCase().includes(normalizedQuery)
     );
   }, [query, gyms]);
+  // The map pop-up links to the same venue page as the list cards.
+  const mapGyms = useMemo(
+    () => filteredGyms.map((gym) => ({ ...gym, href: `/venue?id=${gym.id}` })),
+    [filteredGyms]
+  );
 
   return (
     <div className="min-h-screen bg-background-dark pb-24">
@@ -209,7 +214,7 @@ export default function GymsPage() {
         ) : (
           <div className="space-y-4">
             <GoogleMap
-              gyms={filteredGyms}
+              gyms={mapGyms}
               userLocation={userLocation ?? undefined}
               onGymSelect={handleGymSelect}
               className="h-[60vh] min-h-[500px]"

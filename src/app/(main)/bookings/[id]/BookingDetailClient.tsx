@@ -19,6 +19,7 @@ import {
   CheckCircle,
   AlertCircle,
   Copy,
+  Loader2,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -106,6 +107,11 @@ export default function BookingDetailPage() {
   const refreshUserProfile = useAuthStore((s) => s.refreshUserProfile);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const cancelTitleId = useId();
+  const cancelBodyId = useId();
+  const cancelLateId = useId();
+  // While the cancel request is in flight the dialog stays open: Esc, the backdrop and Keep
+  // are ignored, so the outcome (or the error) is never lost behind a closed dialog.
+  const [isCancelling, setIsCancelling] = useState(false);
   const [localBookingOverride, setLocalBookingOverride] = useState<Booking | null>(null);
 
   // Deep links (push notifications, emailed links, a shared URL) land here with an empty
@@ -179,6 +185,8 @@ export default function BookingDetailPage() {
   const providerDisplayName = booking.instructorName || booking.providerName || '';
 
   const handleCancel = async () => {
+    if (isCancelling) return;
+    setIsCancelling(true);
     try {
       if (isFallbackBooking) {
         setLocalBookingOverride({
@@ -201,6 +209,8 @@ export default function BookingDetailPage() {
       setShowCancelModal(false);
     } catch {
       alert(t('bookings.detail.errorCancel'));
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -276,6 +286,8 @@ export default function BookingDetailPage() {
   const isPast = scheduledAt < new Date();
   // Derived from the shared helpers so these gates cannot drift from the status machine.
   const canCancel = canClientCancel(booking.status) && !isPast;
+  // PILOT: late cancellations are flagged for data collection, never charged.
+  const showLateCancelWarning = wouldBeLateCancellation(booking.scheduledAt.toDate());
   const canReschedule = canRescheduleBooking(booking.status, isPast);
   const canReview = canReviewBooking(booking.status, booking.hasReviewed);
 
@@ -625,20 +637,25 @@ export default function BookingDetailPage() {
       {/* Cancel Modal */}
       {showCancelModal && (
         <Modal
-          onClose={() => setShowCancelModal(false)}
+          onClose={() => {
+            if (!isCancelling) setShowCancelModal(false);
+          }}
+          closeOnBackdrop={!isCancelling}
           labelledBy={cancelTitleId}
+          describedBy={
+            showLateCancelWarning ? `${cancelBodyId} ${cancelLateId}` : cancelBodyId
+          }
           className="w-full max-w-sm"
         >
           <div className="bg-surface-elevated rounded-2xl p-6">
             <h3 id={cancelTitleId} className="text-lg font-semibold text-content mb-2">
               {t('bookings.detail.cancelModal.title')}
             </h3>
-            <p className="text-text-secondary text-sm mb-4">
+            <p id={cancelBodyId} className="text-text-secondary text-sm mb-4">
               {t('bookings.detail.cancelModal.body')}
             </p>
-            {/* PILOT: late cancellations are flagged for data collection, never charged. */}
-            {wouldBeLateCancellation(booking.scheduledAt.toDate()) && (
-              <p className="text-sm text-warning bg-warning/10 border border-warning/30 rounded-lg p-3 mb-4">
+            {showLateCancelWarning && (
+              <p id={cancelLateId} className="text-sm text-warning bg-warning/10 border border-warning/30 rounded-lg p-3 mb-4">
                 {t('booking.cancel.lateWarning' as MessageKey)}
               </p>
             )}
@@ -646,15 +663,22 @@ export default function BookingDetailPage() {
               <Button
                 variant="secondary"
                 onClick={() => setShowCancelModal(false)}
+                disabled={isCancelling}
                 className="flex-1"
               >
                 {t('bookings.detail.cancelModal.keep')}
               </Button>
               <button
+                type="button"
                 onClick={handleCancel}
-                className="flex-1 py-3 bg-error text-white rounded-xl font-medium hover:bg-error/90 transition-colors"
+                disabled={isCancelling}
+                aria-busy={isCancelling}
+                className="flex-1 inline-flex items-center justify-center gap-2 py-3 bg-error text-white rounded-xl font-medium hover:bg-error/90 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                {t('common.cancel')}
+                {isCancelling && <Loader2 className="w-4 h-4 animate-spin" aria-hidden />}
+                {isCancelling
+                  ? t('bookings.detail.cancelModal.cancelling')
+                  : t('common.cancel')}
               </button>
             </div>
           </div>

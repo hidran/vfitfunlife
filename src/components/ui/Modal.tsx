@@ -15,6 +15,8 @@ export interface ModalProps {
   labelledBy?: string;
   /** Accessible name when there is no visible title to point at. */
   ariaLabel?: string;
+  /** Id(s) of the text that explains the dialog (space-separated), announced after its name. */
+  describedBy?: string;
   /** Close on a click outside the box (default true). Pass false while e.g. a form is mid-submit. */
   closeOnBackdrop?: boolean;
   /** Where focus goes on close when the opener is gone, e.g. the menu button whose (now
@@ -45,6 +47,7 @@ export function Modal({
   className,
   labelledBy,
   ariaLabel,
+  describedBy,
   closeOnBackdrop = true,
   returnFocusRef,
 }: ModalProps) {
@@ -118,6 +121,7 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={labelledBy}
         aria-label={labelledBy ? undefined : ariaLabel}
+        aria-describedby={describedBy}
         tabIndex={-1}
         className={cn(
           'relative z-10 max-h-full overflow-y-auto outline-none animate-in fade-in zoom-in-95 duration-200',

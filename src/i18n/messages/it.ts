@@ -1941,6 +1941,7 @@ export const itMessages = {
   'map.google.loading': 'Caricamento mappa...',
   'map.google.reviews': '{{count}} recensioni',
   'map.google.partner': 'Partner',
+  'map.google.viewDetails': 'Vedi dettagli',
   'map.google.error.apiKeyInvalid': 'Google Maps API key non valida o non configurata',
   'map.google.error.requestRejected':
     'Google Maps ha rifiutato la richiesta. Verifica API key, billing e domini consentiti.',
@@ -2711,6 +2712,7 @@ export const itMessages = {
   'bookings.detail.cancelModal.title': 'Annulla prenotazione',
   'bookings.detail.cancelModal.body': 'Sei sicuro di voler annullare questa prenotazione? La cancellazione gratuita è disponibile fino a 24 ore prima.',
   'bookings.detail.cancelModal.keep': 'Mantieni',
+  'bookings.detail.cancelModal.cancelling': 'Annullamento…',
 
   // bookings/reschedule/BookingRescheduleClient.tsx
   'bookings.reschedule.title': 'Riprogramma prenotazione',

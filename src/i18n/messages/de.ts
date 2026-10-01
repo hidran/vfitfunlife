@@ -1924,6 +1924,7 @@ export const deMessages: Messages = {
   'map.google.loading': 'Karte wird geladen...',
   'map.google.reviews': '{{count}} Bewertungen',
   'map.google.partner': 'Partner',
+  'map.google.viewDetails': 'Details ansehen',
   'map.google.error.apiKeyInvalid': 'Google Maps API-Schlüssel ist ungültig oder nicht konfiguriert',
   'map.google.error.requestRejected':
     'Google Maps hat die Anfrage abgelehnt. Prüfe API-Schlüssel, Billing und erlaubte Domains.',
@@ -2694,6 +2695,7 @@ export const deMessages: Messages = {
   'bookings.detail.cancelModal.title': 'Buchung stornieren',
   'bookings.detail.cancelModal.body': 'Möchten Sie diese Buchung wirklich stornieren? Kostenlose Stornierung ist bis 24 Stunden vorher möglich.',
   'bookings.detail.cancelModal.keep': 'Behalten',
+  'bookings.detail.cancelModal.cancelling': 'Wird storniert…',
 
   // bookings/reschedule/BookingRescheduleClient.tsx
   'bookings.reschedule.title': 'Buchung umbuchen',

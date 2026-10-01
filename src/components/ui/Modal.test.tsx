@@ -89,4 +89,15 @@ describe('Modal', () => {
     opener.remove();
     menuButton.remove();
   });
+
+  it('is described by describedBy', () => {
+    render(
+      <Modal onClose={vi.fn()} labelledBy="d-title" describedBy="d-body">
+        <h3 id="d-title">Cancel booking</h3>
+        <p id="d-body">Are you sure?</p>
+        <button type="button">Keep</button>
+      </Modal>
+    );
+    expect(screen.getByRole('dialog', { name: 'Cancel booking' })).toHaveAccessibleDescription('Are you sure?');
+  });
 });

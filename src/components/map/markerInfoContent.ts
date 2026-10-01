@@ -5,6 +5,9 @@ export interface MarkerInfo {
   rating: string;
   reviewsLabel: string;
   partnerLabel?: string;
+  /** The pop-up's way in: a real link (so it can be opened in a new tab or focused), whose
+   *  plain clicks `onClick` may take over for in-app navigation. */
+  link?: { href: string; label: string; onClick?: (event: MouseEvent) => void };
 }
 
 /**
@@ -44,6 +47,17 @@ export function markerInfoContent(info: MarkerInfo): HTMLElement {
         info.partnerLabel
       )
     );
+  }
+
+  if (info.link) {
+    const a = el(
+      'a',
+      'mt-3 flex min-h-[44px] w-full items-center justify-center rounded-xl px-4 text-sm font-semibold text-white no-underline bg-section-gradient hover:opacity-90 focus-ring',
+      info.link.label
+    ) as HTMLAnchorElement;
+    a.href = info.link.href;
+    if (info.link.onClick) a.addEventListener('click', info.link.onClick);
+    root.append(a);
   }
 
   return root;

@@ -373,7 +373,9 @@ export default function BookingPage() {
                 lat: p.location?.lat,
                 lng: p.location?.lng,
                 isPartner: p.isVerified,
+                href: `/book?providerId=${p.id}`,
               }))}
+              linkLabel={t('booking.provider.checkAvailability')}
               onGymSelect={(id) => {
                 const provider = displayedProviders.find((p) => p.id === id);
                 if (provider) handleProviderSelect(provider);
