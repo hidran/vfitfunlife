@@ -1943,6 +1943,7 @@ export const esMessages: Messages = {
   'profile.settings.notifications.chat': 'Mensajes de chat',
   'profile.settings.notifications.weeklyDigest': 'Resumen semanal',
   'profile.settings.notifications.reminder': 'Recordatorios de reservas',
+  'profile.settings.back': 'Atrás',
   'profile.settings.privacy.sectionTitle': 'Privacidad',
   'profile.settings.privacy.visibility': 'Visibilidad del perfil',
   'profile.settings.privacy.public': 'Público',

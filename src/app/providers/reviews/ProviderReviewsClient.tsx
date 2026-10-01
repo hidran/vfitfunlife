@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { readIdParam } from '@/lib/routes';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Star } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatDecimal } from '@/lib/utils';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
 import { useI18n } from '@/hooks/useI18n';
@@ -86,7 +86,7 @@ export default function ProviderReviewsClient() {
           <div className="mt-3 flex items-center gap-3">
             <div className="inline-flex items-center gap-1 rounded-full bg-warning/20 px-3 py-1 text-warning">
               <Star className="h-4 w-4 fill-warning" />
-              <span className="text-sm font-semibold">{averageRating.toFixed(1)}</span>
+              <span className="text-sm font-semibold">{formatDecimal(averageRating, locale, 1)}</span>
             </div>
             <span className="text-sm text-text-secondary">{t('providerReviews.totalReviews', { count: reviews.length })}</span>
           </div>

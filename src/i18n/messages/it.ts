@@ -1967,6 +1967,7 @@ export const itMessages = {
   'profile.settings.notifications.chat': 'Messaggi chat',
   'profile.settings.notifications.weeklyDigest': 'Riepilogo settimanale',
   'profile.settings.notifications.reminder': 'Promemoria prenotazioni',
+  'profile.settings.back': 'Indietro',
   'profile.settings.privacy.sectionTitle': 'Privacy',
   'profile.settings.privacy.visibility': 'Visibilità profilo',
   'profile.settings.privacy.public': 'Pubblico',

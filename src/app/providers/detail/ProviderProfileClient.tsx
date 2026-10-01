@@ -23,7 +23,7 @@ import {
   GraduationCap,
   Languages,
 } from 'lucide-react';
-import { cn, formatPrice } from '@/lib/utils';
+import { cn, formatDecimal, formatPrice } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/Spinner';
 import { Badge } from '@/components/ui/Badge';
@@ -176,7 +176,7 @@ export default function ProviderProfileClient() {
               <div className="flex items-center gap-2 mt-2">
                 <Rating value={providerData.rating} size="sm" />
                 <span className="text-sm text-text-secondary">
-                  {providerData.rating.toFixed(1)} {t('providerProfile.reviews', { count: providerData.reviewCount })}
+                  {formatDecimal(providerData.rating, locale, 1)} {t('providerProfile.reviews', { count: providerData.reviewCount })}
                 </span>
               </div>
             )}

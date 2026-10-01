@@ -127,7 +127,7 @@ export function UserTabContent({
               </span>
               <span className="text-content">
                 {user.dateOfBirth
-                  ? formatDate(toDate(user.dateOfBirth) || new Date())
+                  ? formatDate(toDate(user.dateOfBirth) || new Date(), locale)
                   : t('admin.userDetail.field.notSet')}
               </span>
             </div>

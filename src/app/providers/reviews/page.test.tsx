@@ -57,8 +57,8 @@ describe('/providers/reviews?id=', () => {
     expect(screen.queryByText('prov-42')).not.toBeInTheDocument();
     expect(screen.getByText('Allenamento perfetto')).toBeInTheDocument();
     expect(screen.getByText('Luca R.')).toBeInTheDocument();
-    // Average of 5 and 3.
-    expect(screen.getByText('4.0')).toBeInTheDocument();
+    // Average of 5 and 3, in the app's (Italian) number format.
+    expect(screen.getByText('4,0')).toBeInTheDocument();
     // Known tag keys are translated; unknown ones are dropped.
     expect(screen.queryByText('not-a-tag')).not.toBeInTheDocument();
   });

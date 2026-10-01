@@ -112,7 +112,7 @@ export function BookingsListView() {
         <div>
           <p className="font-medium text-content">#{booking.id.slice(-6).toUpperCase()}</p>
           <p className="text-xs text-content-faint">
-            {formatDate(toDate(booking.createdAt) || new Date(), {
+            {formatDate(toDate(booking.createdAt) || new Date(), locale, {
               month: "short",
               day: "numeric",
               hour: "2-digit",
@@ -162,7 +162,7 @@ export function BookingsListView() {
         <div>
           <p className="text-sm text-content">{booking.serviceName}</p>
           <p className="text-xs text-content-muted">
-            {formatDate(toDate(booking.scheduledAt) || new Date(), {
+            {formatDate(toDate(booking.scheduledAt) || new Date(), locale, {
               month: "short",
               day: "numeric",
               hour: "2-digit",

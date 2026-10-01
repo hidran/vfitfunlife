@@ -21,11 +21,16 @@ export function formatPrice(price: number, locale: AppLocale): string {
 }
 
 /**
- * Format date in Italian locale
+ * Format a date in the given app locale (pass the active one from `useI18n()`):
+ * it → "01/10/2026", en → "10/1/2026".
  */
-export function formatDate(date: Date | string, options?: Intl.DateTimeFormatOptions): string {
+export function formatDate(
+  date: Date | string,
+  locale: AppLocale,
+  options?: Intl.DateTimeFormatOptions
+): string {
   const d = typeof date === 'string' ? new Date(date) : date;
-  return new Intl.DateTimeFormat('it-IT', options).format(d);
+  return new Intl.DateTimeFormat(toLocaleTag(locale), options).format(d);
 }
 
 /**

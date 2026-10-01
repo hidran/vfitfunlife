@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { useAuthStore } from '@/stores/authStore';
-import { cn } from '@/lib/utils';
+import { cn, formatDecimal } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/Spinner';
 import { 
@@ -414,7 +414,7 @@ export default function ProfilePage() {
               <div className="flex items-center gap-2">
                 <Star className="text-section-primary" size={16} />
                 <span className="text-2xl font-bold text-text-inverse">
-                  {providerProfile.rating?.toFixed(1) || '0.0'}
+                  {formatDecimal(providerProfile.rating ?? 0, locale, 1)}
                 </span>
               </div>
               <p className="text-xs text-text-tertiary mt-1">{t('profile.provider.averageRating')}</p>
@@ -658,7 +658,7 @@ export default function ProfilePage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-2xl font-bold text-text-inverse">
-                      {providerProfile.rating?.toFixed(1) || '0.0'}
+                      {formatDecimal(providerProfile.rating ?? 0, locale, 1)}
                     </span>
                     <div className="flex items-center">
                       {[1, 2, 3, 4, 5].map((star) => (

@@ -54,7 +54,7 @@ export function PaymentsListView() {
         <div>
           <p className="font-medium text-content">{tx.id.toUpperCase()}</p>
           <p className="text-xs text-content-faint">
-            {formatDate(tx.createdAt, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+            {formatDate(tx.createdAt, locale, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
           </p>
         </div>
       ),

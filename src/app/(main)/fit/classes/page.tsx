@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { Calendar, Clock, Filter, Star, Users } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatDecimal } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
 import { useFitnessClasses } from '@/hooks/useFitness';
 import { Spinner } from '@/components/ui/Spinner';
@@ -13,7 +13,7 @@ type CategoryFilter = ClassCategory | 'all';
 
 export default function FitClassesPage() {
   const [category, setCategory] = useState<CategoryFilter>('all');
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   const { data: classes = [], isLoading } = useFitnessClasses(
     category === 'all' ? {} : { category }
@@ -102,7 +102,7 @@ export default function FitClassesPage() {
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <Star className="h-3.5 w-3.5 text-yellow-400 light:text-amber-700" />
-                  {item.rating.toFixed(1)}
+                  {formatDecimal(item.rating, locale, 1)}
                 </span>
               </div>
               <Link

@@ -126,7 +126,7 @@ export function ServiceCategoriesListView() {
       key: 'created',
       header: t('admin.serviceCategories.col.created'),
       cell: (sc) => (
-        <span className="text-sm text-content-muted">{formatDate(sc.createdAt)}</span>
+        <span className="text-sm text-content-muted">{formatDate(sc.createdAt, locale)}</span>
       ),
       sortable: true,
       width: 'w-28',

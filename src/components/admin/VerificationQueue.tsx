@@ -130,7 +130,7 @@ export function VerificationQueue({
                         <Calendar className="w-4 h-4 text-content-faint" />
                         <span className="text-content-muted">{t('admin.verifications.joined')}</span>
                         <span className="text-content">
-                          {formatDate(toDate(provider.createdAt) || new Date())}
+                          {formatDate(toDate(provider.createdAt) || new Date(), locale)}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 text-sm">

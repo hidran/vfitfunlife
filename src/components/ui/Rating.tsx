@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { Star } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatDecimal } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
 
 export interface RatingProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -37,7 +37,7 @@ const Rating = React.forwardRef<HTMLDivElement, RatingProps>(
     },
     ref
   ) => {
-    const { t } = useI18n();
+    const { t, locale } = useI18n();
     const config = sizeConfig[size];
     const clampedValue = Math.max(0, Math.min(5, value));
     const fullStars = Math.floor(clampedValue);
@@ -45,8 +45,8 @@ const Rating = React.forwardRef<HTMLDivElement, RatingProps>(
     const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
     const ariaLabel =
       typeof count === 'number'
-        ? t('ui.rating.ariaLabelWithCount', { value: value.toFixed(1), count })
-        : t('ui.rating.ariaLabel', { value: value.toFixed(1) });
+        ? t('ui.rating.ariaLabelWithCount', { value: formatDecimal(value, locale, 1), count })
+        : t('ui.rating.ariaLabel', { value: formatDecimal(value, locale, 1) });
 
     return (
       <div
@@ -97,7 +97,7 @@ const Rating = React.forwardRef<HTMLDivElement, RatingProps>(
         {/* Value */}
         {showValue && (
           <span className={cn('font-semibold text-content', config.text)}>
-            {value.toFixed(1)}
+            {formatDecimal(value, locale, 1)}
           </span>
         )}
 

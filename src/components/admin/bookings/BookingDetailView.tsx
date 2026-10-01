@@ -34,7 +34,7 @@ interface Props {
 
 export function BookingDetailView({ bookingId }: Props) {
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const qc = useQueryClient();
   const queryKey = queryKeys.adminBooking(bookingId);
   const {
@@ -118,7 +118,7 @@ export function BookingDetailView({ bookingId }: Props) {
   const canCancel = isActive(status);
   const canComplete = status === 'accepted';
 
-  const subtitle = `${booking.serviceName} — ${formatDate(toDate(booking.scheduledAt) || new Date(), {
+  const subtitle = `${booking.serviceName} — ${formatDate(toDate(booking.scheduledAt) || new Date(), locale, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',

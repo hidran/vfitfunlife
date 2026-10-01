@@ -579,7 +579,7 @@ export function LifeRouteScreen({ slug }: { slug: LifeRouteSlug }) {
               <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-text-tertiary">
                 <span className="inline-flex items-center gap-1">
                   <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400 light:text-amber-600" />
-                  {provider.rating.toFixed(1)} ({numberFormatter.format(provider.reviews)})
+                  {formatDecimal(provider.rating, locale, 1)} ({numberFormatter.format(provider.reviews)})
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <MapPin className="h-3.5 w-3.5" />
@@ -630,7 +630,7 @@ export function LifeRouteScreen({ slug }: { slug: LifeRouteSlug }) {
               <div className="mt-2 flex items-center gap-3 text-xs text-text-tertiary">
                 <span className="inline-flex items-center gap-1">
                   <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400 light:text-amber-600" />
-                  {center.rating.toFixed(1)}
+                  {formatDecimal(center.rating, locale, 1)}
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <MapPin className="h-3.5 w-3.5" />

@@ -92,7 +92,7 @@ export function ProviderTabContent({
                   <p className="text-sm text-content-muted capitalize">{doc.type}</p>
                   <p className="text-xs text-content-faint">
                     {t('admin.providerDetail.documentUploadedPrefix')}{' '}
-                    {formatDate(toDate(doc.uploadedAt) || new Date())}
+                    {formatDate(toDate(doc.uploadedAt) || new Date(), locale)}
                   </p>
                 </div>
                 <ExternalLink className="w-5 h-5 text-content-faint group-hover:text-content" />
@@ -172,10 +172,10 @@ export function ProviderTabContent({
                     <p className="text-sm text-content-muted">{cert.issuingOrganization}</p>
                     <p className="text-xs text-content-faint mt-1">
                       {t('admin.providerDetail.certIssuedPrefix')}{' '}
-                      {formatDate(toDate(cert.issueDate) || new Date())}
+                      {formatDate(toDate(cert.issueDate) || new Date(), locale)}
                       {cert.expiryDate &&
                         ` ${t('admin.providerDetail.certExpiresPrefix')} ${formatDate(
-                          toDate(cert.expiryDate) || new Date(),
+                          toDate(cert.expiryDate) || new Date(), locale,
                         )}`}
                     </p>
                   </div>

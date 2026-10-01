@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
-import { cn } from '@/lib/utils';
+import { cn, formatDecimal } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
 import { useTheme } from '@/contexts/ThemeContext';
 import { mapStylesFor } from './mapStyles';
@@ -28,7 +28,7 @@ interface GoogleMapProps {
 
 
 export function GoogleMap({ gyms, userLocation, onGymSelect, className }: GoogleMapProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { theme } = useTheme();
   // Latest theme for the map's creation; later switches go through setOptions below.
   const themeRef = useRef(theme);
@@ -146,7 +146,7 @@ export function GoogleMap({ gyms, userLocation, onGymSelect, className }: Google
           box-shadow: 0 2px 8px rgba(0,0,0,0.3);
           cursor: pointer;
           transition: transform 0.2s;
-        ">${gym.rating.toFixed(1)}</div>
+        ">${formatDecimal(gym.rating, locale, 1)}</div>
       `;
 
       const marker = new google.maps.Marker({
@@ -157,7 +157,7 @@ export function GoogleMap({ gyms, userLocation, onGymSelect, className }: Google
           url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
             <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
               <circle cx="18" cy="18" r="16" fill="${gym.isPartner ? '#00C9FF' : '#7B61FF'}" stroke="white" stroke-width="2"/>
-              <text x="18" y="22" text-anchor="middle" fill="white" font-size="12" font-weight="bold">${gym.rating.toFixed(1)}</text>
+              <text x="18" y="22" text-anchor="middle" fill="white" font-size="12" font-weight="bold">${formatDecimal(gym.rating, locale, 1)}</text>
             </svg>
           `)}`,
           scaledSize: new google.maps.Size(36, 36),
@@ -175,7 +175,7 @@ export function GoogleMap({ gyms, userLocation, onGymSelect, className }: Google
         content: markerInfoContent({
           name: gym.name,
           city: gym.city,
-          rating: gym.rating,
+          rating: formatDecimal(gym.rating, locale, 1),
           reviewsLabel: t('map.google.reviews', { count: gym.reviewCount }),
           partnerLabel: gym.isPartner ? t('map.google.partner') : undefined,
         }),
@@ -210,7 +210,7 @@ export function GoogleMap({ gyms, userLocation, onGymSelect, className }: Google
     if (gyms.length > 0) {
       googleMapRef.current.fitBounds(bounds, 50);
     }
-  }, [gyms, isLoading, onGymSelect, t, userLocation]);
+  }, [gyms, isLoading, locale, onGymSelect, t, userLocation]);
 
   if (error) {
     return (

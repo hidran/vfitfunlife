@@ -22,7 +22,7 @@ import { useAdminStore } from '@/stores/adminStore';
 import { useShallow } from 'zustand/react/shallow';
 import { notify } from '@/lib/notify';
 import { useI18n } from '@/hooks/useI18n';
-import { formatPrice } from '@/lib/utils';
+import { formatDecimal, formatPrice } from '@/lib/utils';
 import type { AdminProvider } from '@/types/admin';
 import { type ProviderFormData } from './ProviderFormView';
 import {
@@ -326,7 +326,7 @@ export function ProviderDetailView({ providerId }: Props) {
                 <ContactRow
                   icon={<Star className="w-5 h-5 text-[#F59E0B] light:text-amber-700" />}
                   label={t('admin.providerDetail.field.rating')}
-                  value={`${profile?.rating?.toFixed(1) || '0.0'} ${t(
+                  value={`${formatDecimal(profile?.rating ?? 0, locale, 1)} ${t(
                     'admin.providerDetail.reviews',
                     { count: String(profile?.reviewCount || 0) },
                   )}`}

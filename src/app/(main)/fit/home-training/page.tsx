@@ -5,9 +5,10 @@ import { Clock, Home, MapPin, ShieldCheck, Star } from 'lucide-react';
 import { useI18n } from '@/hooks/useI18n';
 import { useHomeTrainingServices } from '@/hooks/useFitness';
 import { Spinner } from '@/components/ui/Spinner';
+import { formatDecimal } from '@/lib/utils';
 
 export default function HomeTrainingPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { data: services = [], isLoading } = useHomeTrainingServices();
 
   return (
@@ -59,7 +60,7 @@ export default function HomeTrainingPage() {
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <Star className="h-3.5 w-3.5 text-yellow-400 light:text-amber-700" />
-                  {service.rating.toFixed(1)}
+                  {formatDecimal(service.rating, locale, 1)}
                 </span>
               </div>
               <div className="mt-3 flex items-center justify-between">

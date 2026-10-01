@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { euroSymbolPosition, formatDecimal, formatDistance, formatPrice } from './utils';
+import { euroSymbolPosition, formatDate, formatDecimal, formatDistance, formatPrice } from './utils';
 
 // Intl puts a (narrow) no-break space before the euro sign in it/fr/de/es; normalise it.
 const plain = (s: string) => s.replace(/[  ]/g, ' ');
@@ -24,6 +24,28 @@ describe('formatDecimal', () => {
   it('pads to the given decimals in the locale', () => {
     expect(formatDecimal(0, 'it', 2)).toBe('0,00');
     expect(formatDecimal(0, 'en', 2)).toBe('0.00');
+  });
+
+  it('formats one-decimal ratings in the locale', () => {
+    expect(formatDecimal(4.8, 'it', 1)).toBe('4,8');
+    expect(formatDecimal(4.8, 'en', 1)).toBe('4.8');
+    expect(formatDecimal(5, 'de', 1)).toBe('5,0');
+  });
+});
+
+describe('formatDate', () => {
+  const date = new Date(2026, 9, 1, 12, 0);
+
+  it('follows the given app locale', () => {
+    expect(formatDate(date, 'it')).toBe('01/10/2026');
+    expect(formatDate(date, 'en')).toBe('10/1/2026');
+    expect(formatDate(date, 'de')).toBe('1.10.2026');
+  });
+
+  it('passes the options through', () => {
+    const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long', year: 'numeric' };
+    expect(formatDate(date, 'it', options)).toBe('1 ottobre 2026');
+    expect(formatDate(date, 'en', options)).toBe('October 1, 2026');
   });
 });
 

@@ -33,7 +33,7 @@ interface Props {
 
 export function UserDetailView({ userId }: Props) {
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { updateUserRoleAction, suspendUserAction, activateUserAction } = useAdminStore(
     useShallow((s) => ({
       updateUserRoleAction: s.updateUserRoleAction,
@@ -233,14 +233,14 @@ export function UserDetailView({ userId }: Props) {
             <ContactRow
               icon={<Calendar className="w-5 h-5 text-content-muted" />}
               label={t('admin.users.col.joined')}
-              value={formatDate(toDate(user.createdAt) || new Date())}
+              value={formatDate(toDate(user.createdAt) || new Date(), locale)}
             />
             <ContactRow
               icon={<Clock className="w-5 h-5 text-content-muted" />}
               label={t('admin.users.col.lastLogin')}
               value={
                 user.lastLoginAt
-                  ? formatDate(toDate(user.lastLoginAt) || new Date(), {
+                  ? formatDate(toDate(user.lastLoginAt) || new Date(), locale, {
                       month: 'short',
                       day: 'numeric',
                       hour: '2-digit',

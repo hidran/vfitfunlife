@@ -25,7 +25,7 @@ interface UserTypeRow {
 const USER_TYPES_COLLECTION = 'userTypes';
 
 export function UserTypesListView() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const router = useRouter();
   const [searchValue, setSearchValue] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -122,7 +122,7 @@ export function UserTypesListView() {
       key: 'created',
       header: t('admin.userTypes.col.created'),
       cell: (ut) => (
-        <span className="text-sm text-content-muted">{formatDate(ut.createdAt)}</span>
+        <span className="text-sm text-content-muted">{formatDate(ut.createdAt, locale)}</span>
       ),
       sortable: true,
       width: 'w-28',

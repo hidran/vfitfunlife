@@ -27,7 +27,7 @@ type AdminUser = Pick<
 };
 
 export default function UserRolesPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
 
@@ -88,7 +88,7 @@ export default function UserRolesPage() {
       cell: (user) => (
         <div>
           <p className="text-sm text-content-muted">
-            {(user as any).addedAt ? formatDate((user as any).addedAt) : t('admin.userDetail.field.naValue')}
+            {(user as any).addedAt ? formatDate((user as any).addedAt, locale) : t('admin.userDetail.field.naValue')}
           </p>
           <p className="text-xs text-content-faint">{t('admin.roles.col.addedBy', { by: (user as any).addedBy || 'System' })}</p>
         </div>
@@ -103,7 +103,7 @@ export default function UserRolesPage() {
         return (
           <span className="text-sm text-content-muted">
             {date
-              ? formatDate(date, {
+              ? formatDate(date, locale, {
                   month: "short",
                   day: "numeric",
                   hour: "2-digit",

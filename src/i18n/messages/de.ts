@@ -1950,6 +1950,7 @@ export const deMessages: Messages = {
   'profile.settings.notifications.chat': 'Chat-Nachrichten',
   'profile.settings.notifications.weeklyDigest': 'Wöchliche Zusammenfassung',
   'profile.settings.notifications.reminder': 'Buchungserinnerungen',
+  'profile.settings.back': 'Zurück',
   'profile.settings.privacy.sectionTitle': 'Datenschutz',
   'profile.settings.privacy.visibility': 'Profil-Sichtbarkeit',
   'profile.settings.privacy.public': 'Öffentlich',

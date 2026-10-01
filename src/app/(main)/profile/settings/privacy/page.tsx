@@ -13,8 +13,8 @@ export default function PrivacySettingsPage() {
 
   return (
     <div className="container-mobile py-6">
-      <button onClick={() => router.back()} aria-label="Back" className="mb-4 inline-flex items-center gap-1 text-sm">
-        <ChevronLeft className="h-4 w-4" /> Back
+      <button onClick={() => router.back()} className="mb-4 inline-flex items-center gap-1 text-sm">
+        <ChevronLeft className="h-4 w-4" aria-hidden="true" /> {t('profile.settings.back')}
       </button>
       <h1 className="mb-6 text-2xl font-display font-bold">{t('profile.settings.privacy.sectionTitle')}</h1>
       {user && (

@@ -17,7 +17,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { cn, formatDistance, formatPrice } from '@/lib/utils';
+import { cn, formatDecimal, formatDistance, formatPrice } from '@/lib/utils';
 import { useBookingStore } from '@/stores/bookingStore';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -435,7 +435,7 @@ export default function BookingPage() {
                               <div className="flex items-center gap-1">
                                 <Star className="w-3.5 h-3.5 text-warning fill-warning" />
                                 <span className="text-sm text-content">
-                                  {provider.rating.toFixed(1)}
+                                  {formatDecimal(provider.rating, locale, 1)}
                                 </span>
                               </div>
                               <span className="text-text-tertiary text-sm">

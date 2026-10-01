@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 
 export default function SystemLogsPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const { systemLogs, logsTotal, logsFilters, isLoadingLogs, error, fetchSystemLogs } = useAdminStore(
@@ -142,7 +142,7 @@ export default function SystemLogsPage() {
         const date = toDate(log.timestamp);
         return (
           <span className="text-sm text-content-muted whitespace-nowrap">
-            {formatDate(date || new Date(), {
+            {formatDate(date || new Date(), locale, {
               month: "short",
               day: "numeric",
               hour: "2-digit",

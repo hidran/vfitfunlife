@@ -23,7 +23,7 @@ import { ProviderOnboardingSettings } from "@/components/admin/settings/Provider
 import { Button } from "@/components/ui/button";
 import { AdminProvider, ProviderFilters } from "@/types/admin";
 import { Column } from "@/components/admin/DataTable";
-import { formatPrice } from "@/lib/utils";
+import { formatDecimal, formatPrice } from "@/lib/utils";
 import { useI18n } from "@/hooks/useI18n";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import {
@@ -183,7 +183,7 @@ export function ProvidersListView() {
         <div className="flex items-center gap-1">
           <Star className="w-4 h-4 text-[#F59E0B] light:text-amber-700 fill-[#F59E0B] light:fill-amber-600" />
           <span className="text-sm text-content">
-            {provider.providerProfile?.rating?.toFixed(1) || "0.0"}
+            {formatDecimal(provider.providerProfile?.rating ?? 0, locale, 1)}
           </span>
           <span className="text-sm text-content-faint">
             ({provider.providerProfile?.reviewCount || 0})

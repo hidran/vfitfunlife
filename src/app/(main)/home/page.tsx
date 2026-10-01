@@ -31,7 +31,7 @@ import {
   Wind,
 } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
-import { cn } from '@/lib/utils';
+import { cn, formatDecimal } from '@/lib/utils';
 import { usePullToRefresh } from 'use-pull-to-refresh';
 import { Spinner } from '@/components/ui/Spinner';
 import { useI18n } from '@/hooks/useI18n';
@@ -163,7 +163,7 @@ const vfunTVSchedule: VFunTVShow[] = [
 const vfunIsStreamingLive = true;
 
 function VFitHome() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { data: trainers = [], isLoading: loadingTrainers } = useProviders({ onlyVerified: true, limit: 6 });
   const { data: gyms = [], isLoading: loadingGyms } = useVenues({ type: 'gym', limit: 4 });
   const { data: classSessions = [], isLoading: loadingClasses } = useTodayClasses(3);
@@ -215,7 +215,7 @@ function VFitHome() {
                     <div className="absolute left-4 top-20 h-1.5 w-28 rounded-full bg-white/15" />
                     <div className="absolute right-3 top-3 flex items-center gap-1 rounded-lg bg-white/90 px-2 py-1 text-[10px] font-bold text-amber-600">
                       <Star className="h-3 w-3 fill-current" />
-                      {gym.rating.toFixed(1)}
+                      {formatDecimal(gym.rating, locale, 1)}
                     </div>
                   </div>
                   <div className="p-3">
@@ -319,7 +319,7 @@ function VFitHome() {
                         <p className="truncate text-sm font-semibold text-white">{trainer.fullName}</p>
                         <div className="flex items-center gap-0.5 text-yellow-300">
                           <Star className="h-3.5 w-3.5 fill-current" />
-                          <span className="text-[11px] font-semibold">{trainer.rating.toFixed(1)}</span>
+                          <span className="text-[11px] font-semibold">{formatDecimal(trainer.rating, locale, 1)}</span>
                         </div>
                       </div>
                       <p className="truncate text-xs text-indigo-100/90">

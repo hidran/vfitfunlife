@@ -1952,6 +1952,7 @@ export const frMessages: Messages = {
   'profile.settings.notifications.chat': 'Messages chat',
   'profile.settings.notifications.weeklyDigest': 'Résumé hebdomadaire',
   'profile.settings.notifications.reminder': 'Rappels de réservations',
+  'profile.settings.back': 'Retour',
   'profile.settings.privacy.sectionTitle': 'Confidentialité',
   'profile.settings.privacy.visibility': 'Visibilité du profil',
   'profile.settings.privacy.public': 'Public',

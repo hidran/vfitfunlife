@@ -48,7 +48,7 @@ import {
 } from "lucide-react";
 
 export function UsersListView() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const router = useRouter();
   const {
     users,
@@ -285,7 +285,7 @@ export function UsersListView() {
         const date = toDate(user.createdAt);
         return (
           <span className="text-sm text-content-muted">
-            {date ? formatDate(date) : "N/A"}
+            {date ? formatDate(date, locale) : "N/A"}
           </span>
         );
       },
@@ -300,7 +300,7 @@ export function UsersListView() {
         return (
           <span className="text-sm text-content-muted">
             {date
-              ? formatDate(date, {
+              ? formatDate(date, locale, {
                   month: "short",
                   day: "numeric",
                   hour: "2-digit",

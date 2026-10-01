@@ -15,7 +15,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '@/lib/utils';
+import { cn, formatDecimal } from '@/lib/utils';
 import { useBookingStore } from '@/stores/bookingStore';
 import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
@@ -185,7 +185,7 @@ export default function ProviderBookingPage() {
             <div className="flex items-center gap-2 mt-1">
               <div className="flex items-center gap-1">
                 <Star className="w-4 h-4 text-warning fill-warning" />
-                <span className="font-semibold text-content">{provider.rating.toFixed(1)}</span>
+                <span className="font-semibold text-content">{formatDecimal(provider.rating, locale, 1)}</span>
               </div>
               <span className="text-text-secondary">
                 {t('booking.provider.reviews', { count: provider.reviewCount })}

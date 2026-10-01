@@ -1969,6 +1969,7 @@ export const enMessages: Messages = {
   'profile.settings.notifications.chat': 'Chat messages',
   'profile.settings.notifications.weeklyDigest': 'Weekly digest',
   'profile.settings.notifications.reminder': 'Booking reminders',
+  'profile.settings.back': 'Back',
   'profile.settings.privacy.sectionTitle': 'Privacy',
   'profile.settings.privacy.visibility': 'Profile visibility',
   'profile.settings.privacy.public': 'Public',

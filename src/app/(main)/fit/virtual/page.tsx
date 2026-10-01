@@ -5,9 +5,10 @@ import { MonitorPlay, Play, Signal, Star, Timer } from 'lucide-react';
 import { useI18n } from '@/hooks/useI18n';
 import { useVirtualPrograms } from '@/hooks/useFitness';
 import { Spinner } from '@/components/ui/Spinner';
+import { formatDecimal } from '@/lib/utils';
 
 export default function FitVirtualPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { data: programs = [], isLoading } = useVirtualPrograms();
 
   return (
@@ -65,7 +66,7 @@ export default function FitVirtualPage() {
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <Star className="h-3.5 w-3.5 text-yellow-400 light:text-amber-700" />
-                  {program.rating.toFixed(1)}
+                  {formatDecimal(program.rating, locale, 1)}
                 </span>
               </div>
               <Link

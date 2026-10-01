@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ChevronLeft, Clock, MapPin, Star } from 'lucide-react';
-import { cn, formatPrice } from '@/lib/utils';
+import { cn, formatDecimal, formatPrice } from '@/lib/utils';
 import { useVenue, useVenueServices, useVenueCourses } from '@/hooks/useVenues';
 import { amenityIcon } from '@/lib/icons/amenityIcons';
 import { VenueNotFound } from '@/components/venue/VenueNotFound';
@@ -95,7 +95,7 @@ export default function VenueDetailClient() {
           </div>
           <div className="inline-flex items-center gap-1 rounded-full bg-yellow-50 px-2 py-1 text-xs font-semibold text-yellow-700">
             <Star className="h-3.5 w-3.5 fill-current" />
-            {venue.rating.toFixed(1)} <span className="text-yellow-600/70">({venue.reviewCount})</span>
+            {formatDecimal(venue.rating, locale, 1)} <span className="text-yellow-600/70">({venue.reviewCount})</span>
           </div>
         </div>
 

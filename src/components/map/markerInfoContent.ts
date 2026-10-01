@@ -1,7 +1,8 @@
 export interface MarkerInfo {
   name: string;
   city: string;
-  rating: number;
+  /** Already formatted in the app locale (`formatDecimal(rating, locale, 1)`). */
+  rating: string;
   reviewsLabel: string;
   partnerLabel?: string;
 }
@@ -30,7 +31,7 @@ export function markerInfoContent(info: MarkerInfo): HTMLElement {
   const rating = el('div', 'flex items-center gap-2 mt-2 text-sm');
   rating.append(
     el('span', 'text-warning', '★'),
-    el('span', 'font-semibold text-content', String(info.rating)),
+    el('span', 'font-semibold text-content', info.rating),
     el('span', 'text-content-muted', `(${info.reviewsLabel})`)
   );
   root.append(rating);

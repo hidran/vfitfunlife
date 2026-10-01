@@ -4,7 +4,7 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useMemo, useState, useCallback } from 'react';
 import { List, Map as MapIcon, MapPin, Search, SlidersHorizontal, Star } from 'lucide-react';
-import { cn, formatDistance } from '@/lib/utils';
+import { cn, formatDecimal, formatDistance } from '@/lib/utils';
 import { MapPlaceholder } from '@/components/map/MapPlaceholder';
 import { useRouter } from 'next/navigation';
 import { useI18n } from '@/hooks/useI18n';
@@ -172,7 +172,7 @@ export default function GymsPage() {
                   )}
                   <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-background-dark/80 px-2 py-1 text-[11px] text-content">
                     <Star className="h-3 w-3 text-yellow-400 light:text-amber-700" />
-                    {gym.rating.toFixed(1)}
+                    {formatDecimal(gym.rating, locale, 1)}
                   </div>
                 </div>
                 <div className="space-y-2 p-4">
@@ -240,7 +240,7 @@ export default function GymsPage() {
                   <div className="text-right text-xs text-text-tertiary">
                     <div className="flex items-center justify-end gap-1 text-text-inverse">
                       <Star className="h-3 w-3 text-yellow-400 light:text-amber-700" />
-                      {gym.rating.toFixed(1)}
+                      {formatDecimal(gym.rating, locale, 1)}
                     </div>
                     {gym.distanceKm != null && Number.isFinite(gym.distanceKm) && (
                       <span>{formatDistance(gym.distanceKm, locale)}</span>
