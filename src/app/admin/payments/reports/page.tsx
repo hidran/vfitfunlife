@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 
 export default function PaymentReportsPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const router = useRouter();
   const [dateRange, setDateRange] = useState("this_month");
 
@@ -96,7 +96,7 @@ export default function PaymentReportsPage() {
             <span className="text-sm text-content-muted">{t('admin.reports.stat.totalRevenue')}</span>
           </div>
           <p className="text-2xl font-bold text-content">
-            {formatPrice(commissionBreakdown.totalRevenue)}
+            {formatPrice(commissionBreakdown.totalRevenue, locale)}
           </p>
         </div>
         <div className="bg-surface rounded-xl border border-hairline p-5">
@@ -107,7 +107,7 @@ export default function PaymentReportsPage() {
             <span className="text-sm text-content-muted">{t('admin.reports.stat.platformCommission')}</span>
           </div>
           <p className="text-2xl font-bold text-content">
-            {formatPrice(commissionBreakdown.platformCommission)}
+            {formatPrice(commissionBreakdown.platformCommission, locale)}
           </p>
           <p className="text-xs text-content-faint mt-1">{t('admin.reports.stat.commissionNote')}</p>
         </div>
@@ -119,7 +119,7 @@ export default function PaymentReportsPage() {
             <span className="text-sm text-content-muted">{t('admin.reports.stat.providerPayouts')}</span>
           </div>
           <p className="text-2xl font-bold text-content">
-            {formatPrice(commissionBreakdown.providerPayouts)}
+            {formatPrice(commissionBreakdown.providerPayouts, locale)}
           </p>
           <p className="text-xs text-content-faint mt-1">{t('admin.reports.stat.payoutsNote')}</p>
         </div>
@@ -131,7 +131,7 @@ export default function PaymentReportsPage() {
             <span className="text-sm text-content-muted">{t('admin.reports.stat.netRevenue')}</span>
           </div>
           <p className="text-2xl font-bold text-content">
-            {formatPrice(commissionBreakdown.netRevenue)}
+            {formatPrice(commissionBreakdown.netRevenue, locale)}
           </p>
           <p className="text-xs text-content-faint mt-1">{t('admin.reports.stat.netRevenueNote')}</p>
         </div>
@@ -161,7 +161,7 @@ export default function PaymentReportsPage() {
                   <span className="text-sm text-content">{item.category}</span>
                   <div className="flex items-center gap-4">
                     <span className="text-sm text-content-muted">
-                      {formatPrice(item.amount)}
+                      {formatPrice(item.amount, locale)}
                     </span>
                     <span className="text-sm font-medium text-content w-10 text-right">
                       {item.percentage}%
@@ -208,10 +208,10 @@ export default function PaymentReportsPage() {
                 </div>
                 <div className="text-right">
                   <p className="font-semibold text-content">
-                    {formatPrice(provider.revenue)}
+                    {formatPrice(provider.revenue, locale)}
                   </p>
                   <p className="text-xs text-[#10B981] light:text-emerald-700">
-                    {t('admin.reports.topProviders.commissionPrefix', { amount: formatPrice(provider.commission) })}
+                    {t('admin.reports.topProviders.commissionPrefix', { amount: formatPrice(provider.commission, locale) })}
                   </p>
                 </div>
               </div>

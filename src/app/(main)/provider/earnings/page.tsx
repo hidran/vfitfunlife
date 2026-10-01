@@ -9,7 +9,7 @@ import { useProviderStore } from '@/stores/providerStore';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
 import { EarningsFilters } from '@/types/provider';
-import { cn, formatPrice } from '@/lib/utils';
+import { cn, euroSymbolPosition, formatDecimal, formatPrice } from '@/lib/utils';
 import { Transaction } from '@/types/provider';
 
 // Helper function to generate chart data from actual transactions
@@ -73,6 +73,8 @@ export default function ProviderEarningsPage() {
   );
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
+  // The euro sign sits before the amount in en and after it in it/es/fr/de.
+  const euroBefore = euroSymbolPosition(locale) === 'before';
 
   useEffect(() => {
     fetchEarnings();
@@ -314,14 +316,24 @@ export default function ProviderEarningsPage() {
             <div className="mb-6">
               <label className="block text-sm text-content-muted mb-2">{t('provider.earnings.withdraw.amountLabel')}</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-content-muted">€</span>
+                <span
+                  className={cn(
+                    'absolute top-1/2 -translate-y-1/2 text-content-muted',
+                    euroBefore ? 'left-3' : 'right-3'
+                  )}
+                >
+                  €
+                </span>
                 <input
                   type="number"
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
-                  placeholder="0.00"
+                  placeholder={formatDecimal(0, locale, 2)}
                   max={earningsData.availableBalance}
-                  className="w-full bg-surface-input border border-hairline rounded-lg pl-8 pr-4 py-3 text-content placeholder-gray-500 outline-none focus:border-section-primary"
+                  className={cn(
+                    'w-full bg-surface-input border border-hairline rounded-lg py-3 text-content placeholder-gray-500 outline-none focus:border-section-primary',
+                    euroBefore ? 'pl-8 pr-4' : 'pl-4 pr-8'
+                  )}
                 />
               </div>
               <button

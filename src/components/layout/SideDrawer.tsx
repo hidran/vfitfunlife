@@ -118,7 +118,7 @@ export function SideDrawer({
   const visibleSections = useVisibleSections();
   // Filtered, never deleted — a section returns by flipping a Remote Config flag.
   const sectionPills = ALL_SECTION_PILLS.filter((p) => visibleSections.includes(p.section));
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const logout = useAuthStore((state) => state.logout);
   const isLoading = useAuthStore((state) => state.isLoading);
   const role = useAuthStore((state) => state.user?.role);
@@ -161,7 +161,7 @@ export function SideDrawer({
             href: '/profile/payment',
             icon: CircleDollarSign,
             labelKey: 'profile.stats.balance' as MessageKey,
-            value: formatPrice(walletBalance),
+            value: formatPrice(walletBalance, locale),
           }]
         : []),
       {
@@ -187,7 +187,7 @@ export function SideDrawer({
         labelKey: 'profile.social.title',
       },
     ],
-    [pointsBalance, walletBalance, stripePaymentsEnabled]
+    [pointsBalance, walletBalance, stripePaymentsEnabled, locale]
   );
 
   const handleNavigate = (href: string, nextSection?: Section) => {

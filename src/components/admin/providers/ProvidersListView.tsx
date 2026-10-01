@@ -38,7 +38,7 @@ import {
 const VERIFICATION_ORDER = { pending: 0, rejected: 1, verified: 2 } as const;
 
 export function ProvidersListView() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const router = useRouter();
   const {
     providers,
@@ -214,7 +214,7 @@ export function ProvidersListView() {
         const metrics = (provider as AdminProvider).performanceMetrics;
         return (
           <span className="text-sm text-content font-medium">
-            {formatPrice(metrics?.totalRevenue || 0)}
+            {formatPrice(metrics?.totalRevenue || 0, locale)}
           </span>
         );
       },

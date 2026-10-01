@@ -196,7 +196,7 @@ export function BookingCard({
         <div className="flex items-center justify-between pt-3 border-t border-hairline">
           <span className="text-text-secondary">{t('booking.card.total')}</span>
           <span className="text-lg font-bold text-content">
-            {formatPrice(booking.totalPrice)}
+            {formatPrice(booking.totalPrice, locale)}
           </span>
         </div>
       </div>

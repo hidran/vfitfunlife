@@ -28,7 +28,7 @@ import {
 
 export default function AdminDashboardPage() {
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const user = useAuthStore((s) => s.user);
   // Only the slices this page renders: a whole-store subscription re-rendered the dashboard on
   // every unrelated admin-store write (users/bookings/logs fetches, errors, …).
@@ -136,7 +136,7 @@ export default function AdminDashboardPage() {
         />
         <StatCard
           title={t('admin.dashboard.stats.monthlyRevenue')}
-          value={formatPrice(dashboardStats?.monthlyRevenue || 0)}
+          value={formatPrice(dashboardStats?.monthlyRevenue || 0, locale)}
           icon="revenue"
           onClick={() => router.push("/admin/payments")}
         />
@@ -344,7 +344,7 @@ export default function AdminDashboardPage() {
                     </p>
                   </div>
                   <span className="font-semibold text-content">
-                    {formatPrice((provider as any).performanceMetrics?.totalRevenue || 0)}
+                    {formatPrice((provider as any).performanceMetrics?.totalRevenue || 0, locale)}
                   </span>
                 </div>
               ))

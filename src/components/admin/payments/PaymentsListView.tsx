@@ -32,7 +32,7 @@ interface TransactionRow {
 }
 
 export function PaymentsListView() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const router = useRouter();
   const [searchValue, setSearchValue] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -108,7 +108,7 @@ export function PaymentsListView() {
           }`}
         >
           {tx.type === "booking_payment" || tx.type === "commission" ? "+" : "-"}
-          {formatPrice(tx.amount)}
+          {formatPrice(tx.amount, locale)}
         </span>
       ),
       sortable: true,
@@ -180,7 +180,7 @@ export function PaymentsListView() {
             </div>
             <div>
               <p className="text-xs text-content-faint">{t('admin.payments.stat.totalRevenue')}</p>
-              <p className="text-xl font-bold text-content">{formatPrice(totalRevenue)}</p>
+              <p className="text-xl font-bold text-content">{formatPrice(totalRevenue, locale)}</p>
             </div>
           </div>
         </div>
@@ -191,7 +191,7 @@ export function PaymentsListView() {
             </div>
             <div>
               <p className="text-xs text-content-faint">{t('admin.payments.stat.totalPayouts')}</p>
-              <p className="text-xl font-bold text-content">{formatPrice(totalPayouts)}</p>
+              <p className="text-xl font-bold text-content">{formatPrice(totalPayouts, locale)}</p>
             </div>
           </div>
         </div>
@@ -202,7 +202,7 @@ export function PaymentsListView() {
             </div>
             <div>
               <p className="text-xs text-content-faint">{t('admin.payments.stat.commission')}</p>
-              <p className="text-xl font-bold text-content">{formatPrice(totalCommissions)}</p>
+              <p className="text-xl font-bold text-content">{formatPrice(totalCommissions, locale)}</p>
             </div>
           </div>
         </div>
@@ -213,7 +213,7 @@ export function PaymentsListView() {
             </div>
             <div>
               <p className="text-xs text-content-faint">{t('admin.payments.stat.thisMonth')}</p>
-              <p className="text-xl font-bold text-content">{formatPrice(totalRevenue * 0.3)}</p>
+              <p className="text-xl font-bold text-content">{formatPrice(totalRevenue * 0.3, locale)}</p>
             </div>
           </div>
         </div>

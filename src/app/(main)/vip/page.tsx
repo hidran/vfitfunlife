@@ -45,7 +45,7 @@ const VIP_PLANS: VipPlan[] = [
 ];
 
 export default function VipPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
   const [selectedPlan, setSelectedPlan] = useState<string>('pro');
   const { subscriptionsEnabled, isLoading } = usePaymentSettings();
@@ -120,7 +120,7 @@ export default function VipPage() {
                     <div>
                       <p className="font-semibold text-text-inverse">{t(plan.nameKey)}</p>
                       <p className="text-sm text-text-secondary">
-                        {t('vip.pricePerMonth', { price: formatPrice(price) })}
+                        {t('vip.pricePerMonth', { price: formatPrice(price, locale) })}
                       </p>
                     </div>
                     {plan.highlight && (

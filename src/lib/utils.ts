@@ -10,10 +10,10 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Format price with euro symbol in the given app locale (Italian by default):
+ * Format price with euro symbol in the given app locale (pass the active one from `useI18n()`):
  * it → "50,00 €", en → "€50.00".
  */
-export function formatPrice(price: number, locale: AppLocale = 'it'): string {
+export function formatPrice(price: number, locale: AppLocale): string {
   return new Intl.NumberFormat(toLocaleTag(locale), {
     style: 'currency',
     currency: 'EUR',
@@ -70,13 +70,33 @@ export function calculateDistance(
 }
 
 /**
- * Format distance for display
+ * Format a distance in km with one decimal in the given app locale:
+ * it → "0,1 km", en → "0.1 km".
  */
-export function formatDistance(km: number): string {
-  if (km < 1) {
-    return `${Math.round(km * 1000)} m`;
-  }
-  return `${km.toFixed(1)} km`;
+export function formatDistance(km: number, locale: AppLocale): string {
+  return `${formatDecimal(km, locale, 1)} km`;
+}
+
+/**
+ * Format a plain number with a fixed number of decimals in the given app locale:
+ * it → "0,00", en → "0.00".
+ */
+export function formatDecimal(value: number, locale: AppLocale, decimals: number): string {
+  return new Intl.NumberFormat(toLocaleTag(locale), {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  }).format(value);
+}
+
+/**
+ * Where the euro sign sits around an amount in the given app locale, for input adornments:
+ * it → after ("50,00 €"), en → before ("€50.00").
+ */
+export function euroSymbolPosition(locale: AppLocale): 'before' | 'after' {
+  const parts = new Intl.NumberFormat(toLocaleTag(locale), { style: 'currency', currency: 'EUR' }).formatToParts(1);
+  const currency = parts.findIndex((p) => p.type === 'currency');
+  const integer = parts.findIndex((p) => p.type === 'integer');
+  return currency < integer ? 'before' : 'after';
 }
 
 /**

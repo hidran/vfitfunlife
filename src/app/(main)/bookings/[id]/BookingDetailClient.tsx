@@ -554,7 +554,7 @@ export default function BookingDetailPage() {
 
           <div className="flex items-center justify-between">
             <span className="text-text-secondary">{t('common.total')}</span>
-            <span className="font-semibold text-content">{formatPrice(booking.totalPrice)}</span>
+            <span className="font-semibold text-content">{formatPrice(booking.totalPrice, locale)}</span>
           </div>
 
           {booking.promotionCode && (

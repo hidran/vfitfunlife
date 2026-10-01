@@ -50,7 +50,7 @@ describe('booking confirm — honest checkout (B3)', () => {
 
   it('shows the service price as the total — no platform fee, no saved cards', () => {
     render(<BookingConfirmPage />);
-    expect(shownTotal()).toBe(formatPrice(50));
+    expect(shownTotal()).toBe(formatPrice(50, 'it'));
     expect(screen.queryByText(/commissione/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/4242|8888/)).not.toBeInTheDocument();
   });
@@ -65,16 +65,16 @@ describe('booking confirm — honest checkout (B3)', () => {
   it('applies a promo the way the server does (percentage, capped)', () => {
     store.appliedPromo = { code: 'SAVE20', type: 'percentage', value: 20, maxDiscount: 5 };
     render(<BookingConfirmPage />);
-    expect(shownTotal()).toBe(formatPrice(45));
+    expect(shownTotal()).toBe(formatPrice(45, 'it'));
   });
 
   it('"use my points" is a toggle that uses what the server will use', async () => {
     auth.user = { id: 'client-1', pointsBalance: 1250, walletBalance: 0, isVip: false };
     render(<BookingConfirmPage />);
-    expect(shownTotal()).toBe(formatPrice(50));
+    expect(shownTotal()).toBe(formatPrice(50, 'it'));
 
     fireEvent.click(screen.getByRole('switch', { name: /Usa i miei punti/ }));
-    expect(shownTotal()).toBe(formatPrice(37.5));
+    expect(shownTotal()).toBe(formatPrice(37.5, 'it'));
 
     confirm();
     await waitFor(() => expect(createBooking).toHaveBeenCalledTimes(1));

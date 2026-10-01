@@ -27,7 +27,7 @@ const STATUS_LABELS: Record<ReferralEntry['status'], MessageKey> = {
 };
 
 export default function ReferralPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [copied, setCopied] = useState(false);
   const referralCode = 'VFIT-HIDRAN-2026';
 
@@ -82,7 +82,7 @@ export default function ReferralPage() {
         </div>
         <div className="rounded-2xl border border-hairline bg-surface-2 p-4">
           <p className="text-xs text-text-tertiary">{t('referral.rewards')}</p>
-          <p className="mt-1 text-xl font-bold text-section-primary">{formatPrice(totalReward)}</p>
+          <p className="mt-1 text-xl font-bold text-section-primary">{formatPrice(totalReward, locale)}</p>
         </div>
       </section>
 
@@ -101,7 +101,7 @@ export default function ReferralPage() {
             </div>
             <p className="mt-2 text-sm text-text-secondary">
               {t('referral.reward', {
-                value: entry.reward > 0 ? formatPrice(entry.reward) : t('referral.pending'),
+                value: entry.reward > 0 ? formatPrice(entry.reward, locale) : t('referral.pending'),
               })}
             </p>
           </article>

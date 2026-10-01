@@ -48,7 +48,7 @@ interface Props {
 
 export function ProviderDetailView({ providerId }: Props) {
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { verifyProviderAction, rejectProviderAction } = useAdminStore(
     useShallow((s) => ({
       verifyProviderAction: s.verifyProviderAction,
@@ -367,13 +367,13 @@ export function ProviderDetailView({ providerId }: Props) {
             icon={<CreditCard className="w-5 h-5 text-[#7B61FF] light:text-violet-700" />}
             bg="bg-[#7B61FF]/20"
             label={t('admin.providerDetail.stat.totalRevenue')}
-            value={formatPrice(metrics?.totalRevenue || 0)}
+            value={formatPrice(metrics?.totalRevenue || 0, locale)}
           />
           <MetricCard
             icon={<TrendingUp className="w-5 h-5 text-[#F59E0B] light:text-amber-700" />}
             bg="bg-[#F59E0B]/20"
             label={t('admin.providerDetail.stat.commissionPaid')}
-            value={formatPrice(metrics?.commissionPaid || 0)}
+            value={formatPrice(metrics?.commissionPaid || 0, locale)}
           />
         </div>
 

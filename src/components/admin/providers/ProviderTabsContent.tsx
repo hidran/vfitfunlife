@@ -64,7 +64,7 @@ export function ProviderTabContent({
   editing,
   onSubmitForm,
 }: ContentProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const profile = provider.providerProfile;
 
   if (activeTab === 'documents') {
@@ -208,7 +208,7 @@ export function ProviderTabContent({
                     </p>
                   </div>
                   <span className="font-semibold text-content">
-                    {formatPrice(service.price)}
+                    {formatPrice(service.price, locale)}
                   </span>
                 </div>
               ))}

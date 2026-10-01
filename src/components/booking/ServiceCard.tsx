@@ -21,7 +21,7 @@ export function ServiceCard({
   onSelect,
   className,
 }: ServiceCardProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const durationHours = Math.floor(service.durationMinutes / 60);
   const durationMins = service.durationMinutes % 60;
   const durationText =
@@ -54,7 +54,7 @@ export function ServiceCard({
             </div>
             
             <span className="text-lg font-bold text-[var(--section-primary)]">
-              {formatPrice(service.price)}
+              {formatPrice(service.price, locale)}
             </span>
           </div>
         </div>

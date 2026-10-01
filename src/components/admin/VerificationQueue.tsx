@@ -33,7 +33,7 @@ export function VerificationQueue({
   isLoading = false,
   className,
 }: VerificationQueueProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectModal, setShowRejectModal] = useState<string | null>(null);
@@ -205,7 +205,7 @@ export function VerificationQueue({
                               </p>
                             </div>
                             <span className="text-sm text-content whitespace-nowrap ml-3">
-                              {formatPrice(service.price)}
+                              {formatPrice(service.price, locale)}
                             </span>
                           </div>
                         ))}

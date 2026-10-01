@@ -28,7 +28,7 @@ interface PaymentDoc extends AdminTransaction {
 const COLLECTION = 'transactions';
 
 export function PaymentDetailView({ paymentId }: { paymentId: string }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const qc = useQueryClient();
   const queryKey = queryKeys.adminPayment(paymentId);
   const { data: payment, isLoading: loading } = useFirestoreDocQuery<PaymentDoc>(
@@ -70,7 +70,7 @@ export function PaymentDetailView({ paymentId }: { paymentId: string }) {
     <>
       <EntityDetailLayout
         title={`${t('admin.payments.entityLabel')} #${payment.id.slice(0, 8)}`}
-        subtitle={`${formatPrice(payment.amount)} • ${payment.status}`}
+        subtitle={`${formatPrice(payment.amount, locale)} • ${payment.status}`}
         backHref="/admin/payments/"
         isEditing={editing}
         isSaving={updateMut.isPending}
@@ -93,7 +93,7 @@ export function PaymentDetailView({ paymentId }: { paymentId: string }) {
             </div>
             <div>
               <span className="text-content-muted">{t('admin.payments.field.amount')}</span>
-              <div className="text-content">{formatPrice(payment.amount)}</div>
+              <div className="text-content">{formatPrice(payment.amount, locale)}</div>
             </div>
             <div>
               <span className="text-content-muted">{t('admin.payments.field.status')}</span>

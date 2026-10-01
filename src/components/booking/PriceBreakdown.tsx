@@ -26,7 +26,7 @@ export function PriceBreakdown({
   totalPrice,
   className,
 }: PriceBreakdownProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const hasDiscount = discountAmount > 0;
   const hasPoints = pointsUsed > 0;
 
@@ -38,7 +38,7 @@ export function PriceBreakdown({
         {/* Service price */}
         <div className="flex items-center justify-between text-sm">
           <span className="text-text-secondary">{t('booking.price.service')}</span>
-          <span className="text-content">{formatPrice(servicePrice)}</span>
+          <span className="text-content">{formatPrice(servicePrice, locale)}</span>
         </div>
 
         {/* Discount */}
@@ -48,7 +48,7 @@ export function PriceBreakdown({
               <Ticket className="w-3.5 h-3.5" />
               {t('booking.price.discount')}
             </span>
-            <span className="text-success">-{formatPrice(discountAmount)}</span>
+            <span className="text-success">-{formatPrice(discountAmount, locale)}</span>
           </div>
         )}
 
@@ -59,7 +59,7 @@ export function PriceBreakdown({
               <Coins className="w-3.5 h-3.5" />
               {t('booking.price.pointsUsed', { count: pointsUsed.toLocaleString() })}
             </span>
-            <span className="text-[var(--section-accent)]">-{formatPrice(pointsValue)}</span>
+            <span className="text-[var(--section-accent)]">-{formatPrice(pointsValue, locale)}</span>
           </div>
         )}
 
@@ -67,7 +67,7 @@ export function PriceBreakdown({
         <div className="flex items-center justify-between pt-3 border-t border-hairline">
           <span className="font-semibold text-content">{t('common.total')}</span>
           <span className="text-xl font-bold text-[var(--section-primary)]">
-            {formatPrice(totalPrice)}
+            {formatPrice(totalPrice, locale)}
           </span>
         </div>
 
@@ -75,7 +75,7 @@ export function PriceBreakdown({
         {(hasDiscount || hasPoints) && (
           <div className="text-center pt-2">
             <span className="text-xs text-success bg-success/10 px-3 py-1 rounded-full">
-              {t('booking.price.savings', { amount: formatPrice(discountAmount + pointsValue) })}
+              {t('booking.price.savings', { amount: formatPrice(discountAmount + pointsValue, locale) })}
             </span>
           </div>
         )}

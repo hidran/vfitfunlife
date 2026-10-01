@@ -261,7 +261,7 @@ export default function ProviderProfileClient() {
                     </div>
                     <div className="text-right">
                       <p className="text-xl font-bold text-section-primary">
-                        {formatPrice(service.price)}
+                        {formatPrice(service.price, locale)}
                       </p>
                     </div>
                   </div>

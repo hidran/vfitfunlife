@@ -181,7 +181,7 @@ export default function MetricsClient() {
         <StatTile
           icon={<Euro className="w-4 h-4" />}
           label={t('metrics.card.gmv' as MessageKey)}
-          value={`${latest.cumulativeGrossValue.toFixed(0)} €`}
+          value={new Intl.NumberFormat(toLocaleTag(locale), { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(latest.cumulativeGrossValue)}
         />
         <StatTile
           icon={<Clock className="w-4 h-4" />}

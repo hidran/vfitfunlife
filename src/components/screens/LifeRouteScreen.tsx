@@ -13,7 +13,7 @@ import {
   Wind,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
+import { cn, formatDecimal } from '@/lib/utils';
 import { LIFE_ROUTE_CONTENT, type LifeRouteSlug } from '@/lib/featureRouteContent';
 import { useI18n } from '@/hooks/useI18n';
 import type { MessageKey } from '@/i18n/messages';
@@ -583,7 +583,7 @@ export function LifeRouteScreen({ slug }: { slug: LifeRouteSlug }) {
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <MapPin className="h-3.5 w-3.5" />
-                  {t('lifeRoute.distanceKm', { value: provider.distanceKm.toFixed(1) })}
+                  {t('lifeRoute.distanceKm', { value: formatDecimal(provider.distanceKm, locale, 1) })}
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <Clock className="h-3.5 w-3.5" />
@@ -634,7 +634,7 @@ export function LifeRouteScreen({ slug }: { slug: LifeRouteSlug }) {
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <MapPin className="h-3.5 w-3.5" />
-                  {t('lifeRoute.distanceKm', { value: center.distanceKm.toFixed(1) })}
+                  {t('lifeRoute.distanceKm', { value: formatDecimal(center.distanceKm, locale, 1) })}
                 </span>
               </div>
               <div className="mt-3 flex flex-wrap gap-1.5">

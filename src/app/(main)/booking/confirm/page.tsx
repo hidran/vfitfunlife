@@ -311,7 +311,7 @@ export default function BookingConfirmPage() {
                 <span className="block text-sm text-text-secondary">
                   {t('bookings.confirm.pointsBalance', { count: pointsBalance.toLocaleString() })}
                   {' · '}
-                  {t('bookings.confirm.pointsValue', { price: formatPrice(pointsBalance * 0.01) })}
+                  {t('bookings.confirm.pointsValue', { price: formatPrice(pointsBalance * 0.01, locale) })}
                 </span>
               </span>
               <input
@@ -327,7 +327,7 @@ export default function BookingConfirmPage() {
               <p className="mt-2 text-sm text-[var(--section-accent)]">
                 {t('bookings.confirm.usePointsApplied', {
                   count: price.pointsUsed.toLocaleString(),
-                  price: formatPrice(price.pointsValue),
+                  price: formatPrice(price.pointsValue, locale),
                 })}
               </p>
             )}
@@ -350,7 +350,7 @@ export default function BookingConfirmPage() {
             {t('bookings.confirm.paymentTitle')}
           </h3>
           <p className="text-sm text-text-secondary">
-            {t('bookings.confirm.payTrainerBody', { price: formatPrice(totalPrice) })}
+            {t('bookings.confirm.payTrainerBody', { price: formatPrice(totalPrice, locale) })}
           </p>
           <p className="text-sm text-content flex items-start gap-2">
             <Sparkles className="w-4 h-4 mt-0.5 flex-shrink-0 text-[var(--section-accent)]" aria-hidden="true" />
@@ -438,7 +438,7 @@ export default function BookingConfirmPage() {
         <div className="flex items-center justify-between gap-4">
           <div>
             <p className="text-text-secondary text-sm">{t('common.total')}</p>
-            <p className="text-2xl font-bold text-content">{formatPrice(totalPrice)}</p>
+            <p className="text-2xl font-bold text-content">{formatPrice(totalPrice, locale)}</p>
           </div>
           <Button
             onClick={handleCreateBooking}

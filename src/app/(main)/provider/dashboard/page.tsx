@@ -25,6 +25,7 @@ import { dashboardBannerKind } from '@/lib/availability/adapter';
 import { useI18n } from '@/hooks/useI18n';
 import { trace } from '@/lib/perf';
 import { toLocaleTag } from '@/types/locale';
+import { formatPrice } from '@/lib/utils';
 import { ACTIVITY_LABEL_KEYS, bookingActivity, isNewProvider } from '@/lib/providerActivity';
 import Link from 'next/link';
 
@@ -143,7 +144,7 @@ export default function ProviderDashboardPage() {
         />
         <StatCard
           title={t('provider.dashboard.stats.monthEarnings')}
-          value={`€${stats.monthEarnings.toLocaleString()}`}
+          value={formatPrice(stats.monthEarnings, locale)}
           icon={Wallet}
         />
         <StatCard

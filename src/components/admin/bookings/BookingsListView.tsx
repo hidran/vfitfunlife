@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 
 export function BookingsListView() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const router = useRouter();
   const { bookings, bookingsTotal, bookingsFilters, isLoadingBookings, error, fetchBookings } =
     useAdminStore(
@@ -178,7 +178,7 @@ export function BookingsListView() {
       header: t('admin.bookings.col.amount'),
       cell: (booking) => (
         <span className="font-medium text-content">
-          {formatPrice(booking.finalPrice || 0)}
+          {formatPrice(booking.finalPrice || 0, locale)}
         </span>
       ),
       sortable: true,
@@ -256,7 +256,7 @@ export function BookingsListView() {
             </div>
             <div>
               <p className="text-xs text-content-faint">{t('admin.bookings.stat.totalRevenue')}</p>
-              <p className="text-xl font-bold text-content">{formatPrice(totalRevenue)}</p>
+              <p className="text-xl font-bold text-content">{formatPrice(totalRevenue, locale)}</p>
             </div>
           </div>
         </div>

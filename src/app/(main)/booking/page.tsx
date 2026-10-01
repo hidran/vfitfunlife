@@ -16,7 +16,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { cn, formatPrice } from '@/lib/utils';
+import { cn, formatDistance, formatPrice } from '@/lib/utils';
 import { useBookingStore } from '@/stores/bookingStore';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -469,14 +469,14 @@ export default function BookingPage() {
                         <div className="flex flex-wrap items-baseline gap-x-2">
                           {provider.lowestPrice != null ? (
                             <span className="text-lg font-bold text-[var(--section-primary)] whitespace-nowrap">
-                              {t('booking.price.from', { price: formatPrice(provider.lowestPrice) })}
+                              {t('booking.price.from', { price: formatPrice(provider.lowestPrice, locale) })}
                             </span>
                           ) : (
                             <span className="text-sm text-text-secondary">{t('booking.provider.viewAvailability')}</span>
                           )}
                           {provider.distanceKm != null && Number.isFinite(provider.distanceKm) && (
                             <span className="text-xs text-text-tertiary whitespace-nowrap">
-                              {provider.distanceKm.toFixed(1)} km
+                              {formatDistance(provider.distanceKm, locale)}
                             </span>
                           )}
                         </div>

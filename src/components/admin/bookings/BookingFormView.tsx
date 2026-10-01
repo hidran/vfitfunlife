@@ -38,7 +38,7 @@ function toLocalDateTimeInput(
 }
 
 export function BookingFormView({ mode, initial, onSubmit }: Props) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   const defaults: BookingFormData = {
     notes:
@@ -92,10 +92,10 @@ export function BookingFormView({ mode, initial, onSubmit }: Props) {
         />
         <ReadOnlyField
           label={t('admin.bookings.field.originalPrice')}
-          value={formatPrice(initial?.originalPrice ?? 0)}
+          value={formatPrice(initial?.originalPrice ?? 0, locale)}
           sub={
             initial?.discountAmount && initial.discountAmount > 0
-              ? `${t('admin.bookings.field.discount')}: ${formatPrice(initial.discountAmount)}`
+              ? `${t('admin.bookings.field.discount')}: ${formatPrice(initial.discountAmount, locale)}`
               : undefined
           }
         />

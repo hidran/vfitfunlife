@@ -145,7 +145,7 @@ const menuItems: ProfileMenuSection[] = [
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { user, firebaseUser, logout, isLoading, refreshUserProfile } = useAuthStore(
     useShallow((s) => ({
       user: s.user,
@@ -391,7 +391,7 @@ export default function ProfilePage() {
                 {t('profile.stats.balance')}
               </p>
             </div>
-            <p className="truncate text-xl font-bold tabular-nums text-text-inverse">{formatPrice(walletBalance)}</p>
+            <p className="truncate text-xl font-bold tabular-nums text-text-inverse">{formatPrice(walletBalance, locale)}</p>
           </div>
 
           <div className="relative min-w-0 overflow-hidden rounded-2xl border border-hairline bg-surface bg-gradient-to-br from-vfun-primary/15 to-transparent p-4">
@@ -402,7 +402,7 @@ export default function ProfilePage() {
               </p>
             </div>
             <p className="truncate text-xl font-bold tabular-nums text-text-inverse">
-              {isProviderUser ? formatPrice(stats.totalEarnings) : providerProfile?.reviewCount || 0}
+              {isProviderUser ? formatPrice(stats.totalEarnings, locale) : providerProfile?.reviewCount || 0}
             </p>
           </div>
         </div>

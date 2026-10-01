@@ -1916,7 +1916,7 @@ export const itMessages = {
 
   'notifications.title': 'Notifiche',
   'notifications.unreadCount': '{{count}} non lette',
-  'notifications.subtitle': 'Centro notifiche per booking, chat e aggiornamenti account.',
+  'notifications.subtitle': "Centro notifiche per prenotazioni, chat e aggiornamenti dell'account.",
   'notifications.markAllRead': 'Segna tutte come lette',
   'notifications.unreadOnly': 'Solo non lette',
   'notifications.emptyFiltered': 'Nessuna notifica da mostrare con il filtro attuale.',

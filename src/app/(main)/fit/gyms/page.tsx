@@ -4,7 +4,7 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useMemo, useState, useCallback } from 'react';
 import { List, Map as MapIcon, MapPin, Search, SlidersHorizontal, Star } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatDistance } from '@/lib/utils';
 import { MapPlaceholder } from '@/components/map/MapPlaceholder';
 import { useRouter } from 'next/navigation';
 import { useI18n } from '@/hooks/useI18n';
@@ -33,7 +33,7 @@ const NO_GYMS: VenueWithDistance[] = [];
 
 export default function GymsPage() {
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [view, setView] = useState<'list' | 'map'>('list');
   const [query, setQuery] = useState('');
 
@@ -185,7 +185,7 @@ export default function GymsPage() {
                     </div>
                     {gym.distanceKm != null && Number.isFinite(gym.distanceKm) && (
                       <span className="text-xs text-text-tertiary">
-                        {gym.distanceKm.toFixed(1)} km
+                        {formatDistance(gym.distanceKm, locale)}
                       </span>
                     )}
                   </div>
@@ -243,7 +243,7 @@ export default function GymsPage() {
                       {gym.rating.toFixed(1)}
                     </div>
                     {gym.distanceKm != null && Number.isFinite(gym.distanceKm) && (
-                      <span>{gym.distanceKm.toFixed(1)} km</span>
+                      <span>{formatDistance(gym.distanceKm, locale)}</span>
                     )}
                   </div>
                 </Link>

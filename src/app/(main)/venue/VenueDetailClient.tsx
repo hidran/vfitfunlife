@@ -16,7 +16,7 @@ type TabOption = 'services' | 'classes';
 
 export default function VenueDetailClient() {
   const searchParams = useSearchParams();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const id = searchParams?.get('id') ?? undefined;
 
   const venueQuery = useVenue(id);
@@ -185,7 +185,7 @@ export default function VenueDetailClient() {
                 className="flex items-center justify-between rounded-xl border border-hairline bg-surface p-3"
               >
                 <span className="text-sm font-medium text-content">{s.name}</span>
-                <span className="text-sm font-semibold text-content">{formatPrice(s.price)}</span>
+                <span className="text-sm font-semibold text-content">{formatPrice(s.price, locale)}</span>
               </li>
             ))}
             {!servicesQuery.isLoading && services.length === 0 && (

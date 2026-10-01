@@ -58,7 +58,7 @@ export function UserTabContent({
   onSubmitForm,
   onRoleChange,
 }: ContentProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   if (activeTab === 'bookings') {
     return (
@@ -164,7 +164,7 @@ export function UserTabContent({
             <StatBox
               icon={<CreditCard className="w-5 h-5 text-[#10B981] light:text-emerald-700" />}
               label={t('admin.userDetail.stat.totalSpent')}
-              value={formatPrice(0)}
+              value={formatPrice(0, locale)}
             />
             <StatBox
               icon={
@@ -196,7 +196,7 @@ export function UserTabContent({
             <div className="flex justify-between items-center p-3 bg-surface-sunken rounded-xl">
               <span className="text-content-muted">{t('admin.userDetail.walletBalance')}</span>
               <span className="text-xl font-semibold text-content">
-                {formatPrice(user.walletBalance || 0)}
+                {formatPrice(user.walletBalance || 0, locale)}
               </span>
             </div>
             <div className="flex justify-between items-center p-3 bg-surface-sunken rounded-xl">
