@@ -17,7 +17,7 @@ import { gateStatus, type MetricsDaily } from '@/types/metrics';
 import { WeeklyTrendChart } from '@/components/admin/metrics/WeeklyTrendChart';
 import { Spinner } from '@/components/ui/Spinner';
 import { toLocaleTag } from '@/types/locale';
-import { cn } from '@/lib/utils';
+import { cn, formatDecimal } from '@/lib/utils';
 import type { MessageKey } from '@/i18n/messages';
 import { queryKeys } from '@/lib/queryKeys';
 
@@ -188,7 +188,7 @@ export default function MetricsClient() {
           label={t('metrics.card.timeToAccept' as MessageKey)}
           value={latest.medianTimeToAcceptHours === null
             ? '—'
-            : t('metrics.hours' as MessageKey, { n: latest.medianTimeToAcceptHours.toFixed(1) })}
+            : t('metrics.hours' as MessageKey, { n: formatDecimal(latest.medianTimeToAcceptHours, locale, 1) })}
         />
         <StatTile
           icon={<Users className="w-4 h-4" />}

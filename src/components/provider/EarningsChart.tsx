@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, BarChart3, LineChart as LineChartIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { cn, formatPrice } from '@/lib/utils';
+import { cn, formatDecimal, formatPrice } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
 
@@ -147,7 +147,7 @@ export function EarningsChart({ data, className }: EarningsChartProps) {
               ) : (
                 <TrendingDown className="w-3 h-3" />
               )}
-              {Math.abs(stats.trend).toFixed(1)}%
+              {formatDecimal(Math.abs(stats.trend), locale, 1)}%
             </span>
           </div>
         </div>

@@ -4,6 +4,7 @@ import { httpsCallable } from 'firebase/functions';
 import { getFunctionsInstance } from '@/lib/firebase/config';
 import { Button } from '@/components/ui/button';
 import { useI18n } from '@/hooks/useI18n';
+import { formatPrice } from '@/lib/utils';
 import { AlertTriangle, X } from 'lucide-react';
 import { useEntityMutation } from '@/components/admin';
 
@@ -15,7 +16,7 @@ interface Props {
 }
 
 export function RefundDialog({ open, paymentId, maxAmount, onClose }: Props) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [amount, setAmount] = useState(maxAmount);
   const [reason, setReason] = useState('');
   const refundMut = useEntityMutation<
@@ -65,7 +66,7 @@ export function RefundDialog({ open, paymentId, maxAmount, onClose }: Props) {
         </div>
         <label className="block space-y-1">
           <span className="text-xs text-content-muted">
-            {t('admin.payments.refund.amountLabel')} (max {maxAmount.toFixed(2)})
+            {t('admin.payments.refund.amountLabel')} (max {formatPrice(maxAmount, locale)})
           </span>
           <input
             type="number"
