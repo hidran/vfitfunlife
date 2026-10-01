@@ -129,6 +129,39 @@ Italian one `screenshots-it/`. Update text where behaviour changed, remove fixed
 then rebuild both docx with `python3 docs/user-journeys/build-docx.py` (see the script header).
 - **Done when:** both guides + docx match the deployed app; README links unchanged.
 
+### Follow-ups found while doing F1–G2 (added 2026-10-01)
+
+Same §0 rules. Each: staging deploy → staging check → prod.
+
+### H1 `[ ]` Locale formatting leftovers (Medium)
+- Customer screens in English print Italian prices ("From 50,00 €") while the provider side prints `€50.00`:
+  every `formatPrice` caller must pass the active locale (grep `formatPrice(`); consider making the default come
+  from the i18n context rather than a hard-coded `it`.
+- Provider dashboard "This Month's Earnings" is assembled as `€${…}` (`provider/dashboard/page.tsx` ~146) → `formatPrice`.
+- `notifications.subtitle` in `it.ts` still says "booking" → Italian wording (check es/fr/de).
+- Distances print "0.1 km" in Italian → locale-aware number format (search/booking cards, grep `km`).
+- Earnings withdraw field: "€" prefix + "0.00" placeholder → locale-aware.
+- **Done when:** en shows `€50.00` and it shows `50,00 €` on customer AND provider screens; no hard-coded `€${` left in UI code.
+
+### H2 `[ ]` Reschedule calendar uses the bookable-days check (Low)
+`BookingRescheduleClient.tsx` uses `AvailabilityPicker` without `useBookableDays` → wire it like `BookingClient.tsx` (F1).
+- **Done when:** reschedule disables weekends/<24h days for demo.provider; enabled days list ≥1 time.
+
+### H3 `[ ]` Dialog leftovers (Medium, a11y)
+- Backdrop click never closes `Modal` (`src/components/ui/Modal.tsx`: the click hits the backdrop layer, not the wrapper the handler checks).
+- `provider/schedule/page.tsx` dialogs are off-centre (same pattern as F6 → `className="w-full max-w-md"` on `Modal`).
+- Customer cancel-booking Keep/Cancel confirmation is not a dialog → use `Modal` (or role/aria + focus trap).
+- After Edit Service closes, focus lands on body → return it to the service's menu button.
+- **Done when:** backdrop click closes every `Modal` (unless a caller opts out), schedule dialogs centred at 390px, cancel confirmation resolves with `getByRole('dialog')` and Esc closes it.
+
+### H4 `[ ]` Accessibility & theme leftovers (Low–Medium)
+- Search result cards on `/booking` are not links/buttons → make each card (or its name/"Check availability") a real link to the trainer page.
+- List/map view toggle buttons on `/booking` have no accessible name.
+- Payment switches (`PaymentSettingsPanel.tsx` `SwitchRow`) → `role="switch"` + `aria-checked`; show a success toast/message after save.
+- Nested `<main>` in `home/page.tsx`, `profile/settings/privacy/page.tsx`, `profile/settings/notifications/page.tsx` → `div`.
+- Map marker pop-up in `GoogleMap.tsx` has a hard-coded dark card → theme tokens.
+- **Done when:** keyboard Tab+Enter opens a trainer from results; every page has exactly one `main`; switches announce as switches; pop-up follows the theme.
+
 ---
 
 ## 2. Log
