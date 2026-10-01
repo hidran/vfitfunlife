@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Calendar, CheckCircle2, Clock, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -12,6 +12,7 @@ import { rescheduleErrorKey } from '@/lib/availability/errors';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
 import { AvailabilityPicker } from '@/components/booking';
+import { useBookableDays } from '@/hooks/useBookableDays';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/Avatar';
 
@@ -91,6 +92,18 @@ export default function BookingRescheduleClient() {
     // the booking blocking the slot it is sitting in.
     void fetchAvailability(instructorId, booking.serviceId, selectedDate, booking.id);
   }, [booking.id, booking.serviceId, fetchAvailability, instructorId, isReschedulable, selectedDate]);
+
+  // Which days of the month on show have a free start, so the calendar only offers those.
+  // Excludes this booking for the same reason as the slot list above.
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
+  const handleMonthChange = useCallback((month: Date) => setCalendarMonth(month), []);
+  const { data: bookableDays, isFetching: isCheckingDays } = useBookableDays(
+    instructorId || undefined,
+    booking.serviceId || undefined,
+    calendarMonth,
+    isReschedulable && !!user,
+    booking.id,
+  );
 
   const hasChanged = useMemo(() => {
     if (!selectedDate || !selectedTime) return false;
@@ -216,6 +229,9 @@ export default function BookingRescheduleClient() {
               onSelectDate={setSelectedDate}
               onSelectTime={setSelectedTime}
               isLoading={isLoadingAvailability}
+              bookableDays={bookableDays}
+              isCheckingDays={isCheckingDays && !bookableDays}
+              onMonthChange={handleMonthChange}
             />
 
             <section className="rounded-2xl border border-hairline bg-surface-2 p-4">
