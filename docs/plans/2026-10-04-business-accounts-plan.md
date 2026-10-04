@@ -196,7 +196,7 @@ registration. Optional fields only — no existing behaviour changes.
 - **Done when:** owner can change public name and logo, search shows the new name after the index trigger
   runs, attempts to change P.IVA are impossible in the UI and rejected by rules (B4).
 
-### B7 `[ ]` Public listing and search (Medium)
+### B7 `[~]` Public listing and search (Medium)
 - Files: `src/lib/firebase/providers.ts` (`flattenProvider` reads `providerType`, `business`),
   provider card and booking-page components, `functions/src/providers/onInstructorWriteSearchIndex.ts`
   (add `displayName` and `legalName` tokens), i18n `provider.badge.business` ("Azienda" in it).
@@ -419,3 +419,20 @@ the same on prod with a throwaway P.IVA claim removed afterwards.
   not deleted from Storage (cards/search may still point at the old URL until reload); orphans
   are harmless. (4) The page's Back button got an `aria-label`. Tests: section (24), form edit
   mode (3), lib (11 + 7), page wiring with the section stubbed (6).
+- 2026-10-04 — B7 code + unit tests done (this commit); B7 stays `[~]` until B10's browser checks. New
+  `src/lib/publicBusiness.ts` (`readBusinessDetails`, `toPublicBusiness`, `safeHttpUrl`): a `business`
+  map is valid iff it is a plain object with a non-empty trimmed `displayName`; legal fields coerce to
+  "", optional fields kept only when correctly typed, `website`/`logoUrl` only when http(s). The badge
+  is derived from that map only, never `providerType` (owner-writable). `flattenProvider`,
+  `providerSearchResultFromDoc` and `toProviderPublicProfile` add `isBusiness`/`business`/`logoUrl`
+  only for companies (individuals get no new keys); the search result and public profile carry the
+  public subset only (no legal name, tax id, legal form or affiliation number). `/booking` cards and
+  `/providers/detail` show the "Azienda" badge (`provider.badge.business`, text + icon, same label
+  for every legal form), the logo as avatar, and on the page the description and website
+  (`BusinessWebsiteLink`: target _blank, rel noopener noreferrer, scheme re-checked at render, sr-only
+  "opens in a new tab" via `providerProfile.business.websiteNewTab`). `searchTerms` now also indexes
+  `business.displayName` and `business.legalName` (not tax id / affiliation number); the existing
+  `sameTerms` guard keeps a logo/description edit write-free. The client's `searchTerms
+  array-contains` query finds a company by legal name while cards only show the public name.
+  Not covered: home page trainer cards (no badge/logo yet); existing companies need
+  `scripts/backfill-provider-search.mjs` (or any write) before legal-name search finds them.

@@ -58,3 +58,40 @@ describe("providerSearchPatch", () => {
     expect(providerSearchPatch({ fullName: "Marco", searchTerms: patch!.searchTerms })).not.toBeNull();
   });
 });
+
+describe("company accounts", () => {
+  const company = {
+    fullName: "Palestra Roma",
+    business: {
+      legalName: "Rossi Sport S.r.l.",
+      vatNumber: "12345678903",
+      affiliationNumber: "CONI-998",
+      displayName: "Palestra Roma",
+      logoUrl: "https://x/a.png",
+    },
+  };
+
+  it("indexes the legal name and the display name, not the tax id or registration number", () => {
+    const terms = computeProviderSearchTerms(company);
+    expect(terms).toEqual(expect.arrayContaining(["rossi", "rossi sport", "sport", "palestra", "roma"]));
+    expect(terms.some((t) => t.startsWith("1234") || t.startsWith("coni"))).toBe(false);
+  });
+
+  it("ignores a malformed business map and leaves individuals unchanged", () => {
+    const base = computeProviderSearchTerms({ fullName: "Anna" });
+    expect(computeProviderSearchTerms({ fullName: "Anna", business: "x" as never })).toEqual(base);
+    expect(computeProviderSearchTerms({ fullName: "Anna", business: [] as never })).toEqual(base);
+    expect(computeProviderSearchTerms({ fullName: "Anna", business: { legalName: 5 } })).toEqual(base);
+  });
+
+  it("is idempotent: a logo-only or description edit produces no write", () => {
+    const patch = providerSearchPatch(company)!;
+    expect(patch.searchTerms).toContain("rossi");
+    const stored = { ...company, searchTerms: patch.searchTerms };
+    expect(providerSearchPatch(stored)).toBeNull();
+    const logoEdit = { ...stored, business: { ...company.business, logoUrl: "https://x/b.png", description: "new" } };
+    expect(providerSearchPatch(logoEdit)).toBeNull();
+    const renamed = { ...stored, business: { ...company.business, legalName: "Bianchi Srl" } };
+    expect(providerSearchPatch(renamed)).not.toBeNull();
+  });
+});

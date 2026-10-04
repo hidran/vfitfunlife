@@ -14,6 +14,10 @@ export interface Provider {
   // Company accounts (absent ⇒ individual)
   providerType?: ProviderType;
   business?: BusinessDetails;
+  /** True iff a valid `business` map exists (see lib/publicBusiness.ts); drives the "Azienda" badge. */
+  isBusiness?: boolean;
+  /** `business.logoUrl`, preferred over `avatarUrl` when present. */
+  logoUrl?: string;
   // VFun bookable-activity fields (absent ⇒ a real trainer)
   activityKind?: ActivityKind;
   eventDate?: string;      // events, e.g. "16 Feb"

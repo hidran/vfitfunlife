@@ -28,6 +28,7 @@ import { geoRangeQuery } from './firebase/geoQuery';
 import type { LatLng } from './geo';
 import { localDateKey } from './availability/dates';
 import { normalizeSearchText, SEARCH_TOKEN_MAX_LENGTH } from './admin/adminIndex';
+import { readBusinessDetails, toPublicBusiness } from './publicBusiness';
 import type {
   Booking,
   BookingData,
@@ -115,6 +116,9 @@ export function providerSearchResultFromDoc(
   data: DocumentData
 ): ProviderSearchResult {
   const profile = data.providerProfile || {};
+  // Company badge/logo come from the `business` map only (providerType is owner-writable).
+  // The result carries the public subset: the legal name is searchable, never displayed.
+  const business = toPublicBusiness(readBusinessDetails(data.business));
 
   return {
     id,
@@ -140,6 +144,9 @@ export function providerSearchResultFromDoc(
     // fetched lazily on the detail page (useProviderServices). Search cards
     // don't render service-level info, so we return an empty array here.
     services: [],
+    ...(business
+      ? { isBusiness: true, business, ...(business.logoUrl ? { logoUrl: business.logoUrl } : {}) }
+      : {}),
   } as ProviderSearchResult;
 }
 

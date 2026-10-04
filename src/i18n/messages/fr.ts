@@ -3045,6 +3045,8 @@ export const frMessages: Messages = {
   'providerProfile.error.loadFailed': 'Impossible de charger le profil du prestataire',
   'providerProfile.goBack': 'Retour',
   'providerProfile.verified': 'Vérifié',
+  'provider.badge.business': 'Entreprise',
+  'providerProfile.business.websiteNewTab': "s'ouvre dans un nouvel onglet",
   'providerProfile.reviews': '({{count}} avis)',
   'providerProfile.experience.year': 'an',
   'providerProfile.experience.years': 'ans',

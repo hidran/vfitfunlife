@@ -3043,6 +3043,8 @@ export const deMessages: Messages = {
   'providerProfile.error.loadFailed': 'Anbieterprofil konnte nicht geladen werden',
   'providerProfile.goBack': 'Zurück',
   'providerProfile.verified': 'Verifiziert',
+  'provider.badge.business': 'Unternehmen',
+  'providerProfile.business.websiteNewTab': 'öffnet in einem neuen Tab',
   'providerProfile.reviews': '({{count}} Bewertungen)',
   'providerProfile.experience.year': 'Jahr',
   'providerProfile.experience.years': 'Jahre',

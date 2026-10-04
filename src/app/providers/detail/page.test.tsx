@@ -50,3 +50,55 @@ describe('/providers/detail?id=', () => {
     expect(screen.queryByText('Anna Verdi')).not.toBeInTheDocument();
   });
 });
+
+describe('/providers/detail company page', () => {
+  const base = {
+    id: 'biz-1',
+    fullName: 'Palestra Roma',
+    avatarUrl: null,
+    bio: null,
+    providerProfile: null,
+    socialLinks: null,
+    isProvider: true,
+    portfolioImages: [],
+  };
+
+  it('shows the badge, logo, description and a safe website link, never the legal data', () => {
+    mockSearchParams = new URLSearchParams('id=biz-1');
+    mockUseProfile.mockReturnValue({
+      data: {
+        ...base,
+        business: {
+          displayName: 'Palestra Roma',
+          description: 'Sala pesi e corsi',
+          website: 'https://palestra.it',
+          logoUrl: 'https://cdn.x/logo.png',
+        },
+      },
+      isLoading: false,
+      error: null,
+    });
+    render(<ProviderProfilePage />);
+    expect(screen.getByText('Azienda')).toBeInTheDocument();
+    expect(screen.getByText('Sala pesi e corsi')).toBeInTheDocument();
+    expect(screen.getByAltText('Palestra Roma')).toHaveAttribute('src', 'https://cdn.x/logo.png');
+    const link = screen.getByRole('link', { name: /palestra\.it/ });
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(link).toHaveAttribute('target', '_blank');
+  });
+
+  it('does not render a javascript: website and shows no badge for individuals', () => {
+    mockSearchParams = new URLSearchParams('id=biz-1');
+    mockUseProfile.mockReturnValue({
+      data: { ...base, business: { displayName: 'X', website: 'javascript:alert(1)' } },
+      isLoading: false,
+      error: null,
+    });
+    const { unmount } = render(<ProviderProfilePage />);
+    expect(screen.queryByRole('link')).toBeNull();
+    unmount();
+    mockUseProfile.mockReturnValue({ data: base, isLoading: false, error: null });
+    render(<ProviderProfilePage />);
+    expect(screen.queryByText('Azienda')).toBeNull();
+  });
+});

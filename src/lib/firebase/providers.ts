@@ -20,6 +20,7 @@ import type {
   ActivityKind,
 } from '@/types/instructor';
 import type { ProviderApplicationStatus } from '@/types/firebase';
+import { readBusinessDetails } from '@/lib/publicBusiness';
 
 /**
  * Normalizes the various shapes /instructors documents take in this app's data —
@@ -29,6 +30,9 @@ import type { ProviderApplicationStatus } from '@/types/firebase';
  */
 function flattenProvider(id: string, data: Record<string, unknown>): Provider {
   const profile = (data.providerProfile ?? {}) as Record<string, unknown>;
+  // Company accounts: present only when a valid `business` map exists, so individuals keep
+  // exactly the keys they had. Never derived from providerType (owner-writable).
+  const business = readBusinessDetails(data.business);
   return {
     id,
     fullName: (data.fullName as string) ?? (data.name as string) ?? 'Provider',
@@ -58,6 +62,9 @@ function flattenProvider(id: string, data: Record<string, unknown>): Provider {
     lowestPrice: typeof data.lowestPrice === 'number' ? (data.lowestPrice as number) : undefined,
     categoryIds: (data.categoryIds as string[]) ?? undefined,
     requestedCategoryIds: (data.requestedCategoryIds as string[]) ?? undefined,
+    ...(business
+      ? { isBusiness: true, business, ...(business.logoUrl ? { logoUrl: business.logoUrl } : {}) }
+      : {}),
   };
 }
 

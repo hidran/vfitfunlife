@@ -28,6 +28,7 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/Spinner';
 import { Badge } from '@/components/ui/Badge';
 import { Rating } from '@/components/ui/Rating';
+import { BusinessBadge, BusinessWebsiteLink } from '@/components/provider/BusinessBadge';
 import { Timestamp } from 'firebase/firestore';
 import { ProviderNotFoundError, useProviderPublicProfile } from '@/hooks/useProviderPublicProfile';
 
@@ -99,6 +100,8 @@ export default function ProviderProfileClient() {
   }
 
   const providerData = profile.providerProfile;
+  // A company's logo stands in for the avatar when it has one.
+  const headerImage = profile.business?.logoUrl ?? profile.avatarUrl;
   const initials = profile.fullName
     .split(' ')
     .map((n) => n[0])
@@ -143,9 +146,9 @@ export default function ProviderProfileClient() {
           {/* Avatar */}
           <div className="w-24 h-24 rounded-full bg-gradient-to-br from-vfit-primary via-vfun-primary to-vlife-primary p-0.5 flex-shrink-0">
             <div className="w-full h-full rounded-full bg-background-dark flex items-center justify-center overflow-hidden">
-              {profile.avatarUrl ? (
+              {headerImage ? (
                 <Image
-                  src={profile.avatarUrl}
+                  src={headerImage}
                   alt={profile.fullName}
                   width={96}
                   height={96}
@@ -160,8 +163,14 @@ export default function ProviderProfileClient() {
 
           {/* Info */}
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold text-text-inverse">{profile.fullName}</h1>
-            
+            <h1 className="text-2xl font-bold text-text-inverse break-words">{profile.fullName}</h1>
+
+            {profile.business && (
+              <div className="mt-1">
+                <BusinessBadge />
+              </div>
+            )}
+
             {providerData?.isVerified && (
               <div className="flex items-center gap-1 mt-1">
                 <Badge variant="success" size="sm">
@@ -189,6 +198,18 @@ export default function ProviderProfileClient() {
             )}
           </div>
         </div>
+
+        {/* Company description and website (never the legal name or tax id) */}
+        {profile.business?.description && (
+          <p className="mt-4 whitespace-pre-line break-words text-text-secondary leading-relaxed">
+            {profile.business.description}
+          </p>
+        )}
+        {profile.business?.website && (
+          <div className="mt-2 text-sm text-section-primary">
+            <BusinessWebsiteLink website={profile.business.website} />
+          </div>
+        )}
 
         {/* Bio */}
         {(profile.bio || providerData?.professionalBio) && (

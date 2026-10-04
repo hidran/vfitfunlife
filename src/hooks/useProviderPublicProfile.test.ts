@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { makeQueryClientWrapper } from '@/test-utils/queryClientWrapper';
-import { ProviderNotFoundError, useProviderPublicProfile } from './useProviderPublicProfile';
+import { ProviderNotFoundError, toProviderPublicProfile, useProviderPublicProfile } from './useProviderPublicProfile';
 import { getDoc } from 'firebase/firestore';
 import { getPortfolioImages } from '@/lib/firebase/storage';
 
@@ -87,5 +87,23 @@ describe('useProviderPublicProfile', () => {
     const { result } = renderHook(() => useProviderPublicProfile(undefined), { wrapper });
     expect(result.current.fetchStatus).toBe('idle');
     expect(getDoc).not.toHaveBeenCalled();
+  });
+});
+
+describe('toProviderPublicProfile company data', () => {
+  it('exposes only the public business fields', () => {
+    const p = toProviderPublicProfile(
+      'b',
+      {
+        fullName: 'Acme',
+        business: { legalName: 'Acme Srl', vatNumber: '12345678903', displayName: 'Acme', website: 'https://acme.it' },
+      },
+      [],
+    );
+    expect(p.business).toEqual({ displayName: 'Acme', website: 'https://acme.it' });
+  });
+
+  it('leaves individuals without a business key', () => {
+    expect('business' in toProviderPublicProfile('i', { fullName: 'Jane', providerType: 'business' }, [])).toBe(false);
   });
 });

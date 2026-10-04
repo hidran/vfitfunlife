@@ -3036,6 +3036,8 @@ export const esMessages: Messages = {
   'providerProfile.error.loadFailed': 'No se pudo cargar el perfil del proveedor',
   'providerProfile.goBack': 'Volver',
   'providerProfile.verified': 'Verificado',
+  'provider.badge.business': 'Empresa',
+  'providerProfile.business.websiteNewTab': 'se abre en una pestaña nueva',
   'providerProfile.reviews': '({{count}} reseñas)',
   'providerProfile.experience.year': 'año',
   'providerProfile.experience.years': 'años',

@@ -3060,6 +3060,8 @@ export const itMessages = {
   'providerProfile.error.loadFailed': 'Impossibile caricare il profilo del provider',
   'providerProfile.goBack': 'Torna indietro',
   'providerProfile.verified': 'Verificato',
+  'provider.badge.business': 'Azienda',
+  'providerProfile.business.websiteNewTab': 'si apre in una nuova scheda',
   'providerProfile.reviews': '({{count}} recensioni)',
   'providerProfile.experience.year': 'anno',
   'providerProfile.experience.years': 'anni',

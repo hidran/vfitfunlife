@@ -32,6 +32,7 @@ import {
   bookingFromDoc,
   getProviderAvailability,
   providerSearchKey,
+  providerSearchResultFromDoc,
   searchProviders,
   searchProvidersNear,
 } from './firebookings';
@@ -172,5 +173,40 @@ describe('bookingFromDoc provider name', () => {
     expect(bookingFromDoc('b1', { instructorName: 'Luca Bianchi' }).providerName).toBe('Luca Bianchi');
     expect(bookingFromDoc('b2', { providerName: 'Gym Milano', instructorName: 'X' }).providerName).toBe('Gym Milano');
     expect(bookingFromDoc('b3', {}).providerName).toBeUndefined();
+  });
+});
+
+describe('providerSearchResultFromDoc company data', () => {
+  it('marks a company from its business map and keeps the legal name off the result', () => {
+    const r = providerSearchResultFromDoc('biz', {
+      fullName: 'Palestra Roma',
+      business: {
+        legalName: 'Rossi Sport Srl',
+        vatNumber: '12345678903',
+        displayName: 'Palestra Roma',
+        logoUrl: 'https://x/l.png',
+      },
+      searchTerms: ['rossi', 'palestra'],
+    });
+    expect(r.isBusiness).toBe(true);
+    expect(r.logoUrl).toBe('https://x/l.png');
+    expect(JSON.stringify(r)).not.toContain('Rossi Sport');
+    expect(JSON.stringify(r)).not.toContain('12345678903');
+  });
+
+  it('a search for the legal name matches via searchTerms but only displays the public name', async () => {
+    const { applyProviderSearchFilters } = await import('./firebookings');
+    const r = providerSearchResultFromDoc('biz', {
+      fullName: 'Palestra Roma',
+      business: { legalName: 'Rossi Sport Srl', vatNumber: '1', displayName: 'Palestra Roma' },
+      searchTerms: ['rossi', 'rossi sport'],
+    });
+    const out = applyProviderSearchFilters([r], { query: 'Rossi' } as never);
+    expect(out.map((p) => p.fullName)).toEqual(['Palestra Roma']);
+  });
+
+  it('gives individuals no company keys, even with providerType business', () => {
+    const r = providerSearchResultFromDoc('i', { fullName: 'Jane', providerType: 'business' });
+    expect('isBusiness' in r || 'business' in r || 'logoUrl' in r).toBe(false);
   });
 });

@@ -77,6 +77,43 @@ describe('fetchProviders', () => {
   });
 });
 
+describe('company accounts in fetchProviders', () => {
+  const doc = (id: string, extra: Record<string, unknown>) => ({
+    id,
+    data: () => ({ fullName: 'X', isActive: true, providerProfile: { isVerified: true }, ...extra }),
+  });
+
+  it('flags a provider with a valid business map and exposes its logo', async () => {
+    getDocs.mockResolvedValueOnce({
+      docs: [
+        doc('biz', {
+          business: { legalName: 'L Srl', vatNumber: '12345678903', displayName: 'Acme', logoUrl: 'https://x/l.png' },
+        }),
+      ],
+    });
+    const [p] = await fetchProviders({ limit: 5 });
+    expect(p.isBusiness).toBe(true);
+    expect(p.logoUrl).toBe('https://x/l.png');
+    expect(p.business?.displayName).toBe('Acme');
+  });
+
+  it('ignores providerType and malformed business maps; individuals gain no keys', async () => {
+    getDocs.mockResolvedValueOnce({
+      docs: [
+        doc('a', { providerType: 'business' }),
+        doc('b', { business: 'nope' }),
+        doc('c', { business: { displayName: '' } }),
+        doc('d', {}),
+      ],
+    });
+    const out = await fetchProviders({ limit: 5 });
+    for (const p of out) {
+      expect(p.isBusiness).toBeUndefined();
+      expect('isBusiness' in p || 'business' in p || 'logoUrl' in p).toBe(false);
+    }
+  });
+});
+
 describe('createProviderService', () => {
   it('writes to the subcollection the booking flow reads', async () => {
     await createProviderService('trainer-1', {

@@ -3061,6 +3061,8 @@ export const enMessages: Messages = {
   'providerProfile.error.loadFailed': 'Failed to load provider profile',
   'providerProfile.goBack': 'Go Back',
   'providerProfile.verified': 'Verified',
+  'provider.badge.business': 'Business',
+  'providerProfile.business.websiteNewTab': 'opens in a new tab',
   'providerProfile.reviews': '({{count}} reviews)',
   'providerProfile.experience.year': 'year',
   'providerProfile.experience.years': 'years',
