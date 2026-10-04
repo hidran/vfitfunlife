@@ -154,9 +154,9 @@ export function parseProviderType(raw: unknown): ProviderType {
  * sets it and a company cannot clear it to slip through the individual (auto-approvable) path.
  * The guard is safe because of that users-side rule.
  *
- * The instructors doc's `business` map is checked too, but today it is only a secondary
- * signal: until task B4 locks it, the owner can create, edit or remove `instructors.business`
- * from the client.
+ * The instructors doc's `business` map is checked too, as a secondary signal. Since task B4
+ * the rules stop the owner from adding or removing it (or editing its legal fields) from the
+ * client, but older docs may predate those rules.
  */
 export function isExistingBusiness(
   user: Record<string, unknown> | undefined,
@@ -260,10 +260,10 @@ export interface VatClaimTransaction<Ref> {
  *   claim.
  *
  * The account's `instructors.business.vatNumber` is deliberately NOT used to find what it holds:
- * until B4 the owner can rewrite it from the client — to another company's number, or to
- * something like "a/b" that is not even a valid document id (Firestore would throw, surfacing as
- * `internal`). The uid query is the authoritative record, and it never offers someone else's
- * claim.
+ * before the B4 rules the owner could rewrite it from the client — to another company's number,
+ * or to something like "a/b" that is not even a valid document id (Firestore would throw,
+ * surfacing as `internal`) — and a doc written then may still carry such a value. The uid query
+ * is the authoritative record, and it never offers someone else's claim.
  *
  * Rejection itself does not release a claim; an admin frees one from the back office (B8).
  */

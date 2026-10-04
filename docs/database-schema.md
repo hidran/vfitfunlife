@@ -264,8 +264,8 @@ interface Instructor {
   // Business accounts (absent for individual providers; users/{uid}.providerType === 'business')
   providerType?: 'individual' | 'business'; // denormalized from users/{uid}
   business?: {
-    legalName: string;              // ragione sociale; admin-verified, NOT owner-editable after approval
-    vatNumber: string;              // Italian tax id, 11 digits + checksum: the P.IVA, or an association's codice fiscale (ASD/SSD without a P.IVA); admin-verified, NOT owner-editable after approval
+    legalName: string;              // ragione sociale; admin-verified, NOT owner-editable (rules refuse it, also while pending)
+    vatNumber: string;              // Italian tax id, 11 digits + checksum: the P.IVA, or an association's codice fiscale (ASD/SSD without a P.IVA); admin-verified, NOT owner-editable (rules refuse it, also while pending)
     legalForm?: 'company' | 'sole_trader' | 'association' | 'other'; // always written since B3b ('company' when the applicant gave none); absent on older docs => 'company'. Admin-verified, NOT owner-editable
     affiliationNumber?: string;     // optional CONI / RASD / ente di promozione registration, <= 40 chars, "" when none; informational, shown in the admin UI only (not on the public page) — not secret: this doc is publicly readable once verified. NOT owner-editable
     displayName: string;            // shown publicly; copied to name/fullName, so cards/search/bookings show the company name
@@ -275,6 +275,11 @@ interface Instructor {
     city?: string;                  // public city
   };
   // For a business, public name/fullName === business.displayName.
+  // Owner client writes (firestore.rules, B4): `business` can't be created with the doc, added or
+  // removed; legalName/vatNumber/legalForm/affiliationNumber never change; no other keys; changed
+  // values must fit displayName 1–120 (non-blank), description ≤ 1000, city ≤ 80, website null or
+  // http(s) ≤ 200, logoUrl null or https ≤ 500. Admins may change anything (tax-id changes should
+  // go through the B8 callable so the businessVat claim moves too).
 
   // Booking availability (functions/src/availability/slots.ts is the single source of truth
   // for this shape). Missing or empty means every day is switched off deliberately — it does

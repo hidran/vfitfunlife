@@ -142,7 +142,7 @@ registration. Optional fields only — no existing behaviour changes.
   existing P.IVA tests still pass with a codice fiscale of an association as the tax id, and a test per
   hardening item above.
 
-### B4 `[ ]` Firestore rules (Medium)
+### B4 `[x]` Firestore rules (Medium)
 - Files: `firestore.rules`, `functions/test/` rules test (emulator pattern of `chat-rules.test.ts`).
 - **`users/{uid}`:** `providerType` stays OUT of `isValidUserCreate` / `isValidUserUpdate` — the
   `business_account_exists` guard in `applyAsProvider` is safe only because of that. Add a test that
@@ -332,3 +332,18 @@ the same on prod with a throwaway P.IVA claim removed afterwards.
   in-transaction reads, refuses a read after a write, only records committed writes, rejects a
   non-document id and enforces `lastUpdateTime`; one test runs the real commitProviderDecision through
   the code-9 retry to `business_account_exists`.
+- 2026-10-04 — B4 done (this commit). `firestore.rules`: an owner can't create an instructors doc with
+  `business`; on update the map can't be added or removed, `legalName`/`vatNumber`/`legalForm`/
+  `affiliationNumber` never change (map `diff()`, so absent→absent passes and adding one is refused —
+  also while pending), keys `hasOnly` the nine allowed, and changed display values must fit
+  `displayName` 1–120 non-blank, `description` ≤ 1000, `city` ≤ 80, `website` null or `^https?://\S+$`
+  ≤ 200, `logoUrl` null or `^https://\S+$` ≤ 500. Only *changed* fields are value-checked, so a value
+  the callable already accepted (e.g. an upper-case `HTTPS://` site) never blocks an unrelated edit.
+  Admin unchanged (free). `businessVat/{vat}`: explicit deny-all. `users.providerType` confirmed outside
+  both owner allow-lists (pinned by tests); admin client writes of it kept, with a comment pointing to
+  B8. Tests `functions/test/business-rules.test.ts` (38) **executed** on the Firestore emulator
+  (`--project demo-vfit-rules`): all pass; `chat-rules` (26), `booking-rules` (19) and the other 7 rules
+  suites (64) still pass; 12 rule mutations each turned at least one test red. Optional
+  `name == fullName == business.displayName` not enforced (B6 mirrors them). Neighbouring holes left
+  as listed above, plus one for B7: the owner can write `instructors.providerType`, which no server code
+  sets — derive the "Azienda" badge from `business` (now locked), not from that field.

@@ -106,7 +106,11 @@ service cloud.firestore {
     }
 
     /**
-     * Validate user creation data
+     * Validate user creation data.
+     * providerType is deliberately NOT in this list (nor in isValidUserUpdate): only the
+     * applyAsProvider callable sets it, and its business_account_exists guard is safe only
+     * because a company can never clear it from the client to slip through the individual,
+     * auto-approvable path (plan 2026-10-04, B4).
      */
     function isValidUserCreate() {
       return request.resource.data.keys().hasOnly([
@@ -125,7 +129,8 @@ service cloud.firestore {
     }
 
     /**
-     * Validate user update data (customers and providers)
+     * Validate user update data (customers and providers). providerType stays out — see
+     * isValidUserCreate.
      */
     function isValidUserUpdate() {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
@@ -218,7 +223,11 @@ service cloud.firestore {
               // Superadmin can update anything else
               isSuperAdmin()
             ) || (
-              // Admin can update non-superadmin users and cannot change roles
+              // Admin can update non-superadmin users and cannot change roles.
+              // This still lets an admin client change providerType. Kept as is, but such a
+              // change should go through an audited callable (plan 2026-10-04, B8:
+              // convertBusinessToIndividual) so instructors.business and the businessVat
+              // claim move with it — a plain client write leaves them out of step.
               isAdmin() &&
               resource.data.role != 'superadmin' &&
               !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'permissions'])
@@ -355,6 +364,83 @@ service cloud.firestore {
     }
 
     // ============================================
+    // BUSINESS ACCOUNTS — instructors/{uid}.business
+    // (docs/plans/2026-10-04-business-accounts-plan.md, task B4)
+    // ============================================
+    //
+    // A business is users/{uid}.providerType == 'business' plus an instructors/{uid}.business
+    // map. applyAsProvider writes both with the Admin SDK (which bypasses these rules) after
+    // validating the tax id and taking the businessVat/{vat} claim. The helpers below stop the
+    // OWNER from doing from the client what that callable would refuse. Admins are not limited
+    // by them: isAdmin() short-circuits the instructors rules.
+
+    /** Every key a business map may hold (D1, B3b). Anything else is refused. */
+    function businessKeys() {
+      return ['legalName', 'vatNumber', 'legalForm', 'affiliationNumber',
+              'displayName', 'description', 'website', 'logoUrl', 'city'];
+    }
+
+    /**
+     * What the admin checks before a company is listed (D2, D6). The owner may never change,
+     * add or remove these — not even while pending, or the admin would review a tax id other
+     * than the one the businessVat claim was taken for. Changes go through an admin (B8).
+     */
+    function businessReviewedKeys() {
+      return ['legalName', 'vatNumber', 'legalForm', 'affiliationNumber'];
+    }
+
+    /** A string of at most `max` characters (callers read an absent optional field as ''). */
+    function isTextUpTo(value, max) {
+      return value is string && value.size() <= max;
+    }
+
+    /** null, or a string of at most `max` characters that fully matches `pattern`. */
+    function isNullOrUrl(value, max, pattern) {
+      return value == null || (value is string && value.size() <= max && value.matches(pattern));
+    }
+
+    /**
+     * The owner's new business map compared with the stored one. Only fields that change are
+     * value-checked, so a value applyAsProvider already accepted (it applies the same caps)
+     * never locks the owner out of an unrelated edit. diff() treats a key that is absent on
+     * both sides as unchanged, so older maps without legalForm/affiliationNumber still pass,
+     * while adding one counts as a change and is refused.
+     */
+    function isValidOwnerBusinessChange(before, after) {
+      let changed = after.diff(before).affectedKeys();
+      return after.keys().hasOnly(businessKeys()) &&
+        !changed.hasAny(businessReviewedKeys()) &&
+        // The public name, mirrored to name/fullName on every card: never blank, capped like
+        // the callable.
+        (!('displayName' in changed) ||
+          (isTextUpTo(after.get('displayName', null), 120) && after.displayName.trim().size() > 0)) &&
+        (!('description' in changed) || isTextUpTo(after.get('description', ''), 1000)) &&
+        (!('city' in changed) || isTextUpTo(after.get('city', ''), 80)) &&
+        // Rendered as a link on the public page: http(s) only. The callable refuses
+        // `javascript:`; without this the owner could still write it straight from the client.
+        (!('website' in changed) ||
+          isNullOrUrl(after.get('website', null), 200, '^https?://\\S+$')) &&
+        // Rendered as an image: https only, so no mixed content and no data:/javascript: URL.
+        (!('logoUrl' in changed) ||
+          isNullOrUrl(after.get('logoUrl', null), 500, '^https://\\S+$'));
+    }
+
+    /**
+     * Owner-side business checks on an instructors update. The map can be neither added nor
+     * removed: becoming (or ceasing to be) a business goes through applyAsProvider or an
+     * admin, which also keep users.providerType and the businessVat claim in step. Individual
+     * providers (no map before or after) pass untouched.
+     */
+    function isAllowedOwnerBusinessUpdate() {
+      let hadBusiness = 'business' in resource.data;
+      let hasBusiness = 'business' in request.resource.data;
+      return hadBusiness == hasBusiness &&
+        (!hasBusiness ||
+          (request.resource.data.business is map &&
+           isValidOwnerBusinessChange(resource.data.business, request.resource.data.business)));
+    }
+
+    // ============================================
     // INSTRUCTORS/PROVIDERS COLLECTION
     // ============================================
 
@@ -368,24 +454,30 @@ service cloud.firestore {
                     (isAuthenticated() && request.auth.uid == resource.data.uid) ||
                     (isAuthenticated() && request.auth.uid == instructorId);
 
-      // Create: admin, or the user creating their OWN unverified pending profile
+      // Create: admin, or the user creating their OWN unverified pending profile — never
+      // with a `business` map: a company is created only by applyAsProvider, which checks
+      // the tax id and takes the businessVat claim first (D3, D5).
       allow create: if isAdmin() ||
         (isAuthenticated() &&
          request.resource.data.uid == request.auth.uid &&
          request.resource.data.get(['providerProfile', 'isVerified'], false) == false &&
-         request.resource.data.get('applicationStatus', 'pending') == 'pending');
+         request.resource.data.get('applicationStatus', 'pending') == 'pending' &&
+         !('business' in request.resource.data));
 
       // Update: admin can change anything; the owner may edit their profile but may
       // NOT change isVerified or applicationStatus (only admin verifies/rejects).
       // Ownership by `uid` field or by path id, as for read: older provider docs lack a
       // `uid`, and their owners must still be able to set their own location (D4).
+      // A business owner may edit only the display fields of `business` (D6, B4) — see
+      // isAllowedOwnerBusinessUpdate; for an individual provider that check is a no-op.
       allow update: if isAdmin() ||
         (isAuthenticated() &&
          (resource.data.get('uid', null) == request.auth.uid || request.auth.uid == instructorId) &&
          request.resource.data.get(['providerProfile', 'isVerified'], false) ==
            resource.data.get(['providerProfile', 'isVerified'], false) &&
          request.resource.data.get('applicationStatus', 'pending') ==
-           resource.data.get('applicationStatus', 'pending'));
+           resource.data.get('applicationStatus', 'pending') &&
+         isAllowedOwnerBusinessUpdate());
 
       allow delete: if isAdmin();
 
@@ -418,6 +510,19 @@ service cloud.firestore {
       match /bookingDays/{date} {
         allow read, write: if false;
       }
+    }
+
+    // ============================================
+    // BUSINESS TAX-ID CLAIMS (plan 2026-10-04, task B4)
+    // ============================================
+
+    // businessVat/{vatNumber} = { uid, createdAt }: one business per P.IVA / codice fiscale
+    // (D5). Taken in a transaction by applyAsProvider and freed only by the audited admin
+    // callables (B8), all Admin SDK. Explicitly closed to every client, admins included:
+    // reading would let anyone enumerate registered tax ids and their owners' uids, and a
+    // client write could squat a number or free someone else's claim.
+    match /businessVat/{vatNumber} {
+      allow read, write: if false;
     }
 
     // ============================================
