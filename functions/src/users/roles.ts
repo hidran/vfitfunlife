@@ -17,6 +17,7 @@ import {
 } from "../utils/roles";
 import { writeAuditLog, toActorRole } from "../lib/audit";
 import { seedProviderServicesFromTemplates } from "../providers/seedProviderServices";
+import { instructorVerificationPatch } from "../providers/applicationDecision";
 import { mayHoldSuperadmin, isProtectedSuperadmin } from "../lib/superadmins";
 
 const db = admin.firestore();
@@ -521,6 +522,14 @@ export const verifyProvider = onCall<VerifyProviderData>(
       "verifiedBy": callerId,
       "verifiedAt": FieldValue.serverTimestamp(),
     });
+
+    // The public /instructors read rule and every search query key on the NESTED flag in the
+    // catalogue document, not on users/{uid}. Only touch a document that exists: this must
+    // not create a stub catalogue entry for a provider who has none.
+    const instructorRef = db.collection("instructors").doc(providerId);
+    if ((await instructorRef.get()).exists) {
+      await instructorRef.set(instructorVerificationPatch(verified), { merge: true });
+    }
 
     // Log verification action
     await db.collection("verificationLogs").add({
