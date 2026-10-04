@@ -447,6 +447,8 @@ export const esMessages: Messages = {
   'admin.business.error.vatTaken': 'Esta P.IVA / codice fiscale ya está registrada por otra cuenta. Si esa empresa fue rechazada, libera antes su P.IVA desde su ficha.',
   'admin.business.error.claimMissing': 'Esta empresa ya no tiene registrada su P.IVA (se liberó), así que no puede aprobarse. Pídele que vuelva a solicitarlo o cambia su P.IVA.',
   'admin.business.error.protectedAccount': 'Esta cuenta está protegida y no se puede modificar desde aquí.',
+  'admin.business.error.vatCarriedByOther': 'Esta P.IVA / codice fiscale sigue figurando en la ficha de otra empresa (por ejemplo, una rechazada cuya P.IVA se liberó): conviértela antes en profesional individual o cambia su P.IVA.',
+  'admin.business.error.concurrentUpdate': 'Otra persona ha modificado esta cuenta al mismo tiempo. Recarga la página e inténtalo de nuevo.',
   'admin.verificationsPage.title': 'Verificaciones de proveedores',
   'admin.verificationsPage.actionFailed': 'Acción fallida: solo un superadministrador puede verificar o rechazar a un proveedor.',
   'admin.verificationsPage.subtitle': 'Revisar y aprobar solicitudes de proveedores',

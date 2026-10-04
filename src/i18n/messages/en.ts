@@ -453,6 +453,8 @@ export const enMessages: Messages = {
   'admin.business.error.vatTaken': 'This P.IVA / codice fiscale is already registered by another account. If that company was rejected, release its tax id from its page first.',
   'admin.business.error.claimMissing': "This company no longer holds its tax id (it was released), so it can't be approved. Ask it to apply again or change its tax id.",
   'admin.business.error.protectedAccount': "This account is protected and can't be changed here.",
+  'admin.business.error.vatCarriedByOther': "Another company's record still carries this P.IVA / codice fiscale (for example a rejected one whose tax id was released): convert that company to an individual or change its tax id first.",
+  'admin.business.error.concurrentUpdate': 'Someone else changed this account at the same time. Reload the page and try again.',
 
   // ─── Admin: Verifications page ───────────────────────────────────────
   'admin.verificationsPage.title': 'Provider Verifications',

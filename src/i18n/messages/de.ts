@@ -448,6 +448,8 @@ export const deMessages: Messages = {
   'admin.business.error.vatTaken': 'Diese P.IVA / Codice fiscale ist bereits von einem anderen Konto registriert. Wurde dieses Unternehmen abgelehnt, gib zuerst seine P.IVA in seinem Profil frei.',
   'admin.business.error.claimMissing': 'Dieses Unternehmen hat seine P.IVA nicht mehr registriert (die Registrierung wurde aufgehoben) und kann daher nicht freigegeben werden. Bitte es, sich erneut zu bewerben, oder ändere seine P.IVA.',
   'admin.business.error.protectedAccount': 'Dieses Konto ist geschützt und kann hier nicht geändert werden.',
+  'admin.business.error.vatCarriedByOther': 'Das Profil eines anderen Unternehmens enthält diese P.IVA / Codice fiscale noch (zum Beispiel ein abgelehntes, dessen Registrierung aufgehoben wurde): Wandle dieses Unternehmen zuerst in eine Einzelperson um oder ändere seine P.IVA.',
+  'admin.business.error.concurrentUpdate': 'Jemand anderes hat dieses Konto gleichzeitig geändert. Lade die Seite neu und versuche es erneut.',
   'admin.verificationsPage.title': 'Anbieter-Verifizierungen',
   'admin.verificationsPage.actionFailed': 'Aktion fehlgeschlagen: Nur ein Superadmin kann einen Anbieter verifizieren oder ablehnen.',
   'admin.verificationsPage.subtitle': 'Anbieteranträge prüfen und genehmigen',

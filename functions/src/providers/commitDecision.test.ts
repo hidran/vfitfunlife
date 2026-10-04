@@ -277,7 +277,7 @@ describe("commitProviderDecision (one transaction)", () => {
       h.put("users/u1", { ...USER, role: "superadmin" });
       await expect(
         commitProviderDecision({ providerId: "u1", decision: "verified", actor: ADMIN }),
-      ).rejects.toMatchObject({ code: "permission-denied" });
+      ).rejects.toMatchObject({ code: "permission-denied", message: "protected_account" });
       expect(h.ops).toEqual([]);
     });
 

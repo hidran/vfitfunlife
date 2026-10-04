@@ -1,7 +1,11 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue, type DocumentReference } from "firebase-admin/firestore";
 import { commitProviderDecision } from "./commitDecision";
-import { draftServicesForCategories, pendingApplicationPatches } from "./applicationDecision";
+import {
+  draftServicesForCategories,
+  pendingApplicationPatches,
+  toConcurrentUpdateError,
+} from "./applicationDecision";
 import {
   BUSINESS_VAT_COLLECTION,
   assertNotApprovedBusiness,
@@ -128,8 +132,9 @@ export const applyAsProvider = onCall<ApplyAsProviderData>(
 
     // A company re-applying as an individual would otherwise be auto-approved (and listed
     // without its tax id ever being checked), or have its company name replaced by a person's.
-    // These reads may already be stale; commitProviderDecision re-checks inside its transaction,
-    // which is what actually closes a concurrent individual/business race.
+    // These reads may already be stale; the auto-approval (commitProviderDecision) and the
+    // pending branch below both re-check inside their transactions, which is what actually
+    // closes a concurrent individual/business race. This early check only fails fast.
     if (providerType !== "business") {
       assertNotExistingBusiness(caller, instructorSnap.data());
     }
@@ -166,28 +171,39 @@ export const applyAsProvider = onCall<ApplyAsProviderData>(
 
     const now = FieldValue.serverTimestamp();
 
-    if (business) {
-      // One transaction, every read first (Firestore requires it): the user and instructors
-      // docs — fresh, so the approval check below cannot act on the stale reads above — then
-      // every claim this account holds and the claim it asks for; only then the writes. A
-      // refused application therefore writes nothing, two accounts racing for the same tax id
-      // cannot both win, and a concurrent decision on this account (commitProviderDecision, also
-      // one transaction over users + instructors) is serialised with it: whichever commits
-      // second re-runs on the other's result.
-      const claims = db.collection(BUSINESS_VAT_COLLECTION);
+    // One transaction, every read first (Firestore requires it): the user and instructors docs —
+    // fresh, so the checks below cannot act on the stale reads above — then, for a company,
+    // every claim this account holds and the claim it asks for; only then the writes. A refused
+    // application therefore writes nothing, and a concurrent write to either doc (a company
+    // application racing an individual one, or a decision by commitProviderDecision, also one
+    // transaction) makes Firestore re-run it on fresh reads:
+    // - a company: two accounts racing for the same tax id cannot both win, and an approved
+    //   business is refused (`business_already_approved`);
+    // - an individual: re-checked against `business_account_exists`, so a company application
+    //   landing after the reads above keeps its name and data; and the profile defaults (bio,
+    //   rating, reviewCount, createdAt) are written only if the doc is absent in THIS read.
+    const claims = db.collection(BUSINESS_VAT_COLLECTION);
+    try {
       await db.runTransaction(async (tx) => {
         const currentUser = await tx.get(userRef);
         const current = await tx.get(instructorRef);
-        assertNotApprovedBusiness(currentUser.data(), current.data());
-        const held = await tx.get(claims.where("uid", "==", callerUid));
-        await claimBusinessVat<DocumentReference>(tx, {
-          uid: callerUid,
-          vatNumber: business.vatNumber,
-          instructor: current.data(),
-          heldVatNumbers: held.docs.map((claim) => claim.id),
-          claimRef: (vat) => claims.doc(vat),
-          now,
-        });
+        if (!currentUser.exists) {
+          throw new HttpsError("not-found", "User profile not found");
+        }
+        if (business) {
+          assertNotApprovedBusiness(currentUser.data(), current.data());
+          const held = await tx.get(claims.where("uid", "==", callerUid));
+          await claimBusinessVat<DocumentReference>(tx, {
+            uid: callerUid,
+            vatNumber: business.vatNumber,
+            instructor: current.data(),
+            heldVatNumbers: held.docs.map((claim) => claim.id),
+            claimRef: (vat) => claims.doc(vat),
+            now,
+          });
+        } else {
+          assertNotExistingBusiness(currentUser.data(), current.data());
+        }
         const patches = pendingApplicationPatches({
           uid: callerUid,
           applicantName,
@@ -199,18 +215,9 @@ export const applyAsProvider = onCall<ApplyAsProviderData>(
         tx.set(instructorRef, patches.instructor, { merge: true });
         tx.update(userRef, patches.user);
       });
-    } else {
-      const patches = pendingApplicationPatches({
-        uid: callerUid,
-        applicantName,
-        requestedLeaves,
-        now,
-        instructorExists: instructorSnap.exists,
-      });
-      const batch = db.batch();
-      batch.set(instructorRef, patches.instructor, { merge: true });
-      batch.update(userRef, patches.user);
-      await batch.commit();
+    } catch (err) {
+      // Contention that outlasted the SDK's own retries: retryable, not `internal`.
+      throw toConcurrentUpdateError(err);
     }
 
     return { success: true, providerId: callerUid, autoApproved: false, draftServicesSeeded: 0 };

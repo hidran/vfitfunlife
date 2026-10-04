@@ -120,14 +120,37 @@ export function assertApprovalHoldsClaim(claim: Record<string, unknown> | undefi
 }
 
 /**
- * updateBusinessTaxId must not move a company onto a number another instructors doc still
- * carries — even an unclaimed one (a rejected company whose claim was released): approving
- * either later would then list two companies with one tax id. `carrierIds` are the ids of the
- * docs whose `business.vatNumber` equals the new number (a query in the same transaction).
+ * Whether updateBusinessTaxId may put `targetVat` on `providerId`'s company (invariant I2: one
+ * tax id, one holder). Every input is read in the updateBusinessTaxId transaction:
+ * - `claimUid`: the uid of the existing `businessVat/{targetVat}` claim, if any;
+ * - `currentVat`: the company's stored `business.vatNumber`;
+ * - `carrierIds`: the ids of every instructors doc whose `business.vatNumber` is `targetVat`.
+ *
+ * - Another account holds the claim ⇒ `already-exists` / `vat_already_registered`.
+ * - The number is not changing (stored number, normalised, equals the target): passes — the
+ *   admin is correcting legal data, not moving the company. Other carriers are no reason to
+ *   refuse then: after the S1 recovery (squatter rejected and released, real owner approved on
+ *   the number) the squatter's doc still carries it, and the owner's legal name must stay
+ *   correctable. claimBusinessVat still guards the claim itself.
+ * - Otherwise no OTHER doc may carry the number, claimed or not — e.g. a rejected company whose
+ *   claim was released — else `already-exists` / `vat_carried_by_other`: approving either later
+ *   could list two companies with one tax id. The way out is to convert that company to an
+ *   individual or change its number first.
  */
-export function assertNoOtherCarrier(carrierIds: readonly string[], providerId: string): void {
-  if (carrierIds.some((id) => id !== providerId)) {
+export function assertTaxIdAvailable(opts: {
+  providerId: string;
+  targetVat: string;
+  currentVat: unknown;
+  claimUid: unknown;
+  carrierIds: readonly string[];
+}): void {
+  const { providerId, targetVat, currentVat, claimUid, carrierIds } = opts;
+  if (claimUid !== undefined && claimUid !== providerId) {
     throw new HttpsError("already-exists", "vat_already_registered");
+  }
+  if (typeof currentVat === "string" && normalizeVatNumber(currentVat) === targetVat) return;
+  if (carrierIds.some((id) => id !== providerId)) {
+    throw new HttpsError("already-exists", "vat_carried_by_other");
   }
 }
 

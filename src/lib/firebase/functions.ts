@@ -819,7 +819,10 @@ export interface DecideProviderApplicationRequest {
  * review it again. A review sent for a provider that is not (any more) a company is also
  * `stale_review`. The company must also hold the claim on its tax id: `claim_missing` (it was
  * released, e.g. after a rejection) or `already-exists` / `vat_already_registered` (another
- * account holds it now). `not-found` / `provider_not_found` when the account was deleted.
+ * account holds it now). `not-found` / `provider_not_found` when the account was deleted;
+ * `invalid-argument` / `invalid_provider_id` for an id that can't name an account;
+ * `permission-denied` / `protected_account` for a protected superadmin; `aborted` /
+ * `concurrent_update` when contention outlasted the server transaction's retries (try again).
  */
 export async function decideProviderApplication(
   data: DecideProviderApplicationRequest,
@@ -837,7 +840,8 @@ export async function decideProviderApplication(
 // stable code as the message: `invalid_vat`, `invalid_business_name`, `invalid_legal_form`,
 // `invalid_affiliation_number`, `invalid_provider_id`, `invalid_reason`, `claim_not_found`,
 // `claim_in_use`, `not_a_business`, `provider_not_found`, `vat_already_registered`,
-// `protected_account`.
+// `vat_carried_by_other`, `protected_account`, `concurrent_update` (contention outlasted the
+// server transaction's retries — try again).
 
 export interface ReleaseBusinessVatRequest {
   /** P.IVA / codice fiscale whose uniqueness claim to free. */
@@ -921,8 +925,11 @@ export interface UpdateBusinessTaxIdResult {
  * Change a company's admin-owned fields (tax id, legal name, legal form, affiliation number) —
  * the owner can't, and a plain client write would leave the tax-id claim behind. The claim
  * moves with the number: `already-exists` / `vat_already_registered` when another account holds
- * it or another company's record still carries it (e.g. a rejected one whose claim was
- * released); `failed-precondition` / `not_a_business` when the provider is not a company.
+ * it; `already-exists` / `vat_carried_by_other` when the number changes and another company's
+ * record still carries it (e.g. a rejected one whose claim was released — convert that company
+ * or change its number first). Keeping the number and correcting the legal data is never
+ * blocked by another record. `failed-precondition` / `not_a_business` when the provider is not a
+ * company.
  */
 export async function updateBusinessTaxId(data: UpdateBusinessTaxIdRequest): Promise<UpdateBusinessTaxIdResult> {
   const functions = await getFunctionsInstance();

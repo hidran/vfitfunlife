@@ -2,7 +2,7 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import { requireAdmin } from "../utils/roles";
 import { commitProviderDecision } from "./commitDecision";
-import type { BusinessReview } from "./businessAdminRules";
+import { type BusinessReview, parseProviderId } from "./businessAdminRules";
 
 import { region } from "../lib/runtimeOptions";
 
@@ -45,10 +45,10 @@ export const decideProviderApplication = onCall<DecideProviderApplicationData>(
       throw new HttpsError("permission-denied", "Admin required");
     }
 
-    const { providerId, decision, notes, expectedReview } = req.data ?? ({} as DecideProviderApplicationData);
-    if (typeof providerId !== "string" || !providerId) {
-      throw new HttpsError("invalid-argument", "providerId is required");
-    }
+    const { decision, notes, expectedReview } = req.data ?? ({} as DecideProviderApplicationData);
+    // A stable code, and never an id that can't name a document ("a/b" would make
+    // collection().doc() throw and surface as `internal`).
+    const providerId = parseProviderId(req.data?.providerId);
     if (decision !== "verified" && decision !== "rejected") {
       throw new HttpsError("invalid-argument", "decision must be 'verified' or 'rejected'");
     }

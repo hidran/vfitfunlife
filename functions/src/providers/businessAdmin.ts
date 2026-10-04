@@ -1,10 +1,11 @@
 import { onCall, HttpsError, type CallableRequest } from "firebase-functions/v2/https";
-import { getFirestore, FieldValue, type DocumentReference } from "firebase-admin/firestore";
+import { getFirestore, FieldValue, type DocumentReference, type Transaction } from "firebase-admin/firestore";
 import { requireAdmin } from "../utils/roles";
 import { auditLogData, auditLogDoc, toActorRole, type ServerAuditPayload } from "../lib/audit";
 import { isProtectedSuperadmin } from "../lib/superadmins";
 import { region } from "../lib/runtimeOptions";
 import type { BusinessLegalForm } from "./businessTypes";
+import { toConcurrentUpdateError } from "./applicationDecision";
 import {
   BUSINESS_VAT_COLLECTION,
   claimBusinessVat,
@@ -13,7 +14,7 @@ import {
 } from "./businessApplication";
 import {
   assertClaimReleasable,
-  assertNoOtherCarrier,
+  assertTaxIdAvailable,
   claimHolderUid,
   convertToIndividualPatches,
   parseAdminReason,
@@ -62,6 +63,19 @@ function actorFields(actor: AdminActor) {
   return { actorUid: actor.uid, actorEmail: actor.email, actorRole: actor.role };
 }
 
+/**
+ * Run `work` as one Firestore transaction. The Admin SDK re-runs it on contention (fresh reads,
+ * up to 5 attempts); if contention outlasts that, the caller gets a retryable `aborted` /
+ * `concurrent_update` instead of `internal`. A guard's HttpsError passes through unchanged.
+ */
+async function inTransaction<T>(work: (tx: Transaction) => Promise<T>): Promise<T> {
+  try {
+    return await getFirestore().runTransaction(work);
+  } catch (err) {
+    throw toConcurrentUpdateError(err);
+  }
+}
+
 interface ReleaseBusinessVatData {
   /** The tax id whose claim to free (P.IVA / codice fiscale; spaces and `IT` allowed). */
   vatNumber: string;
@@ -91,7 +105,7 @@ export const releaseBusinessVat = onCall<ReleaseBusinessVatData>({ region }, asy
 
   const db = getFirestore();
   const claimRef = db.collection(BUSINESS_VAT_COLLECTION).doc(vatNumber);
-  const releasedFrom = await db.runTransaction(async (tx) => {
+  const releasedFrom = await inTransaction(async (tx) => {
     const claim = await tx.get(claimRef);
     if (!claim.exists) throw new HttpsError("not-found", "claim_not_found");
     const data = claim.data() ?? {};
@@ -147,7 +161,7 @@ export const convertBusinessToIndividual = onCall<ConvertBusinessToIndividualDat
   const instructorRef = db.collection("instructors").doc(providerId);
   const claims = db.collection(BUSINESS_VAT_COLLECTION);
 
-  const releasedClaims = await db.runTransaction(async (tx) => {
+  const releasedClaims = await inTransaction(async (tx) => {
     const userSnap = await tx.get(userRef);
     const instructorSnap = await tx.get(instructorRef);
     const held = await tx.get(claims.where("uid", "==", providerId));
@@ -220,12 +234,14 @@ interface UpdateBusinessTaxIdData {
  * reads first (the instructors doc, every claim the uid holds, every instructors doc carrying
  * the new number, the claim on the new number):
  * - the doc must have a `business` map (`failed-precondition` / `not_a_business`);
- * - no OTHER instructors doc may carry the new number, claimed or not — e.g. a rejected company
- *   whose claim was released (`already-exists` / `vat_already_registered`; invariant I2: one
- *   tax id, one holder);
  * - the new number must be unclaimed or already this uid's (`already-exists` /
- *   `vat_already_registered`); the claim moves with claimBusinessVat (`byAdmin`: an approved
- *   company may move too), which also releases every other claim the uid holds;
+ *   `vat_already_registered`);
+ * - when the number CHANGES, no other instructors doc may carry it, claimed or not — e.g. a
+ *   rejected company whose claim was released (`already-exists` / `vat_carried_by_other`:
+ *   convert that company or change its number first; invariant I2). An unchanged number is a
+ *   legal-data correction and is not blocked by other carriers (assertTaxIdAvailable);
+ * - the claim moves with claimBusinessVat (`byAdmin`: an approved company may move too), which
+ *   also releases every other claim the uid holds;
  * - `instructors/{uid}.business` gets only the sent fields, as a nested map merged with
  *   set(merge) (taxIdUpdatePatch — no dotted keys). The approval state is left as it is.
  * Audited as `provider` / `update` with the reviewed fields and claims before and after.
@@ -242,18 +258,25 @@ export const updateBusinessTaxId = onCall<UpdateBusinessTaxIdData>({ region }, a
   const claims = db.collection(BUSINESS_VAT_COLLECTION);
   const now = FieldValue.serverTimestamp();
 
-  const released = await db.runTransaction(async (tx) => {
+  const released = await inTransaction(async (tx) => {
     const instructorSnap = await tx.get(instructorRef);
     const held = await tx.get(claims.where("uid", "==", providerId));
     // Stored tax ids are normalised (validateBusinessInput / this callable), so an equality
     // query finds every carrier. Automatic single-field index on business.vatNumber.
     const carriers = await tx.get(instructors.where("business.vatNumber", "==", update.vatNumber));
+    const newClaim = await tx.get(claims.doc(update.vatNumber));
     const instructor = instructorSnap.exists ? instructorSnap.data() : undefined;
     const business = instructor?.business;
     if (!business || typeof business !== "object") {
       throw new HttpsError("failed-precondition", "not_a_business");
     }
-    assertNoOtherCarrier(carriers.docs.map((doc) => doc.id), providerId);
+    assertTaxIdAvailable({
+      providerId,
+      targetVat: update.vatNumber,
+      currentVat: (business as Record<string, unknown>).vatNumber,
+      claimUid: newClaim.exists ? newClaim.data()?.uid : undefined,
+      carrierIds: carriers.docs.map((doc) => doc.id),
+    });
 
     const heldVatNumbers = held.docs.map((claim) => claim.id);
     // Reads the new number's claim, then (only once every check passed) writes the move.

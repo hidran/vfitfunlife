@@ -450,6 +450,8 @@ export const frMessages: Messages = {
   'admin.business.error.vatTaken': "Cette P.IVA / codice fiscale est déjà enregistrée par un autre compte. Si cette entreprise a été refusée, libérez d'abord sa P.IVA depuis sa fiche.",
   'admin.business.error.claimMissing': 'Cette entreprise ne détient plus sa P.IVA (elle a été libérée) : elle ne peut donc pas être approuvée. Demandez-lui de postuler à nouveau ou modifiez sa P.IVA.',
   'admin.business.error.protectedAccount': 'Ce compte est protégé et ne peut pas être modifié ici.',
+  'admin.business.error.vatCarriedByOther': "La fiche d'une autre entreprise porte encore cette P.IVA / codice fiscale (par exemple une entreprise refusée dont la P.IVA a été libérée) : convertissez d'abord cette entreprise en professionnel individuel ou modifiez sa P.IVA.",
+  'admin.business.error.concurrentUpdate': "Quelqu'un d'autre a modifié ce compte au même moment. Rechargez la page et réessayez.",
   'admin.verificationsPage.title': 'Vérifications des prestataires',
   'admin.verificationsPage.actionFailed': 'Échec de l\'opération : seul un superadmin peut vérifier ou refuser un prestataire.',
   'admin.verificationsPage.subtitle': 'Examiner et approuver les candidatures des prestataires',

@@ -128,6 +128,16 @@ describe("verifyProvider (legacy callable)", () => {
     expect(h.audit).toHaveBeenCalledTimes(1);
   });
 
+  it("an id that can't name a document is invalid_provider_id, not internal", async () => {
+    for (const providerId of ["a/b", "", undefined]) {
+      await expect(call({ providerId, verified: true })).rejects.toMatchObject({
+        code: "invalid-argument",
+        message: "invalid_provider_id",
+      });
+    }
+    expect(fake.ops).toEqual([]);
+  });
+
   it("still does not create a catalogue entry for an individual who has none", async () => {
     fake.put("users/p2", { role: "provider", providerProfile: { isVerified: false } });
 

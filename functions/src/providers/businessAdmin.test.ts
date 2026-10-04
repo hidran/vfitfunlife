@@ -179,6 +179,16 @@ describe("admin callables on a business (handler)", () => {
       ).rejects.toMatchObject({ code: "permission-denied" });
       expect(h.ops).toEqual([]);
     });
+
+    it("an id that can't name a document is invalid_provider_id, not internal", async () => {
+      for (const providerId of ["a/b", "", undefined]) {
+        await expect(asAdmin(decideProviderApplication, { providerId, decision: "verified" })).rejects.toMatchObject({
+          code: "invalid-argument",
+          message: "invalid_provider_id",
+        });
+      }
+      expect(h.ops).toEqual([]);
+    });
   });
 
   describe("releaseBusinessVat", () => {
@@ -376,6 +386,29 @@ describe("admin callables on a business (handler)", () => {
     });
   });
 
+  describe("contention that outlasts Firestore's retries", () => {
+    beforeEach(() => {
+      h.state.maxAttempts = 1;
+      h.put("users/u1", USER);
+      h.put("instructors/u1", { ...APPROVED_COMPANY, applicationStatus: "rejected", providerProfile: { isVerified: false } });
+      h.put(`businessVat/${VAT}`, { uid: "u1", createdAt: "T0" });
+      // Something keeps rewriting the company while each call is in flight.
+      h.state.beforeCommit = () => h.put("instructors/u1", { ...APPROVED_COMPANY, applicationStatus: "rejected", providerProfile: { isVerified: false }, searchTerms: ["x"] });
+    });
+
+    it.each([
+      ["releaseBusinessVat", releaseBusinessVat, { vatNumber: VAT }],
+      ["convertBusinessToIndividual", convertBusinessToIndividual, { providerId: "u1" }],
+      ["updateBusinessTaxId", updateBusinessTaxId, { providerId: "u1", vatNumber: VAT, legalName: "X S.r.l." }],
+    ] as Array<[string, unknown, Record<string, unknown>]>)(
+      "%s reports a retryable concurrent_update, never internal, and writes nothing",
+      async (_name, fn, data) => {
+        await expect(asAdmin(fn, data)).rejects.toMatchObject({ code: "aborted", message: "concurrent_update" });
+        expect(h.ops).toEqual([]);
+      },
+    );
+  });
+
   describe("updateBusinessTaxId", () => {
     beforeEach(() => {
       h.put("users/u1", USER);
@@ -421,14 +454,32 @@ describe("admin callables on a business (handler)", () => {
       expect(h.ops).toEqual([]);
     });
 
-    it("refuses a number no account claims but another doc still carries (a rejected company whose claim was released)", async () => {
+    it("refuses to MOVE onto a number no account claims but another doc still carries ⇒ vat_carried_by_other", async () => {
       h.put("instructors/squatter", { applicationStatus: "rejected", business: { ...COMPANY, vatNumber: OTHER_VAT } });
       await expect(asAdmin(updateBusinessTaxId, { providerId: "u1", vatNumber: OTHER_VAT })).rejects.toMatchObject({
         code: "already-exists",
-        message: "vat_already_registered",
+        message: "vat_carried_by_other",
       });
       expect(h.ops).toEqual([]);
       expect(h.read(`businessVat/${VAT}`)).toEqual({ uid: "u1", createdAt: "T0" });
+    });
+
+    it("an unchanged number is a legal-data correction: another doc carrying it does not block it", async () => {
+      // The S1 recovery state: the rejected squatter still carries VAT; u1 is the real owner.
+      h.put("instructors/squatter", { applicationStatus: "rejected", business: { ...COMPANY, legalName: "Fake S.r.l." } });
+      await expect(
+        asAdmin(updateBusinessTaxId, { providerId: "u1", vatNumber: VAT, legalName: "Karate Club Milano A.S.D." }),
+      ).resolves.toEqual({ success: true, providerId: "u1", vatNumber: VAT, releasedClaims: [] });
+      expect(h.read("instructors/u1")).toMatchObject({ business: { vatNumber: VAT, legalName: "Karate Club Milano A.S.D." } });
+      expect(h.read(`businessVat/${VAT}`)).toEqual({ uid: "u1", createdAt: "T0" });
+    });
+
+    it("an unchanged number whose claim another account holds is still refused (vat_already_registered)", async () => {
+      h.put(`businessVat/${VAT}`, { uid: "someone-else", createdAt: "T9" });
+      await expect(
+        asAdmin(updateBusinessTaxId, { providerId: "u1", vatNumber: VAT, legalName: "Karate Club Milano A.S.D." }),
+      ).rejects.toMatchObject({ code: "already-exists", message: "vat_already_registered" });
+      expect(h.ops).toEqual([]);
     });
 
     it("same uid, same number: the claims are left alone and only the sent fields change", async () => {

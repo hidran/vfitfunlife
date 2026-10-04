@@ -120,10 +120,32 @@ describe("business lifecycle (multi-call sequences)", () => {
 
     await expect(admin(updateBusinessTaxId, { providerId: "b", vatNumber: X })).rejects.toMatchObject({
       code: "already-exists",
-      message: "vat_already_registered",
+      message: "vat_carried_by_other",
     });
     expect(claimHolder(Y)).toBe("b");
     expect(instructor("b")).toMatchObject({ business: { vatNumber: Y } });
+  });
+
+  it("after the S1 recovery the real owner's legal data stays correctable with its number unchanged", async () => {
+    await applyAsCompany("a", SQUATTER);
+    await reject("a");
+    await admin(releaseBusinessVat, { vatNumber: X });
+    await applyAsCompany("b", OWNER);
+    await approve("b", OWNER);
+    // The rejected squatter still carries X: carriers = [a, b]. Not a move, so not blocked.
+    await expect(
+      admin(updateBusinessTaxId, { providerId: "b", vatNumber: X, legalName: "Karate Club Milano A.S.D." }),
+    ).resolves.toMatchObject({ success: true, vatNumber: X, releasedClaims: [] });
+    expect(instructor("b")).toMatchObject({ business: { vatNumber: X, legalName: "Karate Club Milano A.S.D." } });
+    expect(isListed("b")).toBe(true);
+    expect(claimHolder(X)).toBe("b");
+    // A genuine move of another company onto X is still refused (claim held by b).
+    fake.put("users/c-co", { fullName: "Carla", role: "customer", email: "c@example.it" });
+    await applyAsCompany("c-co", { ...OWNER, legalName: "Altro S.r.l.", vatNumber: Y });
+    await expect(admin(updateBusinessTaxId, { providerId: "c-co", vatNumber: X })).rejects.toMatchObject({
+      message: "vat_already_registered",
+    });
+    expectOneHolderPerTaxId();
   });
 
   it("release → the old holder re-applies with the same number → it holds the claim again and is approvable once reviewed", async () => {
@@ -219,5 +241,69 @@ describe("business lifecycle (multi-call sequences)", () => {
     expect(isListed("a")).toBe(false);
     await expect(approve("a", OWNER)).resolves.toMatchObject({ success: true });
     expectOneHolderPerTaxId();
+  });
+
+  describe("an approval racing another write (the competing write commits inside the approval's commit)", () => {
+    const auditEntries = () => [...fake.docs.keys()].filter((path) => path.startsWith("audit_logs/"));
+    const draftWrites = (uid: string) =>
+      fake.ops.filter(([op, path]) => op === "set" && path.startsWith(`instructors/${uid}/services/`));
+
+    it("a second approval of the same provider: both pass, one audit entry each, drafts seeded once", async () => {
+      h.settings.autoApprove = false;
+      await as("b", applyAsProvider, { categoryIds: ["hiit"], fullName: "Bruno Titolare" });
+      let second: Promise<unknown> = Promise.resolve();
+      fake.state.beforeCommit = async () => {
+        second = approve("b");
+        await second;
+      };
+      await expect(approve("b")).resolves.toMatchObject({ success: true, draftServicesSeeded: 0 });
+      await expect(second).resolves.toMatchObject({ success: true, draftServicesSeeded: 1 });
+      expect(auditEntries()).toHaveLength(2);
+      expect(draftWrites("b")).toHaveLength(1);
+      expect(isListed("b")).toBe(true);
+    });
+
+    it("updateBusinessTaxId moving the company to another number ⇒ the approval re-runs into stale_review", async () => {
+      await applyAsCompany("b", OWNER);
+      fake.state.beforeCommit = () => admin(updateBusinessTaxId, { providerId: "b", vatNumber: Y }).then(() => undefined);
+      await expect(approve("b", OWNER)).rejects.toMatchObject({ message: "stale_review" });
+      expect(isListed("b")).toBe(false);
+      expect(instructor("b")).toMatchObject({ business: { vatNumber: Y } });
+      expect(claimHolder(Y)).toBe("b");
+      expect(claimHolder(X)).toBeUndefined();
+    });
+
+    it("convertBusinessToIndividual ⇒ the approval re-runs into stale_review (the reviewed company is gone)", async () => {
+      await applyAsCompany("b", OWNER);
+      fake.state.beforeCommit = () => admin(convertBusinessToIndividual, { providerId: "b" }).then(() => undefined);
+      await expect(approve("b", OWNER)).rejects.toMatchObject({ message: "stale_review" });
+      expect(isListed("b")).toBe(false);
+      expect(instructor("b")).not.toHaveProperty("business");
+    });
+
+    it("a release of the claim (company rejected earlier) ⇒ the re-approval re-runs into claim_missing", async () => {
+      await applyAsCompany("a", OWNER);
+      await reject("a");
+      fake.state.beforeCommit = () => admin(releaseBusinessVat, { vatNumber: X }).then(() => undefined);
+      await expect(approve("a", OWNER)).rejects.toMatchObject({ message: "claim_missing" });
+      expect(isListed("a")).toBe(false);
+      expect(claimHolder(X)).toBeUndefined();
+    });
+
+    it("reverse S2: the individual's approval commits first, then the company application re-runs — pending, claim held", async () => {
+      h.settings.autoApprove = false;
+      await as("b", applyAsProvider, { categoryIds: ["hiit"], fullName: "Bruno Titolare" });
+      // B's company application is between its reads and its commit when the admin's approval
+      // of the individual commits; the company transaction is re-run on the approved doc.
+      fake.state.beforeCommit = () => approve("b").then(() => undefined);
+      await expect(applyAsCompany("b", OWNER)).resolves.toMatchObject({ autoApproved: false });
+
+      expect(isListed("b")).toBe(false);
+      expect(instructor("b")).toMatchObject({ applicationStatus: "pending", business: { vatNumber: X } });
+      expect(fake.read("users/b")).toMatchObject({ providerType: "business", providerStatus: "pending" });
+      expect(claimHolder(X)).toBe("b");
+      await expect(approve("b", OWNER)).resolves.toMatchObject({ success: true });
+      expectOneHolderPerTaxId();
+    });
   });
 });

@@ -296,4 +296,65 @@ describe("applyAsProvider (handler)", () => {
       ]);
     }
   });
+
+  describe("pending individual (auto-approval OFF): one transaction like the company branch", () => {
+    beforeEach(() => {
+      h.settings.autoApprove = false;
+    });
+
+    it("queues an individual with the profile defaults when there is no instructors doc", async () => {
+      await expect(call({ categoryIds: ["hiit"], fullName: "Mario Rossi" })).resolves.toMatchObject({ autoApproved: false });
+      expect(h.commitProviderDecision).not.toHaveBeenCalled();
+      expect(fake.read("instructors/u1")).toMatchObject({
+        name: "Mario Rossi",
+        applicationStatus: "pending",
+        providerProfile: { isVerified: false, bio: "", rating: 0, reviewCount: 0 },
+        createdAt: "NOW",
+      });
+      expect(fake.read("users/u1")).toMatchObject({ providerStatus: "pending" });
+      expect(fake.read("users/u1")).not.toHaveProperty("providerType");
+    });
+
+    it("a company application landing between its reads and its commit: the re-run refuses and the company keeps its data", async () => {
+      const company = {
+        ...PENDING,
+        name: "Karate Club Milano",
+        fullName: "Karate Club Milano",
+        business: { legalName: COMPANY.legalName, vatNumber: VAT, displayName: "Karate Club Milano" },
+      };
+      fake.state.beforeCommit = () => {
+        fake.put("users/u1", { ...USER, providerStatus: "pending", providerType: "business" });
+        fake.put("instructors/u1", company);
+        fake.put(`businessVat/${VAT}`, { uid: "u1", createdAt: "NOW" });
+      };
+      await expect(call({ categoryIds: ["hiit"], fullName: "Mario Rossi" })).rejects.toMatchObject({
+        code: "failed-precondition",
+        message: "business_account_exists",
+      });
+      expect(fake.state.attempts).toBe(2);
+      expect(fake.ops).toEqual([]);
+      expect(fake.read("instructors/u1")).toEqual(company);
+    });
+
+    it("judges 'doc exists' on the transaction's read: a stale outer read never resets bio, rating or createdAt", async () => {
+      fake.put("instructors/u1", { ...PENDING, applicationStatus: "rejected", createdAt: "T0", name: "Mario" });
+      fake.stale.set("instructors/u1", null);
+      await call({ categoryIds: ["hiit"], fullName: "Mario Rossi" });
+      expect(fake.read("instructors/u1")).toMatchObject({
+        applicationStatus: "pending",
+        createdAt: "T0",
+        providerProfile: { isVerified: false, bio: "Dal 1990", rating: 0, reviewCount: 0 },
+      });
+    });
+  });
+
+  it("company transaction: contention outlasting Firestore's retries is a retryable concurrent_update, not internal", async () => {
+    fake.state.maxAttempts = 1;
+    fake.state.beforeCommit = () => fake.put("users/u1", { ...USER, searchTokens: ["mario"] });
+    await expect(call({ categoryIds: ["hiit"], providerType: "business", business: COMPANY })).rejects.toMatchObject({
+      code: "aborted",
+      message: "concurrent_update",
+    });
+    expect(fake.ops).toEqual([]);
+  });
 });

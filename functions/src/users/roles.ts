@@ -19,6 +19,7 @@ import { writeAuditLog, toActorRole } from "../lib/audit";
 import { seedProviderServicesFromTemplates } from "../providers/seedProviderServices";
 import { instructorVerificationPatch } from "../providers/applicationDecision";
 import { isExistingBusiness } from "../providers/businessApplication";
+import { parseProviderId } from "../providers/businessAdminRules";
 import { mayHoldSuperadmin, isProtectedSuperadmin } from "../lib/superadmins";
 
 const db = admin.firestore();
@@ -503,7 +504,9 @@ export const verifyProvider = onCall<VerifyProviderData>(
     const caller = callerSnap.data();
     const callerRole = (caller?.role === "superadmin" ? "superadmin" : "admin") as "admin" | "superadmin";
 
-    const { providerId, verified, notes } = request.data;
+    const { verified, notes } = request.data;
+    // A stable code, and never an id that can't name a document ("a/b" → `internal`).
+    const providerId = parseProviderId(request.data?.providerId);
 
     const userRef = db.collection("users").doc(providerId);
     const instructorRef = db.collection("instructors").doc(providerId);

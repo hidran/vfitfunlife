@@ -451,6 +451,8 @@ export const itMessages = {
   'admin.business.error.vatTaken': "Questa P.IVA / codice fiscale è già registrata da un altro account. Se quell'azienda è stata respinta, libera prima la sua P.IVA dalla sua scheda.",
   'admin.business.error.claimMissing': 'Questa azienda non detiene più la sua P.IVA (è stata liberata), quindi non può essere approvata. Chiedile di ripresentare la domanda o cambiane la P.IVA.',
   'admin.business.error.protectedAccount': 'Questo account è protetto e non può essere modificato da qui.',
+  'admin.business.error.vatCarriedByOther': "Questa P.IVA / codice fiscale è ancora presente nella scheda di un'altra azienda (per esempio una respinta la cui P.IVA è stata liberata): prima convertila in singolo professionista o cambiane la P.IVA.",
+  'admin.business.error.concurrentUpdate': 'Qualcun altro ha modificato questo account nello stesso momento. Ricarica la pagina e riprova.',
 
   // ─── Admin: Verifications page ───────────────────────────────────────
   'admin.verificationsPage.title': 'Verifiche provider',

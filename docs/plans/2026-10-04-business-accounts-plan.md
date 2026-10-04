@@ -286,12 +286,32 @@ the same on prod with a throwaway P.IVA claim removed afterwards.
   decides before B5: allow with the warning.
 - **Squatting by an unreviewed claim** — a pending claim blocks the real owner of that tax id until an admin
   acts; the B8 release action is the escape hatch, and a pending company may change its own tax id (B3).
-- **`concurrent_update` retry** — `applyAsProvider` retries the auto-approval once because the admin-index
-  trigger writes `users/{uid}` right after signup; the retry re-reads and re-checks the business guard.
+- **`concurrent_update`** — the decision (commitProviderDecision), applyAsProvider's pending branch and
+  the admin business callables are single transactions that Firestore re-runs on contention (e.g. the
+  admin-index trigger writing `users/{uid}` right after signup); `concurrent_update` only surfaces if
+  contention outlasts the SDK's retries (B8a review fixes replaced the earlier one-retry wrapper).
 - **ASD tax and legal details** — whether an association charges VAT or not is irrelevant to listing; we only
   verify that the tax id exists and matches the legal name. The affiliation number is informational.
 - **Legal copy** — the terms/privacy pages don't mention business data; confirm wording with the owner
   before prod (`[?]` if they want a change).
+- **Legacy `verifyProvider` audit after the transaction** (B8a re-review m3) — its `verificationLogs` entry,
+  template seeding and `audit_logs` entry run after the verification transaction, so a crash in
+  between leaves an unaudited change. No client calls it any more: consider deleting the callable
+  after phase 1.
+- **The admin review covers only `vatNumber` + `legalName`** (m4) — `legalForm` and `affiliationNumber`
+  can change by re-applying between the admin loading a company and approving it; extend
+  `expectedReview` if they ever matter for the decision.
+- **Direct admin client writes bypass I1/I2** (m5) — `firestore.rules` (instructors `allow update: if
+  isAdmin()`) lets an admin client set `providerProfile.isVerified` or `business.vatNumber` directly,
+  skipping the review and claim checks of the callables. Tighten the admin branch in a follow-up
+  (route verification and tax-id changes through the callables only).
+- **`deleteUserCascade` deletes claims outside a transaction** (m6) — between Auth deletion and the
+  claim delete, the deleted user's still-valid ID token (≤ 1 h) could in theory re-apply and take a
+  claim back; the cascade is idempotent and a re-run removes it.
+- **Business legal data is public** — Tax id, legal name and affiliation number sit on the public
+  instructors doc (readable by anyone once verified; the UI only chooses not to render them).
+  Option: move them to an owner/admin-only subdocument `instructors/{uid}/private/business` —
+  decide with the product owner (they are public registry data, so exposure is modest).
 
 ## 6. Log
 
@@ -563,3 +583,35 @@ the same on prod with a throwaway P.IVA claim removed afterwards.
   is checked on rejections too; updateBusinessTaxId onto the company's own (released) number
   re-creates its claim, which is how an admin makes a `claim_missing` company approvable again.
 - 2026-10-05 — UI review fixes (B6/B7/B8b): badges wrap at 320px, page Save explains a busy section, admin sees the full website URL, focus survives Convert (buttons 44px), public `Provider.business` is the public subset and the applications panel reads through `readAdminBusiness`, unknown legal form is not overwritten, rejected companies get their own note, owner's public-profile cache is invalidated, review_required copy on the provider page, one legal-form list/label map (this commit).
+- 2026-10-05 — B8a backend re-review fixes (this commit; re-review of 8efef3a: approved with one
+  Important). **Important:** `updateBusinessTaxId` ran the other-carrier check even when the number
+  was not changing, so after the S1 recovery (squatter rejected + released, owner approved on X) the
+  owner's legal name could not be corrected (carriers = [squatter, owner] ⇒ refused, and Release then
+  refuses too). `assertTaxIdAvailable` (replaces `assertNoOtherCarrier`) now: another account's claim
+  ⇒ `vat_already_registered`; an unchanged number (normalised compare) ⇒ passes, claimBusinessVat
+  still guards the claim; otherwise another carrier ⇒ the new stable code `vat_carried_by_other`
+  (admin text in it/en/es/fr/de: convert that company or change its number first). **m1:**
+  `concurrent_update` is in `ADMIN_BUSINESS_ERROR_CODES` (`admin.business.error.concurrentUpdate`,
+  5 locales); commitProviderDecision's protected-superadmin refusal is `protected_account`; the three
+  admin business callables and applyAsProvider's pending transaction map exhausted contention
+  (code 10) to `aborted` / `concurrent_update` instead of `internal`; the stale "retried once"
+  comment in `providerApplicationErrors.ts` is fixed. **m2:** applyAsProvider's pending branch is one
+  transaction for individuals too — it re-reads users + instructors, re-checks
+  `business_account_exists`, and judges "doc exists" (profile defaults, createdAt) on its own read; a
+  missing users doc is a clean `not-found` instead of `internal`. **m7:** `decideProviderApplication`
+  and legacy `verifyProvider` use `parseProviderId` (`invalid_provider_id` for "a/b", "" or none).
+  §5 gained the skipped items m3–m6 and the "business legal data is public" option; its
+  `concurrent_update` bullet now describes the transactions. Tests: the exact S1-recovery
+  legal-name correction (lifecycle + handler), a genuine other carrier ⇒ `vat_carried_by_other`, an
+  unchanged number whose claim another account holds ⇒ `vat_already_registered`; races (approval vs
+  a second approval — both pass, one audit entry each, drafts seeded once; vs updateBusinessTaxId ⇒
+  `stale_review`; vs convertBusinessToIndividual ⇒ `stale_review`; vs a release ⇒ `claim_missing`);
+  reverse S2 (the individual's approval commits first, the company application re-runs to pending
+  with its claim held); pending-individual contention and stale-existence tests; contention ⇒
+  `concurrent_update` for the three admin callables and the company transaction; `invalid_provider_id`
+  in both decision callables. providers + users 395 → 414; functions 859 → 878; error-map test
+  40 → 42. 11 mutations (carrier check also on an unchanged number; no carrier check; old code for
+  the carried case; claim check dropped from assertTaxIdAvailable; un-normalised compare; pending
+  individual not re-checked; stale existence read; no parseProviderId ×2; contention leaked ×2) each
+  turned tests red. Touched in `src/` beyond the error map and locales: `providerApplicationErrors.test.ts`
+  (pins the admin code list) and doc comments of the wrappers in `src/lib/firebase/functions.ts`.

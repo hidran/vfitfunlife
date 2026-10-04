@@ -65,7 +65,8 @@ export interface CommitDecisionOptions {
  *   a business with no review ⇒ `review_required`;
  * - I2, one tax id one holder: approving a company requires that it holds the claim on its tax
  *   id (`claim_missing` / `vat_already_registered`);
- * - a provider deleted mid-flight ends in `not-found` / `provider_not_found`.
+ * - a provider deleted mid-flight ends in `not-found` / `provider_not_found`; a protected
+ *   superadmin is refused with `permission-denied` / `protected_account`.
  * A concurrent write that changes none of the reviewed facts — e.g. the search-index trigger
  * rewriting `searchTerms` seconds after an edit, or the admin-index trigger touching users/{uid}
  * right after signup — only causes a re-run that passes; it can't produce a spurious
@@ -98,7 +99,7 @@ export async function commitProviderDecision(
       // protected superadmin's doc must not be written by this path at all (providerStatus,
       // verification fields, etc.) — belt and suspenders against a crafted application.
       if (isProtectedSuperadmin(user)) {
-        throw new HttpsError("permission-denied", "Cannot modify a protected superadmin account");
+        throw new HttpsError("permission-denied", "protected_account");
       }
 
       // Self-apply only: applyAsProvider checked this too, but on its own (possibly stale) reads.

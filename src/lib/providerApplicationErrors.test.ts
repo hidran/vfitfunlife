@@ -107,7 +107,7 @@ describe('PROVIDER_APPLICATION_ERRORS', () => {
     }
   });
 
-  it('says "try again" for concurrent_update (the server already retried once)', () => {
+  it('says "try again" for concurrent_update (the server transaction already retried)', () => {
     expect(enMessages[PROVIDER_APPLICATION_ERRORS.concurrent_update.messageKey]).toBe(
       'Something changed while saving, please try again.'
     );
@@ -135,6 +135,9 @@ describe('admin business errors (B8: approve, release, convert, change tax id)',
         // Backend review fixes: an approval must hold the tax-id claim; protected accounts.
         'claim_missing',
         'protected_account',
+        // Re-review: moving onto a number another record carries; contention after retries.
+        'vat_carried_by_other',
+        'concurrent_update',
       ].sort()
     );
   });
@@ -161,11 +164,13 @@ describe('admin business errors (B8: approve, release, convert, change tax id)',
     expect(adminBusinessErrorMessageKey(new Error('vat_already_registered'))).toBe('admin.business.error.vatTaken');
     expect(adminBusinessErrorMessageKey(new Error('claim_missing'))).toBe('admin.business.error.claimMissing');
     expect(adminBusinessErrorMessageKey(new Error('protected_account'))).toBe('admin.business.error.protectedAccount');
+    expect(adminBusinessErrorMessageKey(new Error('vat_carried_by_other'))).toBe('admin.business.error.vatCarriedByOther');
+    expect(adminBusinessErrorMessageKey(new Error('concurrent_update'))).toBe('admin.business.error.concurrentUpdate');
   });
 
   it('returns null for anything that is not one of its codes', () => {
     expect(adminBusinessErrorCode(new Error('Admin access required'))).toBeNull();
-    expect(adminBusinessErrorCode(new Error('concurrent_update'))).toBeNull();
+    expect(adminBusinessErrorCode(new Error('business_account_exists'))).toBeNull();
     expect(adminBusinessErrorCode({ code: 'functions/permission-denied' })).toBeNull();
     expect(adminBusinessErrorCode(null)).toBeNull();
     expect(adminBusinessErrorMessageKey('stale_review')).toBeNull();

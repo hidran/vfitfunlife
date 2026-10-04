@@ -54,7 +54,8 @@ export const PROVIDER_APPLICATION_ERRORS: Record<
   invalid_provider_type: { messageKey: 'provider.applyError.invalidType' },
   business_account_exists: { messageKey: 'provider.applyError.accountIsBusiness' },
   business_already_approved: { messageKey: 'provider.applyError.alreadyApproved' },
-  // The server has already retried once; another attempt from the user is the right move.
+  // Firestore already re-ran the server's transaction several times (contention outlasted its
+  // retries); another attempt from the user is the right move.
   concurrent_update: { messageKey: 'provider.applyError.concurrentUpdate' },
 };
 
@@ -98,8 +99,10 @@ export function reportProviderApplicationError(
  * `claim_missing` — it no longer holds its tax-id claim — and `vat_already_registered` — another
  * account holds it) and the `releaseBusinessVat` / `convertBusinessToIndividual` /
  * `updateBusinessTaxId` callables (functions/src/providers/businessAdmin.ts;
- * `protected_account` refuses a protected superadmin). Tax-id and legal-field codes reuse the
- * signup form's texts, except `vat_already_registered`: an admin can do something about it.
+ * `protected_account` refuses a protected superadmin; `vat_carried_by_other` — moving a company
+ * onto a number another company's record still carries; `concurrent_update` — contention
+ * outlasted the server transaction's retries, try again). Tax-id and legal-field codes reuse
+ * the signup form's texts, except `vat_already_registered`: an admin can do something about it.
  */
 export const ADMIN_BUSINESS_ERROR_CODES = [
   'review_required',
@@ -117,6 +120,8 @@ export const ADMIN_BUSINESS_ERROR_CODES = [
   'vat_already_registered',
   'claim_missing',
   'protected_account',
+  'vat_carried_by_other',
+  'concurrent_update',
 ] as const;
 
 export type AdminBusinessErrorCode = (typeof ADMIN_BUSINESS_ERROR_CODES)[number];
@@ -137,6 +142,8 @@ export const ADMIN_BUSINESS_ERRORS: Record<AdminBusinessErrorCode, MessageKey> =
   vat_already_registered: 'admin.business.error.vatTaken',
   claim_missing: 'admin.business.error.claimMissing',
   protected_account: 'admin.business.error.protectedAccount',
+  vat_carried_by_other: 'admin.business.error.vatCarriedByOther',
+  concurrent_update: 'admin.business.error.concurrentUpdate',
 };
 
 const ADMIN_CODES: ReadonlySet<string> = new Set(ADMIN_BUSINESS_ERROR_CODES);

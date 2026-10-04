@@ -3,7 +3,7 @@ import { HttpsError } from "firebase-functions/v2/https";
 import {
   assertApprovalHoldsClaim,
   assertClaimReleasable,
-  assertNoOtherCarrier,
+  assertTaxIdAvailable,
   checkBusinessReview,
   claimHolderUid,
   convertToIndividualPatches,
@@ -158,14 +158,41 @@ describe("assertApprovalHoldsClaim", () => {
   });
 });
 
-describe("assertNoOtherCarrier", () => {
-  it("passes when no doc, or only the provider's own doc, carries the number", () => {
-    expect(() => assertNoOtherCarrier([], "u1")).not.toThrow();
-    expect(() => assertNoOtherCarrier(["u1"], "u1")).not.toThrow();
+describe("assertTaxIdAvailable (updateBusinessTaxId)", () => {
+  const check = (opts: { claimUid?: unknown; currentVat?: unknown; carrierIds?: string[]; targetVat?: string }) =>
+    assertTaxIdAvailable({
+      providerId: "u1",
+      targetVat: opts.targetVat ?? VAT,
+      currentVat: opts.currentVat,
+      claimUid: opts.claimUid,
+      carrierIds: opts.carrierIds ?? [],
+    });
+
+  it("passes when nobody else holds or carries the number", () => {
+    expect(() => check({ currentVat: OTHER_VAT })).not.toThrow();
+    expect(() => check({ currentVat: OTHER_VAT, carrierIds: ["u1"], claimUid: "u1" })).not.toThrow();
   });
 
-  it("refuses with vat_already_registered when another doc (even a rejected one) still carries it", () => {
-    expectHttpsError(() => assertNoOtherCarrier(["u1", "a"], "u1"), "already-exists", "vat_already_registered");
+  it("another account's claim ⇒ vat_already_registered, whatever the docs say", () => {
+    for (const currentVat of [VAT, OTHER_VAT]) {
+      expectHttpsError(() => check({ currentVat, claimUid: "someone-else" }), "already-exists", "vat_already_registered");
+    }
+  });
+
+  it("no claim of another account, but another doc carries the number ⇒ vat_carried_by_other", () => {
+    expectHttpsError(
+      () => check({ currentVat: OTHER_VAT, carrierIds: ["a", "u1"] }),
+      "already-exists",
+      "vat_carried_by_other",
+    );
+    expectHttpsError(() => check({ currentVat: undefined, carrierIds: ["a"] }), "already-exists", "vat_carried_by_other");
+  });
+
+  it("the number is not changing (normalised compare): other carriers don't block a legal-data correction", () => {
+    // After the S1 recovery the rejected squatter still carries X; the real owner keeps X and
+    // only its legal name is corrected. claimBusinessVat still guards the claim itself.
+    expect(() => check({ currentVat: VAT, carrierIds: ["a", "u1"], claimUid: "u1" })).not.toThrow();
+    expect(() => check({ currentVat: `IT ${VAT}`, carrierIds: ["a"] })).not.toThrow();
   });
 });
 
