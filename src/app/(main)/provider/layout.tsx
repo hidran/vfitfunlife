@@ -169,9 +169,10 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
         <div className="p-4 lg:p-8 max-w-7xl mx-auto">
           {status === 'pending' && (
             <div className="mb-4 flex items-center gap-3 rounded-xl border border-[#F59E0B]/30 bg-[#F59E0B]/10 p-4">
-              <Clock className="w-5 h-5 text-[#F59E0B] light:text-amber-700" />
-              <p className="text-sm text-content/80">
-                {t('provider.banner.pending')}
+              <Clock className="w-5 h-5 shrink-0 text-[#F59E0B] light:text-amber-700" />
+              <p className="min-w-0 text-sm text-content/80 break-words">
+                {/* A company waits for its tax id to be checked (it is never auto-approved). */}
+                {t(user?.providerType === 'business' ? 'provider.banner.pendingBusiness' : 'provider.banner.pending')}
               </p>
             </div>
           )}

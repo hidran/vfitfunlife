@@ -167,7 +167,7 @@ registration. Optional fields only — no existing behaviour changes.
   approved), owner adds or removes `business` ✘, `javascript:` website ✘, other user ✘, admin ✔, client
   read/write of `businessVat` ✘, owner write of `users.providerType` ✘.
 
-### B5 `[ ]` Signup: individual or company (Large)
+### B5 `[x]` Signup: individual or company (Large)
 - Files: `src/app/auth/register/RegisterClient.tsx` (both `submitProviderApplication` call sites),
   `src/hooks/useProviderApplication.ts`, `src/lib/firebase/providerApplication.ts`,
   `src/components/profile/BecomeProviderCard.tsx`, new `src/components/provider/BusinessDetailsForm.tsx`
@@ -347,3 +347,30 @@ the same on prod with a throwaway P.IVA claim removed afterwards.
   `name == fullName == business.displayName` not enforced (B6 mirrors them). Neighbouring holes left
   as listed above, plus one for B7: the owner can write `instructors.providerType`, which no server code
   sets — derive the "Azienda" badge from `business` (now locked), not from that field.
+- 2026-10-04 — B5 done (this commit). `BusinessDetailsForm` (RHF + Zod, `src/lib/businessDetails.ts`
+  mirrors the server limits; P.IVA / codice fiscale via `isValidItalianVat`, sent as bare digits; public
+  name defaults to the legal name; `www.x.it` gets `https://`, other schemes and credentials refused,
+  scheme lower-cased for the rules' case-sensitive regex; `mode` prop reserved for B6). A sub-form, not a
+  `<form>`: the parent calls `validate()` (errors on their fields, focus on the first) and
+  `showServerError(code)` through a ref. `ProviderTypeChoice` = native radios in a fieldset (arrow keys,
+  ≥44px, stacked below 380px so "professionista" never breaks mid-word), shown after "professional" in
+  both register flows (via `ProviderOptInField`) and in `BecomeProviderCard`; the company form stays
+  mounted (hidden) so switching back and forth keeps what was typed. `submitProviderApplication` now
+  returns the callable's answer and takes `providerType: 'business'` + `business`; an individual's
+  payload is still exactly `{ categoryIds, fullName }` (test pins the keys). Every B3/B3b code maps to
+  localised text in `src/lib/providerApplicationErrors.ts` (`provider.business.error.*` on a field —
+  tax-id codes on the tax id, `invalid_business_name` on the legal name — `provider.applyError.*`
+  otherwise, incl. `business_account_exists` / `concurrent_update` for individuals); plain-sentence
+  errors keep the generic message. `applicationOutcomeStatus` (in `src/lib/providerStatus.ts`) turns
+  `autoApproved` into verified/pending: the card shows it while the reloaded user lags, and the social
+  flow routes on it. Pending copy for a company (`provider.card.pending.subtitleBusiness`,
+  `provider.banner.pendingBusiness` in the provider layout) says the tax id is being checked.
+  Decisions not in the plan: (1) the email flow remembers the account it created, so a retry after a
+  failed application (e.g. `vat_already_registered`, fixed inline) re-sends only the application instead
+  of failing on "email already in use" — individuals get the same fix; (2) city and website are optional
+  (as on the server); (3) the RegisterClient error boxes got `role="alert"`, the card's small buttons
+  44px and its open state a real `<form>` (Enter submits); (4) §5 "verified individual applies as a
+  business" has no B5 entry point (verified users see the dashboard link, registered users are
+  redirected away from /auth/register), so no warning was built — still open for B6/B8. Browser
+  verification at 320/390px is deferred to B10 (backend not deployed yet); layout was reasoned from the
+  classes (`min-w-0` on fieldsets, `break-words` on labels/hints/errors, inputs 52px, radios 44px).

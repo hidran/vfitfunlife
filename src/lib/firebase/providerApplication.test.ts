@@ -30,6 +30,51 @@ describe('submitProviderApplication', () => {
     });
   });
 
+  it('sends an individual exactly as before companies existed: no providerType key at all', async () => {
+    await submitProviderApplication({ fullName: 'Mia Rossi', categoryIds: ['yoga'] });
+    await submitProviderApplication({ fullName: 'Mia Rossi', categoryIds: ['yoga'], providerType: 'individual' });
+
+    for (const [payload] of vi.mocked(applyAsProvider).mock.calls) {
+      expect(Object.keys(payload).sort()).toEqual(['categoryIds', 'fullName']);
+    }
+  });
+
+  it('sends a company with providerType business and its details', async () => {
+    const business = {
+      legalName: 'Karate Club Roma SRL',
+      vatNumber: '00743110157',
+      legalForm: 'company' as const,
+      displayName: 'Karate Club Roma',
+      website: 'https://karateroma.it',
+    };
+    await submitProviderApplication({
+      fullName: 'Mia Rossi',
+      categoryIds: ['karate'],
+      providerType: 'business',
+      business,
+    });
+
+    expect(applyAsProvider).toHaveBeenCalledWith({
+      fullName: 'Mia Rossi',
+      categoryIds: ['karate'],
+      providerType: 'business',
+      business,
+    });
+  });
+
+  it("returns the callable's answer", async () => {
+    vi.mocked(applyAsProvider).mockResolvedValueOnce({
+      success: true,
+      providerId: 'u1',
+      autoApproved: false,
+      draftServicesSeeded: 0,
+    });
+
+    await expect(
+      submitProviderApplication({ fullName: 'Mia Rossi', categoryIds: ['yoga'] })
+    ).resolves.toMatchObject({ autoApproved: false });
+  });
+
   it('writes nothing to Firestore from the browser', async () => {
     // The verification flag the public read rule keys on is server-only for a reason: a
     // client batch that set it would let anyone list themselves in the marketplace. If this

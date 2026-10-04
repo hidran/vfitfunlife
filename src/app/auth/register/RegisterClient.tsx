@@ -15,8 +15,20 @@ import { cn } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
-import { submitProviderApplication } from '@/lib/firebase/providerApplication';
+import {
+  submitProviderApplication,
+  type BusinessApplicationInput,
+  type ProviderApplicationInput,
+  type ProviderApplicationResult,
+} from '@/lib/firebase/providerApplication';
 import { ProviderOptInField } from '@/components/auth/ProviderOptInField';
+import {
+  BusinessDetailsForm,
+  type BusinessDetailsFormHandle,
+} from '@/components/provider/BusinessDetailsForm';
+import { PROVIDER_APPLICATION_ERRORS, providerApplicationErrorCode } from '@/lib/providerApplicationErrors';
+import { applicationOutcomeStatus, canAccessProviderArea } from '@/lib/providerStatus';
+import type { ProviderType } from '@/types/firebase';
 import { validatePasswordStrength } from '@/lib/auth/passwordPolicy';
 import { PasswordRequirements } from '@/components/auth/PasswordRequirements';
 import { alreadyRegisteredRoute, postAuthRoute } from '@/lib/auth/postAuthRoute';
@@ -75,6 +87,40 @@ export function RegisterClient() {
   const [showPassword, setShowPassword] = useState(false);
   const [wantsProvider, setWantsProvider] = useState(startsAsProvider);
   const [providerCategoryIds, setProviderCategoryIds] = useState<string[]>([]);
+  const [providerType, setProviderType] = useState<ProviderType>('individual');
+  const businessFormRef = useRef<BusinessDetailsFormHandle>(null);
+  // The account this form created, when only the professional application after it failed.
+  const createdAccount = useRef<{ uid: string; email: string } | null>(null);
+  const appliesAsBusiness = wantsProvider && providerType === 'business';
+
+  /**
+   * The company details, validated — errors shown on their fields, focus on the first — and
+   * normalised; null when something is wrong.
+   */
+  const validateBusiness = async (): Promise<BusinessApplicationInput | null> =>
+    (await businessFormRef.current?.validate()) ?? null;
+
+  const providerApplication = (business: BusinessApplicationInput | undefined): ProviderApplicationInput =>
+    business
+      ? { fullName: fullName.trim(), categoryIds: providerCategoryIds, providerType: 'business', business }
+      : { fullName: fullName.trim(), categoryIds: providerCategoryIds };
+
+  /**
+   * A failure `applyAsProvider` can name: shown on its company field when it has one (e.g. a tax
+   * id another account registered), otherwise as the form error. False for any other failure.
+   */
+  const reportApplicationError = (err: unknown): boolean => {
+    const code = providerApplicationErrorCode(err);
+    if (!code) return false;
+    if (!(appliesAsBusiness && businessFormRef.current?.showServerError(code))) {
+      setError(t(PROVIDER_APPLICATION_ERRORS[code].messageKey));
+    }
+    return true;
+  };
+
+  const businessDetails = (
+    <BusinessDetailsForm ref={businessFormRef} mode="create" disabled={isLoading} />
+  );
 
   // Someone who already has a profile (opened /auth/register by hand, or followed an old
   // link) must not re-run registration over it: send them where a sign-in would. Skipped
@@ -115,10 +161,15 @@ export function RegisterClient() {
       return;
     }
 
+    // Company details are checked with the rest, before anything is written.
+    const business = appliesAsBusiness ? await validateBusiness() : undefined;
+
     if (wantsProvider && providerCategoryIds.length === 0) {
       setError(t('provider.optIn.errorNoCategory'));
       return;
     }
+
+    if (business === null) return;
 
     setIsLoading(true);
     submitting.current = true;
@@ -132,16 +183,29 @@ export function RegisterClient() {
         preferredLanguage: locale,
       });
 
+      let application: ProviderApplicationResult | undefined;
       if (wantsProvider) {
-        await submitProviderApplication({ fullName: fullName.trim(), categoryIds: providerCategoryIds });
+        application = await submitProviderApplication(providerApplication(business));
       }
 
       // Refresh user profile in store
       await refreshUserProfile();
 
-      router.push(postAuthRoute(useAuthStore.getState().user));
+      // The reloaded profile can lag the callable: until it shows the application, the
+      // callable's answer (approved, or pending review — always the case for a company)
+      // decides where the new professional lands.
+      const user = useAuthStore.getState().user;
+      const outcome = applicationOutcomeStatus(application);
+      router.push(
+        postAuthRoute(
+          user && outcome && !canAccessProviderArea(user.providerStatus)
+            ? { ...user, providerStatus: outcome }
+            : user
+        )
+      );
     } catch (err) {
       console.error('Registration error:', err);
+      if (reportApplicationError(err)) return;
       setError(
         (err as { code?: string })?.code === 'functions/permission-denied'
           ? t('auth.register.error.providerNotAllowed')
@@ -185,27 +249,43 @@ export function RegisterClient() {
       return;
     }
 
+    // Company details are checked with the rest, before the account is created.
+    const business = appliesAsBusiness ? await validateBusiness() : undefined;
+
     if (wantsProvider && providerCategoryIds.length === 0) {
       setError(t('provider.optIn.errorNoCategory'));
       return;
     }
 
+    if (business === null) return;
+
     setIsLoading(true);
     submitting.current = true;
 
     try {
-      // Register with email/password
-      await registerWithEmail(email.trim(), password, fullName.trim(), locale, {
-        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
-        preferredSection,
-      });
+      // Register with email/password — unless this form already created the account and only
+      // the professional application after it failed (say, a tax id another account holds):
+      // then the retry re-sends the application, instead of failing on "email already in use".
+      const typedEmail = email.trim();
+      const created = createdAccount.current;
+      const accountExists =
+        created !== null &&
+        created.email === typedEmail &&
+        useAuthStore.getState().firebaseUser?.uid === created.uid;
+      if (!accountExists) {
+        await registerWithEmail(typedEmail, password, fullName.trim(), locale, {
+          dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
+          preferredSection,
+        });
+      }
 
       if (wantsProvider) {
         const uid = useAuthStore.getState().firebaseUser?.uid;
         if (!uid) {
           throw new Error('Registration user is not available');
         }
-        await submitProviderApplication({ fullName: fullName.trim(), categoryIds: providerCategoryIds });
+        createdAccount.current = { uid, email: typedEmail };
+        await submitProviderApplication(providerApplication(business));
         // Keep the in-memory profile in sync so the professional state is
         // visible immediately after permissions/home navigation.
         await refreshUserProfile();
@@ -219,6 +299,7 @@ export function RegisterClient() {
         setEmailTaken(true);
         return;
       }
+      if (reportApplicationError(err)) return;
       setError(
         err?.code === 'functions/permission-denied'
           ? t('auth.register.error.providerNotAllowed')
@@ -381,7 +462,7 @@ export function RegisterClient() {
 
             {/* Error Message */}
             {!emailTaken && (error || storeError) && (
-              <div className={cn(
+              <div role="alert" className={cn(
                 "p-4 border rounded-lg",
                 (error || storeError)?.includes('not enabled')
                   ? "bg-yellow-500/10 border-yellow-500/20"
@@ -562,6 +643,10 @@ export function RegisterClient() {
               onToggle={setWantsProvider}
               categoryIds={providerCategoryIds}
               onChangeCategoryIds={setProviderCategoryIds}
+              providerType={providerType}
+              onChangeProviderType={setProviderType}
+              businessDetails={businessDetails}
+              disabled={isLoading}
             />
 
             {/* Terms & Privacy */}
@@ -624,7 +709,7 @@ export function RegisterClient() {
         <form onSubmit={handleSocialSubmit} className="space-y-6 max-w-md mx-auto">
           {/* Error Message */}
           {error && (
-            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+            <div role="alert" className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
               <p className="text-red-400 text-sm text-center">{error}</p>
             </div>
           )}
@@ -722,6 +807,10 @@ export function RegisterClient() {
             onToggle={setWantsProvider}
             categoryIds={providerCategoryIds}
             onChangeCategoryIds={setProviderCategoryIds}
+            providerType={providerType}
+            onChangeProviderType={setProviderType}
+            businessDetails={businessDetails}
+            disabled={isLoading}
           />
 
           {/* Terms & Privacy */}

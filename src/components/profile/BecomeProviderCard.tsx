@@ -1,23 +1,40 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { Briefcase, Clock, CheckCircle, XCircle } from 'lucide-react';
-import { providerCardState } from '@/lib/providerStatus';
+import { applicationOutcomeStatus, providerCardState } from '@/lib/providerStatus';
 import { useProviderStatus, useSubmitProviderApplication } from '@/hooks/useProviderApplication';
 import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
 import { CategoryLeafPicker } from '@/components/provider/CategoryLeafPicker';
+import { ProviderTypeChoice } from '@/components/provider/ProviderTypeChoice';
+import {
+  BusinessDetailsForm,
+  type BusinessDetailsFormHandle,
+} from '@/components/provider/BusinessDetailsForm';
+import { PROVIDER_APPLICATION_ERRORS, providerApplicationErrorCode } from '@/lib/providerApplicationErrors';
 import { useI18n } from '@/hooks/useI18n';
+import type { MessageKey } from '@/i18n/messages';
+import type { ProviderType } from '@/types/firebase';
 
 export function BecomeProviderCard() {
   const { t } = useI18n();
   const role = useAuthStore((s) => s.user?.role);
+  const storedProviderType = useAuthStore((s) => s.user?.providerType);
   const status = useProviderStatus();
-  const variant = providerCardState(status);
   const submit = useSubmitProviderApplication();
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
+  const [providerType, setProviderType] = useState<ProviderType>('individual');
+  const [errorKey, setErrorKey] = useState<MessageKey | null>(null);
+  const businessFormRef = useRef<BusinessDetailsFormHandle>(null);
+
+  // The auth user is reloaded after a successful application, but that read can lag (or fail):
+  // until it shows the application, the callable's answer picks the approved or pending card.
+  const outcome = applicationOutcomeStatus(submit.data);
+  const variant = providerCardState(status === 'none' && outcome ? outcome : status);
+  const isBusiness = storedProviderType === 'business' || submit.data?.providerType === 'business';
 
   // The verified card is a way IN to the provider area, not an application CTA, so it is
   // checked before the role guard below. Guarding first hid it from anyone whose role had
@@ -46,10 +63,13 @@ export function BecomeProviderCard() {
   if (variant === 'pending') {
     return (
       <div className="flex items-center gap-3 rounded-xl border border-[#F59E0B]/30 bg-[#F59E0B]/10 p-4">
-        <Clock className="w-5 h-5 text-[#F59E0B]" />
-        <div>
+        <Clock className="w-5 h-5 shrink-0 text-[#F59E0B]" />
+        <div className="min-w-0">
           <p className="text-content font-medium">{t('provider.card.pending.title')}</p>
-          <p className="text-sm text-content-muted">{t('provider.card.pending.subtitle')}</p>
+          <p className="text-sm text-content-muted break-words">
+            {/* A company is never approved on the spot: say what is being checked. */}
+            {t(isBusiness ? 'provider.card.pending.subtitleBusiness' : 'provider.card.pending.subtitle')}
+          </p>
         </div>
       </div>
     );
@@ -67,12 +87,36 @@ export function BecomeProviderCard() {
     );
   }
 
+  /** A failed application: on its company field when it has one, else under the form. */
+  const reportError = (err: unknown) => {
+    const code = providerApplicationErrorCode(err);
+    if (code && providerType === 'business' && businessFormRef.current?.showServerError(code)) return;
+    setErrorKey(code ? PROVIDER_APPLICATION_ERRORS[code].messageKey : 'provider.card.error');
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setErrorKey(null);
+    if (selected.length === 0 || submit.isPending) return;
+    if (providerType === 'business') {
+      // Shows the errors on their fields and focuses the first one when something is wrong.
+      const business = await businessFormRef.current?.validate();
+      if (!business) return;
+      submit.mutate(
+        { categoryIds: selected, providerType: 'business', business },
+        { onError: reportError }
+      );
+    } else {
+      submit.mutate(selected, { onError: reportError });
+    }
+  };
+
   // variant === 'cta'
   return (
     <div className="rounded-xl border border-hairline p-4">
       <div className="flex items-center gap-3">
-        <Briefcase className="w-5 h-5 text-vfit-primary light:text-vfit-secondary" />
-        <div className="flex-1">
+        <Briefcase className="w-5 h-5 shrink-0 text-vfit-primary light:text-vfit-secondary" />
+        <div className="min-w-0 flex-1">
           <p className="text-content font-medium">{t('provider.card.cta.title')}</p>
           <p className="text-sm text-content-muted">{t('provider.card.cta.subtitle')}</p>
         </div>
@@ -80,19 +124,38 @@ export function BecomeProviderCard() {
       </div>
 
       {open && (
-        <div className="mt-4">
-          <p className="text-sm text-content-muted mb-2">{t('provider.optIn.pickServices')}</p>
-          <CategoryLeafPicker value={selected} onChange={setSelected} />
-          {submit.isError && (
-            <p className="text-sm text-[#EF4444] mt-2">{t('provider.card.error')}</p>
-          )}
-          <div className="flex gap-2 mt-4">
-            <Button size="sm" disabled={selected.length === 0 || submit.isPending} onClick={() => submit.mutate(selected)}>
+        <form className="mt-4 space-y-4" onSubmit={handleSubmit} noValidate>
+          <ProviderTypeChoice value={providerType} onChange={setProviderType} disabled={submit.isPending} />
+          {/* Hidden, not unmounted: switching back and forth keeps what was typed. */}
+          <div hidden={providerType !== 'business'}>
+            <BusinessDetailsForm ref={businessFormRef} mode="create" disabled={submit.isPending} />
+          </div>
+          <div>
+            <p className="text-sm text-content-muted mb-2">{t('provider.optIn.pickServices')}</p>
+            <CategoryLeafPicker value={selected} onChange={setSelected} />
+          </div>
+          <div aria-live="polite">
+            {errorKey && <p className="text-sm text-error break-words">{t(errorKey)}</p>}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" size="sm" className="min-h-11" disabled={selected.length === 0 || submit.isPending}>
               {submit.isPending ? t('provider.card.submitting') : t('provider.card.submit')}
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => { submit.reset(); setOpen(false); }}>{t('provider.card.cancel')}</Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="min-h-11"
+              onClick={() => {
+                submit.reset();
+                setErrorKey(null);
+                setOpen(false);
+              }}
+            >
+              {t('provider.card.cancel')}
+            </Button>
           </div>
-        </div>
+        </form>
       )}
     </div>
   );
