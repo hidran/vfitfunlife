@@ -127,6 +127,8 @@ export interface User {
   role: UserRole;
   // Provider application status (absent ⇒ "none")
   providerStatus?: ProviderStatus;
+  // Individual professional or company (absent ⇒ "individual")
+  providerType?: ProviderType;
   // Kind of provider, e.g. "personal_trainer", "psychologist" (providers only)
   userType?: string | null;
 
@@ -775,4 +777,21 @@ export interface Review {
   isVerified: boolean;
   createdAt: Timestamp;
   updatedAt: Timestamp;
+}
+
+/** Kind of provider account: a person, or a company (P.IVA holder). Absent ⇒ 'individual'. */
+export type ProviderType = 'individual' | 'business';
+
+/** `instructors/{uid}.business` — company details of a business provider. */
+export interface BusinessDetails {
+  /** Ragione sociale. Admin-verified; owner read-only after approval. */
+  legalName: string;
+  /** Italian P.IVA, 11 digits. Admin-verified; owner read-only after approval. */
+  vatNumber: string;
+  /** Shown publicly; also copied to the instructor's name/fullName. */
+  displayName: string;
+  description?: string;
+  website?: string | null;
+  logoUrl?: string | null;
+  city?: string;
 }

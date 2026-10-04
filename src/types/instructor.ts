@@ -1,6 +1,6 @@
 // src/types/instructor.ts
 import type { Timestamp } from 'firebase/firestore';
-import type { ProviderApplicationStatus } from '@/types/firebase';
+import type { BusinessDetails, ProviderApplicationStatus, ProviderType } from '@/types/firebase';
 
 export type ActivityKind = 'event' | 'vr' | 'party';
 
@@ -11,6 +11,9 @@ export interface Provider {
   rating: number;
   reviewCount: number;
   isVerified: boolean;
+  // Company accounts (absent ⇒ individual)
+  providerType?: ProviderType;
+  business?: BusinessDetails;
   // VFun bookable-activity fields (absent ⇒ a real trainer)
   activityKind?: ActivityKind;
   eventDate?: string;      // events, e.g. "16 Feb"

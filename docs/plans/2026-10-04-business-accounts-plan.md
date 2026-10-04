@@ -77,7 +77,7 @@ token and booking screen shows the company name with no further change.
 
 ## 3. Phase 1 — registration, approval, listing, booking
 
-### B1 `[ ]` Italian P.IVA validator (Small)
+### B1 `[x]` Italian P.IVA validator (Small)
 - Files: `functions/src/providers/vatNumber.ts` (+ `.test.ts`), `src/lib/vatNumber.ts` (+ `.test.ts`) — the
   same ~15 lines in both trees (functions and web don't share a package), kept identical by a test fixture
   list used by both.
@@ -86,7 +86,7 @@ token and booking screen shows the company name with no further change.
 - **Done when:** unit tests cover valid numbers, wrong length, non-digits, bad check digit, `IT` prefix,
   surrounding whitespace, all zeros.
 
-### B2 `[ ]` Types and schema docs (Small)
+### B2 `[x]` Types and schema docs (Small)
 - Files: `src/types/firebase.ts` (`ProviderType`, `BusinessDetails`, `User.providerType`),
   `src/types/instructor.ts` (`Provider.providerType`, `Provider.business`), `functions/src/types`,
   `docs/database-schema.md` (users, instructors, new `businessVat`).
@@ -205,3 +205,4 @@ the same on prod with a throwaway P.IVA claim removed afterwards.
 ## 6. Log
 
 - 2026-10-04 — Plan written after the design was approved ("go for C"). No tasks started.
+- 2026-10-04 — B1 done (2bf6bcd); B2 done (types + schema docs) (this commit).
