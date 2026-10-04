@@ -120,8 +120,27 @@ registration. Optional fields only — no existing behaviour changes.
 - `legalForm` ∈ `company | sole_trader | association | other` (default `company` when absent), validated
   against that list (`invalid_legal_form`); `affiliationNumber` optional string ≤ 40 chars after trim,
   stored as `""` when empty (same re-apply rule as `description`/`city`). Nested map, no dotted keys.
-- **Done when:** tests for each enum value, an unknown value, over-long affiliation number, and that the
-  existing P.IVA tests still pass with a codice fiscale of an association as the tax id.
+- **Hardening carried over from the B3 re-review (same files):**
+  1. *Release every other claim the caller holds.* Inside the business transaction, query
+     `businessVat where uid == caller` and delete all claims other than the one being taken (pending/rejected
+     only; an approved business is refused first). This stops one account accumulating claims even if the
+     owner edits `instructors.business.vatNumber` from the client before B4 locks it. Firestore transactions
+     allow a query read — do it before any write.
+  2. *Validate the stored number before using it as a document id:* run the stored
+     `business.vatNumber` through `isValidItalianVat`; ignore it if invalid (a client-written `"a/b"` would
+     otherwise make `claimRef` throw `internal`).
+  3. *Refuse any business re-apply from an approved account* (`business_already_approved`, a stable code
+     for B5): same-number re-apply currently drops an approved company to pending and de-lists it, and its
+     next re-apply could change the number. Changes to an approved company go through B6 (display fields)
+     or an admin (B8).
+  4. *Test fidelity:* in `applyAsProvider.test.ts` make `tx.get` and `ref.get` return different data so the
+     in-transaction read is really exercised; make the fake transaction throw on a read after a write
+     (apply `expectReadsBeforeWrites` to the handler too); add one handler test that does NOT mock
+     `commitProviderDecision`: first commit throws code 9 while the docs become a business, and the retry
+     must end in `business_account_exists`.
+- **Done when:** tests for each enum value, an unknown value, over-long affiliation number, that the
+  existing P.IVA tests still pass with a codice fiscale of an association as the tax id, and a test per
+  hardening item above.
 
 ### B4 `[ ]` Firestore rules (Medium)
 - Files: `firestore.rules`, `functions/test/` rules test (emulator pattern of `chat-rules.test.ts`).
@@ -192,6 +211,11 @@ registration. Optional fields only — no existing behaviour changes.
 - List: type filter (all / individual / business) and a company badge. Detail: a business block with legal
   name, P.IVA, website, and the existing approve/reject actions. Every mutation writes `audit_log`
   (project policy).
+- **Approve what the admin actually saw** (from the B3 re-review): a pending company may change its tax id
+  or legal name through `applyAsProvider`, and the admin's approve re-reads the latest doc — so an admin
+  looking at number X could approve Y. The approve action sends the `vatNumber` and `legalName` shown on
+  screen (or the instructors doc `updateTime`); `commitProviderDecision` refuses with a stale-review error
+  on a mismatch and the UI reloads the detail view. Test: swap the tax id between load and approve.
 - Also an admin callable `convertBusinessToIndividual` (audit-logged): clears `users.providerType`, deletes
   the `instructors.business` map and releases the claim. Without it, an Italian sole trader who picked
   "Company" by mistake is locked out of the individual path for good (`business_account_exists`).
