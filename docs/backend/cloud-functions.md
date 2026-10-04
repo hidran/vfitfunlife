@@ -229,6 +229,10 @@ These functions are exported from `../../functions/src/index.ts` but were missin
 - **Type:** Callable
 - **Auth:** Admin or superadmin (`requireAdmin`).
 - **Purpose:** Mark a provider as verified/unverified; writes an entry to `verificationLogs`.
+- **Legacy:** no client calls it. A company (`business` map on `instructors/{id}`, or
+  `users.providerType === 'business'`) is refused with `failed-precondition` /
+  `use_decide_provider_application` before any write, so it can't bypass the
+  `expectedReview` check of `decideProviderApplication`.
 
 #### `listProviders`
 - **Type:** Callable (public; auth optional)

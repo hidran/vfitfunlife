@@ -477,6 +477,9 @@ export const updateProviderProfile = onCall<UpdateProviderProfileData>(
 /**
  * Verify or unverify a provider
  * Admin/Superadmin only
+ *
+ * Legacy: the web client decides providers through decideProviderApplication. Kept deployed
+ * for individuals; a company is refused with `use_decide_provider_application` (B8).
  */
 export const verifyProvider = onCall<VerifyProviderData>(
   { region },
@@ -507,6 +510,19 @@ export const verifyProvider = onCall<VerifyProviderData>(
     }
 
     const providerData = providerDoc.data();
+
+    // A company is decided only through decideProviderApplication, which checks that the
+    // admin reviewed the tax id and legal name being approved (expectedReview). This callable
+    // has no such check, so it refuses companies outright — before any write. "Company" uses
+    // the same test as the server's business guards: any `business` object on the instructors
+    // doc, or users.providerType === 'business'.
+    const instructorRef = db.collection("instructors").doc(providerId);
+    const instructorSnap = await instructorRef.get();
+    const business = instructorSnap.exists ? instructorSnap.data()?.business : undefined;
+    if ((business && typeof business === "object") || providerData?.providerType === "business") {
+      throw new HttpsError("failed-precondition", "use_decide_provider_application");
+    }
+
     if (providerData?.role !== "provider") {
       throw new HttpsError("invalid-argument", "User is not a provider");
     }
@@ -526,8 +542,7 @@ export const verifyProvider = onCall<VerifyProviderData>(
     // The public /instructors read rule and every search query key on the NESTED flag in the
     // catalogue document, not on users/{uid}. Only touch a document that exists: this must
     // not create a stub catalogue entry for a provider who has none.
-    const instructorRef = db.collection("instructors").doc(providerId);
-    if ((await instructorRef.get()).exists) {
+    if (instructorSnap.exists) {
       await instructorRef.set(instructorVerificationPatch(verified), { merge: true });
     }
 

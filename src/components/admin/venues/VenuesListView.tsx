@@ -33,6 +33,8 @@ interface Venue {
   isPartner: boolean;
   createdAt: Date;
   photoUrls?: string[];
+  /** Reserved for phase 4 (venue owners); absent on every venue today. */
+  ownerUid?: string;
 }
 
 export function VenuesListView() {
@@ -73,6 +75,7 @@ export function VenuesListView() {
       isPartner: v.isPartner,
       createdAt: v.createdAt?.toDate?.() ?? new Date(),
       photoUrls: v.photoUrls ?? [],
+      ownerUid: typeof v.ownerUid === 'string' && v.ownerUid ? v.ownerUid : undefined,
     };
   });
 
@@ -147,6 +150,24 @@ export function VenuesListView() {
       ),
       sortable: true,
       width: "w-24",
+    },
+    {
+      // Read-only until phase 4 assigns owners. Shown as the uid: resolving names would cost
+      // a users read per row for a column that is empty everywhere today.
+      key: "owner",
+      header: t('admin.venues.col.owner'),
+      cell: (venue) =>
+        venue.ownerUid ? (
+          <span className="block max-w-[8rem] break-all font-mono text-xs text-content-muted">
+            {venue.ownerUid}
+          </span>
+        ) : (
+          <span className="text-sm text-content-faint">
+            <span aria-hidden="true">—</span>
+            <span className="sr-only">{t('admin.venues.owner.none')}</span>
+          </span>
+        ),
+      width: "w-28",
     },
     {
       key: "status",

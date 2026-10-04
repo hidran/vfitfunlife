@@ -3,11 +3,14 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Timestamp } from "firebase/firestore";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAdminStore } from "@/stores/adminStore";
 import { useShallow } from "zustand/react/shallow";
 import { VerificationQueue } from "@/components/admin";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/hooks/useI18n";
+import type { BusinessReview } from "@/lib/firebase/functions";
+import { adminBusinessErrorCode, ADMIN_BUSINESS_ERRORS } from "@/lib/providerApplicationErrors";
 import {
   ArrowLeft,
   CheckCircle,
@@ -28,21 +31,34 @@ export default function ProviderVerificationsPage() {
   // Approving is superadmin-only and now goes through a callable that can refuse. Swallowing
   // that into the console told the admin the same story as success — the row simply stayed.
   const [actionError, setActionError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     fetchPendingVerifications();
   }, [fetchPendingVerifications]);
 
-  const handleApprove = async (providerId: string) => {
+  const handleApprove = async (providerId: string, expectedReview?: BusinessReview) => {
     setActionError(null);
     try {
       await verifyProviderAction(providerId, {
         status: "verified",
         verifiedAt: Timestamp.now(),
+        ...(expectedReview ? { expectedReview } : {}),
       });
     } catch (error) {
       console.error("Failed to approve provider:", error);
-      setActionError(t('admin.verificationsPage.actionFailed'));
+      const code = adminBusinessErrorCode(error);
+      if (code === "stale_review" || code === "review_required") {
+        // The company changed since its row was opened: say so, and reload the queue and
+        // the company details so the admin reviews what is there now.
+        setActionError(t(ADMIN_BUSINESS_ERRORS[code]));
+        await Promise.all([
+          fetchPendingVerifications(),
+          queryClient.invalidateQueries({ queryKey: ["providers"] }),
+        ]);
+        return;
+      }
+      setActionError(t(code ? ADMIN_BUSINESS_ERRORS[code] : 'admin.verificationsPage.actionFailed'));
     }
   };
 
@@ -71,7 +87,7 @@ export default function ProviderVerificationsPage() {
       </div>
 
       {actionError && (
-        <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-400 light:text-red-700">
+        <div role="alert" className="rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-400 light:text-red-700">
           {actionError}
         </div>
       )}

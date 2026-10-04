@@ -133,6 +133,43 @@ describe('getProviders', () => {
     ]);
   });
 
+  it('filters by account type: companies, or individuals (who carry no providerType)', async () => {
+    seedUsers({
+      companyApplicant: {
+        fullName: 'Karate Club Milano',
+        email: 'karate@example.com',
+        role: 'customer',
+        providerStatus: 'pending',
+        providerType: 'business',
+        createdAt: day(8),
+      },
+      verifiedPro: {
+        fullName: 'Vera Verificata',
+        role: 'provider',
+        providerStatus: 'verified',
+        providerProfile: { isVerified: true },
+        createdAt: day(3),
+      },
+      applicant: { fullName: 'Paola Pendente', role: 'customer', providerStatus: 'pending', createdAt: day(5) },
+      // Not a provider: a stray providerType must not put a customer in the providers list.
+      strayCustomer: { fullName: 'Carlo', role: 'customer', providerType: 'business', createdAt: day(6) },
+    });
+
+    expect(ids(await getProviders({ providerType: 'business' }))).toEqual(['companyApplicant']);
+    expect(where).toHaveBeenCalledWith('providerKind', '==', 'business');
+    expect(ids(await getProviders({ providerType: 'individual' }))).toEqual(['applicant', 'verifiedPro']);
+    expect(ids(await getProviders({ providerType: 'all' }))).toEqual(['companyApplicant', 'applicant', 'verifiedPro']);
+    expect(ids(await getProviders({ providerType: 'business', verificationStatus: 'verified' }))).toEqual([]);
+    expect(ids(await getProviders({ providerType: 'business', verificationStatus: 'pending' }))).toEqual([
+      'companyApplicant',
+    ]);
+  });
+
+  it('adds no type constraint for "all"', async () => {
+    await getProviders({ providerType: 'all' });
+    expect(where).not.toHaveBeenCalledWith('providerKind', expect.anything(), expect.anything());
+  });
+
   it('searches name and email prefixes, case-insensitively', async () => {
     expect(ids(await getProviders({ search: 'PAOLA' }))).toEqual(['applicant']);
     expect(ids(await getProviders({ search: 'rita@' }))).toEqual(['rejectedApplicant']);

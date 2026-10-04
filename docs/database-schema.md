@@ -50,6 +50,10 @@ interface User {
   isActive: boolean;                // soft-deactivation flag enforced by admin tooling
   isVerified: boolean;              // top-level verification (mirrors providerProfile.isVerified for providers)
   providerType?: 'individual' | 'business'; // kind of provider account; absent => 'individual'. 'business' = a company or association (P.IVA / codice fiscale holder), always approved manually; its company data lives in instructors/{uid}.business
+  // Derived admin-index fields, written only by the onUserWriteAdminIndex trigger (and
+  // scripts/backfill-search-tokens.mjs) — see src/lib/admin/adminIndex.ts: searchTokens,
+  // adminHidden, providerVerification ('verified' | 'pending' | 'rejected' | null) and
+  providerKind?: 'individual' | 'business' | null; // providerType for providers/applicants (absent => 'individual'), null for everyone else; the /admin/providers type filter (B8). Existing docs get it on their next write or from the backfill script.
 
   // VIP Status
   isVip: boolean;
@@ -165,6 +169,11 @@ interface Venue {
   isPartner: boolean;             // "Anche noi siamo qui" badge
   isFeatured: boolean;
   isActive: boolean;
+
+  // Ownership — RESERVED for phase 4 of the business-accounts plan (venue owners/managers).
+  // Nothing writes it yet; /admin/venues already shows it read-only in an "Owner" column
+  // ("—" when absent, which is every venue today).
+  ownerUid?: string;              // users/{uid} of the venue's owner
   
   // Search
   searchKeywords: string[];

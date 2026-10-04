@@ -94,6 +94,24 @@ describe('derived fields agree with the predicates the admin UI uses', () => {
   });
 });
 
+describe('providerKind (the providers list type filter)', () => {
+  it.each([
+    ['company applicant', { role: 'customer', providerStatus: 'pending', providerType: 'business' }, 'business'],
+    ['approved company', { role: 'provider', providerStatus: 'verified', providerType: 'business' }, 'business'],
+    ['rejected company', { role: 'customer', providerStatus: 'rejected', providerType: 'business' }, 'business'],
+    // providerType is absent on every individual: an equality filter could never find them.
+    ['legacy individual', { role: 'provider', isVerified: true }, 'individual'],
+    ['explicit individual', { role: 'provider', providerType: 'individual' }, 'individual'],
+    ['individual applicant', { role: 'customer', providerStatus: 'pending' }, 'individual'],
+    ['unknown type', { role: 'provider', providerType: 'gym' }, 'individual'],
+    // Not a provider and never applied: not in the providers list at all, like providerVerification.
+    ['plain customer', { role: 'customer' }, null],
+    ['customer with a stray type', { role: 'customer', providerType: 'business' }, null],
+  ] as const)('%s', (_name, data, kind) => {
+    expect(computeAdminIndex('u', data).providerKind).toBe(kind);
+  });
+});
+
 describe('adminIndexPatch', () => {
   it('is null once the document carries its derived fields', () => {
     const data = { fullName: 'A B', role: 'provider' };
@@ -101,6 +119,23 @@ describe('adminIndexPatch', () => {
   });
 
   it('writes providerVerification: null explicitly for non-providers', () => {
-    expect(adminIndexPatch('u', { role: 'customer' })).toMatchObject({ providerVerification: null });
+    expect(adminIndexPatch('u', { role: 'customer' })).toMatchObject({
+      providerVerification: null,
+      providerKind: null,
+    });
+  });
+
+  it('gives a document indexed before providerKind existed the field on its next write', () => {
+    const data = { fullName: 'A B', role: 'provider' };
+    const { providerKind: _omitted, ...indexedBefore } = computeAdminIndex('u', data);
+    expect(adminIndexPatch('u', { ...data, ...indexedBefore })).toEqual({ providerKind: 'individual' });
+  });
+
+  it('follows a company converted back to an individual', () => {
+    const company = { fullName: 'Karate Club', role: 'provider', providerType: 'business' };
+    const indexed = { ...company, ...computeAdminIndex('u', company) };
+    expect(indexed.providerKind).toBe('business');
+    const { providerType: _removed, ...converted } = indexed;
+    expect(adminIndexPatch('u', converted)).toEqual({ providerKind: 'individual' });
   });
 });

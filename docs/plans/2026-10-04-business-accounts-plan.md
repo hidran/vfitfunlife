@@ -203,7 +203,7 @@ registration. Optional fields only — no existing behaviour changes.
 - **Done when:** an approved company shows its name, logo and an "Azienda" badge in `/booking` search and on
   its own page; searching the legal name finds it; individual cards unchanged.
 
-### B8 `[ ]` Admin visibility (Medium) — backend half (B8a) done, see the Log; UI half (B8b) pending
+### B8 `[~]` Admin visibility (Medium) — B8a (callables) and B8b (admin UI) code + unit tests done; browser checks are part of B10
 - Files: `src/components/admin/providers/ProvidersListView.tsx` (+ test), `ProviderDetailView.tsx`,
   admin store/query for the type filter; a small admin callable `releaseBusinessVat` (superadmin or admin,
   audit-logged) to free a P.IVA claim; `src/components/admin/venues/VenuesListView.tsx` gets a read-only
@@ -476,3 +476,45 @@ the same on prod with a throwaway P.IVA claim removed afterwards.
   `lastUpdateTime` fake), `businessApplication.test.ts` (+5); providers suite 156 → 221. 20
   mutations (no stale check, no guard, null instead of delete, claims kept, read after write, no
   claim_in_use, dotted keys, byAdmin ignored, no admin check, …) each turned at least one test red.
+- 2026-10-05 — B8b done (this commit); B8 stays `[~]` until B10's browser checks. **Approve what
+  was seen:** every approve path sends `expectedReview` for a company — `verifyProvider` (lib, via
+  `VerificationData.expectedReview`; the store passes it through unchanged) from the provider page
+  and the verification queue, and `ProviderApplicationsPanel` directly; individuals' payloads are
+  unchanged (tests pin the exact keys). The values come from the instructors doc's `business` map
+  on screen: new `readAdminBusiness` (`src/lib/admin/providerBusiness.ts`, any object counts as a
+  company like the server's `businessOf`, tax id and legal name kept verbatim) behind
+  `useAdminProviderBusiness` (`queryKeys.adminProviderBusiness(id)`, under `adminProvider(id)`).
+  Approve waits for a fresh read (`isFetching`). `stale_review` / `review_required` show the
+  localised text (`role="alert"`) and reload: the detail view invalidates the provider, the queue
+  page refetches the queue and `['providers']`, the panel refetches the applications. **List:** new
+  derived admin-index field `providerKind` ('business' | 'individual' for providers/applicants, null
+  otherwise; both byte-identical `adminIndex.ts` copies) because individuals carry no `providerType`
+  for an equality filter; `providerListConstraints` adds `providerKind ==`; URL `?type=`; 4 new
+  composite indexes in `firestore.indexes.json` and the shapes in `verify-admin-list-indexes.mjs`.
+  **Existing users docs get `providerKind` only on their next write** — B11 must deploy the
+  trigger + indexes, then run `scripts/backfill-search-tokens.mjs --apply` (now counts the field),
+  or the "individuals" filter misses older providers. Company badge = `BusinessBadge` (text + icon)
+  from `users.providerType`, which is server-written only. **Detail:** `BusinessReviewCard` (legal
+  name, tax id, legal form, affiliation number, public name, city, safe website link, description,
+  logo) and `BusinessAdminActions`: change tax id / legal data (form prefilled, client-validated
+  with the signup rules, sends all four fields — tax id as bare digits, empty affiliation as null),
+  release claim (offered only for a rejected company), convert (warning); each in a `Modal`
+  (focus trap, Escape/backdrop blocked while running) with an optional reason ≤ 200 chars, server
+  codes mapped through the new `ADMIN_BUSINESS_ERRORS` in `providerApplicationErrors.ts`
+  (`vat_already_registered` gets an admin-specific text), refresh after success. **Venues:** read-only
+  "Owner" column (uid, "—" + sr-only "no owner" when absent — every venue today); `Venue.ownerUid?`
+  reserved in the type and the schema doc. **Legacy `verifyProvider` callable** refuses a company
+  (business map or `users.providerType === 'business'`) with `failed-precondition` /
+  `use_decide_provider_application` before any write. Decisions not in the plan: (1) the owner
+  column shows the uid, not a name (a users read per row for an always-empty column); (2) the
+  shared `FilterBar` labels are now tied to their selects (`useId`), so the new filter is
+  announced; (3) the legacy guard also refuses un-verifying a company (decideProviderApplication
+  can reject); (4) a company whose `business` map has no public name gets no review from the
+  panel (the public reader drops it) — the server answers `review_required`, whose text sends the
+  admin to the provider page, which reads the raw map. Tests: provider page 14, queue page 5,
+  panel 5, list 9 (+3), venues 2, lib verifyProvider 4, providerBusiness 6, adminIndex +11,
+  getProviders +2, list query +1, error mapping +16 (web gate 93 → 99 files, 724 → 793 tests, all
+  green); functions roles.verifyProvider 4 and admin-index trigger +2 (providers + users 359 → 365).
+  Mutations (no expectedReview on the page / the queue / the panel, no reload on stale_review in
+  the page / the panel, no legacy guard) each turned a test red; the queue page's extra
+  `['providers']` invalidation is belt-and-braces (a reopened row refetches anyway).

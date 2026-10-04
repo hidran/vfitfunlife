@@ -605,11 +605,26 @@ the authority where the two disagree.
 #### Provider Directory
 - **All Providers**: Searchable, filterable list
 - **Provider Status**: Active, pending, suspended, rejected
+- **Account type filter**: all / individuals / companies and associations (derived `providerKind`
+  admin-index field); companies carry an "Azienda" text badge
 - **Performance View**: Bookings, ratings, earnings per provider
 - **Actions**:
   - Edit provider profile
   - Suspend/activate provider
   - Remove verification badge
+
+#### Business (company) accounts — admin or superadmin
+- **Business card** on the provider page: legal name, P.IVA / codice fiscale, legal form,
+  affiliation number, public name, website, city, description, logo.
+- **Approve what you saw**: approving a company (provider page, verification queue, pending
+  applications panel) sends the tax id and legal name on screen; if the company changed them in
+  the meantime the server refuses (`stale_review`), the screen says so and reloads the details.
+- **Admin corrections**, each in a confirmation dialog with an optional reason (≤ 200 chars) and
+  audited server-side: change tax id / legal data (`updateBusinessTaxId`), release the tax-id
+  claim of a rejected company (`releaseBusinessVat`), convert to an individual
+  (`convertBusinessToIndividual` — removes the business details and the claim, the public name
+  reverts to the person's name).
+- **Venues** list shows a read-only "Owner" column (`ownerUid`, reserved for phase 4; "—" today).
 
 ### Booking Management
 

@@ -1,7 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
+  ADMIN_BUSINESS_ERROR_CODES,
+  ADMIN_BUSINESS_ERRORS,
   PROVIDER_APPLICATION_ERROR_CODES,
   PROVIDER_APPLICATION_ERRORS,
+  adminBusinessErrorCode,
+  adminBusinessErrorMessageKey,
   providerApplicationErrorCode,
   reportProviderApplicationError,
 } from './providerApplicationErrors';
@@ -108,5 +112,57 @@ describe('PROVIDER_APPLICATION_ERRORS', () => {
       'Something changed while saving, please try again.'
     );
     expect(PROVIDER_APPLICATION_ERRORS.concurrent_update.field).toBeUndefined();
+  });
+});
+
+describe('admin business errors (B8: approve, release, convert, change tax id)', () => {
+  it('covers every code the B8a admin callables can throw', () => {
+    expect([...ADMIN_BUSINESS_ERROR_CODES].sort()).toEqual(
+      [
+        'review_required',
+        'stale_review',
+        'claim_not_found',
+        'claim_in_use',
+        'not_a_business',
+        'provider_not_found',
+        'invalid_provider_id',
+        'invalid_reason',
+        'invalid_vat',
+        'invalid_business_name',
+        'invalid_legal_form',
+        'invalid_affiliation_number',
+        'vat_already_registered',
+      ].sort()
+    );
+  });
+
+  it.each(ADMIN_BUSINESS_ERROR_CODES)('%s has localised text in all five locales, never the raw code', (code) => {
+    const messageKey = ADMIN_BUSINESS_ERRORS[code];
+    for (const [locale, messages] of Object.entries(LOCALES)) {
+      const text = messages[messageKey];
+      expect(text, `${locale} ${messageKey}`).toBeTruthy();
+      expect(text).not.toContain(code);
+      expect(text).not.toBe(messageKey);
+    }
+  });
+
+  it('reads the code from a callable error and maps it to its message', () => {
+    const err = Object.assign(new Error('stale_review'), { code: 'functions/failed-precondition' });
+    expect(adminBusinessErrorCode(err)).toBe('stale_review');
+    expect(adminBusinessErrorMessageKey(err)).toBe('admin.business.error.staleReview');
+    expect(enMessages[adminBusinessErrorMessageKey(err)!]).toBe(
+      "The company's data changed since you opened it — review the new details and approve again."
+    );
+    expect(adminBusinessErrorMessageKey(new Error('claim_in_use'))).toBe('admin.business.error.claimInUse');
+    // Another account holds the number: the admin, unlike an applicant, can free a rejected one.
+    expect(adminBusinessErrorMessageKey(new Error('vat_already_registered'))).toBe('admin.business.error.vatTaken');
+  });
+
+  it('returns null for anything that is not one of its codes', () => {
+    expect(adminBusinessErrorCode(new Error('Admin access required'))).toBeNull();
+    expect(adminBusinessErrorCode(new Error('concurrent_update'))).toBeNull();
+    expect(adminBusinessErrorCode({ code: 'functions/permission-denied' })).toBeNull();
+    expect(adminBusinessErrorCode(null)).toBeNull();
+    expect(adminBusinessErrorMessageKey('stale_review')).toBeNull();
   });
 });

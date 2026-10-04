@@ -91,20 +91,24 @@ for (const hidden of [false, true]) {
   }
 }
 for (const verification of ["all", "pending"]) {
-  for (const suspended of [null, false]) {
-    for (const token of [null, "a"]) {
-      let q = users.where("adminHidden", "==", false);
-      const label = ["adminHidden==false"];
-      if (verification === "all") {
-        q = q.where("providerVerification", "in", ["verified", "pending", "rejected"]);
-        label.push("providerVerification in");
-      } else {
-        q = q.where("providerVerification", "==", verification);
-        label.push("providerVerification==");
+  // null = no account-type filter; "business" stands for both values of providerKind.
+  for (const kind of [null, "business"]) {
+    for (const suspended of [null, false]) {
+      for (const token of [null, "a"]) {
+        let q = users.where("adminHidden", "==", false);
+        const label = ["adminHidden==false"];
+        if (verification === "all") {
+          q = q.where("providerVerification", "in", ["verified", "pending", "rejected"]);
+          label.push("providerVerification in");
+        } else {
+          q = q.where("providerVerification", "==", verification);
+          label.push("providerVerification==");
+        }
+        if (kind) (q = q.where("providerKind", "==", kind)), label.push("providerKind==");
+        if (suspended !== null) (q = q.where("isSuspended", "==", suspended)), label.push("isSuspended==");
+        if (token) (q = q.where("searchTokens", "array-contains", token)), label.push("searchTokens contains");
+        shapes.push({ list: "providers", order: "createdAt", label: label.join(" & "), q });
       }
-      if (suspended !== null) (q = q.where("isSuspended", "==", suspended)), label.push("isSuspended==");
-      if (token) (q = q.where("searchTokens", "array-contains", token)), label.push("searchTokens contains");
-      shapes.push({ list: "providers", order: "createdAt", label: label.join(" & "), q });
     }
   }
 }

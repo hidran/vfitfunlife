@@ -7,6 +7,11 @@ import { Button } from "@/components/ui/button";
 import { AdminProvider } from "@/types/admin";
 import { VerificationBadge, ProviderTypeBadge } from "./UserRoleBadge";
 import { useI18n } from "@/hooks/useI18n";
+import { useAdminProviderBusiness } from "@/hooks/useAdminProviderBusiness";
+import { businessReviewOf } from "@/lib/admin/providerBusiness";
+import type { BusinessReview } from "@/lib/firebase/functions";
+import { BusinessBadge } from "@/components/provider/BusinessBadge";
+import { BusinessReviewCard } from "./providers/BusinessReviewCard";
 import {
   CheckCircle,
   XCircle,
@@ -20,7 +25,11 @@ import {
 
 interface VerificationQueueProps {
   providers: AdminProvider[];
-  onApprove: (providerId: string) => void;
+  /**
+   * `expectedReview` is set for a company: the tax id and legal name shown in its expanded
+   * row, which the server requires (and compares) to approve it. Undefined for individuals.
+   */
+  onApprove: (providerId: string, expectedReview?: BusinessReview) => void;
   onReject: (providerId: string, reason: string) => void;
   isLoading?: boolean;
   className?: string;
@@ -38,8 +47,15 @@ export function VerificationQueue({
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectModal, setShowRejectModal] = useState<string | null>(null);
 
+  // One row is open at a time, and only an open company can be approved: its business map is
+  // read when it is expanded (users.providerType marks it; the server decides by the map).
+  const expanded = providers.find((p) => p.id === expandedId);
+  const expandedIsCompany = expanded?.providerType === "business";
+  const businessQuery = useAdminProviderBusiness(expandedId ?? "", expandedIsCompany);
+  const expandedBusiness = expandedIsCompany ? businessQuery.data ?? null : null;
+
   const handleApprove = (providerId: string) => {
-    onApprove(providerId);
+    onApprove(providerId, expandedBusiness ? businessReviewOf(expandedBusiness) : undefined);
     setExpandedId(null);
   };
 
@@ -105,6 +121,8 @@ export function VerificationQueue({
                 <p className="text-sm text-content-muted">{provider.email}</p>
               </div>
 
+              {provider.providerType === "business" && <BusinessBadge />}
+
               {/* Status */}
               <VerificationBadge
                 isVerified={provider.providerProfile?.isVerified ?? false}
@@ -123,6 +141,18 @@ export function VerificationQueue({
             {isExpanded && (
               <div className="px-4 pb-4 border-t border-hairline">
                 <div className="pt-4 space-y-4">
+                  {/* A company is approved for exactly these details (expectedReview). */}
+                  {expandedIsCompany &&
+                    (expandedBusiness ? (
+                      <BusinessReviewCard business={expandedBusiness} className="bg-surface-sunken" />
+                    ) : businessQuery.isLoading ? (
+                      <p className="text-sm text-content-muted">{t('common.loading')}</p>
+                    ) : businessQuery.isError ? (
+                      <p role="alert" className="text-sm text-red-400 light:text-red-700">
+                        {t('admin.business.loadError')}
+                      </p>
+                    ) : null)}
+
                   {/* Provider Details */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -326,7 +356,8 @@ export function VerificationQueue({
                       <Button
                         variant="primary"
                         onClick={() => handleApprove(provider.id)}
-                        disabled={isLoading}
+                        // Wait for a fresh read of the company: what is sent is what is shown.
+                        disabled={isLoading || (expandedIsCompany && businessQuery.isFetching)}
                         className="flex-1 bg-emerald-700 hover:bg-emerald-800"
                       >
                         <CheckCircle className="w-4 h-4 mr-2" />

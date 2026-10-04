@@ -453,14 +453,19 @@ const PROVIDER_VERIFICATION_STATES: ProviderVerificationState[] = ["verified", "
  * The Firestore filters of a providers list query. `providerVerification` is derived by the
  * admin-index trigger with the same rule as providerVerificationState, so the "pending" filter
  * and the verification queue (getPendingVerifications) always name the same people.
+ * `providerKind` (same trigger) is the account type: individuals have no `providerType` field
+ * for an equality filter to match, so the derived field is what makes "individuals" queryable.
+ * Existing documents get it on their next write (or from scripts/backfill-search-tokens.mjs).
  */
 export function providerListConstraints(filters: ProviderFilters): QueryConstraint[] {
   const wanted = filters.verificationStatus ?? "all";
+  const kind = filters.providerType ?? "all";
   return [
     where("adminHidden", "==", false),
     wanted === "all"
       ? where("providerVerification", "in", PROVIDER_VERIFICATION_STATES)
       : where("providerVerification", "==", wanted),
+    ...(kind === "all" ? [] : [where("providerKind", "==", kind)]),
     ...suspensionConstraint(filters.status),
     ...searchConstraint(filters.search),
   ];
@@ -532,15 +537,22 @@ export async function getPendingVerifications(): Promise<AdminProvider[]> {
  *
  * `data` is kept for the call sites that pass verification notes; the timestamps and the
  * acting admin are recorded server-side.
+ *
+ * A company (instructors doc with a `business` map) is approved only with `expectedReview`:
+ * the tax id and legal name the admin had on screen. The server refuses with `review_required`
+ * without it and `stale_review` when they no longer match — the caller reloads and says so.
+ * An individual's payload is unchanged.
  */
 export async function verifyProvider(
   providerId: string,
   data: VerificationData
 ): Promise<void> {
+  const review = data.expectedReview;
   await decideProviderApplication({
     providerId,
     decision: "verified",
     ...(data.notes ? { notes: data.notes } : {}),
+    ...(review ? { expectedReview: { vatNumber: review.vatNumber, legalName: review.legalName } } : {}),
   });
   await logAdminAction("VERIFY_PROVIDER", `Verified provider ${providerId}`);
 }

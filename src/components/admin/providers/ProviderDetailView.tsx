@@ -24,6 +24,13 @@ import { notify } from '@/lib/notify';
 import { useI18n } from '@/hooks/useI18n';
 import { formatDecimal, formatPrice } from '@/lib/utils';
 import type { AdminProvider } from '@/types/admin';
+import { providerVerificationState } from '@/lib/firebase/admin';
+import { useAdminProviderBusiness } from '@/hooks/useAdminProviderBusiness';
+import { businessReviewOf } from '@/lib/admin/providerBusiness';
+import { adminBusinessErrorCode, ADMIN_BUSINESS_ERRORS } from '@/lib/providerApplicationErrors';
+import { BusinessBadge } from '@/components/provider/BusinessBadge';
+import { BusinessReviewCard } from './BusinessReviewCard';
+import { BusinessAdminActions } from './BusinessAdminActions';
 import { type ProviderFormData } from './ProviderFormView';
 import {
   ProviderTabBar,
@@ -69,6 +76,17 @@ export function ProviderDetailView({ providerId }: Props) {
   const [activeTab, setActiveTab] = useState<ProviderTab>('overview');
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  const [approving, setApproving] = useState(false);
+  // Why the last approval was refused, shown next to the buttons (e.g. stale_review).
+  const [approveError, setApproveError] = useState<string | null>(null);
+
+  // The company details (instructors/{id}.business), read for every provider: the server
+  // decides "company" by that map, not by users.providerType, and the approval must send back
+  // exactly what this card shows.
+  const businessQuery = useAdminProviderBusiness(providerId);
+  const business = businessQuery.data ?? null;
+  // Reloads the users doc and the business map (the second key is under the first).
+  const reloadProvider = () => qc.invalidateQueries({ queryKey });
 
   const updateMut = useEntityMutation<ProviderFormData, void>({
     mutate: async (patch) => {
@@ -141,11 +159,15 @@ export function ProviderDetailView({ providerId }: Props) {
   });
 
   const handleVerify = async () => {
-    if (!provider) return;
+    if (!provider || approving) return;
+    setApproving(true);
+    setApproveError(null);
     try {
       await verifyProviderAction(provider.id, {
         status: 'verified',
         verifiedAt: Timestamp.now(),
+        // A company is approved for the tax id and legal name on screen, nothing else.
+        ...(business ? { expectedReview: businessReviewOf(business) } : {}),
       });
       qc.setQueryData(queryKey, (prev: AdminProvider | null | undefined) =>
         prev
@@ -164,7 +186,17 @@ export function ProviderDetailView({ providerId }: Props) {
       notify.success(t('admin.providerDetail.verifiedSuccess'));
     } catch (error) {
       console.error('Failed to verify provider:', error);
-      notify.error(t('admin.providerDetail.actionError'));
+      const code = adminBusinessErrorCode(error);
+      if (code === 'stale_review' || code === 'review_required') {
+        // The company changed under the admin (or was never reviewed here): show the new
+        // details and ask for a fresh look instead of failing silently.
+        setApproveError(t(ADMIN_BUSINESS_ERRORS[code]));
+        await reloadProvider();
+      } else {
+        notify.error(t(code ? ADMIN_BUSINESS_ERRORS[code] : 'admin.providerDetail.actionError'));
+      }
+    } finally {
+      setApproving(false);
     }
   };
 
@@ -237,6 +269,7 @@ export function ProviderDetailView({ providerId }: Props) {
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <ProviderTypeBadge userType={provider.userType} />
+                    {(business || provider.providerType === 'business') && <BusinessBadge />}
                     <VerificationBadge isVerified={profile?.isVerified ?? false} />
                     <StatusBadge status={isSuspended ? 'suspended' : 'active'} />
                     {profile?.specialties?.map((specialty) => (
@@ -270,6 +303,9 @@ export function ProviderDetailView({ providerId }: Props) {
                           <Button
                             variant="primary"
                             onClick={handleVerify}
+                            // A company's approval carries its details: wait until a fresh read is on screen.
+                            disabled={businessQuery.isFetching}
+                            isLoading={approving}
                             className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800"
                           >
                             <CheckCircle className="w-4 h-4" />
@@ -295,6 +331,15 @@ export function ProviderDetailView({ providerId }: Props) {
                   </>
                 )}
               </div>
+
+              {approveError && (
+                <p
+                  role="alert"
+                  className="mt-4 rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-400 light:text-red-700"
+                >
+                  {approveError}
+                </p>
+              )}
 
               {showRejectForm && (
                 <div className="mt-4 p-4 bg-[#EF4444]/10 border border-[#EF4444]/30 rounded-xl">
@@ -342,6 +387,24 @@ export function ProviderDetailView({ providerId }: Props) {
             </div>
           </div>
         </div>
+
+        {business ? (
+          <BusinessReviewCard business={business}>
+            <BusinessAdminActions
+              providerId={provider.id}
+              business={business}
+              canRelease={providerVerificationState(provider) === 'rejected'}
+              onChanged={reloadProvider}
+            />
+          </BusinessReviewCard>
+        ) : (
+          businessQuery.isError &&
+          provider.providerType === 'business' && (
+            <p role="alert" className="rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-400 light:text-red-700">
+              {t('admin.business.loadError')}
+            </p>
+          )
+        )}
 
         {/* Performance Metrics */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

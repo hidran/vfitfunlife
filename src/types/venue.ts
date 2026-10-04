@@ -50,6 +50,11 @@ export interface Venue {
   amenities: AmenityRef[];
   hours: VenueHours[];
   photoUrls?: string[]; // max 10. photoUrls[0] is the cover.
+  /**
+   * users/{uid} of the venue's owner. Reserved for phase 4 of the business-accounts plan
+   * (docs/plans/2026-10-04-business-accounts-plan.md); nothing writes it yet.
+   */
+  ownerUid?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

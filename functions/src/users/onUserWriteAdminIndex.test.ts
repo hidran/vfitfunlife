@@ -42,6 +42,22 @@ describe("userAdminIndexPatch", () => {
     expect(Object.keys(patch ?? {})).toEqual(["searchTokens"]);
   });
 
+  it("derives providerKind for the providers list type filter, and follows a conversion", () => {
+    const company = indexed("u1", { role: "customer", providerStatus: "pending", providerType: "business" });
+    expect(company.providerKind).toBe("business");
+    expect(userAdminIndexPatch("u1", company, createTime)).toBeNull();
+
+    // convertBusinessToIndividual deletes users.providerType.
+    delete company.providerType;
+    expect(userAdminIndexPatch("u1", company, createTime)).toEqual({ providerKind: "individual" });
+  });
+
+  it("adds providerKind to a document indexed before the field existed (on its next write)", () => {
+    const data = indexed("u1", { role: "provider", isVerified: true });
+    delete data.providerKind;
+    expect(userAdminIndexPatch("u1", data, createTime)).toEqual({ providerKind: "individual" });
+  });
+
   it("follows a soft delete and a verification decision", () => {
     const data = indexed("u1", { role: "provider" });
     expect(data.providerVerification).toBe("pending");

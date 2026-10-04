@@ -11,6 +11,8 @@ import { useI18n } from '@/hooks/useI18n';
 import { useAuthStore } from '@/stores/authStore';
 import { useServiceCategoryMap } from '@/hooks/useServiceCategories';
 import { queryKeys } from '@/lib/queryKeys';
+import { adminBusinessErrorCode, ADMIN_BUSINESS_ERRORS } from '@/lib/providerApplicationErrors';
+import { BusinessBadge } from '@/components/provider/BusinessBadge';
 
 export function ProviderApplicationsPanel() {
   const { t } = useI18n();
@@ -28,17 +30,32 @@ export function ProviderApplicationsPanel() {
   const loading = appsQuery.isPending;
 
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [errorId, setErrorId] = useState<string | null>(null);
+  const [error, setError] = useState<{ id: string; message: string } | null>(null);
 
-  const decide = async (id: string, decision: 'verified' | 'rejected') => {
-    setBusyId(id);
-    setErrorId(null);
+  const decide = async (a: Provider, decision: 'verified' | 'rejected') => {
+    setBusyId(a.id);
+    setError(null);
     try {
-      await decideProviderApplication({ providerId: id, decision });
+      await decideProviderApplication({
+        providerId: a.id,
+        decision,
+        // A company is approved for the tax id and legal name shown in its row (B8).
+        ...(decision === 'verified' && a.business
+          ? { expectedReview: { vatNumber: a.business.vatNumber, legalName: a.business.legalName } }
+          : {}),
+      });
       await queryClient.invalidateQueries({ queryKey: queryKeys.providerApplications() });
     } catch (e) {
-      console.error('[ProviderApplicationsPanel] decide failed', id, decision, e);
-      setErrorId(id);
+      console.error('[ProviderApplicationsPanel] decide failed', a.id, decision, e);
+      const code = adminBusinessErrorCode(e);
+      setError({
+        id: a.id,
+        message: t(code ? ADMIN_BUSINESS_ERRORS[code] : 'admin.applications.error'),
+      });
+      // The company changed since the list was loaded: show what it is now.
+      if (code === 'stale_review' || code === 'review_required') {
+        await queryClient.invalidateQueries({ queryKey: queryKeys.providerApplications() });
+      }
     } finally {
       setBusyId(null);
     }
@@ -70,18 +87,30 @@ export function ProviderApplicationsPanel() {
           {apps.map((a) => (
             <li key={a.id} className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-hairline p-3">
               <div className="min-w-0">
-                <p className="text-content font-medium">{a.fullName}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-content font-medium">{a.fullName}</p>
+                  {a.isBusiness && <BusinessBadge />}
+                </div>
                 <p className="text-sm text-content-muted">{categoryLabels(a) || '—'}</p>
-                {errorId === a.id && (
-                  <p className="text-sm text-[#EF4444] light:text-red-700">{t('admin.applications.error')}</p>
+                {/* What an approval of a company confirms (and sends back as expectedReview). */}
+                {a.business && (
+                  <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-2 text-sm">
+                    <dt className="text-content-faint">{t('provider.business.reviewed.legalName')}</dt>
+                    <dd className="text-content break-words">{a.business.legalName}</dd>
+                    <dt className="text-content-faint">{t('provider.business.reviewed.vatNumber')}</dt>
+                    <dd className="text-content font-mono tabular-nums">{a.business.vatNumber}</dd>
+                  </dl>
+                )}
+                {error?.id === a.id && (
+                  <p role="alert" className="text-sm text-[#EF4444] light:text-red-700">{error.message}</p>
                 )}
               </div>
               {isAdmin && (
                 <div className="flex gap-2">
-                  <Button size="sm" disabled={busyId === a.id} onClick={() => decide(a.id, 'verified')}>
+                  <Button size="sm" disabled={busyId === a.id} onClick={() => decide(a, 'verified')}>
                     <CheckCircle className="w-4 h-4 mr-1" /> {t('admin.applications.verify')}
                   </Button>
-                  <Button size="sm" variant="ghost" disabled={busyId === a.id} onClick={() => decide(a.id, 'rejected')}>
+                  <Button size="sm" variant="ghost" disabled={busyId === a.id} onClick={() => decide(a, 'rejected')}>
                     <XCircle className="w-4 h-4 mr-1" /> {t('admin.applications.reject')}
                   </Button>
                 </div>
