@@ -45,8 +45,8 @@ Same working rules as `docs/plans/2026-09-29-communication-booking-plan.md` §0 
 |---|---|---|
 | D1 | Business = `users/{uid}.providerType: 'individual' \| 'business'` (default `individual`) + `instructors/{uid}.business` map | Reuses the whole catalogue; existing providers need no migration |
 | D2 | Businesses are **always** approved manually, even when `providerOnboarding.autoApprove` is ON | Someone should check the P.IVA before a company is listed |
-| D3 | P.IVA mandatory, Italy only (11 digits + checksum) | Matches the market; other countries later |
-| D4 | One owner account per business in phase 1 | Team members and venues are phases 2–3 |
+| D3 | An 11-digit Italian tax id is mandatory: the **P.IVA, or the codice fiscale of an association** (ASD/SSD often have no P.IVA; both use the same checksum, so `isValidItalianVat` already accepts both). Stored in `vatNumber`; the UI says "P.IVA / Codice fiscale". Italy only. *(Amended 2026-10-04 after the first real prospect turned out to be an ASD.)* | Matches the market; other countries later |
+| D4 | One owner account per business in phase 1 | Team members and venues are phases 3–4 |
 | D5 | One business per P.IVA (uniqueness claim, written in a transaction) | Stops duplicate registrations and squatting |
 | D6 | After approval the owner may edit display fields (name, logo, website, description, city) but **not** `legalName` / `vatNumber` | Those are what the admin verified; changes go through an admin |
 
@@ -59,7 +59,9 @@ users/{uid}
 instructors/{uid}
   business?: {
     legalName: string,        # ragione sociale — admin-verified, owner read-only after approval
-    vatNumber: string,        # 11 digits, validated; owner read-only after approval
+    vatNumber: string,        # 11-digit P.IVA or association codice fiscale, validated; owner read-only after approval
+    legalForm?: 'company' | 'sole_trader' | 'association' | 'other',   # added in B3b
+    affiliationNumber?: string,   # optional CONI / RASD / ente di promozione registration (B3b); admin-visible only
     displayName: string,      # shown publicly; also copied to name/fullName
     description?: string,
     website?: string | null,
@@ -110,22 +112,57 @@ token and booking screen shows the company name with no further change.
 - **Done when:** tests cover: invalid P.IVA, duplicate P.IVA, idempotent re-apply, autoApprove ON still
   yields pending, individual path unchanged, no dotted keys, approval keeps the company name.
 
+### B3b `[ ]` Legal form and affiliation number (Small) — added 2026-10-04
+An association is not a "company"; admins reviewing it want to know the legal form and its sports-body
+registration. Optional fields only — no existing behaviour changes.
+- Files: `functions/src/providers/businessApplication.ts` (+ test), `functions/src/providers/businessTypes.ts`,
+  `src/types/firebase.ts`, `src/lib/firebase/functions.ts` (wrapper type), `docs/database-schema.md`.
+- `legalForm` ∈ `company | sole_trader | association | other` (default `company` when absent), validated
+  against that list (`invalid_legal_form`); `affiliationNumber` optional string ≤ 40 chars after trim,
+  stored as `""` when empty (same re-apply rule as `description`/`city`). Nested map, no dotted keys.
+- **Done when:** tests for each enum value, an unknown value, over-long affiliation number, and that the
+  existing P.IVA tests still pass with a codice fiscale of an association as the tax id.
+
 ### B4 `[ ]` Firestore rules (Medium)
 - Files: `firestore.rules`, `functions/test/` rules test (emulator pattern of `chat-rules.test.ts`).
-- Owner update of `instructors/{uid}` may change `business.displayName/description/website/logoUrl/city`
-  but not `business.legalName`, `business.vatNumber`, or create/remove the `business` map (D6).
-  `businessVat/*`: no client read or write.
-- **Done when:** rules tests: owner edits display field ✔, owner edits P.IVA ✘, owner adds `business` to an
-  individual ✘, other user ✘, admin ✔, client read of `businessVat` ✘.
+- **`users/{uid}`:** `providerType` stays OUT of `isValidUserCreate` / `isValidUserUpdate` — the
+  `business_account_exists` guard in `applyAsProvider` is safe only because of that. Add a test that
+  pins it. Admin client updates can change it today (only `role`/`permissions` are excluded for
+  admins); either accept that or route changes through an audited callable (B8).
+- **`instructors` create (owner):** forbid the `business` key entirely. **Update (owner):** the `business`
+  map cannot be added or removed (`('business' in new) == ('business' in old)`); `legalName`,
+  `vatNumber`, `legalForm` and `affiliationNumber` never change, **including while pending** (otherwise
+  the admin reviews a number that isn't the claimed one); `business` keys `hasOnly` the allowed set;
+  limits: `displayName` 1–120, `description` ≤ 1000, `city` ≤ 80, `website` null or ≤ 200 chars matching
+  `^https?://\S+$` (the owner can otherwise write `javascript:` straight from the client),
+  `logoUrl` null or an https string with a length cap. Optional: for business docs `name == fullName ==
+  business.displayName`.
+- **Admin edits of `business.vatNumber`** must go through a callable that moves the `businessVat` claim too
+  (B8) — a plain client write would leave claim and doc out of step.
+- **`businessVat/*`:** explicit `allow read, write: if false` plus a test.
+- Known neighbouring holes (out of scope, note in the Log if touched): the owner can write
+  `instructors.providerProfile.rating/reviewCount`, `name`/`fullName`, `isActive`; and
+  `users.providerProfile` (incl. `isVerified`) is on the owner allowlist while `backfillProviderStatus`
+  trusts it.
+- **Done when:** rules tests: owner edits display field ✔, owner edits P.IVA / legal form ✘ (pending and
+  approved), owner adds or removes `business` ✘, `javascript:` website ✘, other user ✘, admin ✔, client
+  read/write of `businessVat` ✘, owner write of `users.providerType` ✘.
 
 ### B5 `[ ]` Signup: individual or company (Large)
 - Files: `src/app/auth/register/RegisterClient.tsx` (both `submitProviderApplication` call sites),
   `src/hooks/useProviderApplication.ts`, `src/lib/firebase/providerApplication.ts`,
   `src/components/profile/BecomeProviderCard.tsx`, new `src/components/provider/BusinessDetailsForm.tsx`
   (React Hook Form + Zod, validator from B1), i18n keys in all five locales.
-- Flow: after choosing "professional", a two-option control "Individual / Company"; Company reveals legal
-  name, P.IVA, public name (defaults to legal name), city, website. The same control appears in
-  `BecomeProviderCard` for existing customers.
+- Flow: after choosing "professional", a two-option control "Individual / Company or association"; the
+  business option reveals legal name, **"P.IVA / Codice fiscale"** (with help text: associations without a
+  P.IVA use their codice fiscale), legal form (company / sole trader / association / other), optional
+  affiliation number (CONI / RASD / ente di promozione), public name (defaults to legal name), city,
+  website. The same control appears in `BecomeProviderCard` for existing customers.
+- Map every error code from the B3 log (`invalid_vat`, `vat_already_registered`, `vat_change_not_allowed`,
+  `business_account_exists`, …) to localised text. `concurrent_update` ⇒ "try again" (the server already
+  retried once). A scheme-less website (`www.…`) is rejected by the server — prepend `https://` in the form.
+  The callable also still throws plain-sentence errors for the older checks ("Pick at least one category").
+- Use `autoApproved` from the response to choose the pending vs. approved screen.
 - Pending state: the existing "application under review" screens are reused; copy for a company mentions
   that the P.IVA is being checked.
 - **Done when:** at 320 and 390px, in it and de: no overlap, 44px targets, inline errors for bad P.IVA and
@@ -155,8 +192,13 @@ token and booking screen shows the company name with no further change.
 - List: type filter (all / individual / business) and a company badge. Detail: a business block with legal
   name, P.IVA, website, and the existing approve/reject actions. Every mutation writes `audit_log`
   (project policy).
-- **Done when:** admin (not only superadmin) can filter companies, open one, see the P.IVA and approve it;
-  approval makes it appear in search; release action works and is audited.
+- Also an admin callable `convertBusinessToIndividual` (audit-logged): clears `users.providerType`, deletes
+  the `instructors.business` map and releases the claim. Without it, an Italian sole trader who picked
+  "Company" by mistake is locked out of the individual path for good (`business_account_exists`).
+  Admin changes to `business.vatNumber` go through a callable that moves the `businessVat` claim too.
+- **Done when:** admin (not only superadmin) can filter companies, open one, see the tax id, legal form and
+  affiliation number and approve it; approval makes it appear in search; release, convert and
+  tax-id-change actions work and are audited.
 
 ### B9 `[ ]` i18n, accessibility, docs (Small)
 - All new keys in it/en/es/fr/de, `completeness.test.ts` green; labels tied to inputs, errors announced
@@ -184,11 +226,26 @@ the same on prod with a throwaway P.IVA claim removed afterwards.
 
 ## 4. Later phases (planned separately once phase 1 ships)
 
-- **Phase 2 — Team:** `businessMembers` collection; the owner invites trainers by email; bookings of a
+- **Phase 2 — Class timetable** (added 2026-10-04; the first real prospect is an ASD whose product is a
+  weekly timetable of group classes at ~8 host sites, not one-to-one slots — see the SST Planet
+  "palinsesto settimanale"). Needs its own spec before tasks:
+  - Data: `instructors/{uid}/classSlots/{id}` = `{ categoryId, title, dayOfWeek, startTime,
+    durationMinutes, location: { venueId? | name, address, city, lat?, lng? }, capacity?, price?, coachName?,
+    isActive, validFrom?, validTo? }`. Several slots may share a day/time (two classes in one slot) and the
+    same class may repeat across locations (Kangoo Jumps in six sites).
+  - Entry: a weekly grid editor in the provider area laid out like the poster (times × days, tap a cell to add
+    a class). Optional: upload the poster and a callable (Claude vision) returns draft slots the owner
+    reviews and corrects — never saved without review.
+  - Display: the business page shows the timetable by day; a "classes near you this week" view in search
+    (`classSlots` collection-group query, needs an index and public read when the instructor is verified).
+  - Booking (later step): capacity, waitlist, per-occurrence reservation.
+  - Rules: owner-only writes under their own `instructors/{uid}`, public read only for a verified parent.
+- **Phase 3 — Team:** `businessMembers` collection; the owner invites trainers by email; bookings of a
   business service route to a member; per-member availability; the business page lists its team.
-- **Phase 3 — Venues:** make `venueStaff` real (schema + admin tool), `venues.ownerUid` + "assign owner /
+- **Phase 4 — Venues:** make `venueStaff` real (schema + admin tool), `venues.ownerUid` + "assign owner /
   manager" in `/admin/venues`, and a venue application path for real partner gyms. This is what finally
-  gives admins ownership visibility over the ~130 seeded venues.
+  gives admins ownership visibility over the ~130 seeded venues. Host sites in a class timetable can then
+  link to a real venue (`location.venueId`).
 
 ## 5. Risks and open points
 
@@ -199,6 +256,16 @@ the same on prod with a throwaway P.IVA claim removed afterwards.
 - **Uniqueness claim vs. rejection** — a rejected company keeps its claim; the admin release action (B8)
   is the escape hatch. If rejections turn out to be common, release automatically on rejection instead.
 - **Non-Italian companies** are out of scope (D3); the validator is isolated so a country switch is local.
+- **A verified individual applying as a business** drops to pending (they are de-listed until an admin
+  reviews the new `business` data) while `users.isVerified` and `role: provider` stay as they were. `[?]`
+  decide: allow with a confirmation warning in B5, or refuse with "contact support". Default if nobody
+  decides before B5: allow with the warning.
+- **Squatting by an unreviewed claim** — a pending claim blocks the real owner of that tax id until an admin
+  acts; the B8 release action is the escape hatch, and a pending company may change its own tax id (B3).
+- **`concurrent_update` retry** — `applyAsProvider` retries the auto-approval once because the admin-index
+  trigger writes `users/{uid}` right after signup; the retry re-reads and re-checks the business guard.
+- **ASD tax and legal details** — whether an association charges VAT or not is irrelevant to listing; we only
+  verify that the tax id exists and matches the legal name. The affiliation number is informational.
 - **Legal copy** — the terms/privacy pages don't mention business data; confirm wording with the owner
   before prod (`[?]` if they want a change).
 
@@ -214,7 +281,11 @@ the same on prod with a throwaway P.IVA claim removed afterwards.
   `vat_already_registered`, `business_account_exists` (an existing business re-applying as an
   individual is refused, else it would be auto-approved unchecked). `description`/`city` are stored
   as "" and `website` as null when empty, so a re-apply through set(merge) replaces stale values.
-- 2026-10-04 — B3 review fixes (this commit). D2 race closed: commitProviderDecision's self-apply
+- 2026-10-04 — Plan amended: D3 now accepts an association's codice fiscale (new task B3b: legal form +
+  affiliation number); B4 rules constraints and B8 convert/release actions taken from the B3 review; phases
+  renumbered — new Phase 2 "Class timetable" (prompted by the SST Planet ASD poster), Team is Phase 3,
+  Venues Phase 4.
+- 2026-10-04 — B3 review fixes (f849d3e). D2 race closed: commitProviderDecision's self-apply
   path re-checks `business_account_exists` on its own reads and guards its users/{uid} write with
   `lastUpdateTime`; a stale write maps to `aborted`/`concurrent_update`, which applyAsProvider retries
   once (the admin-index trigger also writes users/{uid} right after signup). P.IVA squatting closed: the
