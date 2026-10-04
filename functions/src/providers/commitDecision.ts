@@ -5,10 +5,12 @@ import { auditLogData, auditLogDoc, toActorRole } from "../lib/audit";
 import {
   decisionInstructorPatch,
   draftServicesForCategories,
+  isFailedPreconditionError,
   providerRolePatch,
   toConcurrentUpdateError,
 } from "./applicationDecision";
 import { assertNotExistingBusiness } from "./businessApplication";
+import { checkBusinessReview } from "./businessAdminRules";
 import { isProtectedSuperadmin } from "../lib/superadmins";
 
 /** Who the audit entry should name as responsible for the decision. */
@@ -34,6 +36,14 @@ export interface CommitDecisionOptions {
    * (`aborted` / `concurrent_update`) instead of being overwritten.
    */
   application?: { requestedCategoryIds: string[]; fullName?: string | null };
+  /**
+   * What the admin had on screen: the company's tax id and legal name, a `BusinessReview` (B8).
+   * Required to verify a provider whose instructors doc has a `business` map
+   * (`review_required`) and must match it (`stale_review`); ignored for a rejection and for
+   * individuals. Typed `unknown` because it is untrusted caller input — checkBusinessReview
+   * checks its shape.
+   */
+  expectedReview?: unknown;
 }
 
 /**
@@ -48,7 +58,7 @@ export interface CommitDecisionOptions {
 export async function commitProviderDecision(
   opts: CommitDecisionOptions
 ): Promise<{ draftServicesSeeded: number }> {
-  const { providerId, decision, actor, notes, application } = opts;
+  const { providerId, decision, actor, notes, application, expectedReview } = opts;
 
   const db = getFirestore();
   const userRef = db.collection("users").doc(providerId);
@@ -74,6 +84,16 @@ export async function commitProviderDecision(
   if (application) {
     assertNotExistingBusiness(user, instructor);
   }
+
+  // B8, approve what the admin actually saw: approving a company needs the tax id and legal
+  // name the admin reviewed, and they must equal what THIS read of the instructors doc holds
+  // (`review_required` / `stale_review`). Checking the same read the write is built from is
+  // not enough on its own — the doc could change between this read and the commit — so the
+  // instructors write below is guarded on this read's updateTime (`reviewed`), the same
+  // lastUpdateTime technique B3 uses for users/{uid}. Chosen over moving the decision into a
+  // transaction: it closes the window with one extra write and leaves the shared batch (and
+  // the self-apply path that relies on it) as it is.
+  const reviewed = checkBusinessReview(instructorSnap.data(), decision, expectedReview);
 
   const now = FieldValue.serverTimestamp();
   const verified = decision === "verified";
@@ -136,6 +156,15 @@ export async function commitProviderDecision(
     requestedLeaves,
     now,
   });
+  if (reviewed && instructorSnap.updateTime) {
+    // The stale-review guard. WriteBatch.set takes no precondition, so it rides on an update of
+    // `updatedAt` (which the set writes anyway) placed before the set. A batch is one Commit
+    // RPC, "always executed atomically and in order" (google.firestore.v1.CommitRequest; unlike
+    // BatchWrite it allows several writes to one document): if the doc changed since the read
+    // checkBusinessReview passed on — e.g. a re-application with another tax id — the whole
+    // commit fails with code 9 and nothing is written.
+    batch.update(instructorRef, { updatedAt: now }, { lastUpdateTime: instructorSnap.updateTime });
+  }
   batch.set(instructorRef, instructorPatch, { merge: true });
 
   let seeded = 0;
@@ -171,6 +200,12 @@ export async function commitProviderDecision(
   try {
     await batch.commit();
   } catch (err) {
+    // A reviewed approval is always the admin path (the self-apply path refuses a business
+    // above), so its only precondition is the instructors guard: the company changed after the
+    // check — the admin must reload and review it again rather than retry blindly.
+    if (reviewed && isFailedPreconditionError(err)) {
+      throw new HttpsError("failed-precondition", "stale_review");
+    }
     throw toConcurrentUpdateError(err);
   }
 

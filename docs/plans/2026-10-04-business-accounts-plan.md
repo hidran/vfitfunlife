@@ -203,7 +203,7 @@ registration. Optional fields only — no existing behaviour changes.
 - **Done when:** an approved company shows its name, logo and an "Azienda" badge in `/booking` search and on
   its own page; searching the legal name finds it; individual cards unchanged.
 
-### B8 `[ ]` Admin visibility (Medium)
+### B8 `[ ]` Admin visibility (Medium) — backend half (B8a) done, see the Log; UI half (B8b) pending
 - Files: `src/components/admin/providers/ProvidersListView.tsx` (+ test), `ProviderDetailView.tsx`,
   admin store/query for the type filter; a small admin callable `releaseBusinessVat` (superadmin or admin,
   audit-logged) to free a P.IVA claim; `src/components/admin/venues/VenuesListView.tsx` gets a read-only
@@ -436,3 +436,43 @@ the same on prod with a throwaway P.IVA claim removed afterwards.
   array-contains` query finds a company by legal name while cards only show the public name.
   Not covered: home page trainer cards (no badge/logo yet); existing companies need
   `scripts/backfill-provider-search.mjs` (or any write) before legal-name search finds them.
+- 2026-10-05 — B8a done (this commit) — the backend half of B8; B8 stays `[ ]` until the admin UI
+  (B8b). **Approve what was reviewed:** `decideProviderApplication` takes `expectedReview?: {
+  vatNumber, legalName }`; `commitProviderDecision` runs `checkBusinessReview` (pure, new
+  `businessAdminRules.ts`) on its OWN instructors read: approving a doc with a `business` map
+  without it ⇒ `failed-precondition`/`review_required`, tax id (normalised) or legal name
+  (trimmed, case-sensitive) different ⇒ `stale_review`, nothing written. No window between check
+  and write: the batch gets a guard `update({updatedAt})` on instructors with that read's
+  `lastUpdateTime`, placed before the unchanged `set(merge)` (WriteBatch.set takes no
+  precondition; one Commit RPC is atomic and ordered and allows several writes to one doc), and a
+  guard failure maps to `stale_review` (not the retryable `concurrent_update`). Rejections and
+  individuals need no review (one sent is ignored). **New admin callables** (`businessAdmin.ts`,
+  admin or superadmin, one transaction each, all reads first, audit entry in the same
+  transaction): `releaseBusinessVat({vatNumber, reason?})` (audit entity `business_vat` /
+  `delete`, new in both audit vocabularies), `convertBusinessToIndividual({providerId, reason?})`,
+  `updateBusinessTaxId({providerId, vatNumber, legalName?, legalForm?, affiliationNumber?,
+  reason?})` (both `provider` / `update`). New error codes for B8b: `review_required`,
+  `stale_review`, `claim_not_found` (not-found), `claim_in_use`, `not_a_business`,
+  `provider_not_found` (not-found), `invalid_provider_id`, `invalid_reason` (non-string or > 1000
+  chars); reused: `invalid_vat`, `invalid_business_name`, `invalid_legal_form`,
+  `invalid_affiliation_number`, `vat_already_registered`. The signup validators are now exported
+  (`parseVatNumber`, `parseLegalName`, `parseLegalForm`, `parseAffiliationNumber`) and
+  `updateBusinessTaxId` uses them; `claimBusinessVat` gained `byAdmin` (skips only the
+  `vat_change_not_allowed` backstop — an admin may move an approved company). Typed wrappers +
+  request/response types in `src/lib/firebase/functions.ts`; docs in `docs/backend/cloud-functions.md`
+  and `docs/database-schema.md`. Decisions not in the plan: (1) `releaseBusinessVat` treats a
+  holder doc without `applicationStatus` as in use, and a claim whose `uid` can't name a doc as
+  abandoned; (2) `convertBusinessToIndividual` also deletes a denormalised `instructors.providerType`
+  if present, needs the users doc (`provider_not_found`) and refuses a protected superadmin;
+  (3) `updateBusinessTaxId` requires the instructors `business` map (users.providerType alone is
+  `not_a_business`), releases EVERY other claim of the uid (the B3b uid query, not just the stored
+  number's), keeps the approval state, and still writes (fields + audit) when nothing changed;
+  `null` resets `legalForm`/clears `affiliationNumber` like signup. **Deploy note:** the current
+  admin UI (`verifyProvider` in `src/lib/firebase/admin.ts`, `ProviderApplicationsPanel`) sends no
+  `expectedReview`, so approving a company returns `review_required` until B8b — deploy these
+  functions together with B8b (B11), never alone. Tests: `businessAdminRules.test.ts` (21),
+  `businessAdmin.test.ts` (32, strict transaction fake: read-after-write throws, commit-only
+  writes, delete sentinel, invalid doc ids throw), `commitDecision.test.ts` (4 → 11, versioned
+  `lastUpdateTime` fake), `businessApplication.test.ts` (+5); providers suite 156 → 221. 20
+  mutations (no stale check, no guard, null instead of delete, claims kept, read after write, no
+  claim_in_use, dotted keys, byAdmin ignored, no admin check, …) each turned at least one test red.

@@ -8,7 +8,11 @@ import {
   buildBusinessInstructorPatch,
   claimBusinessVat,
   isExistingBusiness,
+  parseAffiliationNumber,
+  parseLegalForm,
+  parseLegalName,
   parseProviderType,
+  parseVatNumber,
   validateBusinessInput,
 } from "./businessApplication";
 
@@ -722,5 +726,74 @@ describe("claimBusinessVat", () => {
       await expect(result).rejects.toMatchObject({ code: "failed-precondition", message: "vat_change_not_allowed" });
       expect(fake.writes()).toEqual([]);
     }
+  });
+
+  describe("byAdmin (updateBusinessTaxId, B8)", () => {
+    function claimByAdmin(fake: ReturnType<typeof fakeTransaction>, instructor: Record<string, unknown>) {
+      return claimBusinessVat(fake.tx, {
+        uid: OWNER,
+        vatNumber: NEW_VAT,
+        instructor,
+        heldVatNumbers: fake.heldBy(OWNER),
+        claimRef,
+        now: NOW,
+        byAdmin: true,
+      });
+    }
+
+    it("moves an APPROVED business to another tax id — the admin is who D6 leaves it to", async () => {
+      const fake = fakeTransaction({ [`businessVat/${OLD_VAT}`]: { uid: OWNER } });
+      await expect(claimByAdmin(fake, instructorWith(OLD_VAT, APPROVED))).resolves.toEqual({
+        claim: "claimed",
+        released: [OLD_VAT],
+      });
+      expect(fake.writes()).toEqual([
+        ["delete", `businessVat/${OLD_VAT}`],
+        ["create", `businessVat/${NEW_VAT}`, { uid: OWNER, createdAt: NOW }],
+      ]);
+      expectReadsBeforeWrites(fake.ops);
+    });
+
+    it("still refuses a tax id another account holds, and writes nothing", async () => {
+      const fake = fakeTransaction({
+        [`businessVat/${OLD_VAT}`]: { uid: OWNER },
+        [`businessVat/${NEW_VAT}`]: { uid: "someone-else" },
+      });
+      await expect(claimByAdmin(fake, instructorWith(OLD_VAT, APPROVED))).rejects.toMatchObject({
+        code: "already-exists",
+        message: "vat_already_registered",
+      });
+      expect(fake.writes()).toEqual([]);
+    });
+  });
+});
+
+describe("field validators shared with the admin route", () => {
+  it("parseVatNumber normalises a valid tax id and refuses anything else with invalid_vat", () => {
+    expect(parseVatNumber(" IT 123 456 789 03 ")).toBe("12345678903");
+    expect(parseVatNumber(ASSOCIATION_CF)).toBe(ASSOCIATION_CF);
+    for (const bad of [undefined, null, 12345678903, "", "12345678904", "a/b", "00000000000"]) {
+      expectHttpsError(() => parseVatNumber(bad), "invalid-argument", "invalid_vat");
+    }
+  });
+
+  it("parseLegalName trims and caps, like signup", () => {
+    expect(parseLegalName("  ASD Sport  ")).toBe("ASD Sport");
+    for (const bad of [undefined, null, 1, "", "   ", "x".repeat(BUSINESS_FIELD_LIMITS.legalName + 1)]) {
+      expectHttpsError(() => parseLegalName(bad), "invalid-argument", "invalid_business_name");
+    }
+  });
+
+  it("parseLegalForm and parseAffiliationNumber keep the signup defaults and limits", () => {
+    expect(parseLegalForm(undefined)).toBe("company");
+    expect(parseLegalForm("association")).toBe("association");
+    expectHttpsError(() => parseLegalForm("srl"), "invalid-argument", "invalid_legal_form");
+    expect(parseAffiliationNumber(null)).toBe("");
+    expect(parseAffiliationNumber(" RASD 1 ")).toBe("RASD 1");
+    expectHttpsError(
+      () => parseAffiliationNumber("9".repeat(BUSINESS_FIELD_LIMITS.affiliationNumber + 1)),
+      "invalid-argument",
+      "invalid_affiliation_number",
+    );
   });
 });

@@ -74,12 +74,42 @@ function parseWebsite(value: unknown): string | null {
   return trimmed;
 }
 
+/**
+ * The field validators below are exported so the admin route that changes the reviewed fields
+ * after signup (updateBusinessTaxId, B8) applies exactly the signup rules — one set of rules,
+ * not a copy that can drift.
+ */
+
+/**
+ * The tax id — a P.IVA, or an association's codice fiscale (D3; both share the B1 checksum) —
+ * as bare 11 digits (no spaces, no `IT`), or `invalid_vat`.
+ */
+export function parseVatNumber(value: unknown): string {
+  if (typeof value !== "string" || !isValidItalianVat(value)) throw invalid("invalid_vat");
+  return normalizeVatNumber(value);
+}
+
+/** The ragione sociale: required, trimmed, at most 120 characters (`invalid_business_name`). */
+export function parseLegalName(value: unknown): string {
+  if (typeof value !== "string") throw invalid("invalid_business_name");
+  const legalName = value.trim();
+  if (!legalName || legalName.length > BUSINESS_FIELD_LIMITS.legalName) {
+    throw invalid("invalid_business_name");
+  }
+  return legalName;
+}
+
 /** The declared legal form: absent/null ⇒ 'company'; anything outside the list is refused. */
-function parseLegalForm(value: unknown): BusinessLegalForm {
+export function parseLegalForm(value: unknown): BusinessLegalForm {
   if (value === undefined || value === null) return BUSINESS_LEGAL_FORMS[0];
   const known = BUSINESS_LEGAL_FORMS.find((form) => form === value);
   if (!known) throw invalid("invalid_legal_form");
   return known;
+}
+
+/** The optional affiliation number: absent/null ⇒ "", else ≤ 40 chars trimmed. */
+export function parseAffiliationNumber(value: unknown): string {
+  return optionalText(value, BUSINESS_FIELD_LIMITS.affiliationNumber, "invalid_affiliation_number");
 }
 
 /**
@@ -104,16 +134,8 @@ export function validateBusinessInput(raw: unknown): BusinessDetails {
   }
   const input = raw as Record<string, unknown>;
 
-  if (typeof input.vatNumber !== "string" || !isValidItalianVat(input.vatNumber)) {
-    throw invalid("invalid_vat");
-  }
-  const vatNumber = normalizeVatNumber(input.vatNumber);
-
-  if (typeof input.legalName !== "string") throw invalid("invalid_business_name");
-  const legalName = input.legalName.trim();
-  if (!legalName || legalName.length > BUSINESS_FIELD_LIMITS.legalName) {
-    throw invalid("invalid_business_name");
-  }
+  const vatNumber = parseVatNumber(input.vatNumber);
+  const legalName = parseLegalName(input.legalName);
 
   const displayName =
     optionalText(input.displayName, BUSINESS_FIELD_LIMITS.displayName, "invalid_business_name") ||
@@ -123,11 +145,7 @@ export function validateBusinessInput(raw: unknown): BusinessDetails {
     legalName,
     vatNumber,
     legalForm: parseLegalForm(input.legalForm),
-    affiliationNumber: optionalText(
-      input.affiliationNumber,
-      BUSINESS_FIELD_LIMITS.affiliationNumber,
-      "invalid_affiliation_number",
-    ),
+    affiliationNumber: parseAffiliationNumber(input.affiliationNumber),
     displayName,
     description: optionalText(
       input.description,
@@ -266,6 +284,11 @@ export interface VatClaimTransaction<Ref> {
  * is the authoritative record, and it never offers someone else's claim.
  *
  * Rejection itself does not release a claim; an admin frees one from the back office (B8).
+ *
+ * `byAdmin: true` is the admin route that changes a company's tax id (updateBusinessTaxId, B8)
+ * — D6 makes the reviewed fields admin-owned after approval, and this IS that admin, so the
+ * `vat_change_not_allowed` backstop is skipped. Every other rule (refuse another account's
+ * claim, release every other claim of the account, create the new one) is the same.
  */
 export async function claimBusinessVat<Ref>(
   tx: VatClaimTransaction<Ref>,
@@ -276,12 +299,13 @@ export async function claimBusinessVat<Ref>(
     heldVatNumbers: readonly string[];
     claimRef: (vatNumber: string) => Ref;
     now: unknown;
+    byAdmin?: boolean;
   },
 ): Promise<{ claim: "claimed" | "already-yours"; released: string[] }> {
-  const { uid, vatNumber, instructor, heldVatNumbers, claimRef, now } = opts;
+  const { uid, vatNumber, instructor, heldVatNumbers, claimRef, now, byAdmin } = opts;
 
   const others = [...new Set(heldVatNumbers)].filter((held) => held !== vatNumber);
-  if (others.length > 0 && isApproved(instructor)) {
+  if (others.length > 0 && !byAdmin && isApproved(instructor)) {
     throw new HttpsError("failed-precondition", "vat_change_not_allowed");
   }
 

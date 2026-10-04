@@ -244,6 +244,12 @@ export function decisionInstructorPatch(opts: {
 /** gRPC status code 9: FAILED_PRECONDITION — what a write's `lastUpdateTime` guard fails with. */
 const FAILED_PRECONDITION = 9;
 
+/** Whether a commit failed a write precondition (`lastUpdateTime`): a doc changed after its read. */
+export function isFailedPreconditionError(err: unknown): boolean {
+  const code = err && typeof err === "object" ? (err as { code?: unknown }).code : undefined;
+  return code === FAILED_PRECONDITION;
+}
+
 /**
  * Map a commit that failed its `lastUpdateTime` precondition — the document changed after it
  * was read, e.g. a concurrent business application — to a clean, retryable
@@ -251,8 +257,7 @@ const FAILED_PRECONDITION = 9;
  * is returned unchanged.
  */
 export function toConcurrentUpdateError(err: unknown): unknown {
-  const code = err && typeof err === "object" ? (err as { code?: unknown }).code : undefined;
-  return code === FAILED_PRECONDITION ? new HttpsError("aborted", "concurrent_update") : err;
+  return isFailedPreconditionError(err) ? new HttpsError("aborted", "concurrent_update") : err;
 }
 
 function isConcurrentUpdate(err: unknown): boolean {

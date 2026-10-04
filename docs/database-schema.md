@@ -278,8 +278,11 @@ interface Instructor {
   // Owner client writes (firestore.rules, B4): `business` can't be created with the doc, added or
   // removed; legalName/vatNumber/legalForm/affiliationNumber never change; no other keys; changed
   // values must fit displayName 1–120 (non-blank), description ≤ 1000, city ≤ 80, website null or
-  // http(s) ≤ 200, logoUrl null or https ≤ 500. Admins may change anything (tax-id changes should
-  // go through the B8 callable so the businessVat claim moves too).
+  // http(s) ≤ 200, logoUrl null or https ≤ 500. Admins may change anything, but changes to
+  // legalName/vatNumber/legalForm/affiliationNumber should go through the updateBusinessTaxId
+  // callable so the businessVat claim moves too; convertBusinessToIndividual removes the map
+  // (FieldValue.delete(), never null). Approving a business needs the reviewed vatNumber +
+  // legalName (decideProviderApplication's expectedReview).
 
   // Booking availability (functions/src/availability/slots.ts is the single source of truth
   // for this shape). Missing or empty means every day is switched off deliberately — it does
@@ -782,8 +785,8 @@ The following top-level collections exist in `firestore.rules` and/or `functions
 
 ### businessVat
 - **Path:** `/businessVat/{vatNumber}` (docId == the normalized 11-digit tax id: P.IVA, or an association's codice fiscale)
-- **Purpose:** Uniqueness claim so only one business account can register a given tax id. Written in a transaction together with the application; the same transaction releases every other claim the applicant holds (found by `uid`), so an account holds at most one.
-- **Key fields:** `uid` (owner of the claim; `applyAsProvider` queries `uid ==` inside its transaction — automatic single-field index, do not exempt it), `createdAt: Timestamp`.
+- **Purpose:** Uniqueness claim so only one business account can register a given tax id. Written in a transaction together with the application; the same transaction releases every other claim the applicant holds (found by `uid`), so an account holds at most one. A rejection keeps the claim. Admin callables (B8): `releaseBusinessVat` deletes a claim that is no longer in use (refused while the holder's pending/approved instructors doc still carries the number), `convertBusinessToIndividual` deletes every claim of the uid, `updateBusinessTaxId` moves the claim to the new number.
+- **Key fields:** `uid` (owner of the claim; `applyAsProvider`, `convertBusinessToIndividual` and `updateBusinessTaxId` query `uid ==` inside their transactions — automatic single-field index, do not exempt it), `createdAt: Timestamp`.
 - **Access:** No client read or write (rules deny all); Admin SDK (Cloud Functions) only.
 
 ### venueStaff

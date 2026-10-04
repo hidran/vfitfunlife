@@ -364,6 +364,44 @@ schedule yet; `availabilityUpdatedAt` is deliberately left unset until the provi
 - **Auth:** Superadmin only.
 - **Purpose:** One-time migration. Moves the weekly hours the old profile editor wrote (`users/{uid}.providerProfile.availabilitySchedule`, a weekday map nothing ever booked against) onto `instructors/{uid}.availabilitySchedule`, then removes the users-side field. Never overwrites hours a provider has since saved on `/provider/availability` (`availabilityUpdatedAt` present). Afterward, every real provider (`providerStatus` verified or pending, not soft-deleted) still without a bookable schedule gets `DEFAULT_WEEKLY_HOURS` — counted separately as `defaultedHours` — without stamping `availabilityUpdatedAt`. Idempotent; writes an `audit_log` entry (`entityType: "migration"`, `entityId: "availability_backfill"`) when run for real.
 
+### Provider applications & business accounts (`../../functions/src/providers/`)
+
+Plan: `../plans/2026-10-04-business-accounts-plan.md`. A business (company or association) is a
+provider with `users/{uid}.providerType: 'business'`, an `instructors/{uid}.business` map, and a
+uniqueness claim `businessVat/{vatNumber}` (see `../database-schema.md`). Errors from these
+callables carry a **stable code as the message** (e.g. `stale_review`), which the client maps to
+localised text. All four are admin **or** superadmin (`requireAdmin`; non-admins get
+`permission-denied`), and every mutation writes its `audit_logs` entry in the same
+batch/transaction as the change.
+
+#### `decideProviderApplication`
+- **Type:** Callable (`decideProviderApplication.ts`, the shared write is `commitDecision.ts`)
+- **Parameters:** `{ providerId: string, decision: 'verified' | 'rejected', notes?: string, expectedReview?: { vatNumber: string, legalName: string } }`
+- **Returns:** `{ success, providerId, decision, draftServicesSeeded }`
+- **Purpose:** Verify or reject a provider: sets `providerStatus`, the nested `providerProfile.isVerified` on both docs, promotes the role, seeds default hours and draft services on approval; audited as `provider` / `verify` (or `update` on rejection).
+- **Approve what was reviewed (B8):** approving a provider whose instructors doc has a `business` map requires `expectedReview` — the tax id and legal name the admin saw. Missing or malformed ⇒ `failed-precondition` / `review_required`; not equal to the stored values (tax id normalised, legal name trimmed, case-sensitive) ⇒ `failed-precondition` / `stale_review`, nothing written. The check runs on the same read of the instructors doc that the write is built from, and the batch carries a `lastUpdateTime` guard on that doc, so a change landing between check and commit (a re-application with another tax id) also ends in `stale_review`. The UI should reload the detail view and review again. Rejections and individuals need no `expectedReview` (one sent is ignored).
+
+#### `releaseBusinessVat`
+- **Type:** Callable (`businessAdmin.ts`)
+- **Parameters:** `{ vatNumber: string, reason?: string }` — P.IVA / codice fiscale; spaces and an `IT` prefix allowed.
+- **Returns:** `{ success, vatNumber, releasedFrom: string | null }`
+- **Purpose:** Free a tax-id claim (a rejected company's, or a squatter's) so the real owner can register. Refused while the claim's holder still has a non-rejected instructors doc carrying that number — use `convertBusinessToIndividual` or `updateBusinessTaxId` for a live company. Audited as `business_vat` / `delete` (`before` = the claim).
+- **Errors:** `invalid-argument` / `invalid_vat` · `not-found` / `claim_not_found` · `failed-precondition` / `claim_in_use` · `invalid_reason`.
+
+#### `convertBusinessToIndividual`
+- **Type:** Callable (`businessAdmin.ts`)
+- **Parameters:** `{ providerId: string, reason?: string }`
+- **Returns:** `{ success, providerId, releasedClaims: string[] }`
+- **Purpose:** Turn a company back into an individual (e.g. a sole trader who picked "Company" by mistake and is otherwise locked out of the individual path by `business_account_exists`). One transaction: deletes `users/{uid}.providerType` and the `instructors/{uid}.business` map with `FieldValue.delete()` (never null — the B4 rules would then block every owner edit), plus a denormalised `instructors.providerType` if present; deletes every `businessVat` claim with that `uid`; resets the public `name`/`fullName` to the user's personal `fullName` (kept as is if the user has none). Verification is unchanged — an approved company stays listed under the personal name. Audited as `provider` / `update` (`before` = business map + claims).
+- **Errors:** `invalid-argument` / `invalid_provider_id` · `not-found` / `provider_not_found` · `failed-precondition` / `not_a_business` · `permission-denied` (protected superadmin) · `invalid_reason`.
+
+#### `updateBusinessTaxId`
+- **Type:** Callable (`businessAdmin.ts`)
+- **Parameters:** `{ providerId: string, vatNumber: string, legalName?: string, legalForm?: 'company' | 'sole_trader' | 'association' | 'other' | null, affiliationNumber?: string | null, reason?: string }` — validated with the signup validators; the optional fields change only when sent (`null` resets `legalForm` to `company` / clears `affiliationNumber`).
+- **Returns:** `{ success, providerId, vatNumber, releasedClaims: string[] }`
+- **Purpose:** The only way to change a company's admin-owned fields after review (the owner can't — rules lock them — and a plain admin client write would leave the claim behind). One transaction: the new number must be unclaimed or already this uid's; every other claim of the uid is released and the new one created; `instructors/{uid}.business` gets only the sent fields as a nested map (set with merge). The approval state is unchanged. Audited as `provider` / `update` (reviewed fields + claims before and after).
+- **Errors:** `invalid-argument` / `invalid_vat`, `invalid_business_name`, `invalid_legal_form`, `invalid_affiliation_number`, `invalid_provider_id`, `invalid_reason` · `already-exists` / `vat_already_registered` · `failed-precondition` / `not_a_business`.
+
 ---
 
 ## Recipes (`../../functions/src/recipes/`)

@@ -788,21 +788,137 @@ export async function setPaymentSettings(
   return (await fn(data)).data;
 }
 
+/** What the admin had on screen when approving a company: its tax id and legal name. */
+export interface BusinessReview {
+  /** As shown — spaces and an `IT` prefix are ignored when compared. */
+  vatNumber: string;
+  /** As shown — compared trimmed, case-sensitive. */
+  legalName: string;
+}
+
+export interface DecideProviderApplicationRequest {
+  providerId: string;
+  decision: "verified" | "rejected";
+  notes?: string;
+  /**
+   * Required to approve a company (a provider whose instructors doc has a `business` map);
+   * ignored for rejections and individuals. Send the values the detail view displayed.
+   */
+  expectedReview?: BusinessReview;
+}
+
 /**
  * An admin verifies or un-verifies a provider. With auto-approval on this is mostly the
  * revoking route; with it off it is how a pending application is decided. Verifying also
  * promotes the user to role 'provider' and seeds a draft service per requested category
  * (functions/src/providers/decideProviderApplication.ts).
+ *
+ * Approving a company fails with `failed-precondition` and a stable code as the message:
+ * `review_required` (no `expectedReview` sent) or `stale_review` (the company's tax id or legal
+ * name is no longer what was shown — it re-applied, or changed while the approval was in
+ * flight): reload the detail view and review it again.
  */
-export async function decideProviderApplication(data: {
-  providerId: string;
-  decision: "verified" | "rejected";
-  notes?: string;
-}): Promise<{ success: boolean; draftServicesSeeded: number }> {
+export async function decideProviderApplication(
+  data: DecideProviderApplicationRequest,
+): Promise<{ success: boolean; draftServicesSeeded: number }> {
   const functions = await getFunctionsInstance();
   const fn = httpsCallable<typeof data, { success: boolean; draftServicesSeeded: number }>(
     functions,
     "decideProviderApplication",
   );
+  return (await fn(data)).data;
+}
+
+// --- Business accounts: admin corrections (functions/src/providers/businessAdmin.ts) ---
+// Admin or superadmin; each call is one transaction with its audit_logs entry. Failures carry a
+// stable code as the message: `invalid_vat`, `invalid_business_name`, `invalid_legal_form`,
+// `invalid_affiliation_number`, `invalid_provider_id`, `invalid_reason`, `claim_not_found`,
+// `claim_in_use`, `not_a_business`, `provider_not_found`, `vat_already_registered`.
+
+export interface ReleaseBusinessVatRequest {
+  /** P.IVA / codice fiscale whose uniqueness claim to free. */
+  vatNumber: string;
+  reason?: string;
+}
+
+export interface ReleaseBusinessVatResult {
+  success: boolean;
+  /** Normalised (11 digits). */
+  vatNumber: string;
+  /** The uid that held the claim, or null when it named no usable account. */
+  releasedFrom: string | null;
+}
+
+/**
+ * Free a tax-id claim, e.g. a rejected company's or a squatter's. `not-found` /
+ * `claim_not_found` when nobody holds it; `failed-precondition` / `claim_in_use` while the
+ * holder's pending or approved company still carries the number (convert it, or change its tax
+ * id, instead).
+ */
+export async function releaseBusinessVat(data: ReleaseBusinessVatRequest): Promise<ReleaseBusinessVatResult> {
+  const functions = await getFunctionsInstance();
+  const fn = httpsCallable<typeof data, ReleaseBusinessVatResult>(functions, "releaseBusinessVat");
+  return (await fn(data)).data;
+}
+
+export interface ConvertBusinessToIndividualRequest {
+  providerId: string;
+  reason?: string;
+}
+
+export interface ConvertBusinessToIndividualResult {
+  success: boolean;
+  providerId: string;
+  /** The tax-id claims that were released. */
+  releasedClaims: string[];
+}
+
+/**
+ * Turn a company back into an individual: removes `providerType` and the `business` map,
+ * releases its tax-id claims and renames it to the person's own name. Verification is
+ * unchanged. `failed-precondition` / `not_a_business` when it is not a company.
+ */
+export async function convertBusinessToIndividual(
+  data: ConvertBusinessToIndividualRequest,
+): Promise<ConvertBusinessToIndividualResult> {
+  const functions = await getFunctionsInstance();
+  const fn = httpsCallable<typeof data, ConvertBusinessToIndividualResult>(
+    functions,
+    "convertBusinessToIndividual",
+  );
+  return (await fn(data)).data;
+}
+
+export interface UpdateBusinessTaxIdRequest {
+  providerId: string;
+  /** Required: the new (or unchanged) P.IVA / codice fiscale. */
+  vatNumber: string;
+  /** The fields below change only when sent. */
+  legalName?: string;
+  /** `null` resets to 'company'. */
+  legalForm?: BusinessLegalForm | null;
+  /** `null` clears it. At most 40 characters. */
+  affiliationNumber?: string | null;
+  reason?: string;
+}
+
+export interface UpdateBusinessTaxIdResult {
+  success: boolean;
+  providerId: string;
+  /** Normalised (11 digits). */
+  vatNumber: string;
+  /** Claims released by the move (empty when the number did not change). */
+  releasedClaims: string[];
+}
+
+/**
+ * Change a company's admin-owned fields (tax id, legal name, legal form, affiliation number) —
+ * the owner can't, and a plain client write would leave the tax-id claim behind. The claim
+ * moves with the number: `already-exists` / `vat_already_registered` when another account holds
+ * it; `failed-precondition` / `not_a_business` when the provider is not a company.
+ */
+export async function updateBusinessTaxId(data: UpdateBusinessTaxIdRequest): Promise<UpdateBusinessTaxIdResult> {
+  const functions = await getFunctionsInstance();
+  const fn = httpsCallable<typeof data, UpdateBusinessTaxIdResult>(functions, "updateBusinessTaxId");
   return (await fn(data)).data;
 }
