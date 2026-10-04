@@ -1,8 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   PROVIDER_APPLICATION_ERROR_CODES,
   PROVIDER_APPLICATION_ERRORS,
   providerApplicationErrorCode,
+  reportProviderApplicationError,
 } from './providerApplicationErrors';
 import { EMPTY_BUSINESS_DETAILS } from './businessDetails';
 import { itMessages } from '@/i18n/messages/it';
@@ -27,6 +28,36 @@ describe('providerApplicationErrorCode', () => {
     expect(providerApplicationErrorCode(null)).toBeNull();
     expect(providerApplicationErrorCode(undefined)).toBeNull();
     expect(providerApplicationErrorCode('invalid_vat')).toBeNull();
+  });
+});
+
+describe('reportProviderApplicationError', () => {
+  it('hands a field code to the company form when one is in use', () => {
+    const showOnField = vi.fn(() => true);
+    expect(reportProviderApplicationError(new Error('vat_already_registered'), showOnField)).toEqual({
+      kind: 'field',
+    });
+    expect(showOnField).toHaveBeenCalledWith('vat_already_registered');
+  });
+
+  it('turns a code the form does not take into its form-level message', () => {
+    expect(reportProviderApplicationError(new Error('concurrent_update'), () => false)).toEqual({
+      kind: 'message',
+      messageKey: 'provider.applyError.concurrentUpdate',
+    });
+    // No company form (an individual): even a field code becomes a message.
+    expect(reportProviderApplicationError(new Error('invalid_vat'))).toEqual({
+      kind: 'message',
+      messageKey: 'provider.business.error.vatInvalid',
+    });
+  });
+
+  it('leaves anything that is not a code to the caller', () => {
+    const showOnField = vi.fn(() => true);
+    expect(reportProviderApplicationError(new Error('Pick at least one category'), showOnField)).toEqual({
+      kind: 'unknown',
+    });
+    expect(showOnField).not.toHaveBeenCalled();
   });
 });
 

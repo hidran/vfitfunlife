@@ -857,6 +857,7 @@ export const esMessages: Messages = {
   'auth.register.socialForm.subtitle': 'Ayudanos a personalizar tu experiencia',
   'auth.register.field.emailOptional': 'Email (opcional)',
   'auth.register.completeRegistration': 'Completar registro',
+  'auth.register.accountCreatedHint': 'Cuenta ya creada: ahora solo puedes cambiar los datos profesionales.',
   'auth.password.rule.minLength': 'Al menos 12 caracteres',
   'auth.password.rule.lowercase': 'Una letra minúscula',
   'auth.password.rule.uppercase': 'Una letra mayúscula',
@@ -2116,6 +2117,7 @@ export const esMessages: Messages = {
   'provider.business.error.affiliationInvalid': 'Número de afiliación demasiado largo (máximo 40 caracteres).',
   'provider.business.error.cityInvalid': 'Ciudad no válida o demasiado larga (máximo 80 caracteres).',
   'provider.business.error.websiteInvalid': 'Dirección web no válida. Ejemplo: www.tusitio.es',
+  'provider.business.error.websiteTooLong': 'Dirección web demasiado larga (máximo 200 caracteres).',
   'provider.business.error.descriptionInvalid': 'Descripción demasiado larga (máximo 1000 caracteres).',
 
   // ─── applyAsProvider error codes without a form field ───────────────

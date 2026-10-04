@@ -11,6 +11,7 @@ import type { BusinessLegalForm } from '@/types/firebase';
 import type { BusinessApplicationInput } from '@/lib/firebase/providerApplication';
 import {
   BUSINESS_FIELD_LIMITS,
+  BUSINESS_FORM_ERRORS,
   BUSINESS_LEGAL_FORMS,
   EMPTY_BUSINESS_DETAILS,
   businessDetailsSchema,
@@ -30,26 +31,28 @@ const LEGAL_FORM_LABELS: Record<BusinessLegalForm, MessageKey> = {
   other: 'provider.business.legalForm.other',
 };
 
-/** Every message the form can show: its schema messages and the field-level server codes. */
+/**
+ * Every message the form can show on a field: the schema's messages and those of the server
+ * codes that belong to a field. Derived from both sources, so neither can add one this misses.
+ */
 const FIELD_ERROR_KEYS: ReadonlySet<string> = new Set<MessageKey>([
-  'provider.business.error.legalNameRequired',
-  'provider.business.error.nameInvalid',
-  'provider.business.error.vatRequired',
-  'provider.business.error.vatInvalid',
-  'provider.business.error.vatTaken',
-  'provider.business.error.vatLocked',
-  'provider.business.error.legalFormInvalid',
-  'provider.business.error.affiliationInvalid',
-  'provider.business.error.cityInvalid',
-  'provider.business.error.websiteInvalid',
-  'provider.business.error.descriptionInvalid',
+  ...Object.values(BUSINESS_FORM_ERRORS),
+  ...Object.values(PROVIDER_APPLICATION_ERRORS)
+    .filter((entry) => entry.field)
+    .map((entry) => entry.messageKey),
 ]);
 
-export interface BusinessDetailsFormState {
-  /** The normalised payload when every field is valid, else null. */
-  value: BusinessApplicationInput | null;
-  isValid: boolean;
-}
+/** The fields in the order they are shown: the first invalid one gets the focus. */
+const FIELD_ORDER: readonly BusinessField[] = [
+  'legalName',
+  'vatNumber',
+  'legalForm',
+  'affiliationNumber',
+  'displayName',
+  'city',
+  'website',
+  'description',
+];
 
 export interface BusinessDetailsFormHandle {
   /**
@@ -71,17 +74,7 @@ export interface BusinessDetailsFormProps {
    * legal name and tax id become read-only; it is not implemented yet and renders as 'create'.
    */
   mode?: 'create' | 'edit';
-  defaultValues?: Partial<BusinessDetailsFormValues>;
-  /** Called with the current value and validity on mount and after every change. */
-  onChange?: (state: BusinessDetailsFormState) => void;
   disabled?: boolean;
-}
-
-function evaluate(values: Partial<BusinessDetailsFormValues>): BusinessDetailsFormState {
-  const parsed = businessDetailsSchema.safeParse({ ...EMPTY_BUSINESS_DETAILS, ...values });
-  return parsed.success
-    ? { value: toBusinessApplication(parsed.data), isValid: true }
-    : { value: null, isValid: false };
 }
 
 /**
@@ -91,10 +84,10 @@ function evaluate(values: Partial<BusinessDetailsFormValues>): BusinessDetailsFo
  *
  * A sub-form, not a `<form>`: it sits inside the signup form (forms can't nest), keeps its own
  * React Hook Form state and hands the result over through the ref (`validate`,
- * `showServerError`) and `onChange`.
+ * `showServerError`).
  */
 export const BusinessDetailsForm = forwardRef<BusinessDetailsFormHandle, BusinessDetailsFormProps>(
-  function BusinessDetailsForm({ mode = 'create', defaultValues, onChange, disabled }, ref) {
+  function BusinessDetailsForm({ mode = 'create', disabled }, ref) {
     const { t } = useI18n();
     const baseId = useId();
     const {
@@ -103,35 +96,22 @@ export const BusinessDetailsForm = forwardRef<BusinessDetailsFormHandle, Busines
       handleSubmit,
       setError,
       setFocus,
-      getValues,
-      subscribe,
       formState: { errors },
     } = useForm<BusinessDetailsFormValues>({
       resolver: zodResolver(businessDetailsSchema),
-      defaultValues: { ...EMPTY_BUSINESS_DETAILS, ...defaultValues },
+      defaultValues: EMPTY_BUSINESS_DETAILS,
       mode: 'onTouched',
       reValidateMode: 'onChange',
-      shouldFocusError: true,
+      // Focus is ours (below): the caller may still have the form disabled when the errors
+      // arrive, and a disabled control can't take focus.
+      shouldFocusError: false,
     });
 
     const legalName = useWatch({ control, name: 'legalName' });
 
-    // Report value + validity without re-rendering into a loop: a subscription fires on real
-    // changes only, whatever the parent does with the callback.
-    const onChangeRef = useRef(onChange);
-    useEffect(() => {
-      onChangeRef.current = onChange;
-    });
-    useEffect(() => {
-      onChangeRef.current?.(evaluate(getValues()));
-      return subscribe({
-        formState: { values: true },
-        callback: ({ values }) => onChangeRef.current?.(evaluate(values)),
-      });
-    }, [getValues, subscribe]);
-
-    // A server error arrives while the parent still has the form disabled (it is submitting),
-    // and a disabled control can't take focus: focus once a render has re-enabled it.
+    // The field to focus once a render shows it enabled: the first invalid one after
+    // `validate`, or the one a server error is about. The parent disables the form while it
+    // checks or submits, so focusing straight away would often hit a disabled control.
     const focusAfterRender = useRef<BusinessField | null>(null);
     useEffect(() => {
       const field = focusAfterRender.current;
@@ -143,14 +123,17 @@ export const BusinessDetailsForm = forwardRef<BusinessDetailsFormHandle, Busines
     useImperativeHandle(
       ref,
       () => ({
-        // handleSubmit runs the resolver, shows every error and focuses the first invalid field
-        // (shouldFocusError). It also marks the form submitted, so from then on each field
-        // re-validates as it is edited — which is what clears a server error on change.
+        // handleSubmit runs the resolver and shows every error. It also marks the form
+        // submitted, so from then on each field re-validates as it is edited — which is what
+        // clears a server error on change.
         validate: () =>
           new Promise<BusinessApplicationInput | null>((resolve) => {
             void handleSubmit(
               (values) => resolve(toBusinessApplication(values)),
-              () => resolve(null)
+              (fieldErrors) => {
+                focusAfterRender.current = FIELD_ORDER.find((field) => fieldErrors[field]) ?? null;
+                resolve(null);
+              }
             )();
           }),
         showServerError: (code) => {
@@ -300,7 +283,8 @@ export const BusinessDetailsForm = forwardRef<BusinessDetailsFormHandle, Busines
             autoComplete="url"
             autoCapitalize="none"
             spellCheck={false}
-            maxLength={BUSINESS_FIELD_LIMITS.website}
+            // No maxLength: the cap counts the `https://` added to a bare address, so the schema
+            // (after normalising) owns it and shows its own "too long" message.
             placeholder="www.example.it"
             className={cn(invalidClass('website'))}
           />

@@ -1,11 +1,7 @@
 import { createRef } from 'react';
 import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
-import {
-  BusinessDetailsForm,
-  type BusinessDetailsFormHandle,
-  type BusinessDetailsFormState,
-} from './BusinessDetailsForm';
+import { describe, it, expect } from 'vitest';
+import { BusinessDetailsForm, type BusinessDetailsFormHandle } from './BusinessDetailsForm';
 import { isValidItalianVat } from '@/lib/vatNumber';
 import {
   PROVIDER_APPLICATION_ERROR_CODES,
@@ -20,9 +16,8 @@ const ASSOCIATION_CF = '97123456788';
 
 function setup() {
   const ref = createRef<BusinessDetailsFormHandle>();
-  const onChange = vi.fn<(state: BusinessDetailsFormState) => void>();
-  render(<BusinessDetailsForm ref={ref} onChange={onChange} />);
-  return { ref, onChange };
+  render(<BusinessDetailsForm ref={ref} />);
+  return { ref };
 }
 
 const field = (label: RegExp) => screen.getByLabelText(label) as HTMLInputElement;
@@ -168,19 +163,32 @@ describe('BusinessDetailsForm', () => {
     }
   );
 
-  it('reports the value and its validity as the user types', async () => {
-    const { onChange } = setup();
-    expect(onChange).toHaveBeenLastCalledWith({ value: null, isValid: false });
-
+  it('lets a long bare address be typed and says it is too long once https:// is added', async () => {
+    const { ref } = setup();
     type(/^Ragione sociale/, 'Fit Lab SRL');
     type(/^P\.IVA \/ Codice fiscale/, VALID_PIVA);
+    // 196 characters typed; with `https://` that is 204, over the 200 the server accepts.
+    const typed = `www.${'a'.repeat(189)}.it`;
+    expect(typed).toHaveLength(196);
+    expect(field(/^Sito web/)).not.toHaveAttribute('maxlength');
+    type(/^Sito web/, typed);
 
-    await waitFor(() =>
-      expect(onChange).toHaveBeenLastCalledWith({
-        value: { legalName: 'Fit Lab SRL', vatNumber: VALID_PIVA, legalForm: 'company', displayName: 'Fit Lab SRL' },
-        isValid: true,
-      })
+    expect(await validate(ref)).toBeNull();
+    expect(field(/^Sito web/)).toHaveValue(typed);
+    expect(field(/^Sito web/)).toHaveAccessibleDescription(
+      'Indirizzo del sito troppo lungo (massimo 200 caratteri).'
     );
+  });
+
+  it('does not take focus while disabled, and focuses the first invalid field once enabled', async () => {
+    const ref = createRef<BusinessDetailsFormHandle>();
+    const { rerender } = render(<BusinessDetailsForm ref={ref} disabled />);
+
+    expect(await validate(ref)).toBeNull();
+    expect(field(/^Ragione sociale/)).not.toHaveFocus();
+
+    rerender(<BusinessDetailsForm ref={ref} />);
+    await waitFor(() => expect(field(/^Ragione sociale/)).toHaveFocus());
   });
 
   describe('server error codes', () => {

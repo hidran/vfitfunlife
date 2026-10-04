@@ -26,7 +26,7 @@ import {
   BusinessDetailsForm,
   type BusinessDetailsFormHandle,
 } from '@/components/provider/BusinessDetailsForm';
-import { PROVIDER_APPLICATION_ERRORS, providerApplicationErrorCode } from '@/lib/providerApplicationErrors';
+import { reportProviderApplicationError } from '@/lib/providerApplicationErrors';
 import { applicationOutcomeStatus, canAccessProviderArea } from '@/lib/providerStatus';
 import type { ProviderType } from '@/types/firebase';
 import { validatePasswordStrength } from '@/lib/auth/passwordPolicy';
@@ -89,8 +89,11 @@ export function RegisterClient() {
   const [providerCategoryIds, setProviderCategoryIds] = useState<string[]>([]);
   const [providerType, setProviderType] = useState<ProviderType>('individual');
   const businessFormRef = useRef<BusinessDetailsFormHandle>(null);
-  // The account this form created, when only the professional application after it failed.
-  const createdAccount = useRef<{ uid: string; email: string } | null>(null);
+  // The uid of the account (email flow) or profile (social flow) this form created, when only
+  // the professional application after it failed. The ref is read synchronously by the submit
+  // handler and the redirect guard; the state locks the account fields on screen.
+  const createdAccount = useRef<string | null>(null);
+  const [accountCreated, setAccountCreated] = useState(false);
   const appliesAsBusiness = wantsProvider && providerType === 'business';
 
   /**
@@ -110,24 +113,49 @@ export function RegisterClient() {
    * id another account registered), otherwise as the form error. False for any other failure.
    */
   const reportApplicationError = (err: unknown): boolean => {
-    const code = providerApplicationErrorCode(err);
-    if (!code) return false;
-    if (!(appliesAsBusiness && businessFormRef.current?.showServerError(code))) {
-      setError(t(PROVIDER_APPLICATION_ERRORS[code].messageKey));
-    }
-    return true;
+    const report = reportProviderApplicationError(
+      err,
+      appliesAsBusiness ? businessFormRef.current?.showServerError : undefined
+    );
+    if (report.kind === 'message') setError(t(report.messageKey));
+    return report.kind !== 'unknown';
+  };
+
+  /**
+   * The reloaded profile can lag the callable. Until it shows the application, put the
+   * callable's answer (approved, or pending review — always the case for a company) into the
+   * auth store: the provider layout reads the store, and would otherwise bounce a brand-new
+   * professional back to /profile.
+   */
+  const recordApplicationOutcome = (
+    application: ProviderApplicationResult | undefined,
+    business: BusinessApplicationInput | undefined
+  ) => {
+    const outcome = applicationOutcomeStatus(application);
+    const user = useAuthStore.getState().user;
+    if (!user || !outcome || canAccessProviderArea(user.providerStatus)) return;
+    useAuthStore.setState({
+      user: { ...user, providerStatus: outcome, ...(business ? { providerType: 'business' as const } : {}) },
+    });
   };
 
   const businessDetails = (
     <BusinessDetailsForm ref={businessFormRef} mode="create" disabled={isLoading} />
   );
 
+  // Once the account exists, its fields are read-only and point at the hint that says why.
+  const lockedAccountField = accountCreated
+    ? { readOnly: true, 'aria-describedby': 'register-account-created' }
+    : {};
+
   // Someone who already has a profile (opened /auth/register by hand, or followed an old
   // link) must not re-run registration over it: send them where a sign-in would. Skipped
-  // while this form is submitting, since registering creates the profile mid-submit.
+  // while this form is submitting, since registering creates the profile mid-submit, and once
+  // this form has created it: a failed professional application leaves the user here to fix
+  // it, and a late profile reload must not carry them off to /profile with what they typed.
   const submitting = useRef(false);
   useEffect(() => {
-    if (submitting.current || !profile?.fullName?.trim()) return;
+    if (submitting.current || createdAccount.current || !profile?.fullName?.trim()) return;
     router.replace(alreadyRegisteredRoute(profile));
   }, [profile, router]);
 
@@ -161,15 +189,24 @@ export function RegisterClient() {
       return;
     }
 
-    // Company details are checked with the rest, before anything is written.
-    const business = appliesAsBusiness ? await validateBusiness() : undefined;
+    // Company details are checked with the rest, before anything is written. The check is
+    // async, so the form is busy meanwhile: no second submit can start.
+    let business: BusinessApplicationInput | null | undefined;
+    if (appliesAsBusiness) {
+      setIsLoading(true);
+      business = await validateBusiness();
+    }
 
     if (wantsProvider && providerCategoryIds.length === 0) {
+      setIsLoading(false);
       setError(t('provider.optIn.errorNoCategory'));
       return;
     }
 
-    if (business === null) return;
+    if (business === null) {
+      setIsLoading(false);
+      return;
+    }
 
     setIsLoading(true);
     submitting.current = true;
@@ -182,6 +219,7 @@ export function RegisterClient() {
         preferredSection,
         preferredLanguage: locale,
       });
+      createdAccount.current = firebaseUser.uid;
 
       let application: ProviderApplicationResult | undefined;
       if (wantsProvider) {
@@ -190,19 +228,9 @@ export function RegisterClient() {
 
       // Refresh user profile in store
       await refreshUserProfile();
+      recordApplicationOutcome(application, business);
 
-      // The reloaded profile can lag the callable: until it shows the application, the
-      // callable's answer (approved, or pending review — always the case for a company)
-      // decides where the new professional lands.
-      const user = useAuthStore.getState().user;
-      const outcome = applicationOutcomeStatus(application);
-      router.push(
-        postAuthRoute(
-          user && outcome && !canAccessProviderArea(user.providerStatus)
-            ? { ...user, providerStatus: outcome }
-            : user
-        )
-      );
+      router.push(postAuthRoute(useAuthStore.getState().user));
     } catch (err) {
       console.error('Registration error:', err);
       if (reportApplicationError(err)) return;
@@ -249,15 +277,24 @@ export function RegisterClient() {
       return;
     }
 
-    // Company details are checked with the rest, before the account is created.
-    const business = appliesAsBusiness ? await validateBusiness() : undefined;
+    // Company details are checked with the rest, before the account is created. The check is
+    // async, so the form is busy meanwhile: no second submit can start.
+    let business: BusinessApplicationInput | null | undefined;
+    if (appliesAsBusiness) {
+      setIsLoading(true);
+      business = await validateBusiness();
+    }
 
     if (wantsProvider && providerCategoryIds.length === 0) {
+      setIsLoading(false);
       setError(t('provider.optIn.errorNoCategory'));
       return;
     }
 
-    if (business === null) return;
+    if (business === null) {
+      setIsLoading(false);
+      return;
+    }
 
     setIsLoading(true);
     submitting.current = true;
@@ -266,17 +303,20 @@ export function RegisterClient() {
       // Register with email/password — unless this form already created the account and only
       // the professional application after it failed (say, a tax id another account holds):
       // then the retry re-sends the application, instead of failing on "email already in use".
-      const typedEmail = email.trim();
-      const created = createdAccount.current;
+      // The account fields are read-only from then on, so nothing typed afterwards is lost.
       const accountExists =
-        created !== null &&
-        created.email === typedEmail &&
-        useAuthStore.getState().firebaseUser?.uid === created.uid;
+        createdAccount.current !== null &&
+        useAuthStore.getState().firebaseUser?.uid === createdAccount.current;
       if (!accountExists) {
-        await registerWithEmail(typedEmail, password, fullName.trim(), locale, {
+        await registerWithEmail(email.trim(), password, fullName.trim(), locale, {
           dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
           preferredSection,
         });
+        const createdUid = useAuthStore.getState().firebaseUser?.uid;
+        if (createdUid) {
+          createdAccount.current = createdUid;
+          setAccountCreated(true);
+        }
       }
 
       if (wantsProvider) {
@@ -284,11 +324,11 @@ export function RegisterClient() {
         if (!uid) {
           throw new Error('Registration user is not available');
         }
-        createdAccount.current = { uid, email: typedEmail };
-        await submitProviderApplication(providerApplication(business));
+        const application = await submitProviderApplication(providerApplication(business));
         // Keep the in-memory profile in sync so the professional state is
         // visible immediately after permissions/home navigation.
         await refreshUserProfile();
+        recordApplicationOutcome(application, business);
       }
 
       // Navigate to permissions or home
@@ -502,6 +542,17 @@ export function RegisterClient() {
               </div>
             )}
 
+            {/* The account exists (only the professional application after it failed): its
+                fields are locked, so nothing typed now can silently not apply to it. */}
+            {accountCreated && (
+              <p
+                id="register-account-created"
+                className="rounded-lg border border-hairline bg-surface-2 p-3 text-sm text-content break-words"
+              >
+                {t('auth.register.accountCreatedHint')}
+              </p>
+            )}
+
             {/* Full Name */}
             <div className="space-y-2">
               <label htmlFor="register-full-name" className="text-sm font-medium text-text-secondary">
@@ -515,9 +566,10 @@ export function RegisterClient() {
                   placeholder={t('auth.register.placeholder.fullName')}
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="auth-input pl-10"
+                  className={cn('auth-input pl-10', accountCreated && 'opacity-70')}
                   required
                   disabled={isLoading}
+                  {...lockedAccountField}
                 />
               </div>
             </div>
@@ -535,9 +587,10 @@ export function RegisterClient() {
                   placeholder={t('auth.common.emailPlaceholder')}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="auth-input pl-10"
+                  className={cn('auth-input pl-10', accountCreated && 'opacity-70')}
                   required
                   disabled={isLoading}
+                  {...lockedAccountField}
                 />
               </div>
             </div>
@@ -555,10 +608,11 @@ export function RegisterClient() {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="auth-input pl-10 pr-20"
+                  className={cn('auth-input pl-10 pr-20', accountCreated && 'opacity-70')}
                   required
                   minLength={12}
                   disabled={isLoading}
+                  {...lockedAccountField}
                 />
                 <button
                   type="button"
@@ -584,10 +638,11 @@ export function RegisterClient() {
                   placeholder="••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="auth-input pl-10"
+                  className={cn('auth-input pl-10', accountCreated && 'opacity-70')}
                   required
                   minLength={6}
                   disabled={isLoading}
+                  {...lockedAccountField}
                 />
               </div>
             </div>
@@ -604,8 +659,9 @@ export function RegisterClient() {
                   type="date"
                   value={dateOfBirth}
                   onChange={(e) => setDateOfBirth(e.target.value)}
-                  className="auth-input pl-10"
+                  className={cn('auth-input pl-10', accountCreated && 'opacity-70')}
                   disabled={isLoading}
+                  {...lockedAccountField}
                 />
               </div>
             </div>
@@ -621,7 +677,7 @@ export function RegisterClient() {
                     key={section.id}
                     type="button"
                     onClick={() => setPreferredSection(section.id)}
-                    disabled={isLoading}
+                    disabled={isLoading || accountCreated}
                     className={`
                       relative py-4 px-3 rounded-xl font-semibold text-sm transition-all
                       ${

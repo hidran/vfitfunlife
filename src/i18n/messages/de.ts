@@ -858,6 +858,7 @@ export const deMessages: Messages = {
   'auth.register.socialForm.subtitle': 'Hilf uns, dein Erlebnis zu personalisieren',
   'auth.register.field.emailOptional': 'E-Mail (optional)',
   'auth.register.completeRegistration': 'Registrierung abschließen',
+  'auth.register.accountCreatedHint': 'Konto bereits erstellt – jetzt kannst du nur noch die beruflichen Angaben ändern.',
   'auth.password.rule.minLength': 'Mindestens 12 Zeichen',
   'auth.password.rule.lowercase': 'Ein Kleinbuchstabe',
   'auth.password.rule.uppercase': 'Ein Großbuchstabe',
@@ -2123,6 +2124,7 @@ export const deMessages: Messages = {
   'provider.business.error.affiliationInvalid': 'Verbandsnummer zu lang (max. 40 Zeichen).',
   'provider.business.error.cityInvalid': 'Stadt ungültig oder zu lang (max. 80 Zeichen).',
   'provider.business.error.websiteInvalid': 'Ungültige Website-Adresse. Beispiel: www.deineseite.de',
+  'provider.business.error.websiteTooLong': 'Website-Adresse zu lang (max. 200 Zeichen).',
   'provider.business.error.descriptionInvalid': 'Beschreibung zu lang (max. 1000 Zeichen).',
 
   // ─── applyAsProvider error codes without a form field ───────────────

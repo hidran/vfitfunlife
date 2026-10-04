@@ -13,7 +13,7 @@ import {
   BusinessDetailsForm,
   type BusinessDetailsFormHandle,
 } from '@/components/provider/BusinessDetailsForm';
-import { PROVIDER_APPLICATION_ERRORS, providerApplicationErrorCode } from '@/lib/providerApplicationErrors';
+import { reportProviderApplicationError } from '@/lib/providerApplicationErrors';
 import { useI18n } from '@/hooks/useI18n';
 import type { MessageKey } from '@/i18n/messages';
 import type { ProviderType } from '@/types/firebase';
@@ -28,6 +28,9 @@ export function BecomeProviderCard() {
   const [selected, setSelected] = useState<string[]>([]);
   const [providerType, setProviderType] = useState<ProviderType>('individual');
   const [errorKey, setErrorKey] = useState<MessageKey | null>(null);
+  // True while the company details are being checked (async): no second submit meanwhile.
+  const [checking, setChecking] = useState(false);
+  const busy = checking || submit.isPending;
   const businessFormRef = useRef<BusinessDetailsFormHandle>(null);
 
   // The auth user is reloaded after a successful application, but that read can lag (or fail):
@@ -89,18 +92,23 @@ export function BecomeProviderCard() {
 
   /** A failed application: on its company field when it has one, else under the form. */
   const reportError = (err: unknown) => {
-    const code = providerApplicationErrorCode(err);
-    if (code && providerType === 'business' && businessFormRef.current?.showServerError(code)) return;
-    setErrorKey(code ? PROVIDER_APPLICATION_ERRORS[code].messageKey : 'provider.card.error');
+    const report = reportProviderApplicationError(
+      err,
+      providerType === 'business' ? businessFormRef.current?.showServerError : undefined
+    );
+    if (report.kind === 'field') return;
+    setErrorKey(report.kind === 'message' ? report.messageKey : 'provider.card.error');
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setErrorKey(null);
-    if (selected.length === 0 || submit.isPending) return;
+    if (selected.length === 0 || busy) return;
     if (providerType === 'business') {
       // Shows the errors on their fields and focuses the first one when something is wrong.
+      setChecking(true);
       const business = await businessFormRef.current?.validate();
+      setChecking(false);
       if (!business) return;
       submit.mutate(
         { categoryIds: selected, providerType: 'business', business },
@@ -120,15 +128,19 @@ export function BecomeProviderCard() {
           <p className="text-content font-medium">{t('provider.card.cta.title')}</p>
           <p className="text-sm text-content-muted">{t('provider.card.cta.subtitle')}</p>
         </div>
-        {!open && <Button size="sm" onClick={() => setOpen(true)}>{t('provider.card.cta.start')}</Button>}
+        {!open && (
+          <Button size="sm" className="min-h-11 shrink-0" onClick={() => setOpen(true)}>
+            {t('provider.card.cta.start')}
+          </Button>
+        )}
       </div>
 
       {open && (
         <form className="mt-4 space-y-4" onSubmit={handleSubmit} noValidate>
-          <ProviderTypeChoice value={providerType} onChange={setProviderType} disabled={submit.isPending} />
+          <ProviderTypeChoice value={providerType} onChange={setProviderType} disabled={busy} />
           {/* Hidden, not unmounted: switching back and forth keeps what was typed. */}
           <div hidden={providerType !== 'business'}>
-            <BusinessDetailsForm ref={businessFormRef} mode="create" disabled={submit.isPending} />
+            <BusinessDetailsForm ref={businessFormRef} mode="create" disabled={busy} />
           </div>
           <div>
             <p className="text-sm text-content-muted mb-2">{t('provider.optIn.pickServices')}</p>
@@ -138,7 +150,7 @@ export function BecomeProviderCard() {
             {errorKey && <p className="text-sm text-error break-words">{t(errorKey)}</p>}
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button type="submit" size="sm" className="min-h-11" disabled={selected.length === 0 || submit.isPending}>
+            <Button type="submit" size="sm" className="min-h-11" disabled={selected.length === 0 || busy}>
               {submit.isPending ? t('provider.card.submitting') : t('provider.card.submit')}
             </Button>
             <Button

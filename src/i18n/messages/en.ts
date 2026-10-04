@@ -883,6 +883,7 @@ export const enMessages: Messages = {
   'auth.register.socialForm.subtitle': 'Help us personalize your experience',
   'auth.register.field.emailOptional': 'Email (optional)',
   'auth.register.completeRegistration': 'Complete registration',
+  'auth.register.accountCreatedHint': 'Account already created — only the professional details can be changed.',
   'auth.password.rule.minLength': 'At least 12 characters',
   'auth.password.rule.lowercase': 'A lowercase letter',
   'auth.password.rule.uppercase': 'An uppercase letter',
@@ -2142,6 +2143,7 @@ export const enMessages: Messages = {
   'provider.business.error.affiliationInvalid': 'Affiliation number too long (max 40 characters).',
   'provider.business.error.cityInvalid': 'City not valid or too long (max 80 characters).',
   'provider.business.error.websiteInvalid': 'Invalid website address. Example: www.yoursite.com',
+  'provider.business.error.websiteTooLong': 'Website address too long (max 200 characters).',
   'provider.business.error.descriptionInvalid': 'Description too long (max 1000 characters).',
 
   // ─── applyAsProvider error codes without a form field ───────────────

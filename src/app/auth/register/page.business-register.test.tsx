@@ -2,14 +2,17 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { RegisterClient } from './RegisterClient';
+import { canAccessProviderArea } from '@/lib/providerStatus';
+import type { ProviderStatus } from '@/types/firebase';
 
 // Business (company / association) signup — plan 2026-10-04, task B5. The individual path is
 // covered by page.email-register.test.tsx, which must keep passing unchanged.
 
 const mockPush = vi.fn();
+const mockReplace = vi.fn();
 let mockSearchParams = new URLSearchParams();
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: mockPush, replace: vi.fn() }),
+  useRouter: () => ({ push: mockPush, replace: mockReplace }),
   useSearchParams: () => mockSearchParams,
 }));
 
@@ -21,7 +24,7 @@ const mockRefreshUserProfile = vi.fn();
 
 type MockAuthState = {
   firebaseUser: { uid: string; email: string | null } | null;
-  user: { providerStatus?: string; role?: string; fullName?: string } | null;
+  user: { providerStatus?: ProviderStatus; providerType?: string; role?: string; fullName?: string } | null;
   refreshUserProfile: typeof mockRefreshUserProfile;
   registerWithEmail: typeof mockRegisterWithEmail;
   clearError: typeof mockClearError;
@@ -38,6 +41,10 @@ vi.mock('@/stores/authStore', () => {
     ...mockAuthState,
     firebaseUser: mockAuthState.firebaseUser ?? { uid: 'new-uid', email: 'new@example.com' },
   });
+  // Like zustand's: a partial merged into the state (what the provider layout then reads).
+  useAuthStore.setState = (partial: Partial<MockAuthState>) => {
+    mockAuthState = { ...mockAuthState, ...partial };
+  };
   return { useAuthStore };
 });
 
@@ -140,7 +147,10 @@ describe('Register as a company or association', () => {
   });
 
   it('creates the account, then applies as a business with the details', async () => {
-    mockRegisterWithEmail.mockResolvedValueOnce(undefined);
+    // Registering loads a customer profile into the store; the reload after applying lags.
+    mockRegisterWithEmail.mockImplementationOnce(async () => {
+      mockAuthState.user = { role: 'customer', fullName: 'Mia Rossi', providerStatus: 'none' };
+    });
     mockSubmitProviderApplication.mockResolvedValueOnce({ success: true, providerId: 'new-uid', autoApproved: false });
     render(<RegisterClient />);
 
@@ -159,6 +169,50 @@ describe('Register as a company or association', () => {
     );
     expect(mockRegisterWithEmail).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/auth/permissions'));
+    // The reloaded profile lagged: the callable's answer is in the store for the next screens.
+    expect(mockAuthState.user).toMatchObject({ providerStatus: 'pending', providerType: 'business' });
+  });
+
+  it('sends exactly the individual payload after switching back from a company with a bad tax id', async () => {
+    mockRegisterWithEmail.mockResolvedValueOnce(undefined);
+    mockSubmitProviderApplication.mockResolvedValueOnce({ success: true, providerId: 'new-uid', autoApproved: true });
+    render(<RegisterClient />);
+
+    fillAccount();
+    chooseCompany();
+    fillBusiness('12345678904');
+    fireEvent.click(screen.getByRole('radio', { name: 'Singolo professionista' }));
+    pickKarateAcceptAndSubmit();
+
+    await waitFor(() => expect(mockSubmitProviderApplication).toHaveBeenCalledTimes(1));
+    const [payload] = mockSubmitProviderApplication.mock.calls[0];
+    expect(payload).toEqual({ categoryIds: ['karate'], fullName: 'Mia Rossi' });
+    expect(Object.keys(payload).sort()).toEqual(['categoryIds', 'fullName']);
+  });
+
+  it('stays on the form when the profile loads after a failed company application', async () => {
+    mockRegisterWithEmail.mockResolvedValueOnce(undefined);
+    mockSubmitProviderApplication.mockRejectedValueOnce(new Error('vat_already_registered'));
+    const { rerender } = render(<RegisterClient />);
+
+    fillAccount();
+    chooseCompany();
+    fillBusiness();
+    pickKarateAcceptAndSubmit();
+    await waitFor(() => expect(screen.getByLabelText(/^P\.IVA \/ Codice fiscale/)).toHaveFocus());
+
+    // The auth listener reloads the new profile a moment later.
+    mockAuthState = { ...mockAuthState, user: { role: 'customer', fullName: 'Mia Rossi', providerStatus: 'none' } };
+    rerender(<RegisterClient />);
+
+    expect(mockReplace).not.toHaveBeenCalled();
+    expect(screen.getByLabelText(/^Ragione sociale/)).toHaveValue('ASD Karate Roma');
+  });
+
+  it('still sends an already-registered visitor away from the form', () => {
+    mockAuthState.user = { role: 'customer', fullName: 'Mia Rossi', providerStatus: 'none' };
+    render(<RegisterClient />);
+    expect(mockReplace).toHaveBeenCalledWith('/profile');
   });
 
   it('checks the company details before creating the account, focusing the first bad field', async () => {
@@ -195,7 +249,20 @@ describe('Register as a company or association', () => {
     expect(screen.queryByRole('alert')).toBeNull();
     expect(mockPush).not.toHaveBeenCalled();
 
-    // The account exists now; fixing the tax id and submitting again must not re-register.
+    // The account exists now: its fields are read-only, pointing at the hint that says why.
+    for (const label of [/Nome completo/i, /^Email/i, /^Password/i, /Conferma Password/i, /Data di nascita/i]) {
+      const input = screen.getByLabelText(label);
+      expect(input).toHaveAttribute('readonly');
+      expect(input).toHaveAccessibleDescription(
+        'Account già creato: ora puoi modificare solo i dati professionali.'
+      );
+    }
+    expect(screen.getByRole('button', { name: 'VFun' })).toBeDisabled();
+    // The professional part stays editable.
+    expect(vat).not.toHaveAttribute('readonly');
+    expect(vat).toBeEnabled();
+
+    // Fixing the tax id and submitting again must not re-register.
     fireEvent.change(vat, { target: { value: '12345678903' } });
     fireEvent.click(screen.getByRole('button', { name: /Crea account/i }));
 
@@ -280,6 +347,10 @@ describe('Register as a company or association', () => {
         })
       );
       await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/provider/dashboard'));
+      // ...and the store says so too: the provider layout reads it, so it lets them in instead
+      // of bouncing them to /profile.
+      expect(mockAuthState.user).toMatchObject({ providerStatus: 'pending', providerType: 'business' });
+      expect(canAccessProviderArea(mockAuthState.user?.providerStatus)).toBe(true);
     });
 
     it('shows an invalid website on its field', async () => {

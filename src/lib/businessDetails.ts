@@ -11,13 +11,16 @@ import { isValidItalianVat, normalizeVatNumber } from '@/lib/vatNumber';
  * except for what only the server can know (a tax id already claimed by someone else).
  */
 
-/** The legal forms offered, in display order. The first is the default (as on the server). */
-export const BUSINESS_LEGAL_FORMS: readonly BusinessLegalForm[] = [
+/**
+ * The legal forms offered, in display order. The first is the default (as on the server). Also
+ * the schema's enum, so the list and the validation can't drift apart.
+ */
+export const BUSINESS_LEGAL_FORMS = [
   'company',
   'sole_trader',
   'association',
   'other',
-];
+] as const satisfies readonly BusinessLegalForm[];
 
 /** Maximum lengths in characters after trimming — the server's BUSINESS_FIELD_LIMITS. */
 export const BUSINESS_FIELD_LIMITS = {
@@ -28,6 +31,20 @@ export const BUSINESS_FIELD_LIMITS = {
   website: 200,
   affiliationNumber: 40,
 } as const;
+
+/** Every message the schema can produce. The form shows exactly these (plus field-level server codes). */
+export const BUSINESS_FORM_ERRORS = {
+  legalNameRequired: 'provider.business.error.legalNameRequired',
+  nameInvalid: 'provider.business.error.nameInvalid',
+  vatRequired: 'provider.business.error.vatRequired',
+  vatInvalid: 'provider.business.error.vatInvalid',
+  legalFormInvalid: 'provider.business.error.legalFormInvalid',
+  affiliationInvalid: 'provider.business.error.affiliationInvalid',
+  cityInvalid: 'provider.business.error.cityInvalid',
+  websiteInvalid: 'provider.business.error.websiteInvalid',
+  websiteTooLong: 'provider.business.error.websiteTooLong',
+  descriptionInvalid: 'provider.business.error.descriptionInvalid',
+} as const satisfies Record<string, MessageKey>;
 
 /** Raw form values: every field is a string as typed (the legal form is a select). */
 export interface BusinessDetailsFormValues {
@@ -61,6 +78,9 @@ export const EMPTY_BUSINESS_DETAILS: BusinessDetailsFormValues = {
  * `https://`. Anything with another scheme (`ftp://`, `mailto:`, `javascript:`) or with
  * credentials in it is refused rather than "fixed", and the scheme is lower-cased because the
  * Firestore rules' `^https?://` check is case-sensitive.
+ *
+ * Format only: the length cap (BUSINESS_FIELD_LIMITS.website, which counts the added `https://`)
+ * is the schema's job, so that a long address gets its own "too long" message.
  */
 export function normalizeWebsite(input: string): string | null {
   const trimmed = input.trim();
@@ -83,49 +103,43 @@ export function normalizeWebsite(input: string): string | null {
   }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
   if (!url.hostname.includes('.') || url.username || url.password) return null;
-  if (candidate.length > BUSINESS_FIELD_LIMITS.website) return null;
   return candidate;
 }
-
-/** Ties a schema message to a real catalogue key, so a typo fails `tsc`, not the screen. */
-const key = (k: MessageKey) => k;
 
 const optionalText = (max: number, message: MessageKey) =>
   z.string().refine((v) => v.trim().length <= max, { message });
 
 /**
- * Validation of the form. Messages are i18n keys; the form translates them. No transforms:
- * the values stay exactly what was typed, `toBusinessApplication` normalises them.
+ * Validation of the form. Messages are i18n keys (BUSINESS_FORM_ERRORS); the form translates
+ * them. No transforms: the values stay exactly what was typed, `toBusinessApplication`
+ * normalises them.
  */
 export const businessDetailsSchema = z.object({
   legalName: z
     .string()
-    .refine((v) => v.trim().length > 0, { message: key('provider.business.error.legalNameRequired') })
+    .refine((v) => v.trim().length > 0, { message: BUSINESS_FORM_ERRORS.legalNameRequired })
     .refine((v) => v.trim().length <= BUSINESS_FIELD_LIMITS.legalName, {
-      message: key('provider.business.error.nameInvalid'),
+      message: BUSINESS_FORM_ERRORS.nameInvalid,
     }),
   vatNumber: z
     .string()
-    .refine((v) => v.trim().length > 0, { message: key('provider.business.error.vatRequired') })
+    .refine((v) => v.trim().length > 0, { message: BUSINESS_FORM_ERRORS.vatRequired })
     .refine((v) => v.trim().length === 0 || isValidItalianVat(v), {
-      message: key('provider.business.error.vatInvalid'),
+      message: BUSINESS_FORM_ERRORS.vatInvalid,
     }),
-  legalForm: z.enum(['company', 'sole_trader', 'association', 'other'], {
-    message: key('provider.business.error.legalFormInvalid'),
-  }),
-  affiliationNumber: optionalText(
-    BUSINESS_FIELD_LIMITS.affiliationNumber,
-    key('provider.business.error.affiliationInvalid'),
-  ),
-  displayName: optionalText(BUSINESS_FIELD_LIMITS.displayName, key('provider.business.error.nameInvalid')),
-  city: optionalText(BUSINESS_FIELD_LIMITS.city, key('provider.business.error.cityInvalid')),
-  website: z.string().refine((v) => normalizeWebsite(v) !== null, {
-    message: key('provider.business.error.websiteInvalid'),
-  }),
-  description: optionalText(
-    BUSINESS_FIELD_LIMITS.description,
-    key('provider.business.error.descriptionInvalid'),
-  ),
+  legalForm: z.enum(BUSINESS_LEGAL_FORMS, { message: BUSINESS_FORM_ERRORS.legalFormInvalid }),
+  affiliationNumber: optionalText(BUSINESS_FIELD_LIMITS.affiliationNumber, BUSINESS_FORM_ERRORS.affiliationInvalid),
+  displayName: optionalText(BUSINESS_FIELD_LIMITS.displayName, BUSINESS_FORM_ERRORS.nameInvalid),
+  city: optionalText(BUSINESS_FIELD_LIMITS.city, BUSINESS_FORM_ERRORS.cityInvalid),
+  // Two checks, at most one fails: a malformed address is "invalid", a well-formed one longer
+  // than the cap (counting an added `https://`) is "too long".
+  website: z
+    .string()
+    .refine((v) => normalizeWebsite(v) !== null, { message: BUSINESS_FORM_ERRORS.websiteInvalid })
+    .refine((v) => (normalizeWebsite(v) ?? '').length <= BUSINESS_FIELD_LIMITS.website, {
+      message: BUSINESS_FORM_ERRORS.websiteTooLong,
+    }),
+  description: optionalText(BUSINESS_FIELD_LIMITS.description, BUSINESS_FORM_ERRORS.descriptionInvalid),
 });
 
 /**

@@ -882,6 +882,7 @@ export const itMessages = {
   'auth.register.socialForm.subtitle': 'Aiutaci a personalizzare la tua esperienza',
   'auth.register.field.emailOptional': 'Email (opzionale)',
   'auth.register.completeRegistration': 'Completa registrazione',
+  'auth.register.accountCreatedHint': 'Account già creato: ora puoi modificare solo i dati professionali.',
   'auth.password.rule.minLength': 'Almeno 12 caratteri',
   'auth.password.rule.lowercase': 'Una lettera minuscola',
   'auth.password.rule.uppercase': 'Una lettera maiuscola',
@@ -2140,6 +2141,7 @@ export const itMessages = {
   'provider.business.error.affiliationInvalid': 'Numero di affiliazione troppo lungo (massimo 40 caratteri).',
   'provider.business.error.cityInvalid': 'Città non valida o troppo lunga (massimo 80 caratteri).',
   'provider.business.error.websiteInvalid': 'Indirizzo del sito non valido. Esempio: www.tuosito.it',
+  'provider.business.error.websiteTooLong': 'Indirizzo del sito troppo lungo (massimo 200 caratteri).',
   'provider.business.error.descriptionInvalid': 'Descrizione troppo lunga (massimo 1000 caratteri).',
 
   // ─── applyAsProvider error codes without a form field ───────────────

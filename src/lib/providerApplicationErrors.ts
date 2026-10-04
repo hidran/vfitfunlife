@@ -67,3 +67,27 @@ export function providerApplicationErrorCode(err: unknown): ProviderApplicationE
     ? (message as ProviderApplicationErrorCode)
     : null;
 }
+
+export type ProviderApplicationErrorReport =
+  /** Shown on its company field by `showOnField`. */
+  | { kind: 'field' }
+  /** A coded failure, for the caller to show as its form-level message. */
+  | { kind: 'message'; messageKey: MessageKey }
+  /** Not a coded failure: the caller's own generic handling applies. */
+  | { kind: 'unknown' };
+
+/**
+ * Where a failed `applyAsProvider` call is shown — the one rule shared by the signup form and
+ * the profile card. A code about a company field goes to `showOnField` (the company form's
+ * `showServerError`, passed only while a company is applying); any other code becomes its
+ * form-level message; anything else is left to the caller.
+ */
+export function reportProviderApplicationError(
+  err: unknown,
+  showOnField?: (code: ProviderApplicationErrorCode) => boolean
+): ProviderApplicationErrorReport {
+  const code = providerApplicationErrorCode(err);
+  if (!code) return { kind: 'unknown' };
+  if (showOnField?.(code)) return { kind: 'field' };
+  return { kind: 'message', messageKey: PROVIDER_APPLICATION_ERRORS[code].messageKey };
+}

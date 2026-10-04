@@ -861,6 +861,7 @@ export const frMessages: Messages = {
   'auth.register.socialForm.subtitle': 'Aidez-nous à personnaliser votre expérience',
   'auth.register.field.emailOptional': 'Email (optionnel)',
   'auth.register.completeRegistration': "Compléter l'inscription",
+  'auth.register.accountCreatedHint': 'Compte déjà créé : seules les informations professionnelles peuvent encore être modifiées.',
   'auth.password.rule.minLength': 'Au moins 12 caractères',
   'auth.password.rule.lowercase': 'Une lettre minuscule',
   'auth.password.rule.uppercase': 'Une lettre majuscule',
@@ -2125,6 +2126,7 @@ export const frMessages: Messages = {
   'provider.business.error.affiliationInvalid': "Numéro d'affiliation trop long (40 caractères maximum).",
   'provider.business.error.cityInvalid': 'Ville non valide ou trop longue (80 caractères maximum).',
   'provider.business.error.websiteInvalid': 'Adresse du site non valide. Exemple : www.votresite.fr',
+  'provider.business.error.websiteTooLong': 'Adresse du site trop longue (200 caractères maximum).',
   'provider.business.error.descriptionInvalid': 'Description trop longue (1000 caractères maximum).',
 
   // ─── applyAsProvider error codes without a form field ───────────────

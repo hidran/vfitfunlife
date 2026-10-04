@@ -105,6 +105,28 @@ describe('BecomeProviderCard', () => {
     expect(mockLoadUserData).toHaveBeenCalledWith('u1');
   });
 
+  it('sends exactly the individual payload after switching back from a company with a bad tax id', async () => {
+    mockSubmitProviderApplication.mockResolvedValueOnce({ success: true, providerId: 'u1', autoApproved: true });
+    renderCard();
+    openAndPickKarate();
+    fireEvent.click(screen.getByRole('radio', { name: 'Azienda o associazione' }));
+    fireEvent.change(screen.getByLabelText(/^P\.IVA \/ Codice fiscale/), { target: { value: '12345678904' } });
+    fireEvent.click(screen.getByRole('radio', { name: 'Singolo professionista' }));
+
+    fireEvent.click(submitButton());
+
+    await waitFor(() => expect(mockSubmitProviderApplication).toHaveBeenCalledTimes(1));
+    const [payload] = mockSubmitProviderApplication.mock.calls[0];
+    expect(Object.keys(payload).sort()).toEqual(['categoryIds', 'fullName']);
+  });
+
+  it('gives the start and submit buttons a 44px target', () => {
+    renderCard();
+    expect(screen.getByRole('button', { name: 'Inizia' })).toHaveClass('min-h-11');
+    openAndPickKarate();
+    expect(submitButton()).toHaveClass('min-h-11');
+  });
+
   it('sends a company with its details and lands on the pending card that mentions the tax id', async () => {
     mockSubmitProviderApplication.mockResolvedValueOnce({ success: true, providerId: 'u1', autoApproved: false });
     renderCard();

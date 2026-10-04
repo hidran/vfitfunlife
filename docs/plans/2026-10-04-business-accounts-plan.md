@@ -167,7 +167,7 @@ registration. Optional fields only — no existing behaviour changes.
   approved), owner adds or removes `business` ✘, `javascript:` website ✘, other user ✘, admin ✔, client
   read/write of `businessVat` ✘, owner write of `users.providerType` ✘.
 
-### B5 `[x]` Signup: individual or company (Large)
+### B5 `[~]` Signup: individual or company (Large) — code + unit tests done; browser checks at 320/390 px (it, de), 44px targets and inline errors are part of B10
 - Files: `src/app/auth/register/RegisterClient.tsx` (both `submitProviderApplication` call sites),
   `src/hooks/useProviderApplication.ts`, `src/lib/firebase/providerApplication.ts`,
   `src/components/profile/BecomeProviderCard.tsx`, new `src/components/provider/BusinessDetailsForm.tsx`
@@ -347,7 +347,7 @@ the same on prod with a throwaway P.IVA claim removed afterwards.
   `name == fullName == business.displayName` not enforced (B6 mirrors them). Neighbouring holes left
   as listed above, plus one for B7: the owner can write `instructors.providerType`, which no server code
   sets — derive the "Azienda" badge from `business` (now locked), not from that field.
-- 2026-10-04 — B5 done (this commit). `BusinessDetailsForm` (RHF + Zod, `src/lib/businessDetails.ts`
+- 2026-10-04 — B5 code done (e1d0812). `BusinessDetailsForm` (RHF + Zod, `src/lib/businessDetails.ts`
   mirrors the server limits; P.IVA / codice fiscale via `isValidItalianVat`, sent as bare digits; public
   name defaults to the legal name; `www.x.it` gets `https://`, other schemes and credentials refused,
   scheme lower-cased for the rules' case-sensitive regex; `mode` prop reserved for B6). A sub-form, not a
@@ -374,3 +374,18 @@ the same on prod with a throwaway P.IVA claim removed afterwards.
   redirected away from /auth/register), so no warning was built — still open for B6/B8. Browser
   verification at 320/390px is deferred to B10 (backend not deployed yet); layout was reasoned from the
   classes (`min-w-0` on fieldsets, `break-words` on labels/hints/errors, inputs 52px, radios 44px).
+- 2026-10-04 — B5 review fixes (this commit); B5 stays `[~]` until B10's browser checks. Once the email
+  flow has created the account, its fields (name, email, both passwords, birth date, section) are
+  read-only with a hint (`auth.register.accountCreatedHint`) and a retry never re-registers — an edited
+  password was silently dropped and an edited email created a second account. The "already registered"
+  redirect also skips once this form created the profile, so a late profile reload after a failed company
+  application no longer carries the user off to /profile. The slow-profile fallback now writes the
+  callable's outcome (`providerStatus`, and `providerType: 'business'`) into the auth store before
+  routing, in both flows — the provider layout reads the store and would otherwise bounce to /profile.
+  `normalizeWebsite` checks format only; the schema caps the normalised address at 200 with its own
+  message (`provider.business.error.websiteTooLong`) and the input has no maxLength. The form's
+  onChange/subscribe plumbing is gone (B6 adds what it needs); its field-message set is derived from
+  `BUSINESS_FORM_ERRORS` + the code map, the enum from `BUSINESS_LEGAL_FORMS`; signup and card share
+  `reportProviderApplicationError`. The form owns focus (after a render that shows it enabled), so
+  the parents mark themselves busy before the async company check — no double submit. Card start
+  button 44px. New `src/lib/businessDetails.test.ts` (website rules, every length limit).
