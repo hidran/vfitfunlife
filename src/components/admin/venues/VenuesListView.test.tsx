@@ -52,6 +52,9 @@ describe('VenuesListView owner column', () => {
       const cell = ownerCell(name);
       expect(within(cell).getByText('—')).toHaveAttribute('aria-hidden', 'true');
       expect(within(cell).getByText(itMessages['admin.venues.owner.none'])).toHaveClass('sr-only');
+      // sr-only is position:absolute: it must sit inside a positioned wrapper or it escapes the
+      // table's scroll container and widens the page on phones.
+      expect(within(cell).getByText(itMessages['admin.venues.owner.none']).parentElement).toHaveClass('relative');
     }
   });
 

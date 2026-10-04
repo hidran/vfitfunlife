@@ -615,3 +615,4 @@ the same on prod with a throwaway P.IVA claim removed afterwards.
   individual not re-checked; stale existence read; no parseProviderId ×2; contention leaked ×2) each
   turned tests red. Touched in `src/` beyond the error map and locales: `providerApplicationErrors.test.ts`
   (pins the admin code list) and doc comments of the wrappers in `src/lib/firebase/functions.ts`.
+- QA layout fixes (B10): legal-form option labels shortened in all 5 locales (+ `px-3 truncate` on the select) so the closed select is not clipped at 320-390px; venues Owner column sr-only text now inside a `relative` wrapper (page no longer wider than the viewport, test added); FilterBar search, select and date controls `min-h-11` (44px touch targets). (this commit)

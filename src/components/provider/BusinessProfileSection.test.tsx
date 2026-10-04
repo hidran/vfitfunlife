@@ -149,7 +149,7 @@ describe('BusinessProfileSection', () => {
       expect(reviewed).toHaveTextContent('Karate Club Roma SRL');
       expect(reviewed).toHaveTextContent('P.IVA / Codice fiscale');
       expect(reviewed).toHaveTextContent('00743110157');
-      expect(reviewed).toHaveTextContent('Associazione o ente (ASD, APS…)');
+      expect(reviewed).toHaveTextContent('Associazione / ente');
       expect(reviewed).toHaveTextContent('CONI 12345');
       expect(reviewed).toHaveTextContent(
         'Questi dati sono stati verificati dal nostro team: per modificarli contatta il supporto.'

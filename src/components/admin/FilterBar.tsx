@@ -75,7 +75,7 @@ export function FilterBar({
             placeholder={searchPlaceholder ?? 'Search...'}
             value={searchValue}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-surface border border-hairline rounded-xl text-content placeholder:text-content-faint focus:outline-none focus:border-[#00C9FF]/50"
+            className="w-full min-h-11 pl-10 pr-4 py-2.5 bg-surface border border-hairline rounded-xl text-content placeholder:text-content-faint focus:outline-none focus:border-[#00C9FF]/50"
           />
           {searchValue && (
             <button
@@ -144,7 +144,7 @@ export function FilterBar({
                   id={`${idBase}-${filter.key}`}
                   value={filter.value}
                   onChange={(e) => filter.onChange(e.target.value)}
-                  className="w-full px-3 py-2 bg-surface-elevated border border-hairline rounded-lg text-content text-sm focus:outline-none focus:border-[#00C9FF]/50"
+                  className="w-full min-h-11 px-3 py-2 bg-surface-elevated border border-hairline rounded-lg text-content text-sm focus:outline-none focus:border-[#00C9FF]/50"
                 >
                   {filter.options.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -172,7 +172,7 @@ export function FilterBar({
                           dateRange.to
                         )
                       }
-                      className="w-full pl-9 pr-3 py-2 bg-surface-elevated border border-hairline rounded-lg text-content text-sm focus:outline-none focus:border-[#00C9FF]/50"
+                      className="w-full min-h-11 pl-9 pr-3 py-2 bg-surface-elevated border border-hairline rounded-lg text-content text-sm focus:outline-none focus:border-[#00C9FF]/50"
                     />
                   </div>
                   <span className="text-content-faint">{t('admin.filter.dateTo')}</span>
@@ -187,7 +187,7 @@ export function FilterBar({
                           fromDateParam(e.target.value) ?? null
                         )
                       }
-                      className="w-full pl-9 pr-3 py-2 bg-surface-elevated border border-hairline rounded-lg text-content text-sm focus:outline-none focus:border-[#00C9FF]/50"
+                      className="w-full min-h-11 pl-9 pr-3 py-2 bg-surface-elevated border border-hairline rounded-lg text-content text-sm focus:outline-none focus:border-[#00C9FF]/50"
                     />
                   </div>
                 </div>

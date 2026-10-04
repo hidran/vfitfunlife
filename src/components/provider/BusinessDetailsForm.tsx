@@ -353,7 +353,7 @@ export const BusinessDetailsForm = forwardRef<BusinessDetailsFormHandle, Busines
               <select
                 {...register('legalForm')}
                 {...a11y('legalForm')}
-                className={cn(textareaOrSelect, 'min-h-[52px]', invalidClass('legalForm'))}
+                className={cn(textareaOrSelect, 'min-h-[52px] truncate px-3', invalidClass('legalForm'))}
               >
                 {BUSINESS_LEGAL_FORMS.map((form) => (
                   <option key={form} value={form}>

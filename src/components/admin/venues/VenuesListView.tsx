@@ -162,7 +162,7 @@ export function VenuesListView() {
             {venue.ownerUid}
           </span>
         ) : (
-          <span className="text-sm text-content-faint">
+          <span className="relative text-sm text-content-faint">
             <span aria-hidden="true">—</span>
             <span className="sr-only">{t('admin.venues.owner.none')}</span>
           </span>
