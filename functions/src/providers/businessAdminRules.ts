@@ -1,12 +1,14 @@
 import { HttpsError } from "firebase-functions/v2/https";
 import type { BusinessDetails, BusinessLegalForm } from "./businessTypes";
 import {
+  isApproved,
+  isExistingBusiness,
   parseAffiliationNumber,
   parseLegalForm,
   parseLegalName,
   parseVatNumber,
 } from "./businessApplication";
-import { normalizeVatNumber } from "./vatNumber";
+import { isValidItalianVat, normalizeVatNumber } from "./vatNumber";
 
 /**
  * Pure pieces of the admin actions on a business (plan 2026-10-04, task B8): approving what was
@@ -42,39 +44,91 @@ function asReview(raw: unknown): BusinessReview | null {
 }
 
 /**
- * Approve what the admin actually saw. A pending company may change its tax id or legal name
- * by re-applying, and an approval re-reads the latest doc — so an admin looking at number X
- * could otherwise approve Y.
+ * Approve what the admin actually saw (invariant: no company is listed with details nobody
+ * reviewed). A pending company may change its tax id or legal name by re-applying, and an
+ * approval re-reads the latest doc — so an admin looking at number X could otherwise approve Y.
+ * `user` and `instructor` must be the reads of the SAME transaction that writes the decision
+ * (commitProviderDecision), so nothing can change between this check and the write.
  *
- * - Approving (`verified`) a doc with a `business` map requires `expectedReview`: missing or
- *   not `{ vatNumber: string, legalName: string }` ⇒ `failed-precondition` / `review_required`.
- * - Its tax id (normalised: spaces and `IT` dropped) and legal name (trimmed; case counts) must
- *   equal the stored ones, else `failed-precondition` / `stale_review`. A stored value that is
- *   not a string can never match.
- * - A rejection, and any individual (no `business` map), need no review; one sent anyway is
- *   ignored. Rejection is reversible (the company can re-apply) and never lists anyone.
+ * "A business" is isExistingBusiness: a `business` map on the instructors doc OR
+ * `users.providerType === 'business'`.
+ * - Approving (`verified`) a business requires `expectedReview`: missing or not
+ *   `{ vatNumber: string, legalName: string }` ⇒ `failed-precondition` / `review_required`.
+ * - A review that IS sent must describe the doc as it is now, whatever the decision: its tax id
+ *   (normalised: spaces and `IT` dropped) and legal name (trimmed; case counts) must equal the
+ *   stored ones, and the doc must still be a business with a `business` map — else
+ *   `failed-precondition` / `stale_review`. A stored value that is not a string never matches;
+ *   a review sent for a doc that is (now) an individual is stale too — the company it described
+ *   is gone, so nothing the admin saw is being decided.
+ * - Without a review, a rejection and an individual's approval pass (rejection never lists
+ *   anyone and the company can re-apply).
  *
- * Returns whether the check applied, so the caller can guard its write against the doc having
- * changed since the read this check was run on (see commitProviderDecision).
+ * Returns the normalised tax id whose `businessVat` claim the approval must hold (a business
+ * being verified), else null. A stored number that matches the review but is no valid tax id
+ * can hold no claim ⇒ `failed-precondition` / `claim_missing` (it must never become a doc id).
  */
-export function checkBusinessReview(
-  instructor: Record<string, unknown> | undefined,
-  decision: "verified" | "rejected",
-  expectedReview: unknown,
-): boolean {
-  const business = businessOf(instructor);
-  if (!business || decision !== "verified") return false;
+export function checkBusinessReview(opts: {
+  user: Record<string, unknown> | undefined;
+  instructor: Record<string, unknown> | undefined;
+  decision: "verified" | "rejected";
+  expectedReview: unknown;
+}): string | null {
+  const { user, instructor, decision, expectedReview } = opts;
+  const verified = decision === "verified";
+  const sent = expectedReview !== undefined && expectedReview !== null;
+
+  if (!isExistingBusiness(user, instructor)) {
+    if (sent) throw new HttpsError("failed-precondition", "stale_review");
+    return null;
+  }
+  if (!sent) {
+    if (verified) throw new HttpsError("failed-precondition", "review_required");
+    return null;
+  }
 
   const review = asReview(expectedReview);
   if (!review) throw new HttpsError("failed-precondition", "review_required");
 
-  const storedVat = business.vatNumber;
-  const storedName = business.legalName;
+  const business = businessOf(instructor);
+  const storedVat = business?.vatNumber;
+  const storedName = business?.legalName;
   const sameVat =
     typeof storedVat === "string" && normalizeVatNumber(storedVat) === normalizeVatNumber(review.vatNumber);
   const sameName = typeof storedName === "string" && storedName.trim() === review.legalName.trim();
   if (!sameVat || !sameName) throw new HttpsError("failed-precondition", "stale_review");
-  return true;
+
+  if (!verified) return null;
+  if (typeof storedVat !== "string" || !isValidItalianVat(storedVat)) {
+    throw new HttpsError("failed-precondition", "claim_missing");
+  }
+  return normalizeVatNumber(storedVat);
+}
+
+/**
+ * The approval of a company must hold the uniqueness claim on its tax id (invariant: one tax id,
+ * one holder — D5). `claim` is `businessVat/{vat}` as read in the approval's own transaction
+ * (undefined when absent).
+ *
+ * - No claim ⇒ `failed-precondition` / `claim_missing`: it was released (e.g. after a rejection)
+ *   or never taken, and approving now would let a second company take the same number later.
+ * - Held by another uid ⇒ `already-exists` / `vat_already_registered`: approving would list two
+ *   companies with one tax id.
+ */
+export function assertApprovalHoldsClaim(claim: Record<string, unknown> | undefined, providerId: string): void {
+  if (!claim) throw new HttpsError("failed-precondition", "claim_missing");
+  if (claim.uid !== providerId) throw new HttpsError("already-exists", "vat_already_registered");
+}
+
+/**
+ * updateBusinessTaxId must not move a company onto a number another instructors doc still
+ * carries — even an unclaimed one (a rejected company whose claim was released): approving
+ * either later would then list two companies with one tax id. `carrierIds` are the ids of the
+ * docs whose `business.vatNumber` equals the new number (a query in the same transaction).
+ */
+export function assertNoOtherCarrier(carrierIds: readonly string[], providerId: string): void {
+  if (carrierIds.some((id) => id !== providerId)) {
+    throw new HttpsError("already-exists", "vat_already_registered");
+  }
 }
 
 /**
@@ -102,19 +156,22 @@ export function claimHolderUid(claim: Record<string, unknown> | undefined): stri
 /**
  * Refuse to release the claim on `vatNumber` while it is still in use (`failed-precondition` /
  * `claim_in_use`): its holder's instructors doc (`holder`, read in the same transaction) still
- * carries that number in its `business` map and is not rejected — pending, approved, or a
- * legacy doc with no applicationStatus. Freeing it then would let another account take the tax
- * id of a live or queued company; convertBusinessToIndividual or updateBusinessTaxId are the
- * routes for those.
+ * carries that number in its `business` map and is either not rejected — pending, approved, or
+ * a legacy doc with no applicationStatus — or approved by isApproved's definition (a listed
+ * legacy doc flagged `providerProfile.isVerified`, whatever its status says). Freeing it then
+ * would let another account take the tax id of a live or queued company;
+ * convertBusinessToIndividual or updateBusinessTaxId are the routes for those.
  *
- * Releasable: a rejected company's claim, one whose holder moved to another number, was
- * converted to an individual, or has no instructors doc at all (an abandoned claim).
+ * Releasable: a rejected (and unlisted) company's claim, one whose holder moved to another
+ * number, was converted to an individual, or has no instructors doc at all (an abandoned claim).
+ * Releasing a rejected company's claim does not make that company approvable again: an approval
+ * must hold the claim (assertApprovalHoldsClaim).
  */
 export function assertClaimReleasable(vatNumber: string, holder: Record<string, unknown> | undefined): void {
   const business = businessOf(holder);
   const stored = business?.vatNumber;
   const carriesNumber = typeof stored === "string" && normalizeVatNumber(stored) === vatNumber;
-  if (carriesNumber && holder?.applicationStatus !== "rejected") {
+  if (carriesNumber && (holder?.applicationStatus !== "rejected" || isApproved(holder))) {
     throw new HttpsError("failed-precondition", "claim_in_use");
   }
 }

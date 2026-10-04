@@ -232,7 +232,9 @@ These functions are exported from `../../functions/src/index.ts` but were missin
 - **Legacy:** no client calls it. A company (`business` map on `instructors/{id}`, or
   `users.providerType === 'business'`) is refused with `failed-precondition` /
   `use_decide_provider_application` before any write, so it can't bypass the
-  `expectedReview` check of `decideProviderApplication`.
+  `expectedReview` and claim checks of `decideProviderApplication`. The guard and both
+  verification writes are one transaction, so a company application landing in between is
+  refused on Firestore's re-run instead of being listed.
 
 #### `listProviders`
 - **Type:** Callable (public; auth optional)
@@ -383,13 +385,15 @@ batch/transaction as the change.
 - **Parameters:** `{ providerId: string, decision: 'verified' | 'rejected', notes?: string, expectedReview?: { vatNumber: string, legalName: string } }`
 - **Returns:** `{ success, providerId, decision, draftServicesSeeded }`
 - **Purpose:** Verify or reject a provider: sets `providerStatus`, the nested `providerProfile.isVerified` on both docs, promotes the role, seeds default hours and draft services on approval; audited as `provider` / `verify` (or `update` on rejection).
-- **Approve what was reviewed (B8):** approving a provider whose instructors doc has a `business` map requires `expectedReview` — the tax id and legal name the admin saw. Missing or malformed ⇒ `failed-precondition` / `review_required`; not equal to the stored values (tax id normalised, legal name trimmed, case-sensitive) ⇒ `failed-precondition` / `stale_review`, nothing written. The check runs on the same read of the instructors doc that the write is built from, and the batch carries a `lastUpdateTime` guard on that doc, so a change landing between check and commit (a re-application with another tax id) also ends in `stale_review`. The UI should reload the detail view and review again. Rejections and individuals need no `expectedReview` (one sent is ignored).
+- **One transaction:** `commitProviderDecision` reads the users and instructors docs, the `businessVat` claim (company approvals) and whether services exist, computes every guard from those reads, then writes users, instructors (`set` with merge, nested maps), draft services and the audit entry. If anything it read changes before the commit, Firestore re-runs it on fresh reads — so no check can go stale before its write. A concurrent write that changes none of the reviewed facts (e.g. the search-index trigger rewriting `searchTerms`) only causes a re-run that passes. Contention that outlasts the SDK's retries ⇒ `aborted` / `concurrent_update`; a provider deleted mid-flight ⇒ `not-found` / `provider_not_found`.
+- **Approve what was reviewed (B8, invariant I1):** approving a business (a `business` map on the instructors doc, or `users.providerType === 'business'`) requires `expectedReview` — the tax id and legal name the admin saw. Missing or malformed ⇒ `failed-precondition` / `review_required`; not equal to the stored values (tax id normalised, legal name trimmed, case-sensitive), or no `business` map to compare ⇒ `failed-precondition` / `stale_review`. A review sent for a provider that is not (any more) a company ⇒ `stale_review` too, whatever the decision. An individual who applies as a company while being approved ends in `review_required` on the re-run. The UI reloads the detail view and asks for a fresh review. Without a review, rejections and individuals' approvals pass.
+- **Approval holds the tax-id claim (invariant I2):** a company is approved only if `businessVat/{its tax id}` exists and names it — else `failed-precondition` / `claim_missing` (released, e.g. after a rejection; the company must re-apply, or an admin sets its tax id again with `updateBusinessTaxId`) or `already-exists` / `vat_already_registered` (another account holds it). So releasing a rejected squatter's claim never lets it be approved alongside the real owner.
 
 #### `releaseBusinessVat`
 - **Type:** Callable (`businessAdmin.ts`)
 - **Parameters:** `{ vatNumber: string, reason?: string }` — P.IVA / codice fiscale; spaces and an `IT` prefix allowed.
 - **Returns:** `{ success, vatNumber, releasedFrom: string | null }`
-- **Purpose:** Free a tax-id claim (a rejected company's, or a squatter's) so the real owner can register. Refused while the claim's holder still has a non-rejected instructors doc carrying that number — use `convertBusinessToIndividual` or `updateBusinessTaxId` for a live company. Audited as `business_vat` / `delete` (`before` = the claim).
+- **Purpose:** Free a tax-id claim (a rejected company's, or a squatter's) so the real owner can register. Refused while the claim's holder still has an instructors doc carrying that number that is not rejected — or is still listed (`applicationStatus === 'verified'` or `providerProfile.isVerified`), whatever its status says — use `convertBusinessToIndividual` or `updateBusinessTaxId` for a live company. The released company can't be approved afterwards (`claim_missing`) unless it takes the number again. Audited as `business_vat` / `delete` (`before` = the claim).
 - **Errors:** `invalid-argument` / `invalid_vat` · `not-found` / `claim_not_found` · `failed-precondition` / `claim_in_use` · `invalid_reason`.
 
 #### `convertBusinessToIndividual`
@@ -397,13 +401,13 @@ batch/transaction as the change.
 - **Parameters:** `{ providerId: string, reason?: string }`
 - **Returns:** `{ success, providerId, releasedClaims: string[] }`
 - **Purpose:** Turn a company back into an individual (e.g. a sole trader who picked "Company" by mistake and is otherwise locked out of the individual path by `business_account_exists`). One transaction: deletes `users/{uid}.providerType` and the `instructors/{uid}.business` map with `FieldValue.delete()` (never null — the B4 rules would then block every owner edit), plus a denormalised `instructors.providerType` if present; deletes every `businessVat` claim with that `uid`; resets the public `name`/`fullName` to the user's personal `fullName` (kept as is if the user has none). Verification is unchanged — an approved company stays listed under the personal name. Audited as `provider` / `update` (`before` = business map + claims).
-- **Errors:** `invalid-argument` / `invalid_provider_id` · `not-found` / `provider_not_found` · `failed-precondition` / `not_a_business` · `permission-denied` (protected superadmin) · `invalid_reason`.
+- **Errors:** `invalid-argument` / `invalid_provider_id` · `not-found` / `provider_not_found` · `failed-precondition` / `not_a_business` · `permission-denied` / `protected_account` (protected superadmin) · `invalid_reason`.
 
 #### `updateBusinessTaxId`
 - **Type:** Callable (`businessAdmin.ts`)
 - **Parameters:** `{ providerId: string, vatNumber: string, legalName?: string, legalForm?: 'company' | 'sole_trader' | 'association' | 'other' | null, affiliationNumber?: string | null, reason?: string }` — validated with the signup validators; the optional fields change only when sent (`null` resets `legalForm` to `company` / clears `affiliationNumber`).
 - **Returns:** `{ success, providerId, vatNumber, releasedClaims: string[] }`
-- **Purpose:** The only way to change a company's admin-owned fields after review (the owner can't — rules lock them — and a plain admin client write would leave the claim behind). One transaction: the new number must be unclaimed or already this uid's; every other claim of the uid is released and the new one created; `instructors/{uid}.business` gets only the sent fields as a nested map (set with merge). The approval state is unchanged. Audited as `provider` / `update` (reviewed fields + claims before and after).
+- **Purpose:** The only way to change a company's admin-owned fields after review (the owner can't — rules lock them — and a plain admin client write would leave the claim behind). One transaction: no other instructors doc may carry the new number, claimed or not (e.g. a rejected company whose claim was released — query `instructors where business.vatNumber ==`, automatic single-field index); the new number must be unclaimed or already this uid's; every other claim of the uid is released and the new one created; `instructors/{uid}.business` gets only the sent fields as a nested map (set with merge). The approval state is unchanged. Audited as `provider` / `update` (reviewed fields + claims before and after).
 - **Errors:** `invalid-argument` / `invalid_vat`, `invalid_business_name`, `invalid_legal_form`, `invalid_affiliation_number`, `invalid_provider_id`, `invalid_reason` · `already-exists` / `vat_already_registered` · `failed-precondition` / `not_a_business`.
 
 ---

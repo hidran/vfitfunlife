@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { HttpsError } from "firebase-functions/v2/https";
 import {
+  assertApprovalHoldsClaim,
   assertClaimReleasable,
+  assertNoOtherCarrier,
   checkBusinessReview,
   claimHolderUid,
   convertToIndividualPatches,
@@ -45,14 +47,19 @@ const BUSINESS = { legalName: LEGAL_NAME, vatNumber: VAT, displayName: "Karate C
 const PENDING_BUSINESS = { applicationStatus: "pending", business: BUSINESS };
 
 describe("checkBusinessReview — approve what the admin actually saw", () => {
-  it("lets a business approval through when the reviewed tax id and legal name match, and reports it was checked", () => {
-    expect(checkBusinessReview(PENDING_BUSINESS, "verified", { vatNumber: VAT, legalName: LEGAL_NAME })).toBe(true);
+  const review = (instructor: Record<string, unknown> | undefined, decision: "verified" | "rejected", expectedReview: unknown, user?: Record<string, unknown>) =>
+    checkBusinessReview({ user, instructor, decision, expectedReview });
+
+  it("a matching business approval passes and names the tax id whose claim the approval must hold", () => {
+    expect(review(PENDING_BUSINESS, "verified", { vatNumber: VAT, legalName: LEGAL_NAME })).toBe(VAT);
   });
 
   it("compares the tax id normalised and the legal name trimmed — formatting is not a different company", () => {
+    expect(review(PENDING_BUSINESS, "verified", { vatNumber: " IT 123 456 789 03 ", legalName: `  ${LEGAL_NAME} ` })).toBe(VAT);
+    // A stored number with an IT prefix still names its normalised claim.
     expect(
-      checkBusinessReview(PENDING_BUSINESS, "verified", { vatNumber: " IT 123 456 789 03 ", legalName: `  ${LEGAL_NAME} ` }),
-    ).toBe(true);
+      review({ business: { ...BUSINESS, vatNumber: `IT${VAT}` } }, "verified", { vatNumber: VAT, legalName: LEGAL_NAME }),
+    ).toBe(VAT);
   });
 
   it("refuses with stale_review when the stored tax id or legal name is not what was reviewed", () => {
@@ -62,7 +69,7 @@ describe("checkBusinessReview — approve what the admin actually saw", () => {
       // Case is a different name: the admin compares what is on the registry, letter for letter.
       { vatNumber: VAT, legalName: LEGAL_NAME.toUpperCase() },
     ]) {
-      expectHttpsError(() => checkBusinessReview(PENDING_BUSINESS, "verified", expected), "failed-precondition", "stale_review");
+      expectHttpsError(() => review(PENDING_BUSINESS, "verified", expected), "failed-precondition", "stale_review");
     }
   });
 
@@ -74,29 +81,91 @@ describe("checkBusinessReview — approve what the admin actually saw", () => {
       [],
     ]) {
       expectHttpsError(
-        () => checkBusinessReview({ business }, "verified", { vatNumber: VAT, legalName: LEGAL_NAME }),
+        () => review({ business }, "verified", { vatNumber: VAT, legalName: LEGAL_NAME }),
         "failed-precondition",
         "stale_review",
       );
     }
   });
 
+  it("a matching review of a stored number that is no valid tax id cannot hold a claim ⇒ claim_missing", () => {
+    for (const vatNumber of ["a/b", "12345678904"]) {
+      expectHttpsError(
+        () => review({ business: { ...BUSINESS, vatNumber } }, "verified", { vatNumber, legalName: LEGAL_NAME }),
+        "failed-precondition",
+        "claim_missing",
+      );
+    }
+  });
+
   it("requires a review to approve a business: missing or malformed ⇒ review_required", () => {
     for (const expected of [undefined, null, "12345678903", {}, { vatNumber: VAT }, { vatNumber: VAT, legalName: 1 }]) {
-      expectHttpsError(() => checkBusinessReview(PENDING_BUSINESS, "verified", expected), "failed-precondition", "review_required");
+      expectHttpsError(() => review(PENDING_BUSINESS, "verified", expected), "failed-precondition", "review_required");
     }
   });
 
-  it("a rejection of a business needs no review and checks nothing", () => {
-    expect(checkBusinessReview(PENDING_BUSINESS, "rejected", undefined)).toBe(false);
-    expect(checkBusinessReview(PENDING_BUSINESS, "rejected", { vatNumber: OTHER_VAT, legalName: "x" })).toBe(false);
+  it("users.providerType 'business' alone makes it a business (same test as isExistingBusiness) — never approvable unseen", () => {
+    const user = { providerType: "business" };
+    for (const instructor of [undefined, {}, { applicationStatus: "pending" }]) {
+      expectHttpsError(() => review(instructor, "verified", undefined, user), "failed-precondition", "review_required");
+      // There is no business map to match whatever was "reviewed".
+      expectHttpsError(
+        () => review(instructor, "verified", { vatNumber: VAT, legalName: LEGAL_NAME }, user),
+        "failed-precondition",
+        "stale_review",
+      );
+    }
   });
 
-  it("an individual (no business map) is unaffected: no review needed, none checked", () => {
+  it("a rejection needs no review and names no claim; a review sent with it must still describe the doc", () => {
+    expect(review(PENDING_BUSINESS, "rejected", undefined)).toBeNull();
+    expect(review(PENDING_BUSINESS, "rejected", { vatNumber: VAT, legalName: LEGAL_NAME })).toBeNull();
+    expectHttpsError(
+      () => review(PENDING_BUSINESS, "rejected", { vatNumber: OTHER_VAT, legalName: LEGAL_NAME }),
+      "failed-precondition",
+      "stale_review",
+    );
+  });
+
+  it("an individual needs no review — but a review sent for one is stale: the company it described is gone", () => {
     for (const instructor of [undefined, {}, { applicationStatus: "pending" }, { business: null }]) {
-      expect(checkBusinessReview(instructor, "verified", undefined)).toBe(false);
-      expect(checkBusinessReview(instructor, "verified", { vatNumber: OTHER_VAT, legalName: "x" })).toBe(false);
+      expect(review(instructor, "verified", undefined)).toBeNull();
+      expect(review(instructor, "rejected", undefined, { providerType: "individual" })).toBeNull();
+      for (const decision of ["verified", "rejected"] as const) {
+        expectHttpsError(
+          () => review(instructor, decision, { vatNumber: VAT, legalName: LEGAL_NAME }),
+          "failed-precondition",
+          "stale_review",
+        );
+      }
     }
+  });
+});
+
+describe("assertApprovalHoldsClaim", () => {
+  it("passes when the company being approved holds the claim on its tax id", () => {
+    expect(() => assertApprovalHoldsClaim({ uid: "u1", createdAt: "T0" }, "u1")).not.toThrow();
+  });
+
+  it("no claim ⇒ claim_missing (released or never taken): approving would let a second company take the number", () => {
+    expectHttpsError(() => assertApprovalHoldsClaim(undefined, "u1"), "failed-precondition", "claim_missing");
+  });
+
+  it("another account holds it ⇒ vat_already_registered: two approved companies must never share a tax id", () => {
+    for (const claim of [{ uid: "someone-else" }, { uid: undefined }, {}]) {
+      expectHttpsError(() => assertApprovalHoldsClaim(claim, "u1"), "already-exists", "vat_already_registered");
+    }
+  });
+});
+
+describe("assertNoOtherCarrier", () => {
+  it("passes when no doc, or only the provider's own doc, carries the number", () => {
+    expect(() => assertNoOtherCarrier([], "u1")).not.toThrow();
+    expect(() => assertNoOtherCarrier(["u1"], "u1")).not.toThrow();
+  });
+
+  it("refuses with vat_already_registered when another doc (even a rejected one) still carries it", () => {
+    expectHttpsError(() => assertNoOtherCarrier(["u1", "a"], "u1"), "already-exists", "vat_already_registered");
   });
 });
 
@@ -126,9 +195,18 @@ describe("assertClaimReleasable", () => {
     );
   });
 
+  it("a listed company is in use even if its applicationStatus says rejected (the isApproved definition)", () => {
+    expectHttpsError(
+      () => assertClaimReleasable(VAT, { applicationStatus: "rejected", providerProfile: { isVerified: true }, business: BUSINESS }),
+      "failed-precondition",
+      "claim_in_use",
+    );
+  });
+
   it("allows the release of an abandoned claim: rejected, moved to another number, converted, or no doc at all", () => {
     for (const holder of [
       { applicationStatus: "rejected", business: BUSINESS },
+      { applicationStatus: "rejected", providerProfile: { isVerified: false }, business: BUSINESS },
       { applicationStatus: "verified", business: { ...BUSINESS, vatNumber: OTHER_VAT } },
       { applicationStatus: "verified", name: "Mario Rossi" },
       { applicationStatus: "verified", business: null },

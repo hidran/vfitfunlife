@@ -2,135 +2,30 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 /**
  * The admin callables on a business (B8) — releaseBusinessVat, convertBusinessToIndividual,
- * updateBusinessTaxId — and decideProviderApplication's `expectedReview`, run over an in-memory
- * Firestore. The rules themselves are unit-tested in businessAdminRules.test.ts; this pins the
- * wiring: who may call, what is read, and exactly what one transaction writes.
- *
- * The fake is strict where Firestore is (same approach as applyAsProvider.test.ts):
- * - a transaction refuses a read after a write, and its writes only land in `h.ops` when it
- *   commits (a refused call writes nothing);
- * - `collection().doc(id)` throws for an id that does not name a document ("a/b");
- * - `FieldValue.delete()` is a recognisable sentinel (`h.DELETE`), so a test can tell a field
- *   deletion from a null;
- * - a batch write with a `lastUpdateTime` precondition fails with gRPC code 9 if the doc was
- *   written after that snapshot (decideProviderApplication runs the real commitProviderDecision).
+ * updateBusinessTaxId — and decideProviderApplication's `expectedReview`, run over the shared
+ * stateful Firestore fake (test/fakes/fakeFirestore.ts). The rules themselves are unit-tested in
+ * businessAdminRules.test.ts; this pins the wiring: who may call, what is read, and exactly what
+ * one transaction writes. The fake applies committed writes to shared state, refuses a read
+ * after a write, re-runs a transaction whose reads changed before its commit, and records the
+ * `FieldValue.delete()` sentinel as `h.DELETE` so a deletion can be told from a null. Multi-call
+ * sequences across these callables live in businessLifecycle.test.ts.
  */
 
 type Ref = { path: string };
-type Query = { collection: string; field: string; value: unknown };
-type Op = [op: "create" | "delete" | "set" | "update", path: string, data?: unknown, options?: unknown];
-type Precondition = { lastUpdateTime?: { path: string; version: number } };
 
-const h = vi.hoisted(() => {
-  const DELETE = Object.freeze({ fieldValue: "delete" });
-  const docs = new Map<string, Record<string, unknown>>();
-  const versions = new Map<string, number>();
-  /** Committed writes, in order. */
-  const ops: Op[] = [];
+const h = await vi.hoisted(async () => {
+  const { createFakeFirestore } = await import("../../test/fakes/fakeFirestore");
   const admins = new Set<string>();
-  const requireAdmin = async (uid: string) => {
-    if (!admins.has(uid)) throw new Error("Admin access required");
-  };
-  const state = { transactions: 0 };
-
-  const put = (path: string, data: Record<string, unknown>) => {
-    docs.set(path, data);
-    versions.set(path, (versions.get(path) ?? 0) + 1);
-  };
-  const snap = (path: string) => {
-    const data = docs.get(path);
-    return {
-      exists: data !== undefined,
-      data: () => data,
-      updateTime: data ? { path, version: versions.get(path) ?? 0 } : undefined,
-    };
-  };
-
-  let autoId = 0;
-  const docRef = (collectionPath: string, id: string): Record<string, unknown> & Ref => {
-    const path = `${collectionPath}/${id}`;
-    if (!id || path.split("/").length % 2 !== 0) {
-      throw new Error(`Value for argument "documentPath" must point to a document, but was "${id}".`);
-    }
-    return {
-      path,
-      get: async () => snap(path),
-      collection: (sub: string) => ({
-        limit: () => ({ get: async () => ({ empty: true }) }),
-        doc: (subId: string) => docRef(`${path}/${sub}`, subId),
-      }),
-    };
-  };
-
-  const runQuery = (q: Query) => ({
-    docs: [...docs]
-      .filter(([path, data]) => {
-        const [collection, id, ...rest] = path.split("/");
-        return collection === q.collection && id && rest.length === 0 && data[q.field] === q.value;
-      })
-      .map(([path, data]) => ({ id: path.split("/")[1], ref: { path }, data: () => data })),
-  });
-
-  const db = {
-    collection: (name: string) => ({
-      doc: (id?: string) => docRef(name, id ?? `auto-${++autoId}`),
-      where: (field: string, op: string, value: unknown): Query => {
-        if (op !== "==") throw new Error(`fake supports == only, got ${op}`);
-        return { collection: name, field, value };
-      },
-    }),
-    runTransaction: async (fn: (t: unknown) => Promise<unknown>) => {
-      state.transactions++;
-      const writes: Op[] = [];
-      const record = (op: Op[0]) => (r: Ref, data?: unknown, options?: unknown) => {
-        const entry: Op = [op, r.path];
-        if (data !== undefined) entry.push(data);
-        if (options !== undefined) entry.push(options);
-        writes.push(entry);
-      };
-      const tx = {
-        get: async (target: Ref | Query) => {
-          if (writes.length) {
-            throw new Error("Firestore transactions require all reads to be executed before all writes.");
-          }
-          return "path" in target ? snap(target.path) : runQuery(target);
-        },
-        create: record("create"),
-        delete: record("delete"),
-        set: record("set"),
-        update: record("update"),
-      };
-      const result = await fn(tx);
-      ops.push(...writes);
-      return result;
-    },
-    batch: () => {
-      const writes: Array<[Op, Precondition | undefined]> = [];
-      return {
-        set: (r: Ref, data: unknown, options?: unknown) => {
-          writes.push([options === undefined ? ["set", r.path, data] : ["set", r.path, data, options], undefined]);
-        },
-        update: (r: Ref, data: unknown, precondition?: Precondition) => {
-          writes.push([["update", r.path, data], precondition]);
-        },
-        commit: async () => {
-          for (const [[, path], pre] of writes) {
-            if (pre?.lastUpdateTime && pre.lastUpdateTime.version !== (versions.get(path) ?? 0)) {
-              throw Object.assign(new Error("9 FAILED_PRECONDITION: the stored version does not match"), { code: 9 });
-            }
-          }
-          ops.push(...writes.map(([op]) => op));
-        },
-      };
+  return {
+    ...createFakeFirestore(),
+    admins,
+    requireAdmin: async (uid: string) => {
+      if (!admins.has(uid)) throw new Error("Admin access required");
     },
   };
-  return { DELETE, docs, versions, ops, admins, requireAdmin, state, put, db };
 });
 
-vi.mock("firebase-admin/firestore", () => ({
-  getFirestore: () => h.db,
-  FieldValue: { serverTimestamp: () => "NOW", delete: () => h.DELETE },
-}));
+vi.mock("firebase-admin/firestore", () => ({ getFirestore: () => h.db, FieldValue: h.FieldValue }));
 // utils/roles opens admin.firestore() at module load: replace it with the admin check the
 // callables use and the permission table commitProviderDecision reads.
 vi.mock("../utils/roles", () => ({
@@ -140,6 +35,7 @@ vi.mock("../utils/roles", () => ({
 
 import { releaseBusinessVat, convertBusinessToIndividual, updateBusinessTaxId } from "./businessAdmin";
 import { decideProviderApplication } from "./decideProviderApplication";
+import { dottedKeys } from "../../test/fakes/fakeFirestore";
 
 type Callable = { run: (r: unknown) => Promise<unknown> };
 
@@ -150,16 +46,6 @@ function callAs(uid: string | null, fn: unknown, data: Record<string, unknown>) 
   });
 }
 const asAdmin = (fn: unknown, data: Record<string, unknown>) => callAs("admin-1", fn, data);
-
-/** Every key, at any depth, whose name contains a dot. */
-function dottedKeys(value: unknown, path = ""): string[] {
-  if (Array.isArray(value)) return value.flatMap((v, i) => dottedKeys(v, `${path}${i}/`));
-  if (!value || typeof value !== "object") return [];
-  return Object.entries(value).flatMap(([k, v]) => [
-    ...(k.includes(".") ? [`${path}${k}`] : []),
-    ...dottedKeys(v, `${path}${k}/`),
-  ]);
-}
 
 const VAT = "12345678903";
 const OTHER_VAT = "00743110157";
@@ -190,10 +76,7 @@ const auditEntries = () =>
 
 describe("admin callables on a business (handler)", () => {
   beforeEach(() => {
-    h.docs.clear();
-    h.versions.clear();
-    h.ops.length = 0;
-    h.state.transactions = 0;
+    h.reset();
     h.admins.clear();
     h.admins.add("admin-1");
     h.put("users/admin-1", { email: "admin@vfit.com", role: "admin" });
@@ -244,6 +127,7 @@ describe("admin callables on a business (handler)", () => {
     beforeEach(() => {
       h.put("users/u1", { ...USER, role: "customer", providerStatus: "pending" });
       h.put("instructors/u1", { ...APPROVED_COMPANY, applicationStatus: "pending", providerProfile: { isVerified: false } });
+      h.put(`businessVat/${VAT}`, { uid: "u1", createdAt: "T0" });
     });
 
     it("passes the reviewed tax id and legal name through: a match approves", async () => {
@@ -268,6 +152,18 @@ describe("admin callables on a business (handler)", () => {
       await expect(
         asAdmin(decideProviderApplication, { providerId: "u1", decision: "verified" }),
       ).rejects.toMatchObject({ code: "failed-precondition", message: "review_required" });
+      expect(h.ops).toEqual([]);
+    });
+
+    it("a matching review of a company that no longer holds its claim is refused with claim_missing", async () => {
+      h.remove(`businessVat/${VAT}`);
+      await expect(
+        asAdmin(decideProviderApplication, {
+          providerId: "u1",
+          decision: "verified",
+          expectedReview: { vatNumber: VAT, legalName: COMPANY.legalName },
+        }),
+      ).rejects.toMatchObject({ code: "failed-precondition", message: "claim_missing" });
       expect(h.ops).toEqual([]);
     });
 
@@ -315,7 +211,7 @@ describe("admin callables on a business (handler)", () => {
     });
 
     it("releases a rejected company's claim and audits it in the same transaction", async () => {
-      h.put("instructors/u1", { ...APPROVED_COMPANY, applicationStatus: "rejected" });
+      h.put("instructors/u1", { ...APPROVED_COMPANY, applicationStatus: "rejected", providerProfile: { isVerified: false } });
       h.put(`businessVat/${VAT}`, { uid: "u1", createdAt: "T0" });
       await expect(
         asAdmin(releaseBusinessVat, { vatNumber: `IT ${VAT}`, reason: " real owner called " }),
@@ -338,6 +234,16 @@ describe("admin callables on a business (handler)", () => {
           timestamp: "NOW",
         },
       ]);
+    });
+
+    it("refuses a company marked rejected that is still listed (isVerified) — the isApproved definition", async () => {
+      h.put("instructors/u1", { ...APPROVED_COMPANY, applicationStatus: "rejected" });
+      h.put(`businessVat/${VAT}`, { uid: "u1", createdAt: "T0" });
+      await expect(asAdmin(releaseBusinessVat, { vatNumber: VAT })).rejects.toMatchObject({
+        code: "failed-precondition",
+        message: "claim_in_use",
+      });
+      expect(h.ops).toEqual([]);
     });
 
     it("releases an abandoned claim: holder moved to another number, or has no instructors doc", async () => {
@@ -464,6 +370,7 @@ describe("admin callables on a business (handler)", () => {
       h.put("users/u1", { ...USER, role: "superadmin" });
       await expect(asAdmin(convertBusinessToIndividual, { providerId: "u1" })).rejects.toMatchObject({
         code: "permission-denied",
+        message: "protected_account",
       });
       expect(h.ops).toEqual([]);
     });
@@ -512,6 +419,16 @@ describe("admin callables on a business (handler)", () => {
         message: "vat_already_registered",
       });
       expect(h.ops).toEqual([]);
+    });
+
+    it("refuses a number no account claims but another doc still carries (a rejected company whose claim was released)", async () => {
+      h.put("instructors/squatter", { applicationStatus: "rejected", business: { ...COMPANY, vatNumber: OTHER_VAT } });
+      await expect(asAdmin(updateBusinessTaxId, { providerId: "u1", vatNumber: OTHER_VAT })).rejects.toMatchObject({
+        code: "already-exists",
+        message: "vat_already_registered",
+      });
+      expect(h.ops).toEqual([]);
+      expect(h.read(`businessVat/${VAT}`)).toEqual({ uid: "u1", createdAt: "T0" });
     });
 
     it("same uid, same number: the claims are left alone and only the sent fields change", async () => {

@@ -1,9 +1,8 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { HttpsError } from "firebase-functions/v2/https";
 import {
   decisionInstructorPatch,
   draftServicesForCategories,
-  retryOnceOnConcurrentUpdate,
   toConcurrentUpdateError,
   instructorVerificationPatch,
   needsDefaultHours,
@@ -256,8 +255,8 @@ describe("pendingApplicationPatches", () => {
 });
 
 describe("toConcurrentUpdateError", () => {
-  it("turns a failed write precondition (gRPC 9) into a retryable, client-mappable error", () => {
-    const mapped = toConcurrentUpdateError(Object.assign(new Error("FAILED_PRECONDITION: stale"), { code: 9 }));
+  it("turns a transaction that outlasted the SDK's retries (gRPC 10 ABORTED) into a retryable, client-mappable error", () => {
+    const mapped = toConcurrentUpdateError(Object.assign(new Error("10 ABORTED: Too much contention"), { code: 10 }));
     expect(mapped).toBeInstanceOf(HttpsError);
     expect(mapped).toMatchObject({ code: "aborted", message: "concurrent_update" });
   });
@@ -265,6 +264,7 @@ describe("toConcurrentUpdateError", () => {
   it("passes every other error through untouched", () => {
     const others = [
       Object.assign(new Error("not found"), { code: 5 }),
+      Object.assign(new Error("FAILED_PRECONDITION"), { code: 9 }),
       new Error("boom"),
       new HttpsError("failed-precondition", "business_account_exists"),
       "a string",
@@ -272,38 +272,6 @@ describe("toConcurrentUpdateError", () => {
     for (const err of others) {
       expect(toConcurrentUpdateError(err)).toBe(err);
     }
-  });
-});
-
-describe("retryOnceOnConcurrentUpdate", () => {
-  const concurrent = () => new HttpsError("aborted", "concurrent_update");
-
-  it("runs the work once when it succeeds", async () => {
-    const work = vi.fn().mockResolvedValue("ok");
-    await expect(retryOnceOnConcurrentUpdate(work)).resolves.toBe("ok");
-    expect(work).toHaveBeenCalledTimes(1);
-  });
-
-  it("re-runs the work once after a concurrent update, so it re-reads and re-checks", async () => {
-    const work = vi.fn().mockRejectedValueOnce(concurrent()).mockResolvedValueOnce("ok");
-    await expect(retryOnceOnConcurrentUpdate(work)).resolves.toBe("ok");
-    expect(work).toHaveBeenCalledTimes(2);
-  });
-
-  it("gives up after the second concurrent update and reports it", async () => {
-    const work = vi.fn().mockRejectedValue(concurrent());
-    await expect(retryOnceOnConcurrentUpdate(work)).rejects.toMatchObject({
-      code: "aborted",
-      message: "concurrent_update",
-    });
-    expect(work).toHaveBeenCalledTimes(2);
-  });
-
-  it("never retries any other error", async () => {
-    const err = new HttpsError("failed-precondition", "business_account_exists");
-    const work = vi.fn().mockRejectedValue(err);
-    await expect(retryOnceOnConcurrentUpdate(work)).rejects.toBe(err);
-    expect(work).toHaveBeenCalledTimes(1);
   });
 });
 

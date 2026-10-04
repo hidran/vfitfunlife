@@ -444,6 +444,8 @@ export const esMessages: Messages = {
   'admin.business.error.invalidProviderId': 'Identificador de cuenta no válido. Recarga la página.',
   'admin.business.error.invalidReason': 'Motivo no válido o demasiado largo.',
   'admin.business.error.vatTaken': 'Esta P.IVA / codice fiscale ya está registrada por otra cuenta. Si esa empresa fue rechazada, libera antes su P.IVA desde su ficha.',
+  'admin.business.error.claimMissing': 'Esta empresa ya no tiene registrada su P.IVA (se liberó), así que no puede aprobarse. Pídele que vuelva a solicitarlo o cambia su P.IVA.',
+  'admin.business.error.protectedAccount': 'Esta cuenta está protegida y no se puede modificar desde aquí.',
   'admin.verificationsPage.title': 'Verificaciones de proveedores',
   'admin.verificationsPage.actionFailed': 'Acción fallida: solo un superadministrador puede verificar o rechazar a un proveedor.',
   'admin.verificationsPage.subtitle': 'Revisar y aprobar solicitudes de proveedores',

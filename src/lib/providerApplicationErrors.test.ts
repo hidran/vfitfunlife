@@ -132,6 +132,9 @@ describe('admin business errors (B8: approve, release, convert, change tax id)',
         'invalid_legal_form',
         'invalid_affiliation_number',
         'vat_already_registered',
+        // Backend review fixes: an approval must hold the tax-id claim; protected accounts.
+        'claim_missing',
+        'protected_account',
       ].sort()
     );
   });
@@ -156,6 +159,8 @@ describe('admin business errors (B8: approve, release, convert, change tax id)',
     expect(adminBusinessErrorMessageKey(new Error('claim_in_use'))).toBe('admin.business.error.claimInUse');
     // Another account holds the number: the admin, unlike an applicant, can free a rejected one.
     expect(adminBusinessErrorMessageKey(new Error('vat_already_registered'))).toBe('admin.business.error.vatTaken');
+    expect(adminBusinessErrorMessageKey(new Error('claim_missing'))).toBe('admin.business.error.claimMissing');
+    expect(adminBusinessErrorMessageKey(new Error('protected_account'))).toBe('admin.business.error.protectedAccount');
   });
 
   it('returns null for anything that is not one of its codes', () => {

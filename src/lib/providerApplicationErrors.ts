@@ -94,10 +94,12 @@ export function reportProviderApplicationError(
 
 /**
  * The stable codes the admin side of business accounts throws (plan 2026-10-04, B8a):
- * `decideProviderApplication` approving a company (`review_required`, `stale_review`) and the
- * `releaseBusinessVat` / `convertBusinessToIndividual` / `updateBusinessTaxId` callables
- * (functions/src/providers/businessAdmin.ts). Tax-id and legal-field codes reuse the signup
- * form's texts, except `vat_already_registered`: an admin can do something about it.
+ * `decideProviderApplication` approving a company (`review_required`, `stale_review`,
+ * `claim_missing` — it no longer holds its tax-id claim — and `vat_already_registered` — another
+ * account holds it) and the `releaseBusinessVat` / `convertBusinessToIndividual` /
+ * `updateBusinessTaxId` callables (functions/src/providers/businessAdmin.ts;
+ * `protected_account` refuses a protected superadmin). Tax-id and legal-field codes reuse the
+ * signup form's texts, except `vat_already_registered`: an admin can do something about it.
  */
 export const ADMIN_BUSINESS_ERROR_CODES = [
   'review_required',
@@ -113,6 +115,8 @@ export const ADMIN_BUSINESS_ERROR_CODES = [
   'invalid_legal_form',
   'invalid_affiliation_number',
   'vat_already_registered',
+  'claim_missing',
+  'protected_account',
 ] as const;
 
 export type AdminBusinessErrorCode = (typeof ADMIN_BUSINESS_ERROR_CODES)[number];
@@ -131,6 +135,8 @@ export const ADMIN_BUSINESS_ERRORS: Record<AdminBusinessErrorCode, MessageKey> =
   invalid_legal_form: 'provider.business.error.legalFormInvalid',
   invalid_affiliation_number: 'provider.business.error.affiliationInvalid',
   vat_already_registered: 'admin.business.error.vatTaken',
+  claim_missing: 'admin.business.error.claimMissing',
+  protected_account: 'admin.business.error.protectedAccount',
 };
 
 const ADMIN_CODES: ReadonlySet<string> = new Set(ADMIN_BUSINESS_ERROR_CODES);

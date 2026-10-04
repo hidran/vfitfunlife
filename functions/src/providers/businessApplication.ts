@@ -200,8 +200,11 @@ export function assertNotExistingBusiness(
   }
 }
 
-/** Approved by either signal — applicationStatus, or the flag legacy docs carry alone. */
-function isApproved(instructor: Record<string, unknown> | undefined): boolean {
+/**
+ * Approved by either signal — applicationStatus, or the flag legacy docs carry alone. The one
+ * definition every business guard uses (also releaseBusinessVat's "in use" check).
+ */
+export function isApproved(instructor: Record<string, unknown> | undefined): boolean {
   const profile = instructor?.providerProfile as Record<string, unknown> | undefined;
   return instructor?.applicationStatus === "verified" || profile?.isVerified === true;
 }

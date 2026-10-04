@@ -13,6 +13,7 @@ import {
 } from "./businessApplication";
 import {
   assertClaimReleasable,
+  assertNoOtherCarrier,
   claimHolderUid,
   convertToIndividualPatches,
   parseAdminReason,
@@ -74,9 +75,12 @@ interface ReleaseBusinessVatData {
  *
  * - The number is validated and normalised (`invalid_vat`); no claim ⇒ `not-found` /
  *   `claim_not_found`.
- * - Refused with `failed-precondition` / `claim_in_use` while the claim's holder still has a
- *   non-rejected instructors doc carrying that number (assertClaimReleasable) — use
- *   convertBusinessToIndividual or updateBusinessTaxId for a live company instead.
+ * - Refused with `failed-precondition` / `claim_in_use` while the claim's holder still has an
+ *   instructors doc carrying that number that is not rejected, or is listed whatever its status
+ *   says (assertClaimReleasable) — use convertBusinessToIndividual or updateBusinessTaxId for a
+ *   live company instead. Releasing a rejected company's claim never makes it approvable: an
+ *   approval must hold the claim (commitProviderDecision), so it ends in `claim_missing`, or
+ *   `vat_already_registered` once the real owner has taken the number.
  * - Otherwise the claim is deleted, audited as `business_vat` / `delete` with the claim as
  *   `before`.
  */
@@ -129,8 +133,9 @@ interface ConvertBusinessToIndividualData {
  * The verification state is untouched: an approved company stays listed under that name.
  *
  * Refused with `failed-precondition` / `not_a_business` when neither signal says business
- * (isExistingBusiness), `not-found` without a users doc, `permission-denied` on a protected
- * superadmin. Audited as `provider` / `update` with the removed map and claims as `before`.
+ * (isExistingBusiness), `not-found` / `provider_not_found` without a users doc,
+ * `permission-denied` / `protected_account` on a protected superadmin. Audited as `provider` /
+ * `update` with the removed map and claims as `before`.
  */
 export const convertBusinessToIndividual = onCall<ConvertBusinessToIndividualData>({ region }, async (req) => {
   const actor = await requireAdminCaller(req);
@@ -150,7 +155,7 @@ export const convertBusinessToIndividual = onCall<ConvertBusinessToIndividualDat
     if (!userSnap.exists) throw new HttpsError("not-found", "provider_not_found");
     const user = userSnap.data() ?? {};
     if (isProtectedSuperadmin(user)) {
-      throw new HttpsError("permission-denied", "Cannot modify a protected superadmin account");
+      throw new HttpsError("permission-denied", "protected_account");
     }
     const instructor = instructorSnap.exists ? instructorSnap.data() : undefined;
     if (!isExistingBusiness(user, instructor)) {
@@ -212,8 +217,12 @@ interface UpdateBusinessTaxIdData {
  * behind).
  *
  * Input is validated with the signup validators (parseTaxIdUpdate). Then one transaction, all
- * reads first (the instructors doc, every claim the uid holds, the claim on the new number):
+ * reads first (the instructors doc, every claim the uid holds, every instructors doc carrying
+ * the new number, the claim on the new number):
  * - the doc must have a `business` map (`failed-precondition` / `not_a_business`);
+ * - no OTHER instructors doc may carry the new number, claimed or not — e.g. a rejected company
+ *   whose claim was released (`already-exists` / `vat_already_registered`; invariant I2: one
+ *   tax id, one holder);
  * - the new number must be unclaimed or already this uid's (`already-exists` /
  *   `vat_already_registered`); the claim moves with claimBusinessVat (`byAdmin`: an approved
  *   company may move too), which also releases every other claim the uid holds;
@@ -228,18 +237,23 @@ export const updateBusinessTaxId = onCall<UpdateBusinessTaxIdData>({ region }, a
   const reason = parseAdminReason(req.data?.reason);
 
   const db = getFirestore();
-  const instructorRef = db.collection("instructors").doc(providerId);
+  const instructors = db.collection("instructors");
+  const instructorRef = instructors.doc(providerId);
   const claims = db.collection(BUSINESS_VAT_COLLECTION);
   const now = FieldValue.serverTimestamp();
 
   const released = await db.runTransaction(async (tx) => {
     const instructorSnap = await tx.get(instructorRef);
     const held = await tx.get(claims.where("uid", "==", providerId));
+    // Stored tax ids are normalised (validateBusinessInput / this callable), so an equality
+    // query finds every carrier. Automatic single-field index on business.vatNumber.
+    const carriers = await tx.get(instructors.where("business.vatNumber", "==", update.vatNumber));
     const instructor = instructorSnap.exists ? instructorSnap.data() : undefined;
     const business = instructor?.business;
     if (!business || typeof business !== "object") {
       throw new HttpsError("failed-precondition", "not_a_business");
     }
+    assertNoOtherCarrier(carriers.docs.map((doc) => doc.id), providerId);
 
     const heldVatNumbers = held.docs.map((claim) => claim.id);
     // Reads the new number's claim, then (only once every check passed) writes the move.

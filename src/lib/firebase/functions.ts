@@ -813,10 +813,13 @@ export interface DecideProviderApplicationRequest {
  * promotes the user to role 'provider' and seeds a draft service per requested category
  * (functions/src/providers/decideProviderApplication.ts).
  *
- * Approving a company fails with `failed-precondition` and a stable code as the message:
- * `review_required` (no `expectedReview` sent) or `stale_review` (the company's tax id or legal
- * name is no longer what was shown — it re-applied, or changed while the approval was in
- * flight): reload the detail view and review it again.
+ * Approving a company fails with a stable code as the message: `review_required` (no
+ * `expectedReview` sent) or `stale_review` (the company's tax id or legal name is no longer what
+ * was shown — it re-applied, or was converted to an individual): reload the detail view and
+ * review it again. A review sent for a provider that is not (any more) a company is also
+ * `stale_review`. The company must also hold the claim on its tax id: `claim_missing` (it was
+ * released, e.g. after a rejection) or `already-exists` / `vat_already_registered` (another
+ * account holds it now). `not-found` / `provider_not_found` when the account was deleted.
  */
 export async function decideProviderApplication(
   data: DecideProviderApplicationRequest,
@@ -833,7 +836,8 @@ export async function decideProviderApplication(
 // Admin or superadmin; each call is one transaction with its audit_logs entry. Failures carry a
 // stable code as the message: `invalid_vat`, `invalid_business_name`, `invalid_legal_form`,
 // `invalid_affiliation_number`, `invalid_provider_id`, `invalid_reason`, `claim_not_found`,
-// `claim_in_use`, `not_a_business`, `provider_not_found`, `vat_already_registered`.
+// `claim_in_use`, `not_a_business`, `provider_not_found`, `vat_already_registered`,
+// `protected_account`.
 
 export interface ReleaseBusinessVatRequest {
   /** P.IVA / codice fiscale whose uniqueness claim to free. */
@@ -852,8 +856,9 @@ export interface ReleaseBusinessVatResult {
 /**
  * Free a tax-id claim, e.g. a rejected company's or a squatter's. `not-found` /
  * `claim_not_found` when nobody holds it; `failed-precondition` / `claim_in_use` while the
- * holder's pending or approved company still carries the number (convert it, or change its tax
- * id, instead).
+ * holder's pending or approved (or still listed) company carries the number (convert it, or
+ * change its tax id, instead). The released company can't be approved afterwards
+ * (`claim_missing`) unless it takes the number again.
  */
 export async function releaseBusinessVat(data: ReleaseBusinessVatRequest): Promise<ReleaseBusinessVatResult> {
   const functions = await getFunctionsInstance();
@@ -876,7 +881,8 @@ export interface ConvertBusinessToIndividualResult {
 /**
  * Turn a company back into an individual: removes `providerType` and the `business` map,
  * releases its tax-id claims and renames it to the person's own name. Verification is
- * unchanged. `failed-precondition` / `not_a_business` when it is not a company.
+ * unchanged. `failed-precondition` / `not_a_business` when it is not a company;
+ * `permission-denied` / `protected_account` for a protected superadmin.
  */
 export async function convertBusinessToIndividual(
   data: ConvertBusinessToIndividualRequest,
@@ -915,7 +921,8 @@ export interface UpdateBusinessTaxIdResult {
  * Change a company's admin-owned fields (tax id, legal name, legal form, affiliation number) —
  * the owner can't, and a plain client write would leave the tax-id claim behind. The claim
  * moves with the number: `already-exists` / `vat_already_registered` when another account holds
- * it; `failed-precondition` / `not_a_business` when the provider is not a company.
+ * it or another company's record still carries it (e.g. a rejected one whose claim was
+ * released); `failed-precondition` / `not_a_business` when the provider is not a company.
  */
 export async function updateBusinessTaxId(data: UpdateBusinessTaxIdRequest): Promise<UpdateBusinessTaxIdResult> {
   const functions = await getFunctionsInstance();

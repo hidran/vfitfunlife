@@ -518,3 +518,47 @@ the same on prod with a throwaway P.IVA claim removed afterwards.
   Mutations (no expectedReview on the page / the queue / the panel, no reload on stale_review in
   the page / the panel, no legacy guard) each turned a test red; the queue page's extra
   `['providers']` invalidation is belt-and-braces (a reopened row refetches anyway).
+- 2026-10-05 — B8a backend review fixes (this commit), from an adversarial review of 69129c0 +
+  the functions part of 554e1e7 (two confirmed invariant breaks). **I1 — no company listed
+  unreviewed:** `commitProviderDecision` is now ONE Firestore transaction (reads: users,
+  instructors, the `businessVat` claim for a company approval, `services limit(1)`; every guard
+  from those reads; then the users update, instructors set(merge) with nested maps, draft services
+  and the audit entry). Firestore re-runs it when anything it read changes before the commit, so
+  the review gate can't fail open: an individual who applies as a company while an admin approves
+  them ends in `review_required` on the re-run; the B8a `lastUpdateTime` guard write,
+  `isFailedPreconditionError` and applyAsProvider's `retryOnceOnConcurrentUpdate` are gone
+  (`concurrent_update` now means "contention outlasted the SDK's retries", ABORTED → same code).
+  `checkBusinessReview` uses isExistingBusiness (m1: `users.providerType` alone counts), and a
+  review sent for a doc that is not (any more) a company is `stale_review` whatever the decision
+  (a sent review must describe the doc; without one, rejections/individuals pass as before).
+  The search-index/admin-index triggers writing mid-approval now only cause a passing re-run — no
+  spurious `stale_review` (m4, documented in the code). A provider deleted mid-flight ⇒
+  `not-found` / `provider_not_found` (was "Provider not found"). **I2 — one tax id, one holder:**
+  approving a company requires that `businessVat/{its normalised tax id}` names it, read in the
+  same transaction — `claim_missing` (new code) or `vat_already_registered`; a stored number that
+  matches the review but is no valid tax id ⇒ `claim_missing`. `releaseBusinessVat` treats a
+  holder as in use when not rejected OR approved by `isApproved` (now exported); `updateBusinessTaxId`
+  also queries `instructors where business.vatNumber == N` (automatic index) and refuses when
+  another doc carries N even without a claim. **Legacy `verifyProvider`:** guard + users update +
+  instructors write in one transaction. **m2:** convert's protected-superadmin refusal is
+  `permission-denied` / `protected_account` (new code). **m3:** `deleteUserCascade` deletes the
+  uid's `businessVat` claims (`deleteBusinessVatClaims` dep). New codes mapped in
+  `ADMIN_BUSINESS_ERRORS` with it/en/es/fr/de text (`admin.business.error.claimMissing`,
+  `.protectedAccount`) and in the wrapper docs; callable names/inputs unchanged. Tests: a shared
+  stateful fake `functions/test/fakes/fakeFirestore.ts` (applies commits, re-runs a transaction on
+  contention like the SDK — 5 attempts then code 10 — read-before-write, `create` on an existing
+  doc / `update` on a missing one fail the whole commit, `beforeCommit` interleaving hook) now
+  backs commitDecision (22), businessAdmin (35), applyAsProvider (15), roles.verifyProvider (5),
+  deleteUserCascade (8) and the new `businessLifecycle.test.ts` (8 multi-call sequences: the exact
+  S1 squatter sequence, its updateBusinessTaxId variant, release → re-apply → approve-old-holder,
+  release → admin re-assigns the own number → approvable,
+  S2 with a real nested company application inside the admin's commit, a review gone stale by a
+  conversion, convert-frees-the-number, re-apply-with-another-number), each checking "one listed
+  company per tax id, holding its claim". providers + users 365 → 395; functions 859. 13 mutations
+  (no claim requirement — S1 sequence red too; non-business review ignored; read after a write;
+  missing/foreign claim accepted; release ignoring isApproved; no carrier check; review gate
+  ignoring providerType; protected message; cascade keeping claims; non-transactional reads in the
+  legacy callable, the decision's instructors read and its claim read) each turned tests red.
+  Decisions beyond the review: the claim requirement does not apply to rejections; a sent review
+  is checked on rejections too; updateBusinessTaxId onto the company's own (released) number
+  re-creates its claim, which is how an admin makes a `claim_missing` company approvable again.

@@ -445,6 +445,8 @@ export const deMessages: Messages = {
   'admin.business.error.invalidProviderId': 'Ungültige Konto-ID. Lade die Seite neu.',
   'admin.business.error.invalidReason': 'Grund ungültig oder zu lang.',
   'admin.business.error.vatTaken': 'Diese P.IVA / Codice fiscale ist bereits von einem anderen Konto registriert. Wurde dieses Unternehmen abgelehnt, gib zuerst seine P.IVA in seinem Profil frei.',
+  'admin.business.error.claimMissing': 'Dieses Unternehmen hat seine P.IVA nicht mehr registriert (die Registrierung wurde aufgehoben) und kann daher nicht freigegeben werden. Bitte es, sich erneut zu bewerben, oder ändere seine P.IVA.',
+  'admin.business.error.protectedAccount': 'Dieses Konto ist geschützt und kann hier nicht geändert werden.',
   'admin.verificationsPage.title': 'Anbieter-Verifizierungen',
   'admin.verificationsPage.actionFailed': 'Aktion fehlgeschlagen: Nur ein Superadmin kann einen Anbieter verifizieren oder ablehnen.',
   'admin.verificationsPage.subtitle': 'Anbieteranträge prüfen und genehmigen',

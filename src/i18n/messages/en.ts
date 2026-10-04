@@ -450,6 +450,8 @@ export const enMessages: Messages = {
   'admin.business.error.invalidProviderId': 'Invalid account id. Reload the page.',
   'admin.business.error.invalidReason': 'Reason not valid or too long.',
   'admin.business.error.vatTaken': 'This P.IVA / codice fiscale is already registered by another account. If that company was rejected, release its tax id from its page first.',
+  'admin.business.error.claimMissing': "This company no longer holds its tax id (it was released), so it can't be approved. Ask it to apply again or change its tax id.",
+  'admin.business.error.protectedAccount': "This account is protected and can't be changed here.",
 
   // ─── Admin: Verifications page ───────────────────────────────────────
   'admin.verificationsPage.title': 'Provider Verifications',

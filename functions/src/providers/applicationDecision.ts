@@ -241,40 +241,17 @@ export function decisionInstructorPatch(opts: {
   return patch;
 }
 
-/** gRPC status code 9: FAILED_PRECONDITION — what a write's `lastUpdateTime` guard fails with. */
-const FAILED_PRECONDITION = 9;
-
-/** Whether a commit failed a write precondition (`lastUpdateTime`): a doc changed after its read. */
-export function isFailedPreconditionError(err: unknown): boolean {
-  const code = err && typeof err === "object" ? (err as { code?: unknown }).code : undefined;
-  return code === FAILED_PRECONDITION;
-}
+/** gRPC status code 10: ABORTED — what a transaction ends with once the SDK stops retrying it. */
+const ABORTED = 10;
 
 /**
- * Map a commit that failed its `lastUpdateTime` precondition — the document changed after it
- * was read, e.g. a concurrent business application — to a clean, retryable
+ * Map a transaction that lost to contention even after the Admin SDK's own retries (it re-runs
+ * the transaction function with fresh reads up to 5 times) to a clean, retryable
  * `aborted` / `concurrent_update` instead of letting it surface as `internal`. Any other error
- * is returned unchanged.
+ * — including every HttpsError a guard throws, which the SDK never retries — is returned
+ * unchanged.
  */
 export function toConcurrentUpdateError(err: unknown): unknown {
-  return isFailedPreconditionError(err) ? new HttpsError("aborted", "concurrent_update") : err;
-}
-
-function isConcurrentUpdate(err: unknown): boolean {
-  return err instanceof HttpsError && err.code === "aborted" && err.message === "concurrent_update";
-}
-
-/**
- * Run `work` and, if it lost a race (`concurrent_update`), run it once more. The second run
- * re-reads everything and re-checks every guard, so a benign concurrent write (the admin-index
- * trigger touching users/{uid} right after signup) just succeeds, while a real conflict (a
- * concurrent business application) is refused by the guard on the re-read.
- */
-export async function retryOnceOnConcurrentUpdate<T>(work: () => Promise<T>): Promise<T> {
-  try {
-    return await work();
-  } catch (err) {
-    if (!isConcurrentUpdate(err)) throw err;
-    return work();
-  }
+  const code = err && typeof err === "object" ? (err as { code?: unknown }).code : undefined;
+  return code === ABORTED ? new HttpsError("aborted", "concurrent_update") : err;
 }

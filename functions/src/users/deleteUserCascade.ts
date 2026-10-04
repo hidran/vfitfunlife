@@ -1,11 +1,14 @@
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { getAuth } from "firebase-admin/auth";
+import { BUSINESS_VAT_COLLECTION } from "../providers/businessApplication";
 
 /**
  * What deleting a user removes. Kept on purpose: bookings, payments, transactions and
  * audit_logs (financial and legal records), and reviews or client notes the user left on
- * someone else's document.
+ * someone else's document. A company's `businessVat` tax-id claims go too: left behind they
+ * would block the real owner of that tax id from ever registering (`vat_already_registered`)
+ * with no account left to release them from.
  */
 export function ownedStoragePrefixes(uid: string): string[] {
   return [
@@ -22,6 +25,8 @@ export interface CascadeDeps {
   recursiveDelete: (docPath: string) => Promise<void>;
   /** Removes any providerApplications docs with userId == uid — personal data, not a legal record. */
   deleteProviderApplications: (uid: string) => Promise<void>;
+  /** Removes every `businessVat/{vat}` uniqueness claim whose uid == uid (business accounts). */
+  deleteBusinessVatClaims: (uid: string) => Promise<void>;
   deleteStoragePrefix: (prefix: string) => Promise<void>;
   deleteAuthUser: (uid: string) => Promise<void>;
 }
@@ -56,6 +61,7 @@ export async function deleteUserCascade(uid: string, deps: CascadeDeps): Promise
 
   await deps.recursiveDelete(`instructors/${uid}`);
   await deps.deleteProviderApplications(uid);
+  await deps.deleteBusinessVatClaims(uid);
 
   for (const prefix of ownedStoragePrefixes(uid)) {
     await deps.deleteStoragePrefix(prefix);
@@ -67,19 +73,23 @@ export async function deleteUserCascade(uid: string, deps: CascadeDeps): Promise
 /** The real dependencies, backed by the Admin SDK. */
 export function adminCascadeDeps(): CascadeDeps {
   const db = getFirestore();
+  /** Delete every doc of `collection` whose `field` == `value`, in batches. */
+  const deleteWhere = async (collection: string, field: string, value: string) => {
+    const snap = await db.collection(collection).where(field, "==", value).get();
+    // Rules let a user create arbitrarily many providerApplications; stay comfortably under
+    // Firestore's 500-write batch limit rather than assuming there's only ever a handful.
+    const CHUNK_SIZE = 400;
+    for (let i = 0; i < snap.docs.length; i += CHUNK_SIZE) {
+      const batch = db.batch();
+      for (const doc of snap.docs.slice(i, i + CHUNK_SIZE)) batch.delete(doc.ref);
+      await batch.commit();
+    }
+  };
   return {
     recursiveDelete: (path) => db.recursiveDelete(db.doc(path)),
-    deleteProviderApplications: async (uid) => {
-      const snap = await db.collection("providerApplications").where("userId", "==", uid).get();
-      // Rules let a user create arbitrarily many of these; stay comfortably under Firestore's
-      // 500-write batch limit rather than assuming there's only ever a handful.
-      const CHUNK_SIZE = 400;
-      for (let i = 0; i < snap.docs.length; i += CHUNK_SIZE) {
-        const batch = db.batch();
-        for (const doc of snap.docs.slice(i, i + CHUNK_SIZE)) batch.delete(doc.ref);
-        await batch.commit();
-      }
-    },
+    deleteProviderApplications: (uid) => deleteWhere("providerApplications", "userId", uid),
+    // Same automatic single-field index on `uid` that applyAsProvider's claim query uses.
+    deleteBusinessVatClaims: (uid) => deleteWhere(BUSINESS_VAT_COLLECTION, "uid", uid),
     deleteStoragePrefix: async (prefix) => {
       await getStorage().bucket().deleteFiles({ prefix });
     },

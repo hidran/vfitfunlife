@@ -1,11 +1,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue, type DocumentReference } from "firebase-admin/firestore";
 import { commitProviderDecision } from "./commitDecision";
-import {
-  draftServicesForCategories,
-  pendingApplicationPatches,
-  retryOnceOnConcurrentUpdate,
-} from "./applicationDecision";
+import { draftServicesForCategories, pendingApplicationPatches } from "./applicationDecision";
 import {
   BUSINESS_VAT_COLLECTION,
   assertNotApprovedBusiness,
@@ -132,32 +128,31 @@ export const applyAsProvider = onCall<ApplyAsProviderData>(
 
     // A company re-applying as an individual would otherwise be auto-approved (and listed
     // without its tax id ever being checked), or have its company name replaced by a person's.
-    // These reads may already be stale; commitProviderDecision re-checks on its own reads and
-    // guards its write, which is what actually closes a concurrent individual/business race.
+    // These reads may already be stale; commitProviderDecision re-checks inside its transaction,
+    // which is what actually closes a concurrent individual/business race.
     if (providerType !== "business") {
       assertNotExistingBusiness(caller, instructorSnap.data());
     }
 
     if (shouldAutoApprove(settings, providerType)) {
-      // One retry on `concurrent_update`: right after signup the admin-index trigger writes
-      // users/{uid} too, which trips the commit's lastUpdateTime guard for no real reason. The
-      // retry re-reads and re-checks, so a genuine business race is still refused.
-      const { draftServicesSeeded } = await retryOnceOnConcurrentUpdate(() =>
-        commitProviderDecision({
-          providerId: callerUid,
-          decision: "verified",
-          actor: {
-            uid: callerUid,
-            email: (caller.email as string) ?? req.auth?.token?.email ?? "",
-            // Their own role, which at signup is `customer` and maps to the audit
-            // vocabulary's 'client'. The audit entry therefore never claims an admin acted;
-            // the reason below is what marks the row as an auto-approval.
-            role: (caller.role as string) ?? "customer",
-          },
-          notes: "Auto-approved at signup",
-          application: { requestedCategoryIds: categoryIds, fullName: applicantName },
-        })
-      );
+      // One transaction (commitProviderDecision): a concurrent write — the admin-index trigger
+      // touching users/{uid} right after signup, or a business application — makes Firestore
+      // re-run it with fresh reads, so the first just succeeds and the second is refused
+      // (`business_account_exists`). `concurrent_update` only if contention outlasts its retries.
+      const { draftServicesSeeded } = await commitProviderDecision({
+        providerId: callerUid,
+        decision: "verified",
+        actor: {
+          uid: callerUid,
+          email: (caller.email as string) ?? req.auth?.token?.email ?? "",
+          // Their own role, which at signup is `customer` and maps to the audit
+          // vocabulary's 'client'. The audit entry therefore never claims an admin acted;
+          // the reason below is what marks the row as an auto-approval.
+          role: (caller.role as string) ?? "customer",
+        },
+        notes: "Auto-approved at signup",
+        application: { requestedCategoryIds: categoryIds, fullName: applicantName },
+      });
       return { success: true, providerId: callerUid, autoApproved: true, draftServicesSeeded };
     }
 
@@ -176,8 +171,9 @@ export const applyAsProvider = onCall<ApplyAsProviderData>(
       // docs — fresh, so the approval check below cannot act on the stale reads above — then
       // every claim this account holds and the claim it asks for; only then the writes. A
       // refused application therefore writes nothing, two accounts racing for the same tax id
-      // cannot both win, and the users/{uid} write is what makes a concurrent individual
-      // auto-approval fail its precondition.
+      // cannot both win, and a concurrent decision on this account (commitProviderDecision, also
+      // one transaction over users + instructors) is serialised with it: whichever commits
+      // second re-runs on the other's result.
       const claims = db.collection(BUSINESS_VAT_COLLECTION);
       await db.runTransaction(async (tx) => {
         const currentUser = await tx.get(userRef);
