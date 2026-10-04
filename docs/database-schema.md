@@ -49,7 +49,7 @@ interface User {
   providerProfile: ProviderProfile | null; // populated for providers; see ProviderProfile in functions/src/types.ts
   isActive: boolean;                // soft-deactivation flag enforced by admin tooling
   isVerified: boolean;              // top-level verification (mirrors providerProfile.isVerified for providers)
-  providerType?: 'individual' | 'business'; // kind of provider account; absent => 'individual'. 'business' = a company (P.IVA holder), always approved manually; its company data lives in instructors/{uid}.business
+  providerType?: 'individual' | 'business'; // kind of provider account; absent => 'individual'. 'business' = a company or association (P.IVA / codice fiscale holder), always approved manually; its company data lives in instructors/{uid}.business
 
   // VIP Status
   isVip: boolean;
@@ -265,7 +265,9 @@ interface Instructor {
   providerType?: 'individual' | 'business'; // denormalized from users/{uid}
   business?: {
     legalName: string;              // ragione sociale; admin-verified, NOT owner-editable after approval
-    vatNumber: string;              // Italian P.IVA, 11 digits + checksum; admin-verified, NOT owner-editable after approval
+    vatNumber: string;              // Italian tax id, 11 digits + checksum: the P.IVA, or an association's codice fiscale (ASD/SSD without a P.IVA); admin-verified, NOT owner-editable after approval
+    legalForm?: 'company' | 'sole_trader' | 'association' | 'other'; // always written since B3b ('company' when the applicant gave none); absent on older docs => 'company'. Admin-verified, NOT owner-editable
+    affiliationNumber?: string;     // optional CONI / RASD / ente di promozione registration, <= 40 chars, "" when none; informational, shown in the admin UI only (not on the public page) — not secret: this doc is publicly readable once verified. NOT owner-editable
     displayName: string;            // shown publicly; copied to name/fullName, so cards/search/bookings show the company name
     description?: string;           // public company description
     website?: string | null;        // public website URL
@@ -774,9 +776,9 @@ The following top-level collections exist in `firestore.rules` and/or `functions
 - **Access:** Read by the owner (`resource.data.userId == auth.uid`) or admin; create by the authenticated owner; update by admin; delete by superadmin.
 
 ### businessVat
-- **Path:** `/businessVat/{vatNumber}` (docId == the normalized 11-digit P.IVA)
-- **Purpose:** Uniqueness claim so only one business account can register a given P.IVA. Written in a transaction together with the application.
-- **Key fields:** `uid` (owner of the claim), `createdAt: Timestamp`.
+- **Path:** `/businessVat/{vatNumber}` (docId == the normalized 11-digit tax id: P.IVA, or an association's codice fiscale)
+- **Purpose:** Uniqueness claim so only one business account can register a given tax id. Written in a transaction together with the application; the same transaction releases every other claim the applicant holds (found by `uid`), so an account holds at most one.
+- **Key fields:** `uid` (owner of the claim; `applyAsProvider` queries `uid ==` inside its transaction — automatic single-field index, do not exempt it), `createdAt: Timestamp`.
 - **Access:** No client read or write (rules deny all); Admin SDK (Cloud Functions) only.
 
 ### venueStaff

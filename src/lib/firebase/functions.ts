@@ -8,7 +8,12 @@ import type {
   AiProviderId,
   ResultCard,
 } from "@/types/assistant";
-import type { BookingStatus, PaymentConfirmationMethod, ProviderType } from "@/types/firebase";
+import type {
+  BookingStatus,
+  BusinessLegalForm,
+  PaymentConfirmationMethod,
+  ProviderType,
+} from "@/types/firebase";
 
 // Type definitions for function responses
 interface BookingResult {
@@ -695,11 +700,14 @@ export async function updateAiAuthoringSettings(patch: Partial<AiAuthoringSettin
  * pending instructors document and never lets them set `providerProfile.isVerified`.
  *
  * Failures carry a stable code as the error message for the UI to localise: `invalid_vat`,
- * `invalid_business`, `invalid_business_name`, `invalid_website`,
+ * `invalid_business`, `invalid_business_name`, `invalid_legal_form`,
+ * `invalid_affiliation_number` (over 40 characters), `invalid_website`,
  * `invalid_business_description`, `invalid_business_city`, `invalid_provider_type`,
- * `vat_already_registered` (P.IVA claimed by another account), `vat_change_not_allowed` (an
- * approved company re-applying with a different P.IVA), `business_account_exists` (a company
- * re-applying as an individual) and `concurrent_update` (lost a race — safe to retry).
+ * `vat_already_registered` (tax id claimed by another account), `business_already_approved`
+ * (an approved company re-applying — changes go through its profile or an admin),
+ * `vat_change_not_allowed` (backstop for the same case, not expected in practice),
+ * `business_account_exists` (a company re-applying as an individual) and `concurrent_update`
+ * (lost a race — safe to retry).
  */
 export async function applyAsProvider(data: {
   categoryIds: string[];
@@ -709,7 +717,12 @@ export async function applyAsProvider(data: {
   /** Required when `providerType` is 'business'. `displayName` defaults to `legalName`. */
   business?: {
     legalName: string;
+    /** P.IVA / codice fiscale (an association without a P.IVA uses its codice fiscale). */
     vatNumber: string;
+    /** Absent ⇒ 'company'. */
+    legalForm?: BusinessLegalForm;
+    /** Optional CONI / RASD / ente di promozione registration, at most 40 characters. */
+    affiliationNumber?: string;
     displayName?: string;
     description?: string;
     website?: string;

@@ -112,7 +112,7 @@ token and booking screen shows the company name with no further change.
 - **Done when:** tests cover: invalid P.IVA, duplicate P.IVA, idempotent re-apply, autoApprove ON still
   yields pending, individual path unchanged, no dotted keys, approval keeps the company name.
 
-### B3b `[ ]` Legal form and affiliation number (Small) — added 2026-10-04
+### B3b `[x]` Legal form and affiliation number (Small) — added 2026-10-04
 An association is not a "company"; admins reviewing it want to know the legal form and its sports-body
 registration. Optional fields only — no existing behaviour changes.
 - Files: `functions/src/providers/businessApplication.ts` (+ test), `functions/src/providers/businessTypes.ts`,
@@ -317,3 +317,18 @@ the same on prod with a throwaway P.IVA claim removed afterwards.
   P.IVA releases its own old claim, an approved one gets `vat_change_not_allowed` (D6). A re-apply no
   longer resets bio/rating/reviewCount/createdAt. Handler-level tests with a mocked firebase-admin for
   applyAsProvider and commitProviderDecision.
+- 2026-10-04 — B3b done (this commit). `business.legalForm` (company / sole_trader / association /
+  other, 'company' when absent) and `business.affiliationNumber` (≤ 40 chars, "" when empty), both in
+  the nested map. New error codes for B5: `invalid_legal_form`, `invalid_affiliation_number`,
+  `business_already_approved`. Hardening: the business transaction reads users + instructors fresh and
+  refuses ANY re-apply from an approved business (`business_already_approved`, also the same-number
+  case) — a verified *individual* applying as a business is still allowed (§5 default); it then
+  queries `businessVat where uid == caller` and releases every claim other than the one being taken.
+  That query replaces B3's release-old-claim path, so the client-writable `business.vatNumber` is no
+  longer used to find claims at all and can never become a document id ("a/b" ⇒ no `internal`).
+  `vat_change_not_allowed` stays only as a backstop inside claimBusinessVat (an approved account holding
+  another claim); the handler refuses first, so B5 should not expect it. A codice fiscale of an
+  association passes every tax-id test. The applyAsProvider test fake now serves stale outer vs. fresh
+  in-transaction reads, refuses a read after a write, only records committed writes, rejects a
+  non-document id and enforces `lastUpdateTime`; one test runs the real commitProviderDecision through
+  the code-9 retry to `business_account_exists`.

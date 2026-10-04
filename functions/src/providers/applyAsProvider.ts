@@ -8,12 +8,13 @@ import {
 } from "./applicationDecision";
 import {
   BUSINESS_VAT_COLLECTION,
+  assertNotApprovedBusiness,
   assertNotExistingBusiness,
   claimBusinessVat,
   parseProviderType,
   validateBusinessInput,
 } from "./businessApplication";
-import type { ProviderType } from "./businessTypes";
+import type { BusinessLegalForm, ProviderType } from "./businessTypes";
 import {
   PROVIDER_ONBOARDING_DOC,
   ProviderOnboardingSettings,
@@ -31,7 +32,12 @@ interface ApplyAsProviderData {
   /** Required when providerType is 'business'; ignored otherwise. See validateBusinessInput. */
   business?: {
     legalName: string;
+    /** P.IVA, or an association's codice fiscale (D3). */
     vatNumber: string;
+    /** Absent ⇒ 'company'. */
+    legalForm?: BusinessLegalForm;
+    /** Optional CONI / RASD / ente di promozione registration. */
+    affiliationNumber?: string;
     displayName?: string;
     description?: string;
     website?: string;
@@ -69,14 +75,16 @@ async function readOnboardingSettings(): Promise<ProviderOnboardingSettings> {
  * - `autoApprove: false` — the application is stored as pending and waits for an admin to
  *   decide in /admin/providers. Nothing is listed publicly until they do.
  *
- * A company (`providerType: 'business'`) always takes the pending branch, whatever the
- * setting (decision D2: someone checks the P.IVA first). Its details are validated
- * (validateBusinessInput), its P.IVA is claimed in `businessVat/{vat}` — one business per
- * P.IVA (D5), a pending company moving to a new P.IVA releases its old claim, an approved one
- * cannot change it (D6) — and the claim, the instructors doc and the user doc are written in
- * one transaction, so a refused claim writes nothing. Errors carry stable codes as messages
- * (`invalid_vat`, `vat_already_registered`, `vat_change_not_allowed`, ...) for the client to
- * localise; `aborted` / `concurrent_update` means "lost a race, try again".
+ * A company or association (`providerType: 'business'`) always takes the pending branch,
+ * whatever the setting (decision D2: someone checks the tax id first). Its details are
+ * validated (validateBusinessInput), an account that is already an approved business is
+ * refused (`business_already_approved`), and its tax id (P.IVA / codice fiscale) is claimed in
+ * `businessVat/{vat}` — one business per tax id (D5), and every other claim the account holds
+ * is released — and the claims, the instructors doc and the user doc are written in one
+ * transaction, so a refused application writes nothing. Errors carry stable codes as messages
+ * (`invalid_vat`, `invalid_legal_form`, `vat_already_registered`, `business_already_approved`,
+ * ...) for the client to localise; `aborted` / `concurrent_update` means "lost a race, try
+ * again".
  *
  * Either way this has to be a callable. firestore.rules lets a user create only an
  * *unverified, pending* instructors document and never lets them write
@@ -123,7 +131,7 @@ export const applyAsProvider = onCall<ApplyAsProviderData>(
     const applicantName = fullName ?? (caller.fullName as string) ?? null;
 
     // A company re-applying as an individual would otherwise be auto-approved (and listed
-    // without its P.IVA ever being checked), or have its company name replaced by a person's.
+    // without its tax id ever being checked), or have its company name replaced by a person's.
     // These reads may already be stale; commitProviderDecision re-checks on its own reads and
     // guards its write, which is what actually closes a concurrent individual/business race.
     if (providerType !== "business") {
@@ -164,18 +172,24 @@ export const applyAsProvider = onCall<ApplyAsProviderData>(
     const now = FieldValue.serverTimestamp();
 
     if (business) {
-      // One transaction, every read first (Firestore requires it): the instructors doc — to
-      // know which P.IVA the account already holds and whether it is approved — then the
-      // claims; only then the writes. A refused claim therefore writes nothing, two accounts
-      // racing for the same P.IVA cannot both win, and the users/{uid} write is what makes a
-      // concurrent individual auto-approval fail its precondition.
+      // One transaction, every read first (Firestore requires it): the user and instructors
+      // docs — fresh, so the approval check below cannot act on the stale reads above — then
+      // every claim this account holds and the claim it asks for; only then the writes. A
+      // refused application therefore writes nothing, two accounts racing for the same tax id
+      // cannot both win, and the users/{uid} write is what makes a concurrent individual
+      // auto-approval fail its precondition.
+      const claims = db.collection(BUSINESS_VAT_COLLECTION);
       await db.runTransaction(async (tx) => {
+        const currentUser = await tx.get(userRef);
         const current = await tx.get(instructorRef);
+        assertNotApprovedBusiness(currentUser.data(), current.data());
+        const held = await tx.get(claims.where("uid", "==", callerUid));
         await claimBusinessVat<DocumentReference>(tx, {
           uid: callerUid,
           vatNumber: business.vatNumber,
           instructor: current.data(),
-          claimRef: (vat) => db.collection(BUSINESS_VAT_COLLECTION).doc(vat),
+          heldVatNumbers: held.docs.map((claim) => claim.id),
+          claimRef: (vat) => claims.doc(vat),
           now,
         });
         const patches = pendingApplicationPatches({

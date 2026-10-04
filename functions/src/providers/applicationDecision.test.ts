@@ -34,6 +34,14 @@ const COMPANY = validateBusinessInput({
   city: "Milano",
 });
 
+/** An association: codice fiscale as the tax id, its legal form and its affiliation number. */
+const ASSOCIATION = validateBusinessInput({
+  legalName: "ASD Sport e Salute",
+  vatNumber: "97123456788",
+  legalForm: "association",
+  affiliationNumber: "RASD n. 12.345",
+});
+
 describe("draftServicesForCategories", () => {
   it("builds one inactive, unpriced draft per requested leaf, named in the provider's locale", () => {
     const drafts = draftServicesForCategories(["personal_training", "hiit"], "en");
@@ -199,6 +207,8 @@ describe("pendingApplicationPatches", () => {
       business: {
         legalName: "Karate Club Milano S.r.l.",
         vatNumber: "12345678903",
+        legalForm: "company",
+        affiliationNumber: "",
         displayName: "Karate Club Milano",
         description: "",
         website: null,
@@ -221,7 +231,7 @@ describe("pendingApplicationPatches", () => {
   it("uses no dotted key at any depth in either write", () => {
     // The instructors write is set(..., { merge: true }), which stores a dotted key as a
     // literal field name instead of a nested path.
-    for (const business of [undefined, COMPANY]) {
+    for (const business of [undefined, COMPANY, ASSOCIATION]) {
       for (const instructorExists of [true, false]) {
         const patches = pendingApplicationPatches({
           uid: "u4", applicantName: "Mario Rossi", requestedLeaves: ["hiit"], now: NOW, business, instructorExists,

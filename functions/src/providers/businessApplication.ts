@@ -1,10 +1,10 @@
 import { HttpsError } from "firebase-functions/v2/https";
-import type { BusinessDetails, ProviderType } from "./businessTypes";
+import type { BusinessDetails, BusinessLegalForm, ProviderType } from "./businessTypes";
 import { isValidItalianVat, normalizeVatNumber } from "./vatNumber";
 
 /**
- * Pure pieces of a company applying as a provider (plan 2026-10-04, task B3), kept free of
- * firebase-admin so they can be tested without the emulator — same split as
+ * Pure pieces of a company applying as a provider (plan 2026-10-04, tasks B3 and B3b), kept
+ * free of firebase-admin so they can be tested without the emulator — same split as
  * applicationDecision.ts.
  *
  * Every HttpsError raised here carries a stable code as its message (`invalid_vat`,
@@ -12,7 +12,10 @@ import { isValidItalianVat, normalizeVatNumber } from "./vatNumber";
  * human sentence there.
  */
 
-/** Where the one-business-per-P.IVA claims live (decision D5). Admin SDK only. */
+/**
+ * Where the one-business-per-tax-id claims live (decision D5), keyed by the P.IVA / codice
+ * fiscale. Admin SDK only.
+ */
 export const BUSINESS_VAT_COLLECTION = "businessVat";
 
 /** Maximum lengths, in characters after trimming. */
@@ -22,7 +25,16 @@ export const BUSINESS_FIELD_LIMITS = {
   description: 1000,
   city: 80,
   website: 200,
+  affiliationNumber: 40,
 } as const;
+
+/** The legal forms a business may declare (B3b). The first is the default. */
+export const BUSINESS_LEGAL_FORMS: readonly BusinessLegalForm[] = [
+  "company",
+  "sole_trader",
+  "association",
+  "other",
+];
 
 function invalid(code: string): HttpsError {
   return new HttpsError("invalid-argument", code);
@@ -62,16 +74,29 @@ function parseWebsite(value: unknown): string | null {
   return trimmed;
 }
 
+/** The declared legal form: absent/null ⇒ 'company'; anything outside the list is refused. */
+function parseLegalForm(value: unknown): BusinessLegalForm {
+  if (value === undefined || value === null) return BUSINESS_LEGAL_FORMS[0];
+  const known = BUSINESS_LEGAL_FORMS.find((form) => form === value);
+  if (!known) throw invalid("invalid_legal_form");
+  return known;
+}
+
 /**
- * Validate and normalise what the signup form sent for a company.
+ * Validate and normalise what the signup form sent for a company or association.
  *
- * - `vatNumber`: must pass the B1 P.IVA check; stored as bare 11 digits (no spaces, no `IT`).
+ * - `vatNumber`: the tax id — a P.IVA, or an association's codice fiscale (D3; both share the
+ *   B1 checksum). Stored as bare 11 digits (no spaces, no `IT`).
  * - `legalName`: required. `displayName`: defaults to the legal name when omitted or blank.
+ * - `legalForm`: one of BUSINESS_LEGAL_FORMS, 'company' when omitted (`invalid_legal_form`).
+ * - `affiliationNumber`: optional CONI / RASD / ente di promozione registration
+ *   (`invalid_affiliation_number`); informational, for the admin reviewing the application.
  * - Every text field is trimmed and length-capped (BUSINESS_FIELD_LIMITS).
- * - `description` and `city` are always present ("" when not given) and `website` is always
- *   present (null when not given). The result is merged into `instructors/{uid}.business`
- *   with set(merge), which merges nested maps field by field — writing every field each time
- *   means a re-apply replaces what the applicant changed instead of keeping a stale value.
+ * - `legalForm`, `affiliationNumber`, `description` and `city` are always present ("" when not
+ *   given, 'company' for the form) and `website` is always present (null when not given). The
+ *   result is merged into `instructors/{uid}.business` with set(merge), which merges nested
+ *   maps field by field — writing every field each time means a re-apply replaces what the
+ *   applicant changed instead of keeping a stale value.
  */
 export function validateBusinessInput(raw: unknown): BusinessDetails {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
@@ -97,6 +122,12 @@ export function validateBusinessInput(raw: unknown): BusinessDetails {
   return {
     legalName,
     vatNumber,
+    legalForm: parseLegalForm(input.legalForm),
+    affiliationNumber: optionalText(
+      input.affiliationNumber,
+      BUSINESS_FIELD_LIMITS.affiliationNumber,
+      "invalid_affiliation_number",
+    ),
     displayName,
     description: optionalText(
       input.description,
@@ -138,9 +169,9 @@ export function isExistingBusiness(
 
 /**
  * Refuse an individual (re-)application from an account that is already a business: it would
- * otherwise be auto-approved and listed without its P.IVA being checked (D2), or have its
- * company name replaced by a person's. applyAsProvider checks this up front, and
- * commitProviderDecision checks it again against its own reads on the self-apply path.
+ * otherwise be auto-approved and listed without its tax id (P.IVA / codice fiscale) being
+ * checked (D2), or have its company name replaced by a person's. applyAsProvider checks this up
+ * front, and commitProviderDecision checks it again against its own reads on the self-apply path.
  */
 export function assertNotExistingBusiness(
   user: Record<string, unknown> | undefined,
@@ -148,6 +179,33 @@ export function assertNotExistingBusiness(
 ): void {
   if (isExistingBusiness(user, instructor)) {
     throw new HttpsError("failed-precondition", "business_account_exists");
+  }
+}
+
+/** Approved by either signal — applicationStatus, or the flag legacy docs carry alone. */
+function isApproved(instructor: Record<string, unknown> | undefined): boolean {
+  const profile = instructor?.providerProfile as Record<string, unknown> | undefined;
+  return instructor?.applicationStatus === "verified" || profile?.isVerified === true;
+}
+
+/**
+ * Refuse a business (re-)application from an account that is already an APPROVED business
+ * (`failed-precondition` / `business_already_approved`). Re-applying would drop a listed
+ * company back to pending — de-listing it — and the re-apply after that could change its tax
+ * id. Changes to an approved company go through its profile (display fields, B6) or an admin
+ * (B8).
+ *
+ * `user` and `instructor` must be read inside the business transaction. "Approved" is the
+ * instructors doc's applicationStatus or legacy isVerified flag, neither of which the owner can
+ * write. A first-time applicant, a pending or rejected business, and a verified INDIVIDUAL
+ * applying as a business (plan §5: allowed, drops to pending) all pass.
+ */
+export function assertNotApprovedBusiness(
+  user: Record<string, unknown> | undefined,
+  instructor: Record<string, unknown> | undefined,
+): void {
+  if (isExistingBusiness(user, instructor) && isApproved(instructor)) {
+    throw new HttpsError("failed-precondition", "business_already_approved");
   }
 }
 
@@ -178,29 +236,34 @@ export interface VatClaimTransaction<Ref> {
   delete(ref: Ref): unknown;
 }
 
-/** Approved by either signal — applicationStatus, or the flag legacy docs carry alone. */
-function isApproved(instructor: Record<string, unknown>): boolean {
-  const profile = instructor.providerProfile as Record<string, unknown> | undefined;
-  return instructor.applicationStatus === "verified" || profile?.isVerified === true;
-}
-
 /**
- * Claim `vatNumber` for `uid` inside the caller's transaction (decision D5: one business per
- * P.IVA). Performs only reads until every check has passed, then only writes, so the caller
- * can follow it with its own writes — Firestore needs every read first.
+ * Claim the tax id `vatNumber` (P.IVA / codice fiscale) for `uid` inside the caller's
+ * transaction (decision D5: one business per tax id). Performs only reads until every check has
+ * passed, then only writes, so the caller can follow it with its own writes — Firestore needs
+ * every read first.
  *
- * `instructor` is the caller's instructors doc as read in this SAME transaction (undefined if
- * none); its `business.vatNumber` is the P.IVA the account currently holds.
+ * - `instructor`: the caller's instructors doc as read in this SAME transaction (undefined if
+ *   none) — only its approval state is used.
+ * - `heldVatNumbers`: the ids of every claim whose `uid` is the caller, from a
+ *   `businessVat where uid == caller` query read in this SAME transaction.
  *
+ * Outcomes:
  * - unclaimed ⇒ creates `{ uid, createdAt }`;
  * - claimed by this same account ⇒ an idempotent re-apply: the claim is left as it is;
- * - claimed by anyone else ⇒ `already-exists` / `vat_already_registered`;
- * - a different P.IVA than the one already held: an approved business is refused with
- *   `failed-precondition` / `vat_change_not_allowed` (D6: legalName/vatNumber are admin-owned
- *   after approval); a pending or rejected one moves, and the old claim is released in the
- *   same transaction — only if that claim is this account's, since until B4 the owner can
- *   edit `instructors.business.vatNumber` and point it at someone else's P.IVA. Without the
- *   release, one account could hold any number of P.IVAs by re-applying.
+ * - claimed by anyone else ⇒ `already-exists` / `vat_already_registered`, and nothing is written;
+ * - every OTHER claim the account holds is released in the same transaction, so one account
+ *   never holds more than one tax id however often it re-applies;
+ * - an approved account holding another claim is refused with `failed-precondition` /
+ *   `vat_change_not_allowed` (D6: legalName/vatNumber are admin-owned after approval).
+ *   applyAsProvider already refuses an approved business before this (business_already_approved);
+ *   this is the backstop that keeps the release above from ever freeing an approved company's
+ *   claim.
+ *
+ * The account's `instructors.business.vatNumber` is deliberately NOT used to find what it holds:
+ * until B4 the owner can rewrite it from the client — to another company's number, or to
+ * something like "a/b" that is not even a valid document id (Firestore would throw, surfacing as
+ * `internal`). The uid query is the authoritative record, and it never offers someone else's
+ * claim.
  *
  * Rejection itself does not release a claim; an admin frees one from the back office (B8).
  */
@@ -210,37 +273,34 @@ export async function claimBusinessVat<Ref>(
     uid: string;
     vatNumber: string;
     instructor: Record<string, unknown> | undefined;
+    heldVatNumbers: readonly string[];
     claimRef: (vatNumber: string) => Ref;
     now: unknown;
   },
-): Promise<{ claim: "claimed" | "already-yours"; released: string | null }> {
-  const { uid, vatNumber, instructor, claimRef, now } = opts;
+): Promise<{ claim: "claimed" | "already-yours"; released: string[] }> {
+  const { uid, vatNumber, instructor, heldVatNumbers, claimRef, now } = opts;
 
-  const held = (instructor?.business as Record<string, unknown> | undefined)?.vatNumber;
-  const previousVat = typeof held === "string" && held && held !== vatNumber ? held : null;
-  if (previousVat && instructor && isApproved(instructor)) {
+  const others = [...new Set(heldVatNumbers)].filter((held) => held !== vatNumber);
+  if (others.length > 0 && isApproved(instructor)) {
     throw new HttpsError("failed-precondition", "vat_change_not_allowed");
   }
 
   // Reads.
   const newRef = claimRef(vatNumber);
   const newClaim = await tx.get(newRef);
-  const oldRef = previousVat ? claimRef(previousVat) : null;
-  const oldClaim = oldRef ? await tx.get(oldRef) : null;
 
   // Checks.
   const newOwner = newClaim.exists ? newClaim.data()?.uid : undefined;
   if (newClaim.exists && newOwner !== uid) {
     throw new HttpsError("already-exists", "vat_already_registered");
   }
-  const releaseOld = !!(oldRef && oldClaim?.exists && oldClaim.data()?.uid === uid);
 
   // Writes.
-  if (releaseOld && oldRef) tx.delete(oldRef);
+  for (const held of others) tx.delete(claimRef(held));
   if (!newClaim.exists) tx.create(newRef, { uid, createdAt: now });
 
   return {
     claim: newClaim.exists ? "already-yours" : "claimed",
-    released: releaseOld ? previousVat : null,
+    released: others,
   };
 }

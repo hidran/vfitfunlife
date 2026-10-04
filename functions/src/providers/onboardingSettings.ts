@@ -51,8 +51,9 @@ export function mergeProviderOnboarding(
  * Whether this application is approved on the spot.
  *
  * A business never is, whatever the setting (decision D2 of the business-accounts plan):
- * someone has to check the P.IVA before a company is listed publicly. For an individual the
- * setting decides, exactly as before business accounts existed.
+ * someone has to check the tax id (P.IVA / codice fiscale) before a company or association is
+ * listed publicly. For an individual the setting decides, exactly as before business accounts
+ * existed.
  */
 export function shouldAutoApprove(
   settings: ProviderOnboardingSettings,

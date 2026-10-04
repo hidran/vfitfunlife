@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import { HttpsError } from "firebase-functions/v2/https";
 import {
   BUSINESS_FIELD_LIMITS,
+  BUSINESS_LEGAL_FORMS,
+  assertNotApprovedBusiness,
   assertNotExistingBusiness,
   buildBusinessInstructorPatch,
   claimBusinessVat,
@@ -42,12 +44,46 @@ const VALID = {
   displayName: "Karate Club Milano",
 };
 
+/**
+ * Check digit of an Italian 11-digit tax id — the same rule for a P.IVA and for the numeric
+ * codice fiscale of an association (odd positions as-is, even ones doubled with digit sum).
+ * Re-derived here rather than trusted from memory or from the code under test.
+ */
+function taxIdCheckDigit(first10: string): number {
+  const sum = first10.split("").map(Number).reduce((acc, d, i) => {
+    if (i % 2 === 0) return acc + d;
+    const doubled = d * 2;
+    return acc + (doubled > 9 ? doubled - 9 : doubled);
+  }, 0);
+  return (10 - (sum % 10)) % 10;
+}
+
+/**
+ * An association's (ASD/SSD) numeric codice fiscale, accepted in place of a P.IVA (D3). It starts
+ * with 9 like the codici fiscali of non-commercial bodies, and its digits 8–10 — a P.IVA's
+ * provincial-office code — are not an office code, so it is no well-formed company P.IVA: only
+ * the shared checksum makes it valid.
+ */
+const ASSOCIATION_CF = "9712345678" + taxIdCheckDigit("9712345678");
+
+/** A P.IVA's digits 8–10 name the issuing office: 001–100, 120, 121, 888 or 999. */
+function isPivaOfficeCode(code: number): boolean {
+  return (code >= 1 && code <= 100) || [120, 121, 888, 999].includes(code);
+}
+
+/** The same number with a wrong check digit. */
+function withBadCheckDigit(taxId: string): string {
+  return taxId.slice(0, 10) + ((Number(taxId[10]) + 1) % 10);
+}
+
 describe("validateBusinessInput", () => {
   it("trims every field and returns the normalised business details", () => {
     expect(
       validateBusinessInput({
         legalName: "  Karate Club Milano S.r.l. ",
         vatNumber: "12345678903",
+        legalForm: "sole_trader",
+        affiliationNumber: "  CONI 12345 ",
         displayName: " Karate Club Milano ",
         description: " Karate, animazione e sport per bambini ",
         website: " https://karateclub.example.it ",
@@ -56,6 +92,8 @@ describe("validateBusinessInput", () => {
     ).toEqual({
       legalName: "Karate Club Milano S.r.l.",
       vatNumber: "12345678903",
+      legalForm: "sole_trader",
+      affiliationNumber: "CONI 12345",
       displayName: "Karate Club Milano",
       description: "Karate, animazione e sport per bambini",
       website: "https://karateclub.example.it",
@@ -66,6 +104,8 @@ describe("validateBusinessInput", () => {
   it("stores the optional fields deterministically, so a re-apply replaces rather than keeps stale ones", () => {
     expect(validateBusinessInput(VALID)).toEqual({
       ...VALID,
+      legalForm: "company",
+      affiliationNumber: "",
       description: "",
       website: null,
       city: "",
@@ -215,6 +255,107 @@ describe("validateBusinessInput", () => {
   });
 });
 
+describe("validateBusinessInput — legal form", () => {
+  it("knows exactly the four legal forms of the plan", () => {
+    expect(BUSINESS_LEGAL_FORMS).toEqual(["company", "sole_trader", "association", "other"]);
+  });
+
+  it.each(["company", "sole_trader", "association", "other"])("stores %s as given", (legalForm) => {
+    expect(validateBusinessInput({ ...VALID, legalForm }).legalForm).toBe(legalForm);
+  });
+
+  it("defaults to company when absent, so a form that predates the field still works", () => {
+    for (const legalForm of [undefined, null]) {
+      expect(validateBusinessInput({ ...VALID, legalForm }).legalForm).toBe("company");
+    }
+  });
+
+  it("rejects any other value rather than guessing", () => {
+    for (const legalForm of ["", "Company", "srl", "asd", " association", 1, {}, ["company"]]) {
+      expectHttpsError(
+        () => validateBusinessInput({ ...VALID, legalForm }),
+        "invalid-argument",
+        "invalid_legal_form",
+      );
+    }
+  });
+});
+
+describe("validateBusinessInput — affiliation number", () => {
+  it("is optional and stored as \"\" when absent or blank, so a re-apply replaces a stale one", () => {
+    for (const affiliationNumber of [undefined, null, "", "   "]) {
+      expect(validateBusinessInput({ ...VALID, affiliationNumber }).affiliationNumber).toBe("");
+    }
+  });
+
+  it("is trimmed and capped at 40 characters, measured after trimming", () => {
+    expect(BUSINESS_FIELD_LIMITS.affiliationNumber).toBe(40);
+    expect(validateBusinessInput({ ...VALID, affiliationNumber: ` ${"7".repeat(40)} ` }).affiliationNumber)
+      .toBe("7".repeat(40));
+    expectHttpsError(
+      () => validateBusinessInput({ ...VALID, affiliationNumber: "7".repeat(41) }),
+      "invalid-argument",
+      "invalid_affiliation_number",
+    );
+  });
+
+  it("rejects a value that is not a string", () => {
+    for (const affiliationNumber of [12345, {}, ["RASD 1"]]) {
+      expectHttpsError(
+        () => validateBusinessInput({ ...VALID, affiliationNumber }),
+        "invalid-argument",
+        "invalid_affiliation_number",
+      );
+    }
+  });
+});
+
+describe("an association's codice fiscale as the tax id (D3)", () => {
+  it("is a checksum-valid 11-digit number that is not a company P.IVA", () => {
+    expect(ASSOCIATION_CF).toMatch(/^9\d{10}$/);
+    expect(isPivaOfficeCode(Number(ASSOCIATION_CF.slice(7, 10)))).toBe(false);
+    // A company P.IVA (Milan office, 015) does carry one; the check above is not vacuous.
+    expect(isPivaOfficeCode(Number("00743110157".slice(7, 10)))).toBe(true);
+  });
+
+  it("goes through the same tax-id checks as a P.IVA", () => {
+    for (const taxId of [VALID.vatNumber, ASSOCIATION_CF]) {
+      const spaced = `${taxId.slice(0, 3)} ${taxId.slice(3, 7)} ${taxId.slice(7)}`;
+      expect(validateBusinessInput({ ...VALID, vatNumber: ` ${spaced} ` }).vatNumber).toBe(taxId);
+      expectHttpsError(
+        () => validateBusinessInput({ ...VALID, vatNumber: withBadCheckDigit(taxId) }),
+        "invalid-argument",
+        "invalid_vat",
+      );
+      expectHttpsError(
+        () => validateBusinessInput({ ...VALID, vatNumber: taxId.slice(0, 10) }),
+        "invalid-argument",
+        "invalid_vat",
+      );
+    }
+  });
+
+  it("registers an association with its codice fiscale, legal form and affiliation number", () => {
+    expect(
+      validateBusinessInput({
+        legalName: "ASD Sport e Salute",
+        vatNumber: ASSOCIATION_CF,
+        legalForm: "association",
+        affiliationNumber: "RASD 12345",
+      }),
+    ).toEqual({
+      legalName: "ASD Sport e Salute",
+      vatNumber: ASSOCIATION_CF,
+      legalForm: "association",
+      affiliationNumber: "RASD 12345",
+      displayName: "ASD Sport e Salute",
+      description: "",
+      website: null,
+      city: "",
+    });
+  });
+});
+
 describe("parseProviderType", () => {
   it("is 'individual' when absent, so existing callers are unchanged", () => {
     expect(parseProviderType(undefined)).toBe("individual");
@@ -243,6 +384,8 @@ describe("buildBusinessInstructorPatch", () => {
       business: {
         legalName: "Karate Club Milano S.r.l.",
         vatNumber: "12345678903",
+        legalForm: "company",
+        affiliationNumber: "",
         displayName: "Karate Club Milano",
         description: "",
         website: null,
@@ -253,6 +396,17 @@ describe("buildBusinessInstructorPatch", () => {
 
   it("uses no dotted key at any depth — it is applied with set(merge), which would take one literally", () => {
     expect(dottedKeys(buildBusinessInstructorPatch(business))).toEqual([]);
+    // Every legal form, with and without an affiliation number, lands inside the nested map.
+    for (const legalForm of BUSINESS_LEGAL_FORMS) {
+      for (const affiliationNumber of [undefined, "CONI n. 1.234"]) {
+        const patch = buildBusinessInstructorPatch(
+          validateBusinessInput({ ...VALID, vatNumber: ASSOCIATION_CF, legalForm, affiliationNumber }),
+        );
+        expect(dottedKeys(patch)).toEqual([]);
+        expect(patch.business).toMatchObject({ legalForm, affiliationNumber: affiliationNumber ?? "" });
+        expect(Object.keys(patch).sort()).toEqual(["business", "fullName", "name"]);
+      }
+    }
   });
 
   it("copies the details rather than sharing the caller's object", () => {
@@ -300,23 +454,85 @@ describe("assertNotExistingBusiness", () => {
   });
 });
 
+describe("assertNotApprovedBusiness", () => {
+  const company = { legalName: "Karate Club Milano S.r.l.", vatNumber: "12345678903" };
+
+  it("refuses a business application from an account that is already an approved business", () => {
+    // A re-apply would drop the approved company to pending (de-listing it), and the next one
+    // could change its tax id. Changes go through B6 (display fields) or an admin (B8).
+    for (const [user, instructor] of [
+      [{}, { applicationStatus: "verified", providerProfile: { isVerified: true }, business: company }],
+      // A legacy doc without applicationStatus is approved by its flag alone.
+      [{}, { providerProfile: { isVerified: true }, business: company }],
+      // users.providerType is owner-proof, so it counts even if the client removed the map.
+      [{ providerType: "business" }, { applicationStatus: "verified", providerProfile: { isVerified: true } }],
+    ] as const) {
+      expectHttpsError(
+        () => assertNotApprovedBusiness(user, instructor),
+        "failed-precondition",
+        "business_already_approved",
+      );
+    }
+  });
+
+  it("lets first-time applicants and pending or rejected businesses through", () => {
+    expect(() => assertNotApprovedBusiness(undefined, undefined)).not.toThrow();
+    expect(() => assertNotApprovedBusiness({}, {})).not.toThrow();
+    for (const applicationStatus of ["pending", "rejected"]) {
+      expect(() =>
+        assertNotApprovedBusiness(
+          { providerType: "business" },
+          { applicationStatus, providerProfile: { isVerified: false }, business: company },
+        ),
+      ).not.toThrow();
+    }
+  });
+
+  it("lets a verified individual apply as a business (plan §5: allowed, drops to pending)", () => {
+    expect(() =>
+      assertNotApprovedBusiness(
+        { providerStatus: "verified" },
+        { applicationStatus: "verified", providerProfile: { isVerified: true }, name: "Mario Rossi" },
+      ),
+    ).not.toThrow();
+  });
+});
+
 describe("claimBusinessVat", () => {
   const NOW = { sentinel: "serverTimestamp" };
   const OWNER = "owner-1";
   const NEW_VAT = "12345678903";
   const OLD_VAT = "00743110157";
+  const STRAY_VAT = "01114601006";
 
   type Ref = { path: string };
-  const claimRef = (vat: string): Ref => ({ path: `businessVat/${vat}` });
+  /**
+   * Like Firestore's `collection.doc(id)`, but stricter: anything other than an 11-digit tax id
+   * throws. A client-written `"a/b"` reaching it would surface as `internal` in production.
+   */
+  const claimRef = (vat: string): Ref => {
+    if (!/^\d{11}$/.test(vat)) throw new Error(`claimRef called with an invalid document id: ${vat}`);
+    return { path: `businessVat/${vat}` };
+  };
 
-  /** A transaction over an in-memory set of claims, recording every operation in order. */
+  /**
+   * A transaction over an in-memory set of claims, recording every operation in order. It
+   * refuses a read after a write, like Firestore.
+   */
   function fakeTransaction(claims: Record<string, Record<string, unknown>> = {}) {
     const ops: Array<[op: "get" | "create" | "delete", path: string, data?: Record<string, unknown>]> = [];
+    const wrote = () => ops.some(([op]) => op !== "get");
     return {
       ops,
       writes: () => ops.filter(([op]) => op !== "get"),
+      /** What the handler's `businessVat where uid == …` query returns: the ids of that uid's claims. */
+      heldBy: (uid: string) =>
+        Object.entries(claims)
+          .filter(([, data]) => data.uid === uid)
+          .map(([path]) => path.slice("businessVat/".length)),
       tx: {
         get: async (ref: Ref) => {
+          if (wrote()) throw new Error("Firestore transactions require all reads to be executed before all writes.");
           ops.push(["get", ref.path]);
           const data = claims[ref.path];
           return { exists: data !== undefined, data: () => data };
@@ -331,7 +547,7 @@ describe("claimBusinessVat", () => {
     };
   }
 
-  function instructorWith(vatNumber: string, extra: Record<string, unknown> = {}) {
+  function instructorWith(vatNumber: unknown, extra: Record<string, unknown> = {}) {
     return {
       applicationStatus: "pending",
       providerProfile: { isVerified: false },
@@ -340,12 +556,21 @@ describe("claimBusinessVat", () => {
     };
   }
 
+  const APPROVED = { applicationStatus: "verified", providerProfile: { isVerified: true } };
+
   function claim(
-    tx: ReturnType<typeof fakeTransaction>["tx"],
+    fake: ReturnType<typeof fakeTransaction>,
     instructor: Record<string, unknown> | undefined,
     vatNumber = NEW_VAT,
   ) {
-    return claimBusinessVat(tx, { uid: OWNER, vatNumber, instructor, claimRef, now: NOW });
+    return claimBusinessVat(fake.tx, {
+      uid: OWNER,
+      vatNumber,
+      instructor,
+      heldVatNumbers: fake.heldBy(OWNER),
+      claimRef,
+      now: NOW,
+    });
   }
 
   /** No read may follow a write: Firestore transactions need every read first. */
@@ -355,92 +580,147 @@ describe("claimBusinessVat", () => {
     expect(ops.slice(firstWrite).filter(([op]) => op === "get")).toEqual([]);
   }
 
-  it("creates the claim for an unclaimed P.IVA", async () => {
-    const { tx, ops } = fakeTransaction();
-    await expect(claim(tx, undefined)).resolves.toEqual({ claim: "claimed", released: null });
-    expect(ops).toEqual([
-      ["get", `businessVat/${NEW_VAT}`],
-      ["create", `businessVat/${NEW_VAT}`, { uid: OWNER, createdAt: NOW }],
-    ]);
+  describe.each([
+    ["a P.IVA", NEW_VAT],
+    ["an association's codice fiscale", ASSOCIATION_CF],
+  ])("with %s as the tax id", (_label, taxId) => {
+    it("creates the claim when it is unclaimed", async () => {
+      const fake = fakeTransaction();
+      await expect(claim(fake, undefined, taxId)).resolves.toEqual({ claim: "claimed", released: [] });
+      expect(fake.ops).toEqual([
+        ["get", `businessVat/${taxId}`],
+        ["create", `businessVat/${taxId}`, { uid: OWNER, createdAt: NOW }],
+      ]);
+    });
+
+    it("refuses it when another account holds the claim", async () => {
+      const fake = fakeTransaction({ [`businessVat/${taxId}`]: { uid: "someone-else" } });
+      const result = claim(fake, undefined, taxId);
+      await expect(result).rejects.toBeInstanceOf(HttpsError);
+      await expect(result).rejects.toMatchObject({ code: "already-exists", message: "vat_already_registered" });
+      expect(fake.writes()).toEqual([]);
+    });
+
+    it("lets the same account re-apply with it and leaves the claim as it is", async () => {
+      const fake = fakeTransaction({ [`businessVat/${taxId}`]: { uid: OWNER } });
+      await expect(claim(fake, instructorWith(taxId), taxId)).resolves.toEqual({ claim: "already-yours", released: [] });
+      expect(fake.writes()).toEqual([]);
+    });
   });
 
-  it("refuses a P.IVA already claimed by another account", async () => {
-    const { tx, writes } = fakeTransaction({ [`businessVat/${NEW_VAT}`]: { uid: "someone-else" } });
-    const result = claim(tx, undefined);
-    await expect(result).rejects.toBeInstanceOf(HttpsError);
-    await expect(result).rejects.toMatchObject({ code: "already-exists", message: "vat_already_registered" });
-    expect(writes()).toEqual([]);
-  });
-
-  it("lets the same account re-apply with the same P.IVA and leaves its claim as it is", async () => {
-    for (const instructor of [
-      undefined,
-      instructorWith(NEW_VAT),
-      instructorWith(NEW_VAT, { applicationStatus: "verified", providerProfile: { isVerified: true } }),
-    ]) {
-      const { tx, writes } = fakeTransaction({ [`businessVat/${NEW_VAT}`]: { uid: OWNER } });
-      await expect(claim(tx, instructor)).resolves.toEqual({ claim: "already-yours", released: null });
-      expect(writes()).toEqual([]);
+  it("an idempotent re-apply needs no instructors doc and does not care about approval", async () => {
+    // The handler refuses an approved business before it gets here (assertNotApprovedBusiness);
+    // keeping the same claim is harmless either way.
+    for (const instructor of [undefined, instructorWith(NEW_VAT, APPROVED)]) {
+      const fake = fakeTransaction({ [`businessVat/${NEW_VAT}`]: { uid: OWNER } });
+      await expect(claim(fake, instructor)).resolves.toEqual({ claim: "already-yours", released: [] });
+      expect(fake.writes()).toEqual([]);
     }
   });
 
-  it("moves a pending business to its new P.IVA, releasing the old claim in the same transaction", async () => {
-    const { tx, ops, writes } = fakeTransaction({ [`businessVat/${OLD_VAT}`]: { uid: OWNER } });
-    await expect(claim(tx, instructorWith(OLD_VAT))).resolves.toEqual({ claim: "claimed", released: OLD_VAT });
-    expect(writes()).toEqual([
+  it("moves a pending business to its new tax id, releasing the old claim in the same transaction", async () => {
+    const fake = fakeTransaction({ [`businessVat/${OLD_VAT}`]: { uid: OWNER } });
+    await expect(claim(fake, instructorWith(OLD_VAT))).resolves.toEqual({ claim: "claimed", released: [OLD_VAT] });
+    expect(fake.writes()).toEqual([
       ["delete", `businessVat/${OLD_VAT}`],
       ["create", `businessVat/${NEW_VAT}`, { uid: OWNER, createdAt: NOW }],
     ]);
-    expectReadsBeforeWrites(ops);
+    expectReadsBeforeWrites(fake.ops);
   });
 
   it("treats a rejected business like a pending one — nothing was ever verified", async () => {
-    const { tx, writes } = fakeTransaction({ [`businessVat/${OLD_VAT}`]: { uid: OWNER } });
-    await expect(claim(tx, instructorWith(OLD_VAT, { applicationStatus: "rejected" })))
-      .resolves.toEqual({ claim: "claimed", released: OLD_VAT });
-    expect(writes().map(([op, path]) => [op, path])).toEqual([
+    const fake = fakeTransaction({ [`businessVat/${OLD_VAT}`]: { uid: OWNER } });
+    await expect(claim(fake, instructorWith(OLD_VAT, { applicationStatus: "rejected" })))
+      .resolves.toEqual({ claim: "claimed", released: [OLD_VAT] });
+    expect(fake.writes().map(([op, path]) => [op, path])).toEqual([
       ["delete", `businessVat/${OLD_VAT}`],
       ["create", `businessVat/${NEW_VAT}`],
     ]);
   });
 
-  it("never releases an old claim that belongs to someone else", async () => {
-    // Until B4, the owner can edit instructors.business.vatNumber from the client; pointing it
-    // at another company's P.IVA must not let a re-apply delete that company's claim.
-    const { tx, writes } = fakeTransaction({ [`businessVat/${OLD_VAT}`]: { uid: "someone-else" } });
-    await expect(claim(tx, instructorWith(OLD_VAT))).resolves.toEqual({ claim: "claimed", released: null });
-    expect(writes()).toEqual([["create", `businessVat/${NEW_VAT}`, { uid: OWNER, createdAt: NOW }]]);
+  it("releases every other claim the account holds, not only the one its instructors doc names", async () => {
+    // Until B4 the owner can rewrite instructors.business.vatNumber from the client, so the
+    // stored number is no record of what the account holds; the uid query is.
+    const fake = fakeTransaction({
+      [`businessVat/${OLD_VAT}`]: { uid: OWNER },
+      [`businessVat/${STRAY_VAT}`]: { uid: OWNER },
+      [`businessVat/${ASSOCIATION_CF}`]: { uid: "someone-else" },
+    });
+    await expect(claim(fake, instructorWith(ASSOCIATION_CF))).resolves.toEqual({
+      claim: "claimed",
+      released: [OLD_VAT, STRAY_VAT],
+    });
+    expect(fake.writes()).toEqual([
+      ["delete", `businessVat/${OLD_VAT}`],
+      ["delete", `businessVat/${STRAY_VAT}`],
+      ["create", `businessVat/${NEW_VAT}`, { uid: OWNER, createdAt: NOW }],
+    ]);
+    expectReadsBeforeWrites(fake.ops);
+  });
+
+  it("keeps the claim being taken when the account already holds it, and releases the rest", async () => {
+    const fake = fakeTransaction({
+      [`businessVat/${NEW_VAT}`]: { uid: OWNER },
+      [`businessVat/${OLD_VAT}`]: { uid: OWNER },
+    });
+    await expect(claim(fake, instructorWith(OLD_VAT))).resolves.toEqual({
+      claim: "already-yours",
+      released: [OLD_VAT],
+    });
+    expect(fake.writes()).toEqual([["delete", `businessVat/${OLD_VAT}`]]);
+  });
+
+  it("never releases a claim that belongs to someone else, even when the instructors doc names it", async () => {
+    const fake = fakeTransaction({ [`businessVat/${OLD_VAT}`]: { uid: "someone-else" } });
+    await expect(claim(fake, instructorWith(OLD_VAT))).resolves.toEqual({ claim: "claimed", released: [] });
+    expect(fake.writes()).toEqual([["create", `businessVat/${NEW_VAT}`, { uid: OWNER, createdAt: NOW }]]);
   });
 
   it("does not delete an old claim that no longer exists", async () => {
-    const { tx, writes } = fakeTransaction();
-    await expect(claim(tx, instructorWith(OLD_VAT))).resolves.toEqual({ claim: "claimed", released: null });
-    expect(writes()).toEqual([["create", `businessVat/${NEW_VAT}`, { uid: OWNER, createdAt: NOW }]]);
+    const fake = fakeTransaction();
+    await expect(claim(fake, instructorWith(OLD_VAT))).resolves.toEqual({ claim: "claimed", released: [] });
+    expect(fake.writes()).toEqual([["create", `businessVat/${NEW_VAT}`, { uid: OWNER, createdAt: NOW }]]);
   });
 
-  it("keeps the old claim when the new P.IVA belongs to someone else", async () => {
-    const { tx, writes } = fakeTransaction({
+  it("keeps every claim when the new tax id belongs to someone else", async () => {
+    const fake = fakeTransaction({
       [`businessVat/${OLD_VAT}`]: { uid: OWNER },
+      [`businessVat/${STRAY_VAT}`]: { uid: OWNER },
       [`businessVat/${NEW_VAT}`]: { uid: "someone-else" },
     });
-    await expect(claim(tx, instructorWith(OLD_VAT))).rejects.toMatchObject({
+    await expect(claim(fake, instructorWith(OLD_VAT))).rejects.toMatchObject({
       code: "already-exists",
       message: "vat_already_registered",
     });
-    expect(writes()).toEqual([]);
+    expect(fake.writes()).toEqual([]);
   });
 
-  it("refuses to change the P.IVA of an approved business (D6: admin-owned after approval)", async () => {
+  it("never uses the stored tax id as a document id — it is client-writable until B4", async () => {
+    // "a/b" as a document id would make Firestore throw (→ `internal`), and "a/b/c" would even
+    // address a nested document. What the account holds comes from the uid query instead.
+    for (const stored of ["a/b", "a/b/c", "", "12345678904", 12345678903, { x: 1 }]) {
+      const fake = fakeTransaction({ [`businessVat/${OLD_VAT}`]: { uid: OWNER } });
+      await expect(claim(fake, instructorWith(stored))).resolves.toEqual({ claim: "claimed", released: [OLD_VAT] });
+      expect(fake.writes().map(([op, path]) => [op, path])).toEqual([
+        ["delete", `businessVat/${OLD_VAT}`],
+        ["create", `businessVat/${NEW_VAT}`],
+      ]);
+    }
+  });
+
+  it("refuses to move an approved business to another tax id (D6: admin-owned after approval)", async () => {
     for (const instructor of [
-      instructorWith(OLD_VAT, { applicationStatus: "verified", providerProfile: { isVerified: true } }),
+      instructorWith(OLD_VAT, APPROVED),
       // A legacy doc without applicationStatus still counts as approved by its flag.
       instructorWith(OLD_VAT, { applicationStatus: undefined, providerProfile: { isVerified: true } }),
+      // An unusable stored number does not hide the claim the account really holds.
+      instructorWith("a/b", APPROVED),
     ]) {
-      const { tx, writes } = fakeTransaction({ [`businessVat/${OLD_VAT}`]: { uid: OWNER } });
-      const result = claim(tx, instructor);
+      const fake = fakeTransaction({ [`businessVat/${OLD_VAT}`]: { uid: OWNER } });
+      const result = claim(fake, instructor);
       await expect(result).rejects.toBeInstanceOf(HttpsError);
       await expect(result).rejects.toMatchObject({ code: "failed-precondition", message: "vat_change_not_allowed" });
-      expect(writes()).toEqual([]);
+      expect(fake.writes()).toEqual([]);
     }
   });
 });
