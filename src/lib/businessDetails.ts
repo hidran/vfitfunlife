@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { MessageKey } from '@/i18n/messages';
-import type { BusinessLegalForm } from '@/types/firebase';
+import type { BusinessDetails, BusinessLegalForm } from '@/types/firebase';
 import type { BusinessApplicationInput } from '@/lib/firebase/providerApplication';
 import { isValidItalianVat, normalizeVatNumber } from '@/lib/vatNumber';
 
@@ -30,11 +30,14 @@ export const BUSINESS_FIELD_LIMITS = {
   city: 80,
   website: 200,
   affiliationNumber: 40,
+  /** The Firestore rules' cap on `business.logoUrl` (B4); the logo is never typed. */
+  logoUrl: 500,
 } as const;
 
 /** Every message the schema can produce. The form shows exactly these (plus field-level server codes). */
 export const BUSINESS_FORM_ERRORS = {
   legalNameRequired: 'provider.business.error.legalNameRequired',
+  displayNameRequired: 'provider.business.error.displayNameRequired',
   nameInvalid: 'provider.business.error.nameInvalid',
   vatRequired: 'provider.business.error.vatRequired',
   vatInvalid: 'provider.business.error.vatInvalid',
@@ -164,4 +167,97 @@ export function toBusinessApplication(values: BusinessDetailsFormValues): Busine
   const description = values.description.trim();
   if (description) out.description = description;
   return out;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Editing an existing company profile (plan B6)
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * The parts of `instructors/{uid}.business` the owner may change from the client — exactly
+ * what the Firestore rules allow (firestore.rules, "BUSINESS ACCOUNTS"; decision D6). The
+ * other four (legal name, tax id, legal form, affiliation number) are what an admin reviewed.
+ */
+export const BUSINESS_OWNER_EDITABLE_KEYS = [
+  'displayName',
+  'description',
+  'website',
+  'city',
+  'logoUrl',
+] as const satisfies readonly (keyof BusinessDetails)[];
+
+/** The editable fields that are typed into the form (the logo is uploaded instead). */
+export const BUSINESS_DISPLAY_FIELDS = [
+  'displayName',
+  'city',
+  'website',
+  'description',
+] as const satisfies readonly BusinessField[];
+
+export type BusinessDisplayField = (typeof BUSINESS_DISPLAY_FIELDS)[number];
+
+/** Normalised display values, as stored: `website` null when there is none. */
+export interface BusinessDisplayFields {
+  displayName: string;
+  city: string;
+  website: string | null;
+  description: string;
+}
+
+/** A change to the owner-editable part of the business map: only the keys that changed. */
+export type BusinessDisplayChanges = Partial<BusinessDisplayFields & { logoUrl: string | null }>;
+
+/**
+ * The schema of the form in edit mode. The reviewed fields are shown read-only and never
+ * sent, so they are not validated (an older document may hold values today's signup rules
+ * would refuse). The public name becomes required: it is what every card shows, and the rules
+ * refuse a blank one.
+ */
+export const businessEditSchema = businessDetailsSchema.extend({
+  legalName: z.string(),
+  vatNumber: z.string(),
+  affiliationNumber: z.string(),
+  displayName: z
+    .string()
+    .refine((v) => v.trim().length > 0, { message: BUSINESS_FORM_ERRORS.displayNameRequired })
+    .refine((v) => v.trim().length <= BUSINESS_FIELD_LIMITS.displayName, {
+      message: BUSINESS_FORM_ERRORS.nameInvalid,
+    }),
+});
+
+/** Stored business details → form values (every field a string; an unknown legal form ⇒ company). */
+export function businessFormValues(details: BusinessDetails): BusinessDetailsFormValues {
+  const legalForm = (BUSINESS_LEGAL_FORMS as readonly string[]).includes(details.legalForm ?? '')
+    ? (details.legalForm as BusinessLegalForm)
+    : 'company';
+  return {
+    legalName: details.legalName ?? '',
+    vatNumber: details.vatNumber ?? '',
+    legalForm,
+    affiliationNumber: details.affiliationNumber ?? '',
+    displayName: details.displayName ?? '',
+    city: details.city ?? '',
+    website: details.website ?? '',
+    description: details.description ?? '',
+  };
+}
+
+/** Valid edit-form values → the display fields to store: trimmed, the website with its scheme. */
+export function toBusinessDisplayFields(
+  values: Pick<BusinessDetailsFormValues, BusinessDisplayField>
+): BusinessDisplayFields {
+  return {
+    displayName: values.displayName.trim(),
+    city: values.city.trim(),
+    website: normalizeWebsite(values.website) || null,
+    description: values.description.trim(),
+  };
+}
+
+/**
+ * Whether `url` may be stored as `business.logoUrl`: the rules accept only an https URL of at
+ * most 500 characters (a Firebase Storage download URL in practice).
+ */
+export function isAcceptableLogoUrl(url: string): boolean {
+  return url.length <= BUSINESS_FIELD_LIMITS.logoUrl && /^https:\/\/\S+$/.test(url);
 }

@@ -1,11 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import {
+  BUSINESS_DISPLAY_FIELDS,
   BUSINESS_FIELD_LIMITS,
   BUSINESS_FORM_ERRORS,
   BUSINESS_LEGAL_FORMS,
+  BUSINESS_OWNER_EDITABLE_KEYS,
   EMPTY_BUSINESS_DETAILS,
   businessDetailsSchema,
+  businessEditSchema,
+  businessFormValues,
+  isAcceptableLogoUrl,
   normalizeWebsite,
+  toBusinessDisplayFields,
   type BusinessDetailsFormValues,
   type BusinessField,
 } from './businessDetails';
@@ -124,5 +130,77 @@ describe('businessDetailsSchema limits', () => {
     expect(
       messagesFor('legalForm', { legalForm: 'srl' as BusinessDetailsFormValues['legalForm'] })
     ).toEqual([BUSINESS_FORM_ERRORS.legalFormInvalid]);
+  });
+});
+
+describe('company profile editing (B6)', () => {
+  const STORED: BusinessDetailsFormValues = {
+    ...EMPTY_BUSINESS_DETAILS,
+    legalName: 'Karate Club Roma SRL',
+    vatNumber: '00743110157',
+    displayName: 'Karate Club Roma',
+  };
+  const editMessages = (field: BusinessField, overrides: Partial<BusinessDetailsFormValues>) => {
+    const result = businessEditSchema.safeParse({ ...STORED, ...overrides });
+    if (result.success) return [];
+    return result.error.issues.filter((issue) => issue.path[0] === field).map((issue) => issue.message);
+  };
+
+  it('lets the owner edit exactly the display fields the Firestore rules allow', () => {
+    expect([...BUSINESS_OWNER_EDITABLE_KEYS].sort()).toEqual(
+      ['city', 'description', 'displayName', 'logoUrl', 'website'].sort()
+    );
+    for (const reviewed of ['legalName', 'vatNumber', 'legalForm', 'affiliationNumber']) {
+      expect(BUSINESS_OWNER_EDITABLE_KEYS as readonly string[]).not.toContain(reviewed);
+      expect(BUSINESS_DISPLAY_FIELDS as readonly string[]).not.toContain(reviewed);
+    }
+  });
+
+  it('requires a non-blank public name, capped at 120', () => {
+    expect(editMessages('displayName', { displayName: '   ' })).toEqual([BUSINESS_FORM_ERRORS.displayNameRequired]);
+    expect(editMessages('displayName', { displayName: 'x'.repeat(120) })).toEqual([]);
+    expect(editMessages('displayName', { displayName: 'x'.repeat(121) })).toEqual([BUSINESS_FORM_ERRORS.nameInvalid]);
+  });
+
+  it('does not validate the read-only reviewed fields (an older doc must stay editable)', () => {
+    expect(businessEditSchema.safeParse({ ...STORED, legalName: '', vatNumber: '123', affiliationNumber: 'x'.repeat(80) }).success).toBe(true);
+  });
+
+  it('keeps the signup rules for city, website and description', () => {
+    expect(editMessages('website', { website: 'javascript:alert(1)' })).toEqual([BUSINESS_FORM_ERRORS.websiteInvalid]);
+    expect(editMessages('city', { city: 'x'.repeat(81) })).toEqual([BUSINESS_FORM_ERRORS.cityInvalid]);
+    expect(editMessages('description', { description: 'x'.repeat(1001) })).toEqual([BUSINESS_FORM_ERRORS.descriptionInvalid]);
+  });
+
+  it('turns stored details into form values, an unknown legal form into company', () => {
+    expect(
+      businessFormValues({
+        legalName: 'Karate Club Roma SRL',
+        vatNumber: '00743110157',
+        legalForm: 'srl' as never,
+        displayName: 'Karate Club Roma',
+        website: null,
+        logoUrl: 'https://x.it/logo.png',
+      })
+    ).toEqual({ ...STORED, legalForm: 'company' });
+    expect(
+      businessFormValues({ legalName: 'A', vatNumber: '1', legalForm: 'association', displayName: 'A', city: 'Roma' })
+    ).toMatchObject({ legalForm: 'association', city: 'Roma' });
+  });
+
+  it('normalises display values the way they are stored', () => {
+    expect(
+      toBusinessDisplayFields({ displayName: ' Karate Roma ', city: ' Roma ', website: 'www.karateroma.it', description: ' Corsi ' })
+    ).toEqual({ displayName: 'Karate Roma', city: 'Roma', website: 'https://www.karateroma.it', description: 'Corsi' });
+    expect(toBusinessDisplayFields({ displayName: 'A', city: '', website: '  ', description: '' }).website).toBeNull();
+  });
+
+  it('accepts only https logo URLs of at most 500 characters, as the rules do', () => {
+    expect(isAcceptableLogoUrl('https://firebasestorage.googleapis.com/v0/b/x/o/logo.jpg?alt=media')).toBe(true);
+    expect(isAcceptableLogoUrl('http://127.0.0.1:9199/v0/b/x/o/logo.jpg')).toBe(false);
+    expect(isAcceptableLogoUrl('data:image/png;base64,AAAA')).toBe(false);
+    expect(isAcceptableLogoUrl('https://x.it/a b.png')).toBe(false);
+    expect(isAcceptableLogoUrl(`https://x.it/${'a'.repeat(500 - 'https://x.it/'.length)}`)).toBe(true);
+    expect(isAcceptableLogoUrl(`https://x.it/${'a'.repeat(501 - 'https://x.it/'.length)}`)).toBe(false);
   });
 });

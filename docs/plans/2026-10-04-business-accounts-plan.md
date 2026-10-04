@@ -187,7 +187,7 @@ registration. Optional fields only — no existing behaviour changes.
 - **Done when:** at 320 and 390px, in it and de: no overlap, 44px targets, inline errors for bad P.IVA and
   duplicate P.IVA; a company application ends on the pending screen; an individual still auto-approves.
 
-### B6 `[ ]` Company profile editing (Medium)
+### B6 `[~]` Company profile editing (Medium) — code + unit tests done; browser checks (owner edits name/logo at 320/390 px, search shows the new name) are part of B10
 - Files: provider profile edit (`src/app/(main)/profile/edit/page.tsx` area), reuse
   `BusinessDetailsForm` in "edit" mode with `legalName`/`vatNumber` read-only, logo upload through the
   existing photo upload hook.
@@ -389,3 +389,33 @@ the same on prod with a throwaway P.IVA claim removed afterwards.
   `reportProviderApplicationError`. The form owns focus (after a render that shows it enabled), so
   the parents mark themselves busy before the async company check — no double submit. Card start
   button 44px. New `src/lib/businessDetails.test.ts` (website rules, every length limit).
+- 2026-10-04 — B6 code done (this commit); B6 stays `[~]` until B10's browser checks. New
+  `BusinessProfileSection` at the top of the Professional tab of `/profile/edit`, shown only when
+  `users.providerType === 'business'` (the auth store spreads the whole users doc, so the field
+  already arrives) AND `instructors/{uid}.business` exists (read by its own query,
+  `fetchBusinessDetails` — `flattenProvider` is left to B7). `BusinessDetailsForm` `mode="edit"`
+  (new props `defaultValues`, `reviewStatus`, `logo`, `onDirtyChange`; handle `validateChanges` /
+  `markSaved`): legal name, tax id, legal form and affiliation number as a read-only definition
+  list with "verified by our team / being checked — contact support to change them"; public name
+  (now required, `businessEditSchema`), city, website, description editable. Save =
+  `updateBusinessDisplayFields`: `updateDoc` with `business.<key>` field paths for the changed
+  keys only (compared after normalising, so an untouched field is never sent), `name`/`fullName`
+  mirrored when the public name changes, `updatedAt`; an allow-list (`BUSINESS_OWNER_EDITABLE_KEYS`)
+  means a reviewed key or the whole map can't be sent. §0 nested-flag rule: the no-dot test does
+  not apply to this write — dotted paths are correct for `updateDoc`; the tests instead pin
+  `updateDoc` (never `setDoc`) and the exact keys. `users.fullName` untouched. Logo: uploaded with
+  `uploadGalleryPhoto` to `instructors/{uid}/gallery/` (storage.rules already allow owner image
+  writes there, so no rule change), checked to be an https URL ≤ 500 (the emulator's
+  `http://127.0.0.1:9199` URLs are refused with the upload error), stored on save; "Remove logo"
+  saves null. Every save failure (incl. `permission-denied`) shows one localised message.
+  `onInstructorWriteSearchIndex` indexes `fullName`, so the mirrored name reaches search; a
+  logo-only edit leaves the terms unchanged and the trigger writes nothing. Decisions not in the
+  plan: (1) the section has its own "Save business details" button AND the page's floating Save
+  saves it first when it has edits (an invalid field or failed write stops the page save and
+  switches to the Professional tab); its edits count in the page's unsaved-changes guard; the
+  section stays mounted (hidden) on the Personal tab so edits survive a tab switch, and the form
+  defers focusing an error while hidden. (2) Shown to pending companies too, with the "being
+  checked" note — the rules lock the reviewed keys while pending anyway. (3) Replaced logos are
+  not deleted from Storage (cards/search may still point at the old URL until reload); orphans
+  are harmless. (4) The page's Back button got an `aria-label`. Tests: section (24), form edit
+  mode (3), lib (11 + 7), page wiring with the section stubbed (6).

@@ -1,6 +1,14 @@
 'use client';
 
-import { forwardRef, useEffect, useId, useImperativeHandle, useRef, type ReactNode } from 'react';
+import {
+  forwardRef,
+  useEffect,
+  useId,
+  useImperativeHandle,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { useForm, useWatch, type FieldError } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Input } from '@/components/ui/input';
@@ -10,13 +18,17 @@ import type { MessageKey } from '@/i18n/messages';
 import type { BusinessLegalForm } from '@/types/firebase';
 import type { BusinessApplicationInput } from '@/lib/firebase/providerApplication';
 import {
+  BUSINESS_DISPLAY_FIELDS,
   BUSINESS_FIELD_LIMITS,
   BUSINESS_FORM_ERRORS,
   BUSINESS_LEGAL_FORMS,
   EMPTY_BUSINESS_DETAILS,
   businessDetailsSchema,
+  businessEditSchema,
   toBusinessApplication,
+  toBusinessDisplayFields,
   type BusinessDetailsFormValues,
+  type BusinessDisplayFields,
   type BusinessField,
 } from '@/lib/businessDetails';
 import {
@@ -66,40 +78,79 @@ export interface BusinessDetailsFormHandle {
    * the caller then shows it as a form-level message.
    */
   showServerError: (code: ProviderApplicationErrorCode) => boolean;
+  /**
+   * Edit mode: validate the public fields. When something is wrong the errors appear on their
+   * fields, focus moves to the first one and this resolves to null; otherwise to the
+   * normalised values that differ from the last saved ones (an empty object when nothing does).
+   */
+  validateChanges: () => Promise<Partial<BusinessDisplayFields> | null>;
+  /**
+   * Edit mode: the changes were saved. The current values, normalised the way they were
+   * stored (e.g. `www.x.it` ⇒ `https://www.x.it`), become the new baseline: the form is clean.
+   */
+  markSaved: () => void;
 }
 
 export interface BusinessDetailsFormProps {
   /**
-   * 'create' (signup). 'edit' is reserved for the company profile editor (plan B6), where the
-   * legal name and tax id become read-only; it is not implemented yet and renders as 'create'.
+   * 'create' (signup): every field is editable. 'edit' (the company profile, plan B6): the
+   * legal name, tax id, legal form and affiliation number are what an admin reviewed, so they
+   * are shown as read-only text; the public name (now required), city, website and
+   * description stay editable.
    */
   mode?: 'create' | 'edit';
+  /** Starting values — in edit mode, the stored company details. Read once, at mount. */
+  defaultValues?: Partial<BusinessDetailsFormValues>;
   disabled?: boolean;
+  /**
+   * Edit mode: whether the reviewed fields were verified by an admin or are still being
+   * checked (pending application) — it changes the note under them.
+   */
+  reviewStatus?: 'verified' | 'pending';
+  /** Edit mode: the logo picker, shown between the reviewed fields and the public ones. */
+  logo?: ReactNode;
+  /**
+   * Called with true when a field differs from its saved value and with false when none does
+   * any more (unsaved-changes guards). Pass a stable function.
+   */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 /**
- * The company / association part of a provider application (plan 2026-10-04, B5): legal name,
- * P.IVA or an association's codice fiscale, legal form, affiliation number, public name, city,
- * website and description.
+ * The company / association details of a provider (plan 2026-10-04): legal name, P.IVA or an
+ * association's codice fiscale, legal form, affiliation number, public name, city, website and
+ * description. 'create' at signup (B5), 'edit' on the company profile (B6).
  *
- * A sub-form, not a `<form>`: it sits inside the signup form (forms can't nest), keeps its own
- * React Hook Form state and hands the result over through the ref (`validate`,
- * `showServerError`).
+ * A sub-form, not a `<form>`: at signup it sits inside the signup form (forms can't nest). It
+ * keeps its own React Hook Form state and hands the result over through the ref (`validate`
+ * and `showServerError` when creating, `validateChanges` and `markSaved` when editing).
  */
 export const BusinessDetailsForm = forwardRef<BusinessDetailsFormHandle, BusinessDetailsFormProps>(
-  function BusinessDetailsForm({ mode = 'create', disabled }, ref) {
+  function BusinessDetailsForm(
+    { mode = 'create', defaultValues, disabled, reviewStatus = 'verified', logo, onDirtyChange },
+    ref
+  ) {
     const { t } = useI18n();
     const baseId = useId();
+    const isEdit = mode === 'edit';
+    const [initialValues] = useState<BusinessDetailsFormValues>(() => ({
+      ...EMPTY_BUSINESS_DETAILS,
+      ...defaultValues,
+    }));
     const {
       register,
       control,
       handleSubmit,
       setError,
       setFocus,
-      formState: { errors },
+      getValues,
+      reset,
+      formState: { errors, isDirty },
     } = useForm<BusinessDetailsFormValues>({
-      resolver: zodResolver(businessDetailsSchema),
-      defaultValues: EMPTY_BUSINESS_DETAILS,
+      // Same value shape in both modes; edit only drops the checks on the read-only fields
+      // and requires the public name.
+      resolver: zodResolver(isEdit ? businessEditSchema : businessDetailsSchema),
+      defaultValues: initialValues,
       mode: 'onTouched',
       reValidateMode: 'onChange',
       // Focus is ours (below): the caller may still have the form disabled when the errors
@@ -109,42 +160,88 @@ export const BusinessDetailsForm = forwardRef<BusinessDetailsFormHandle, Busines
 
     const legalName = useWatch({ control, name: 'legalName' });
 
+    // Edit mode: what was last saved, to send only the fields that change.
+    const savedValues = useRef<BusinessDetailsFormValues>(initialValues);
+
+    useEffect(() => {
+      onDirtyChange?.(isDirty);
+    }, [isDirty, onDirtyChange]);
+
     // The field to focus once a render shows it enabled: the first invalid one after
     // `validate`, or the one a server error is about. The parent disables the form while it
-    // checks or submits, so focusing straight away would often hit a disabled control.
+    // checks or submits, so focusing straight away would often hit a disabled control. The
+    // same goes for a form inside a hidden container (the profile page keeps it mounted on
+    // another tab): the focus waits until a render shows it.
     const focusAfterRender = useRef<BusinessField | null>(null);
     useEffect(() => {
       const field = focusAfterRender.current;
       if (!field || disabled) return;
+      if (document.getElementById(`${baseId}-${field}`)?.closest('[hidden]')) return;
       focusAfterRender.current = null;
       setFocus(field);
     });
 
     useImperativeHandle(
       ref,
-      () => ({
-        // handleSubmit runs the resolver and shows every error. It also marks the form
-        // submitted, so from then on each field re-validates as it is edited — which is what
-        // clears a server error on change.
-        validate: () =>
-          new Promise<BusinessApplicationInput | null>((resolve) => {
-            void handleSubmit(
-              (values) => resolve(toBusinessApplication(values)),
-              (fieldErrors) => {
-                focusAfterRender.current = FIELD_ORDER.find((field) => fieldErrors[field]) ?? null;
-                resolve(null);
-              }
-            )();
-          }),
-        showServerError: (code) => {
-          const entry = PROVIDER_APPLICATION_ERRORS[code];
-          if (!entry?.field) return false;
-          setError(entry.field, { type: 'server', message: entry.messageKey });
-          focusAfterRender.current = entry.field;
-          return true;
-        },
-      }),
-      [handleSubmit, setError]
+      () => {
+        const focusFirstError = (fieldErrors: Partial<Record<BusinessField, unknown>>) => {
+          focusAfterRender.current = FIELD_ORDER.find((field) => fieldErrors[field]) ?? null;
+        };
+        return {
+          // handleSubmit runs the resolver and shows every error. It also marks the form
+          // submitted, so from then on each field re-validates as it is edited — which is what
+          // clears a server error on change.
+          validate: () =>
+            new Promise<BusinessApplicationInput | null>((resolve) => {
+              void handleSubmit(
+                (values) => resolve(toBusinessApplication(values)),
+                (fieldErrors) => {
+                  focusFirstError(fieldErrors);
+                  resolve(null);
+                }
+              )();
+            }),
+          showServerError: (code) => {
+            const entry = PROVIDER_APPLICATION_ERRORS[code];
+            if (!entry?.field) return false;
+            setError(entry.field, { type: 'server', message: entry.messageKey });
+            focusAfterRender.current = entry.field;
+            return true;
+          },
+          // Compared after normalising both sides, so an untouched field (or one where only
+          // surrounding spaces changed) is never sent.
+          validateChanges: () =>
+            new Promise<Partial<BusinessDisplayFields> | null>((resolve) => {
+              void handleSubmit(
+                (values) => {
+                  const next = toBusinessDisplayFields(values);
+                  const saved = toBusinessDisplayFields(savedValues.current);
+                  const changes: Partial<Record<keyof BusinessDisplayFields, string | null>> = {};
+                  for (const field of BUSINESS_DISPLAY_FIELDS) {
+                    if (next[field] !== saved[field]) changes[field] = next[field];
+                  }
+                  resolve(changes as Partial<BusinessDisplayFields>);
+                },
+                (fieldErrors) => {
+                  focusFirstError(fieldErrors);
+                  resolve(null);
+                }
+              )();
+            }),
+          markSaved: () => {
+            const values = getValues();
+            const stored = toBusinessDisplayFields(values);
+            const next: BusinessDetailsFormValues = {
+              ...values,
+              ...stored,
+              website: stored.website ?? '',
+            };
+            savedValues.current = next;
+            reset(next);
+          },
+        };
+      },
+      [handleSubmit, setError, getValues, reset]
     );
 
     const idOf = (field: BusinessField) => `${baseId}-${field}`;
@@ -174,85 +271,131 @@ export const BusinessDetailsForm = forwardRef<BusinessDetailsFormHandle, Busines
         <legend className="px-1 text-sm font-semibold text-content break-words">
           {t('provider.business.legend')}
         </legend>
-        <p className="text-xs text-content-muted break-words">{t('provider.business.intro')}</p>
 
-        <Field
-          id={idOf('legalName')}
-          label={t('provider.business.field.legalName')}
-          error={errorText(errors.legalName)}
-        >
-          <Input
-            {...register('legalName')}
-            {...a11y('legalName')}
-            aria-required
-            autoComplete="organization"
-            maxLength={BUSINESS_FIELD_LIMITS.legalName}
-            placeholder={t('provider.business.placeholder.legalName')}
-            className={cn(invalidClass('legalName'))}
-          />
-        </Field>
-
-        <Field
-          id={idOf('vatNumber')}
-          label={t('provider.business.field.vatNumber')}
-          hint={t('provider.business.hint.vatNumber')}
-          error={errorText(errors.vatNumber)}
-        >
-          <Input
-            {...register('vatNumber')}
-            {...a11y('vatNumber', true)}
-            aria-required
-            inputMode="numeric"
-            autoComplete="off"
-            spellCheck={false}
-            maxLength={20}
-            placeholder="01234567890"
-            className={cn(invalidClass('vatNumber'))}
-          />
-        </Field>
-
-        <Field
-          id={idOf('legalForm')}
-          label={t('provider.business.field.legalForm')}
-          error={errorText(errors.legalForm)}
-        >
-          <select
-            {...register('legalForm')}
-            {...a11y('legalForm')}
-            className={cn(textareaOrSelect, 'min-h-[52px]', invalidClass('legalForm'))}
+        {isEdit ? (
+          // Plain text, not disabled inputs: nothing here can be edited, and a screen reader
+          // reads a definition list as label/value pairs.
+          <section
+            aria-labelledby={`${baseId}-reviewed`}
+            className="min-w-0 space-y-3 rounded-lg bg-content/5 p-3"
           >
-            {BUSINESS_LEGAL_FORMS.map((form) => (
-              <option key={form} value={form}>
-                {t(LEGAL_FORM_LABELS[form])}
-              </option>
-            ))}
-          </select>
-        </Field>
+            <h3 id={`${baseId}-reviewed`} className="text-sm font-semibold text-content break-words">
+              {t('provider.business.reviewed.title')}
+            </h3>
+            <dl className="space-y-2">
+              <ReadOnlyRow label={t('provider.business.reviewed.legalName')} value={initialValues.legalName} />
+              <ReadOnlyRow
+                label={t('provider.business.reviewed.vatNumber')}
+                value={initialValues.vatNumber}
+                className="tabular-nums"
+              />
+              <ReadOnlyRow
+                label={t('provider.business.reviewed.legalForm')}
+                value={t(LEGAL_FORM_LABELS[initialValues.legalForm] ?? LEGAL_FORM_LABELS.company)}
+              />
+              {initialValues.affiliationNumber.trim() && (
+                <ReadOnlyRow
+                  label={t('provider.business.reviewed.affiliationNumber')}
+                  value={initialValues.affiliationNumber}
+                />
+              )}
+            </dl>
+            <p className="text-xs text-content-muted break-words">
+              {t(
+                reviewStatus === 'pending'
+                  ? 'provider.business.reviewed.notePending'
+                  : 'provider.business.reviewed.note'
+              )}
+            </p>
+          </section>
+        ) : (
+          <p className="text-xs text-content-muted break-words">{t('provider.business.intro')}</p>
+        )}
 
-        <Field
-          id={idOf('affiliationNumber')}
-          label={t('provider.business.field.affiliationNumber')}
-          hint={t('provider.business.hint.affiliationNumber')}
-          error={errorText(errors.affiliationNumber)}
-        >
-          <Input
-            {...register('affiliationNumber')}
-            {...a11y('affiliationNumber', true)}
-            autoComplete="off"
-            maxLength={BUSINESS_FIELD_LIMITS.affiliationNumber}
-            className={cn(invalidClass('affiliationNumber'))}
-          />
-        </Field>
+        {!isEdit && (
+          <>
+            <Field
+              id={idOf('legalName')}
+              label={t('provider.business.field.legalName')}
+              error={errorText(errors.legalName)}
+            >
+              <Input
+                {...register('legalName')}
+                {...a11y('legalName')}
+                aria-required
+                autoComplete="organization"
+                maxLength={BUSINESS_FIELD_LIMITS.legalName}
+                placeholder={t('provider.business.placeholder.legalName')}
+                className={cn(invalidClass('legalName'))}
+              />
+            </Field>
+
+            <Field
+              id={idOf('vatNumber')}
+              label={t('provider.business.field.vatNumber')}
+              hint={t('provider.business.hint.vatNumber')}
+              error={errorText(errors.vatNumber)}
+            >
+              <Input
+                {...register('vatNumber')}
+                {...a11y('vatNumber', true)}
+                aria-required
+                inputMode="numeric"
+                autoComplete="off"
+                spellCheck={false}
+                maxLength={20}
+                placeholder="01234567890"
+                className={cn(invalidClass('vatNumber'))}
+              />
+            </Field>
+
+            <Field
+              id={idOf('legalForm')}
+              label={t('provider.business.field.legalForm')}
+              error={errorText(errors.legalForm)}
+            >
+              <select
+                {...register('legalForm')}
+                {...a11y('legalForm')}
+                className={cn(textareaOrSelect, 'min-h-[52px]', invalidClass('legalForm'))}
+              >
+                {BUSINESS_LEGAL_FORMS.map((form) => (
+                  <option key={form} value={form}>
+                    {t(LEGAL_FORM_LABELS[form])}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field
+              id={idOf('affiliationNumber')}
+              label={t('provider.business.field.affiliationNumber')}
+              hint={t('provider.business.hint.affiliationNumber')}
+              error={errorText(errors.affiliationNumber)}
+            >
+              <Input
+                {...register('affiliationNumber')}
+                {...a11y('affiliationNumber', true)}
+                autoComplete="off"
+                maxLength={BUSINESS_FIELD_LIMITS.affiliationNumber}
+                className={cn(invalidClass('affiliationNumber'))}
+              />
+            </Field>
+          </>
+        )}
+
+        {isEdit && logo}
 
         <Field
           id={idOf('displayName')}
-          label={t('provider.business.field.displayName')}
-          hint={t('provider.business.hint.displayName')}
+          label={t(isEdit ? 'provider.business.field.displayNameEdit' : 'provider.business.field.displayName')}
+          hint={t(isEdit ? 'provider.business.hint.displayNameEdit' : 'provider.business.hint.displayName')}
           error={errorText(errors.displayName)}
         >
           <Input
             {...register('displayName')}
             {...a11y('displayName', true)}
+            aria-required={isEdit || undefined}
             maxLength={BUSINESS_FIELD_LIMITS.displayName}
             placeholder={legalName?.trim() || undefined}
             className={cn(invalidClass('displayName'))}
@@ -340,6 +483,16 @@ function Field({ id, label, hint, error, children }: FieldProps) {
           </p>
         )}
       </div>
+    </div>
+  );
+}
+
+/** One reviewed field in edit mode: a label and its value as text. */
+function ReadOnlyRow({ label, value, className }: { label: string; value: string; className?: string }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-xs text-content-muted break-words">{label}</dt>
+      <dd className={cn('text-sm font-medium text-content break-words', className)}>{value || '—'}</dd>
     </div>
   );
 }

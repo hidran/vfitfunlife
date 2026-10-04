@@ -1,6 +1,6 @@
 import { createRef } from 'react';
 import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { BusinessDetailsForm, type BusinessDetailsFormHandle } from './BusinessDetailsForm';
 import { isValidItalianVat } from '@/lib/vatNumber';
 import {
@@ -258,6 +258,72 @@ describe('BusinessDetailsForm', () => {
       });
       expect(shown).toBe(false);
       expect(document.querySelector('[aria-invalid="true"]')).toBeNull();
+    });
+  });
+
+  describe('edit mode (company profile, B6)', () => {
+    const STORED = {
+      legalName: 'Karate Club Roma SRL',
+      vatNumber: VALID_PIVA,
+      legalForm: 'company' as const,
+      affiliationNumber: '',
+      displayName: 'Karate Club Roma',
+      city: 'Roma',
+      website: 'https://karateroma.it',
+      description: '',
+    };
+
+    async function validateChanges(ref: React.RefObject<BusinessDetailsFormHandle | null>) {
+      let result: Awaited<ReturnType<BusinessDetailsFormHandle['validateChanges']>> | undefined;
+      await act(async () => {
+        result = await ref.current!.validateChanges();
+      });
+      return result;
+    }
+
+    it('hides an empty affiliation number and offers no reviewed field as a control', () => {
+      render(<BusinessDetailsForm mode="edit" defaultValues={STORED} />);
+      expect(screen.queryByText('Numero di affiliazione')).toBeNull();
+      expect(screen.getByText('Karate Club Roma SRL')).toBeInTheDocument();
+      expect(screen.queryByRole('combobox')).toBeNull();
+      expect(field(/^Nome pubblico \*/)).toHaveValue('Karate Club Roma');
+    });
+
+    it('returns only the fields that changed, and nothing once they are marked saved', async () => {
+      const ref = createRef<BusinessDetailsFormHandle>();
+      const onDirtyChange = vi.fn();
+      render(<BusinessDetailsForm ref={ref} mode="edit" defaultValues={STORED} onDirtyChange={onDirtyChange} />);
+
+      type(/^Città/, ' Milano ');
+      await waitFor(() => expect(onDirtyChange).toHaveBeenLastCalledWith(true));
+      expect(await validateChanges(ref)).toEqual({ city: 'Milano' });
+
+      act(() => ref.current!.markSaved());
+      await waitFor(() => expect(onDirtyChange).toHaveBeenLastCalledWith(false));
+      expect(field(/^Città/)).toHaveValue('Milano');
+      expect(await validateChanges(ref)).toEqual({});
+    });
+
+    it('waits until a hidden form is shown before focusing the first invalid field', async () => {
+      const ref = createRef<BusinessDetailsFormHandle>();
+      const { rerender } = render(
+        <div hidden>
+          <BusinessDetailsForm ref={ref} mode="edit" defaultValues={STORED} />
+        </div>
+      );
+      type(/^Nome pubblico/, '');
+
+      expect(await validateChanges(ref)).toBeNull();
+      // The error has rendered (so the focus effect has run) while the form is hidden.
+      expect(await screen.findByText('Inserisci il nome pubblico.')).toBeInTheDocument();
+      expect(field(/^Nome pubblico/)).not.toHaveFocus();
+
+      rerender(
+        <div>
+          <BusinessDetailsForm ref={ref} mode="edit" defaultValues={STORED} />
+        </div>
+      );
+      await waitFor(() => expect(field(/^Nome pubblico/)).toHaveFocus());
     });
   });
 });

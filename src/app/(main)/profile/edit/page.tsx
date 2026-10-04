@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ChevronLeft,
@@ -50,6 +50,10 @@ import { updateRequestedCategories } from '@/lib/firebase/providerApplication';
 import { canAccessProviderArea } from '@/lib/providerStatus';
 import { CategoryLeafPicker } from '@/components/provider/CategoryLeafPicker';
 import { MissingLocationBanner } from '@/components/provider/MissingLocationBanner';
+import {
+  BusinessProfileSection,
+  type BusinessProfileSectionHandle,
+} from '@/components/provider/BusinessProfileSection';
 import { useMyLocation } from '@/hooks/useMyLocation';
 import Link from 'next/link';
 
@@ -133,6 +137,11 @@ export default function EditProfilePage() {
   const [activeTab, setActiveTab] = useState<TabType>('personal');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
+  // The company profile (business providers only) keeps its own form state and reports
+  // whether it has unsaved edits; the page's guard and Save button cover it too.
+  const businessSectionRef = useRef<BusinessProfileSectionHandle>(null);
+  const [businessDirty, setBusinessDirty] = useState(false);
+  const anyUnsavedChanges = hasUnsavedChanges || businessDirty;
   // providerStatus is the source of truth for provider-ness: a self-registered provider
   // approved before role promotion existed still had role 'customer', and gating on role
   // alone hid this whole tab from them the moment they were verified.
@@ -227,7 +236,7 @@ export default function EditProfilePage() {
   // Warn about unsaved changes
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (hasUnsavedChanges) {
+      if (anyUnsavedChanges) {
         e.preventDefault();
         e.returnValue = '';
       }
@@ -235,7 +244,7 @@ export default function EditProfilePage() {
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [hasUnsavedChanges]);
+  }, [anyUnsavedChanges]);
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
@@ -281,6 +290,17 @@ export default function EditProfilePage() {
     setSaveStatus('saving');
 
     try {
+      // Unsaved company-profile edits first. When one of its fields is invalid or the write
+      // fails nothing else is saved, and its tab is shown so its message is visible.
+      if (businessDirty && businessSectionRef.current) {
+        const businessSaved = await businessSectionRef.current.save();
+        if (!businessSaved) {
+          setActiveTab('professional');
+          setSaveStatus('error');
+          return;
+        }
+      }
+
       // Update personal info
       await updateUserProfile(user.id, {
         fullName: formData.fullName,
@@ -397,15 +417,16 @@ export default function EditProfilePage() {
         <div className="flex items-center justify-between p-4">
           <button
             onClick={() => {
-              if (hasUnsavedChanges) {
+              if (anyUnsavedChanges) {
                 setShowUnsavedWarning(true);
               } else {
                 router.back();
               }
             }}
+            aria-label={t('profile.settings.back')}
             className="p-2 -ml-2 rounded-lg text-text-secondary hover:text-text-inverse hover:bg-surface-2 transition-colors"
           >
-            <ChevronLeft size={24} />
+            <ChevronLeft size={24} aria-hidden />
           </button>
           <h1 className="text-lg font-semibold text-text-inverse">{t('profile.edit.title')}</h1>
           <div className="w-10" />
@@ -505,12 +526,26 @@ export default function EditProfilePage() {
           {saveStatus === 'error' && (
             <span className="text-xs text-error">{t('profile.edit.saveStatus.error')}</span>
           )}
-          {hasUnsavedChanges && saveStatus === 'idle' && (
+          {anyUnsavedChanges && saveStatus === 'idle' && (
             <span className="text-xs text-warning-DEFAULT">{t('profile.edit.saveStatus.unsaved')}</span>
           )}
         </div>
 
         {canEditProfessional && <MissingLocationBanner className="mb-5" />}
+
+        {/* Company profile, at the top of the Professional tab (business providers only; the
+            section itself also checks the instructors doc has a business map). Kept mounted
+            but hidden on the Personal tab, so unsaved edits survive a tab switch and the
+            page's Save button can still reach them. */}
+        {canEditProfessional && user?.providerType === 'business' && (
+          <div hidden={activeTab !== 'professional'}>
+            <BusinessProfileSection
+              ref={businessSectionRef}
+              onDirtyChange={setBusinessDirty}
+              className="mb-6"
+            />
+          </div>
+        )}
 
         {/* Personal Tab */}
         {activeTab === 'personal' && (
