@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchBusinessDetails, updateBusinessDisplayFields } from '@/lib/firebase/businessProfile';
+import { queryKeys } from '@/lib/queryKeys';
 import type { BusinessDisplayChanges } from '@/lib/businessDetails';
 import type { BusinessDetails } from '@/types/firebase';
 
@@ -34,6 +35,8 @@ export function useUpdateBusinessDetails(uid: string | undefined) {
       );
       void qc.invalidateQueries({ queryKey: ['provider', uid] });
       void qc.invalidateQueries({ queryKey: ['providers'] });
+      // The owner's own public page shows the company name, logo and description.
+      if (uid) void qc.invalidateQueries({ queryKey: queryKeys.providerPublicProfile(uid) });
     },
   });
 }

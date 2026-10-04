@@ -440,6 +440,7 @@ export const itMessages = {
   'admin.business.convert.confirm': 'Converti',
   'admin.business.convert.success': 'Account convertito in singolo professionista.',
   'admin.business.error.reviewRequired': "Prima di approvare un'azienda bisogna controllarne i dati: apri la sua scheda e approva da lì.",
+  'admin.business.error.reviewRequiredHere': "Prima di approvare un'azienda bisogna controllarne i dati: ricarica questa pagina e rivedi i dati dell'azienda.",
   'admin.business.error.staleReview': "I dati dell'azienda sono cambiati da quando li hai aperti: controlla i nuovi dati e approva di nuovo.",
   'admin.business.error.claimNotFound': "Nessun account ha registrato questa P.IVA: non c'è niente da liberare.",
   'admin.business.error.claimInUse': "La P.IVA è ancora usata da un'azienda in attesa o approvata: convertila in singolo professionista o cambiane la P.IVA.",
@@ -2194,6 +2195,7 @@ export const itMessages = {
   'provider.business.reviewed.affiliationNumber': 'Numero di affiliazione',
   'provider.business.reviewed.note': 'Questi dati sono stati verificati dal nostro team: per modificarli contatta il supporto.',
   'provider.business.reviewed.notePending': 'Il nostro team sta verificando questi dati: per modificarli contatta il supporto.',
+  'provider.business.reviewed.noteRejected': "La tua richiesta non è stata approvata. Per saperne di più o per modificare questi dati, contatta il supporto.",
   'provider.business.logo.label': 'Logo',
   'provider.business.logo.hint': "Meglio un'immagine quadrata, in JPG o PNG. Viene pubblicato quando salvi i dati dell'attività.",
   'provider.business.logo.upload': 'Carica logo',
@@ -2205,6 +2207,8 @@ export const itMessages = {
   'provider.business.edit.saved': "Dati dell'attività salvati.",
   'provider.business.edit.noChanges': 'Nessuna modifica da salvare.',
   'provider.business.edit.error': 'Non è stato possibile salvare le modifiche. Riprova; se il problema persiste, contatta il supporto.',
+  'provider.business.edit.waitUpload': "Attendi la fine del caricamento del logo, poi salva di nuovo.",
+  'provider.business.edit.waitSaving': "Salvataggio in corso…",
   'provider.business.edit.loadError': "Non è stato possibile caricare i dati dell'attività. Ricarica la pagina per riprovare.",
 
   // ─── applyAsProvider error codes without a form field ───────────────

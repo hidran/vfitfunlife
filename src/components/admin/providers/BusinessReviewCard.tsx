@@ -4,17 +4,9 @@ import { useId, type ReactNode } from 'react';
 import Image from 'next/image';
 import { BusinessBadge, BusinessWebsiteLink } from '@/components/provider/BusinessBadge';
 import { useI18n } from '@/hooks/useI18n';
-import type { MessageKey } from '@/i18n/messages';
 import type { AdminBusiness } from '@/lib/admin/providerBusiness';
-import type { BusinessLegalForm } from '@/types/firebase';
+import { LEGAL_FORM_LABEL } from '@/lib/businessDetails';
 import { cn } from '@/lib/utils';
-
-export const LEGAL_FORM_LABEL: Record<BusinessLegalForm, MessageKey> = {
-  company: 'provider.business.legalForm.company',
-  sole_trader: 'provider.business.legalForm.soleTrader',
-  association: 'provider.business.legalForm.association',
-  other: 'provider.business.legalForm.other',
-};
 
 interface Props {
   business: AdminBusiness;
@@ -50,7 +42,7 @@ export function BusinessReviewCard({ business, children, className }: Props) {
     {
       label: t('admin.business.field.website'),
       value: business.website ? (
-        <BusinessWebsiteLink website={business.website} className="text-section-primary" />
+        <BusinessWebsiteLink website={business.website} fullUrl className="text-section-primary" />
       ) : (
         none
       ),

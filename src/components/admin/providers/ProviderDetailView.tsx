@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
@@ -85,6 +85,7 @@ export function ProviderDetailView({ providerId }: Props) {
   // exactly what this card shows.
   const businessQuery = useAdminProviderBusiness(providerId);
   const business = businessQuery.data ?? null;
+  const pageFocusRef = useRef<HTMLDivElement>(null);
   // Reloads the users doc and the business map (the second key is under the first).
   const reloadProvider = () => qc.invalidateQueries({ queryKey });
 
@@ -190,7 +191,11 @@ export function ProviderDetailView({ providerId }: Props) {
       if (code === 'stale_review' || code === 'review_required') {
         // The company changed under the admin (or was never reviewed here): show the new
         // details and ask for a fresh look instead of failing silently.
-        setApproveError(t(ADMIN_BUSINESS_ERRORS[code]));
+        // review_required here means the page's own data was not loaded: "open its page"
+        // (the panel's text) would send the admin to where they already are.
+        setApproveError(
+          t(code === 'review_required' ? 'admin.business.error.reviewRequiredHere' : ADMIN_BUSINESS_ERRORS[code])
+        );
         await reloadProvider();
       } else {
         notify.error(t(code ? ADMIN_BUSINESS_ERRORS[code] : 'admin.providerDetail.actionError'));
@@ -242,8 +247,14 @@ export function ProviderDetailView({ providerId }: Props) {
         }
         onDelete={() => setConfirmOpen(true)}
       >
-        {/* Profile header card */}
-        <div className="bg-surface rounded-2xl border border-hairline p-6">
+        {/* Profile header card; also where the focus goes when an admin action removes its own button */}
+        <div
+          ref={pageFocusRef}
+          tabIndex={-1}
+          role="region"
+          aria-label={provider.fullName}
+          className="bg-surface rounded-2xl border border-hairline p-6 outline-none"
+        >
           <div className="flex flex-col md:flex-row gap-6">
             {/* Avatar */}
             <div className="flex-shrink-0">
@@ -395,6 +406,7 @@ export function ProviderDetailView({ providerId }: Props) {
               business={business}
               canRelease={providerVerificationState(provider) === 'rejected'}
               onChanged={reloadProvider}
+              focusFallbackRef={pageFocusRef}
             />
           </BusinessReviewCard>
         ) : (

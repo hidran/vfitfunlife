@@ -562,3 +562,4 @@ the same on prod with a throwaway P.IVA claim removed afterwards.
   Decisions beyond the review: the claim requirement does not apply to rejections; a sent review
   is checked on rejections too; updateBusinessTaxId onto the company's own (released) number
   re-creates its claim, which is how an admin makes a `claim_missing` company approvable again.
+- 2026-10-05 — UI review fixes (B6/B7/B8b): badges wrap at 320px, page Save explains a busy section, admin sees the full website URL, focus survives Convert (buttons 44px), public `Provider.business` is the public subset and the applications panel reads through `readAdminBusiness`, unknown legal form is not overwritten, rejected companies get their own note, owner's public-profile cache is invalidated, review_required copy on the provider page, one legal-form list/label map (this commit).

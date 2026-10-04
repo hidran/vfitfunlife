@@ -25,22 +25,33 @@ export function BusinessBadge({ className }: { className?: string }) {
  * The company website as an external link. The scheme is re-checked here, whatever the
  * loader did, so a `javascript:` URL can never become an href. Renders nothing otherwise.
  */
-export function BusinessWebsiteLink({ website, className }: { website?: string | null; className?: string }) {
+export function BusinessWebsiteLink({
+  website,
+  className,
+  fullUrl = false,
+}: {
+  website?: string | null;
+  className?: string;
+  /** Show the whole URL as the link text (admin review) instead of just the host (public pages). */
+  fullUrl?: boolean;
+}) {
   const { t } = useI18n();
   const href = safeHttpUrl(website);
   if (!href) return null;
   let label = href;
-  try {
-    label = new URL(href).host;
-  } catch {
-    /* safeHttpUrl already parsed it */
+  if (!fullUrl) {
+    try {
+      label = new URL(href).host;
+    } catch {
+      /* safeHttpUrl already parsed it */
+    }
   }
   return (
     <a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className={cn('inline-flex min-h-[44px] items-center break-all underline', className)}
+      className={cn('inline-flex min-h-[44px] max-w-full items-center break-all underline', className)}
     >
       {label}
       <span className="sr-only"> ({t('providerProfile.business.websiteNewTab')})</span>

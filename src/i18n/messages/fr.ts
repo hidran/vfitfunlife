@@ -439,6 +439,7 @@ export const frMessages: Messages = {
   'admin.business.convert.confirm': 'Convertir',
   'admin.business.convert.success': 'Compte converti en professionnel individuel.',
   'admin.business.error.reviewRequired': "Pour approuver une entreprise, il faut d'abord vérifier ses informations : ouvrez sa fiche et approuvez-la depuis celle-ci.",
+  'admin.business.error.reviewRequiredHere': "Pour approuver une entreprise, il faut d'abord vérifier ses informations : rechargez cette page et vérifiez à nouveau les données de l'entreprise.",
   'admin.business.error.staleReview': "Les informations de l'entreprise ont changé depuis que vous les avez ouvertes : vérifiez les nouvelles informations et approuvez à nouveau.",
   'admin.business.error.claimNotFound': "Aucun compte n'a enregistré cette P.IVA : il n'y a rien à libérer.",
   'admin.business.error.claimInUse': 'La P.IVA est encore utilisée par une entreprise en attente ou approuvée : convertissez-la en professionnel individuel ou modifiez sa P.IVA.',
@@ -2179,6 +2180,7 @@ export const frMessages: Messages = {
   'provider.business.reviewed.affiliationNumber': "Numéro d'affiliation",
   'provider.business.reviewed.note': 'Ces informations ont été vérifiées par notre équipe. Pour les modifier, contactez le support.',
   'provider.business.reviewed.notePending': 'Notre équipe vérifie ces informations. Pour les modifier, contactez le support.',
+  'provider.business.reviewed.noteRejected': "Votre demande n'a pas été approuvée. Pour en savoir plus ou modifier ces informations, contactez le support.",
   'provider.business.logo.label': 'Logo',
   'provider.business.logo.hint': 'Idéalement une image carrée en JPG ou PNG. Il est publié lorsque vous enregistrez les informations de la structure.',
   'provider.business.logo.upload': 'Importer un logo',
@@ -2190,6 +2192,8 @@ export const frMessages: Messages = {
   'provider.business.edit.saved': 'Informations de la structure enregistrées.',
   'provider.business.edit.noChanges': 'Aucune modification à enregistrer.',
   'provider.business.edit.error': "Impossible d'enregistrer les modifications. Réessayez ; si le problème persiste, contactez le support.",
+  'provider.business.edit.waitUpload': "Attendez la fin de l'import du logo, puis enregistrez à nouveau.",
+  'provider.business.edit.waitSaving': "Enregistrement en cours…",
   'provider.business.edit.loadError': 'Impossible de charger les informations de la structure. Rechargez la page pour réessayer.',
 
   // ─── applyAsProvider error codes without a form field ───────────────

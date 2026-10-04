@@ -1,6 +1,7 @@
 // src/types/instructor.ts
 import type { Timestamp } from 'firebase/firestore';
-import type { BusinessDetails, ProviderApplicationStatus, ProviderType } from '@/types/firebase';
+import type { PublicBusiness } from '@/lib/publicBusiness';
+import type { ProviderApplicationStatus, ProviderType } from '@/types/firebase';
 
 export type ActivityKind = 'event' | 'vr' | 'party';
 
@@ -13,7 +14,8 @@ export interface Provider {
   isVerified: boolean;
   // Company accounts (absent ⇒ individual)
   providerType?: ProviderType;
-  business?: BusinessDetails;
+  /** The public subset only (never legal name, tax id or affiliation number). */
+  business?: PublicBusiness;
   /** True iff a valid `business` map exists (see lib/publicBusiness.ts); drives the "Azienda" badge. */
   isBusiness?: boolean;
   /** `business.logoUrl`, preferred over `avatarUrl` when present. */

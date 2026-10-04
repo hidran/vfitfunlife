@@ -22,6 +22,14 @@ export const BUSINESS_LEGAL_FORMS = [
   'other',
 ] as const satisfies readonly BusinessLegalForm[];
 
+/** The message key of each legal form's label: the one map every screen uses. */
+export const LEGAL_FORM_LABEL: Record<BusinessLegalForm, MessageKey> = {
+  company: 'provider.business.legalForm.company',
+  sole_trader: 'provider.business.legalForm.soleTrader',
+  association: 'provider.business.legalForm.association',
+  other: 'provider.business.legalForm.other',
+};
+
 /** Maximum lengths in characters after trimming — the server's BUSINESS_FIELD_LIMITS. */
 export const BUSINESS_FIELD_LIMITS = {
   legalName: 120,

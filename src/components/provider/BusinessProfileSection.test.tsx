@@ -172,6 +172,18 @@ describe('BusinessProfileSection', () => {
       ).toBeInTheDocument();
     });
 
+    it('says a rejected application was not approved (not "being checked")', async () => {
+      mockUser = { uid: 'u1', providerType: 'business', providerStatus: 'rejected' };
+      await renderCompany();
+
+      expect(
+        screen.getByText(
+          'La tua richiesta non è stata approvata. Per saperne di più o per modificare questi dati, contatta il supporto.'
+        )
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/sta verificando questi dati/)).toBeNull();
+    });
+
     it('prefills the editable fields from the stored details', async () => {
       await renderCompany();
 
@@ -354,6 +366,54 @@ describe('BusinessProfileSection', () => {
 
       expect(saved).toBe(false);
       expect(updateDoc).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('page Save while the section is busy', () => {
+    it('explains that the logo upload must finish first, then clears the message', async () => {
+      let finishUpload!: (url: string) => void;
+      uploadGalleryPhoto.mockReturnValue(new Promise<string>((resolve) => (finishUpload = resolve)));
+      const { ref } = await renderCompany();
+      fireEvent.change(screen.getByTestId('business-logo-input'), {
+        target: { files: [new File(['png'], 'logo.png', { type: 'image/png' })] },
+      });
+      await waitFor(() => expect(uploadGalleryPhoto).toHaveBeenCalled());
+
+      let saved: boolean | undefined;
+      await act(async () => {
+        saved = await ref.current!.save();
+      });
+
+      expect(saved).toBe(false);
+      expect(updateDoc).not.toHaveBeenCalled();
+      const alert = screen.getByRole('alert');
+      expect(alert).toHaveTextContent('Attendi la fine del caricamento del logo, poi salva di nuovo.');
+      expect(alert).toHaveFocus();
+
+      await act(async () => finishUpload(LOGO_URL));
+      await waitFor(() => expect(screen.getByRole('alert')).toBeEmptyDOMElement());
+    });
+
+    it('says it is already saving when a second save arrives mid-write', async () => {
+      let finish!: () => void;
+      updateDoc.mockReturnValue(new Promise<void>((resolve) => (finish = resolve)));
+      const { ref } = await renderCompany();
+      type(/^Nome pubblico/, 'Karate Roma');
+      fireEvent.click(saveButton());
+      await waitFor(() => expect(updateDoc).toHaveBeenCalledTimes(1));
+
+      let second: boolean | undefined;
+      await act(async () => {
+        second = await ref.current!.save();
+      });
+
+      expect(second).toBe(false);
+      expect(updateDoc).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole('alert')).toHaveTextContent('Salvataggio in corso…');
+
+      await act(async () => finish());
+      expect(await screen.findByText("Dati dell'attività salvati.")).toBeInTheDocument();
+      expect(screen.getByRole('alert')).toBeEmptyDOMElement();
     });
   });
 

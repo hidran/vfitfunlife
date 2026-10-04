@@ -15,13 +15,13 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
 import type { MessageKey } from '@/i18n/messages';
-import type { BusinessLegalForm } from '@/types/firebase';
 import type { BusinessApplicationInput } from '@/lib/firebase/providerApplication';
 import {
   BUSINESS_DISPLAY_FIELDS,
   BUSINESS_FIELD_LIMITS,
   BUSINESS_FORM_ERRORS,
   BUSINESS_LEGAL_FORMS,
+  LEGAL_FORM_LABEL,
   EMPTY_BUSINESS_DETAILS,
   businessDetailsSchema,
   businessEditSchema,
@@ -36,12 +36,12 @@ import {
   type ProviderApplicationErrorCode,
 } from '@/lib/providerApplicationErrors';
 
-const LEGAL_FORM_LABELS: Record<BusinessLegalForm, MessageKey> = {
-  company: 'provider.business.legalForm.company',
-  sole_trader: 'provider.business.legalForm.soleTrader',
-  association: 'provider.business.legalForm.association',
-  other: 'provider.business.legalForm.other',
-};
+/** The note under the read-only legal fields, by how far the company's review is. */
+const REVIEW_NOTE = {
+  verified: 'provider.business.reviewed.note',
+  pending: 'provider.business.reviewed.notePending',
+  rejected: 'provider.business.reviewed.noteRejected',
+} as const satisfies Record<'verified' | 'pending' | 'rejected', MessageKey>;
 
 /**
  * Every message the form can show on a field: the schema's messages and those of the server
@@ -106,7 +106,7 @@ export interface BusinessDetailsFormProps {
    * Edit mode: whether the reviewed fields were verified by an admin or are still being
    * checked (pending application) — it changes the note under them.
    */
-  reviewStatus?: 'verified' | 'pending';
+  reviewStatus?: 'verified' | 'pending' | 'rejected';
   /** Edit mode: the logo picker, shown between the reviewed fields and the public ones. */
   logo?: ReactNode;
   /**
@@ -291,7 +291,7 @@ export const BusinessDetailsForm = forwardRef<BusinessDetailsFormHandle, Busines
               />
               <ReadOnlyRow
                 label={t('provider.business.reviewed.legalForm')}
-                value={t(LEGAL_FORM_LABELS[initialValues.legalForm] ?? LEGAL_FORM_LABELS.company)}
+                value={t(LEGAL_FORM_LABEL[initialValues.legalForm] ?? LEGAL_FORM_LABEL.company)}
               />
               {initialValues.affiliationNumber.trim() && (
                 <ReadOnlyRow
@@ -301,11 +301,7 @@ export const BusinessDetailsForm = forwardRef<BusinessDetailsFormHandle, Busines
               )}
             </dl>
             <p className="text-xs text-content-muted break-words">
-              {t(
-                reviewStatus === 'pending'
-                  ? 'provider.business.reviewed.notePending'
-                  : 'provider.business.reviewed.note'
-              )}
+              {t(REVIEW_NOTE[reviewStatus])}
             </p>
           </section>
         ) : (
@@ -361,7 +357,7 @@ export const BusinessDetailsForm = forwardRef<BusinessDetailsFormHandle, Busines
               >
                 {BUSINESS_LEGAL_FORMS.map((form) => (
                   <option key={form} value={form}>
-                    {t(LEGAL_FORM_LABELS[form])}
+                    {t(LEGAL_FORM_LABEL[form])}
                   </option>
                 ))}
               </select>

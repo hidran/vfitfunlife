@@ -78,7 +78,9 @@ export const BusinessProfileSection = forwardRef<BusinessProfileSectionHandle, B
         ref={ref}
         uid={uid}
         details={details}
-        reviewStatus={providerStatus === 'verified' ? 'verified' : 'pending'}
+        reviewStatus={
+          providerStatus === 'verified' ? 'verified' : providerStatus === 'rejected' ? 'rejected' : 'pending'
+        }
         onDirtyChange={onDirtyChange}
         className={className}
       />
@@ -90,10 +92,10 @@ interface BusinessProfileEditorProps extends BusinessProfileSectionProps {
   uid: string;
   /** The stored company profile; after a save the query cache holds the new values. */
   details: BusinessDetails;
-  reviewStatus: 'verified' | 'pending';
+  reviewStatus: 'verified' | 'pending' | 'rejected';
 }
 
-type SaveStatus = 'idle' | 'saved' | 'noChanges' | 'error';
+type SaveStatus = 'idle' | 'saved' | 'noChanges' | 'error' | 'waitUpload' | 'waitSaving';
 
 const BusinessProfileEditor = forwardRef<BusinessProfileSectionHandle, BusinessProfileEditorProps>(
   function BusinessProfileEditor({ uid, details, reviewStatus, onDirtyChange, className }, ref) {
@@ -102,6 +104,7 @@ const BusinessProfileEditor = forwardRef<BusinessProfileSectionHandle, BusinessP
     const formRef = useRef<BusinessDetailsFormHandle>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const savingRef = useRef(false);
+    const alertRef = useRef<HTMLDivElement>(null);
     // The form reads its values once; later cache updates must not reset what is being typed.
     const [defaultValues] = useState(() => businessFormValues(details));
     const update = useUpdateBusinessDetails(uid);
@@ -124,7 +127,17 @@ const BusinessProfileEditor = forwardRef<BusinessProfileSectionHandle, BusinessP
 
     const save = useCallback(async (): Promise<boolean> => {
       const form = formRef.current;
-      if (!form || savingRef.current || uploading) return false;
+      if (!form) return false;
+      // The page's Save can arrive while the section is busy: say why nothing was saved
+      // instead of leaving a bare failure (the message is in the alert region below).
+      if (uploading) {
+        setStatus('waitUpload');
+        return false;
+      }
+      if (savingRef.current) {
+        setStatus('waitSaving');
+        return false;
+      }
       savingRef.current = true;
       setStatus('idle');
       try {
@@ -153,6 +166,15 @@ const BusinessProfileEditor = forwardRef<BusinessProfileSectionHandle, BusinessP
     }, [uploading, logoDirty, logoUrl, update]);
 
     useImperativeHandle(ref, () => ({ save }), [save]);
+
+    // The "wait" messages go away once the thing they wait for is done, and take the focus
+    // while shown so a keyboard / screen-reader user lands on the explanation.
+    useEffect(() => {
+      if (!uploading && status === 'waitUpload') setStatus('idle');
+    }, [uploading, status]);
+    useEffect(() => {
+      if (status === 'waitUpload' || status === 'waitSaving') alertRef.current?.focus();
+    }, [status]);
 
     const onPickLogo = async (event: ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
@@ -296,8 +318,10 @@ const BusinessProfileEditor = forwardRef<BusinessProfileSectionHandle, BusinessP
               <p className="text-content-muted">{t('provider.business.edit.noChanges')}</p>
             )}
           </div>
-          <div role="alert" className="text-sm break-words">
+          <div ref={alertRef} tabIndex={-1} role="alert" className="text-sm break-words outline-none">
             {status === 'error' && <p className="text-error">{t('provider.business.edit.error')}</p>}
+            {status === 'waitUpload' && <p className="text-error">{t('provider.business.edit.waitUpload')}</p>}
+            {status === 'waitSaving' && <p className="text-content-muted">{t('provider.business.edit.waitSaving')}</p>}
           </div>
         </form>
       </section>

@@ -447,7 +447,7 @@ export default function BookingPage() {
                             </div>
                           </div>
                           {(provider.isBusiness || provider.isVerified) && (
-                            <div className="flex shrink-0 flex-wrap gap-1">
+                            <div className="flex min-w-0 max-w-full flex-wrap gap-1">
                               {provider.isBusiness && <BusinessBadge />}
                               {provider.isVerified && (
                                 <Badge variant="partner" size="sm" className="shrink-0">{t('booking.provider.verified')}</Badge>

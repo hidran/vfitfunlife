@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useRef, useState, type ReactNode } from 'react';
+import { useId, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { AlertTriangle, FileEdit, Unlock, UserRound, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/button';
@@ -13,11 +13,10 @@ import {
   updateBusinessTaxId,
 } from '@/lib/firebase/functions';
 import { adminBusinessErrorMessageKey } from '@/lib/providerApplicationErrors';
-import { BUSINESS_FIELD_LIMITS, BUSINESS_LEGAL_FORMS } from '@/lib/businessDetails';
+import { BUSINESS_FIELD_LIMITS, BUSINESS_LEGAL_FORMS, LEGAL_FORM_LABEL } from '@/lib/businessDetails';
 import { isValidItalianVat, normalizeVatNumber } from '@/lib/vatNumber';
 import type { AdminBusiness } from '@/lib/admin/providerBusiness';
 import type { BusinessLegalForm } from '@/types/firebase';
-import { LEGAL_FORM_LABEL } from './BusinessReviewCard';
 
 /** The UI's cap on the optional audit reason (the server accepts up to 1000). */
 export const ADMIN_REASON_MAX_LENGTH = 200;
@@ -34,6 +33,11 @@ interface Props {
   canRelease: boolean;
   /** Reload the provider after a successful action. */
   onChanged: () => void | Promise<void>;
+  /**
+   * A stable element (outside what the reload can remove) that takes the focus when the
+   * element that had it is gone — e.g. the whole company card after "convert to individual".
+   */
+  focusFallbackRef?: RefObject<HTMLElement | null>;
 }
 
 /**
@@ -41,7 +45,7 @@ interface Props {
  * data, release its tax-id claim, convert it to an individual. Each runs in a confirmation
  * dialog with an optional reason; the callables write the audit entry themselves.
  */
-export function BusinessAdminActions({ providerId, business, canRelease, onChanged }: Props) {
+export function BusinessAdminActions({ providerId, business, canRelease, onChanged, focusFallbackRef }: Props) {
   const { t } = useI18n();
   const [open, setOpen] = useState<Action | null>(null);
 
@@ -49,22 +53,28 @@ export function BusinessAdminActions({ providerId, business, canRelease, onChang
     setOpen(null);
     notify.success(t(successKey));
     await onChanged();
+    // The reload may have removed the card (or the button) that held the focus: it would
+    // drop to <body>. Wait for that commit, then hand it to the stable element.
+    setTimeout(() => {
+      const active = document.activeElement;
+      if (!active || active === document.body || !active.isConnected) focusFallbackRef?.current?.focus();
+    }, 0);
   };
 
   return (
     <>
       <div className="flex flex-wrap gap-2 pt-2 border-t border-hairline">
-        <Button variant="secondary" size="sm" onClick={() => setOpen('change')} className="gap-2">
+        <Button variant="secondary" size="sm" onClick={() => setOpen('change')} className="min-h-11 gap-2">
           <FileEdit aria-hidden="true" className="w-4 h-4" />
           {t('admin.business.action.changeTaxId')}
         </Button>
         {canRelease && (
-          <Button variant="secondary" size="sm" onClick={() => setOpen('release')} className="gap-2">
+          <Button variant="secondary" size="sm" onClick={() => setOpen('release')} className="min-h-11 gap-2">
             <Unlock aria-hidden="true" className="w-4 h-4" />
             {t('admin.business.action.release')}
           </Button>
         )}
-        <Button variant="secondary" size="sm" onClick={() => setOpen('convert')} className="gap-2">
+        <Button variant="secondary" size="sm" onClick={() => setOpen('convert')} className="min-h-11 gap-2">
           <UserRound aria-hidden="true" className="w-4 h-4" />
           {t('admin.business.action.convert')}
         </Button>
@@ -263,14 +273,14 @@ type ChangeField = 'vatNumber' | 'legalName' | 'affiliationNumber';
 
 /**
  * Change a company's admin-owned fields. The form starts from what is stored and sends all of
- * them: the new state is exactly what the admin saw and confirmed. The tax id goes as bare
+ * them (the legal form only when it is known or picked): the new state is exactly what the admin saw and confirmed. The tax id goes as bare
  * digits; an empty affiliation number is sent as null (cleared, as at signup).
  */
 function ChangeTaxIdDialog({ providerId, business, onClose, onDone }: ChangeTaxIdDialogProps) {
   const { t } = useI18n();
   const [vatNumber, setVatNumber] = useState(business.vatNumber);
   const [legalName, setLegalName] = useState(business.legalName);
-  const [legalForm, setLegalForm] = useState<BusinessLegalForm>(business.legalForm ?? 'company');
+  const [legalForm, setLegalForm] = useState<BusinessLegalForm | ''>(business.legalForm ?? '');
   const [affiliationNumber, setAffiliationNumber] = useState(business.affiliationNumber);
   const [errors, setErrors] = useState<Partial<Record<ChangeField, MessageKey>>>({});
   const vatRef = useRef<HTMLInputElement>(null);
@@ -328,7 +338,8 @@ function ChangeTaxIdDialog({ providerId, business, onClose, onDone }: ChangeTaxI
           providerId,
           vatNumber: normalizeVatNumber(vatNumber),
           legalName: legalName.trim(),
-          legalForm,
+          // An unknown stored form stays as it is unless the admin picks one.
+          ...(legalForm ? { legalForm } : {}),
           affiliationNumber: affiliation ? affiliation : null,
           ...(reason ? { reason } : {}),
         });
@@ -379,9 +390,10 @@ function ChangeTaxIdDialog({ providerId, business, onClose, onDone }: ChangeTaxI
           <select
             id={ids.legalForm}
             value={legalForm}
-            onChange={(e) => setLegalForm(e.target.value as BusinessLegalForm)}
+            onChange={(e) => setLegalForm(e.target.value as BusinessLegalForm | '')}
             className={inputClass}
           >
+            {!business.legalForm && <option value="">{t('admin.providerDetail.field.naValue')}</option>}
             {BUSINESS_LEGAL_FORMS.map((form) => (
               <option key={form} value={form}>
                 {t(LEGAL_FORM_LABEL[form])}

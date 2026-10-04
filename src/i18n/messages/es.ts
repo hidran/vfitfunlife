@@ -436,6 +436,7 @@ export const esMessages: Messages = {
   'admin.business.convert.confirm': 'Convertir',
   'admin.business.convert.success': 'Cuenta convertida en profesional individual.',
   'admin.business.error.reviewRequired': 'Para aprobar una empresa hay que revisar antes sus datos: abre su ficha y apruébala desde allí.',
+  'admin.business.error.reviewRequiredHere': "Para aprobar una empresa hay que revisar antes sus datos: recarga esta página y revisa de nuevo los datos de la empresa.",
   'admin.business.error.staleReview': 'Los datos de la empresa han cambiado desde que los abriste: revisa los nuevos datos y vuelve a aprobarla.',
   'admin.business.error.claimNotFound': 'Ninguna cuenta tiene registrada esta P.IVA: no hay nada que liberar.',
   'admin.business.error.claimInUse': 'La P.IVA sigue en uso por una empresa pendiente o aprobada: conviértela en profesional individual o cambia su P.IVA.',
@@ -2170,6 +2171,7 @@ export const esMessages: Messages = {
   'provider.business.reviewed.affiliationNumber': 'Número de afiliación',
   'provider.business.reviewed.note': 'Nuestro equipo ha verificado estos datos. Para cambiarlos, contacta con soporte.',
   'provider.business.reviewed.notePending': 'Nuestro equipo está verificando estos datos. Para cambiarlos, contacta con soporte.',
+  'provider.business.reviewed.noteRejected': "Tu solicitud no ha sido aprobada. Para saber más o cambiar estos datos, contacta con soporte.",
   'provider.business.logo.label': 'Logotipo',
   'provider.business.logo.hint': 'Lo ideal es una imagen cuadrada en JPG o PNG. Se publica al guardar los datos de la entidad.',
   'provider.business.logo.upload': 'Subir logotipo',
@@ -2181,6 +2183,8 @@ export const esMessages: Messages = {
   'provider.business.edit.saved': 'Datos de la entidad guardados.',
   'provider.business.edit.noChanges': 'No hay cambios que guardar.',
   'provider.business.edit.error': 'No se han podido guardar los cambios. Inténtalo de nuevo; si el problema continúa, contacta con soporte.',
+  'provider.business.edit.waitUpload': "Espera a que termine la subida del logotipo y vuelve a guardar.",
+  'provider.business.edit.waitSaving': "Guardando…",
   'provider.business.edit.loadError': 'No se han podido cargar los datos de la entidad. Recarga la página para intentarlo de nuevo.',
 
   // ─── applyAsProvider error codes without a form field ───────────────

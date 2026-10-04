@@ -13,6 +13,8 @@ import { useServiceCategoryMap } from '@/hooks/useServiceCategories';
 import { queryKeys } from '@/lib/queryKeys';
 import { adminBusinessErrorCode, ADMIN_BUSINESS_ERRORS } from '@/lib/providerApplicationErrors';
 import { BusinessBadge } from '@/components/provider/BusinessBadge';
+import { useAdminProviderBusiness } from '@/hooks/useAdminProviderBusiness';
+import { businessReviewOf, type AdminBusiness } from '@/lib/admin/providerBusiness';
 
 export function ProviderApplicationsPanel() {
   const { t } = useI18n();
@@ -32,17 +34,16 @@ export function ProviderApplicationsPanel() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<{ id: string; message: string } | null>(null);
 
-  const decide = async (a: Provider, decision: 'verified' | 'rejected') => {
+  const decide = async (a: Provider, decision: 'verified' | 'rejected', business: AdminBusiness | null) => {
     setBusyId(a.id);
     setError(null);
     try {
       await decideProviderApplication({
         providerId: a.id,
         decision,
-        // A company is approved for the tax id and legal name shown in its row (B8).
-        ...(decision === 'verified' && a.business
-          ? { expectedReview: { vatNumber: a.business.vatNumber, legalName: a.business.legalName } }
-          : {}),
+        // A company is approved for the tax id and legal name shown in its row (B8). Read by
+        // the admin reader: a map without a public name is still a company to the server.
+        ...(decision === 'verified' && business ? { expectedReview: businessReviewOf(business) } : {}),
       });
       await queryClient.invalidateQueries({ queryKey: queryKeys.providerApplications() });
     } catch (e) {
@@ -54,7 +55,10 @@ export function ProviderApplicationsPanel() {
       });
       // The company changed since the list was loaded: show what it is now.
       if (code === 'stale_review' || code === 'review_required') {
-        await queryClient.invalidateQueries({ queryKey: queryKeys.providerApplications() });
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: queryKeys.providerApplications() }),
+          queryClient.invalidateQueries({ queryKey: queryKeys.adminProviderBusiness(a.id) }),
+        ]);
       }
     } finally {
       setBusyId(null);
@@ -85,40 +89,67 @@ export function ProviderApplicationsPanel() {
       ) : (
         <ul className="space-y-3">
           {apps.map((a) => (
-            <li key={a.id} className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-hairline p-3">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-content font-medium">{a.fullName}</p>
-                  {a.isBusiness && <BusinessBadge />}
-                </div>
-                <p className="text-sm text-content-muted">{categoryLabels(a) || '—'}</p>
-                {/* What an approval of a company confirms (and sends back as expectedReview). */}
-                {a.business && (
-                  <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-2 text-sm">
-                    <dt className="text-content-faint">{t('provider.business.reviewed.legalName')}</dt>
-                    <dd className="text-content break-words">{a.business.legalName}</dd>
-                    <dt className="text-content-faint">{t('provider.business.reviewed.vatNumber')}</dt>
-                    <dd className="text-content font-mono tabular-nums">{a.business.vatNumber}</dd>
-                  </dl>
-                )}
-                {error?.id === a.id && (
-                  <p role="alert" className="text-sm text-[#EF4444] light:text-red-700">{error.message}</p>
-                )}
-              </div>
-              {isAdmin && (
-                <div className="flex gap-2">
-                  <Button size="sm" disabled={busyId === a.id} onClick={() => decide(a, 'verified')}>
-                    <CheckCircle className="w-4 h-4 mr-1" /> {t('admin.applications.verify')}
-                  </Button>
-                  <Button size="sm" variant="ghost" disabled={busyId === a.id} onClick={() => decide(a, 'rejected')}>
-                    <XCircle className="w-4 h-4 mr-1" /> {t('admin.applications.reject')}
-                  </Button>
-                </div>
-              )}
-            </li>
+            <ApplicationRow
+              key={a.id}
+              app={a}
+              categories={categoryLabels(a)}
+              isAdmin={isAdmin}
+              busy={busyId === a.id}
+              error={error?.id === a.id ? error.message : null}
+              onDecide={decide}
+            />
           ))}
         </ul>
       )}
     </div>
+  );
+}
+
+interface ApplicationRowProps {
+  app: Provider;
+  categories: string;
+  isAdmin: boolean;
+  busy: boolean;
+  error: string | null;
+  onDecide: (a: Provider, decision: 'verified' | 'rejected', business: AdminBusiness | null) => void;
+}
+
+/** One pending application. Its company details come from the admin reader, not the public one. */
+function ApplicationRow({ app: a, categories, isAdmin, busy, error, onDecide }: ApplicationRowProps) {
+  const { t } = useI18n();
+  const businessQuery = useAdminProviderBusiness(a.id);
+  const business = businessQuery.data ?? null;
+  // Approving waits for the company details: without them the server answers review_required.
+  const approveBlocked = busy || businessQuery.isPending;
+  return (
+    <li className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-hairline p-3">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-content font-medium">{a.fullName}</p>
+          {(business || a.isBusiness) && <BusinessBadge />}
+        </div>
+        <p className="text-sm text-content-muted">{categories || '—'}</p>
+        {/* What an approval of a company confirms (and sends back as expectedReview). */}
+        {business && (
+          <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-2 text-sm">
+            <dt className="text-content-faint">{t('provider.business.reviewed.legalName')}</dt>
+            <dd className="text-content break-words">{business.legalName}</dd>
+            <dt className="text-content-faint">{t('provider.business.reviewed.vatNumber')}</dt>
+            <dd className="text-content font-mono tabular-nums">{business.vatNumber}</dd>
+          </dl>
+        )}
+        {error && <p role="alert" className="text-sm text-[#EF4444] light:text-red-700">{error}</p>}
+      </div>
+      {isAdmin && (
+        <div className="flex gap-2">
+          <Button size="sm" disabled={approveBlocked} onClick={() => onDecide(a, 'verified', business)}>
+            <CheckCircle className="w-4 h-4 mr-1" /> {t('admin.applications.verify')}
+          </Button>
+          <Button size="sm" variant="ghost" disabled={busy} onClick={() => onDecide(a, 'rejected', business)}>
+            <XCircle className="w-4 h-4 mr-1" /> {t('admin.applications.reject')}
+          </Button>
+        </div>
+      )}
+    </li>
   );
 }

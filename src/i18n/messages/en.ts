@@ -442,6 +442,7 @@ export const enMessages: Messages = {
   'admin.business.convert.confirm': 'Convert',
   'admin.business.convert.success': 'Account converted to an individual.',
   'admin.business.error.reviewRequired': 'A company can only be approved after reviewing its details: open its page and approve from there.',
+  'admin.business.error.reviewRequiredHere': "A company can only be approved after reviewing its details: reload this page and review the company data again.",
   'admin.business.error.staleReview': "The company's data changed since you opened it — review the new details and approve again.",
   'admin.business.error.claimNotFound': 'No account holds this tax id, so there is nothing to release.',
   'admin.business.error.claimInUse': 'The tax id is still used by a pending or approved company: convert it to an individual or change its tax id instead.',
@@ -2196,6 +2197,7 @@ export const enMessages: Messages = {
   'provider.business.reviewed.affiliationNumber': 'Affiliation number',
   'provider.business.reviewed.note': 'These were verified by our team. To change them, contact support.',
   'provider.business.reviewed.notePending': 'Our team is checking these details. To change them, contact support.',
+  'provider.business.reviewed.noteRejected': "Your application was not approved. To find out more or to change these details, contact support.",
   'provider.business.logo.label': 'Logo',
   'provider.business.logo.hint': 'A square JPG or PNG works best. It goes live when you save the business details.',
   'provider.business.logo.upload': 'Upload logo',
@@ -2207,6 +2209,8 @@ export const enMessages: Messages = {
   'provider.business.edit.saved': 'Business details saved.',
   'provider.business.edit.noChanges': 'No changes to save.',
   'provider.business.edit.error': "Your changes couldn't be saved. Try again; if it keeps happening, contact support.",
+  'provider.business.edit.waitUpload': "Wait for the logo upload to finish, then save again.",
+  'provider.business.edit.waitSaving': "Saving…",
   'provider.business.edit.loadError': "The business details couldn't be loaded. Reload the page to try again.",
 
   // ─── applyAsProvider error codes without a form field ───────────────

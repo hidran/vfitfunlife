@@ -437,6 +437,7 @@ export const deMessages: Messages = {
   'admin.business.convert.confirm': 'Umwandeln',
   'admin.business.convert.success': 'Konto in eine Einzelperson umgewandelt.',
   'admin.business.error.reviewRequired': 'Ein Unternehmen kann erst nach Prüfung seiner Daten freigegeben werden: Öffne sein Profil und gib es dort frei.',
+  'admin.business.error.reviewRequiredHere': "Ein Unternehmen kann erst nach Prüfung seiner Daten freigegeben werden: Lade diese Seite neu und prüfe die Unternehmensdaten noch einmal.",
   'admin.business.error.staleReview': 'Die Unternehmensdaten haben sich geändert, seit du sie geöffnet hast – prüfe die neuen Angaben und gib erneut frei.',
   'admin.business.error.claimNotFound': 'Kein Konto hat diese P.IVA registriert – es gibt nichts freizugeben.',
   'admin.business.error.claimInUse': 'Die P.IVA wird noch von einem ausstehenden oder freigegebenen Unternehmen verwendet: Wandle es in eine Einzelperson um oder ändere seine P.IVA.',
@@ -2177,6 +2178,7 @@ export const deMessages: Messages = {
   'provider.business.reviewed.affiliationNumber': 'Verbandsnummer',
   'provider.business.reviewed.note': 'Diese Angaben wurden von unserem Team geprüft. Um sie zu ändern, wende dich an den Support.',
   'provider.business.reviewed.notePending': 'Unser Team prüft diese Angaben gerade. Um sie zu ändern, wende dich an den Support.',
+  'provider.business.reviewed.noteRejected': "Deine Anmeldung wurde nicht freigegeben. Für weitere Informationen oder um diese Angaben zu ändern, wende dich an den Support.",
   'provider.business.logo.label': 'Logo',
   'provider.business.logo.hint': 'Am besten ein quadratisches Bild als JPG oder PNG. Es wird veröffentlicht, wenn du die Angaben speicherst.',
   'provider.business.logo.upload': 'Logo hochladen',
@@ -2188,6 +2190,8 @@ export const deMessages: Messages = {
   'provider.business.edit.saved': 'Angaben zur Organisation gespeichert.',
   'provider.business.edit.noChanges': 'Keine Änderungen zum Speichern.',
   'provider.business.edit.error': 'Die Änderungen konnten nicht gespeichert werden. Versuche es erneut; wenn das Problem bleibt, wende dich an den Support.',
+  'provider.business.edit.waitUpload': "Warte, bis das Logo fertig hochgeladen ist, und speichere dann erneut.",
+  'provider.business.edit.waitSaving': "Wird gespeichert…",
   'provider.business.edit.loadError': 'Die Angaben zur Organisation konnten nicht geladen werden. Lade die Seite neu, um es erneut zu versuchen.',
 
   // ─── applyAsProvider error codes without a form field ───────────────

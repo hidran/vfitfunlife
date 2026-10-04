@@ -1,4 +1,5 @@
 import type { BusinessDetails, BusinessLegalForm } from '@/types/firebase';
+import { BUSINESS_LEGAL_FORMS } from '@/lib/businessDetails';
 
 /**
  * Defensive reader for the `business` map of a public `instructors/{id}` document.
@@ -13,8 +14,6 @@ import type { BusinessDetails, BusinessLegalForm } from '@/types/firebase';
  * fields are present only when they have the right type, and `website`/`logoUrl` only when
  * they are http(s) URLs.
  */
-
-const LEGAL_FORMS: readonly BusinessLegalForm[] = ['company', 'sole_trader', 'association', 'other'];
 
 /** `value` when it is a string URL with an http(s) scheme, else undefined. Re-check at render time. */
 export function safeHttpUrl(value: unknown): string | undefined {
@@ -51,7 +50,7 @@ export function readBusinessDetails(raw: unknown): BusinessDetails | undefined {
   if (logoUrl) out.logoUrl = logoUrl;
   const city = text(b.city);
   if (city) out.city = city;
-  if (typeof b.legalForm === 'string' && (LEGAL_FORMS as readonly string[]).includes(b.legalForm)) {
+  if (typeof b.legalForm === 'string' && (BUSINESS_LEGAL_FORMS as readonly string[]).includes(b.legalForm)) {
     out.legalForm = b.legalForm as BusinessLegalForm;
   }
   const affiliationNumber = text(b.affiliationNumber);

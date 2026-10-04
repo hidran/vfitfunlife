@@ -97,6 +97,27 @@ describe('company accounts in fetchProviders', () => {
     expect(p.business?.displayName).toBe('Acme');
   });
 
+  it('exposes only the public subset of the business map, never the legal fields', async () => {
+    getDocs.mockResolvedValueOnce({
+      docs: [
+        doc('biz', {
+          business: {
+            legalName: 'L Srl',
+            vatNumber: '12345678903',
+            legalForm: 'company',
+            affiliationNumber: 'AFF-1',
+            displayName: 'Acme',
+            city: 'Milano',
+            website: 'https://acme.example',
+          },
+        }),
+      ],
+    });
+    const [p] = await fetchProviders({ limit: 5 });
+    expect(p.business).toEqual({ displayName: 'Acme', city: 'Milano', website: 'https://acme.example' });
+    expect(JSON.stringify(p)).not.toMatch(/12345678903|L Srl|AFF-1/);
+  });
+
   it('ignores providerType and malformed business maps; individuals gain no keys', async () => {
     getDocs.mockResolvedValueOnce({
       docs: [

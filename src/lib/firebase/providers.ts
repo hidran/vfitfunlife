@@ -20,7 +20,7 @@ import type {
   ActivityKind,
 } from '@/types/instructor';
 import type { ProviderApplicationStatus } from '@/types/firebase';
-import { readBusinessDetails } from '@/lib/publicBusiness';
+import { readBusinessDetails, toPublicBusiness } from '@/lib/publicBusiness';
 
 /**
  * Normalizes the various shapes /instructors documents take in this app's data —
@@ -63,7 +63,7 @@ function flattenProvider(id: string, data: Record<string, unknown>): Provider {
     categoryIds: (data.categoryIds as string[]) ?? undefined,
     requestedCategoryIds: (data.requestedCategoryIds as string[]) ?? undefined,
     ...(business
-      ? { isBusiness: true, business, ...(business.logoUrl ? { logoUrl: business.logoUrl } : {}) }
+      ? { isBusiness: true, business: toPublicBusiness(business), ...(business.logoUrl ? { logoUrl: business.logoUrl } : {}) }
       : {}),
   };
 }
