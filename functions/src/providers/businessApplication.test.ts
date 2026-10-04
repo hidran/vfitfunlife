@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { HttpsError } from "firebase-functions/v2/https";
 import {
   BUSINESS_FIELD_LIMITS,
+  assertNotExistingBusiness,
   buildBusinessInstructorPatch,
   claimBusinessVat,
   isExistingBusiness,
@@ -262,8 +263,11 @@ describe("buildBusinessInstructorPatch", () => {
 
 describe("isExistingBusiness", () => {
   it("is true when either the user or the instructors doc already says business", () => {
+    // users/{uid}.providerType is the reliable signal: it is in neither isValidUserCreate nor
+    // isValidUserUpdate in firestore.rules, so only this callable can set or clear it.
     expect(isExistingBusiness({ providerType: "business" }, {})).toBe(true);
-    // users/{uid} is owner-writable, so the instructors doc's map is what cannot be faked away.
+    // The instructors map counts too, but until B4 locks it the owner can still create, edit
+    // or remove instructors.business from the client — it is a secondary signal only.
     expect(isExistingBusiness({}, { business: { displayName: "Karate Club Milano" } })).toBe(true);
   });
 
@@ -274,46 +278,169 @@ describe("isExistingBusiness", () => {
   });
 });
 
+describe("assertNotExistingBusiness", () => {
+  it("refuses an individual (re-)application on an account that is already a business", () => {
+    // Used by applyAsProvider and, against its own reads, by commitProviderDecision's
+    // self-apply path — the second check is what closes the concurrent individual/business race.
+    expectHttpsError(
+      () => assertNotExistingBusiness({ providerType: "business" }, {}),
+      "failed-precondition",
+      "business_account_exists",
+    );
+    expectHttpsError(
+      () => assertNotExistingBusiness({}, { business: { vatNumber: "12345678903" } }),
+      "failed-precondition",
+      "business_account_exists",
+    );
+  });
+
+  it("lets everyone else through", () => {
+    expect(() => assertNotExistingBusiness(undefined, undefined)).not.toThrow();
+    expect(() => assertNotExistingBusiness({ providerType: "individual" }, { name: "Mario Rossi" })).not.toThrow();
+  });
+});
+
 describe("claimBusinessVat", () => {
   const NOW = { sentinel: "serverTimestamp" };
-  const REF = { path: "businessVat/12345678903" };
+  const OWNER = "owner-1";
+  const NEW_VAT = "12345678903";
+  const OLD_VAT = "00743110157";
 
-  function fakeTransaction(existing?: Record<string, unknown>) {
-    const created: Array<{ ref: unknown; data: Record<string, unknown> }> = [];
-    const reads: unknown[] = [];
+  type Ref = { path: string };
+  const claimRef = (vat: string): Ref => ({ path: `businessVat/${vat}` });
+
+  /** A transaction over an in-memory set of claims, recording every operation in order. */
+  function fakeTransaction(claims: Record<string, Record<string, unknown>> = {}) {
+    const ops: Array<[op: "get" | "create" | "delete", path: string, data?: Record<string, unknown>]> = [];
     return {
-      created,
-      reads,
+      ops,
+      writes: () => ops.filter(([op]) => op !== "get"),
       tx: {
-        get: async (ref: typeof REF) => {
-          reads.push(ref);
-          return { exists: existing !== undefined, data: () => existing };
+        get: async (ref: Ref) => {
+          ops.push(["get", ref.path]);
+          const data = claims[ref.path];
+          return { exists: data !== undefined, data: () => data };
         },
-        create: (ref: typeof REF, data: Record<string, unknown>) => {
-          created.push({ ref, data });
+        create: (ref: Ref, data: Record<string, unknown>) => {
+          ops.push(["create", ref.path, data]);
+        },
+        delete: (ref: Ref) => {
+          ops.push(["delete", ref.path]);
         },
       },
     };
   }
 
+  function instructorWith(vatNumber: string, extra: Record<string, unknown> = {}) {
+    return {
+      applicationStatus: "pending",
+      providerProfile: { isVerified: false },
+      business: { legalName: "Karate Club Milano S.r.l.", vatNumber, displayName: "Karate Club Milano" },
+      ...extra,
+    };
+  }
+
+  function claim(
+    tx: ReturnType<typeof fakeTransaction>["tx"],
+    instructor: Record<string, unknown> | undefined,
+    vatNumber = NEW_VAT,
+  ) {
+    return claimBusinessVat(tx, { uid: OWNER, vatNumber, instructor, claimRef, now: NOW });
+  }
+
+  /** No read may follow a write: Firestore transactions need every read first. */
+  function expectReadsBeforeWrites(ops: Array<[string, string, unknown?]>) {
+    const firstWrite = ops.findIndex(([op]) => op !== "get");
+    if (firstWrite === -1) return;
+    expect(ops.slice(firstWrite).filter(([op]) => op === "get")).toEqual([]);
+  }
+
   it("creates the claim for an unclaimed P.IVA", async () => {
-    const { tx, created, reads } = fakeTransaction();
-    await expect(claimBusinessVat(tx, REF, "owner-1", NOW)).resolves.toBe("claimed");
-    expect(reads).toEqual([REF]);
-    expect(created).toEqual([{ ref: REF, data: { uid: "owner-1", createdAt: NOW } }]);
+    const { tx, ops } = fakeTransaction();
+    await expect(claim(tx, undefined)).resolves.toEqual({ claim: "claimed", released: null });
+    expect(ops).toEqual([
+      ["get", `businessVat/${NEW_VAT}`],
+      ["create", `businessVat/${NEW_VAT}`, { uid: OWNER, createdAt: NOW }],
+    ]);
   });
 
   it("refuses a P.IVA already claimed by another account", async () => {
-    const { tx, created } = fakeTransaction({ uid: "someone-else", createdAt: "earlier" });
-    const result = claimBusinessVat(tx, REF, "owner-1", NOW);
+    const { tx, writes } = fakeTransaction({ [`businessVat/${NEW_VAT}`]: { uid: "someone-else" } });
+    const result = claim(tx, undefined);
     await expect(result).rejects.toBeInstanceOf(HttpsError);
     await expect(result).rejects.toMatchObject({ code: "already-exists", message: "vat_already_registered" });
-    expect(created).toEqual([]);
+    expect(writes()).toEqual([]);
   });
 
-  it("lets the same account re-apply without error and leaves its claim as it is", async () => {
-    const { tx, created } = fakeTransaction({ uid: "owner-1", createdAt: "earlier" });
-    await expect(claimBusinessVat(tx, REF, "owner-1", NOW)).resolves.toBe("already-yours");
-    expect(created).toEqual([]);
+  it("lets the same account re-apply with the same P.IVA and leaves its claim as it is", async () => {
+    for (const instructor of [
+      undefined,
+      instructorWith(NEW_VAT),
+      instructorWith(NEW_VAT, { applicationStatus: "verified", providerProfile: { isVerified: true } }),
+    ]) {
+      const { tx, writes } = fakeTransaction({ [`businessVat/${NEW_VAT}`]: { uid: OWNER } });
+      await expect(claim(tx, instructor)).resolves.toEqual({ claim: "already-yours", released: null });
+      expect(writes()).toEqual([]);
+    }
+  });
+
+  it("moves a pending business to its new P.IVA, releasing the old claim in the same transaction", async () => {
+    const { tx, ops, writes } = fakeTransaction({ [`businessVat/${OLD_VAT}`]: { uid: OWNER } });
+    await expect(claim(tx, instructorWith(OLD_VAT))).resolves.toEqual({ claim: "claimed", released: OLD_VAT });
+    expect(writes()).toEqual([
+      ["delete", `businessVat/${OLD_VAT}`],
+      ["create", `businessVat/${NEW_VAT}`, { uid: OWNER, createdAt: NOW }],
+    ]);
+    expectReadsBeforeWrites(ops);
+  });
+
+  it("treats a rejected business like a pending one — nothing was ever verified", async () => {
+    const { tx, writes } = fakeTransaction({ [`businessVat/${OLD_VAT}`]: { uid: OWNER } });
+    await expect(claim(tx, instructorWith(OLD_VAT, { applicationStatus: "rejected" })))
+      .resolves.toEqual({ claim: "claimed", released: OLD_VAT });
+    expect(writes().map(([op, path]) => [op, path])).toEqual([
+      ["delete", `businessVat/${OLD_VAT}`],
+      ["create", `businessVat/${NEW_VAT}`],
+    ]);
+  });
+
+  it("never releases an old claim that belongs to someone else", async () => {
+    // Until B4, the owner can edit instructors.business.vatNumber from the client; pointing it
+    // at another company's P.IVA must not let a re-apply delete that company's claim.
+    const { tx, writes } = fakeTransaction({ [`businessVat/${OLD_VAT}`]: { uid: "someone-else" } });
+    await expect(claim(tx, instructorWith(OLD_VAT))).resolves.toEqual({ claim: "claimed", released: null });
+    expect(writes()).toEqual([["create", `businessVat/${NEW_VAT}`, { uid: OWNER, createdAt: NOW }]]);
+  });
+
+  it("does not delete an old claim that no longer exists", async () => {
+    const { tx, writes } = fakeTransaction();
+    await expect(claim(tx, instructorWith(OLD_VAT))).resolves.toEqual({ claim: "claimed", released: null });
+    expect(writes()).toEqual([["create", `businessVat/${NEW_VAT}`, { uid: OWNER, createdAt: NOW }]]);
+  });
+
+  it("keeps the old claim when the new P.IVA belongs to someone else", async () => {
+    const { tx, writes } = fakeTransaction({
+      [`businessVat/${OLD_VAT}`]: { uid: OWNER },
+      [`businessVat/${NEW_VAT}`]: { uid: "someone-else" },
+    });
+    await expect(claim(tx, instructorWith(OLD_VAT))).rejects.toMatchObject({
+      code: "already-exists",
+      message: "vat_already_registered",
+    });
+    expect(writes()).toEqual([]);
+  });
+
+  it("refuses to change the P.IVA of an approved business (D6: admin-owned after approval)", async () => {
+    for (const instructor of [
+      instructorWith(OLD_VAT, { applicationStatus: "verified", providerProfile: { isVerified: true } }),
+      // A legacy doc without applicationStatus still counts as approved by its flag.
+      instructorWith(OLD_VAT, { applicationStatus: undefined, providerProfile: { isVerified: true } }),
+    ]) {
+      const { tx, writes } = fakeTransaction({ [`businessVat/${OLD_VAT}`]: { uid: OWNER } });
+      const result = claim(tx, instructor);
+      await expect(result).rejects.toBeInstanceOf(HttpsError);
+      await expect(result).rejects.toMatchObject({ code: "failed-precondition", message: "vat_change_not_allowed" });
+      expect(writes()).toEqual([]);
+    }
   });
 });

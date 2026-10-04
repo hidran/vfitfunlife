@@ -116,10 +116,16 @@ export function parseProviderType(raw: unknown): ProviderType {
 }
 
 /**
- * Whether this account is already a business — then it may only re-apply as one. Checks both
- * documents: `users/{uid}.providerType` is owner-writable, while the instructors doc's
- * `business` map is written only by this callable, so it cannot be cleared to slip a company
- * through the individual (auto-approvable) path.
+ * Whether this account is already a business — then it may only re-apply as one.
+ *
+ * `users/{uid}.providerType` is the signal this relies on: the owner CANNOT write it (it is in
+ * neither isValidUserCreate nor isValidUserUpdate in firestore.rules), so only this callable
+ * sets it and a company cannot clear it to slip through the individual (auto-approvable) path.
+ * The guard is safe because of that users-side rule.
+ *
+ * The instructors doc's `business` map is checked too, but today it is only a secondary
+ * signal: until task B4 locks it, the owner can create, edit or remove `instructors.business`
+ * from the client.
  */
 export function isExistingBusiness(
   user: Record<string, unknown> | undefined,
@@ -128,6 +134,21 @@ export function isExistingBusiness(
   if (user?.providerType === "business") return true;
   const business = instructor?.business;
   return !!business && typeof business === "object";
+}
+
+/**
+ * Refuse an individual (re-)application from an account that is already a business: it would
+ * otherwise be auto-approved and listed without its P.IVA being checked (D2), or have its
+ * company name replaced by a person's. applyAsProvider checks this up front, and
+ * commitProviderDecision checks it again against its own reads on the self-apply path.
+ */
+export function assertNotExistingBusiness(
+  user: Record<string, unknown> | undefined,
+  instructor: Record<string, unknown> | undefined,
+): void {
+  if (isExistingBusiness(user, instructor)) {
+    throw new HttpsError("failed-precondition", "business_account_exists");
+  }
 }
 
 /**
@@ -154,30 +175,72 @@ export function buildBusinessInstructorPatch(business: BusinessDetails): {
 export interface VatClaimTransaction<Ref> {
   get(ref: Ref): Promise<{ exists: boolean; data(): Record<string, unknown> | undefined }>;
   create(ref: Ref, data: Record<string, unknown>): unknown;
+  delete(ref: Ref): unknown;
+}
+
+/** Approved by either signal — applicationStatus, or the flag legacy docs carry alone. */
+function isApproved(instructor: Record<string, unknown>): boolean {
+  const profile = instructor.providerProfile as Record<string, unknown> | undefined;
+  return instructor.applicationStatus === "verified" || profile?.isVerified === true;
 }
 
 /**
- * Claim a P.IVA for `uid` inside the caller's transaction (decision D5: one business per
- * P.IVA). Must run before the transaction's other writes — Firestore needs every read first.
+ * Claim `vatNumber` for `uid` inside the caller's transaction (decision D5: one business per
+ * P.IVA). Performs only reads until every check has passed, then only writes, so the caller
+ * can follow it with its own writes — Firestore needs every read first.
  *
- * - unclaimed ⇒ creates `{ uid, createdAt }` and returns "claimed";
- * - claimed by this same account ⇒ an idempotent re-apply: returns "already-yours" and leaves
- *   the claim as it is;
- * - claimed by anyone else ⇒ `already-exists` / `vat_already_registered`.
+ * `instructor` is the caller's instructors doc as read in this SAME transaction (undefined if
+ * none); its `business.vatNumber` is the P.IVA the account currently holds.
  *
- * Rejection does not release a claim; an admin frees one from the back office (B8).
+ * - unclaimed ⇒ creates `{ uid, createdAt }`;
+ * - claimed by this same account ⇒ an idempotent re-apply: the claim is left as it is;
+ * - claimed by anyone else ⇒ `already-exists` / `vat_already_registered`;
+ * - a different P.IVA than the one already held: an approved business is refused with
+ *   `failed-precondition` / `vat_change_not_allowed` (D6: legalName/vatNumber are admin-owned
+ *   after approval); a pending or rejected one moves, and the old claim is released in the
+ *   same transaction — only if that claim is this account's, since until B4 the owner can
+ *   edit `instructors.business.vatNumber` and point it at someone else's P.IVA. Without the
+ *   release, one account could hold any number of P.IVAs by re-applying.
+ *
+ * Rejection itself does not release a claim; an admin frees one from the back office (B8).
  */
 export async function claimBusinessVat<Ref>(
   tx: VatClaimTransaction<Ref>,
-  ref: Ref,
-  uid: string,
-  now: unknown,
-): Promise<"claimed" | "already-yours"> {
-  const snap = await tx.get(ref);
-  if (snap.exists) {
-    if (snap.data()?.uid === uid) return "already-yours";
+  opts: {
+    uid: string;
+    vatNumber: string;
+    instructor: Record<string, unknown> | undefined;
+    claimRef: (vatNumber: string) => Ref;
+    now: unknown;
+  },
+): Promise<{ claim: "claimed" | "already-yours"; released: string | null }> {
+  const { uid, vatNumber, instructor, claimRef, now } = opts;
+
+  const held = (instructor?.business as Record<string, unknown> | undefined)?.vatNumber;
+  const previousVat = typeof held === "string" && held && held !== vatNumber ? held : null;
+  if (previousVat && instructor && isApproved(instructor)) {
+    throw new HttpsError("failed-precondition", "vat_change_not_allowed");
+  }
+
+  // Reads.
+  const newRef = claimRef(vatNumber);
+  const newClaim = await tx.get(newRef);
+  const oldRef = previousVat ? claimRef(previousVat) : null;
+  const oldClaim = oldRef ? await tx.get(oldRef) : null;
+
+  // Checks.
+  const newOwner = newClaim.exists ? newClaim.data()?.uid : undefined;
+  if (newClaim.exists && newOwner !== uid) {
     throw new HttpsError("already-exists", "vat_already_registered");
   }
-  tx.create(ref, { uid, createdAt: now });
-  return "claimed";
+  const releaseOld = !!(oldRef && oldClaim?.exists && oldClaim.data()?.uid === uid);
+
+  // Writes.
+  if (releaseOld && oldRef) tx.delete(oldRef);
+  if (!newClaim.exists) tx.create(newRef, { uid, createdAt: now });
+
+  return {
+    claim: newClaim.exists ? "already-yours" : "claimed",
+    released: releaseOld ? previousVat : null,
+  };
 }

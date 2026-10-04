@@ -1,7 +1,10 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+import { HttpsError } from "firebase-functions/v2/https";
 import {
   decisionInstructorPatch,
   draftServicesForCategories,
+  retryOnceOnConcurrentUpdate,
+  toConcurrentUpdateError,
   instructorVerificationPatch,
   needsDefaultHours,
   pendingApplicationPatches,
@@ -147,13 +150,14 @@ describe("instructorVerificationPatch", () => {
 });
 
 describe("pendingApplicationPatches", () => {
-  it("queues an individual exactly as before business accounts existed", () => {
+  it("queues a first-time individual exactly as before business accounts existed", () => {
     expect(
       pendingApplicationPatches({
         uid: "u1",
         applicantName: "Mario Rossi",
         requestedLeaves: ["hiit"],
         now: NOW,
+        instructorExists: false,
       }),
     ).toEqual({
       instructor: {
@@ -179,6 +183,7 @@ describe("pendingApplicationPatches", () => {
       requestedLeaves: ["hiit"],
       now: NOW,
       business: COMPANY,
+      instructorExists: false,
     });
 
     expect(instructor).toEqual({
@@ -206,7 +211,7 @@ describe("pendingApplicationPatches", () => {
   it("seeds nothing that would make a pending applicant bookable", () => {
     for (const business of [undefined, COMPANY]) {
       const { instructor } = pendingApplicationPatches({
-        uid: "u3", applicantName: null, requestedLeaves: [], now: NOW, business,
+        uid: "u3", applicantName: null, requestedLeaves: [], now: NOW, business, instructorExists: false,
       });
       expect(instructor).not.toHaveProperty("availabilitySchedule");
       expect(instructor.providerProfile).toMatchObject({ isVerified: false });
@@ -217,11 +222,78 @@ describe("pendingApplicationPatches", () => {
     // The instructors write is set(..., { merge: true }), which stores a dotted key as a
     // literal field name instead of a nested path.
     for (const business of [undefined, COMPANY]) {
-      const patches = pendingApplicationPatches({
-        uid: "u4", applicantName: "Mario Rossi", requestedLeaves: ["hiit"], now: NOW, business,
-      });
-      expect(dottedKeys(patches)).toEqual([]);
+      for (const instructorExists of [true, false]) {
+        const patches = pendingApplicationPatches({
+          uid: "u4", applicantName: "Mario Rossi", requestedLeaves: ["hiit"], now: NOW, business, instructorExists,
+        });
+        expect(dottedKeys(patches)).toEqual([]);
+      }
     }
+  });
+
+  it("a re-apply keeps the profile's bio, rating, review count and createdAt", () => {
+    // set(merge) merges providerProfile field by field, so writing only isVerified leaves the
+    // rest of an existing profile alone; the defaults are for a brand-new document only.
+    for (const business of [undefined, COMPANY]) {
+      const { instructor } = pendingApplicationPatches({
+        uid: "u5", applicantName: "Mario Rossi", requestedLeaves: ["hiit"], now: NOW, business, instructorExists: true,
+      });
+      expect(instructor.providerProfile).toEqual({ isVerified: false });
+      expect(instructor).not.toHaveProperty("createdAt");
+      expect(instructor).toMatchObject({ applicationStatus: "pending", updatedAt: NOW, requestedCategoryIds: ["hiit"] });
+    }
+  });
+});
+
+describe("toConcurrentUpdateError", () => {
+  it("turns a failed write precondition (gRPC 9) into a retryable, client-mappable error", () => {
+    const mapped = toConcurrentUpdateError(Object.assign(new Error("FAILED_PRECONDITION: stale"), { code: 9 }));
+    expect(mapped).toBeInstanceOf(HttpsError);
+    expect(mapped).toMatchObject({ code: "aborted", message: "concurrent_update" });
+  });
+
+  it("passes every other error through untouched", () => {
+    const others = [
+      Object.assign(new Error("not found"), { code: 5 }),
+      new Error("boom"),
+      new HttpsError("failed-precondition", "business_account_exists"),
+      "a string",
+    ];
+    for (const err of others) {
+      expect(toConcurrentUpdateError(err)).toBe(err);
+    }
+  });
+});
+
+describe("retryOnceOnConcurrentUpdate", () => {
+  const concurrent = () => new HttpsError("aborted", "concurrent_update");
+
+  it("runs the work once when it succeeds", async () => {
+    const work = vi.fn().mockResolvedValue("ok");
+    await expect(retryOnceOnConcurrentUpdate(work)).resolves.toBe("ok");
+    expect(work).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-runs the work once after a concurrent update, so it re-reads and re-checks", async () => {
+    const work = vi.fn().mockRejectedValueOnce(concurrent()).mockResolvedValueOnce("ok");
+    await expect(retryOnceOnConcurrentUpdate(work)).resolves.toBe("ok");
+    expect(work).toHaveBeenCalledTimes(2);
+  });
+
+  it("gives up after the second concurrent update and reports it", async () => {
+    const work = vi.fn().mockRejectedValue(concurrent());
+    await expect(retryOnceOnConcurrentUpdate(work)).rejects.toMatchObject({
+      code: "aborted",
+      message: "concurrent_update",
+    });
+    expect(work).toHaveBeenCalledTimes(2);
+  });
+
+  it("never retries any other error", async () => {
+    const err = new HttpsError("failed-precondition", "business_account_exists");
+    const work = vi.fn().mockRejectedValue(err);
+    await expect(retryOnceOnConcurrentUpdate(work)).rejects.toBe(err);
+    expect(work).toHaveBeenCalledTimes(1);
   });
 });
 

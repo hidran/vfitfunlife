@@ -1,11 +1,15 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue, type DocumentReference } from "firebase-admin/firestore";
 import { commitProviderDecision } from "./commitDecision";
-import { draftServicesForCategories, pendingApplicationPatches } from "./applicationDecision";
+import {
+  draftServicesForCategories,
+  pendingApplicationPatches,
+  retryOnceOnConcurrentUpdate,
+} from "./applicationDecision";
 import {
   BUSINESS_VAT_COLLECTION,
+  assertNotExistingBusiness,
   claimBusinessVat,
-  isExistingBusiness,
   parseProviderType,
   validateBusinessInput,
 } from "./businessApplication";
@@ -68,9 +72,11 @@ async function readOnboardingSettings(): Promise<ProviderOnboardingSettings> {
  * A company (`providerType: 'business'`) always takes the pending branch, whatever the
  * setting (decision D2: someone checks the P.IVA first). Its details are validated
  * (validateBusinessInput), its P.IVA is claimed in `businessVat/{vat}` — one business per
- * P.IVA (D5) — and the claim, the instructors doc and the user doc are written in one
- * transaction, so a refused claim writes nothing. Errors carry stable codes as messages
- * (`invalid_vat`, `vat_already_registered`, ...) for the client to localise.
+ * P.IVA (D5), a pending company moving to a new P.IVA releases its old claim, an approved one
+ * cannot change it (D6) — and the claim, the instructors doc and the user doc are written in
+ * one transaction, so a refused claim writes nothing. Errors carry stable codes as messages
+ * (`invalid_vat`, `vat_already_registered`, `vat_change_not_allowed`, ...) for the client to
+ * localise; `aborted` / `concurrent_update` means "lost a race, try again".
  *
  * Either way this has to be a callable. firestore.rules lets a user create only an
  * *unverified, pending* instructors document and never lets them write
@@ -118,25 +124,32 @@ export const applyAsProvider = onCall<ApplyAsProviderData>(
 
     // A company re-applying as an individual would otherwise be auto-approved (and listed
     // without its P.IVA ever being checked), or have its company name replaced by a person's.
-    if (providerType !== "business" && isExistingBusiness(caller, instructorSnap.data())) {
-      throw new HttpsError("failed-precondition", "business_account_exists");
+    // These reads may already be stale; commitProviderDecision re-checks on its own reads and
+    // guards its write, which is what actually closes a concurrent individual/business race.
+    if (providerType !== "business") {
+      assertNotExistingBusiness(caller, instructorSnap.data());
     }
 
     if (shouldAutoApprove(settings, providerType)) {
-      const { draftServicesSeeded } = await commitProviderDecision({
-        providerId: callerUid,
-        decision: "verified",
-        actor: {
-          uid: callerUid,
-          email: (caller.email as string) ?? req.auth?.token?.email ?? "",
-          // Their own role, which at signup is `customer` and maps to the audit
-          // vocabulary's 'client'. The audit entry therefore never claims an admin acted;
-          // the reason below is what marks the row as an auto-approval.
-          role: (caller.role as string) ?? "customer",
-        },
-        notes: "Auto-approved at signup",
-        application: { requestedCategoryIds: categoryIds, fullName: applicantName },
-      });
+      // One retry on `concurrent_update`: right after signup the admin-index trigger writes
+      // users/{uid} too, which trips the commit's lastUpdateTime guard for no real reason. The
+      // retry re-reads and re-checks, so a genuine business race is still refused.
+      const { draftServicesSeeded } = await retryOnceOnConcurrentUpdate(() =>
+        commitProviderDecision({
+          providerId: callerUid,
+          decision: "verified",
+          actor: {
+            uid: callerUid,
+            email: (caller.email as string) ?? req.auth?.token?.email ?? "",
+            // Their own role, which at signup is `customer` and maps to the audit
+            // vocabulary's 'client'. The audit entry therefore never claims an admin acted;
+            // the reason below is what marks the row as an auto-approval.
+            role: (caller.role as string) ?? "customer",
+          },
+          notes: "Auto-approved at signup",
+          application: { requestedCategoryIds: categoryIds, fullName: applicantName },
+        })
+      );
       return { success: true, providerId: callerUid, autoApproved: true, draftServicesSeeded };
     }
 
@@ -149,25 +162,41 @@ export const applyAsProvider = onCall<ApplyAsProviderData>(
     ).map((d) => d.data.categoryId);
 
     const now = FieldValue.serverTimestamp();
-    const patches = pendingApplicationPatches({
-      uid: callerUid,
-      applicantName,
-      requestedLeaves,
-      now,
-      business,
-    });
 
     if (business) {
-      // One transaction: the P.IVA claim is read and created first (Firestore wants every
-      // read before any write), then the profile. A refused claim therefore writes nothing,
-      // and two accounts racing for the same P.IVA cannot both win.
-      const vatRef = db.collection(BUSINESS_VAT_COLLECTION).doc(business.vatNumber);
+      // One transaction, every read first (Firestore requires it): the instructors doc — to
+      // know which P.IVA the account already holds and whether it is approved — then the
+      // claims; only then the writes. A refused claim therefore writes nothing, two accounts
+      // racing for the same P.IVA cannot both win, and the users/{uid} write is what makes a
+      // concurrent individual auto-approval fail its precondition.
       await db.runTransaction(async (tx) => {
-        await claimBusinessVat<DocumentReference>(tx, vatRef, callerUid, now);
+        const current = await tx.get(instructorRef);
+        await claimBusinessVat<DocumentReference>(tx, {
+          uid: callerUid,
+          vatNumber: business.vatNumber,
+          instructor: current.data(),
+          claimRef: (vat) => db.collection(BUSINESS_VAT_COLLECTION).doc(vat),
+          now,
+        });
+        const patches = pendingApplicationPatches({
+          uid: callerUid,
+          applicantName,
+          requestedLeaves,
+          now,
+          business,
+          instructorExists: current.exists,
+        });
         tx.set(instructorRef, patches.instructor, { merge: true });
         tx.update(userRef, patches.user);
       });
     } else {
+      const patches = pendingApplicationPatches({
+        uid: callerUid,
+        applicantName,
+        requestedLeaves,
+        now,
+        instructorExists: instructorSnap.exists,
+      });
       const batch = db.batch();
       batch.set(instructorRef, patches.instructor, { merge: true });
       batch.update(userRef, patches.user);

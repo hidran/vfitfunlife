@@ -206,7 +206,7 @@ the same on prod with a throwaway P.IVA claim removed afterwards.
 
 - 2026-10-04 — Plan written after the design was approved ("go for C"). No tasks started.
 - 2026-10-04 — B1 done (2bf6bcd); B2 done (types + schema docs) (dbd5665).
-- 2026-10-04 — B3 done (this commit). Pure pieces in `businessApplication.ts` (validateBusinessInput,
+- 2026-10-04 — B3 done (6d056c7). Pure pieces in `businessApplication.ts` (validateBusinessInput,
   claimBusinessVat, parseProviderType, isExistingBusiness), `shouldAutoApprove` in onboardingSettings,
   `pendingApplicationPatches`/`decisionInstructorPatch` in applicationDecision. Error codes for B5:
   `invalid_vat`, `invalid_business`, `invalid_business_name`, `invalid_website`,
@@ -214,3 +214,11 @@ the same on prod with a throwaway P.IVA claim removed afterwards.
   `vat_already_registered`, `business_account_exists` (an existing business re-applying as an
   individual is refused, else it would be auto-approved unchecked). `description`/`city` are stored
   as "" and `website` as null when empty, so a re-apply through set(merge) replaces stale values.
+- 2026-10-04 — B3 review fixes (this commit). D2 race closed: commitProviderDecision's self-apply
+  path re-checks `business_account_exists` on its own reads and guards its users/{uid} write with
+  `lastUpdateTime`; a stale write maps to `aborted`/`concurrent_update`, which applyAsProvider retries
+  once (the admin-index trigger also writes users/{uid} right after signup). P.IVA squatting closed: the
+  business transaction reads the instructors doc first; a pending/rejected company moving to a new
+  P.IVA releases its own old claim, an approved one gets `vat_change_not_allowed` (D6). A re-apply no
+  longer resets bio/rating/reviewCount/createdAt. Handler-level tests with a mocked firebase-admin for
+  applyAsProvider and commitProviderDecision.

@@ -1,3 +1,4 @@
+import { HttpsError } from "firebase-functions/v2/https";
 import { SERVICE_CATEGORY_TREE, buildLabelIndex, foldLabel, withAncestors } from "../categories/tree";
 import { normalizeAvailability } from "../ai/search/normalize";
 import { DEFAULT_WEEKLY_HOURS } from "../availability/slots";
@@ -136,6 +137,10 @@ export function instructorVerificationPatch(verified: boolean): {
  * A business additionally gets its `business` map (nested — the instructors write is
  * set(merge)), its public name as `name`/`fullName`, and `providerType: 'business'` on the
  * user. An individual gets no `providerType` at all: absent already means individual.
+ *
+ * The profile defaults (bio, rating, reviewCount) and createdAt are written only for a new
+ * document: on a re-apply, set(merge) merges `providerProfile` field by field, so writing just
+ * `isVerified` leaves an existing bio, rating and review count — and createdAt — alone.
  */
 export function pendingApplicationPatches<Now>(opts: {
   uid: string;
@@ -144,11 +149,13 @@ export function pendingApplicationPatches<Now>(opts: {
   /** FieldValue.serverTimestamp() in production; only passed through. */
   now: Now;
   business?: BusinessDetails | null;
+  /** Whether instructors/{uid} already exists (read by the caller). */
+  instructorExists: boolean;
 }): {
   instructor: Record<string, unknown>;
   user: { providerStatus: "pending"; providerType?: "business"; updatedAt: Now };
 } {
-  const { uid, applicantName, requestedLeaves, now, business } = opts;
+  const { uid, applicantName, requestedLeaves, now, business, instructorExists } = opts;
   return {
     instructor: {
       uid,
@@ -156,9 +163,11 @@ export function pendingApplicationPatches<Now>(opts: {
       fullName: applicantName,
       isActive: true,
       requestedCategoryIds: requestedLeaves,
-      providerProfile: { isVerified: false, bio: "", rating: 0, reviewCount: 0 },
+      providerProfile: instructorExists ?
+        { isVerified: false } :
+        { isVerified: false, bio: "", rating: 0, reviewCount: 0 },
       applicationStatus: "pending",
-      createdAt: now,
+      ...(instructorExists ? {} : { createdAt: now }),
       updatedAt: now,
       ...(business ? buildBusinessInstructorPatch(business) : {}),
     },
@@ -230,4 +239,37 @@ export function decisionInstructorPatch(opts: {
     patch.availabilitySchedule = DEFAULT_WEEKLY_HOURS;
   }
   return patch;
+}
+
+/** gRPC status code 9: FAILED_PRECONDITION — what a write's `lastUpdateTime` guard fails with. */
+const FAILED_PRECONDITION = 9;
+
+/**
+ * Map a commit that failed its `lastUpdateTime` precondition — the document changed after it
+ * was read, e.g. a concurrent business application — to a clean, retryable
+ * `aborted` / `concurrent_update` instead of letting it surface as `internal`. Any other error
+ * is returned unchanged.
+ */
+export function toConcurrentUpdateError(err: unknown): unknown {
+  const code = err && typeof err === "object" ? (err as { code?: unknown }).code : undefined;
+  return code === FAILED_PRECONDITION ? new HttpsError("aborted", "concurrent_update") : err;
+}
+
+function isConcurrentUpdate(err: unknown): boolean {
+  return err instanceof HttpsError && err.code === "aborted" && err.message === "concurrent_update";
+}
+
+/**
+ * Run `work` and, if it lost a race (`concurrent_update`), run it once more. The second run
+ * re-reads everything and re-checks every guard, so a benign concurrent write (the admin-index
+ * trigger touching users/{uid} right after signup) just succeeds, while a real conflict (a
+ * concurrent business application) is refused by the guard on the re-read.
+ */
+export async function retryOnceOnConcurrentUpdate<T>(work: () => Promise<T>): Promise<T> {
+  try {
+    return await work();
+  } catch (err) {
+    if (!isConcurrentUpdate(err)) throw err;
+    return work();
+  }
 }

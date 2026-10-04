@@ -682,19 +682,24 @@ export async function updateAiAuthoringSettings(patch: Partial<AiAuthoringSettin
 // --- Provider applications ---
 
 /**
- * A user opts in as a professional and is approved immediately — role 'provider', default
- * Mon-Fri hours and a draft service per chosen category, all in one server-side write
- * (functions/src/providers/applyAsProvider.ts).
+ * A user opts in as a professional (functions/src/providers/applyAsProvider.ts). What happens
+ * next depends on the back office's `systemSettings/providerOnboarding.autoApprove`:
+ *
+ * - ON (the default), for an individual: approved on the spot — role 'provider', default
+ *   Mon-Fri hours and a draft service per chosen category, in one server-side write
+ *   (`autoApproved: true`).
+ * - OFF, or for a company (`providerType: 'business'`, which is never auto-approved): stored as
+ *   a pending application for an admin to decide in /admin/providers (`autoApproved: false`).
  *
  * It cannot be done from the client: firestore.rules lets a user create only an unverified,
  * pending instructors document and never lets them set `providerProfile.isVerified`.
  *
- * A company passes `providerType: 'business'` and `business`; it is always queued for review
- * (never auto-approved). Failures carry a stable code as the error message for the UI to
- * localise: `invalid_vat`, `invalid_business`, `invalid_business_name`, `invalid_website`,
+ * Failures carry a stable code as the error message for the UI to localise: `invalid_vat`,
+ * `invalid_business`, `invalid_business_name`, `invalid_website`,
  * `invalid_business_description`, `invalid_business_city`, `invalid_provider_type`,
- * `vat_already_registered` (P.IVA claimed by another account) and `business_account_exists`
- * (a company re-applying as an individual).
+ * `vat_already_registered` (P.IVA claimed by another account), `vat_change_not_allowed` (an
+ * approved company re-applying with a different P.IVA), `business_account_exists` (a company
+ * re-applying as an individual) and `concurrent_update` (lost a race — safe to retry).
  */
 export async function applyAsProvider(data: {
   categoryIds: string[];
@@ -710,11 +715,17 @@ export async function applyAsProvider(data: {
     website?: string;
     city?: string;
   };
-}): Promise<{ success: boolean; providerId: string; draftServicesSeeded: number }> {
+}): Promise<{
+  success: boolean;
+  providerId: string;
+  /** True when approved on the spot; false when queued for review. */
+  autoApproved?: boolean;
+  draftServicesSeeded: number;
+}> {
   const functions = await getFunctionsInstance();
   const fn = httpsCallable<
     typeof data,
-    { success: boolean; providerId: string; draftServicesSeeded: number }
+    { success: boolean; providerId: string; autoApproved?: boolean; draftServicesSeeded: number }
   >(functions, "applyAsProvider");
   return (await fn(data)).data;
 }

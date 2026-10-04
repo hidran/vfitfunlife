@@ -6,7 +6,9 @@ import {
   decisionInstructorPatch,
   draftServicesForCategories,
   providerRolePatch,
+  toConcurrentUpdateError,
 } from "./applicationDecision";
+import { assertNotExistingBusiness } from "./businessApplication";
 import { isProtectedSuperadmin } from "../lib/superadmins";
 
 /** Who the audit entry should name as responsible for the decision. */
@@ -25,6 +27,11 @@ export interface CommitDecisionOptions {
    * Present when the caller is applying for themselves. Carries what the signup form
    * collected, so the instructor document is created in the same write that approves it
    * rather than in a separate client batch the rules would (rightly) refuse to verify.
+   *
+   * This self-apply path never verifies a business (D2): it refuses an account its own reads
+   * show to be a business, and its users/{uid} write carries a `lastUpdateTime` precondition
+   * so a business application committed after those reads makes it fail
+   * (`aborted` / `concurrent_update`) instead of being overwritten.
    */
   application?: { requestedCategoryIds: string[]; fullName?: string | null };
 }
@@ -61,6 +68,13 @@ export async function commitProviderDecision(
     throw new HttpsError("permission-denied", "Cannot modify a protected superadmin account");
   }
 
+  // Self-apply only: applyAsProvider checked this too, but on its own (possibly stale) reads.
+  // A business application racing this one may have committed since; these reads are what the
+  // batch below is guarded against (lastUpdateTime), so checking them closes the gap.
+  if (application) {
+    assertNotExistingBusiness(user, instructor);
+  }
+
   const now = FieldValue.serverTimestamp();
   const verified = decision === "verified";
   const batch = db.batch();
@@ -73,7 +87,7 @@ export async function commitProviderDecision(
     ) :
     null;
 
-  batch.update(userRef, {
+  const userPatch = {
     "providerStatus": decision,
     "isVerified": verified,
     "providerProfile.isVerified": verified,
@@ -82,7 +96,14 @@ export async function commitProviderDecision(
     "verificationNotes": notes ?? null,
     "updatedAt": now,
     ...(rolePatch ?? {}),
-  });
+  };
+  if (application && userSnap.updateTime) {
+    // The business transaction in applyAsProvider always writes users/{uid}, so if one
+    // committed after our read this fails rather than verifying the company unreviewed.
+    batch.update(userRef, userPatch, { lastUpdateTime: userSnap.updateTime });
+  } else {
+    batch.update(userRef, userPatch);
+  }
 
   const locale = (user.preferredLanguage as string) ?? "it";
   // Validate through the draft builder: it keeps only known taxonomy leaves, so an applicant
@@ -147,7 +168,11 @@ export async function commitProviderDecision(
     ...(notes ? { reason: notes } : {}),
   }));
 
-  await batch.commit();
+  try {
+    await batch.commit();
+  } catch (err) {
+    throw toConcurrentUpdateError(err);
+  }
 
   return { draftServicesSeeded: seeded };
 }
