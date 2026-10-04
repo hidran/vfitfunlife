@@ -1,11 +1,20 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { getFirestore, FieldValue, type DocumentReference } from "firebase-admin/firestore";
 import { commitProviderDecision } from "./commitDecision";
-import { draftServicesForCategories } from "./applicationDecision";
+import { draftServicesForCategories, pendingApplicationPatches } from "./applicationDecision";
+import {
+  BUSINESS_VAT_COLLECTION,
+  claimBusinessVat,
+  isExistingBusiness,
+  parseProviderType,
+  validateBusinessInput,
+} from "./businessApplication";
+import type { ProviderType } from "./businessTypes";
 import {
   PROVIDER_ONBOARDING_DOC,
   ProviderOnboardingSettings,
   mergeProviderOnboarding,
+  shouldAutoApprove,
 } from "./onboardingSettings";
 import { hotCallableOptions } from "../lib/runtimeOptions";
 import { cachedDocRead } from "../lib/cachedDoc";
@@ -13,6 +22,17 @@ import { cachedDocRead } from "../lib/cachedDoc";
 interface ApplyAsProviderData {
   categoryIds: string[];
   fullName?: string;
+  /** Absent ⇒ 'individual', which behaves exactly as before business accounts. */
+  providerType?: ProviderType;
+  /** Required when providerType is 'business'; ignored otherwise. See validateBusinessInput. */
+  business?: {
+    legalName: string;
+    vatNumber: string;
+    displayName?: string;
+    description?: string;
+    website?: string;
+    city?: string;
+  };
 }
 
 /**
@@ -45,6 +65,13 @@ async function readOnboardingSettings(): Promise<ProviderOnboardingSettings> {
  * - `autoApprove: false` — the application is stored as pending and waits for an admin to
  *   decide in /admin/providers. Nothing is listed publicly until they do.
  *
+ * A company (`providerType: 'business'`) always takes the pending branch, whatever the
+ * setting (decision D2: someone checks the P.IVA first). Its details are validated
+ * (validateBusinessInput), its P.IVA is claimed in `businessVat/{vat}` — one business per
+ * P.IVA (D5) — and the claim, the instructors doc and the user doc are written in one
+ * transaction, so a refused claim writes nothing. Errors carry stable codes as messages
+ * (`invalid_vat`, `vat_already_registered`, ...) for the client to localise.
+ *
  * Either way this has to be a callable. firestore.rules lets a user create only an
  * *unverified, pending* instructors document and never lets them write
  * `providerProfile.isVerified` or `applicationStatus` — correct, since that flag is what
@@ -75,16 +102,27 @@ export const applyAsProvider = onCall<ApplyAsProviderData>(
     if (categoryIds.length > 30) {
       throw new HttpsError("invalid-argument", "Too many categories");
     }
+    const providerType = parseProviderType(req.data?.providerType);
+    const business = providerType === "business" ? validateBusinessInput(req.data?.business) : null;
 
     const db = getFirestore();
-    const [settings, callerSnap] = await Promise.all([
+    const userRef = db.collection("users").doc(callerUid);
+    const instructorRef = db.collection("instructors").doc(callerUid);
+    const [settings, callerSnap, instructorSnap] = await Promise.all([
       readOnboardingSettings(),
-      db.collection("users").doc(callerUid).get(),
+      userRef.get(),
+      instructorRef.get(),
     ]);
     const caller = callerSnap.data() ?? {};
     const applicantName = fullName ?? (caller.fullName as string) ?? null;
 
-    if (settings.autoApprove) {
+    // A company re-applying as an individual would otherwise be auto-approved (and listed
+    // without its P.IVA ever being checked), or have its company name replaced by a person's.
+    if (providerType !== "business" && isExistingBusiness(caller, instructorSnap.data())) {
+      throw new HttpsError("failed-precondition", "business_account_exists");
+    }
+
+    if (shouldAutoApprove(settings, providerType)) {
       const { draftServicesSeeded } = await commitProviderDecision({
         providerId: callerUid,
         decision: "verified",
@@ -111,27 +149,30 @@ export const applyAsProvider = onCall<ApplyAsProviderData>(
     ).map((d) => d.data.categoryId);
 
     const now = FieldValue.serverTimestamp();
-    const batch = db.batch();
-    batch.set(
-      db.collection("instructors").doc(callerUid),
-      {
-        uid: callerUid,
-        name: applicantName,
-        fullName: applicantName,
-        isActive: true,
-        requestedCategoryIds: requestedLeaves,
-        providerProfile: { isVerified: false, bio: "", rating: 0, reviewCount: 0 },
-        applicationStatus: "pending",
-        createdAt: now,
-        updatedAt: now,
-      },
-      { merge: true }
-    );
-    batch.update(db.collection("users").doc(callerUid), {
-      providerStatus: "pending",
-      updatedAt: now,
+    const patches = pendingApplicationPatches({
+      uid: callerUid,
+      applicantName,
+      requestedLeaves,
+      now,
+      business,
     });
-    await batch.commit();
+
+    if (business) {
+      // One transaction: the P.IVA claim is read and created first (Firestore wants every
+      // read before any write), then the profile. A refused claim therefore writes nothing,
+      // and two accounts racing for the same P.IVA cannot both win.
+      const vatRef = db.collection(BUSINESS_VAT_COLLECTION).doc(business.vatNumber);
+      await db.runTransaction(async (tx) => {
+        await claimBusinessVat<DocumentReference>(tx, vatRef, callerUid, now);
+        tx.set(instructorRef, patches.instructor, { merge: true });
+        tx.update(userRef, patches.user);
+      });
+    } else {
+      const batch = db.batch();
+      batch.set(instructorRef, patches.instructor, { merge: true });
+      batch.update(userRef, patches.user);
+      await batch.commit();
+    }
 
     return { success: true, providerId: callerUid, autoApproved: false, draftServicesSeeded: 0 };
   },

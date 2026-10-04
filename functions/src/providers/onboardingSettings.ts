@@ -6,6 +6,8 @@
  * means — is testable on its own.
  */
 
+import type { ProviderType } from "./businessTypes";
+
 export const PROVIDER_ONBOARDING_DOC = "systemSettings/providerOnboarding";
 
 export interface ProviderOnboardingSettings {
@@ -43,6 +45,20 @@ export function mergeProviderOnboarding(
         stored.autoApprove :
         DEFAULT_PROVIDER_ONBOARDING.autoApprove,
   };
+}
+
+/**
+ * Whether this application is approved on the spot.
+ *
+ * A business never is, whatever the setting (decision D2 of the business-accounts plan):
+ * someone has to check the P.IVA before a company is listed publicly. For an individual the
+ * setting decides, exactly as before business accounts existed.
+ */
+export function shouldAutoApprove(
+  settings: ProviderOnboardingSettings,
+  providerType: ProviderType
+): boolean {
+  return providerType !== "business" && settings.autoApprove;
 }
 
 /** Thrown for a payload the caller could fix by sending something else. */

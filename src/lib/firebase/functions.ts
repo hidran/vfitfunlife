@@ -8,7 +8,7 @@ import type {
   AiProviderId,
   ResultCard,
 } from "@/types/assistant";
-import type { BookingStatus, PaymentConfirmationMethod } from "@/types/firebase";
+import type { BookingStatus, PaymentConfirmationMethod, ProviderType } from "@/types/firebase";
 
 // Type definitions for function responses
 interface BookingResult {
@@ -688,10 +688,28 @@ export async function updateAiAuthoringSettings(patch: Partial<AiAuthoringSettin
  *
  * It cannot be done from the client: firestore.rules lets a user create only an unverified,
  * pending instructors document and never lets them set `providerProfile.isVerified`.
+ *
+ * A company passes `providerType: 'business'` and `business`; it is always queued for review
+ * (never auto-approved). Failures carry a stable code as the error message for the UI to
+ * localise: `invalid_vat`, `invalid_business`, `invalid_business_name`, `invalid_website`,
+ * `invalid_business_description`, `invalid_business_city`, `invalid_provider_type`,
+ * `vat_already_registered` (P.IVA claimed by another account) and `business_account_exists`
+ * (a company re-applying as an individual).
  */
 export async function applyAsProvider(data: {
   categoryIds: string[];
   fullName?: string;
+  /** Absent ⇒ 'individual'. */
+  providerType?: ProviderType;
+  /** Required when `providerType` is 'business'. `displayName` defaults to `legalName`. */
+  business?: {
+    legalName: string;
+    vatNumber: string;
+    displayName?: string;
+    description?: string;
+    website?: string;
+    city?: string;
+  };
 }): Promise<{ success: boolean; providerId: string; draftServicesSeeded: number }> {
   const functions = await getFunctionsInstance();
   const fn = httpsCallable<

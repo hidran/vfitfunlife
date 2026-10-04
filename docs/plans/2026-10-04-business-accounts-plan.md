@@ -92,7 +92,7 @@ token and booking screen shows the company name with no further change.
   `docs/database-schema.md` (users, instructors, new `businessVat`).
 - **Done when:** `tsc` clean; schema doc describes the three additions and the read/write access of each.
 
-### B3 `[ ]` `applyAsProvider` accepts a business (Large)
+### B3 `[x]` `applyAsProvider` accepts a business (Large)
 - Files: `functions/src/providers/applyAsProvider.ts`, `commitDecision.ts`, `applicationDecision.ts`,
   `src/lib/firebase/functions.ts` (typed wrapper), tests beside each.
 - Input: `providerType?: 'individual'|'business'`, `business?: {legalName, vatNumber, displayName,
@@ -205,4 +205,12 @@ the same on prod with a throwaway P.IVA claim removed afterwards.
 ## 6. Log
 
 - 2026-10-04 — Plan written after the design was approved ("go for C"). No tasks started.
-- 2026-10-04 — B1 done (2bf6bcd); B2 done (types + schema docs) (this commit).
+- 2026-10-04 — B1 done (2bf6bcd); B2 done (types + schema docs) (dbd5665).
+- 2026-10-04 — B3 done (this commit). Pure pieces in `businessApplication.ts` (validateBusinessInput,
+  claimBusinessVat, parseProviderType, isExistingBusiness), `shouldAutoApprove` in onboardingSettings,
+  `pendingApplicationPatches`/`decisionInstructorPatch` in applicationDecision. Error codes for B5:
+  `invalid_vat`, `invalid_business`, `invalid_business_name`, `invalid_website`,
+  `invalid_business_description`, `invalid_business_city`, `invalid_provider_type`,
+  `vat_already_registered`, `business_account_exists` (an existing business re-applying as an
+  individual is refused, else it would be auto-approved unchecked). `description`/`city` are stored
+  as "" and `website` as null when empty, so a re-apply through set(merge) replaces stale values.

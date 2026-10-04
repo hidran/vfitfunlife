@@ -3,12 +3,10 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getDefaultPermissionsForRole } from "../utils/roles";
 import { auditLogData, auditLogDoc, toActorRole } from "../lib/audit";
 import {
+  decisionInstructorPatch,
   draftServicesForCategories,
-  instructorVerificationPatch,
-  needsDefaultHours,
   providerRolePatch,
 } from "./applicationDecision";
-import { DEFAULT_WEEKLY_HOURS } from "../availability/slots";
 import { isProtectedSuperadmin } from "../lib/superadmins";
 
 /** Who the audit entry should name as responsible for the decision. */
@@ -86,18 +84,6 @@ export async function commitProviderDecision(
     ...(rolePatch ?? {}),
   });
 
-  // Approval also makes them bookable immediately: default Mon-Fri 09:00-17:00 hours if
-  // they have none yet (never overwrites hours already set — e.g. a re-approval, or hours
-  // saved between application and decision). availabilityUpdatedAt is deliberately not
-  // stamped, so the dashboard still nudges the provider to review the default.
-  const instructorPatch: Record<string, unknown> = {
-    "applicationStatus": decision,
-    // Nested map, never the dotted path — see instructorVerificationPatch. This patch is
-    // applied with set(..., { merge: true }) below, which does not resolve dotted keys.
-    ...instructorVerificationPatch(verified),
-    "updatedAt": now,
-  };
-
   const locale = (user.preferredLanguage as string) ?? "it";
   // Validate through the draft builder: it keeps only known taxonomy leaves, so an applicant
   // cannot store a group id or an invented one as something they offer.
@@ -107,28 +93,28 @@ export async function commitProviderDecision(
     ) :
     ((instructor.requestedCategoryIds as string[] | undefined) ?? []);
 
-  if (application) {
-    instructorPatch.requestedCategoryIds = requestedLeaves;
-    if (application.fullName) {
-      instructorPatch.name = application.fullName;
-      instructorPatch.fullName = application.fullName;
-    }
-  }
-
-  if (!instructorSnap.exists) {
-    // A provider created from the admin panel (or one predating the catalogue) has no
-    // instructors document at all, and that document is what makes them bookable and
-    // searchable. Deciding used to be impossible for them through the callable and a
-    // no-op through the admin panel's own write — so create the entry here rather than
-    // refusing a decision the admin is entitled to make.
-    instructorPatch.uid = providerId;
-    instructorPatch.fullName = application?.fullName ?? user.fullName ?? null;
-    instructorPatch.isActive = true;
-    instructorPatch.createdAt = now;
-  }
-  if (verified && needsDefaultHours(instructor)) {
-    instructorPatch.availabilitySchedule = DEFAULT_WEEKLY_HOURS;
-  }
+  // Built by decisionInstructorPatch (pure, tested): nested maps only, because this is
+  // applied with set(..., { merge: true }), which does not resolve dotted keys.
+  //
+  // - A provider created from the admin panel (or one predating the catalogue) has no
+  //   instructors document at all, and that document is what makes them bookable and
+  //   searchable — so the entry is created here rather than refusing a decision the admin is
+  //   entitled to make.
+  // - Approval also makes them bookable immediately: default Mon-Fri 09:00-17:00 hours if
+  //   they have none yet (never overwrites hours already set — e.g. a re-approval, or hours
+  //   saved between application and decision). availabilityUpdatedAt is deliberately not
+  //   stamped, so the dashboard still nudges the provider to review the default.
+  // - A business keeps its company name and its `business` map on approval and rejection.
+  const instructorPatch = decisionInstructorPatch({
+    providerId,
+    decision,
+    instructorExists: instructorSnap.exists,
+    instructor,
+    userFullName: user.fullName,
+    application,
+    requestedLeaves,
+    now,
+  });
   batch.set(instructorRef, instructorPatch, { merge: true });
 
   let seeded = 0;

@@ -1,11 +1,35 @@
 import { describe, it, expect } from "vitest";
 import {
+  decisionInstructorPatch,
   draftServicesForCategories,
   instructorVerificationPatch,
   needsDefaultHours,
+  pendingApplicationPatches,
   resolveLegacySpecialties,
   providerRolePatch,
 } from "./applicationDecision";
+import { validateBusinessInput } from "./businessApplication";
+import { DEFAULT_WEEKLY_HOURS } from "../availability/slots";
+
+/** Stands in for FieldValue.serverTimestamp(); the builders only pass it through. */
+const NOW = { sentinel: "serverTimestamp" };
+
+/** Every key, at any depth, whose name contains a dot. */
+function dottedKeys(value: unknown, path = ""): string[] {
+  if (Array.isArray(value)) return value.flatMap((v, i) => dottedKeys(v, `${path}${i}/`));
+  if (!value || typeof value !== "object") return [];
+  return Object.entries(value).flatMap(([k, v]) => [
+    ...(k.includes(".") ? [`${path}${k}`] : []),
+    ...dottedKeys(v, `${path}${k}/`),
+  ]);
+}
+
+const COMPANY = validateBusinessInput({
+  legalName: "Karate Club Milano S.r.l.",
+  vatNumber: "IT 12345678903",
+  displayName: "Karate Club Milano",
+  city: "Milano",
+});
 
 describe("draftServicesForCategories", () => {
   it("builds one inactive, unpriced draft per requested leaf, named in the provider's locale", () => {
@@ -118,6 +142,220 @@ describe("instructorVerificationPatch", () => {
     for (const verified of [true, false]) {
       const keys = Object.keys(instructorVerificationPatch(verified));
       expect(keys.some((k) => k.includes("."))).toBe(false);
+    }
+  });
+});
+
+describe("pendingApplicationPatches", () => {
+  it("queues an individual exactly as before business accounts existed", () => {
+    expect(
+      pendingApplicationPatches({
+        uid: "u1",
+        applicantName: "Mario Rossi",
+        requestedLeaves: ["hiit"],
+        now: NOW,
+      }),
+    ).toEqual({
+      instructor: {
+        uid: "u1",
+        name: "Mario Rossi",
+        fullName: "Mario Rossi",
+        isActive: true,
+        requestedCategoryIds: ["hiit"],
+        providerProfile: { isVerified: false, bio: "", rating: 0, reviewCount: 0 },
+        applicationStatus: "pending",
+        createdAt: NOW,
+        updatedAt: NOW,
+      },
+      // No providerType: absent already means individual, and nothing else changes.
+      user: { providerStatus: "pending", updatedAt: NOW },
+    });
+  });
+
+  it("queues a business under its public name, with the details nested and the account typed", () => {
+    const { instructor, user } = pendingApplicationPatches({
+      uid: "u2",
+      applicantName: "Mario Rossi",
+      requestedLeaves: ["hiit"],
+      now: NOW,
+      business: COMPANY,
+    });
+
+    expect(instructor).toEqual({
+      uid: "u2",
+      name: "Karate Club Milano",
+      fullName: "Karate Club Milano",
+      isActive: true,
+      requestedCategoryIds: ["hiit"],
+      providerProfile: { isVerified: false, bio: "", rating: 0, reviewCount: 0 },
+      applicationStatus: "pending",
+      createdAt: NOW,
+      updatedAt: NOW,
+      business: {
+        legalName: "Karate Club Milano S.r.l.",
+        vatNumber: "12345678903",
+        displayName: "Karate Club Milano",
+        description: "",
+        website: null,
+        city: "Milano",
+      },
+    });
+    expect(user).toEqual({ providerStatus: "pending", providerType: "business", updatedAt: NOW });
+  });
+
+  it("seeds nothing that would make a pending applicant bookable", () => {
+    for (const business of [undefined, COMPANY]) {
+      const { instructor } = pendingApplicationPatches({
+        uid: "u3", applicantName: null, requestedLeaves: [], now: NOW, business,
+      });
+      expect(instructor).not.toHaveProperty("availabilitySchedule");
+      expect(instructor.providerProfile).toMatchObject({ isVerified: false });
+    }
+  });
+
+  it("uses no dotted key at any depth in either write", () => {
+    // The instructors write is set(..., { merge: true }), which stores a dotted key as a
+    // literal field name instead of a nested path.
+    for (const business of [undefined, COMPANY]) {
+      const patches = pendingApplicationPatches({
+        uid: "u4", applicantName: "Mario Rossi", requestedLeaves: ["hiit"], now: NOW, business,
+      });
+      expect(dottedKeys(patches)).toEqual([]);
+    }
+  });
+});
+
+describe("decisionInstructorPatch", () => {
+  const companyInstructor = {
+    uid: "biz",
+    name: "Karate Club Milano",
+    fullName: "Karate Club Milano",
+    business: COMPANY,
+    applicationStatus: "pending",
+    providerProfile: { isVerified: false, bio: "", rating: 0, reviewCount: 0 },
+  };
+
+  it("approving a business keeps the company name, even when an applicant name is passed", () => {
+    const patch = decisionInstructorPatch({
+      providerId: "biz",
+      decision: "verified",
+      instructorExists: true,
+      instructor: companyInstructor,
+      userFullName: "Mario Rossi",
+      application: { requestedCategoryIds: ["hiit"], fullName: "Mario Rossi" },
+      requestedLeaves: ["hiit"],
+      now: NOW,
+    });
+    expect(patch).not.toHaveProperty("name");
+    expect(patch).not.toHaveProperty("fullName");
+    expect(patch).toMatchObject({ applicationStatus: "verified", providerProfile: { isVerified: true } });
+  });
+
+  it("an admin approving or rejecting a business leaves its name and business details untouched", () => {
+    for (const decision of ["verified", "rejected"] as const) {
+      const patch = decisionInstructorPatch({
+        providerId: "biz",
+        decision,
+        instructorExists: true,
+        instructor: companyInstructor,
+        userFullName: "Mario Rossi",
+        requestedLeaves: [],
+        now: NOW,
+      });
+      expect(patch).not.toHaveProperty("name");
+      expect(patch).not.toHaveProperty("fullName");
+      expect(patch).not.toHaveProperty("business");
+      expect(patch.applicationStatus).toBe(decision);
+    }
+  });
+
+  it("still names an individual after their application, as before", () => {
+    const patch = decisionInstructorPatch({
+      providerId: "u1",
+      decision: "verified",
+      instructorExists: true,
+      instructor: { name: "Old Name", availabilitySchedule: DEFAULT_WEEKLY_HOURS },
+      userFullName: "Ignored",
+      application: { requestedCategoryIds: ["hiit", "strength_conditioning"], fullName: "Mario Rossi" },
+      requestedLeaves: ["hiit"],
+      now: NOW,
+    });
+    expect(patch).toEqual({
+      applicationStatus: "verified",
+      providerProfile: { isVerified: true },
+      updatedAt: NOW,
+      requestedCategoryIds: ["hiit"],
+      name: "Mario Rossi",
+      fullName: "Mario Rossi",
+    });
+  });
+
+  it("does not touch the name when the application carries none", () => {
+    const patch = decisionInstructorPatch({
+      providerId: "u1",
+      decision: "verified",
+      instructorExists: true,
+      instructor: { name: "Mario Rossi", availabilitySchedule: DEFAULT_WEEKLY_HOURS },
+      userFullName: "Mario Rossi",
+      application: { requestedCategoryIds: [], fullName: null },
+      requestedLeaves: [],
+      now: NOW,
+    });
+    expect(patch).not.toHaveProperty("name");
+    expect(patch).not.toHaveProperty("fullName");
+  });
+
+  it("creates the catalogue entry for a provider without an instructors doc, as before", () => {
+    expect(
+      decisionInstructorPatch({
+        providerId: "admin-made",
+        decision: "verified",
+        instructorExists: false,
+        instructor: {},
+        userFullName: "Giulia Bianchi",
+        requestedLeaves: [],
+        now: NOW,
+      }),
+    ).toEqual({
+      applicationStatus: "verified",
+      providerProfile: { isVerified: true },
+      updatedAt: NOW,
+      uid: "admin-made",
+      fullName: "Giulia Bianchi",
+      isActive: true,
+      createdAt: NOW,
+      availabilitySchedule: DEFAULT_WEEKLY_HOURS,
+    });
+  });
+
+  it("seeds default hours on approval only, and never over existing hours", () => {
+    const base = {
+      providerId: "u1", instructorExists: true, userFullName: null, requestedLeaves: [], now: NOW,
+    };
+    expect(decisionInstructorPatch({ ...base, decision: "verified", instructor: {} }).availabilitySchedule)
+      .toEqual(DEFAULT_WEEKLY_HOURS);
+    expect(decisionInstructorPatch({ ...base, decision: "rejected", instructor: {} }))
+      .not.toHaveProperty("availabilitySchedule");
+    const own = [{ dayOfWeek: 6, startTime: "10:00", endTime: "12:00", isAvailable: true }];
+    expect(decisionInstructorPatch({ ...base, decision: "verified", instructor: { availabilitySchedule: own } }))
+      .not.toHaveProperty("availabilitySchedule");
+  });
+
+  it("uses no dotted key at any depth", () => {
+    for (const decision of ["verified", "rejected"] as const) {
+      for (const instructorExists of [true, false]) {
+        const patch = decisionInstructorPatch({
+          providerId: "biz",
+          decision,
+          instructorExists,
+          instructor: instructorExists ? companyInstructor : {},
+          userFullName: "Mario Rossi",
+          application: { requestedCategoryIds: ["hiit"], fullName: "Mario Rossi" },
+          requestedLeaves: ["hiit"],
+          now: NOW,
+        });
+        expect(dottedKeys(patch)).toEqual([]);
+      }
     }
   });
 });
