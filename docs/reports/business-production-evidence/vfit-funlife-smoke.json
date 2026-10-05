@@ -1,0 +1,14 @@
+{
+  "project": "vfit-funlife",
+  "checks": [
+    "Business signup remains pending; VAT claim belongs to owner",
+    "Core route renders: /",
+    "Core route renders: /booking/",
+    "Core route renders: /bookings/",
+    "Core route renders: /chat/",
+    "Core route renders: /profile/"
+  ],
+  "status": "PASS",
+  "cleanup": "VERIFIED",
+  "runtimeErrors": []
+}

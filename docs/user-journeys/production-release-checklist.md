@@ -1,0 +1,13 @@
+# Production release test checklist
+
+Use https://vfit-funlife.web.app in a fresh browser window, then repeat the key screens on a phone (320–390px). Use test accounts and a tax ID you are entitled to use; remove the test company, bookings and VAT claim afterward. Do not make an unintended real payment.
+
+1. **Access and navigation:** log in as a customer, individual provider and admin; open search, bookings, chat and profile. Customers must not reach administration. Refresh a deep link and confirm it stays on the expected screen.
+2. **Company signup:** choose professional → “Azienda o associazione”. Try a missing/invalid P.IVA: show a clear error and focus the field. Submit valid Italian legal details and category: company must remain pending even when automatic approval is enabled. A second company with the same P.IVA must be refused.
+3. **Approval:** admin sees a pending company, its legal name, P.IVA, legal form and affiliation. In provider detail, select “Verifica” only after reviewing them. Badge and actions must update immediately. Test rejection with a separate test applicant. Admin detail tabs must fit the phone screen.
+4. **Company editing:** before approval check permitted corrections; after approval the owner can change display name, logo, description, website and location, but cannot change legal name or P.IVA. Reload and confirm display changes persist.
+5. **Search and booking:** approved company appears with its business badge and display name. Create one test service, price and available slot. Customer finds it, requests a booking, provider confirms, customer reschedules and cancels. Both sides show the same date/status; occupied slots are not double-bookable.
+6. **Individual regression:** individual professional signup still follows the existing approval setting. Service creation/edit/deletion, availability, recipes and profile saves still work. Send a message between the test customer and provider, then reload both sides.
+7. **Presentation:** Italian and one other language; light/dark; phone and desktop. Check signup errors, company profile, admin tabs and long emails for clipping. Test keyboard focus, labels and validation without a mouse.
+8. **Optional integration checks:** OAuth login; verification email/SMS; notifications; completed-session receipt/review and payment flow. Use a deliberate test setup for payments, because production charges are real. These are additional checks, not implied by a page-render smoke test.
+9. **Cleanup:** cancel/remove synthetic bookings, delete test accounts and messages, and confirm the company P.IVA claim is released. Keep audit history. Record any failures with route, role, screenshot and expected/actual behavior.
