@@ -788,12 +788,15 @@ export async function setPaymentSettings(
   return (await fn(data)).data;
 }
 
-/** What the admin had on screen when approving a company: its tax id and legal name. */
+/** What the admin had on screen when approving a company: its tax id, legal name, legal form and affiliation number. */
 export interface BusinessReview {
   /** As shown — spaces and an `IT` prefix are ignored when compared. */
   vatNumber: string;
   /** As shown — compared trimmed, case-sensitive. */
   legalName: string;
+  /** Omitted only by older clients reviewing default company data. */
+  legalForm?: BusinessLegalForm | null;
+  affiliationNumber?: string;
 }
 
 export interface DecideProviderApplicationRequest {
@@ -814,7 +817,7 @@ export interface DecideProviderApplicationRequest {
  * (functions/src/providers/decideProviderApplication.ts).
  *
  * Approving a company fails with a stable code as the message: `review_required` (no
- * `expectedReview` sent) or `stale_review` (the company's tax id or legal name is no longer what
+ * `expectedReview` sent) or `stale_review` (the company's reviewed legal fields is no longer what
  * was shown — it re-applied, or was converted to an individual): reload the detail view and
  * review it again. A review sent for a provider that is not (any more) a company is also
  * `stale_review`. The company must also hold the claim on its tax id: `claim_missing` (it was

@@ -539,7 +539,7 @@ export async function getPendingVerifications(): Promise<AdminProvider[]> {
  * acting admin are recorded server-side.
  *
  * A company (instructors doc with a `business` map) is approved only with `expectedReview`:
- * the tax id and legal name the admin had on screen. The server refuses with `review_required`
+ * the tax id, legal name, legal form and affiliation number the admin had on screen. The server refuses with `review_required`
  * without it and `stale_review` when they no longer match — the caller reloads and says so.
  * An individual's payload is unchanged.
  */
@@ -552,7 +552,7 @@ export async function verifyProvider(
     providerId,
     decision: "verified",
     ...(data.notes ? { notes: data.notes } : {}),
-    ...(review ? { expectedReview: { vatNumber: review.vatNumber, legalName: review.legalName } } : {}),
+    ...(review ? { expectedReview: { ...review } } : {}),
   });
   await logAdminAction("VERIFY_PROVIDER", `Verified provider ${providerId}`);
 }

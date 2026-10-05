@@ -1049,3 +1049,7 @@ Index: `conversations` — `participantIds` ARRAY_CONTAINS, `lastMessageAt` DESC
 ## Security Rules
 
 See `firestore.rules` file for complete security rules implementation.
+
+### Business account writes
+
+Business account creation, conversion, tax-ID/legal-field changes and verification use server-side, audited callables. Admin and superadmin browser clients may read the legal fields and edit valid display fields, but cannot bypass the tax-ID claim or review checks. `businessVat` remains inaccessible to every browser client.

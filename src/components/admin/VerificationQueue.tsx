@@ -26,7 +26,7 @@ import {
 interface VerificationQueueProps {
   providers: AdminProvider[];
   /**
-   * `expectedReview` is set for a company: the tax id and legal name shown in its expanded
+   * `expectedReview` is set for a company: the tax id, legal name, legal form and affiliation number shown in its expanded
    * row, which the server requires (and compares) to approve it. Undefined for individuals.
    */
   onApprove: (providerId: string, expectedReview?: BusinessReview) => void;

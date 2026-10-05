@@ -31,12 +31,12 @@ describe('verifyProvider (the approve path of every admin screen)', () => {
   it('sends the tax id and legal name the admin saw for a company', async () => {
     await verifyProvider('c1', {
       status: 'verified',
-      expectedReview: { vatNumber: '12345678903', legalName: 'Karate Club Milano S.r.l.' },
+      expectedReview: { vatNumber: '12345678903', legalName: 'Karate Club Milano S.r.l.', legalForm: 'association', affiliationNumber: 'RASD-1' },
     });
     expect(decideProviderApplication.mock.calls[0][0]).toEqual({
       providerId: 'c1',
       decision: 'verified',
-      expectedReview: { vatNumber: '12345678903', legalName: 'Karate Club Milano S.r.l.' },
+      expectedReview: { vatNumber: '12345678903', legalName: 'Karate Club Milano S.r.l.', legalForm: 'association', affiliationNumber: 'RASD-1' },
     });
   });
 

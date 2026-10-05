@@ -779,3 +779,5 @@ the authority where the two disagree.
 - Background check (for certain categories)
 - Manual admin approval
 - Verified badge on profile
+
+Business signup guides: [English](user-journeys/business-signup.md) · [Italiano](user-journeys/business-signup.it.md). Admin browser clients cannot change reviewed legal fields or business approval directly; audited callables preserve the tax-ID claim and review checks.

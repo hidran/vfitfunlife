@@ -24,7 +24,7 @@ vi.mock('firebase/firestore', () => ({
   deleteDoc: (...args: unknown[]) => deleteDoc(...(args as [])),
   getDoc: vi.fn(),
   getDocs: (...args: unknown[]) => getDocs(...(args as [])),
-  query: (...args: unknown[]) => query(...(args as [])),
+  query: (...args: unknown[]) => query(...(args as [unknown, ...unknown[]])),
   where: (...args: unknown[]) => where(...(args as [string, string, unknown])),
   limit: (...args: unknown[]) => limit(...(args as [number])),
 }));

@@ -162,6 +162,22 @@ describe("commitProviderDecision (one transaction)", () => {
       expect(h.read(`businessVat/${VAT}`)).toEqual({ uid: "u1", createdAt: "T0" });
     });
 
+    it.each([
+      { legalForm: "association" },
+      { affiliationNumber: "RASD-new" },
+    ])("rechecks all legal facts when a concurrent update retries approval: %j", async (change) => {
+      let changed = false;
+      h.state.beforeCommit = () => {
+        if (changed) return;
+        changed = true;
+        h.put("instructors/u1", { ...PENDING_COMPANY, business: { ...COMPANY, ...change } });
+      };
+      await expect(approve({ ...REVIEWED, legalForm: "company", affiliationNumber: "" }))
+        .rejects.toMatchObject({ code: "failed-precondition", message: "stale_review" });
+      expect(h.ops).toEqual([]);
+      expect(listed()).toBe(false);
+    });
+
     it("a swapped tax id or legal name is refused with stale_review and nothing is written", async () => {
       for (const expectedReview of [
         { ...REVIEWED, vatNumber: OTHER_VAT },

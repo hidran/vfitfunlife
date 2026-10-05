@@ -326,11 +326,56 @@ describe('instructors/{uid}.business — other callers', () => {
     await assertFails(instructorsAs(f.other).doc(f.owner).update({ 'business.displayName': 'Hijacked' }));
   });
 
-  it('an admin can change the tax id (and anything else)', async () => {
+  it('an admin must use audited callables for reviewed fields and verification', async () => {
     const f = await fixture({ applicationStatus: 'pending' });
     const ref = instructorsAs(f.admin).doc(f.owner);
-    await assertSucceeds(ref.update({ 'business.vatNumber': '12345678903' }));
-    await assertSucceeds(ref.update({ 'business.legalName': 'Karate Club ASD', 'business.legalForm': 'association' }));
+    for (const patch of [
+      { 'business.vatNumber': '12345678903' },
+      { 'business.legalName': 'Karate ASD', 'business.legalForm': 'association' },
+      { 'business.affiliationNumber': 'RASD-2' },
+      { 'providerProfile.isVerified': true },
+      { applicationStatus: 'verified' },
+      { business: firebase.firestore.FieldValue.delete() },
+    ]) await assertFails(ref.update(patch));
+    await assertSucceeds(ref.update({ 'business.city': 'Milano' }));
+    await assertFails(instructorsAs(f.admin).doc(f.individual).update({ business: businessMap() }));
+    await assertFails(instructorsAs(f.admin).doc('new-company').set({ uid: 'new-company', business: businessMap() }));
+    const user = testEnv.authenticatedContext(f.admin).firestore().doc(`users/${f.owner}`);
+    for (const patch of [{ providerType: 'individual' }, { providerStatus: 'verified' }, { isVerified: true }, { 'providerProfile.isVerified': true }]) {
+      await assertFails(user.update(patch));
+    }
+    await assertSucceeds(user.update({ fullName: 'Owner corrected name' }));
+  });
+
+  it('an admin cannot delete a company and recreate it as an approved individual', async () => {
+    const f = await fixture();
+    const ref = instructorsAs(f.admin).doc(f.owner);
+    await assertFails(ref.delete());
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await ctx.firestore().doc(`instructors/${f.owner}`).delete();
+    });
+    await assertFails(ref.set({ uid: f.owner, providerProfile: { isVerified: true }, applicationStatus: 'verified' }));
+    await assertFails(ref.set({ uid: f.owner, providerProfile: { isVerified: false }, applicationStatus: 'pending' }));
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await ctx.firestore().doc(`instructors/${f.owner}`).set({ uid: f.owner, providerProfile: { isVerified: false }, applicationStatus: 'pending' });
+    });
+    await assertFails(ref.update({ 'providerProfile.isVerified': true, applicationStatus: 'verified' }));
+  });
+
+  it('a superadmin browser client also cannot change business legal fields or approval', async () => {
+    const f = await fixture({ applicationStatus: 'pending' });
+    const uid = '7MK6TgATIbhl3BkUksLNdGi7cMg1';
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await ctx.firestore().doc(`users/${uid}`).set({ uid, role: 'superadmin' });
+    });
+    const ref = instructorsAs(uid).doc(f.owner);
+    await assertFails(ref.update({ 'business.vatNumber': '12345678903' }));
+    await assertFails(ref.update({ 'providerProfile.isVerified': true, applicationStatus: 'verified' }));
+    await assertSucceeds(ref.update({ 'business.city': 'Torino' }));
+    const user = testEnv.authenticatedContext(uid).firestore().doc(`users/${f.owner}`);
+    await assertFails(user.update({ providerType: 'individual' }));
+    await assertFails(user.update({ providerStatus: 'verified' }));
+    await assertSucceeds(user.update({ fullName: 'Corrected owner name' }));
   });
 
   it('an individual owner can still update their own instructors doc as before', async () => {

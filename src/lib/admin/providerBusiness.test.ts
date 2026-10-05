@@ -34,7 +34,7 @@ describe('readAdminBusiness', () => {
 
   it('keeps the stored tax id and legal name exactly, so the review matches what is stored', () => {
     const b = readAdminBusiness({ ...COMPANY, legalName: ' Karate Club ', vatNumber: 'IT 12345678903' })!;
-    expect(businessReviewOf(b)).toEqual({ vatNumber: 'IT 12345678903', legalName: ' Karate Club ' });
+    expect(businessReviewOf(b)).toEqual({ vatNumber: 'IT 12345678903', legalName: ' Karate Club ', legalForm: 'association', affiliationNumber: 'CONI-123' });
   });
 
   it('defaults an absent legal form to company (pre-B3b docs) and blanks an unknown one', () => {

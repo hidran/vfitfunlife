@@ -51,7 +51,7 @@ export function readAdminBusiness(raw: unknown): AdminBusiness | null {
   };
 }
 
-/** What the admin approved: the tax id and legal name on screen, exactly as they were read. */
+/** What the admin approved: the tax id, legal name, legal form and affiliation number on screen, exactly as they were read. */
 export function businessReviewOf(business: AdminBusiness): BusinessReview {
-  return { vatNumber: business.vatNumber, legalName: business.legalName };
+  return { vatNumber: business.vatNumber, legalName: business.legalName, legalForm: business.legalForm, affiliationNumber: business.affiliationNumber };
 }

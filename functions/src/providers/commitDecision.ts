@@ -34,7 +34,7 @@ export interface CommitDecisionOptions {
    */
   application?: { requestedCategoryIds: string[]; fullName?: string | null };
   /**
-   * What the admin had on screen: the company's tax id and legal name, a `BusinessReview` (B8).
+   * What the admin had on screen: the company's four reviewed legal fields (BusinessReview, B8).
    * Required to verify a business (`review_required`); when sent it must describe the doc as it
    * is (`stale_review`). See checkBusinessReview. Typed `unknown` because it is untrusted caller
    * input — checkBusinessReview checks its shape.

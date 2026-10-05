@@ -2,6 +2,7 @@ import { HttpsError } from "firebase-functions/v2/https";
 import type { BusinessDetails, BusinessLegalForm } from "./businessTypes";
 import {
   isApproved,
+  BUSINESS_LEGAL_FORMS,
   isExistingBusiness,
   parseAffiliationNumber,
   parseLegalForm,
@@ -24,6 +25,8 @@ import { isValidItalianVat, normalizeVatNumber } from "./vatNumber";
 export interface BusinessReview {
   vatNumber: string;
   legalName: string;
+  legalForm?: BusinessLegalForm | null;
+  affiliationNumber?: string;
 }
 
 /**
@@ -39,8 +42,15 @@ function businessOf(instructor: Record<string, unknown> | undefined): Record<str
 /** `{ vatNumber, legalName }` when `raw` has both as strings, else null. */
 function asReview(raw: unknown): BusinessReview | null {
   if (!raw || typeof raw !== "object") return null;
-  const { vatNumber, legalName } = raw as Record<string, unknown>;
-  return typeof vatNumber === "string" && typeof legalName === "string" ? { vatNumber, legalName } : null;
+  const { vatNumber, legalName, legalForm, affiliationNumber } = raw as Record<string, unknown>;
+  if (typeof vatNumber !== "string" || typeof legalName !== "string" ||
+    (legalForm !== undefined && legalForm !== null && !BUSINESS_LEGAL_FORMS.includes(legalForm as BusinessLegalForm)) ||
+    (affiliationNumber !== undefined && typeof affiliationNumber !== "string")) return null;
+  return {
+    vatNumber, legalName,
+    legalForm: legalForm === undefined ? "company" : legalForm as BusinessLegalForm | null,
+    affiliationNumber: affiliationNumber === undefined ? "" : affiliationNumber,
+  };
 }
 
 /**
@@ -95,7 +105,18 @@ export function checkBusinessReview(opts: {
   const sameVat =
     typeof storedVat === "string" && normalizeVatNumber(storedVat) === normalizeVatNumber(review.vatNumber);
   const sameName = typeof storedName === "string" && storedName.trim() === review.legalName.trim();
-  if (!sameVat || !sameName) throw new HttpsError("failed-precondition", "stale_review");
+  // Older clients may omit these fields only for legacy/default company data.
+  // Non-default reviewed facts always require an explicit matching snapshot.
+  const storedForm = business?.legalForm === undefined ? "company" : business.legalForm;
+  const storedAffiliation = business?.affiliationNumber === undefined ? "" : business.affiliationNumber;
+  if (!BUSINESS_LEGAL_FORMS.includes(storedForm as BusinessLegalForm) || typeof storedAffiliation !== "string") {
+    throw new HttpsError("failed-precondition", "stale_review");
+  }
+  const sameForm = storedForm === review.legalForm;
+  const sameAffiliation = storedAffiliation === review.affiliationNumber;
+  if (!sameVat || !sameName || !sameForm || !sameAffiliation) {
+    throw new HttpsError("failed-precondition", "stale_review");
+  }
 
   if (!verified) return null;
   if (typeof storedVat !== "string" || !isValidItalianVat(storedVat)) {

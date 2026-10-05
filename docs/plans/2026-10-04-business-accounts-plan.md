@@ -224,13 +224,13 @@ registration. Optional fields only — no existing behaviour changes.
   affiliation number and approve it; approval makes it appear in search; release, convert and
   tax-id-change actions work and are audited.
 
-### B9 `[ ]` i18n, accessibility, docs (Small)
+### B9 `[x]` i18n, accessibility, docs (Small)
 - All new keys in it/en/es/fr/de, `completeness.test.ts` green; labels tied to inputs, errors announced
   (`aria-live`), focus moves to the first error.
 - Docs: `docs/features.md` (business accounts), `docs/backend/cloud-functions.md` (new input of
   `applyAsProvider`, `releaseBusinessVat`), user-journey guide for business signup in it and en.
 
-### B10 `[ ]` Browser verification (Medium)
+### B10 `[~]` Browser verification (Medium)
 Run on **staging** with a fresh journey account (see §0):
 1. Register as a company with a valid P.IVA → pending screen.
 2. Same P.IVA from a second account → duplicate error.
@@ -298,13 +298,10 @@ the same on prod with a throwaway P.IVA claim removed afterwards.
   template seeding and `audit_logs` entry run after the verification transaction, so a crash in
   between leaves an unaudited change. No client calls it any more: consider deleting the callable
   after phase 1.
-- **The admin review covers only `vatNumber` + `legalName`** (m4) — `legalForm` and `affiliationNumber`
-  can change by re-applying between the admin loading a company and approving it; extend
-  `expectedReview` if they ever matter for the decision.
-- **Direct admin client writes bypass I1/I2** (m5) — `firestore.rules` (instructors `allow update: if
-  isAdmin()`) lets an admin client set `providerProfile.isVerified` or `business.vatNumber` directly,
-  skipping the review and claim checks of the callables. Tighten the admin branch in a follow-up
-  (route verification and tax-id changes through the callables only).
+- **Review snapshot and direct-client bypasses** — resolved 2026-10-05: all four legal fields are
+  compared during approval, malformed stored facts are refused, and admin/superadmin clients cannot
+  change business legal data or approval/type directly, or delete/recreate a business instructor.
+  Legacy clients may omit form/affiliation only for the exact company/empty defaults.
 - **`deleteUserCascade` deletes claims outside a transaction** (m6) — between Auth deletion and the
   claim delete, the deleted user's still-valid ID token (≤ 1 h) could in theory re-apply and take a
   claim back; the cascade is idempotent and a re-run removes it.
@@ -616,3 +613,7 @@ the same on prod with a throwaway P.IVA claim removed afterwards.
   turned tests red. Touched in `src/` beyond the error map and locales: `providerApplicationErrors.test.ts`
   (pins the admin code list) and doc comments of the wrappers in `src/lib/firebase/functions.ts`.
 - QA layout fixes (B10): legal-form option labels shortened in all 5 locales (+ `px-3 truncate` on the select) so the closed select is not clipped at 320-390px; venues Owner column sr-only text now inside a `relative` wrapper (page no longer wider than the viewport, test added); FilterBar search, select and date controls `min-h-11` (44px touch targets). (this commit)
+
+- 2026-10-05 — Codex resumes B9/B10 on the existing `feat/business-accounts` worktree. Ruling: retain the feature branch rather than edit the shared dirty main checkout. Regression tests first reproduced stale legal-form/affiliation approval and direct admin writes. Review snapshots now cover all four legal fields (legacy omitted values match only company/empty defaults); admin and superadmin browser clients use audited callables for business type, legal-field and approval changes. New English/Italian business signup guides; fixed the pre-existing providers-test mock tuple so web tsc is clean. Rules tests passed (38); changed frontend tests passed (344); providers backend tests passed (267). Staging hosting still had the old signup UI; staging build required network access for Google Fonts and then passed. Final gates and the actual staging journey are in progress; no production deploy.
+- 2026-10-05 — Independent reviewer found a delete/recreate bypass and malformed-value defaulting; both reproduced with failing tests and fixed. Final rules run: 69/69 across business, superadmin, profile and provider-service suites. Functions src suite: 880/880, lint/build passed; all changed web tests 344/344, i18n completeness passed, web tsc passed. Staging build passed. B10 requires staging publication of this reviewed branch before its real journey can run.
+- 2026-10-05 — B9 complete: both business guides added, five-locale completeness and accessibility/form tests passed. Final review also identified a legacy business-user/no-business-map update bypass; regression reproduced and guard now checks both business signals consistently with the callables. Staging publication and B10 verification remain in progress.

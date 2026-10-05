@@ -54,6 +54,22 @@ describe("checkBusinessReview — approve what the admin actually saw", () => {
     expect(review(PENDING_BUSINESS, "verified", { vatNumber: VAT, legalName: LEGAL_NAME })).toBe(VAT);
   });
 
+  it("refuses approval when legal form or affiliation changed after review", () => {
+    const expected = { vatNumber: VAT, legalName: LEGAL_NAME, legalForm: "association", affiliationNumber: "RASD-1" };
+    for (const change of [{ legalForm: "company" }, { affiliationNumber: "RASD-2" }]) {
+      expectHttpsError(() => review({ business: { ...BUSINESS, ...expected, ...change } }, "verified", expected), "failed-precondition", "stale_review");
+    }
+    expect(review({ business: { ...BUSINESS, ...expected } }, "verified", expected)).toBe(VAT);
+  });
+
+  it("does not treat malformed stored legal facts as legacy defaults", () => {
+    for (const change of [{ legalForm: "unknown" }, { legalForm: null }, { affiliationNumber: 123 }, { affiliationNumber: null }] as Record<string, unknown>[]) {
+      expectHttpsError(() => review({ business: { ...BUSINESS, ...change } }, "verified",
+        { vatNumber: VAT, legalName: LEGAL_NAME, legalForm: change.legalForm === undefined ? "company" : null, affiliationNumber: "" }),
+      "failed-precondition", "stale_review");
+    }
+  });
+
   it("compares the tax id normalised and the legal name trimmed — formatting is not a different company", () => {
     expect(review(PENDING_BUSINESS, "verified", { vatNumber: " IT 123 456 789 03 ", legalName: `  ${LEGAL_NAME} ` })).toBe(VAT);
     // A stored number with an IT prefix still names its normalised claim.

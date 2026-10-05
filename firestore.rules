@@ -198,7 +198,7 @@ service cloud.firestore {
       // Create rules - superadmin can create any user, new users can create their own profile.
       // Either way, a doc can only be created with role 'superadmin' for one of the two
       // allowed uids (isValidSuperadminTarget) — nobody can mint a new superadmin account.
-      allow create: if isValidSuperadminTarget(userId) && (
+      allow create: if !('providerType' in request.resource.data) && isValidSuperadminTarget(userId) && (
         isSuperAdmin() ||
         (isOwner(userId) &&
          request.resource.data.role in ['customer', 'provider'] &&
@@ -212,23 +212,20 @@ service cloud.firestore {
       // not by the other superadmin. Everything else keeps the existing behavior, with the
       // same "never mint a superadmin" guard as create.
       allow update: if isExistingSuperadmin()
-        ? (isOwner(userId) && !touchesProtectedSuperadminFields())
+        ? (isOwner(userId) && !touchesProtectedSuperadminFields() && isAllowedAdminUserProviderUpdate())
         : (isValidSuperadminTarget(userId) && (
             (
               // Users can update their own basic profile
               (isOwner(userId) && isValidUserUpdate() && !isValidRoleUpdate() &&
+               (!isAdmin() || isAllowedAdminUserProviderUpdate()) &&
                (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['providerStatus']) ||
                 request.resource.data.providerStatus in ['none', 'pending']))
             ) || (
-              // Superadmin can update anything else
-              isSuperAdmin()
+              // Verification and business type changes use audited callables.
+              isSuperAdmin() && isAllowedAdminUserProviderUpdate()
             ) || (
-              // Admin can update non-superadmin users and cannot change roles.
-              // This still lets an admin client change providerType. Kept as is, but such a
-              // change should go through an audited callable (plan 2026-10-04, B8:
-              // convertBusinessToIndividual) so instructors.business and the businessVat
-              // claim move with it — a plain client write leaves them out of step.
-              isAdmin() &&
+              // Business type and verification changes use audited callables.
+              isAdmin() && isAllowedAdminUserProviderUpdate() &&
               resource.data.role != 'superadmin' &&
               !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'permissions'])
             )
@@ -371,8 +368,9 @@ service cloud.firestore {
     // A business is users/{uid}.providerType == 'business' plus an instructors/{uid}.business
     // map. applyAsProvider writes both with the Admin SDK (which bypasses these rules) after
     // validating the tax id and taking the businessVat/{vat} claim. The helpers below stop the
-    // OWNER from doing from the client what that callable would refuse. Admins are not limited
-    // by them: isAdmin() short-circuits the instructors rules.
+    // OWNER from doing from the client what that callable would refuse. Admin clients also
+    // use these checks; reviewed-field and verification changes
+    // go through audited Admin SDK callables.
 
     /** Every key a business map may hold (D1, B3b). Anything else is refused. */
     function businessKeys() {
@@ -440,6 +438,32 @@ service cloud.firestore {
            isValidOwnerBusinessChange(resource.data.business, request.resource.data.business)));
     }
 
+    function isBusinessUser(uid) {
+      return exists(/databases/$(database)/documents/users/$(uid)) &&
+        get(/databases/$(database)/documents/users/$(uid)).data.get('providerType', 'individual') == 'business';
+    }
+
+    /** Admin business state changes must use the audited Admin SDK callables. */
+    function isAllowedAdminInstructorUpdate(instructorId) {
+      let businessAccount = 'business' in resource.data || 'business' in request.resource.data ||
+        isBusinessUser(instructorId);
+      return isAllowedOwnerBusinessUpdate() &&
+        (!businessAccount ||
+          (request.resource.data.get(['providerProfile', 'isVerified'], false) ==
+             resource.data.get(['providerProfile', 'isVerified'], false) &&
+           request.resource.data.get('applicationStatus', 'pending') ==
+             resource.data.get('applicationStatus', 'pending')));
+    }
+
+    function isAllowedAdminUserProviderUpdate() {
+      // providerType and verification are server-owned for every account; personal
+      // profile, suspension and other administrative edits retain their existing rules.
+      return !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['providerType', 'providerStatus', 'isVerified']) &&
+        request.resource.data.get(['providerProfile', 'isVerified'], false) ==
+          resource.data.get(['providerProfile', 'isVerified'], false);
+    }
+
     // ============================================
     // INSTRUCTORS/PROVIDERS COLLECTION
     // ============================================
@@ -457,20 +481,20 @@ service cloud.firestore {
       // Create: admin, or the user creating their OWN unverified pending profile — never
       // with a `business` map: a company is created only by applyAsProvider, which checks
       // the tax id and takes the businessVat claim first (D3, D5).
-      allow create: if isAdmin() ||
+      allow create: if !isBusinessUser(instructorId) && ((isAdmin() && !('business' in request.resource.data)) ||
         (isAuthenticated() &&
          request.resource.data.uid == request.auth.uid &&
          request.resource.data.get(['providerProfile', 'isVerified'], false) == false &&
          request.resource.data.get('applicationStatus', 'pending') == 'pending' &&
-         !('business' in request.resource.data));
+         !('business' in request.resource.data)));
 
-      // Update: admin can change anything; the owner may edit their profile but may
+      // Update: business legal/verification changes use callables; the owner may
       // NOT change isVerified or applicationStatus (only admin verifies/rejects).
       // Ownership by `uid` field or by path id, as for read: older provider docs lack a
       // `uid`, and their owners must still be able to set their own location (D4).
       // A business owner may edit only the display fields of `business` (D6, B4) — see
       // isAllowedOwnerBusinessUpdate; for an individual provider that check is a no-op.
-      allow update: if isAdmin() ||
+      allow update: if (isAdmin() && isAllowedAdminInstructorUpdate(instructorId)) ||
         (isAuthenticated() &&
          (resource.data.get('uid', null) == request.auth.uid || request.auth.uid == instructorId) &&
          request.resource.data.get(['providerProfile', 'isVerified'], false) ==
@@ -479,7 +503,7 @@ service cloud.firestore {
            resource.data.get('applicationStatus', 'pending') &&
          isAllowedOwnerBusinessUpdate());
 
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() && !('business' in resource.data) && !isBusinessUser(instructorId);
 
       // Reviews are written only by the submitReview callable (Admin SDK), which checks the
       // booking was delivered and allows one review per booking. A client-side create let
