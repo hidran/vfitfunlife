@@ -18,7 +18,7 @@ If the number belongs to another account, the tax-ID field shows an error. Corre
 
 An administrator opens **Admin → Providers**, selects the company filter and opens the application. Check legal name, tax ID, legal form and affiliation against the applicant's information. Approve or reject using the displayed actions. If reviewed details changed while the page was open, reload and review them again before approving.
 
-Approval enables the provider area and public listing. The owner must set a price and activate at least one service, review availability and set a location before customers can book it. Automatically created services start as inactive drafts.
+Approval enables the provider area and public listing. The owner must set a price, activate at least one service and review availability. Set a location to appear in nearby searches. Automatically created services start as inactive drafts.
 
 For corrections, administrators use the business actions on the detail page. Changing the tax ID moves its uniqueness claim; converting to an individual removes the business map and claim. A rejected business keeps its claim until an administrator releases it. A live business cannot have its claim released directly.
 
@@ -34,4 +34,6 @@ Legal name, tax ID, legal form and affiliation are read-only for the owner. Cont
 
 ## Verification record
 
-The implementation and security checks are recorded in the [business accounts plan](../plans/2026-10-04-business-accounts-plan.md). Staging journey results and screenshots are recorded there only after the real browser checks pass; this guide alone is not evidence of a completed staging run.
+Verified on staging on 5 October 2026, code `1777547`, in Italian with light/dark themes. Signup, duplicate-tax-ID rejection, admin approval, search, booking and public name/logo editing passed. Italian/German signup checks ran at 320 and 390px. Temporary accounts and the test booking were removed.
+
+See [screenshots and results](business-screenshots/README.md) and the [business accounts plan](../plans/2026-10-04-business-accounts-plan.md). Production publication (B11) remains outstanding.
