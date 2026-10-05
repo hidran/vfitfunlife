@@ -178,9 +178,8 @@ export function ProviderDetailView({ providerId }: Props) {
               // nested verification flag here is how this screen used to look approved
               // while they were still stuck on "pending".
               providerStatus: 'verified',
-              providerProfile: prev.providerProfile
-                ? { ...prev.providerProfile, isVerified: true }
-                : prev.providerProfile,
+              isVerified: true,
+              providerProfile: { ...prev.providerProfile, isVerified: true },
             }
           : prev,
       );
@@ -211,6 +210,7 @@ export function ProviderDetailView({ providerId }: Props) {
       await rejectProviderAction(provider.id, rejectReason);
       setShowRejectForm(false);
       setRejectReason('');
+      await reloadProvider();
       notify.success(t('admin.providerDetail.rejectedSuccess'));
     } catch (error) {
       console.error('Failed to reject provider:', error);
@@ -228,6 +228,7 @@ export function ProviderDetailView({ providerId }: Props) {
   }
 
   const profile = provider.providerProfile;
+  const verificationState = providerVerificationState(provider);
   const isSuspended = (provider as AdminProvider & { isSuspended?: boolean })
     .isSuspended;
   const metrics = provider.performanceMetrics;
@@ -281,7 +282,7 @@ export function ProviderDetailView({ providerId }: Props) {
                   <div className="flex items-center gap-2 flex-wrap">
                     <ProviderTypeBadge userType={provider.userType} />
                     {(business || provider.providerType === 'business') && <BusinessBadge />}
-                    <VerificationBadge isVerified={profile?.isVerified ?? false} />
+                    <VerificationBadge isVerified={verificationState === 'verified'} />
                     <StatusBadge status={isSuspended ? 'suspended' : 'active'} />
                     {profile?.specialties?.map((specialty) => (
                       <span
@@ -298,7 +299,7 @@ export function ProviderDetailView({ providerId }: Props) {
                     office's job here is reviewing who got listed. The whole /admin area
                     already requires admin or superadmin, and decideProviderApplication
                     enforces the same on the server. */}
-                {!profile?.isVerified && (
+                {verificationState !== 'verified' && (
                   <>
                     <div className="flex gap-2">
                       {!showRejectForm ? (
@@ -404,7 +405,7 @@ export function ProviderDetailView({ providerId }: Props) {
             <BusinessAdminActions
               providerId={provider.id}
               business={business}
-              canRelease={providerVerificationState(provider) === 'rejected'}
+              canRelease={verificationState === 'rejected'}
               onChanged={reloadProvider}
               focusFallbackRef={pageFocusRef}
             />

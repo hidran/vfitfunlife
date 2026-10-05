@@ -169,6 +169,28 @@ describe('ProviderDetailView — a company', () => {
     });
   });
 
+  it('refreshes rejection so a rejected business immediately offers claim release', async () => {
+    seedCompany();
+    store.rejectProviderAction.mockImplementationOnce(async () => {
+      h.docs.set('users/c1', { ...h.docs.get('users/c1'), providerStatus: 'rejected' });
+    });
+    renderView();
+    await waitFor(businessCard);
+    fireEvent.click(screen.getByRole('button', { name: it_('admin.providerDetail.reject') }));
+    fireEvent.change(screen.getByPlaceholderText(it_('admin.providerDetail.rejectionPlaceholder')), { target: { value: 'QA rejection' } });
+    fireEvent.click(screen.getByRole('button', { name: it_('admin.providerDetail.confirmReject') }));
+    expect(await screen.findByRole('button', { name: it_('admin.business.action.release') })).toBeInTheDocument();
+  });
+
+  it('shows approval for a provider whose nested profile was absent', async () => {
+    seedCompany();
+    h.docs.set('users/c1', { fullName: 'Karate Club Milano', role: 'customer', providerStatus: 'pending', providerType: 'business' });
+    renderView();
+    await waitFor(businessCard);
+    fireEvent.click(screen.getByRole('button', { name: it_('admin.providerDetail.verify') }));
+    expect(await screen.findByText(it_('admin.badge.verified'), { exact: true })).toBeInTheDocument();
+  });
+
   it('stale_review: says so and reloads, so the new tax id is what the next approval sends', async () => {
     seedCompany();
     renderView();
