@@ -14,6 +14,7 @@ import { queryKeys } from '@/lib/queryKeys';
 import { adminBusinessErrorCode, ADMIN_BUSINESS_ERRORS } from '@/lib/providerApplicationErrors';
 import { BusinessBadge } from '@/components/provider/BusinessBadge';
 import { useAdminProviderBusiness } from '@/hooks/useAdminProviderBusiness';
+import { LEGAL_FORM_LABEL } from '@/lib/businessDetails';
 import { businessReviewOf, type AdminBusiness } from '@/lib/admin/providerBusiness';
 
 export function ProviderApplicationsPanel() {
@@ -41,7 +42,7 @@ export function ProviderApplicationsPanel() {
       await decideProviderApplication({
         providerId: a.id,
         decision,
-        // A company is approved for the tax id and legal name shown in its row (B8). Read by
+        // Approval checks the four legal fields shown in the row (B8). Read by
         // the admin reader: a map without a public name is still a company to the server.
         ...(decision === 'verified' && business ? { expectedReview: businessReviewOf(business) } : {}),
       });
@@ -136,16 +137,22 @@ function ApplicationRow({ app: a, categories, isAdmin, busy, error, onDecide }: 
             <dd className="text-content break-words">{business.legalName}</dd>
             <dt className="text-content-faint">{t('provider.business.reviewed.vatNumber')}</dt>
             <dd className="text-content font-mono tabular-nums">{business.vatNumber}</dd>
+            <dt className="text-content-faint">{t('provider.business.reviewed.legalForm')}</dt>
+            <dd className="text-content break-words">
+              {business.legalForm ? t(LEGAL_FORM_LABEL[business.legalForm]) : t('admin.providerDetail.field.naValue')}
+            </dd>
+            <dt className="text-content-faint">{t('provider.business.reviewed.affiliationNumber')}</dt>
+            <dd className="text-content break-words">{business.affiliationNumber || t('admin.providerDetail.field.naValue')}</dd>
           </dl>
         )}
         {error && <p role="alert" className="text-sm text-[#EF4444] light:text-red-700">{error}</p>}
       </div>
       {isAdmin && (
         <div className="flex gap-2">
-          <Button size="sm" disabled={approveBlocked} onClick={() => onDecide(a, 'verified', business)}>
+          <Button size="sm" className="min-h-11" disabled={approveBlocked} onClick={() => onDecide(a, 'verified', business)}>
             <CheckCircle className="w-4 h-4 mr-1" /> {t('admin.applications.verify')}
           </Button>
-          <Button size="sm" variant="ghost" disabled={busy} onClick={() => onDecide(a, 'rejected', business)}>
+          <Button size="sm" variant="ghost" className="min-h-11" disabled={busy} onClick={() => onDecide(a, 'rejected', business)}>
             <XCircle className="w-4 h-4 mr-1" /> {t('admin.applications.reject')}
           </Button>
         </div>

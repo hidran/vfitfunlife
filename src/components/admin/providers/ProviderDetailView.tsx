@@ -167,7 +167,7 @@ export function ProviderDetailView({ providerId }: Props) {
       await verifyProviderAction(provider.id, {
         status: 'verified',
         verifiedAt: Timestamp.now(),
-        // A company is approved for the tax id and legal name on screen, nothing else.
+        // Approval checks all four legal fields shown on screen against the current record.
         ...(business ? { expectedReview: businessReviewOf(business) } : {}),
       });
       qc.setQueryData(queryKey, (prev: AdminProvider | null | undefined) =>

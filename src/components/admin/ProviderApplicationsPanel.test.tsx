@@ -83,6 +83,19 @@ describe('ProviderApplicationsPanel', () => {
     expect(within(row('Paola Pendente')).queryByText(it_('provider.badge.business'))).not.toBeInTheDocument();
   });
 
+  it('shows every reviewed legal field before approval', async () => {
+    h.businesses = { c1: { ...companyBusiness, legalForm: 'association', affiliationNumber: 'QA-RASD' } };
+    renderPanel();
+    const r = await waitFor(() => row('Karate Club Milano'));
+    expect(await within(r).findByText(it_('provider.business.legalForm.association'))).toBeInTheDocument();
+    expect(within(r).getByText('QA-RASD')).toBeInTheDocument();
+    fireEvent.click(await enabledVerify(r));
+    await waitFor(() => expect(h.decideProviderApplication).toHaveBeenCalled());
+    expect(h.decideProviderApplication.mock.calls[0][0]).toMatchObject({ expectedReview: {
+      legalForm: 'association', affiliationNumber: 'QA-RASD',
+    } });
+  });
+
   it('approves a company with the shown tax id and legal name', async () => {
     renderPanel();
     const r = await waitFor(() => row('Karate Club Milano'));
