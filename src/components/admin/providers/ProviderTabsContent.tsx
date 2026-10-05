@@ -31,7 +31,7 @@ export function ProviderTabBar({ active, onChange }: TabBarProps) {
   ];
   return (
     <div className="border-b border-hairline">
-      <div className="flex gap-6">
+      <div className="flex flex-wrap gap-x-6 gap-y-1">
         {tabs.map((tab) => (
           <button
             key={tab.id}

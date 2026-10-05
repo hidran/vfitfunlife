@@ -167,7 +167,7 @@ registration. Optional fields only — no existing behaviour changes.
   approved), owner adds or removes `business` ✘, `javascript:` website ✘, other user ✘, admin ✔, client
   read/write of `businessVat` ✘, owner write of `users.providerType` ✘.
 
-### B5 `[~]` Signup: individual or company (Large) — code + unit tests done; browser checks at 320/390 px (it, de), 44px targets and inline errors are part of B10
+### B5 `[x]` Signup: individual or company (Large) — staging verification recorded below
 - Files: `src/app/auth/register/RegisterClient.tsx` (both `submitProviderApplication` call sites),
   `src/hooks/useProviderApplication.ts`, `src/lib/firebase/providerApplication.ts`,
   `src/components/profile/BecomeProviderCard.tsx`, new `src/components/provider/BusinessDetailsForm.tsx`
@@ -187,7 +187,7 @@ registration. Optional fields only — no existing behaviour changes.
 - **Done when:** at 320 and 390px, in it and de: no overlap, 44px targets, inline errors for bad P.IVA and
   duplicate P.IVA; a company application ends on the pending screen; an individual still auto-approves.
 
-### B6 `[~]` Company profile editing (Medium) — code + unit tests done; browser checks (owner edits name/logo at 320/390 px, search shows the new name) are part of B10
+### B6 `[x]` Company profile editing (Medium) — staging verification recorded below
 - Files: provider profile edit (`src/app/(main)/profile/edit/page.tsx` area), reuse
   `BusinessDetailsForm` in "edit" mode with `legalName`/`vatNumber` read-only, logo upload through the
   existing photo upload hook.
@@ -196,14 +196,14 @@ registration. Optional fields only — no existing behaviour changes.
 - **Done when:** owner can change public name and logo, search shows the new name after the index trigger
   runs, attempts to change P.IVA are impossible in the UI and rejected by rules (B4).
 
-### B7 `[~]` Public listing and search (Medium)
+### B7 `[x]` Public listing and search (Medium)
 - Files: `src/lib/firebase/providers.ts` (`flattenProvider` reads `providerType`, `business`),
   provider card and booking-page components, `functions/src/providers/onInstructorWriteSearchIndex.ts`
   (add `displayName` and `legalName` tokens), i18n `provider.badge.business` ("Azienda" in it).
 - **Done when:** an approved company shows its name, logo and an "Azienda" badge in `/booking` search and on
   its own page; searching the legal name finds it; individual cards unchanged.
 
-### B8 `[~]` Admin visibility (Medium) — B8a (callables) and B8b (admin UI) code + unit tests done; browser checks are part of B10
+### B8 `[x]` Admin visibility (Medium) — B8a (callables) and B8b (admin UI) code + unit tests done; browser checks are part of B10
 - Files: `src/components/admin/providers/ProvidersListView.tsx` (+ test), `ProviderDetailView.tsx`,
   admin store/query for the type filter; a small admin callable `releaseBusinessVat` (superadmin or admin,
   audit-logged) to free a P.IVA claim; `src/components/admin/venues/VenuesListView.tsx` gets a read-only
@@ -230,7 +230,7 @@ registration. Optional fields only — no existing behaviour changes.
 - Docs: `docs/features.md` (business accounts), `docs/backend/cloud-functions.md` (new input of
   `applyAsProvider`, `releaseBusinessVat`), user-journey guide for business signup in it and en.
 
-### B10 `[~]` Browser verification (Medium)
+### B10 `[x]` Browser verification (Medium)
 Run on **staging** with a fresh journey account (see §0):
 1. Register as a company with a valid P.IVA → pending screen.
 2. Same P.IVA from a second account → duplicate error.
@@ -621,3 +621,7 @@ the same on prod with a throwaway P.IVA claim removed afterwards.
 - 2026-10-05 — Staging browser review found the pending-applications panel omitted legal form and affiliation although approval compares them. Added both visible fields and 44px decision buttons; regression test passed. Admin panel/detail tests 21/21, web tsc and touched ESLint passed. Owner signup stays pending with autoApprove ON; duplicate VAT is refused inline. Ordinary admin approved the synthetic association. Owner saved a new display name and logo; legal inputs are absent and 320/390px layouts have no horizontal overflow. Fresh customer created booking `T8h4OZeeRQS2TCHk8VVr` for the renamed company (2026-10-07 09:00, HIIT), confirming the booking displays its name. Remaining theme/admin-action browser checks and QA cleanup are in progress.
 
 - 2026-10-05 — B10 exposed stale admin detail state after a successful rejection and incomplete approval caching when providerProfile is absent. Two regression tests failed first; rejection now reloads the queried record, approval populates both verification mirrors, and the badge/actions use the shared verification predicate. Panel/detail/i18n tests 27/27, tsc and touched ESLint passed. Ordinary admin tax correction, rejected-claim release and conversion succeeded on synthetic staging accounts. Final staging re-publication/browser regression check and cleanup pending.
+
+- 2026-10-05 — **B5–B8 and B10 complete on staging**, deployed code `b465288` (earlier hardening `b20417d`, reviewed-fields panel `0de4ac7`). Real private-browser journey: company signup remained pending with autoApprove ON; a second owner was refused the same tax ID; ordinary demo admin filtered businesses and approved; public search/detail showed the badge; a fresh customer booked the active HIIT service and the saved booking showed the company name; owner changed name/logo and search reflected the new name. Italian dark/light evidence is in [business-screenshots/README.md](../user-journeys/business-screenshots/README.md). Italian/German bad-checksum and duplicate errors were exercised at 320/390px with VAT focus and no horizontal overflow; business controls meet the 44px target. Individual application still auto-approved. Ordinary admin tax correction, rejection/claim release, and conversion succeeded; audit entries verified. The final admin approval/rejection refresh regression also passed in the real browser. Final gates: changed frontend **347/347 (29 files)**, functions src **882/882 (73 files)**, rules emulator **69/69 (4 files)**, i18n **4/4**, web tsc, functions lint/build, touched ESLint and staging build/deploy passed. Synthetic booking `T8h4OZeeRQS2TCHk8VVr` (2026-10-07 09:00) and five QA accounts were removed, including profiles/subcollections, uploads, applications, claims and temporary allowlist entries; absence verified. Audit records retained; demo admin locale restored. **B11 production deployment remains todo; no production writes or deployment performed.**
+
+- 2026-10-05 — Final screenshot-width audit caught existing admin provider tabs extending the 390px page to 525px. Playwright isolated the overflowing booking/review tab buttons on the demo provider detail page; tabs now wrap on narrow screens. Final staging publication and corrected screenshots in progress.
