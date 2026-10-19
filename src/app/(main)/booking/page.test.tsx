@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   selectProvider: vi.fn(),
   filters: {} as Record<string, unknown>,
   courses: [] as unknown[],
+  searchResults: [] as unknown[],
 }));
 
 vi.mock('next/navigation', () => ({
@@ -34,7 +35,7 @@ vi.mock('@/components/booking/CustomerLocationPrompt', () => ({
 vi.mock('@/hooks/useI18n', () => ({ useI18n: () => ({ t: (key: string) => key, locale: 'en' }) }));
 vi.mock('@/stores/bookingStore', () => ({
   useBookingStore: () => ({
-    searchResults: [],
+    searchResults: mocks.searchResults,
     isSearching: false,
     searchFilters: mocks.filters,
     searchProviders: mocks.searchProviders,
@@ -53,7 +54,8 @@ vi.mock('@/lib/geo', () => ({ annotateAndSortByDistance: (items: unknown[]) => i
 vi.mock('@/components/map/GoogleMap', () => ({ GoogleMap: () => null }));
 vi.mock('@/components/map/MapPlaceholder', () => ({ MapPlaceholder: () => null }));
 vi.mock('@/components/map/RadiusFilter', () => ({ RadiusFilter: () => null }));
-vi.mock('@/components/ui/Avatar', () => ({ Avatar: () => null }));
+// eslint-disable-next-line @next/next/no-img-element -- plain img so the row's picture source is assertable
+vi.mock('@/components/ui/Avatar', () => ({ Avatar: ({ src, alt }: { src?: string | null; alt?: string }) => (src ? <img src={src} alt={alt} /> : null) }));
 vi.mock('@/components/ui/input', () => ({ Input: ({ leftIcon: _leftIcon, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { leftIcon?: React.ReactNode }) => <input type="search" {...props} /> }));
 vi.mock('@/components/ui/Spinner', () => ({ Spinner: () => null }));
 vi.mock('@/components/ui/button', () => ({ Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button> }));
@@ -63,6 +65,7 @@ import BookingPage from './page';
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.filters = {};
+  mocks.searchResults = [];
   window.history.replaceState({}, '', '/booking?query=plumber&category=home_services');
 });
 
@@ -93,4 +96,33 @@ it('shows matching group courses in general search even without provider results
   expect(screen.queryByText('booking.noResults.title')).not.toBeInTheDocument();
   expect(screen.getByRole('link', { name: 'courses.sessions' })).toHaveAttribute('href', '/courses?id=karate');
   mocks.courses = [];
+});
+
+describe('provider rows', () => {
+  const row = (extra: Record<string, unknown>) => ({
+    id: 'p', fullName: 'Rossi Gym', avatarUrl: 'https://cdn/avatar.png', rating: 0, reviewCount: 0, isVerified: true,
+    specialties: [], yearsOfExperience: 0, languages: [], services: [], ...extra,
+  });
+
+  it('shows the company badge and logo for a business provider', () => {
+    window.history.replaceState({}, '', '/booking');
+    mocks.searchResults = [row({
+      providerType: 'business',
+      business: { legalName: 'Rossi Fitness S.r.l.', vatNumber: '12345678901', displayName: 'Rossi Gym', logoUrl: 'https://cdn/logo.png' },
+    })];
+    render(<BookingPage />);
+    expect(screen.getByRole('heading', { name: 'Rossi Gym' })).toBeInTheDocument();
+    expect(screen.getByText('provider.badge.business')).toBeInTheDocument();
+    expect(screen.getByText('booking.provider.verified')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Rossi Gym' })).toHaveAttribute('src', 'https://cdn/logo.png');
+  });
+
+  it('shows no company badge for an individual', () => {
+    window.history.replaceState({}, '', '/booking');
+    mocks.searchResults = [row({ fullName: 'Luca Bianchi' })];
+    render(<BookingPage />);
+    expect(screen.getByRole('heading', { name: 'Luca Bianchi' })).toBeInTheDocument();
+    expect(screen.queryByText('provider.badge.business')).not.toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Luca Bianchi' })).toHaveAttribute('src', 'https://cdn/avatar.png');
+  });
 });

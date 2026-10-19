@@ -99,6 +99,8 @@ export default function ProviderProfileClient() {
   }
 
   const providerData = profile.providerProfile;
+  const isBusiness = profile.providerType === 'business';
+  const headerImageUrl = (isBusiness && profile.business?.logoUrl) || profile.avatarUrl;
   const publicServices = providerData?.servicePricing.filter((service) => service.isActive) ?? [];
   const initials = profile.fullName
     .split(' ')
@@ -144,9 +146,9 @@ export default function ProviderProfileClient() {
           {/* Avatar */}
           <div className="w-24 h-24 rounded-full bg-gradient-to-br from-vfit-primary via-vfun-primary to-vlife-primary p-0.5 flex-shrink-0">
             <div className="w-full h-full rounded-full bg-background-dark flex items-center justify-center overflow-hidden">
-              {profile.avatarUrl ? (
+              {headerImageUrl ? (
                 <Image
-                  src={profile.avatarUrl}
+                  src={headerImageUrl}
                   alt={profile.fullName}
                   width={96}
                   height={96}
@@ -163,12 +165,17 @@ export default function ProviderProfileClient() {
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-bold text-text-inverse">{profile.fullName}</h1>
             
-            {providerData?.isVerified && (
-              <div className="flex items-center gap-1 mt-1">
-                <Badge variant="success" size="sm">
-                  <Check size={10} className="mr-1" />
-                  {t('providerProfile.verified')}
-                </Badge>
+            {(providerData?.isVerified || isBusiness) && (
+              <div className="flex flex-wrap items-center gap-1 mt-1">
+                {providerData?.isVerified && (
+                  <Badge variant="success" size="sm">
+                    <Check size={10} className="mr-1" />
+                    {t('providerProfile.verified')}
+                  </Badge>
+                )}
+                {isBusiness && (
+                  <Badge variant="default" size="sm">{t('provider.badge.business')}</Badge>
+                )}
               </div>
             )}
 

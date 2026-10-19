@@ -6,6 +6,7 @@
  *
  * The terms are lowercased, accent-free prefixes, whole and per word, of:
  *  - the provider's name,
+ *  - a company's display and legal names (`business.displayName` / `business.legalName`),
  *  - their specialties (legacy display labels),
  *  - their category ids, with `_` read as a space (`personal_training` → "personal training").
  *
@@ -41,6 +42,8 @@ export const PROVIDER_SEARCH_TERMS_CAP = 300;
 
 export interface ProviderSearchSource {
   fullName?: unknown;
+  providerType?: unknown;
+  business?: { displayName?: unknown; legalName?: unknown; [key: string]: unknown } | null;
   providerProfile?: { specialties?: unknown } | null;
   categoryIds?: unknown;
 }
@@ -67,6 +70,10 @@ function addPhrase(out: Set<string>, raw: string): void {
 export function computeProviderSearchTerms(record: ProviderSearchSource): string[] {
   const out = new Set<string>();
   if (typeof record.fullName === "string") addPhrase(out, record.fullName);
+  // Companies are found by trade name and ragione sociale alike ("Rossi Fitness S.r.l.").
+  for (const name of [record.business?.displayName, record.business?.legalName]) {
+    if (typeof name === "string") addPhrase(out, name);
+  }
   for (const specialty of strings(record.providerProfile?.specialties)) addPhrase(out, specialty);
   for (const id of strings(record.categoryIds)) addPhrase(out, id.replace(/_/g, " "));
   return [...out].slice(0, PROVIDER_SEARCH_TERMS_CAP);

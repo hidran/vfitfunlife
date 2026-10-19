@@ -11,6 +11,7 @@ export type {
   PaymentConfirmationMethod,
   BookingPaymentConfirmation,
 } from './firebase';
+import type { BusinessDetails, ProviderType } from './firebase';
 
 // Additional location type for provider bookings
 export type LocationType = 'in_person' | 'online' | 'home_visit';
@@ -162,6 +163,10 @@ export interface ProviderSearchResult {
   rating: number;
   reviewCount: number;
   isVerified: boolean;
+  /** Absent ⇒ individual. */
+  providerType?: ProviderType;
+  /** Company details (instructors.business), present only for a business. */
+  business?: BusinessDetails;
   specialties: string[];
   /** Taxonomy ids, leaf and ancestors (instructors.categoryIds). */
   categoryIds?: string[];

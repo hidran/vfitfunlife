@@ -2066,6 +2066,7 @@ export const itMessages = {
   'booking.map.yourPosition': 'La tua posizione',
 
   // ─── Provider opt-in (BecomeProviderCard + ProviderOptInField) ───────
+  'provider.badge.business': 'Azienda',
   'provider.optIn.toggle': 'Voglio anche offrire servizi come professionista',
   'provider.optIn.pickType': 'Che tipo di servizio offri?',
   'provider.optIn.pickServices': 'Seleziona i servizi che offri',

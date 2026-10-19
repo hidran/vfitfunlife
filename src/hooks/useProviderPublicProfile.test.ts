@@ -63,6 +63,19 @@ describe('useProviderPublicProfile', () => {
     });
   });
 
+  it('exposes a company\'s type and details so the page can show its badge and logo', async () => {
+    const business = { legalName: 'Rossi Fitness S.r.l.', vatNumber: '12345678901', displayName: 'Rossi Gym', logoUrl: 'https://cdn/logo.png' };
+    vi.mocked(getDoc).mockResolvedValue(snap('company-1', {
+      fullName: 'Rossi Gym', providerType: 'business', business, providerProfile: { isVerified: true },
+    }));
+
+    const { wrapper } = makeQueryClientWrapper();
+    const { result } = renderHook(() => useProviderPublicProfile('company-1'), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data).toMatchObject({ providerType: 'business', business });
+  });
+
   it('loads the actual booking services so the public profile can list active offers', async () => {
     vi.mocked(getDoc).mockResolvedValue(snap('provider-1', {
       fullName: 'Jane Trainer',

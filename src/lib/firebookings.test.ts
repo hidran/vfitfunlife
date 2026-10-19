@@ -32,6 +32,7 @@ import {
   bookingFromDoc,
   getProviderAvailability,
   providerSearchKey,
+  providerSearchResultFromDoc,
   searchProviders,
   searchProvidersNear,
 } from './firebookings';
@@ -139,6 +140,18 @@ describe('getProviderAvailability', () => {
       { time: '09:00', startsAt: '2026-09-21T07:00:00.000Z', isAvailable: true, isBooked: false },
       { time: '09:30', startsAt: '2026-09-21T07:30:00.000Z', isAvailable: true, isBooked: false },
     ]);
+  });
+});
+
+describe('providerSearchResultFromDoc', () => {
+  it('carries a company\'s type and details, and nothing for an individual', () => {
+    const business = { legalName: 'Rossi Fitness S.r.l.', vatNumber: '12345678901', displayName: 'Rossi Gym', logoUrl: 'https://cdn/logo.png' };
+    const company = providerSearchResultFromDoc('c1', { fullName: 'Rossi Gym', providerType: 'business', business, providerProfile: {} });
+    expect(company).toMatchObject({ providerType: 'business', business });
+
+    const person = providerSearchResultFromDoc('p1', { fullName: 'Luca', providerProfile: {} });
+    expect(person.providerType).toBeUndefined();
+    expect(person.business).toBeUndefined();
   });
 });
 

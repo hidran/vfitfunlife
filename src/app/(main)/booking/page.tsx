@@ -482,7 +482,7 @@ export default function BookingPage() {
                     )}
                     <div className="flex gap-4 p-4">
                       <Avatar
-                        src={provider.avatarUrl}
+                        src={provider.business?.logoUrl || provider.avatarUrl}
                         alt={provider.fullName}
                         size="xl"
                         className="flex-shrink-0"
@@ -511,8 +511,15 @@ export default function BookingPage() {
                               </div>
                             )}
                           </div>
-                          {provider.isVerified && (
-                            <Badge variant="partner" size="sm" className="shrink-0">{t('booking.provider.verified')}</Badge>
+                          {(provider.isVerified || provider.providerType === 'business') && (
+                            <div className="flex shrink-0 items-center gap-1">
+                              {provider.isVerified && (
+                                <Badge variant="partner" size="sm">{t('booking.provider.verified')}</Badge>
+                              )}
+                              {provider.providerType === 'business' && (
+                                <Badge variant="default" size="sm">{t('provider.badge.business')}</Badge>
+                              )}
+                            </div>
                           )}
                         </div>
 

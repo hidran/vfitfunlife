@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { getPortfolioImages } from '@/lib/firebase/storage';
-import type { ProviderProfile } from '@/types/firebase';
+import type { BusinessDetails, ProviderProfile, ProviderType } from '@/types/firebase';
 import { queryKeys } from '@/lib/queryKeys';
 
 export interface ProviderPublicProfile {
@@ -12,6 +12,10 @@ export interface ProviderPublicProfile {
   fullName: string;
   avatarUrl: string | null;
   bio: string | null;
+  /** Absent ⇒ individual. */
+  providerType?: ProviderType;
+  /** Company details (instructors.business), present only for a business. */
+  business?: BusinessDetails;
   providerProfile: ProviderProfile | null;
   socialLinks: {
     instagram?: string;
@@ -73,6 +77,9 @@ export function toProviderPublicProfile(
     fullName: str(data.fullName) ?? str(data.name) ?? 'Provider',
     avatarUrl: str(data.avatarUrl) ?? null,
     bio,
+    ...(data.providerType === 'business'
+      ? { providerType: 'business' as const, business: (data.business as BusinessDetails | undefined) }
+      : {}),
     providerProfile,
     socialLinks: (data.socialLinks as ProviderPublicProfile['socialLinks']) ?? null,
     isProvider: true,

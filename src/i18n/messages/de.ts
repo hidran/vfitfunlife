@@ -2047,6 +2047,7 @@ export const deMessages: Messages = {
   'booking.map.yourPosition': 'Mein Standort',
 
   // ─── Provider opt-in (BecomeProviderCard + ProviderOptInField) ───────
+  'provider.badge.business': 'Unternehmen',
   'provider.optIn.toggle': 'Ich möchte auch Dienstleistungen als Fachkraft anbieten',
   'provider.optIn.pickType': 'Welche Art von Dienstleistung bieten Sie an?',
   'provider.optIn.pickServices': 'Wähle die Leistungen, die du anbietest',

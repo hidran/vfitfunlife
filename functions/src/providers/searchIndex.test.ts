@@ -33,6 +33,23 @@ describe("computeProviderSearchTerms", () => {
     expect(terms).toEqual(expect.arrayContaining(["yoga", "personal training", "training", "strength"]));
   });
 
+  it("indexes a company's display and legal names, dots read as spaces", () => {
+    const terms = computeProviderSearchTerms({
+      fullName: "Rossi Gym",
+      providerType: "business",
+      business: { legalName: "Rossi Fitness S.r.l.", displayName: "Rossi Gym", vatNumber: "12345678901" },
+    });
+    expect(terms).toEqual(expect.arrayContaining(["rossi gym", "rossi f", "rossi fitness s r l", "fitness", "l"]));
+    expect(terms.some((t) => t.includes("1234"))).toBe(false);
+    expect(terms.indexOf("rossi gym")).toBeLessThan(terms.indexOf("rossi fitness s r l"));
+  });
+
+  it("leaves an individual's terms unchanged by the business fields", () => {
+    const individual = computeProviderSearchTerms({ fullName: "Luca Bianchi", providerType: "individual" });
+    expect(individual).toEqual(computeProviderSearchTerms({ fullName: "Luca Bianchi", business: null }));
+    expect(individual).toEqual(computeProviderSearchTerms({ fullName: "Luca Bianchi" }));
+  });
+
   it("never indexes anything but name, specialties and categories", () => {
     const terms = computeProviderSearchTerms({ fullName: "Anna", email: "anna@x.it", phone: "+39333" } as never);
     expect(terms.some((t) => t.includes("@") || t.startsWith("3"))).toBe(false);

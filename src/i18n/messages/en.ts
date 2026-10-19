@@ -2068,6 +2068,7 @@ export const enMessages: Messages = {
   'booking.map.yourPosition': 'Your location',
 
   // ─── Provider dashboard ──────────────────────────────────────────────
+  'provider.badge.business': 'Company',
   'provider.optIn.toggle': 'I also want to offer services as a professional',
   'provider.optIn.pickType': 'What type of service do you offer?',
   'provider.optIn.pickServices': 'Select the services you offer',

@@ -38,6 +38,7 @@ import type {
   Discount,
   BookingFilters,
 } from '@/types/booking';
+import type { BusinessDetails } from '@/types/firebase';
 
 const BOOKINGS_COLLECTION = 'bookings';
 const INSTRUCTORS_COLLECTION = 'instructors';
@@ -123,6 +124,8 @@ export function providerSearchResultFromDoc(
     rating: profile.rating || 0,
     reviewCount: profile.reviewCount || 0,
     isVerified: profile.isVerified || false,
+    providerType: data.providerType === 'business' ? 'business' : undefined,
+    business: data.providerType === 'business' && data.business ? (data.business as BusinessDetails) : undefined,
     specialties: profile.specialties || [],
     categoryIds: (data.categoryIds as string[]) || [],
     searchTerms: Array.isArray(data.searchTerms) ? (data.searchTerms as string[]) : undefined,
