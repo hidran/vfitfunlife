@@ -33,6 +33,7 @@ import { RadiusFilter } from '@/components/map/RadiusFilter';
 import { useQuery } from '@tanstack/react-query';
 import { annotateAndSortByDistance, roundLocation, type LatLng } from '@/lib/geo';
 import { applyProviderSearchFilters, searchProvidersNear } from '@/lib/firebookings';
+import { providerImageUrl } from '@/lib/bookingProvider';
 import { useServiceCategoryGroups } from '@/hooks/useServiceCategories';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
@@ -482,7 +483,7 @@ export default function BookingPage() {
                     )}
                     <div className="flex gap-4 p-4">
                       <Avatar
-                        src={provider.business?.logoUrl || provider.avatarUrl}
+                        src={providerImageUrl(provider)}
                         alt={provider.fullName}
                         size="xl"
                         className="flex-shrink-0"
@@ -511,16 +512,16 @@ export default function BookingPage() {
                               </div>
                             )}
                           </div>
-                          {(provider.isVerified || provider.providerType === 'business') && (
-                            <div className="flex shrink-0 items-center gap-1">
-                              {provider.isVerified && (
-                                <Badge variant="partner" size="sm">{t('booking.provider.verified')}</Badge>
-                              )}
-                              {provider.providerType === 'business' && (
-                                <Badge variant="default" size="sm">{t('provider.badge.business')}</Badge>
-                              )}
+                          {provider.isVerified && provider.providerType === 'business' ? (
+                            <div className="flex min-w-0 max-w-full flex-wrap items-center gap-1">
+                              <Badge variant="partner" size="sm">{t('booking.provider.verified')}</Badge>
+                              <Badge variant="default" size="sm">{t('provider.badge.business')}</Badge>
                             </div>
-                          )}
+                          ) : provider.isVerified ? (
+                            <Badge variant="partner" size="sm" className="shrink-0">{t('booking.provider.verified')}</Badge>
+                          ) : provider.providerType === 'business' ? (
+                            <Badge variant="default" size="sm" className="shrink-0">{t('provider.badge.business')}</Badge>
+                          ) : null}
                         </div>
 
                         {/* Specialties */}

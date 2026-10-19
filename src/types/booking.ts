@@ -165,8 +165,8 @@ export interface ProviderSearchResult {
   isVerified: boolean;
   /** Absent ⇒ individual. */
   providerType?: ProviderType;
-  /** Company details (instructors.business), present only for a business. */
-  business?: BusinessDetails;
+  /** Public card fields of instructors.business, whenever stored; providerType decides. */
+  business?: Pick<BusinessDetails, 'displayName' | 'logoUrl'>;
   specialties: string[];
   /** Taxonomy ids, leaf and ancestors (instructors.categoryIds). */
   categoryIds?: string[];

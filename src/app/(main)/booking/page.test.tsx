@@ -117,6 +117,14 @@ describe('provider rows', () => {
     expect(screen.getByRole('img', { name: 'Rossi Gym' })).toHaveAttribute('src', 'https://cdn/logo.png');
   });
 
+  it('falls back to the avatar for a business without a logo', () => {
+    window.history.replaceState({}, '', '/booking');
+    mocks.searchResults = [row({ providerType: 'business', business: { displayName: 'Rossi Gym', logoUrl: null } })];
+    render(<BookingPage />);
+    expect(screen.getByText('provider.badge.business')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Rossi Gym' })).toHaveAttribute('src', 'https://cdn/avatar.png');
+  });
+
   it('shows no company badge for an individual', () => {
     window.history.replaceState({}, '', '/booking');
     mocks.searchResults = [row({ fullName: 'Luca Bianchi' })];

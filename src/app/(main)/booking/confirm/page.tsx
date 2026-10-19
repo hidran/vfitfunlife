@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn, formatPrice } from '@/lib/utils';
+import { providerImageUrl } from '@/lib/bookingProvider';
 import { useBookingStore } from '@/stores/bookingStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useI18n } from '@/hooks/useI18n';
@@ -187,7 +188,7 @@ export default function BookingConfirmPage() {
         <div className="bg-surface-elevated/50 rounded-2xl p-4">
           <div className="flex gap-3">
             <Avatar
-              src={selectedProvider.avatarUrl}
+              src={providerImageUrl(selectedProvider)}
               alt={selectedProvider.fullName}
               size="lg"
             />

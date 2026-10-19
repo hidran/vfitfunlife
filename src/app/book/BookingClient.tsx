@@ -31,7 +31,7 @@ import { VenueNotFound } from '@/components/venue/VenueNotFound';
 import { PhotoGallery } from '@/components/gallery/PhotoGallery';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
-import { providerSearchResultFromProvider } from '@/lib/bookingProvider';
+import { providerImageUrl, providerSearchResultFromProvider } from '@/lib/bookingProvider';
 
 export default function ProviderBookingPage() {
   const { t, locale } = useI18n();
@@ -166,7 +166,7 @@ export default function ProviderBookingPage() {
       <div className="p-4">
         <div className="flex gap-4">
           <Avatar
-            src={provider.avatarUrl}
+            src={providerImageUrl(provider)}
             alt={provider.fullName}
             size="xl"
             className="flex-shrink-0"

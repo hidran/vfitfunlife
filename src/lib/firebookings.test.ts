@@ -144,10 +144,11 @@ describe('getProviderAvailability', () => {
 });
 
 describe('providerSearchResultFromDoc', () => {
-  it('carries a company\'s type and details, and nothing for an individual', () => {
+  it('carries a company\'s type and only the public business fields', () => {
     const business = { legalName: 'Rossi Fitness S.r.l.', vatNumber: '12345678901', displayName: 'Rossi Gym', logoUrl: 'https://cdn/logo.png' };
     const company = providerSearchResultFromDoc('c1', { fullName: 'Rossi Gym', providerType: 'business', business, providerProfile: {} });
-    expect(company).toMatchObject({ providerType: 'business', business });
+    expect(company.providerType).toBe('business');
+    expect(company.business).toEqual({ displayName: 'Rossi Gym', logoUrl: 'https://cdn/logo.png' });
 
     const person = providerSearchResultFromDoc('p1', { fullName: 'Luca', providerProfile: {} });
     expect(person.providerType).toBeUndefined();

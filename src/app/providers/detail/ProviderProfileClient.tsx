@@ -30,6 +30,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Rating } from '@/components/ui/Rating';
 import { Timestamp } from 'firebase/firestore';
 import { ProviderNotFoundError, useProviderPublicProfile } from '@/hooks/useProviderPublicProfile';
+import { providerImageUrl } from '@/lib/bookingProvider';
 
 export default function ProviderProfileClient() {
   const { t, locale } = useI18n();
@@ -55,7 +56,7 @@ export default function ProviderProfileClient() {
   const handleContact = () => {
     if (!providerId) return;
     // The public profile id is the provider's uid (instructors/{uid}).
-    router.push(chatHref(providerId, { name: profile?.fullName, photoUrl: profile?.avatarUrl }));
+    router.push(chatHref(providerId, { name: profile?.fullName, photoUrl: profile && providerImageUrl(profile) }));
   };
 
   const handleShare = async () => {
@@ -100,7 +101,7 @@ export default function ProviderProfileClient() {
 
   const providerData = profile.providerProfile;
   const isBusiness = profile.providerType === 'business';
-  const headerImageUrl = (isBusiness && profile.business?.logoUrl) || profile.avatarUrl;
+  const headerImageUrl = providerImageUrl(profile);
   const publicServices = providerData?.servicePricing.filter((service) => service.isActive) ?? [];
   const initials = profile.fullName
     .split(' ')

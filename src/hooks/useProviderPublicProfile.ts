@@ -6,6 +6,7 @@ import { db } from '@/lib/firebase/config';
 import { getPortfolioImages } from '@/lib/firebase/storage';
 import type { BusinessDetails, ProviderProfile, ProviderType } from '@/types/firebase';
 import { queryKeys } from '@/lib/queryKeys';
+import { publicBusiness } from '@/lib/bookingProvider';
 
 export interface ProviderPublicProfile {
   id: string;
@@ -14,8 +15,8 @@ export interface ProviderPublicProfile {
   bio: string | null;
   /** Absent ⇒ individual. */
   providerType?: ProviderType;
-  /** Company details (instructors.business), present only for a business. */
-  business?: BusinessDetails;
+  /** Public card fields of instructors.business, whenever stored; providerType decides. */
+  business?: Pick<BusinessDetails, 'displayName' | 'logoUrl'>;
   providerProfile: ProviderProfile | null;
   socialLinks: {
     instagram?: string;
@@ -77,9 +78,8 @@ export function toProviderPublicProfile(
     fullName: str(data.fullName) ?? str(data.name) ?? 'Provider',
     avatarUrl: str(data.avatarUrl) ?? null,
     bio,
-    ...(data.providerType === 'business'
-      ? { providerType: 'business' as const, business: (data.business as BusinessDetails | undefined) }
-      : {}),
+    providerType: data.providerType === 'business' ? 'business' : undefined,
+    business: publicBusiness(data.business),
     providerProfile,
     socialLinks: (data.socialLinks as ProviderPublicProfile['socialLinks']) ?? null,
     isProvider: true,

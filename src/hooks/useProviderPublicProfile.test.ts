@@ -73,7 +73,8 @@ describe('useProviderPublicProfile', () => {
     const { result } = renderHook(() => useProviderPublicProfile('company-1'), { wrapper });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(result.current.data).toMatchObject({ providerType: 'business', business });
+    expect(result.current.data?.providerType).toBe('business');
+    expect(result.current.data?.business).toEqual({ displayName: 'Rossi Gym', logoUrl: 'https://cdn/logo.png' });
   });
 
   it('loads the actual booking services so the public profile can list active offers', async () => {

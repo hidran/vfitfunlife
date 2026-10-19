@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ProviderProfilePage from './page';
+import { itMessages } from '@/i18n/messages/it';
 
 let mockSearchParams = new URLSearchParams();
 vi.mock('next/navigation', () => ({
@@ -83,7 +84,7 @@ describe('/providers/detail?id=', () => {
       error: null,
     });
     render(<ProviderProfilePage />);
-    expect(screen.getByText('Azienda')).toBeInTheDocument();
+    expect(screen.getByText(itMessages['provider.badge.business'])).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Rossi Gym' })).toHaveAttribute('src', 'https://cdn/logo.png');
   });
 

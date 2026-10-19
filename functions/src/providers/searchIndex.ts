@@ -42,7 +42,6 @@ export const PROVIDER_SEARCH_TERMS_CAP = 300;
 
 export interface ProviderSearchSource {
   fullName?: unknown;
-  providerType?: unknown;
   business?: { displayName?: unknown; legalName?: unknown; [key: string]: unknown } | null;
   providerProfile?: { specialties?: unknown } | null;
   categoryIds?: unknown;
@@ -71,6 +70,7 @@ export function computeProviderSearchTerms(record: ProviderSearchSource): string
   const out = new Set<string>();
   if (typeof record.fullName === "string") addPhrase(out, record.fullName);
   // Companies are found by trade name and ragione sociale alike ("Rossi Fitness S.r.l.").
+  // Placed before specialties so the cap, which truncates from the end, never drops a company's names.
   for (const name of [record.business?.displayName, record.business?.legalName]) {
     if (typeof name === "string") addPhrase(out, name);
   }
