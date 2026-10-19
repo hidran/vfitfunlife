@@ -270,8 +270,103 @@ describe('RegisterPage Email Registration', () => {
       expect(mockSubmitProviderApplication).toHaveBeenCalledWith({
         fullName: 'Professional User',
         categoryIds: ['personal_training'],
+        providerType: 'individual',
       });
     });
+  });
+
+  function fillEmailForm() {
+    fireEvent.click(screen.getByText('Email e Password'));
+    fireEvent.change(screen.getByLabelText(/Nome completo/i), { target: { value: 'Company Owner' } });
+    fireEvent.change(screen.getByLabelText(/^Email/i), { target: { value: 'owner@example.com' } });
+    fireEvent.change(screen.getByLabelText(/^Password/i), { target: { value: 'StrongPassword123!' } });
+    fireEvent.change(screen.getByLabelText(/Conferma Password/i), { target: { value: 'StrongPassword123!' } });
+    fireEvent.click(screen.getByRole('checkbox', { name: /professionista/i }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Azienda' }));
+    fireEvent.click(screen.getByRole('button', { name: /Personal Training/i }));
+    fireEvent.click(screen.getByLabelText(/Termini/i));
+  }
+
+  function fillCompany(vat = '01234567897') {
+    fireEvent.change(screen.getByLabelText('Ragione sociale'), { target: { value: 'Palestra Rossi S.r.l.' } });
+    fireEvent.change(screen.getByLabelText('Partita IVA'), { target: { value: vat } });
+    fireEvent.change(screen.getByLabelText('Indirizzo'), { target: { value: 'Via Roma 1' } });
+    fireEvent.change(screen.getByLabelText('Città'), { target: { value: 'Milano' } });
+  }
+
+  it('defaults the professional type to individual and reveals the company fields on Azienda', () => {
+    mockSearchParams = new URLSearchParams('as=provider');
+    render(<RegisterClient />);
+
+    const individual = screen.getByRole('radio', { name: 'Privato' });
+    expect(individual).toHaveAttribute('aria-checked', 'true');
+    expect(screen.queryByLabelText('Partita IVA')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Azienda' }));
+    expect(screen.getByLabelText('Partita IVA')).toBeInTheDocument();
+    expect(screen.getByRole('radiogroup')).toBeInTheDocument();
+  });
+
+  it('submits a company application with the business payload', async () => {
+    mockRegisterWithEmail.mockResolvedValueOnce(undefined);
+    mockSubmitProviderApplication.mockResolvedValueOnce({ success: true, status: 'pending' });
+    render(<RegisterClient />);
+
+    fillEmailForm();
+    fillCompany();
+    fireEvent.change(screen.getByLabelText('Sito web (facoltativo)'), { target: { value: 'https://palestrarossi.it' } });
+    fireEvent.click(screen.getByRole('button', { name: /Crea account/i }));
+
+    await waitFor(() => {
+      expect(mockSubmitProviderApplication).toHaveBeenCalledWith({
+        fullName: 'Company Owner',
+        categoryIds: ['personal_training'],
+        providerType: 'business',
+        business: {
+          legalName: 'Palestra Rossi S.r.l.',
+          vatNumber: '01234567897',
+          displayName: 'Palestra Rossi S.r.l.',
+          venueType: 'gym',
+          address: 'Via Roma 1',
+          city: 'Milano',
+          website: 'https://palestrarossi.it',
+        },
+      });
+    });
+  });
+
+  it('shows an inline error for a bad P.IVA and does not create the account', async () => {
+    render(<RegisterClient />);
+
+    fillEmailForm();
+    fillCompany('01234567898');
+    fireEvent.click(screen.getByRole('button', { name: /Crea account/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Partita IVA non valida/)).toBeInTheDocument();
+    });
+    expect(screen.getByLabelText('Partita IVA')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText('Partita IVA')).toHaveFocus();
+    expect(mockRegisterWithEmail).not.toHaveBeenCalled();
+    expect(mockSubmitProviderApplication).not.toHaveBeenCalled();
+  });
+
+  it('maps a duplicate P.IVA from the server to the inline message', async () => {
+    mockRegisterWithEmail.mockResolvedValueOnce(undefined);
+    mockSubmitProviderApplication.mockRejectedValueOnce(
+      Object.assign(new Error('business_vat_taken'), { code: 'functions/already-exists' })
+    );
+    render(<RegisterClient />);
+
+    fillEmailForm();
+    fillCompany();
+    fireEvent.click(screen.getByRole('button', { name: /Crea account/i }));
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Questa partita IVA è già registrata').length).toBeGreaterThan(0);
+    });
+    expect(screen.getByLabelText('Partita IVA')).toHaveAttribute('aria-invalid', 'true');
+    expect(mockPush).not.toHaveBeenCalled();
   });
 
   it('lets an authenticated phone or social user opt in as a provider during profile completion', async () => {
@@ -305,6 +400,7 @@ describe('RegisterPage Email Registration', () => {
       expect(mockSubmitProviderApplication).toHaveBeenCalledWith({
         fullName: 'Provider User',
         categoryIds: ['personal_training'],
+        providerType: 'individual',
       });
     });
   });

@@ -27,6 +27,26 @@ describe('submitProviderApplication', () => {
     expect(applyAsProvider).toHaveBeenCalledWith({
       fullName: 'Mia Rossi',
       categoryIds: ['yoga', 'pilates'],
+      providerType: 'individual',
+    });
+  });
+
+  it('sends the company payload for a business application and drops it for an individual', async () => {
+    const business = { legalName: 'Palestra Rossi S.r.l.', vatNumber: '01234567897', displayName: 'Palestra Rossi' };
+
+    await submitProviderApplication({ fullName: 'Mia Rossi', categoryIds: ['yoga'], providerType: 'business', business });
+    expect(applyAsProvider).toHaveBeenLastCalledWith({
+      fullName: 'Mia Rossi',
+      categoryIds: ['yoga'],
+      providerType: 'business',
+      business,
+    });
+
+    await submitProviderApplication({ fullName: 'Mia Rossi', categoryIds: ['yoga'], providerType: 'individual', business });
+    expect(applyAsProvider).toHaveBeenLastCalledWith({
+      fullName: 'Mia Rossi',
+      categoryIds: ['yoga'],
+      providerType: 'individual',
     });
   });
 

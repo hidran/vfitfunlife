@@ -1,6 +1,7 @@
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from './config';
-import { applyAsProvider } from './functions';
+import { applyAsProvider, type ApplyAsProviderResult, type BusinessApplicationInput } from './functions';
+import type { ProviderType } from '@/types/firebase';
 
 /**
  * User opts in as a provider and is approved on the spot: `instructors/{uid}` is created as a
@@ -24,9 +25,21 @@ import { applyAsProvider } from './functions';
  * Throws on failure; callers (the registration form) surface the error.
  */
 export async function submitProviderApplication(
-  opts: { fullName: string; categoryIds: string[] }
-): Promise<void> {
-  await applyAsProvider({ categoryIds: opts.categoryIds, fullName: opts.fullName });
+  opts: {
+    fullName: string;
+    categoryIds: string[];
+    /** Absent ⇒ 'individual'. A 'business' application must carry `business` and never auto-approves. */
+    providerType?: ProviderType;
+    business?: BusinessApplicationInput;
+  }
+): Promise<ApplyAsProviderResult> {
+  const providerType = opts.providerType ?? 'individual';
+  return applyAsProvider({
+    categoryIds: opts.categoryIds,
+    fullName: opts.fullName,
+    providerType,
+    ...(providerType === 'business' && opts.business ? { business: opts.business } : {}),
+  });
 }
 
 /** A provider changes which categories they offer, before they have priced real services. */

@@ -20,6 +20,16 @@ import { ProviderOptInField } from '@/components/auth/ProviderOptInField';
 import { validatePasswordStrength } from '@/lib/auth/passwordPolicy';
 import { PasswordRequirements } from '@/components/auth/PasswordRequirements';
 import { alreadyRegisteredRoute, postAuthRoute } from '@/lib/auth/postAuthRoute';
+import {
+  EMPTY_BUSINESS_DETAILS,
+  providerApplicationErrorFor,
+  toBusinessApplicationInput,
+  validateBusinessDetails,
+  type BusinessDetailsErrors,
+  type BusinessDetailsValues,
+} from '@/lib/businessDetails';
+import { focusFirstBusinessError } from '@/components/provider/BusinessDetailsForm';
+import type { ProviderType } from '@/types/firebase';
 
 const SECTIONS = [
   { id: 'fit' as const, label: 'VFit', color: 'from-vfit-primary to-vfit-secondary' },
@@ -75,6 +85,48 @@ export function RegisterClient() {
   const [showPassword, setShowPassword] = useState(false);
   const [wantsProvider, setWantsProvider] = useState(startsAsProvider);
   const [providerCategoryIds, setProviderCategoryIds] = useState<string[]>([]);
+  const [providerType, setProviderType] = useState<ProviderType>('individual');
+  const [business, setBusiness] = useState<BusinessDetailsValues>(EMPTY_BUSINESS_DETAILS);
+  const [businessErrors, setBusinessErrors] = useState<BusinessDetailsErrors>({});
+  const clearBusinessError = (field: keyof BusinessDetailsErrors) =>
+    setBusinessErrors((prev) => (prev[field] ? { ...prev, [field]: undefined } : prev));
+
+  /**
+   * Checks the professional section and returns the payload for submitProviderApplication,
+   * or null (with the error shown) when it is incomplete. A company must pass the client
+   * validation before anything is created, so a typo in the P.IVA never costs an account.
+   */
+  const providerPayload = (): Parameters<typeof submitProviderApplication>[0] | null => {
+    if (providerCategoryIds.length === 0) {
+      setError(t('provider.optIn.errorNoCategory'));
+      return null;
+    }
+    if (providerType === 'business') {
+      const errors = validateBusinessDetails(business);
+      setBusinessErrors(errors);
+      if (focusFirstBusinessError(errors)) {
+        setError(t('provider.business.error.fixFields'));
+        return null;
+      }
+      return {
+        fullName: fullName.trim(),
+        categoryIds: providerCategoryIds,
+        providerType: 'business',
+        business: toBusinessApplicationInput(business),
+      };
+    }
+    return { fullName: fullName.trim(), categoryIds: providerCategoryIds, providerType: 'individual' };
+  };
+
+  /** The provider step failed after the account was created: say why, under the field when there is one. */
+  const showProviderError = (err: unknown) => {
+    const { key, field } = providerApplicationErrorFor(err);
+    if (field) {
+      setBusinessErrors({ [field]: key });
+      focusFirstBusinessError({ [field]: key });
+    }
+    setError(t(key));
+  };
 
   // Someone who already has a profile (opened /auth/register by hand, or followed an old
   // link) must not re-run registration over it: send them where a sign-in would. Skipped
@@ -115,13 +167,12 @@ export function RegisterClient() {
       return;
     }
 
-    if (wantsProvider && providerCategoryIds.length === 0) {
-      setError(t('provider.optIn.errorNoCategory'));
-      return;
-    }
+    const application = wantsProvider ? providerPayload() : null;
+    if (wantsProvider && !application) return;
 
     setIsLoading(true);
     submitting.current = true;
+    let stage: 'register' | 'provider' = 'register';
 
     try {
       await completeRegistration(firebaseUser.uid, {
@@ -132,8 +183,9 @@ export function RegisterClient() {
         preferredLanguage: locale,
       });
 
-      if (wantsProvider) {
-        await submitProviderApplication({ fullName: fullName.trim(), categoryIds: providerCategoryIds });
+      if (application) {
+        stage = 'provider';
+        await submitProviderApplication(application);
       }
 
       // Refresh user profile in store
@@ -142,11 +194,8 @@ export function RegisterClient() {
       router.push(postAuthRoute(useAuthStore.getState().user));
     } catch (err) {
       console.error('Registration error:', err);
-      setError(
-        (err as { code?: string })?.code === 'functions/permission-denied'
-          ? t('auth.register.error.providerNotAllowed')
-          : t('auth.register.error.generic')
-      );
+      if (stage === 'provider') showProviderError(err);
+      else setError(t('auth.register.error.generic'));
     } finally {
       submitting.current = false;
       setIsLoading(false);
@@ -185,13 +234,12 @@ export function RegisterClient() {
       return;
     }
 
-    if (wantsProvider && providerCategoryIds.length === 0) {
-      setError(t('provider.optIn.errorNoCategory'));
-      return;
-    }
+    const application = wantsProvider ? providerPayload() : null;
+    if (wantsProvider && !application) return;
 
     setIsLoading(true);
     submitting.current = true;
+    let stage: 'register' | 'provider' = 'register';
 
     try {
       // Register with email/password
@@ -200,12 +248,13 @@ export function RegisterClient() {
         preferredSection,
       });
 
-      if (wantsProvider) {
+      if (application) {
         const uid = useAuthStore.getState().firebaseUser?.uid;
         if (!uid) {
           throw new Error('Registration user is not available');
         }
-        await submitProviderApplication({ fullName: fullName.trim(), categoryIds: providerCategoryIds });
+        stage = 'provider';
+        await submitProviderApplication(application);
         // Keep the in-memory profile in sync so the professional state is
         // visible immediately after permissions/home navigation.
         await refreshUserProfile();
@@ -219,11 +268,8 @@ export function RegisterClient() {
         setEmailTaken(true);
         return;
       }
-      setError(
-        err?.code === 'functions/permission-denied'
-          ? t('auth.register.error.providerNotAllowed')
-          : useAuthStore.getState().error || t('auth.register.error.generic')
-      );
+      if (stage === 'provider') showProviderError(err);
+      else setError(useAuthStore.getState().error || t('auth.register.error.generic'));
     } finally {
       submitting.current = false;
       setIsLoading(false);
@@ -381,7 +427,7 @@ export function RegisterClient() {
 
             {/* Error Message */}
             {!emailTaken && (error || storeError) && (
-              <div className={cn(
+              <div aria-live="polite" className={cn(
                 "p-4 border rounded-lg",
                 (error || storeError)?.includes('not enabled')
                   ? "bg-yellow-500/10 border-yellow-500/20"
@@ -562,6 +608,13 @@ export function RegisterClient() {
               onToggle={setWantsProvider}
               categoryIds={providerCategoryIds}
               onChangeCategoryIds={setProviderCategoryIds}
+              providerType={providerType}
+              onChangeProviderType={setProviderType}
+              business={business}
+              onChangeBusiness={setBusiness}
+              businessErrors={businessErrors}
+              onClearBusinessError={clearBusinessError}
+              disabled={isLoading}
             />
 
             {/* Terms & Privacy */}
@@ -624,7 +677,7 @@ export function RegisterClient() {
         <form onSubmit={handleSocialSubmit} className="space-y-6 max-w-md mx-auto">
           {/* Error Message */}
           {error && (
-            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+            <div aria-live="polite" className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
               <p className="text-red-400 text-sm text-center">{error}</p>
             </div>
           )}
@@ -722,6 +775,13 @@ export function RegisterClient() {
             onToggle={setWantsProvider}
             categoryIds={providerCategoryIds}
             onChangeCategoryIds={setProviderCategoryIds}
+            providerType={providerType}
+            onChangeProviderType={setProviderType}
+            business={business}
+            onChangeBusiness={setBusiness}
+            businessErrors={businessErrors}
+            onClearBusinessError={clearBusinessError}
+            disabled={isLoading}
           />
 
           {/* Terms & Privacy */}

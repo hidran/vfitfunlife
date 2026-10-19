@@ -8,16 +8,65 @@ import { useProviderStatus, useSubmitProviderApplication } from '@/hooks/useProv
 import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
 import { CategoryLeafPicker } from '@/components/provider/CategoryLeafPicker';
+import { ProviderTypeToggle } from '@/components/provider/ProviderTypeToggle';
+import { BusinessDetailsForm, focusFirstBusinessError } from '@/components/provider/BusinessDetailsForm';
+import {
+  EMPTY_BUSINESS_DETAILS,
+  providerApplicationErrorFor,
+  toBusinessApplicationInput,
+  validateBusinessDetails,
+  type BusinessDetailsErrors,
+  type BusinessDetailsValues,
+} from '@/lib/businessDetails';
 import { useI18n } from '@/hooks/useI18n';
+import type { MessageKey } from '@/i18n/messages';
+import type { ProviderType } from '@/types/firebase';
+
+const CARD_ID_PREFIX = 'profile-business';
 
 export function BecomeProviderCard() {
   const { t } = useI18n();
   const role = useAuthStore((s) => s.user?.role);
   const status = useProviderStatus();
   const variant = providerCardState(status);
+  const providerType = useAuthStore((s) => s.user?.providerType);
   const submit = useSubmitProviderApplication();
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
+  const [type, setType] = useState<ProviderType>('individual');
+  const [business, setBusiness] = useState<BusinessDetailsValues>(EMPTY_BUSINESS_DETAILS);
+  const [businessErrors, setBusinessErrors] = useState<BusinessDetailsErrors>({});
+  const [errorKey, setErrorKey] = useState<MessageKey | null>(null);
+
+  const clearBusinessError = (field: keyof BusinessDetailsErrors) =>
+    setBusinessErrors((prev) => (prev[field] ? { ...prev, [field]: undefined } : prev));
+
+  const handleSubmit = () => {
+    setErrorKey(null);
+    if (type === 'business') {
+      const errors = validateBusinessDetails(business);
+      setBusinessErrors(errors);
+      if (focusFirstBusinessError(errors, CARD_ID_PREFIX)) {
+        setErrorKey('provider.business.error.fixFields');
+        return;
+      }
+    }
+    submit.mutate(
+      type === 'business'
+        ? { categoryIds: selected, providerType: 'business', business: toBusinessApplicationInput(business) }
+        : { categoryIds: selected, providerType: 'individual' },
+      {
+        onError: (err) => {
+          const { key, field } = providerApplicationErrorFor(err);
+          if (field) {
+            setBusinessErrors({ [field]: key });
+            focusFirstBusinessError({ [field]: key }, CARD_ID_PREFIX);
+          }
+          setErrorKey(key);
+        },
+      }
+    );
+  };
 
   // The verified card is a way IN to the provider area, not an application CTA, so it is
   // checked before the role guard below. Guarding first hid it from anyone whose role had
@@ -49,7 +98,9 @@ export function BecomeProviderCard() {
         <Clock className="w-5 h-5 text-[#F59E0B]" />
         <div>
           <p className="text-content font-medium">{t('provider.card.pending.title')}</p>
-          <p className="text-sm text-content-muted">{t('provider.card.pending.subtitle')}</p>
+          <p className="text-sm text-content-muted">
+            {t(providerType === 'business' ? 'provider.card.pending.businessSubtitle' : 'provider.card.pending.subtitle')}
+          </p>
         </div>
       </div>
     );
@@ -80,17 +131,38 @@ export function BecomeProviderCard() {
       </div>
 
       {open && (
-        <div className="mt-4">
-          <p className="text-sm text-content-muted mb-2">{t('provider.optIn.pickServices')}</p>
-          <CategoryLeafPicker value={selected} onChange={setSelected} />
-          {submit.isError && (
-            <p className="text-sm text-[#EF4444] mt-2">{t('provider.card.error')}</p>
+        <div className="mt-4 space-y-4">
+          <ProviderTypeToggle value={type} onChange={setType} disabled={submit.isPending} />
+          {type === 'business' && (
+            <BusinessDetailsForm
+              values={business}
+              onChange={setBusiness}
+              errors={businessErrors}
+              onClearError={clearBusinessError}
+              disabled={submit.isPending}
+              idPrefix={CARD_ID_PREFIX}
+            />
           )}
-          <div className="flex gap-2 mt-4">
-            <Button size="sm" disabled={selected.length === 0 || submit.isPending} onClick={() => submit.mutate(selected)}>
+          <div>
+            <p className="text-sm text-content-muted mb-2">{t('provider.optIn.pickServices')}</p>
+            <CategoryLeafPicker value={selected} onChange={setSelected} disabled={submit.isPending} />
+          </div>
+          <div aria-live="polite">
+            {(errorKey || submit.isError) && (
+              <p className="text-sm text-[#EF4444]">{t(errorKey ?? 'provider.card.error')}</p>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" disabled={selected.length === 0 || submit.isPending} onClick={handleSubmit}>
               {submit.isPending ? t('provider.card.submitting') : t('provider.card.submit')}
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => { submit.reset(); setOpen(false); }}>{t('provider.card.cancel')}</Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => { submit.reset(); setErrorKey(null); setBusinessErrors({}); setOpen(false); }}
+            >
+              {t('provider.card.cancel')}
+            </Button>
           </div>
         </div>
       )}
