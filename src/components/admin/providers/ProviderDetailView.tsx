@@ -158,13 +158,16 @@ export function ProviderDetailView({ providerId }: Props) {
               // nested verification flag here is how this screen used to look approved
               // while they were still stuck on "pending".
               providerStatus: 'verified',
-              providerProfile: prev.providerProfile
-                ? { ...prev.providerProfile, isVerified: true }
-                : prev.providerProfile,
+              // An applicant has no providerProfile until the decision creates it: build
+              // the flag in rather than skip the update (the badge and the Verify/Reject
+              // buttons read it, so skipping left the page "Pending" until a reload).
+              providerProfile: { ...(prev.providerProfile ?? {}), isVerified: true },
             }
           : prev,
       );
       notify.success(t('admin.providerDetail.verifiedSuccess'));
+      // The decision also promoted the role and created catalogue data: read the real doc.
+      void qc.invalidateQueries({ queryKey });
     } catch (error) {
       console.error('Failed to verify provider:', error);
       notify.error(t(providerDecisionErrorKey(error) ?? 'admin.providerDetail.actionError'));
@@ -178,6 +181,7 @@ export function ProviderDetailView({ providerId }: Props) {
       setShowRejectForm(false);
       setRejectReason('');
       notify.success(t('admin.providerDetail.rejectedSuccess'));
+      void qc.invalidateQueries({ queryKey });
     } catch (error) {
       console.error('Failed to reject provider:', error);
       notify.error(t('admin.providerDetail.actionError'));

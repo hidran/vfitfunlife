@@ -30,13 +30,15 @@ export function ProviderTabBar({ active, onChange }: TabBarProps) {
     { id: 'reviews', label: t('admin.providerDetail.tab.reviews'), icon: Star },
   ];
   return (
-    <div className="border-b border-hairline">
-      <div className="flex gap-6">
+    // The strip scrolls inside itself on narrow screens (390px made the whole page scroll
+    // sideways); min-w-0 lets a flex/grid parent shrink it below its content width.
+    <div className="min-w-0 max-w-full overflow-x-auto border-b border-hairline">
+      <div className="flex w-max min-w-full gap-6">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => onChange(tab.id)}
-            className={`flex items-center gap-2 px-1 py-3 text-sm font-medium border-b-2 transition-colors ${
+            className={`flex shrink-0 items-center gap-2 whitespace-nowrap px-1 py-3 text-sm font-medium border-b-2 transition-colors ${
               active === tab.id
                 ? 'text-[#00C9FF] light:text-cyan-700 border-[#00C9FF]'
                 : 'text-content-muted border-transparent hover:text-content'

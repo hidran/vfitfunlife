@@ -26,9 +26,14 @@ const individual = {
 } as unknown as AdminProvider;
 
 let mockProvider: AdminProvider = company;
-vi.mock('@/hooks/useFirestoreDocQuery', () => ({
-  useFirestoreDocQuery: () => ({ data: mockProvider, isLoading: false }),
-}));
+// A real query over the mutable fixture, so the view's cache updates and refetches are exercised.
+vi.mock('@/hooks/useFirestoreDocQuery', async () => {
+  const { useQuery } = await import('@tanstack/react-query');
+  return {
+    useFirestoreDocQuery: (queryKey: readonly unknown[]) =>
+      useQuery({ queryKey, queryFn: async () => mockProvider }),
+  };
+});
 
 // The card reads instructors/{uid} and has its own suite (BusinessDetailsCard.test.tsx).
 vi.mock('./BusinessDetailsCard', () => ({
@@ -88,27 +93,28 @@ beforeEach(() => {
 });
 
 describe('ProviderDetailView — company', () => {
-  it('shows the company badge and block, with the approve action still there', () => {
+  it('shows the company badge and block, with the approve action still there', async () => {
     renderView('biz');
 
-    expect(screen.getByText('Azienda')).toBeInTheDocument();
+    expect(await screen.findByText('Azienda')).toBeInTheDocument();
     expect(screen.getByTestId('business-card')).toHaveTextContent('biz:false');
     expect(screen.getByRole('button', { name: /Verifica/ })).toBeInTheDocument();
   });
 
-  it('tells the card when the company is already verified', () => {
+  it('tells the card when the company is already verified', async () => {
     mockProvider = {
       ...company, providerStatus: 'verified', providerProfile: { isVerified: true },
     } as unknown as AdminProvider;
     renderView('biz');
 
-    expect(screen.getByTestId('business-card')).toHaveTextContent('biz:true');
+    expect(await screen.findByTestId('business-card')).toHaveTextContent('biz:true');
     expect(screen.queryByRole('button', { name: /^Verifica/ })).not.toBeInTheDocument();
   });
 
-  it('shows nothing company-related for an individual', () => {
+  it('shows nothing company-related for an individual', async () => {
     mockProvider = individual;
     renderView('solo');
+    await screen.findByText('Anna Bianchi');
 
     expect(screen.queryByText('Azienda')).not.toBeInTheDocument();
     expect(screen.queryByTestId('business-card')).not.toBeInTheDocument();
@@ -123,7 +129,7 @@ describe('ProviderDetailView — approval errors', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     renderView('biz');
 
-    await userEvent.click(screen.getByRole('button', { name: /Verifica/ }));
+    await userEvent.click(await screen.findByRole('button', { name: /Verifica/ }));
 
     await waitFor(() => expect(mockNotify.error).toHaveBeenCalledWith(
       itMessages['admin.providerDecision.error.venueExists'],
@@ -135,10 +141,37 @@ describe('ProviderDetailView — approval errors', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     renderView('biz');
 
-    await userEvent.click(screen.getByRole('button', { name: /Verifica/ }));
+    await userEvent.click(await screen.findByRole('button', { name: /Verifica/ }));
 
     await waitFor(() => expect(mockNotify.error).toHaveBeenCalledWith(
       itMessages['admin.providerDetail.actionError'],
     ));
+  });
+});
+
+describe('ProviderDetailView — after approval', () => {
+  it('flips the badge, hides the decision buttons and toasts, for an applicant with no providerProfile yet', async () => {
+    // A pending applicant has no providerProfile on users/{uid} until the decision creates it.
+    mockProvider = {
+      id: 'biz', uid: 'biz', fullName: 'Palestra Rossi', role: 'customer',
+      providerStatus: 'pending', providerType: 'business',
+    } as unknown as AdminProvider;
+    mockAdminState.verifyProviderAction.mockImplementationOnce(async () => {
+      // What a refetch of the document would see once the callable has run.
+      mockProvider = {
+        ...mockProvider, role: 'provider', providerStatus: 'verified', providerProfile: { isVerified: true },
+      } as unknown as AdminProvider;
+    });
+    renderView('biz');
+
+    expect(await screen.findByText('In attesa')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /Verifica/ }));
+
+    await waitFor(() => expect(mockNotify.success).toHaveBeenCalledWith(
+      itMessages['admin.providerDetail.verifiedSuccess'],
+    ));
+    expect(await screen.findByText('Verificato')).toBeInTheDocument();
+    expect(screen.queryByText('In attesa')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Verifica/ })).not.toBeInTheDocument();
   });
 });

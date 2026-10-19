@@ -164,6 +164,17 @@ export function resetAdminListPaging(): void {
   logsPaging = { key: "", cursors: new Map() };
 }
 
+/**
+ * Reload the providers table and the verification queue after a decision, in the background.
+ * The decision is done when the callable returns; making the caller wait for two list reads
+ * delayed its confirmation (and kept the detail screen on "Pending") for as long as they took.
+ * Both fetches handle their own errors.
+ */
+function refreshAfterProviderDecision(get: () => Pick<AdminState, 'fetchProviders' | 'fetchPendingVerifications'>) {
+  void get().fetchProviders();
+  void get().fetchPendingVerifications();
+}
+
 export const useAdminStore = create<AdminState>((set, get) => ({
   // Initial state
   dashboardStats: null,
@@ -307,9 +318,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     set({ error: null });
     try {
       await verifyProvider(providerId, data);
-      // Refresh providers and pending verifications
-      await get().fetchProviders();
-      await get().fetchPendingVerifications();
+      refreshAfterProviderDecision(get);
     } catch (error: any) {
       set({ error: error.message || "Failed to verify provider" });
       throw error;
@@ -321,9 +330,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     set({ error: null });
     try {
       await rejectProvider(providerId, reason);
-      // Refresh providers and pending verifications
-      await get().fetchProviders();
-      await get().fetchPendingVerifications();
+      refreshAfterProviderDecision(get);
     } catch (error: any) {
       set({ error: error.message || "Failed to reject provider" });
       throw error;
