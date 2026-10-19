@@ -154,6 +154,13 @@ describe("commitProviderDecision (one transaction)", () => {
         expect(h.read("users/u1")).toMatchObject({ providerStatus: "rejected" });
       });
 
+      it("a removed provider (stale verified instructors doc) is refused like a rejected one, not treated as verified", async () => {
+        h.put("users/u1", { ...USER, providerStatus: "removed" });
+        h.put("instructors/u1", { applicationStatus: "verified", providerProfile: { isVerified: true } });
+        await expect(self()).rejects.toMatchObject({ code: "failed-precondition", message: "application_rejected" });
+        expect(h.ops).toEqual([]);
+      });
+
       it("an already verified account (any signal) is a no-op: alreadyVerified, nothing rewritten", async () => {
         for (const setup of [
           () => h.put("users/u1", { ...USER, providerStatus: "verified" }),

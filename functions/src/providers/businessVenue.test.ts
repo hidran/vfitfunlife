@@ -206,17 +206,38 @@ describe("planBusinessVenue", () => {
     expect(planBusinessVenue({ ...input, instructor: { business: { ...business, venueId: "elsewhere" } } })).toBeNull();
   });
 
-  it("reactivates the company's own inactive venue with isActive/updatedAt only, relinking when needed", () => {
-    expect(planBusinessVenue({ ...input, instructor: linked, existing: own({ isActive: false }) })).toEqual({
-      kind: "reactivate", venueId: "biz_biz1", venuePatch: { isActive: true, updatedAt: NOW }, instructorPatch: null,
+  const MARK = { deactivatedBy: "lifecycle", deactivatedAt: NOW };
+  const CLEARED = { isActive: true, updatedAt: NOW, deactivatedBy: null, deactivatedAt: null };
+
+  it("reactivates a venue the SYSTEM deactivated, clearing the marker, relinking when the link is empty", () => {
+    expect(planBusinessVenue({ ...input, instructor: linked, existing: own({ isActive: false, ...MARK }) })).toEqual({
+      kind: "reactivate", venueId: "biz_biz1", venuePatch: CLEARED, instructorPatch: null,
     });
     // Converted to individual and back: the link is gone, the venue is still the company's.
-    expect(planBusinessVenue({ ...input, existing: own({ isActive: false }) })).toEqual({
+    expect(planBusinessVenue({ ...input, existing: own({ isActive: false, ...MARK }) })).toEqual({
+      kind: "reactivate", venueId: "biz_biz1", venuePatch: CLEARED,
+      instructorPatch: { business: { venueId: "biz_biz1" } },
+    });
+    // Active but unlinked: link it without touching the venue's state (no marker to clear).
+    expect(planBusinessVenue({ ...input, existing: own() })).toEqual({
       kind: "reactivate", venueId: "biz_biz1", venuePatch: { isActive: true, updatedAt: NOW },
       instructorPatch: { business: { venueId: "biz_biz1" } },
     });
-    // Active but unlinked: relink without touching the venue's state.
-    expect(planBusinessVenue({ ...input, existing: own() })).toMatchObject({ kind: "reactivate", instructorPatch: { business: { venueId: "biz_biz1" } } });
+  });
+
+  it("leaves a venue an ADMIN switched off (no marker) inactive, and keeps the link as it is", () => {
+    expect(planBusinessVenue({ ...input, instructor: linked, existing: own({ isActive: false }) })).toBeNull();
+    expect(planBusinessVenue({ ...input, existing: own({ isActive: false }) })).toBeNull();
+    expect(planBusinessVenue({ ...input, existing: own({ isActive: false, deactivatedBy: "admin" }) })).toBeNull();
+  });
+
+  it("never silently replaces a link to another venue with biz_<uid>", () => {
+    const elsewhere = { ...input.instructor, business: { ...(input.instructor.business as object), venueId: "venue-elsewhere" } };
+    expect(planBusinessVenue({ ...input, instructor: elsewhere, existing: own() })).toBeNull();
+    // Even a system-deactivated biz_<uid> comes back without touching the instructor's link.
+    expect(planBusinessVenue({ ...input, instructor: elsewhere, existing: own({ isActive: false, ...MARK }) })).toEqual({
+      kind: "reactivate", venueId: "biz_biz1", venuePatch: CLEARED, instructorPatch: null,
+    });
   });
 
   it("a venue at the id owned by someone else is a genuine clash: venue_exists", () => {
@@ -230,7 +251,8 @@ describe("planBusinessVenue", () => {
   it("a rejection deactivates the company's own active venue and leaves anything else alone", () => {
     const rejected = { ...input, decision: "rejected" as const, instructor: linked };
     expect(planBusinessVenue({ ...rejected, existing: own() })).toEqual({
-      kind: "deactivate", venueId: "biz_biz1", venuePatch: { isActive: false, updatedAt: NOW },
+      kind: "deactivate", venueId: "biz_biz1",
+      venuePatch: { isActive: false, updatedAt: NOW, deactivatedBy: "lifecycle", deactivatedAt: NOW },
     });
     expect(planBusinessVenue({ ...rejected, existing: own({ isActive: undefined }) })).toMatchObject({ kind: "deactivate" });
     expect(planBusinessVenue({ ...rejected, existing: own({ isActive: false }) })).toBeNull();
@@ -243,7 +265,9 @@ describe("planBusinessVenue", () => {
 describe("venueDeactivationPatch", () => {
   const own = (extra: Record<string, unknown> = {}) => ({ exists: true, data: { ownerId: "biz1", ...extra } });
   it("deactivates only the owner's own venue that is not already inactive", () => {
-    expect(venueDeactivationPatch("biz1", own(), NOW)).toEqual({ isActive: false, updatedAt: NOW });
+    expect(venueDeactivationPatch("biz1", own(), NOW)).toEqual({
+      isActive: false, updatedAt: NOW, deactivatedBy: "lifecycle", deactivatedAt: NOW,
+    });
     expect(venueDeactivationPatch("biz1", own({ isActive: false }), NOW)).toBeNull();
     expect(venueDeactivationPatch("biz1", own({ ownerId: "x" }), NOW)).toBeNull();
     expect(venueDeactivationPatch("biz1", { exists: false }, NOW)).toBeNull();

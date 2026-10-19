@@ -2,6 +2,7 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { getAuth } from "firebase-admin/auth";
 import { BUSINESS_VAT_COLLECTION } from "../providers/businessApplication";
+import { businessVenueId, venueDeactivationPatch } from "../providers/businessVenue";
 
 /**
  * What deleting a user removes. Kept on purpose: bookings, payments, transactions and
@@ -10,9 +11,12 @@ import { BUSINESS_VAT_COLLECTION } from "../providers/businessApplication";
  * would block the real owner of that tax id from ever registering (`vat_already_registered`)
  * with no account left to release them from.
  *
- * Venues the user owns (`venues.ownerId == uid`, e.g. a company's `biz_<uid>`) are DEACTIVATED,
- * not deleted: a venue carries courses, sessions and bookings, which are kept records like the
- * bookings above. `ownerId` stays for audit; the venue just leaves the public listings.
+ * The company venue (`venues/biz_<uid>`, when its `ownerId` is the uid) is DEACTIVATED, not
+ * deleted: a venue carries courses, sessions and bookings, which are kept records like the
+ * bookings above. `ownerId` stays for audit; the venue just leaves the public listings, marked as
+ * a system deactivation (`deactivatedBy: 'lifecycle'`). Other venues whose `ownerId` is the uid are
+ * NOT touched: there it is the admin-editable manager of a partner gym, whose gym outlives the
+ * manager's account.
  */
 export function ownedStoragePrefixes(uid: string): string[] {
   return [
@@ -31,7 +35,7 @@ export interface CascadeDeps {
   deleteProviderApplications: (uid: string) => Promise<void>;
   /** Removes every `businessVat/{vat}` uniqueness claim whose uid == uid (business accounts). */
   deleteBusinessVatClaims: (uid: string) => Promise<void>;
-  /** Sets `isActive: false` on every venue with ownerId == uid (S-4); never deletes them. */
+  /** Deactivates the company's own venue `biz_<uid>` (S-4); never deletes it, never touches other venues. */
   deactivateOwnedVenues: (uid: string) => Promise<void>;
   deleteStoragePrefix: (prefix: string) => Promise<void>;
   deleteAuthUser: (uid: string) => Promise<void>;
@@ -98,16 +102,11 @@ export function adminCascadeDeps(): CascadeDeps {
     // Same automatic single-field index on `uid` that applyAsProvider's claim query uses.
     deleteBusinessVatClaims: (uid) => deleteWhere(BUSINESS_VAT_COLLECTION, "uid", uid),
     deactivateOwnedVenues: async (uid) => {
-      const snap = await db.collection("venues").where("ownerId", "==", uid).get();
-      const CHUNK_SIZE = 400;
-      const active = snap.docs.filter((doc) => doc.data().isActive !== false);
-      for (let i = 0; i < active.length; i += CHUNK_SIZE) {
-        const batch = db.batch();
-        for (const doc of active.slice(i, i + CHUNK_SIZE)) {
-          batch.update(doc.ref, { isActive: false, updatedAt: FieldValue.serverTimestamp() });
-        }
-        await batch.commit();
-      }
+      const ref = db.collection("venues").doc(businessVenueId(uid));
+      const snap = await ref.get();
+      const now = FieldValue.serverTimestamp();
+      const patch = venueDeactivationPatch(uid, { exists: snap.exists, data: snap.data() }, now);
+      if (patch) await ref.update(patch);
     },
     deleteStoragePrefix: async (prefix) => {
       await getStorage().bucket().deleteFiles({ prefix });

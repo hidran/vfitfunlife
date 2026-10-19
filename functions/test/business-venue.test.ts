@@ -141,12 +141,24 @@ describe("approving a company in a real transaction", () => {
     });
   });
 
-  it("an inactive venue whose link is gone is relinked and reactivated, not recreated", async () => {
+  it("a venue the system deactivated, whose link is gone, is relinked and reactivated (marker cleared), not recreated", async () => {
+    await seedCompany();
+    await db.doc("venues/biz_biz").set({
+      name: "Old", ownerId: "biz", isActive: false, partnerStatus: "active", deactivatedBy: "lifecycle", deactivatedAt: new Date(),
+    });
+    expect((await approve()).venueId).toBe("biz_biz");
+    expect(await read("venues/biz_biz")).toEqual({
+      name: "Old", ownerId: "biz", isActive: true, partnerStatus: "active", updatedAt: expect.anything(), deactivatedBy: null, deactivatedAt: null,
+    });
+    expect((await read("instructors/biz"))?.business).toEqual({ ...BUSINESS, venueId: "biz_biz" });
+  });
+
+  it("a venue an admin switched off (no marker) stays inactive on re-approval and is not relinked", async () => {
     await seedCompany();
     await db.doc("venues/biz_biz").set({ name: "Old", ownerId: "biz", isActive: false, partnerStatus: "active" });
-    expect((await approve()).venueId).toBe("biz_biz");
-    expect(await read("venues/biz_biz")).toEqual({ name: "Old", ownerId: "biz", isActive: true, partnerStatus: "active", updatedAt: expect.anything() });
-    expect((await read("instructors/biz"))?.business).toEqual({ ...BUSINESS, venueId: "biz_biz" });
+    expect((await approve()).venueId).toBeNull();
+    expect(await read("venues/biz_biz")).toEqual({ name: "Old", ownerId: "biz", isActive: false, partnerStatus: "active" });
+    expect((await read("instructors/biz"))?.business).toEqual(BUSINESS);
   });
 
   it("a company with no declared premises gets no venue", async () => {

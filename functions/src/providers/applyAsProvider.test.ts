@@ -329,6 +329,32 @@ describe("applyAsProvider (handler)", () => {
       });
     });
 
+    it("a REMOVED provider (stale verified instructors doc) is queued again, never a silent no-op, even with auto-approval ON", async () => {
+      fake.put("users/u1", { ...USER, providerStatus: "removed" });
+      fake.put("instructors/u1", { ...APPROVED, name: "Mario Rossi", providerProfile: { isVerified: true, bio: "Dal 1990" } });
+      await expect(call({ categoryIds: ["hiit"], fullName: "Mario Rossi" })).resolves.toEqual({
+        success: true,
+        providerId: "u1",
+        autoApproved: false,
+        draftServicesSeeded: 0,
+      });
+      expect(h.commitProviderDecision).not.toHaveBeenCalled();
+      expect(fake.read("users/u1")).toMatchObject({ providerStatus: "pending", role: "customer" });
+      expect(fake.read("instructors/u1")).toMatchObject({
+        applicationStatus: "pending",
+        providerProfile: { isVerified: false, bio: "Dal 1990" },
+      });
+    });
+
+    it("a removed provider may apply as a company (it is not a verified individual)", async () => {
+      fake.put("users/u1", { ...USER, providerStatus: "removed" });
+      fake.put("instructors/u1", { ...APPROVED, name: "Mario Rossi" });
+      await expect(call({ categoryIds: ["hiit"], providerType: "business", business: COMPANY })).resolves.toMatchObject({
+        autoApproved: false,
+      });
+      expect(fake.read("users/u1")).toMatchObject({ providerStatus: "pending", providerType: "business" });
+    });
+
     it("is queued again when only the instructors doc says rejected", async () => {
       fake.put("instructors/u1", { ...PENDING, applicationStatus: "rejected" });
       await expect(call({ categoryIds: ["hiit"] })).resolves.toMatchObject({ autoApproved: false });

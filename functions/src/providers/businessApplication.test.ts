@@ -641,6 +641,14 @@ describe("isVerifiedAccount / isRejectedAccount", () => {
     expect(isVerifiedAccount({ providerStatus: "rejected" }, { applicationStatus: "rejected" })).toBe(false);
   });
 
+  it("a removed provider is rejected, and not verified even with a stale verified instructors doc", () => {
+    const stale = { applicationStatus: "verified", providerProfile: { isVerified: true } };
+    expect(isRejectedAccount({ providerStatus: "removed" }, stale)).toBe(true);
+    expect(isVerifiedAccount({ providerStatus: "removed" }, stale)).toBe(false);
+    // ...whereas the same instructors doc under any other status still counts.
+    expect(isVerifiedAccount({ providerStatus: "pending" }, stale)).toBe(true);
+  });
+
   it("is rejected on either side", () => {
     expect(isRejectedAccount({ providerStatus: "rejected" }, undefined)).toBe(true);
     expect(isRejectedAccount({}, { applicationStatus: "rejected" })).toBe(true);

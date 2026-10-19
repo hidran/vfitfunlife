@@ -135,17 +135,38 @@ export type BusinessVenuePlan =
   | {
     kind: "reactivate";
     venueId: string;
-    /** `update()`d onto the venue: only these fields, so admin edits, photos and partnerStatus survive. */
-    venuePatch: { isActive: true; updatedAt: unknown };
-    /** Present only when the link is missing or points elsewhere. */
+    /**
+     * `update()`d onto the venue: only these fields, so admin edits, photos and partnerStatus
+     * survive. The lifecycle marker is cleared (set to null) when there was one to clear.
+     */
+    venuePatch: { isActive: true; updatedAt: unknown; deactivatedBy?: null; deactivatedAt?: null };
+    /** Present only when the link is missing (never when it points elsewhere: that link is kept). */
     instructorPatch: { business: { venueId: string } } | null;
   }
   | {
     kind: "deactivate";
     venueId: string;
     /** `ownerId` stays, for audit; the venue just leaves public listings. */
-    venuePatch: { isActive: false; updatedAt: unknown };
+    venuePatch: VenueDeactivation;
   };
+
+/**
+ * The system's own deactivation of a company venue (rejection, conversion to individual, account
+ * deletion). `deactivatedBy: 'lifecycle'` is what lets a later approval bring the venue back: an
+ * admin who switched a venue off by hand leaves no marker, and that stays off.
+ */
+export const LIFECYCLE_DEACTIVATION = "lifecycle";
+
+export type VenueDeactivation = {
+  isActive: false;
+  updatedAt: unknown;
+  deactivatedBy: typeof LIFECYCLE_DEACTIVATION;
+  deactivatedAt: unknown;
+};
+
+export function venueDeactivation(now: unknown): VenueDeactivation {
+  return { isActive: false, updatedAt: now, deactivatedBy: LIFECYCLE_DEACTIVATION, deactivatedAt: now };
+}
 
 /** A venue the company owns (ownerId == uid), as read. */
 const ownedBy = (
@@ -161,11 +182,16 @@ const ownedBy = (
  * Approval of a company with premises (venueType gym / school / studio; absent and "none" mean
  * none):
  * - no venue at the id and nothing linked ⇒ create it;
- * - the company's own venue (ownerId == uid) that is inactive (deactivated by a rejection, a
- *   conversion to individual…) ⇒ reactivate it and relink `business.venueId` — a patch of
- *   isActive/updatedAt only, so everything an admin or the owner added since survives;
+ * - the company's own venue (ownerId == uid) that the SYSTEM deactivated (`deactivatedBy:
+ *   'lifecycle'`: a rejection, a conversion to individual, an account deletion) ⇒ reactivate it,
+ *   clear the marker and link `business.venueId` if it is empty — a patch of isActive/updatedAt and
+ *   the marker only, so everything an admin or the owner added since survives;
+ * - the company's own venue that is inactive WITHOUT the marker (an admin switched it off) ⇒
+ *   nothing: it stays off, and the instructor's link is left as it is;
  * - the company's own venue already active (isActive absent counts as active, like the rules)
  *   and linked ⇒ nothing (re-running an approval changes nothing);
+ * - `business.venueId` already pointing at ANOTHER venue ⇒ that link is kept, never silently
+ *   replaced by `biz_<uid>`;
  * - a venue at the id owned by someone else ⇒ `venue_exists`: a genuine clash that nobody
  *   should resolve by overwriting it;
  * - nothing at the id but `business.venueId` still set (an admin deleted the venue) ⇒ nothing:
@@ -185,7 +211,7 @@ export function planBusinessVenue(
 
   if (decision === "rejected") {
     if (!ownedBy(existing, providerId) || existing.data.isActive === false) return null;
-    return { kind: "deactivate", venueId, venuePatch: { isActive: false, updatedAt: now } };
+    return { kind: "deactivate", venueId, venuePatch: venueDeactivation(now) };
   }
 
   if (businessVenueType(b) === "none") return null;
@@ -193,12 +219,17 @@ export function planBusinessVenue(
   if (existing?.exists) {
     if (!ownedBy(existing, providerId)) throw new HttpsError("already-exists", "venue_exists");
     const linked = b.venueId === venueId;
-    if (existing.data.isActive !== false && linked) return null;
+    const linkable = !nonEmpty(b.venueId);
+    const inactive = existing.data.isActive === false;
+    if (inactive && existing.data.deactivatedBy !== LIFECYCLE_DEACTIVATION) return null;
+    if (!inactive && (linked || !linkable)) return null;
     return {
       kind: "reactivate",
       venueId,
-      venuePatch: { isActive: true, updatedAt: now },
-      instructorPatch: linked ? null : { business: { venueId } },
+      venuePatch: inactive ?
+        { isActive: true, updatedAt: now, deactivatedBy: null, deactivatedAt: null } :
+        { isActive: true, updatedAt: now },
+      instructorPatch: linkable ? { business: { venueId } } : null,
     };
   }
 
@@ -213,9 +244,9 @@ export function venueDeactivationPatch(
   providerId: string,
   existing: ExistingVenue | undefined,
   now: unknown,
-): { isActive: false; updatedAt: unknown } | null {
+): VenueDeactivation | null {
   if (!ownedBy(existing, providerId) || existing.data.isActive === false) return null;
-  return { isActive: false, updatedAt: now };
+  return venueDeactivation(now);
 }
 
 /**

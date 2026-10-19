@@ -230,21 +230,28 @@ export function isExistingBusiness(
  * An admin (or auto-approval) said yes, by any of the three signals: `users.providerStatus`,
  * the instructors doc's `applicationStatus`, or the `providerProfile.isVerified` flag legacy docs
  * carry alone. Providers from before `users.providerStatus` existed are verified only on the
- * instructors side, so the user doc alone is not enough.
+ * instructors side, so the user doc alone is not enough. A REMOVED provider (superadmin removal
+ * sets `users.providerStatus: 'removed'` and leaves the instructors doc) is not verified, whatever
+ * that stale instructors doc still says: re-applying must not be a silent no-op.
  */
 export function isVerifiedAccount(
   user: Record<string, unknown> | undefined,
   instructor: Record<string, unknown> | undefined,
 ): boolean {
+  if (user?.providerStatus === "removed") return false;
   return user?.providerStatus === "verified" || isApproved(instructor);
 }
 
-/** An admin turned this applicant down; only an admin may reverse that (never auto-approval). */
+/**
+ * An admin turned this applicant down (or a superadmin removed them: `providerStatus: 'removed'`);
+ * only an admin may reverse that, never auto-approval.
+ */
 export function isRejectedAccount(
   user: Record<string, unknown> | undefined,
   instructor: Record<string, unknown> | undefined,
 ): boolean {
-  return user?.providerStatus === "rejected" || instructor?.applicationStatus === "rejected";
+  return user?.providerStatus === "rejected" || user?.providerStatus === "removed" ||
+    instructor?.applicationStatus === "rejected";
 }
 
 /**

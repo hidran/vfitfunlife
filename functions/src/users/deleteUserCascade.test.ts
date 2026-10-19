@@ -104,11 +104,9 @@ describe("adminCascadeDeps().deleteBusinessVatClaims", () => {
 });
 
 describe("adminCascadeDeps().deactivateOwnedVenues (S-4)", () => {
-  it("deactivates the venues the uid owns — kept, not deleted — and leaves everyone else's alone", async () => {
+  it("deactivates the company's own venue biz_<uid> — kept, not deleted, marked as a lifecycle deactivation", async () => {
     h.fake.reset();
     h.fake.put("venues/biz_u1", { name: "Palestra", ownerId: "u1", isActive: true, partnerStatus: "active" });
-    h.fake.put("venues/other", { name: "Mine too", ownerId: "u1" }); // isActive absent counts as active
-    h.fake.put("venues/gone", { name: "Already off", ownerId: "u1", isActive: false });
     h.fake.put("venues/biz_u2", { name: "Not theirs", ownerId: "u2", isActive: true });
     h.fake.put("venues/biz_u1/locations/main", { name: "Centro" });
 
@@ -116,13 +114,34 @@ describe("adminCascadeDeps().deactivateOwnedVenues (S-4)", () => {
 
     expect(h.fake.read("venues/biz_u1")).toEqual({
       name: "Palestra", ownerId: "u1", isActive: false, partnerStatus: "active", updatedAt: "NOW",
+      deactivatedBy: "lifecycle", deactivatedAt: "NOW",
     });
-    expect(h.fake.read("venues/other")).toMatchObject({ ownerId: "u1", isActive: false, updatedAt: "NOW" });
-    expect(h.fake.read("venues/gone")).toEqual({ name: "Already off", ownerId: "u1", isActive: false });
     expect(h.fake.read("venues/biz_u2")).toEqual({ name: "Not theirs", ownerId: "u2", isActive: true });
     expect(h.fake.read("venues/biz_u1/locations/main")).toEqual({ name: "Centro" });
 
     // Idempotent: a resumed cascade changes nothing more.
     await expect(adminCascadeDeps().deactivateOwnedVenues("u1")).resolves.toBeUndefined();
+  });
+
+  it("leaves an admin-created gym active when its manager (ownerId) is deleted", async () => {
+    h.fake.reset();
+    h.fake.put("venues/gym-roma", { name: "Gym Roma", ownerId: "manager1", isActive: true, partnerStatus: "active" });
+    h.fake.put("venues/spa-1", { name: "Spa", ownerId: "manager1" }); // isActive absent counts as active
+
+    await adminCascadeDeps().deactivateOwnedVenues("manager1");
+
+    expect(h.fake.read("venues/gym-roma")).toEqual({ name: "Gym Roma", ownerId: "manager1", isActive: true, partnerStatus: "active" });
+    expect(h.fake.read("venues/spa-1")).toEqual({ name: "Spa", ownerId: "manager1" });
+  });
+
+  it("does nothing for a biz_<uid> that is already inactive, owned by someone else, or missing", async () => {
+    h.fake.reset();
+    h.fake.put("venues/biz_u1", { name: "Off", ownerId: "u1", isActive: false });
+    h.fake.put("venues/biz_u3", { name: "Promoted by an admin", ownerId: "someone-else", isActive: true });
+    await adminCascadeDeps().deactivateOwnedVenues("u1");
+    await adminCascadeDeps().deactivateOwnedVenues("u3");
+    await adminCascadeDeps().deactivateOwnedVenues("nobody");
+    expect(h.fake.read("venues/biz_u1")).toEqual({ name: "Off", ownerId: "u1", isActive: false });
+    expect(h.fake.read("venues/biz_u3")).toEqual({ name: "Promoted by an admin", ownerId: "someone-else", isActive: true });
   });
 });

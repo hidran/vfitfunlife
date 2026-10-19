@@ -231,7 +231,8 @@ describe("the venue follows the decision (S-4): rejection deactivates, approval 
     expect(result.venueId).toBeNull();
     expect(h.read("venues/biz_biz")).toMatchObject({ ...EDITED, ownerId: "biz", isActive: false, updatedAt: "NOW" });
     const update = h.ops.filter(([op, path]) => op === "update" && path === "venues/biz_biz").at(-1);
-    expect(update?.[2]).toEqual({ isActive: false, updatedAt: "NOW" });
+    expect(update?.[2]).toEqual({ isActive: false, updatedAt: "NOW", deactivatedBy: "lifecycle", deactivatedAt: "NOW" });
+    expect(h.read("venues/biz_biz")).toMatchObject({ deactivatedBy: "lifecycle" });
     const entry = audits().at(-1) as { after: Record<string, unknown> };
     expect(entry.after).toMatchObject({ providerStatus: "rejected", venueId: "biz_biz", venueDeactivated: true });
     // The link stays: the company still points at its (now inactive) venue.
@@ -250,10 +251,10 @@ describe("the venue follows the decision (S-4): rejection deactivates, approval 
 
     expect(again.venueId).toBe("biz_biz");
     expect(venues()).toHaveLength(1);
-    expect(h.read("venues/biz_biz")).toMatchObject({ ...EDITED, ownerId: "biz", isActive: true });
+    expect(h.read("venues/biz_biz")).toMatchObject({ ...EDITED, ownerId: "biz", isActive: true, deactivatedBy: null });
     expect(h.ops.some(([op, path]) => op === "create" && path === "venues/biz_biz")).toBe(false);
     expect(h.ops.filter(([, path]) => path === "venues/biz_biz").map((o) => [o[0], o[2]])).toEqual([
-      ["update", { isActive: true, updatedAt: "NOW" }],
+      ["update", { isActive: true, updatedAt: "NOW", deactivatedBy: null, deactivatedAt: null }],
     ]);
     expect((audits().at(-1) as { after: Record<string, unknown> }).after).toMatchObject({
       venueId: "biz_biz", venueReactivated: true,
@@ -263,7 +264,7 @@ describe("the venue follows the decision (S-4): rejection deactivates, approval 
 
   it("an inactive venue whose link is gone (converted to individual and back) is relinked and reactivated, not recreated", async () => {
     seedCompany();
-    h.put("venues/biz_biz", { ...EDITED, ownerId: "biz", isActive: false });
+    h.put("venues/biz_biz", { ...EDITED, ownerId: "biz", isActive: false, deactivatedBy: "lifecycle", deactivatedAt: "T0" });
     const result = await approve();
     expect(result.venueId).toBe("biz_biz");
     expect(h.read("venues/biz_biz")).toMatchObject({ ...EDITED, isActive: true });
@@ -271,6 +272,24 @@ describe("the venue follows the decision (S-4): rejection deactivates, approval 
     expect((h.read("instructors/biz") as { business: unknown }).business).toEqual({ ...BUSINESS, venueId: "biz_biz" });
     const instructorWrite = h.ops.find(([op, path]) => op === "set" && path === "instructors/biz");
     expect((instructorWrite?.[2] as { business: unknown }).business).toEqual({ venueId: "biz_biz" });
+  });
+
+  it("a venue an ADMIN switched off (no marker) stays inactive on re-approval, and nothing is relinked", async () => {
+    seedCompany();
+    h.put("venues/biz_biz", { ...EDITED, ownerId: "biz", isActive: false });
+    const result = await approve();
+    expect(result.venueId).toBeNull();
+    expect(h.read("venues/biz_biz")).toEqual({ ...EDITED, ownerId: "biz", isActive: false });
+    expect(h.ops.filter(([, path]) => path === "venues/biz_biz")).toEqual([]);
+    expect((h.read("instructors/biz") as { business: unknown }).business).toEqual(BUSINESS);
+  });
+
+  it("a link to another venue is kept: approval does not repoint it at biz_<uid>", async () => {
+    seedCompany("biz", { ...BUSINESS, venueId: "venue-elsewhere" });
+    h.put("venues/biz_biz", { ...EDITED, ownerId: "biz", isActive: false, deactivatedBy: "lifecycle" });
+    await approve();
+    expect((h.read("instructors/biz") as { business: { venueId: string } }).business.venueId).toBe("venue-elsewhere");
+    expect(h.read("venues/biz_biz")).toMatchObject({ isActive: true });
   });
 
   it("an active, unlinked venue of the company is just relinked", async () => {
