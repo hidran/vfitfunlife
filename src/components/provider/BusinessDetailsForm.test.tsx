@@ -9,10 +9,21 @@ import {
   type BusinessDetailsValues,
 } from '@/lib/businessDetails';
 
-function Harness({ errors, onChange }: { errors?: BusinessDetailsErrors; onChange?: (v: BusinessDetailsValues) => void }) {
-  const [values, setValues] = useState(EMPTY_BUSINESS_DETAILS);
+function Harness({
+  errors,
+  onChange,
+  mode,
+  initial = EMPTY_BUSINESS_DETAILS,
+}: {
+  errors?: BusinessDetailsErrors;
+  onChange?: (v: BusinessDetailsValues) => void;
+  mode?: 'apply' | 'edit';
+  initial?: BusinessDetailsValues;
+}) {
+  const [values, setValues] = useState(initial);
   return (
     <BusinessDetailsForm
+      mode={mode}
       values={values}
       errors={errors}
       onChange={(v) => {
@@ -79,5 +90,59 @@ describe('BusinessDetailsForm', () => {
     expect(focusBusinessField('legalName')).toBe(true);
     expect(screen.getByLabelText('Ragione sociale')).toHaveFocus();
     expect(focusBusinessField('legalName', 'other-prefix')).toBe(false);
+  });
+
+  it('does not show the description at signup', () => {
+    render(<Harness />);
+    expect(screen.queryByLabelText('Descrizione (facoltativa)')).not.toBeInTheDocument();
+  });
+
+  describe('edit mode', () => {
+    const stored: BusinessDetailsValues = {
+      legalName: 'Palestra Rossi S.r.l.',
+      vatNumber: '01234567897',
+      displayName: 'Palestra Rossi',
+      venueType: 'gym',
+      address: 'Via Roma 1',
+      city: 'Milano',
+      website: '',
+      description: '',
+    };
+
+    it('renders the admin-verified fields read-only with a hint, keeps the rest editable and adds a description', () => {
+      const onChange = vi.fn();
+      render(<Harness mode="edit" initial={stored} onChange={onChange} />);
+
+      const legal = screen.getByLabelText('Ragione sociale') as HTMLInputElement;
+      const vat = screen.getByLabelText('Partita IVA') as HTMLInputElement;
+      const venue = screen.getByLabelText('Tipo di sede') as HTMLInputElement;
+      const address = screen.getByLabelText('Indirizzo') as HTMLInputElement;
+      for (const frozen of [legal, vat, venue, address]) {
+        expect(frozen).toHaveAttribute('readonly');
+        expect(frozen).not.toBeDisabled();
+        expect(frozen).toHaveAccessibleDescription(/Verificato da un amministratore/);
+      }
+      expect(vat.value).toBe('01234567897');
+      expect(venue.value).toBe('Palestra');
+
+      // Typing into a frozen field changes nothing.
+      fireEvent.change(vat, { target: { value: '99999999999' } });
+      expect(onChange).not.toHaveBeenCalled();
+      expect(vat.value).toBe('01234567897');
+
+      const description = screen.getByLabelText('Descrizione (facoltativa)');
+      expect(description).not.toHaveAttribute('readonly');
+      fireEvent.change(description, { target: { value: 'Dal 1990' } });
+      expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ description: 'Dal 1990' }));
+
+      fireEvent.change(screen.getByLabelText('Città'), { target: { value: 'Torino' } });
+      expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ city: 'Torino' }));
+    });
+
+    it('keeps the city editable even when there are no fixed premises', () => {
+      render(<Harness mode="edit" initial={{ ...stored, venueType: 'none', address: '' }} />);
+      expect(screen.getByLabelText('Città')).not.toHaveAttribute('readonly');
+      expect(screen.queryByLabelText('Indirizzo')).not.toBeInTheDocument();
+    });
   });
 });

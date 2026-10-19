@@ -11,6 +11,7 @@ import {
   validateBusinessDetails,
   type BusinessDetailsErrors,
   type BusinessDetailsField,
+  type BusinessDetailsMode,
   type BusinessDetailsValues,
 } from '@/lib/businessDetails';
 
@@ -21,6 +22,8 @@ interface UseBusinessDetailsOptions {
    * again; focusing a disabled input does nothing.
    */
   disabled?: boolean;
+  /** 'edit' skips the rules for the frozen fields (see validateBusinessDetails). */
+  mode?: BusinessDetailsMode;
 }
 
 /**
@@ -28,7 +31,10 @@ interface UseBusinessDetailsOptions {
  * card: values, per-field errors, `validate()` for the client rules and `applyServerError()`
  * for what applyAsProvider refused. Both put the error under its input and move focus there.
  */
-export function useBusinessDetails(idPrefix = DEFAULT_BUSINESS_ID_PREFIX, { disabled = false }: UseBusinessDetailsOptions = {}) {
+export function useBusinessDetails(
+  idPrefix = DEFAULT_BUSINESS_ID_PREFIX,
+  { disabled = false, mode = 'apply' }: UseBusinessDetailsOptions = {}
+) {
   const [values, setValues] = useState<BusinessDetailsValues>(EMPTY_BUSINESS_DETAILS);
   const [errors, setErrors] = useState<BusinessDetailsErrors>({});
   // The field waiting for focus lives in a ref (consumed, not rendered); `focusRequest`
@@ -58,7 +64,7 @@ export function useBusinessDetails(idPrefix = DEFAULT_BUSINESS_ID_PREFIX, { disa
 
   /** The callable payload when the form is valid; otherwise null, with the errors shown and focus on the first. */
   const validate = useCallback((): BusinessApplicationInput | null => {
-    const nextErrors = validateBusinessDetails(values);
+    const nextErrors = validateBusinessDetails(values, { mode });
     setErrors(nextErrors);
     const first = firstBusinessError(nextErrors);
     if (first) {
@@ -66,7 +72,7 @@ export function useBusinessDetails(idPrefix = DEFAULT_BUSINESS_ID_PREFIX, { disa
       return null;
     }
     return toBusinessApplicationInput(values);
-  }, [values, scheduleFocus]);
+  }, [values, mode, scheduleFocus]);
 
   /** Shows why the server refused and returns the message to announce. */
   const applyServerError = useCallback((err: unknown): MessageKey => {

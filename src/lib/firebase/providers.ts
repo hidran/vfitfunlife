@@ -19,7 +19,7 @@ import type {
   ProviderListOptions,
   ActivityKind,
 } from '@/types/instructor';
-import type { ProviderApplicationStatus } from '@/types/firebase';
+import type { BusinessDetails, ProviderApplicationStatus, ProviderType } from '@/types/firebase';
 
 /**
  * Normalizes the various shapes /instructors documents take in this app's data —
@@ -58,6 +58,8 @@ function flattenProvider(id: string, data: Record<string, unknown>): Provider {
     lowestPrice: typeof data.lowestPrice === 'number' ? (data.lowestPrice as number) : undefined,
     categoryIds: (data.categoryIds as string[]) ?? undefined,
     requestedCategoryIds: (data.requestedCategoryIds as string[]) ?? undefined,
+    providerType: data.providerType as ProviderType | undefined,
+    business: data.business as BusinessDetails | undefined,
   };
 }
 

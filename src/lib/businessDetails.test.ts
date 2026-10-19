@@ -2,8 +2,10 @@ import { describe, it, expect } from 'vitest';
 import {
   EMPTY_BUSINESS_DETAILS,
   firstBusinessError,
+  businessDetailsFromProvider,
   providerApplicationErrorFor,
   toBusinessApplicationInput,
+  toBusinessProfilePatch,
   validateBusinessDetails,
   type BusinessDetailsValues,
 } from './businessDetails';
@@ -16,6 +18,7 @@ const valid: BusinessDetailsValues = {
   address: 'Via Roma 1',
   city: 'Milano',
   website: '',
+  description: '',
 };
 
 describe('validateBusinessDetails', () => {
@@ -64,6 +67,64 @@ describe('validateBusinessDetails', () => {
   it('caps field lengths like the server', () => {
     expect(validateBusinessDetails({ ...valid, legalName: 'x'.repeat(121) })).toEqual({
       legalName: 'provider.business.error.tooLong',
+    });
+    expect(validateBusinessDetails({ ...valid, description: 'x'.repeat(2001) })).toEqual({
+      description: 'provider.business.error.tooLong',
+    });
+  });
+
+  describe('edit mode', () => {
+    it('ignores the frozen fields and the premises, which the owner cannot change', () => {
+      expect(validateBusinessDetails(
+        { ...valid, legalName: '', vatNumber: 'bad', address: '', city: '' },
+        { mode: 'edit' }
+      )).toEqual({});
+    });
+
+    it('still requires a public name (it is what lists show) and checks the editable fields', () => {
+      expect(validateBusinessDetails({ ...valid, displayName: '  ' }, { mode: 'edit' })).toEqual({
+        displayName: 'provider.business.error.displayNameRequired',
+      });
+      expect(validateBusinessDetails(
+        { ...valid, website: 'nope', city: 'x'.repeat(121), description: 'x'.repeat(2001) },
+        { mode: 'edit' }
+      )).toEqual({
+        website: 'provider.business.error.websiteInvalid',
+        city: 'provider.business.error.tooLong',
+        description: 'provider.business.error.tooLong',
+      });
+    });
+  });
+});
+
+describe('businessDetailsFromProvider', () => {
+  it('fills every form field from the stored company, defaulting the blanks', () => {
+    expect(businessDetailsFromProvider({
+      legalName: 'Palestra Rossi S.r.l.',
+      vatNumber: '01234567897',
+      displayName: 'Palestra Rossi',
+      website: null,
+      city: 'Milano',
+    })).toEqual({
+      legalName: 'Palestra Rossi S.r.l.',
+      vatNumber: '01234567897',
+      displayName: 'Palestra Rossi',
+      venueType: 'gym',
+      address: '',
+      city: 'Milano',
+      website: '',
+      description: '',
+    });
+  });
+});
+
+describe('toBusinessProfilePatch', () => {
+  it('trims the editable fields only, keeping empty strings so a field can be cleared', () => {
+    expect(toBusinessProfilePatch({ ...valid, displayName: ' Palestra Rossi ', website: ' ', description: ' Dal 1990 ' })).toEqual({
+      displayName: 'Palestra Rossi',
+      description: 'Dal 1990',
+      website: '',
+      city: 'Milano',
     });
   });
 });

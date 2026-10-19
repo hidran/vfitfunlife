@@ -47,6 +47,7 @@ import { useServiceCategoryMap } from '@/hooks/useServiceCategories';
 import { useProviderStatus } from '@/hooks/useProviderApplication';
 import { useProvider, useProviderServices } from '@/hooks/useProviders';
 import { updateRequestedCategories } from '@/lib/firebase/providerApplication';
+import { BusinessProfileSection } from '@/components/provider/BusinessProfileSection';
 import { canAccessProviderArea } from '@/lib/providerStatus';
 import { CategoryLeafPicker } from '@/components/provider/CategoryLeafPicker';
 import { MissingLocationBanner } from '@/components/provider/MissingLocationBanner';
@@ -696,6 +697,9 @@ export default function EditProfilePage() {
         {/* Professional Tab */}
         {activeTab === 'professional' && canEditProfessional && (
           <div className="space-y-6">
+            {/* Company details: saves on its own to instructors/{uid} (see BusinessProfileSection) */}
+            {user?.providerType === 'business' && <BusinessProfileSection uid={user.id} />}
+
             {/* Professional Bio */}
             <div>
               <label className="block text-sm font-medium text-text-tertiary mb-2">
