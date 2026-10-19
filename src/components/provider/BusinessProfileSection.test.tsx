@@ -100,13 +100,24 @@ describe('BusinessProfileSection', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Impossibile salvare i dati aziendali');
   });
 
+  it('exposes only the button for the logo, not the file input behind it', async () => {
+    render(<BusinessProfileSection uid="u1" />);
+    await screen.findByLabelText('Partita IVA');
+
+    const input = screen.getByTestId('business-logo-input');
+    expect(input).toHaveAttribute('aria-hidden', 'true');
+    expect(input).toHaveAttribute('tabindex', '-1');
+    expect(input).toHaveAttribute('hidden');
+    expect(screen.getAllByRole('button', { name: 'Cambia logo' })).toHaveLength(1);
+  });
+
   it('uploads a new logo and stores its URL', async () => {
     uploadBusinessLogo.mockResolvedValue('https://storage.example/new-logo.jpg');
     render(<BusinessProfileSection uid="u1" />);
     await screen.findByLabelText('Partita IVA');
 
     const file = new File(['x'], 'logo.png', { type: 'image/png' });
-    fireEvent.change(screen.getByLabelText('Cambia logo'), { target: { files: [file] } });
+    fireEvent.change(screen.getByTestId('business-logo-input'), { target: { files: [file] } });
 
     await waitFor(() => expect(updateBusinessDetails).toHaveBeenCalledWith('u1', { logoUrl: 'https://storage.example/new-logo.jpg' }));
     expect(uploadBusinessLogo).toHaveBeenCalledWith('u1', file);
@@ -118,7 +129,7 @@ describe('BusinessProfileSection', () => {
     render(<BusinessProfileSection uid="u1" />);
     await screen.findByLabelText('Partita IVA');
 
-    fireEvent.change(screen.getByLabelText('Cambia logo'), { target: { files: [new File(['x'], 'logo.png', { type: 'image/png' })] } });
+    fireEvent.change(screen.getByTestId('business-logo-input'), { target: { files: [new File(['x'], 'logo.png', { type: 'image/png' })] } });
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Impossibile caricare il logo');
     expect(updateBusinessDetails).not.toHaveBeenCalled();

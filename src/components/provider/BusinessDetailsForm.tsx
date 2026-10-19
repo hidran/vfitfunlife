@@ -97,7 +97,16 @@ export function BusinessDetailsForm({
       </p>
     ) : null;
 
+  // What validateBusinessDetails refuses when empty, per mode. aria-required rather than the
+  // native `required`, so the form's own inline errors stay in charge (no browser bubbles).
+  const isRequired = (field: BusinessDetailsField) => {
+    if (editing) return field === 'displayName';
+    if (field === 'legalName' || field === 'vatNumber') return true;
+    return needsPremises && (field === 'address' || field === 'city');
+  };
+
   const a11y = (field: BusinessDetailsField, describedBy?: string) => ({
+    'aria-required': isRequired(field) ? true : undefined,
     'aria-invalid': errors[field] ? true : undefined,
     'aria-describedby':
       [errors[field] ? errorId(field) : null, isFrozen(field) ? frozenHintId : null, describedBy ?? null]

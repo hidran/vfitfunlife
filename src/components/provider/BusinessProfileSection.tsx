@@ -155,8 +155,12 @@ export function BusinessProfileSection({ uid }: BusinessProfileSectionProps) {
                   accept="image/*"
                   onChange={handleLogoPick}
                   disabled={isUploading}
-                  className="sr-only"
-                  aria-label={t('provider.business.edit.changeLogo')}
+                  // Opened by the button below; the input itself is not a control for keyboard or
+                  // screen-reader users (it used to be announced as a second "Change logo").
+                  hidden
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  data-testid="business-logo-input"
                 />
                 <Button
                   type="button"

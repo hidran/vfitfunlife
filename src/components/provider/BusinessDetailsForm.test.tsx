@@ -46,6 +46,31 @@ describe('BusinessDetailsForm', () => {
     expect(screen.getByLabelText('Sito web (facoltativo)')).toBeInTheDocument();
   });
 
+  it('marks the fields the validator requires with aria-required', () => {
+    render(<Harness />);
+    for (const name of ['Ragione sociale', 'Partita IVA', 'Indirizzo', 'Città']) {
+      expect(screen.getByLabelText(name)).toHaveAttribute('aria-required', 'true');
+    }
+    for (const name of ['Nome pubblico', 'Sito web (facoltativo)']) {
+      expect(screen.getByLabelText(name)).not.toHaveAttribute('aria-required');
+    }
+    expect(screen.getByLabelText('Tipo di sede')).not.toHaveAttribute('aria-required');
+  });
+
+  it('does not require address and city when there are no fixed premises', () => {
+    render(<Harness initial={{ ...EMPTY_BUSINESS_DETAILS, venueType: 'none' }} />);
+    expect(screen.getByLabelText('Ragione sociale')).toHaveAttribute('aria-required', 'true');
+    expect(screen.queryByLabelText('Indirizzo')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Città')).not.toBeInTheDocument();
+  });
+
+  it('requires only the public name in edit mode', () => {
+    render(<Harness mode="edit" />);
+    expect(screen.getByLabelText('Nome pubblico')).toHaveAttribute('aria-required', 'true');
+    expect(screen.getByLabelText('Ragione sociale')).not.toHaveAttribute('aria-required');
+    expect(screen.getByLabelText('Partita IVA')).not.toHaveAttribute('aria-required');
+  });
+
   it('hides address and city when there are no fixed premises', () => {
     render(<Harness />);
     fireEvent.change(screen.getByLabelText('Tipo di sede'), { target: { value: 'none' } });
