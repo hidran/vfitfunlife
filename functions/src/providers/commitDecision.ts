@@ -10,6 +10,7 @@ import {
 } from "./applicationDecision";
 import { DEFAULT_WEEKLY_HOURS } from "../availability/slots";
 import { isProtectedSuperadmin } from "../lib/superadmins";
+import type { ProviderType } from "../types";
 
 /** Who the audit entry should name as responsible for the decision. */
 export interface DecisionActor {
@@ -28,7 +29,12 @@ export interface CommitDecisionOptions {
    * collected, so the instructor document is created in the same write that approves it
    * rather than in a separate client batch the rules would (rightly) refuse to verify.
    */
-  application?: { requestedCategoryIds: string[]; fullName?: string | null };
+  application?: {
+    requestedCategoryIds: string[];
+    fullName?: string | null;
+    /** Recorded on both documents; absent (admin decisions) leaves whatever is stored. */
+    providerType?: ProviderType;
+  };
 }
 
 /**
@@ -84,6 +90,7 @@ export async function commitProviderDecision(
     "verificationNotes": notes ?? null,
     "updatedAt": now,
     ...(rolePatch ?? {}),
+    ...(application?.providerType ? { providerType: application.providerType } : {}),
   });
 
   // Approval also makes them bookable immediately: default Mon-Fri 09:00-17:00 hours if
@@ -107,11 +114,19 @@ export async function commitProviderDecision(
     ) :
     ((instructor.requestedCategoryIds as string[] | undefined) ?? []);
 
+  // Only the fields a decision owns are written; `business` (a company's legal name, P.IVA,
+  // display details — see applyAsProvider) is deliberately never spread, reset or touched
+  // here, and the merge below leaves it exactly as the application stored it. Likewise
+  // name/fullName are only set from a *present* application name: for a company they hold
+  // the display name, and a null application name must not blank them.
   if (application) {
     instructorPatch.requestedCategoryIds = requestedLeaves;
     if (application.fullName) {
       instructorPatch.name = application.fullName;
       instructorPatch.fullName = application.fullName;
+    }
+    if (application.providerType) {
+      instructorPatch.providerType = application.providerType;
     }
   }
 

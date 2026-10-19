@@ -5,6 +5,7 @@ import { isValidItalianVat, normalizeVatNumber } from './vatNumber';
 const FIXTURES: ReadonlyArray<{ input: string; valid: boolean; label: string }> = [
   { input: '01234567897', valid: true, label: 'valid number' },
   { input: '12345678903', valid: true, label: 'valid number (second)' },
+  { input: '50500000000', valid: true, label: 'check digit 0' },
   { input: 'IT01234567897', valid: true, label: 'IT prefix' },
   { input: 'it01234567897', valid: true, label: 'lowercase it prefix' },
   { input: '  IT 0123 4567 897  ', valid: true, label: 'prefix, inner and surrounding whitespace' },

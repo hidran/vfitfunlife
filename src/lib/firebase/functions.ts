@@ -8,7 +8,12 @@ import type {
   AiProviderId,
   ResultCard,
 } from "@/types/assistant";
-import type { BookingStatus, PaymentConfirmationMethod } from "@/types/firebase";
+import type {
+  BookingStatus,
+  BusinessDetails,
+  PaymentConfirmationMethod,
+  ProviderType,
+} from "@/types/firebase";
 
 // Type definitions for function responses
 interface BookingResult {
@@ -683,9 +688,31 @@ export async function updateAiAuthoringSettings(patch: Partial<AiAuthoringSettin
 // --- Provider applications ---
 
 /**
- * A user opts in as a professional and is approved immediately — role 'provider', default
- * Mon-Fri hours and a draft service per chosen category, all in one server-side write
- * (functions/src/providers/applyAsProvider.ts).
+ * What a company sends when applying. The server validates every field and normalises the
+ * P.IVA; `venueType` defaults to "gym". Stored fields the server owns (`logoUrl`, `venueId`)
+ * are not accepted here.
+ */
+export type BusinessApplicationInput = Pick<BusinessDetails, 'legalName' | 'vatNumber' | 'displayName'> &
+  Partial<Pick<BusinessDetails, 'description' | 'website' | 'city' | 'venueType' | 'address'>>;
+
+export interface ApplyAsProviderResult {
+  success: boolean;
+  providerId: string;
+  /** False when queued for an admin: auto-approval off, or always for a business. */
+  autoApproved: boolean;
+  draftServicesSeeded: number;
+}
+
+/**
+ * A user opts in as a professional, in one server-side write
+ * (functions/src/providers/applyAsProvider.ts). An individual is approved immediately when
+ * auto-approval is on — role 'provider', default Mon-Fri hours and a draft service per chosen
+ * category; otherwise, and always for a business (`providerType: 'business'` + `business`),
+ * the application is queued for an admin and `autoApproved` comes back false.
+ *
+ * A rejected business payload fails with code `invalid-argument` (or `already-exists` for a
+ * P.IVA someone else holds) and a stable message such as `business_vat_invalid` or
+ * `business_vat_taken` to map to an inline error.
  *
  * It cannot be done from the client: firestore.rules lets a user create only an unverified,
  * pending instructors document and never lets them set `providerProfile.isVerified`.
@@ -693,12 +720,11 @@ export async function updateAiAuthoringSettings(patch: Partial<AiAuthoringSettin
 export async function applyAsProvider(data: {
   categoryIds: string[];
   fullName?: string;
-}): Promise<{ success: boolean; providerId: string; draftServicesSeeded: number }> {
+  providerType?: ProviderType;
+  business?: BusinessApplicationInput;
+}): Promise<ApplyAsProviderResult> {
   const functions = await getFunctionsInstance();
-  const fn = httpsCallable<
-    typeof data,
-    { success: boolean; providerId: string; draftServicesSeeded: number }
-  >(functions, "applyAsProvider");
+  const fn = httpsCallable<typeof data, ApplyAsProviderResult>(functions, "applyAsProvider");
   return (await fn(data)).data;
 }
 

@@ -35,7 +35,7 @@ export interface BusinessDetails {
   // Default "gym"
   venueType?: BusinessVenueType;
   // Street address for the venue created on approval
-  address?: string;
+  address?: string | null;
   // Set by approval when a venue is created
   venueId?: string | null;
 }
