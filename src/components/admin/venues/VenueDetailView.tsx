@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
+import { hostsCourses } from '@/types/venue';
 import {
   EntityDetailLayout,
   ConfirmDeleteDialog,
@@ -123,7 +124,7 @@ export function VenueDetailView({ venueId }: { venueId: string }) {
           onSubmit={(d) => updateMut.mutate(d)}
         />
       </EntityDetailLayout>
-      {venue.type === 'gym' && <GymInstructorPanel venueId={venueId} />}
+      {hostsCourses(venue.type) && <GymInstructorPanel venueId={venueId} />}
       <ConfirmDeleteDialog
         open={confirmOpen}
         entityLabel={t('admin.venues.entityLabel')}

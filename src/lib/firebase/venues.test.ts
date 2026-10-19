@@ -5,6 +5,7 @@ import {
   fetchVenueServices,
   fetchVenueCourses,
   fetchVenuesNear,
+  typeFilter,
 } from './venues';
 
 vi.mock('./config', () => ({ db: {} }));
@@ -22,7 +23,7 @@ vi.mock('firebase/firestore', () => ({
   Timestamp: { now: () => ({ seconds: 0, nanoseconds: 0 }) },
 }));
 
-import { getDoc, getDocs, orderBy, limit } from 'firebase/firestore';
+import { getDoc, getDocs, orderBy, limit, where } from 'firebase/firestore';
 
 const mockGetDoc = vi.mocked(getDoc);
 const mockGetDocs = vi.mocked(getDocs);
@@ -73,6 +74,47 @@ describe('fetchVenues', () => {
     await fetchVenues({ type: 'gym', orderByRating: true, limit: 50 });
     expect(orderBy).toHaveBeenCalledWith('rating', 'desc');
     expect(limit).toHaveBeenCalledWith(50);
+  });
+});
+
+describe('type filters', () => {
+  it("fetchVenues filters with 'in' for a list of types, ordered by rating (same (type, rating) index)", async () => {
+    mockGetDocs.mockResolvedValueOnce({ docs: [] } as never);
+    await fetchVenues({ types: ['gym', 'school', 'studio'], orderByRating: true, limit: 50 });
+    expect(where).toHaveBeenCalledWith('type', 'in', ['gym', 'school', 'studio']);
+    expect(where).not.toHaveBeenCalledWith('type', '==', expect.anything());
+    expect(orderBy).toHaveBeenCalledWith('rating', 'desc');
+  });
+
+  it("fetchVenues keeps '==' for a single type and no filter without one", async () => {
+    mockGetDocs.mockResolvedValue({ docs: [] } as never);
+    await fetchVenues({ type: 'gym' });
+    expect(where).toHaveBeenCalledWith('type', '==', 'gym');
+    vi.mocked(where).mockClear();
+    await fetchVenues();
+    expect(where).not.toHaveBeenCalled();
+  });
+
+  it('types takes precedence over type', async () => {
+    mockGetDocs.mockResolvedValue({ docs: [] } as never);
+    await fetchVenues({ type: 'spa', types: ['gym', 'school'] });
+    expect(where).toHaveBeenCalledWith('type', 'in', ['gym', 'school']);
+    expect(where).not.toHaveBeenCalledWith('type', '==', 'spa');
+  });
+
+  it('an empty types list matches nothing instead of reading every venue', async () => {
+    expect(typeFilter({ types: [] })).toBeNull();
+    expect(typeFilter({ type: 'gym', types: [] })).toBeNull();
+    expect(await fetchVenues({ types: [] })).toEqual([]);
+    expect(await fetchVenuesNear({ types: [], center: { lat: 41, lng: 16 }, radiusKm: 5 })).toEqual([]);
+    expect(mockGetDocs).not.toHaveBeenCalled();
+  });
+
+  it("fetchVenuesNear combines 'in' with the geohash range", async () => {
+    mockGetDocs.mockResolvedValue({ docs: [] } as never);
+    await fetchVenuesNear({ types: ['gym', 'school'], center: { lat: 41.1171, lng: 16.8719 }, radiusKm: 10 });
+    expect(where).toHaveBeenCalledWith('type', 'in', ['gym', 'school']);
+    expect(orderBy).toHaveBeenCalledWith('geohash');
   });
 });
 

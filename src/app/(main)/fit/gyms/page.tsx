@@ -15,6 +15,7 @@ import { PhotoCover } from '@/components/gallery/PhotoCover';
 import { useNearMe } from '@/hooks/useNearMe';
 import { useCustomerSearchLocation } from '@/hooks/useCustomerSearchLocation';
 import { RadiusFilter } from '@/components/map/RadiusFilter';
+import { COURSE_VENUE_TYPES } from '@/types/venue';
 
 const filterKeys: MessageKey[] = [
   'fit.gyms.filter.distance',
@@ -42,9 +43,9 @@ export default function GymsPage() {
   const { userLocation, radiusKm, isLocating, error, requestLocation, clearLocation, setRadiusKm } =
     useNearMe(savedSearchLocation?.coords ?? null);
 
-  // Bounded read either way: a geohash radius search when located, else the top-rated gyms.
+  // Bounded read either way: a geohash radius search when located, else the top-rated venues.
   // Results arrive already distance-sorted (and radius-filtered) when a location is known.
-  const { data: gyms = NO_GYMS, isLoading: gymsLoading } = useNearbyVenues({ type: 'gym', userLocation, radiusKm });
+  const { data: gyms = NO_GYMS, isLoading: gymsLoading } = useNearbyVenues({ types: COURSE_VENUE_TYPES, userLocation, radiusKm });
 
   const handleGymSelect = useCallback((gymId: string) => {
     router.push(`/venue?id=${gymId}`);

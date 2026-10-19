@@ -1299,7 +1299,7 @@ export const frMessages: Messages = {
   'search.section.fun': 'VFun',
   'search.section.life': 'VLife',
 
-  'fit.gyms.title': 'Salles VFit',
+  'fit.gyms.title': 'Salles et écoles',
   'fit.gyms.subtitle': 'Consultez les salles partenaires répertoriées dans le catalogue.',
   'fit.gyms.searchPlaceholder': 'Rechercher salle ou zone...',
   'fit.gyms.clear': 'Effacer',

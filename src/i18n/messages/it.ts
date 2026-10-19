@@ -1409,7 +1409,7 @@ export const itMessages = {
   'search.section.fun': 'VFun',
   'search.section.life': 'VLife',
 
-  'fit.gyms.title': 'Palestre VFit',
+  'fit.gyms.title': 'Palestre e scuole',
   'fit.gyms.subtitle': 'Esplora i centri fitness partner pubblicati nel catalogo.',
   'fit.gyms.searchPlaceholder': 'Cerca palestra o zona...',
   'fit.gyms.clear': 'Pulisci',
