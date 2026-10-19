@@ -140,11 +140,10 @@ service cloud.firestore {
     }
 
     /**
-     * Validate role update (admin only fields). providerType (individual/business) is
-     * set by applyAsProvider and tells the app which review path the account went through.
+     * Validate role update (admin only fields)
      */
     function isValidRoleUpdate() {
-      return request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'permissions', 'userType', 'providerType']);
+      return request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'permissions', 'userType']);
     }
 
     /**
@@ -375,29 +374,26 @@ service cloud.firestore {
 
     /**
      * Business accounts: `providerType` and the `business` map are set by applyAsProvider
-     * (Admin SDK). An owner may touch neither — the map's presence IS the account type,
-     * so adding one to an individual or dropping one from a company would bypass review.
+     * (Admin SDK). The owner may not change `providerType` or add/remove `business` — the
+     * map's presence IS the account type, so adding one to an individual or dropping one
+     * from a company would bypass review.
      */
-    function providerTypeUnchanged() {
+    function accountTypeUnchanged() {
       return request.resource.data.get('providerType', null) == resource.data.get('providerType', null) &&
         (('business' in request.resource.data) == ('business' in resource.data));
     }
 
     /**
-     * Within `business`, the owner may edit presentation (displayName, description,
-     * website, logoUrl, city) but not legalName/vatNumber — they are what the admin
-     * verified and what the businessVat claim is keyed on — nor the venue binding
-     * (venueType, address, venueId), which ties the account to a venue the admin checked.
-     * Absent compared as null so a missing key can't be smuggled in or out.
+     * Within `business`, the owner may edit presentation only (allowlist, fail-closed):
+     * displayName, description, website, logoUrl, city. Everything else is frozen —
+     * legalName/vatNumber are what the admin verified and what the businessVat claim is
+     * keyed on; venueType/address/venueId tie the account to a venue the admin checked;
+     * any unknown key is denied too. A non-map `business` makes .diff() error → deny (intended).
      */
     function businessProtectedUnchanged() {
-      return !('business' in resource.data) || (
-        request.resource.data.business.get('legalName', null) == resource.data.business.get('legalName', null) &&
-        request.resource.data.business.get('vatNumber', null) == resource.data.business.get('vatNumber', null) &&
-        request.resource.data.business.get('venueType', null) == resource.data.business.get('venueType', null) &&
-        request.resource.data.business.get('address', null) == resource.data.business.get('address', null) &&
-        request.resource.data.business.get('venueId', null) == resource.data.business.get('venueId', null)
-      );
+      return !('business' in resource.data) ||
+        request.resource.data.business.diff(resource.data.business).affectedKeys()
+          .hasOnly(['displayName', 'description', 'website', 'logoUrl', 'city']);
     }
 
     match /instructors/{instructorId} {
@@ -410,13 +406,18 @@ service cloud.firestore {
                     (isAuthenticated() && request.auth.uid == resource.data.uid) ||
                     (isAuthenticated() && request.auth.uid == instructorId);
 
-      // Create: admin, or the user creating their OWN unverified pending profile
+      // Create: admin, or the user creating their OWN unverified pending profile. A
+      // business account is only ever created by applyAsProvider (Admin SDK, with the
+      // P.IVA claim), so a client create may carry neither a `business` map nor a
+      // non-individual providerType.
       allow create: if isAdmin() ||
         (isAuthenticated() &&
          request.resource.data.uid == request.auth.uid &&
          request.resource.data.get(['providerProfile', 'isVerified'], false) == false &&
          request.resource.data.get('applicationStatus', 'pending') == 'pending' &&
-         request.resource.data.get('partnerStatus', 'pending') == 'pending');
+         request.resource.data.get('partnerStatus', 'pending') == 'pending' &&
+         !('business' in request.resource.data) &&
+         request.resource.data.get('providerType', 'individual') == 'individual');
 
       // Update: admin can change anything; the owner may edit their profile but may
       // NOT change isVerified or applicationStatus (only admin verifies/rejects), nor
@@ -432,7 +433,7 @@ service cloud.firestore {
            resource.data.get('applicationStatus', 'pending') &&
          request.resource.data.get('partnerStatus', 'pending') ==
            resource.data.get('partnerStatus', 'pending') &&
-         providerTypeUnchanged() &&
+         accountTypeUnchanged() &&
          businessProtectedUnchanged());
 
       allow delete: if isAdmin();
