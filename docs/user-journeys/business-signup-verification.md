@@ -125,3 +125,79 @@ Passwords for the journey accounts: `JourneyDemo!2026!`. The demo accounts are t
 - 320 px German/Italian for the provider page and the company form (only the search card).
 - Owner column on `/admin/venues` is inside a horizontally scrolling table at 390 px; its text was read from the DOM, not captured in a screenshot.
 - Email verification (the staging mail provider is a placeholder).
+
+## Re-verification (20759f9)
+
+| | |
+|--|--|
+| **Date** | 19 October 2026 |
+| **Environment** | Staging only (`https://vfit-app-staging.web.app`, project `vfit-app-staging`); production was not touched. Hosting and `syncBusinessVenueLocation` had just been redeployed at commit `20759f9` (the deployed build was not otherwise checked against the SHA) |
+| **Device** | Chromium via Playwright, 390 x 844, dark (320 x 844 for the overflow check). One fresh private browser context per actor (company A owner, company B owner, `demo.customer`), admin in the main context |
+| **Screenshots** | `screenshots/business-recheck-*.png` |
+
+Application code was not changed.
+
+### Result per item
+
+| Item | Result | Evidence |
+|--|--|--|
+| D1 duplicate P.IVA, then fix and resubmit | **PASS** | See below |
+| D2 admin approve updates the page without a reload | **PASS** | See below |
+| D3 no horizontal overflow on the admin provider detail | **FAIL** (tab strip fixed; the long email in the header still overflows) | See below |
+| D11 venue follows the public name | **PASS** (slug not visible in the UI, not checked) | See below |
+| D6 Company badge on `/book` | **PASS** | See below |
+| D14 company logo and badge on the booking detail | **PASS, with a caveat** (badge always; logo after a reload, initials right after confirming) | See below |
+| D5 toggle keys | **PASS** | See below |
+
+Console and network: no `permission-denied`, no missing-index errors, no failed Firestore requests at any step. The only failures were the expected `applyAsProvider` 409 `business_vat_taken` (company B, once) and one transient `ERR_HTTP2_PROTOCOL_ERROR` on a Firestore `Listen` channel in the admin tab while navigating away.
+
+### D1: duplicate P.IVA, fix, resubmit (PASS)
+
+- Company A (`journey.biz.recheck.a.202610192224@vitfitdemo.dev`, legal name *Recheck Gym A SRL*, P.IVA `01234567897`) registered and landed on `/auth/permissions`, then *Skip for now* to the provider dashboard (`business-recheck-00-form-a.png`, `-01-company-a-pending.png`).
+- In a second fresh context, company B (`journey.biz.recheck.b.202610192224@vitfitdemo.dev`, *Recheck Gym B SRL*) with the same P.IVA: `applyAsProvider` returned 409 `business_vat_taken`. The page showed the inline alert *This VAT number is already registered* under the field, `aria-invalid="true"`, `aria-describedby="business-vatNumber-error"`, **`document.activeElement.id === "business-vatNumber"`**, the hint *Account created. Fix the professional details and try again.* at the top, and the email and both password inputs are `disabled` (`-02-company-b-vat-taken.png`, `-02b-company-b-hint-top.png`).
+- Changing the P.IVA to `12345678903` and pressing **Create account** again: **no `signUp` call, no "email already exists"**, no failed request; it went to `/auth/permissions`, then the dashboard. `/profile` shows **Request under review** with *We are verifying the VAT number and company details...* (`-03-company-b-pending.png`).
+- Cosmetic: the *This VAT number is already registered* message appears twice at the top of the form (the form-level banner plus the field error under the field).
+
+### D2: admin approve (PASS)
+
+`/admin/providers?type=business` (the Companies filter, chip *Type: Companies*), company A row, detail page `?id=x473tgl2PZanNCUgd6YM6QvYuKC2`. Pressing **Verify**: the header badge changed from *Pending* to *Verified* about 4 s after the click (measured by polling, includes the function round trip), **without a reload**; the Reject and Verify buttons were removed; **one** toast *Provider verified successfully.* (counted with a MutationObserver on the toast region; 3 s extra wait, no second toast); no failed requests (`business-recheck-04-admin-approved-no-reload.png`). The reject path was not run. A venue `biz_x473tgl2PZanNCUgd6YM6QvYuKC2` ("Recheck Gym A", Gym, Via Roma 10, Torino, owner `x473tgl2...`) appeared in `/admin/venues`.
+
+### D3: admin detail overflow (FAIL, root cause narrowed)
+
+`document.documentElement.scrollWidth <= window.innerWidth` on `/admin/providers?id=x473tgl2PZanNCUgd6YM6QvYuKC2` (after Verify, also after a reload at each width):
+
+| Width | scrollWidth | innerWidth | Result |
+|--|--|--|--|
+| 390 | **418** | 390 | FAIL |
+| 320 | **418** | 320 | FAIL |
+
+- The previous defect is fixed: the tab strip (Overview / Documents / Bookings / Reviews) is now inside a `min-w-0 max-w-full overflow-x-auto` wrapper (it scrolls internally; it was 473 before).
+- The remaining overflow comes from the header paragraph under the name (`P.mt-1.text-content-muted`): the unbreakable address `journey.biz.recheck.a.202610192224@vitfitdemo.dev` is 402 px wide in a 354 px (390) or 284 px (320) box. Replacing only that text with `short@x.dev` in the DOM brings `scrollWidth` to 386 (390) and 316 (320), so the page then fits.
+- Control with a normal-length address, `/admin/providers?id=demo-provider-vfit` (`demo.provider@vitfitdemo.dev`, 28 characters): `scrollWidth` 386 at 390 and 316 at 320 (**PASS**, `business-recheck-05b-admin-detail-short-email-390.png`).
+- Screenshots of the failing page: `business-recheck-05-admin-detail-390.png`, `-320.png`.
+- Defect D3b (Low/Medium): addresses longer than about 36 characters (at 390) or 29 (at 320) overflow the header on the shared admin provider detail page; it needs `break-all` / `truncate` / `min-w-0` on the email line. The same is likely on other admin detail pages that print the address unwrapped (not checked).
+
+### D11: venue follows the public name, and booking badges (PASS)
+
+- Owner A, `/profile/edit` > Professional > Company details: public name *Recheck Gym A* changed to *Recheck Gym A Renamed*. Note that the sticky **Save changes** button did not save it (no feedback); the section's own **Save company details** did (*Company details saved*, 20:30:59 UTC).
+- `/admin/venues` (reloaded) showed *Recheck Gym A Renamed* for the venue `biz_x473tgl2PZanNCUgd6YM6QvYuKC2` on the first check, about 9 s after saving; the venue id and the URL `?id=biz_<uid>` are unchanged, and there is no second venue (`business-recheck-07-admin-venue-renamed.png`). The venue slug is not shown anywhere in the admin venue form, so it was not compared.
+- Search as `demo.customer` for *Recheck Gym A Renamed* returned the company with the new name, VERIFIED and COMPANY badges and *From 35.00* (`-08-search-result.png`).
+- D6: `/book?providerId=x473tgl2PZanNCUgd6YM6QvYuKC2` header shows **VERIFIED** and **COMPANY** (`-09-book-company-badge.png`).
+- D14: after the owner uploaded a logo (256 x 256 PNG, `#profile-business-edit-logo`; `Personal Training` edited to 35 EUR and activated), `demo.customer` booked it (Thu 22 Oct, 11:00): the confirmation page shows the logo. The booking detail (`/bookings/detail?id=q4LcKNgMcjLZxMaQcou7`) shows the **Company** badge and the **logo** (`business-recheck-11-booking-detail.png`, in the customer's light theme). Caveat: on the first render right after confirming (`...&confirmed=true`, client navigation) the avatar showed the initials *RR* and no `<img>`; a reload showed the logo. Observed once, not retried (Low).
+- The booking was **cancelled by the customer** (status *Cancelled by client*).
+
+### D5: signup toggle keys (PASS)
+
+`/auth/register?as=provider`, Individual/Company radiogroup: roving tabindex is in place (selected radio `tabindex=0`, the other `-1`). ArrowRight moved the selection and focus Individual to Company, ArrowLeft back to Individual. A synthetic `keydown` with `altKey: true` (ArrowLeft and ArrowRight, `bubbles`, `cancelable`) was **not** prevented (`defaultPrevented === false`) and did not change the selection; the same event without Alt was prevented (`true`).
+
+### Accounts, data and cleanup
+
+| What | Value |
+|--|--|
+| Company A | `journey.biz.recheck.a.202610192224@vitfitdemo.dev`, uid `x473tgl2PZanNCUgd6YM6QvYuKC2`, verified, *Recheck Gym A Renamed* (legal *Recheck Gym A SRL*), venue `biz_x473tgl2PZanNCUgd6YM6QvYuKC2`, *Personal Training* 35 EUR active, logo uploaded |
+| Company B | `journey.biz.recheck.b.202610192224@vitfitdemo.dev`, uid `DcUGtqHiUjaBxYBUN9ifeivbA502`, application *Recheck Gym B SRL* **pending** (not approved or rejected) |
+| P.IVA | `01234567897` (A; B's refused attempt never claimed it) and `12345678903` (B). **Both released** through the admin *Release VAT number* button (toast *VAT number released* each). `50500000000` was not used |
+| Staging allowlist | The two `journey.biz.recheck.*.202610192224@vitfitdemo.dev` addresses were added at `/admin/staging-access` as `admin@vfit.com` (note *B10 recheck 20759f9*); not removed |
+| Booking | `q4LcKNgMcjLZxMaQcou7` by `demo.customer`, cancelled by the customer |
+| Demo accounts | `demo.admin` / `demo.customer` data unchanged apart from the cancelled booking. The staging admin session used `admin@vfit.com` for the allowlist only, and switched its UI language to English (it was Italian) |
+| Test companies | Left in place (A verified with its venue, B pending) |
