@@ -88,6 +88,31 @@ describe('/providers/detail?id=', () => {
     expect(screen.getByRole('img', { name: 'Rossi Gym' })).toHaveAttribute('src', 'https://cdn/logo.png');
   });
 
+  it('links http(s) social links but shows anything else as plain text', () => {
+    mockSearchParams = new URLSearchParams('id=prov-42');
+    mockUseProfile.mockReturnValue({
+      data: {
+        id: 'prov-42',
+        fullName: 'Anna Verdi',
+        avatarUrl: null,
+        bio: null,
+        providerProfile: { isVerified: true, rating: 0, reviewCount: 0, yearsOfExperience: 0, servicePricing: [] },
+        socialLinks: { website: 'javascript:alert(1)', linkedin: 'https://linkedin.com/in/anna' },
+        isProvider: true,
+        portfolioImages: [],
+      },
+      isLoading: false,
+      error: null,
+    });
+    render(<ProviderProfilePage />);
+
+    expect(document.querySelector('a[href^="javascript:"]')).toBeNull();
+    expect(screen.getByText('javascript:alert(1)').closest('a')).toBeNull();
+    const linkedin = screen.getByRole('link', { name: 'LinkedIn' });
+    expect(linkedin).toHaveAttribute('href', 'https://linkedin.com/in/anna');
+    expect(linkedin).toHaveAttribute('rel', 'noopener noreferrer');
+  });
+
   it('shows the not-found state when id is missing', () => {
     mockSearchParams = new URLSearchParams();
     mockUseProfile.mockReturnValue({ data: undefined, isLoading: false, error: null });

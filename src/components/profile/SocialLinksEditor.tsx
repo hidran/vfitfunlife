@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { updateSocialLinks } from '@/lib/firebase/auth';
 import { SocialLinks } from '@/types/firebase';
 import { useI18n } from '@/hooks/useI18n';
+import { socialLinkHref } from '@/lib/socialLinks';
 import type { MessageKey } from '@/i18n/messages';
 
 interface SocialLinksEditorProps {
@@ -155,24 +156,6 @@ export function SocialLinksEditor({
     setValidationErrors({});
   };
 
-  const formatUrl = (url?: string, key?: string): string => {
-    if (!url) return '';
-    
-    // If it's just a handle (starts with @), format it
-    if (url.startsWith('@')) {
-      if (key === 'instagram') return `https://instagram.com/${url.slice(1)}`;
-      if (key === 'twitter') return `https://twitter.com/${url.slice(1)}`;
-      return url;
-    }
-    
-    // If it doesn't have a protocol, add https://
-    if (!url.startsWith('http')) {
-      return `https://${url}`;
-    }
-    
-    return url;
-  };
-
   const hasLinks = Object.values(links).some((v) => v && v.length > 0);
 
   if (!isEditing) {
@@ -195,20 +178,38 @@ export function SocialLinksEditor({
               const value = links[platform.key as keyof SocialLinks];
               if (!value) return null;
 
-              return (
-                <a
-                  key={platform.key}
-                  href={formatUrl(value, platform.key)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-content/10 text-text-inverse text-sm hover:bg-content/20 transition-colors"
-                  style={{ borderLeft: `3px solid ${platform.color}` }}
-                >
+              // Stored values are user-written: only a safe http(s) URL becomes a link.
+              const href = socialLinkHref(value, platform.key);
+              const pillClass =
+                'inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-content/10 text-text-inverse text-sm';
+              const content = (
+                <>
                   <platform.icon size={14} style={{ color: platform.color }} />
                   <span className="truncate max-w-[120px]">
                     {value.replace(/^https?:\/\//, '').replace(/^@/, '')}
                   </span>
+                </>
+              );
+
+              return href ? (
+                <a
+                  key={platform.key}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`${pillClass} hover:bg-content/20 transition-colors`}
+                  style={{ borderLeft: `3px solid ${platform.color}` }}
+                >
+                  {content}
                 </a>
+              ) : (
+                <span
+                  key={platform.key}
+                  className={pillClass}
+                  style={{ borderLeft: `3px solid ${platform.color}` }}
+                >
+                  {content}
+                </span>
               );
             })}
           </div>

@@ -98,8 +98,10 @@ function optionalText(
 }
 
 /**
- * Only absolute http(s) URLs: the value is rendered as a link on the public profile, so a
- * `javascript:` or bare-host value must never be stored. Blank means no website.
+ * Only absolute http(s) URLs with a host: the value is rendered as a link, so a `javascript:`
+ * or bare-host value must never be stored. Blank means no website. The stored form is the
+ * parsed `href` (trimmed, scheme lowercased), which is what firestore.rules'
+ * businessWebsiteSafe accepts regardless of how the user typed the scheme.
  */
 function website(value: unknown): string | null {
   const text = optionalText(value, BUSINESS_LIMITS.website, "business_website_invalid", "business_website_too_long");
@@ -113,7 +115,7 @@ function website(value: unknown): string | null {
   if ((url.protocol !== "http:" && url.protocol !== "https:") || !url.hostname) {
     throw new BusinessApplicationError("business_website_invalid");
   }
-  return text;
+  return url.href;
 }
 
 /**

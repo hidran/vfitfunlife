@@ -101,7 +101,7 @@ describe("applyAsProvider for a business", () => {
         vatNumber: VAT,
         displayName: "Palestra Rossi",
         description: "Functional training",
-        website: "https://palestrarossi.it",
+        website: "https://palestrarossi.it/",
         city: "Torino",
         venueType: "gym",
         address: null,

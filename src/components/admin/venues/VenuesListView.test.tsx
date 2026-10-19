@@ -58,7 +58,8 @@ describe('VenuesListView', () => {
     expect(screen.getByText('Proprietario')).toBeInTheDocument();
     const owned = rowOf('Palestra Rossi');
     expect(owned).toHaveTextContent('abcdefgh…');
-    expect(owned.querySelector('[title="abcdefghijklmnopqrstuvwxyz12"]')).not.toBeNull();
+    const ownerLink = owned.querySelector('[title="abcdefghijklmnopqrstuvwxyz12"]');
+    expect(ownerLink?.getAttribute('href')).toMatch(/^\/admin\/providers\/?\?id=abcdefghijklmnopqrstuvwxyz12$/);
     expect(rowOf('Centro Benessere Blu')).toHaveTextContent('—');
   });
 

@@ -70,10 +70,18 @@ export function safeHttpUrl(value: unknown): string | null {
   if (typeof value !== 'string' || !value.trim()) return null;
   try {
     const url = new URL(value.trim());
-    return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : null;
+    const http = url.protocol === 'http:' || url.protocol === 'https:';
+    // `href` is the normalised form: trimmed, scheme lowercased.
+    return http && url.hostname ? url.href : null;
   } catch {
     return null;
   }
+}
+
+/** A website as it is stored: the normalised href when it is a valid URL, else the trimmed input (validation rejects it before it is sent). */
+function storedWebsite(input: string): string {
+  const trimmed = input.trim();
+  return safeHttpUrl(trimmed) ?? trimmed;
 }
 
 /** http(s) URL check that mirrors the server's: parseable and an http/https scheme. */
@@ -174,7 +182,7 @@ export function toBusinessApplicationInput(values: BusinessDetailsValues): Busin
     if (address) input.address = address;
     if (city) input.city = city;
   }
-  if (website) input.website = website;
+  if (website) input.website = storedWebsite(website);
   return input;
 }
 
@@ -206,7 +214,7 @@ export function toBusinessProfilePatch(values: BusinessDetailsValues): BusinessP
   return {
     displayName: values.displayName.trim(),
     description: values.description.trim(),
-    website: values.website.trim(),
+    website: storedWebsite(values.website),
     city: values.city.trim(),
   };
 }

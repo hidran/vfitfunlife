@@ -152,13 +152,19 @@ describe('toBusinessApplicationInput', () => {
     });
   });
 
+  it('stores the website as its normalised href, and still clears it with an empty string', () => {
+    expect(toBusinessProfilePatch({ ...valid, website: ' HTTPS://Palestra.it ' }).website).toBe('https://palestra.it/');
+    expect(toBusinessProfilePatch({ ...valid, website: '' }).website).toBe('');
+    expect(toBusinessApplicationInput({ ...valid, website: ' HTTP://A.it ' }).website).toBe('http://a.it/');
+  });
+
   it('falls back to the legal name as public name and omits premises for venueType none', () => {
     expect(toBusinessApplicationInput({ ...valid, displayName: '', venueType: 'none', website: 'https://x.it' })).toEqual({
       legalName: 'Palestra Rossi S.r.l.',
       vatNumber: '01234567897',
       displayName: 'Palestra Rossi S.r.l.',
       venueType: 'none',
-      website: 'https://x.it',
+      website: 'https://x.it/',
     });
   });
 });
@@ -166,6 +172,7 @@ describe('toBusinessApplicationInput', () => {
 describe('safeHttpUrl', () => {
   it('returns the href for http(s) URLs only', () => {
     expect(safeHttpUrl('https://palestrarossi.it')).toBe('https://palestrarossi.it/');
+    expect(safeHttpUrl('HTTPS://Palestrarossi.IT')).toBe('https://palestrarossi.it/');
     expect(safeHttpUrl('  http://example.com/path?x=1 ')).toBe('http://example.com/path?x=1');
   });
 
@@ -174,6 +181,7 @@ describe('safeHttpUrl', () => {
     expect(safeHttpUrl('JavaScript:alert(1)')).toBeNull();
     expect(safeHttpUrl('data:text/html,<script>alert(1)</script>')).toBeNull();
     expect(safeHttpUrl('ftp://example.com')).toBeNull();
+    expect(safeHttpUrl('https://')).toBeNull();
     expect(safeHttpUrl('palestrarossi.it')).toBeNull();
     expect(safeHttpUrl('not a url')).toBeNull();
     expect(safeHttpUrl('')).toBeNull();

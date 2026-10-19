@@ -70,6 +70,9 @@ export const queryKeys = {
   adminUserType: (userTypeId: string) => ['userTypes', userTypeId] as const,
   adminBooking: (bookingId: string) => ['bookings', bookingId] as const,
   adminProvider: (providerId: string) => ['providers', providerId] as const,
+  // instructors/{uid} read for the company block of the admin provider detail; shares the
+  // ['providers'] root so the usual invalidation busts it too.
+  adminProviderBusiness: (providerId: string) => ['providers', providerId, 'business'] as const,
   adminServiceCategory: (serviceCategoryId: string) =>
     ['serviceCategories', serviceCategoryId] as const,
   adminVenue: (venueId: string) => ['venues', venueId] as const,

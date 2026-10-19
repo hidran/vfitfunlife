@@ -43,7 +43,7 @@ Same working rules as `docs/plans/2026-09-29-communication-booking-plan.md` §0 
 
 | # | Decision | Why |
 |---|---|---|
-| D1 | Business = `users/{uid}.providerType: 'individual' \| 'business'` (default `individual`) + `instructors/{uid}.business` map | Reuses the whole catalogue; existing providers need no migration |
+| D1 | Business = `users/{uid}.providerType: 'individual' \| 'business'` (default `individual`) + `instructors/{uid}.business` map | Reuses the whole catalogue; existing providers need no migration to keep working (amended: `scripts/backfill-provider-type.mjs` types them `individual` so the admin "Privati" filter finds them) |
 | D2 | Businesses are **always** approved manually, even when `providerOnboarding.autoApprove` is ON | Someone should check the P.IVA before a company is listed |
 | D3 | P.IVA mandatory, Italy only (11 digits + checksum) | Matches the market; other countries later |
 | D4 | One owner account per business in phase 1 | Team members and venues are phases 2–3 |
@@ -225,6 +225,8 @@ Added 2026-10-19 from `docs/superpowers/specs/2026-10-19-unified-group-courses-d
 
 - 2026-10-04 — Plan written after the design was approved ("go for C"). No tasks started.
 - 2026-10-19 — B8 owner field corrected to `ownerId`; B12 added (venue on approval, school/studio types) per the unified-courses spec. Execution started (subagent-driven, on main).
+- 2026-10-19 — B8 done (1ed2c91, c3da677 + review fixes): providers list type filter + Azienda badge, company block with "Libera P.IVA" (`releaseBusinessVat`, audited, idempotent), `businessVatClaim.ts` extracted, venues owner column + school/studio, 4 new `users` indexes (deploy in B11). `business.website` is stored as the parsed href and the rules (`businessWebsiteSafe`) accept an http(s) value only when it CHANGES. **B11 runs `scripts/backfill-provider-type.mjs` per environment (dry run first, then `--apply`) before relying on the Privati filter; D1 "no migration" amended** — providers who applied before B3 carry no `providerType`, so `== 'individual'` misses them until it runs.
+- 2026-10-19 — Follow-up (not done): `socialLinks.website/linkedin` are owner-written and unconstrained in the rules; B8 only makes the UI render non-http(s) values as text (`socialLinkHref` / `safeHttpUrl`). Add a rules check like `businessWebsiteSafe` for `users.socialLinks` / `instructors.socialLinks`.
 - 2026-10-19 — B5 done: "Privato / Azienda" toggle in ProviderOptInField and BecomeProviderCard, `BusinessDetailsForm`, `useBusinessDetails` hook (state, pure `validateBusinessDetails`, server-code mapping, deferred focus to the first bad field), 32 i18n keys ×5 locales, company pending copy on the profile card and the provider banner. B5 uses controlled state + pure validator instead of RHF+Zod (register page is hand-rolled state; avoids nested form); form adds venueType + address for B12.
 - 2026-10-19 — B7 done (14e7add): search index adds business names name-first; `providerImageUrl`/`publicBusiness` helpers in src/lib/bookingProvider.ts; Azienda badge on /booking rows and provider page. **B11 must run `scripts/backfill-provider-search.mjs` on each environment** so existing business docs get the new terms; B10 should eyeball the two-badge wrap at 320px it/de.
 - 2026-10-19 — B6 done (2c3a594): BusinessProfileSection on the professional tab, `updateBusinessDetails` allowlisted dotted paths + name/fullName mirror, logo to instructors/{uid}/gallery. Follow-up: the page's unsaved-changes guard ignores the section (own Save button).

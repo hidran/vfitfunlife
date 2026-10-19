@@ -397,15 +397,18 @@ service cloud.firestore {
     }
 
     /**
-     * The owner's website is rendered as a link in the admin panel and on the public profile:
-     * absent, null or '' is fine, anything else must be an http(s) URL of at most 300
-     * characters (the same cap as the business validator), so a `javascript:` value can never
-     * be stored. Admins are not bound (the branch is owner-only).
+     * The owner's business.website is rendered as a link in the admin provider detail, so a
+     * value they CHANGE must be absent, null, '' or an http(s) URL of at most 300 characters
+     * (the validator's cap) — a `javascript:` value can never be stored. An unchanged value is
+     * always fine: a legacy or odd website already on the doc must not lock the owner out of
+     * editing anything else. The scheme match is spelled out per letter because rules regexes
+     * have no case-insensitive flag. Admins are not bound (the branch is owner-only).
      */
     function businessWebsiteSafe() {
-      let website = request.resource.data.get(['business', 'website'], null);
-      return website == null || website == '' ||
-        (website is string && website.size() <= 300 && website.matches('^https?://.*'));
+      let next = request.resource.data.get(['business', 'website'], null);
+      return next == resource.data.get(['business', 'website'], null) ||
+        next == null || next == '' ||
+        (next is string && next.size() <= 300 && next.matches('^[hH][tT][tT][pP][sS]?://.+'));
     }
 
     match /instructors/{instructorId} {

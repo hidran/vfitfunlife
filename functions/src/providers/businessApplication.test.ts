@@ -48,7 +48,7 @@ describe("validateBusinessApplication", () => {
       vatNumber: "01234567897",
       displayName: "Palestra Rossi",
       description: "Functional training in Torino",
-      website: "https://palestrarossi.it",
+      website: "https://palestrarossi.it/",
       city: "Torino",
       venueType: "studio",
       address: "Via Roma 1",
@@ -111,7 +111,10 @@ describe("validateBusinessApplication", () => {
     expect(validateBusinessApplication({ ...valid, website: "" }).website).toBeNull();
     expect(validateBusinessApplication({ ...valid, website: "   " }).website).toBeNull();
     expect(validateBusinessApplication({ ...valid, website: null }).website).toBeNull();
-    expect(validateBusinessApplication({ ...valid, website: "http://a.it" }).website).toBe("http://a.it");
+    expect(validateBusinessApplication({ ...valid, website: "http://a.it" }).website).toBe("http://a.it/");
+    // Stored as the parsed href: trimmed, scheme lowercased, which is what the rules accept.
+    expect(validateBusinessApplication({ ...valid, website: "  HTTPS://Palestra.IT/Corsi  " }).website)
+      .toBe("https://palestra.it/Corsi");
     for (const bad of ["palestrarossi.it", "ftp://a.it", "javascript:alert(1)", "https://", "https://a b"]) {
       expect(code(() => validateBusinessApplication({ ...valid, website: bad }))).toBe("business_website_invalid");
     }

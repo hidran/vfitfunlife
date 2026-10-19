@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DataTable, FilterBar, StatusBadge } from "@/components/admin";
 import { Button } from "@/components/ui/button";
@@ -129,12 +130,19 @@ export function VenuesListView() {
     {
       key: "owner",
       header: t('admin.venues.col.owner'),
-      // Read-only: the owner is edited on the venue's page (VenueFormView).
+      // Read-only: the owner is edited on the venue's page (VenueFormView). The owner of a
+      // venue is a provider, so the uid opens their admin provider page (the row itself
+      // opens the venue, hence the stopPropagation).
       cell: (venue) =>
         venue.ownerId ? (
-          <span className="text-sm text-content-muted font-mono" title={venue.ownerId}>
+          <Link
+            href={`/admin/providers/?id=${encodeURIComponent(venue.ownerId)}`}
+            onClick={(e) => e.stopPropagation()}
+            className="text-sm text-content-muted font-mono hover:text-content hover:underline"
+            title={venue.ownerId}
+          >
             {shortUid(venue.ownerId)}
-          </span>
+          </Link>
         ) : (
           <span className="text-sm text-content-faint">—</span>
         ),

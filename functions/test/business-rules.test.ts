@@ -52,6 +52,13 @@ async function seed() {
       providerProfile: { isVerified: true }, bio: 'b',
     });
     await db.doc('businessVat/12345678901').set({ uid: 'owner', createdAt: new Date() });
+    // A company whose stored website predates the rule (or was written by an admin): odd, but
+    // the owner must still be able to edit everything else.
+    await db.doc('users/legacyweb').set({ role: 'provider', providerStatus: 'verified', providerType: 'business', fullName: 'Legacy web' });
+    await db.doc('instructors/legacyweb').set({
+      uid: 'legacyweb', providerType: 'business', business: { ...business, website: 'javascript:alert(1)' },
+      applicationStatus: 'approved', partnerStatus: 'approved', providerProfile: { isVerified: true }, bio: 'b',
+    });
   });
 }
 beforeEach(async () => { await env.clearFirestore(); await seed(); });
@@ -74,10 +81,23 @@ describe('instructors/{uid}.business owner edits', () => {
     await assertSucceeds(doc.update({ 'business.website': 'http://example.com/path' }));
     await assertSucceeds(doc.update({ 'business.website': '' }));
     await assertSucceeds(doc.update({ 'business.website': null }));
-    await assertSucceeds(doc.update({ business: { ...business, website: 'javascript:alert(1)' } }).then(
-      () => { throw new Error('whole-map rewrite with a javascript: website must fail'); },
-      () => undefined,
-    ));
+    await assertFails(doc.update({ business: { ...business, website: 'javascript:alert(1)' } }));
+  });
+  it('accepts an upper- or mixed-case scheme (no regex flags in rules, so spelled out)', async () => {
+    const doc = as('owner').doc('instructors/owner');
+    await assertSucceeds(doc.update({ 'business.website': 'HTTPS://Example.com' }));
+    await assertSucceeds(doc.update({ 'business.website': 'hTTp://example.com' }));
+    await assertFails(doc.update({ 'business.website': 'HTTPS://' }));
+    await assertFails(doc.update({ 'business.website': 'JAVASCRIPT:alert(1)' }));
+  });
+  it('does not lock the owner out of other edits when the stored website is legacy/invalid', async () => {
+    const doc = as('legacyweb').doc('instructors/legacyweb');
+    await assertSucceeds(doc.update({ 'business.city': 'Torino' }));
+    await assertSucceeds(doc.update({ bio: 'new bio' }));
+    await assertSucceeds(doc.update({ business: { ...business, website: 'javascript:alert(1)', city: 'Roma' } }));
+    // Changing it is still checked: to another bad value fails, to a good one or none works.
+    await assertFails(doc.update({ 'business.website': 'data:text/html,hi' }));
+    await assertSucceeds(doc.update({ 'business.website': 'https://fixed.example' }));
   });
   it('lets the owner rewrite the whole map when only editable fields differ', async () => {
     await assertSucceeds(as('owner').doc('instructors/owner').update({ business: { ...business, displayName: 'New', city: 'Torino' } }));
