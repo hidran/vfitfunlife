@@ -45,6 +45,12 @@ export interface UserFilters {
 // Provider Filters
 export interface ProviderFilters {
   type?: string;
+  /**
+   * Individual vs company. `users.providerType` is written by applyAsProvider since the
+   * business-accounts work (plan B3): providers who applied before it carry no field at all,
+   * so "individual" only matches those who applied after it, while "business" is exact.
+   */
+  providerType?: "all" | "individual" | "business";
   verificationStatus?: "pending" | "verified" | "rejected" | "all";
   status?: "active" | "suspended" | "all";
   search?: string;

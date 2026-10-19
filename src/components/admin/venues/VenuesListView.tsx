@@ -33,6 +33,13 @@ interface Venue {
   isPartner: boolean;
   createdAt: Date;
   photoUrls?: string[];
+  /** The owning provider's uid (`venues.ownerId`); set on the venues approval creates for companies. */
+  ownerId?: string;
+}
+
+/** Enough of a uid to tell owners apart in a column, without a 28-character cell. */
+function shortUid(uid: string): string {
+  return uid.length > 10 ? `${uid.slice(0, 8)}…` : uid;
 }
 
 export function VenuesListView() {
@@ -73,6 +80,7 @@ export function VenuesListView() {
       isPartner: v.isPartner,
       createdAt: v.createdAt?.toDate?.() ?? new Date(),
       photoUrls: v.photoUrls ?? [],
+      ownerId: v.ownerId,
     };
   });
 
@@ -117,6 +125,20 @@ export function VenuesListView() {
         </div>
       ),
       width: "w-32",
+    },
+    {
+      key: "owner",
+      header: t('admin.venues.col.owner'),
+      // Read-only: the owner is edited on the venue's page (VenueFormView).
+      cell: (venue) =>
+        venue.ownerId ? (
+          <span className="text-sm text-content-muted font-mono" title={venue.ownerId}>
+            {shortUid(venue.ownerId)}
+          </span>
+        ) : (
+          <span className="text-sm text-content-faint">—</span>
+        ),
+      width: "w-28",
     },
     {
       key: "rating",
@@ -224,6 +246,8 @@ export function VenuesListView() {
             options: [
               { value: "all", label: t('admin.venues.filter.allTypes') },
               { value: "gym", label: t('admin.venues.filter.gym') },
+              { value: "school", label: t('admin.venues.filter.school') },
+              { value: "studio", label: t('admin.venues.filter.studio') },
               { value: "wellness_center", label: t('admin.venues.filter.wellnessCenter') },
               { value: "beauty_salon", label: t('admin.venues.filter.beautySalon') },
               { value: "outdoor_space", label: t('admin.venues.filter.outdoorSpace') },

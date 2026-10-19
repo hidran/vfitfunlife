@@ -24,6 +24,13 @@ describe('providers list query', () => {
     expect(providerFiltersFromParams(new URLSearchParams(qs))).toEqual(filters);
   });
 
+  it('round-trips the provider type', () => {
+    const filters = { ...DEFAULT_PROVIDER_FILTERS, providerType: 'business' as const };
+    expect(queryFromProviderFilters(filters)).toBe('type=business');
+    expect(providerFiltersFromParams(new URLSearchParams('type=business'))).toEqual(filters);
+    expect(providerFiltersFromParams(new URLSearchParams('type=company'))).toEqual(DEFAULT_PROVIDER_FILTERS);
+  });
+
   it('round-trips an allowed page size', () => {
     const filters = { ...DEFAULT_PROVIDER_FILTERS, limit: 10 };
     expect(queryFromProviderFilters(filters)).toBe('size=10');

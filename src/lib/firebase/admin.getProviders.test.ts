@@ -51,7 +51,16 @@ beforeEach(() => {
       email: 'paola@example.com',
       role: 'customer',
       providerStatus: 'pending',
+      providerType: 'individual',
       createdAt: day(5),
+    },
+    company: {
+      fullName: 'Palestra Rossi',
+      email: 'rossi@example.com',
+      role: 'customer',
+      providerStatus: 'pending',
+      providerType: 'business',
+      createdAt: day(8),
     },
     rejectedApplicant: {
       fullName: 'Rita Respinta',
@@ -82,6 +91,7 @@ describe('getProviders', () => {
     const result = await getProviders({});
 
     expect(ids(result)).toEqual([
+      'company',
       'applicant',
       'unverifiedPro',
       'verifiedPro',
@@ -89,15 +99,24 @@ describe('getProviders', () => {
       'legacyVerified',
       'rejectedApplicant',
     ]);
-    expect(result.total).toBe(6);
+    expect(result.total).toBe(7);
     expect(where).toHaveBeenCalledWith('providerVerification', 'in', ['verified', 'pending', 'rejected']);
   });
 
   it('verification=pending includes applicants who are still customers', async () => {
     const result = await getProviders({ verificationStatus: 'pending' });
 
-    expect(ids(result)).toEqual(['applicant', 'unverifiedPro']);
+    expect(ids(result)).toEqual(['company', 'applicant', 'unverifiedPro']);
     expect(where).toHaveBeenCalledWith('providerVerification', '==', 'pending');
+  });
+
+  it('filters companies exactly; "individual" only matches accounts that carry the field', async () => {
+    expect(ids(await getProviders({ providerType: 'business' }))).toEqual(['company']);
+    expect(where).toHaveBeenCalledWith('providerType', '==', 'business');
+    // Pre-B3 individuals have no providerType at all, so they are not in this list.
+    expect(ids(await getProviders({ providerType: 'individual' }))).toEqual(['applicant']);
+    expect(ids(await getProviders({ providerType: 'business', verificationStatus: 'verified' }))).toEqual([]);
+    expect(where).not.toHaveBeenCalledWith('providerType', '==', 'all');
   });
 
   it('the pending filter and the verification queue name the same people', async () => {
@@ -123,7 +142,7 @@ describe('getProviders', () => {
   it('applies the status filter with the same semantics as getUsers', async () => {
     expect(ids(await getProviders({ status: 'suspended' }))).toEqual(['suspendedPro']);
     expect(ids(await getProviders({ status: 'active' }))).not.toContain('suspendedPro');
-    expect(ids(await getProviders({ status: 'active' }))).toHaveLength(5);
+    expect(ids(await getProviders({ status: 'active' }))).toHaveLength(6);
   });
 
   it('combines status and verification filters', async () => {
@@ -144,14 +163,14 @@ describe('getProviders', () => {
   it('pages server-side and reports the filtered total', async () => {
     fakeDb.reads = 0;
     const first = await getProviders({ page: 1, limit: 4 });
-    expect(ids(first)).toEqual(['applicant', 'unverifiedPro', 'verifiedPro', 'suspendedPro']);
+    expect(ids(first)).toEqual(['company', 'applicant', 'unverifiedPro', 'verifiedPro']);
     expect(fakeDb.reads).toBe(4);
 
     fakeDb.reads = 0;
     const second = await getProviders({ page: 2, limit: 4 }, first.cursors);
-    expect(ids(second)).toEqual(['legacyVerified', 'rejectedApplicant']);
-    expect(second.total).toBe(6);
-    expect(fakeDb.reads).toBe(2);
+    expect(ids(second)).toEqual(['suspendedPro', 'legacyVerified', 'rejectedApplicant']);
+    expect(second.total).toBe(7);
+    expect(fakeDb.reads).toBe(3);
   });
 
   it('uses the doc id even when the data carries a stray id/uid', async () => {

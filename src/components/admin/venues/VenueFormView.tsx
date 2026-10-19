@@ -8,7 +8,7 @@ import type { Venue } from '@/types/firebase';
 
 const venueSchema = z.object({
   name: z.string().min(1),
-  type: z.enum(['gym', 'wellness_center', 'beauty_salon', 'outdoor_space', 'event_space']),
+  type: z.enum(['gym', 'school', 'studio', 'wellness_center', 'beauty_salon', 'outdoor_space', 'event_space']),
   street: z.string().min(1),
   city: z.string().min(1),
   zipCode: z.string().min(1),
@@ -74,6 +74,8 @@ export function VenueFormView({ mode, initial, onSubmit }: Props) {
       <Field label={t('admin.venues.field.type')} error={errors.type?.message}>
         <select {...register('type')} disabled={readonly} className="admin-input">
           <option value="gym">Gym</option>
+          <option value="school">School</option>
+          <option value="studio">Studio</option>
           <option value="wellness_center">Wellness Center</option>
           <option value="beauty_salon">Beauty Salon</option>
           <option value="outdoor_space">Outdoor</option>

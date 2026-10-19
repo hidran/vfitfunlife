@@ -16,6 +16,7 @@ import {
   parseProviderType,
   validateBusinessApplication,
 } from "./businessApplication";
+import { BUSINESS_VAT_COLLECTION, claimVat } from "./businessVatClaim";
 import type { BusinessDetails, ProviderType } from "../types";
 
 interface ApplyAsProviderData {
@@ -47,8 +48,8 @@ export type ApplyAsProviderErrorCode =
   | "provider_type_locked"
   | "business_vat_taken";
 
-/** Uniqueness claims on a partita IVA: `businessVat/{digits}` = { uid, createdAt }. Admin SDK only. */
-export const BUSINESS_VAT_COLLECTION = "businessVat";
+/** Re-exported for callers that only know this module; the claim logic lives in businessVatClaim.ts. */
+export { BUSINESS_VAT_COLLECTION };
 
 /**
  * The stored onboarding settings, or the defaults when nothing is configured.
@@ -293,12 +294,10 @@ function requestedLeafIds(categoryIds: string[], caller: Record<string, unknown>
  * A company is always queued for an admin, whatever `autoApprove` says: its legal name
  * and P.IVA are claims that need a human look before the company trades under them.
  *
- * One transaction claims `businessVat/{vat}` and writes the pending application, so two
- * companies racing for the same number can never both get through: the second sees the
- * first's claim and fails with `already-exists` / `business_vat_taken`. A claim held by the
- * caller is theirs to reuse (re-applying after a rejection, or a double submit), and a
- * caller switching to a different number releases the one they held so it is not
- * orphaned. Rejection never releases a claim — see commitProviderDecision.
+ * One transaction claims `businessVat/{vat}` (claimVat in businessVatClaim.ts: the second of
+ * two companies racing for the same number fails with `already-exists` / `business_vat_taken`,
+ * the holder may reuse their own claim, switching numbers releases the old one) and writes the
+ * pending application, so the claim and the application always land together.
  *
  * `business` is a nested map and the instructor write goes through set/merge: a dotted
  * path there would create a field literally named "business.x" (see
@@ -311,7 +310,6 @@ async function queueBusinessApplication(
   caller: Record<string, unknown>,
   business: ValidatedBusiness,
 ): Promise<void> {
-  const claimRef = db.collection(BUSINESS_VAT_COLLECTION).doc(business.vatNumber);
   const instructorRef = db.collection("instructors").doc(uid);
   const userRef = db.collection("users").doc(uid);
   const writes = pendingApplicationWrites({
@@ -319,22 +317,14 @@ async function queueBusinessApplication(
   });
 
   await db.runTransaction(async (tx) => {
-    const [claimSnap, instructorSnap] = await Promise.all([tx.get(claimRef), tx.get(instructorRef)]);
-    const claimedBy = claimSnap.data()?.uid as string | undefined;
-    if (claimSnap.exists && claimedBy !== uid) {
-      throw new HttpsError("already-exists", "business_vat_taken");
-    }
-
+    const instructorSnap = await tx.get(instructorRef);
     const previousVat = (instructorSnap.data()?.business as Partial<BusinessDetails> | undefined)?.vatNumber;
-    if (typeof previousVat === "string" && previousVat && previousVat !== business.vatNumber) {
-      const previousRef = db.collection(BUSINESS_VAT_COLLECTION).doc(previousVat);
-      const previous = await tx.get(previousRef);
-      if (previous.data()?.uid === uid) tx.delete(previousRef);
-    }
-
-    if (!claimSnap.exists) {
-      tx.create(claimRef, { uid, createdAt: FieldValue.serverTimestamp() });
-    }
+    // Reads (the claim, the previous claim) happen inside claimVat, before any write below.
+    await claimVat(tx, db, {
+      uid,
+      vatNumber: business.vatNumber,
+      previousVat: typeof previousVat === "string" ? previousVat : null,
+    });
     tx.set(instructorRef, writes.instructor, { merge: true });
     tx.update(userRef, writes.user);
   });

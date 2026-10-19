@@ -800,3 +800,20 @@ export async function decideProviderApplication(data: {
   );
   return (await fn(data)).data;
 }
+
+/**
+ * An admin frees a company's P.IVA uniqueness claim so the number can be registered again
+ * (functions/src/providers/releaseBusinessVat.ts). Idempotent: `released` is false when the
+ * claim was already gone. The number stays on the company's profile.
+ */
+export async function releaseBusinessVat(data: {
+  providerId: string;
+  reason?: string;
+}): Promise<{ success: boolean; providerId: string; vatNumber: string; released: boolean }> {
+  const functions = await getFunctionsInstance();
+  const fn = httpsCallable<
+    typeof data,
+    { success: boolean; providerId: string; vatNumber: string; released: boolean }
+  >(functions, "releaseBusinessVat");
+  return (await fn(data)).data;
+}

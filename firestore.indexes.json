@@ -289,6 +289,52 @@
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
+    // /admin/providers with the individual/business type filter (providerTypeConstraint in
+    // src/lib/firebase/admin.ts): the four shapes above, each with providerType.
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "adminHidden", "order": "ASCENDING" },
+        { "fieldPath": "providerVerification", "order": "ASCENDING" },
+        { "fieldPath": "providerType", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "adminHidden", "order": "ASCENDING" },
+        { "fieldPath": "isSuspended", "order": "ASCENDING" },
+        { "fieldPath": "providerVerification", "order": "ASCENDING" },
+        { "fieldPath": "providerType", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "searchTokens", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "adminHidden", "order": "ASCENDING" },
+        { "fieldPath": "providerVerification", "order": "ASCENDING" },
+        { "fieldPath": "providerType", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "searchTokens", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "adminHidden", "order": "ASCENDING" },
+        { "fieldPath": "isSuspended", "order": "ASCENDING" },
+        { "fieldPath": "providerVerification", "order": "ASCENDING" },
+        { "fieldPath": "providerType", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
     {
       "collectionGroup": "transactions",
       "queryScope": "COLLECTION",

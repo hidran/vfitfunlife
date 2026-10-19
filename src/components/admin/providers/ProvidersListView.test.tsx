@@ -27,6 +27,15 @@ const mockProviders: AdminProvider[] = [
     role: 'provider',
     providerProfile: { isVerified: true, rating: 4.8 },
   } as unknown as AdminProvider,
+  {
+    id: 'p4',
+    uid: 'p4',
+    fullName: 'Palestra Rossi',
+    email: 'rossi@example.com',
+    role: 'provider',
+    providerType: 'business',
+    providerProfile: { isVerified: true, rating: 4.2 },
+  } as unknown as AdminProvider,
 ];
 
 const mockAdminState = {
@@ -141,6 +150,37 @@ describe('ProvidersListView', () => {
     const names = Array.from(document.querySelectorAll('tbody tr')).map(
       (tr) => tr.querySelector('p')?.textContent
     );
-    expect(names).toEqual(['Paola Pendente', 'Rita Respinta', 'Vera Verificata']);
+    expect(names).toEqual(['Paola Pendente', 'Rita Respinta', 'Vera Verificata', 'Palestra Rossi']);
+  });
+
+  it('marks companies with the business badge, and nobody else', () => {
+    render(<ProvidersListView />);
+
+    const row = (name: string) => screen.getByText(name).closest('tr')!;
+    expect(row('Palestra Rossi')).toHaveTextContent('Azienda');
+    expect(row('Vera Verificata')).not.toHaveTextContent('Azienda');
+    expect(row('Paola Pendente')).not.toHaveTextContent('Azienda');
+  });
+
+  it('filters by provider type, seeded from and written back to the URL', () => {
+    mockSearchParams = new URLSearchParams('type=business');
+    render(<ProvidersListView />);
+    expect(mockAdminState.fetchProviders).toHaveBeenCalledWith(
+      expect.objectContaining({ providerType: 'business' })
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Filtri/i }));
+    const [, , type] = screen.getAllByRole('combobox') as HTMLSelectElement[];
+    expect(type).toHaveValue('business');
+    expect(Array.from(type.options).map((o) => o.textContent)).toEqual(['Tutti', 'Privati', 'Aziende']);
+
+    fireEvent.change(type, { target: { value: 'individual' } });
+    expect(window.location.search).toBe('?type=individual');
+    expect(mockAdminState.fetchProviders).toHaveBeenLastCalledWith(
+      expect.objectContaining({ providerType: 'individual', page: 1 })
+    );
+
+    fireEvent.change(type, { target: { value: 'all' } });
+    expect(window.location.search).toBe('');
   });
 });

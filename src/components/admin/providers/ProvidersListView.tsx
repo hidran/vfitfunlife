@@ -21,6 +21,7 @@ import {
 } from "@/lib/admin/providersListQuery";
 import { ProviderOnboardingSettings } from "@/components/admin/settings/ProviderOnboardingSettings";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/Badge";
 import { AdminProvider, ProviderFilters } from "@/types/admin";
 import { Column } from "@/components/admin/DataTable";
 import { formatDecimal, formatPrice } from "@/lib/utils";
@@ -119,6 +120,14 @@ export function ProvidersListView() {
     }));
   };
 
+  const handleProviderTypeChange = (providerType: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      providerType: providerType as ProviderFilters["providerType"],
+      page: 1,
+    }));
+  };
+
   const handlePageChange = (page: number) => {
     setFilters((prev) => ({ ...prev, page }));
   };
@@ -149,8 +158,13 @@ export function ProvidersListView() {
               <User className="w-5 h-5" />
             </div>
           )}
-          <div>
-            <p className="font-medium text-content">{provider.fullName}</p>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-medium text-content">{provider.fullName}</p>
+              {provider.providerType === "business" && (
+                <Badge variant="default" size="sm">{t("provider.badge.business")}</Badge>
+              )}
+            </div>
             <p className="text-sm text-content-muted">{provider.email}</p>
           </div>
         </div>
@@ -353,6 +367,19 @@ export function ProvidersListView() {
             ],
             value: filters.status || "all",
             onChange: handleStatusChange,
+          },
+          {
+            // "Privati" only matches accounts that applied since providerType exists on
+            // users (see ProviderFilters); "Aziende" is exact and is the one the back office needs.
+            key: "providerType",
+            label: t("admin.providers.filter.type"),
+            options: [
+              { value: "all", label: t("admin.providers.filter.allTypes") },
+              { value: "individual", label: t("admin.providers.filter.individual") },
+              { value: "business", label: t("admin.providers.filter.business") },
+            ],
+            value: filters.providerType || "all",
+            onChange: handleProviderTypeChange,
           },
         ]}
         onClearFilters={handleClearFilters}

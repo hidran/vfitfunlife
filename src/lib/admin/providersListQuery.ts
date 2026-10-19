@@ -4,6 +4,7 @@ import { DEFAULT_PAGE_SIZE, pageSizeFromParams } from './usersListQuery';
 export const DEFAULT_PROVIDER_FILTERS: ProviderFilters = {
   verificationStatus: 'all',
   status: 'all',
+  providerType: 'all',
   search: '',
   page: 1,
   limit: 20,
@@ -11,6 +12,7 @@ export const DEFAULT_PROVIDER_FILTERS: ProviderFilters = {
 
 const VERIFICATIONS = ['all', 'verified', 'pending', 'rejected'] as const;
 const STATUSES = ['all', 'active', 'suspended'] as const;
+const PROVIDER_TYPES = ['all', 'individual', 'business'] as const;
 
 /** sessionStorage key holding the list's last query, so leaving a provider's page returns to it. */
 export const PROVIDERS_LIST_QUERY_KEY = 'admin.providers.listQuery';
@@ -22,6 +24,7 @@ export const PROVIDERS_LIST_QUERY_KEY = 'admin.providers.listQuery';
 export function providerFiltersFromParams(params: URLSearchParams): ProviderFilters {
   const verification = params.get('verification');
   const status = params.get('status');
+  const type = params.get('type');
   const page = Number(params.get('page'));
   return {
     ...DEFAULT_PROVIDER_FILTERS,
@@ -31,6 +34,9 @@ export function providerFiltersFromParams(params: URLSearchParams): ProviderFilt
       : 'all',
     status: (STATUSES as readonly string[]).includes(status ?? '')
       ? (status as ProviderFilters['status'])
+      : 'all',
+    providerType: (PROVIDER_TYPES as readonly string[]).includes(type ?? '')
+      ? (type as ProviderFilters['providerType'])
       : 'all',
     page: Number.isInteger(page) && page > 1 ? page : 1,
     limit: pageSizeFromParams(params),
@@ -45,6 +51,7 @@ export function queryFromProviderFilters(filters: ProviderFilters): string {
     params.set('verification', filters.verificationStatus);
   }
   if (filters.status && filters.status !== 'all') params.set('status', filters.status);
+  if (filters.providerType && filters.providerType !== 'all') params.set('type', filters.providerType);
   if (filters.page && filters.page > 1) params.set('page', String(filters.page));
   if (filters.limit && filters.limit !== DEFAULT_PAGE_SIZE) params.set('size', String(filters.limit));
   return params.toString();

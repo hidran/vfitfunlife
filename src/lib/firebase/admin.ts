@@ -462,8 +462,18 @@ export function providerListConstraints(filters: ProviderFilters): QueryConstrai
       ? where("providerVerification", "in", PROVIDER_VERIFICATION_STATES)
       : where("providerVerification", "==", wanted),
     ...suspensionConstraint(filters.status),
+    ...providerTypeConstraint(filters.providerType),
     ...searchConstraint(filters.search),
   ];
+}
+
+/**
+ * `users.providerType` exists only on accounts that applied through applyAsProvider since the
+ * business-accounts work: older individuals have no field, so "individual" misses them (an
+ * `==` never matches an absent field) while "business" — the filter that matters — is exact.
+ */
+function providerTypeConstraint(type: ProviderFilters["providerType"]): QueryConstraint[] {
+  return type && type !== "all" ? [where("providerType", "==", type)] : [];
 }
 
 // Get providers with filters — providers and applicants, one page, server-side.
