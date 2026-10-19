@@ -394,3 +394,14 @@ node scripts/backfill-provider-type.mjs --project vfit-app-staging --apply
 7. Clean up: remove the test company's `instructors`, `users`, `venues/biz_<uid>` and any remaining `businessVat/<P.IVA>` document. On production, use a throwaway P.IVA and remove the claim afterwards.
 
 Legal copy: the terms and privacy pages do not mention business data; confirm the wording with the owner before the production release (plan section 5).
+
+### Staging deploy - 2026-10-19
+
+Deployed to `vfit-app-staging` only (production untouched) from `main` at `ed9302f` (working tree identical to `f34c0e2`, a docs-only commit made during the deploy).
+
+- **Indexes:** `firestore:indexes` deployed; the four new `users` composite indexes (`providerType` before `createdAt`) took about 5 minutes to build. `verify-admin-list-indexes.mjs` then reported 92 query shapes, all OK, 0 missing. The CLI warned about 4 indexes in the project that are not in `firestore.indexes.json`; they were left alone (no `--force`).
+- **Rules:** `firestore:rules` released.
+- **Functions** (`--force`, one pass, no retries needed): `applyAsProvider`, `decideProviderApplication`, `releaseBusinessVat` (updated: it already existed on staging), `syncBusinessVenueLocation` (created), `onInstructorWriteSearchIndex`, `saveGymSpace`, `configureGymInstructor`, `saveGymSchedule`, `updateGymSession`, `quoteGymBooking`, `quoteGymTimetable`, `bookGymClass`, `cancelGymBooking`, `recordGymPayment`, `confirmGymRefund`, `chatWithAssistant`. The list matched `git diff --name-only e308d61..HEAD -- functions/src`.
+- **Hosting:** `build:staging` then `firebase deploy -P staging --only hosting`; https://vfit-app-staging.web.app answers 200.
+- **Backfills:** `backfill-provider-search.mjs`: 432 instructors scanned, 0 to update (all `searchTerms` already current; no business documents exist yet). `backfill-provider-type.mjs`: 28 users scanned, 12 users + 12 instructors updated to `providerType: 'individual'` (24 writes, 0 skipped, 0 failed); a second dry run reports 0 to update.
+- **Not done:** the section 6 smoke test (fresh-journey company registration) and production.
