@@ -1,6 +1,6 @@
 // src/types/instructor.ts
 import type { Timestamp } from 'firebase/firestore';
-import type { ProviderApplicationStatus } from '@/types/firebase';
+import type { BusinessDetails, ProviderApplicationStatus, ProviderType } from '@/types/firebase';
 
 export type ActivityKind = 'event' | 'vr' | 'party';
 
@@ -34,6 +34,10 @@ export interface Provider {
    */
   requestedCategoryIds?: string[];
   applicationStatus?: ProviderApplicationStatus;
+  /** Absent ⇒ individual. */
+  providerType?: ProviderType;
+  /** Company details; present only when providerType is 'business'. */
+  business?: BusinessDetails;
   isActive: boolean;
   specialties: string[];
   yearsOfExperience: number;

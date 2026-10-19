@@ -48,6 +48,7 @@ interface User {
   providerProfile: ProviderProfile | null; // populated for providers; see ProviderProfile in functions/src/types.ts
   isActive: boolean;                // soft-deactivation flag enforced by admin tooling
   isVerified: boolean;              // top-level verification (mirrors providerProfile.isVerified for providers)
+  providerType?: 'individual' | 'business'; // absent ⇒ 'individual'. 'business' = a company (gym, school, studio); company details live on instructors/{uid}.business. Set by the signup callable, not writable by the owner.
 
   // VIP Status
   isVip: boolean;
@@ -124,7 +125,9 @@ interface PointsTransaction {
 interface Venue {
   name: string;
   slug: string;
-  type: 'gym' | 'wellness_center' | 'beauty_salon' | 'outdoor_space' | 'event_space';
+  type: 'gym' | 'school' | 'studio' | 'wellness_center' | 'spa' | 'beauty_salon' | 'outdoor_space' | 'event_space';
+                                  // 'school' and 'studio' were added for business accounts (see VenueType in src/types/venue.ts).
+                                  // hostsCourses(type) is true for gym / school / studio: those venues can host group courses.
   section: 'fit' | 'fun' | 'life';
   
   // Contact
@@ -211,6 +214,25 @@ interface VenueService {
 interface Instructor {
   userId: string | null;          // Link to user account if registered
   venueId: string | null;         // NULL if freelance
+
+  // Business accounts. A company (gym, school, studio) is a provider in this same catalogue.
+  providerType?: 'individual' | 'business'; // absent ⇒ 'individual'
+  business?: {                    // present only when providerType === 'business'
+    legalName: string;            // ragione sociale — admin-verified; owner read-only after approval
+    vatNumber: string;            // partita IVA, 11 digits, validated (src/lib/vatNumber.ts); owner read-only after approval
+    displayName: string;          // shown publicly; also copied to name/fullName
+    description?: string;
+    website?: string | null;
+    logoUrl?: string | null;
+    city?: string;
+    venueType?: 'gym' | 'school' | 'studio' | 'none'; // default 'gym'; 'none' ⇒ no venue is created
+    address?: string;             // street address for the venue created on approval
+    venueId?: string | null;      // set by approval when a venue is created
+  };
+  // Access: the owner may update only business.displayName / description / website / logoUrl / city
+  // (legalName and vatNumber are admin-only once approved; providerType, venueType, address and
+  // venueId are set by the signup / approval functions). Everything else follows the usual
+  // instructors rules.
   
   // Profile
   fullName: string;
@@ -735,6 +757,12 @@ Create these composite indexes in `firestore.indexes.json`:
   ]
 }
 ```
+
+### businessVat
+- **Path:** `/businessVat/{vatNumber}` (doc id == the 11-digit P.IVA)
+- **Purpose:** Uniqueness claim so one P.IVA can belong to only one business provider. Created in a transaction by the business signup callable; released if the application is rejected or the account is deleted.
+- **Key fields:** `uid: string` (owner of the claim, == `instructors/{uid}`), `createdAt: Timestamp`.
+- **Access:** Admin SDK only — no client read or write (`allow read, write: if false` in `firestore.rules`).
 
 ## Additional Collections (Audit Sync 2026-05)
 

@@ -9,10 +9,49 @@ export interface UserData {
   [key: string]: unknown;
 }
 
+export type VenueType =
+  | "gym"
+  | "school"
+  | "studio"
+  | "wellness_center"
+  | "spa"
+  | "beauty_salon";
+
+/** Venue types that host group courses (a business's own timetable lives on these). */
+export function hostsCourses(type: VenueType): boolean {
+  return type === "gym" || type === "school" || type === "studio";
+}
+
 export interface VenueData {
   name: string;
   address: string;
   [key: string]: unknown;
+}
+
+// Who a provider is: a person (absent ⇒ "individual") or a company (gym, school, studio).
+export type ProviderType = "individual" | "business";
+
+// What a business offers at its premises; "none" ⇒ no venue is created on approval.
+export type BusinessVenueType = "gym" | "school" | "studio" | "none";
+
+// Company details of a business provider (instructors/{uid}.business).
+export interface BusinessDetails {
+  // Ragione sociale — admin-verified, owner read-only after approval
+  legalName: string;
+  // Partita IVA, 11 digits, validated — owner read-only after approval
+  vatNumber: string;
+  // Shown publicly; also copied to name/fullName
+  displayName: string;
+  description?: string;
+  website?: string | null;
+  logoUrl?: string | null;
+  city?: string;
+  // Default "gym"
+  venueType?: BusinessVenueType;
+  // Street address for the venue created on approval
+  address?: string;
+  // Set by approval when a venue is created
+  venueId?: string | null;
 }
 
 export interface ServiceData {

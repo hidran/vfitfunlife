@@ -13,6 +13,32 @@ export type ProviderStatus = "none" | "pending" | "verified" | "rejected";
 // Stored application status on the instructor doc (never "none" — absence means not an applicant)
 export type ProviderApplicationStatus = Exclude<ProviderStatus, "none">;
 
+// Who a provider is: a person (absent ⇒ "individual") or a company (gym, school, studio).
+export type ProviderType = "individual" | "business";
+
+// What a business offers at its premises; "none" ⇒ no venue is created on approval.
+export type BusinessVenueType = "gym" | "school" | "studio" | "none";
+
+// Company details of a business provider (instructors/{uid}.business).
+export interface BusinessDetails {
+  // Ragione sociale — admin-verified, owner read-only after approval
+  legalName: string;
+  // Partita IVA, 11 digits, validated — owner read-only after approval
+  vatNumber: string;
+  // Shown publicly; also copied to name/fullName
+  displayName: string;
+  description?: string;
+  website?: string | null;
+  logoUrl?: string | null;
+  city?: string;
+  // Default "gym"
+  venueType?: BusinessVenueType;
+  // Street address for the venue created on approval
+  address?: string;
+  // Set by approval when a venue is created
+  venueId?: string | null;
+}
+
 // Certification type
 export interface Certification {
   id: string;
@@ -129,6 +155,8 @@ export interface User {
   role: UserRole;
   // Provider application status (absent ⇒ "none")
   providerStatus?: ProviderStatus;
+  // Individual or business provider (absent ⇒ "individual")
+  providerType?: ProviderType;
   // Kind of provider, e.g. "personal_trainer", "psychologist" (providers only)
   userType?: string | null;
 
