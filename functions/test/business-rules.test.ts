@@ -153,6 +153,8 @@ describe('instructors/{uid}.business — owner edits display fields', () => {
     const website = 'https://' + 'a'.repeat(192);
     await assertSucceeds(instructorsAs(f.owner).doc(f.owner).update({
       'business.displayName': 'x'.repeat(120),
+      'name': 'x'.repeat(120),
+      'fullName': 'x'.repeat(120),
       'business.website': website,
     }));
   });
@@ -162,7 +164,9 @@ describe('instructors/{uid}.business — owner edits display fields', () => {
     delete legacy.legalForm;
     delete legacy.affiliationNumber;
     const f = await fixture({ business: legacy });
-    await assertSucceeds(instructorsAs(f.owner).doc(f.owner).update({ 'business.displayName': 'Nuovo nome' }));
+    await assertSucceeds(instructorsAs(f.owner).doc(f.owner).update({
+      'business.displayName': 'Nuovo nome', 'name': 'Nuovo nome', 'fullName': 'Nuovo nome',
+    }));
   });
 
   it('the owner can still edit non-business fields of a business doc', async () => {
@@ -290,6 +294,44 @@ describe('instructors/{uid}.business — venue keys (venueType, address, venueId
     await assertFails(ref.update({ 'business.address': 'Via Milano 2' }));
     await assertFails(ref.update({ 'business.venueId': 'biz_other' }));
     await assertSucceeds(ref.update({ 'business.city': 'Milano' }));
+  });
+});
+
+// S-5: name == fullName == business.displayName whenever an owner update touches one of them.
+describe('instructors/{uid}.business — the public name stays mirrored (name = fullName = displayName)', () => {
+  it('the owner cannot rename the company card without the company name, or the other way round', async () => {
+    const f = await fixture();
+    const ref = instructorsAs(f.owner).doc(f.owner);
+    await assertFails(ref.update({ name: 'Palestra Fantasma' }));
+    await assertFails(ref.update({ fullName: 'Palestra Fantasma' }));
+    await assertFails(ref.update({ name: 'Palestra Fantasma', fullName: 'Palestra Fantasma' }));
+    await assertFails(ref.update({ 'business.displayName': 'Karate & Fun' }));
+    await assertFails(ref.update({ 'business.displayName': 'Karate & Fun', name: 'Karate & Fun' }));
+    await assertFails(ref.update({ 'business.displayName': 'Karate & Fun', name: 'Other', fullName: 'Karate & Fun' }));
+  });
+
+  it('the owner can rename all three together, and edit other fields without touching the name', async () => {
+    const f = await fixture();
+    const ref = instructorsAs(f.owner).doc(f.owner);
+    await assertSucceeds(ref.update({ 'business.displayName': 'Karate & Fun', name: 'Karate & Fun', fullName: 'Karate & Fun' }));
+    await assertSucceeds(ref.update({ 'business.city': 'Monza', 'business.description': 'Nuova' }));
+    await assertSucceeds(ref.update({ name: 'Karate & Fun', fullName: 'Karate & Fun' }));
+  });
+
+  it('a doc already out of step is not locked out of unrelated edits, and can be put right', async () => {
+    const f = await fixture();
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await ctx.firestore().doc(`instructors/${f.owner}`).update({ name: 'Legacy name' });
+    });
+    const ref = instructorsAs(f.owner).doc(f.owner);
+    await assertSucceeds(ref.update({ 'business.city': 'Monza' }));
+    await assertFails(ref.update({ fullName: 'Karate Club Spoof' }));
+    await assertSucceeds(ref.update({ name: 'Karate Club', fullName: 'Karate Club' }));
+  });
+
+  it('an individual provider still edits name and fullName freely', async () => {
+    const f = await fixture();
+    await assertSucceeds(instructorsAs(f.individual).doc(f.individual).update({ name: 'Mario R.', fullName: 'Mario R.' }));
   });
 });
 

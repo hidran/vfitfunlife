@@ -485,6 +485,23 @@ service cloud.firestore {
     }
 
     /**
+     * S-5: a company's public name is `business.displayName`, mirrored to `name` and `fullName`
+     * (applyAsProvider on signup, businessDisplayPatch on every owner edit) and shown on every
+     * card. Both are owner-writable, so without this an owner could show a name unrelated to the
+     * company the admin approved. When an owner update touches any of the three, all three must
+     * agree afterwards; an update that touches none of them (a city edit, say) passes, so a doc
+     * that is already out of step is never locked out. Individuals (no map) are untouched.
+     */
+    function businessNameMirrorOk() {
+      let after = request.resource.data;
+      let displayName = after.get(['business', 'displayName'], null);
+      let renamed = after.diff(resource.data).affectedKeys().hasAny(['name', 'fullName']) ||
+        displayName != resource.data.get(['business', 'displayName'], null);
+      return !('business' in after) || !renamed ||
+        (after.get('name', null) == displayName && after.get('fullName', null) == displayName);
+    }
+
+    /**
      * Owner-side business checks on an instructors update. The map can be neither added nor
      * removed: becoming (or ceasing to be) a business goes through applyAsProvider or an
      * admin, which also keep users.providerType and the businessVat claim in step. Individual
@@ -566,6 +583,7 @@ service cloud.firestore {
            resource.data.get('applicationStatus', 'pending') &&
          request.resource.data.get('partnerStatus', 'pending') ==
            resource.data.get('partnerStatus', 'pending') &&
+         businessNameMirrorOk() &&
          isAllowedOwnerBusinessUpdate()));
 
       allow delete: if isAdmin() && !('business' in resource.data) && !isBusinessUser(instructorId);
