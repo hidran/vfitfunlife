@@ -5,6 +5,7 @@ import {
   businessVenueType,
   planBusinessVenue,
   venueLocationPatch,
+  venueNamePatch,
   venueSlug,
 } from "./businessVenue";
 
@@ -140,6 +141,36 @@ describe("venueLocationPatch", () => {
   });
   it("is null when the document was deleted", () => {
     expect(venueLocationPatch(loc, undefined)).toBeNull();
+  });
+});
+
+describe("venueNamePatch", () => {
+  const biz = (displayName: unknown) => ({ business: { displayName } });
+
+  it("mirrors a changed public name", () => {
+    expect(venueNamePatch(biz("Old"), biz("New"))).toEqual({ name: "New" });
+  });
+  it("trims it, like the name the venue was created with", () => {
+    expect(venueNamePatch(biz("Old"), biz("  New  "))).toEqual({ name: "New" });
+  });
+  it("is null when the name is unchanged or the edit is unrelated", () => {
+    expect(venueNamePatch(biz("Same"), { ...biz("Same"), bio: "x" })).toBeNull();
+    expect(venueNamePatch(biz("Same"), biz(" Same "))).toBeNull();
+  });
+  it("mirrors the first name when there is no earlier one (the re-read of the current document)", () => {
+    expect(venueNamePatch(undefined, biz("New"))).toEqual({ name: "New" });
+    expect(venueNamePatch({}, biz("New"))).toEqual({ name: "New" });
+  });
+  it("never blanks the venue: an empty, missing or non-string name is ignored", () => {
+    expect(venueNamePatch(biz("Old"), biz(""))).toBeNull();
+    expect(venueNamePatch(biz("Old"), biz("   "))).toBeNull();
+    expect(venueNamePatch(biz("Old"), biz(7))).toBeNull();
+    expect(venueNamePatch(biz("Old"), { business: {} })).toBeNull();
+    expect(venueNamePatch(biz("Old"), {})).toBeNull();
+  });
+  it("is null when the document was deleted, and never touches the slug", () => {
+    expect(venueNamePatch(biz("Old"), undefined)).toBeNull();
+    expect(Object.keys(venueNamePatch(biz("Old"), biz("New")) ?? {})).toEqual(["name"]);
   });
 });
 

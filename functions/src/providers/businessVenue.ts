@@ -150,3 +150,27 @@ export function venueLocationPatch(
   if (city && city !== before?.city) patch.city = city;
   return Object.keys(patch).length ? patch : null;
 }
+
+/** The trimmed public name of an instructors document's `business` map, or null. */
+function publicNameOf(instructor: Record<string, unknown> | undefined): string | null {
+  const business = instructor?.business;
+  if (!business || typeof business !== "object") return null;
+  return nonEmpty((business as Record<string, unknown>).displayName);
+}
+
+/**
+ * What to copy from a business's public name onto its venue: `{ name }` when
+ * `business.displayName` changed to a non-empty value, else null (unrelated edit, an emptied
+ * or non-string name, a deletion), so the venue is never blanked. Only the name: the slug
+ * was minted at creation and stays, since the venue's URL must not move under its links.
+ * With no `before` (the re-read of the current document) it yields the current name.
+ */
+export function venueNamePatch(
+  before: Record<string, unknown> | undefined,
+  after: Record<string, unknown> | undefined,
+): { name: string } | null {
+  if (!after) return null;
+  const name = publicNameOf(after);
+  if (!name || name === publicNameOf(before)) return null;
+  return { name };
+}

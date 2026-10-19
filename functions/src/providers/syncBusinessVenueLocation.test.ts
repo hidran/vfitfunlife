@@ -70,7 +70,42 @@ describe("mirrorBusinessVenueLocation", () => {
     expect(await readVenue()).toMatchObject(LOC);
   });
 
-  it("does nothing when the location did not change", async () => {
+  it("renames the venue when the public name changes, leaving the slug and location alone", async () => {
+    await db.doc("venues/v1").update({ slug: "palestra-rossi", lat: 45.07, lng: 7.69, city: "Torino" });
+    const doc = { business: { venueId: "v1", displayName: "Palestra Rossi" }, ...LOC };
+    await deliver(doc, { ...doc, business: { venueId: "v1", displayName: "Palestra Rossi Centro" } });
+    expect(await readVenue()).toEqual({
+      name: "Palestra Rossi Centro", slug: "palestra-rossi", address: "Via Po 2", ownerId: "biz", ...LOC,
+    });
+  });
+
+  it("writes the instructor's current public name, not a stale event's", async () => {
+    const before = { business: { venueId: "v1", displayName: "A" } };
+    await deliver(before, { business: { venueId: "v1", displayName: "B" } }, { business: { venueId: "v1", displayName: "C" } });
+    expect(await readVenue()).toMatchObject({ name: "C" });
+  });
+
+  it("mirrors a rename and a move delivered in one write, together", async () => {
+    await deliver(
+      { business: { venueId: "v1", displayName: "A" } },
+      { business: { venueId: "v1", displayName: "B" }, ...LOC },
+    );
+    expect(await readVenue()).toMatchObject({ name: "B", ...LOC });
+  });
+
+  it("a move alone does not rewrite a name an admin edited on the venue", async () => {
+    await db.doc("venues/v1").update({ name: "Admin Chosen Name" });
+    const doc = { business: { venueId: "v1", displayName: "Palestra Rossi" } };
+    await deliver(doc, { ...doc, ...LOC });
+    expect(await readVenue()).toMatchObject({ name: "Admin Chosen Name", ...LOC });
+  });
+
+  it("does not blank the venue name when the public name is emptied", async () => {
+    await deliver({ business: { venueId: "v1", displayName: "A" } }, { business: { venueId: "v1", displayName: "" } });
+    expect(await readVenue()).toMatchObject({ name: "Palestra Rossi" });
+  });
+
+  it("does nothing when neither the name nor the location changed", async () => {
     const doc = { ...LINKED, ...LOC };
     await deliver(doc, { ...doc, bio: "new bio" });
     expect(await readVenue()).not.toHaveProperty("lat");
