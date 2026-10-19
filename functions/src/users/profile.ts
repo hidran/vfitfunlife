@@ -153,8 +153,21 @@ export const updateSocialLinks = onCall<UpdateSocialLinksData>(
 
 interface UpdateAvatarData { avatarUrl: string; }
 
-const STORAGE_BUCKET = process.env.STORAGE_BUCKET ||
-  `${process.env.GCLOUD_PROJECT}.appspot.com`;
+function configuredStorageBucket(): string {
+  if (process.env.STORAGE_BUCKET) return process.env.STORAGE_BUCKET;
+  try {
+    const firebaseConfig = JSON.parse(process.env.FIREBASE_CONFIG ?? "{}") as { storageBucket?: unknown };
+    if (typeof firebaseConfig.storageBucket === "string" && firebaseConfig.storageBucket) {
+      return firebaseConfig.storageBucket;
+    }
+  } catch {
+    // Fall through to the project default when FIREBASE_CONFIG is absent or malformed.
+  }
+  const projectId = process.env.GCLOUD_PROJECT || process.env.GCP_PROJECT;
+  return projectId ? `${projectId}.firebasestorage.app` : "";
+}
+
+const STORAGE_BUCKET = configuredStorageBucket();
 
 /** Extract the Storage object path from a Firebase Storage download URL. */
 function extractObjectPath(url: string): string | null {

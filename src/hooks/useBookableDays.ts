@@ -20,13 +20,16 @@ export function useBookableDays(
   excludeBookingId?: string,
 ) {
   const monthKey = `${month.getFullYear()}-${month.getMonth() + 1}`;
+  const queryKey = ['bookable-days', providerId, serviceId, monthKey, excludeBookingId ?? null] as const;
   return useQuery({
-    queryKey: ['bookable-days', providerId, serviceId, monthKey, excludeBookingId ?? null],
-    queryFn: () =>
-      findBookableDays(daysToCheck(month, new Date()), async (day) =>
-        (
-          await getProviderAvailability(providerId as string, serviceId as string, day, excludeBookingId)
-        ).length,
+    queryKey,
+    queryFn: async ({ client }) =>
+      findBookableDays(
+        daysToCheck(month, new Date()),
+        async (day) =>
+          (await getProviderAvailability(providerId as string, serviceId as string, day, excludeBookingId)).length,
+        6,
+        (partial) => client.setQueryData(queryKey, partial),
       ),
     enabled: enabled && !!providerId && !!serviceId,
     staleTime: STALE_1_MIN,

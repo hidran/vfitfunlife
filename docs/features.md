@@ -764,3 +764,15 @@ the authority where the two disagree.
 - Background check (for certain categories)
 - Manual admin approval
 - Verified badge on profile
+
+## Group courses and activities
+
+Approved providers create group services with a maximum participant count, instructor/location, dated lessons and optional daily/weekly recurrence. Customers discover courses through `/courses` and reserve a single lesson or an entire series. Prices are per participant; providers can offer either pricing option or both. Full-series enrollment reserves every included lesson atomically and is available before the actual first lesson starts.
+
+Included: timezone-aware previews (annual weekly/daily courses, including leap years), capacity protection including checkout holds, duplicate-enrollment prevention, private rosters, attendance, advance direct-payment recording, cancellation deadlines, individual rescheduling/cancellation, remaining-series cancellation, refund obligations and reminders. Existing individual appointment booking rejects linked group services.
+
+Direct payment remains the default. Stripe-hosted course checkout is implemented behind both the global Stripe flag and a separate superadmin course-checkout flag; both default off. Signed webhooks, expiry reconciliation and refunds are supported. Escrow, automated provider payouts, waitlists, subscriptions and multi-seat purchases are deferred. See the [complete course journey](user-journeys/group-courses.md).
+
+### Provider-managed course participants
+
+Providers can search their linked clients and reserve a lesson or full course for them, with direct payment and existing capacity/policy checks. Inline participant creation requires only full name and email; surname and phone are optional. Existing accounts are reused by email. Provider/customer relationships are many-to-many and preserve each provider’s independent roster. Optional email invitations send private setup links; SMS/WhatsApp invitations open the provider’s device composer. Invited participants complete registration on the same UID, preserving reservations and all provider links. Notification failures remain visible and enrollment is retained.

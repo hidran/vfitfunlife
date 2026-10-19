@@ -111,6 +111,7 @@ export function ServiceCategoryDetailView({
           )?.requestSubmit()
         }
         onDelete={() => setConfirmOpen(true)}
+        allowAdminDelete
       >
         <ServiceCategoryFormView
           mode={editing ? 'edit' : 'view'}

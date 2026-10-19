@@ -4,7 +4,9 @@ import { describe, it, expect } from "vitest";
 import {
   ACCOUNT_STATUS_INVITED,
   CUSTOMER_DEFAULT_PERMISSIONS,
+  PROVIDER_DEFAULT_PERMISSIONS,
   buildInvitedCustomerProfile,
+  effectivePermissions,
   isInvitedAccountClaimed,
 } from "./customerProfile";
 
@@ -75,6 +77,31 @@ describe("buildInvitedCustomerProfile", () => {
 
   it("does not share the permissions array between profiles", () => {
     expect(profile.permissions).not.toBe(CUSTOMER_DEFAULT_PERMISSIONS);
+  });
+});
+
+describe("effectivePermissions", () => {
+  it("keeps customer permissions additive to provider permissions", () => {
+    const permissions = effectivePermissions(
+      "provider",
+      PROVIDER_DEFAULT_PERMISSIONS,
+      PROVIDER_DEFAULT_PERMISSIONS,
+      CUSTOMER_DEFAULT_PERMISSIONS,
+    );
+
+    expect(permissions).toEqual(expect.arrayContaining(CUSTOMER_DEFAULT_PERMISSIONS));
+    expect(permissions).toEqual(expect.arrayContaining(PROVIDER_DEFAULT_PERMISSIONS));
+    expect(permissions).toEqual(expect.arrayContaining(["bookings:write", "bookings:cancel"]));
+    expect(
+      effectivePermissions("admin", ["providers:verify"], ["providers:verify"], CUSTOMER_DEFAULT_PERMISSIONS),
+    ).toEqual(expect.arrayContaining(["providers:verify", ...CUSTOMER_DEFAULT_PERMISSIONS]));
+    expect(new Set(permissions).size).toBe(permissions.length);
+  });
+
+  it("keeps customer defaults unchanged for customer accounts", () => {
+    expect(
+      effectivePermissions("customer", undefined, CUSTOMER_DEFAULT_PERMISSIONS, CUSTOMER_DEFAULT_PERMISSIONS),
+    ).toEqual(CUSTOMER_DEFAULT_PERMISSIONS);
   });
 });
 

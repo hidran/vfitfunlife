@@ -28,7 +28,26 @@ describe('/providers/detail?id=', () => {
         fullName: 'Anna Verdi',
         avatarUrl: null,
         bio: null,
-        providerProfile: null,
+        providerProfile: {
+          servicePricing: [
+            {
+              id: 'active-service',
+              serviceName: 'Personal coaching',
+              description: 'Sessione individuale',
+              durationMinutes: 60,
+              price: 45,
+              isActive: true,
+            },
+            {
+              id: 'inactive-service',
+              serviceName: 'Servizio bozza',
+              description: '',
+              durationMinutes: 30,
+              price: 10,
+              isActive: false,
+            },
+          ],
+        },
         socialLinks: null,
         isProvider: true,
         portfolioImages: [],
@@ -39,6 +58,10 @@ describe('/providers/detail?id=', () => {
     render(<ProviderProfilePage />);
     expect(mockUseProfile).toHaveBeenCalledWith('prov-42');
     expect(screen.getAllByText('Anna Verdi').length).toBeGreaterThan(0);
+    expect(screen.getByText('Personal coaching')).toBeInTheDocument();
+    expect(screen.getByText('Sessione individuale')).toBeInTheDocument();
+    expect(screen.queryByText('Servizio bozza')).not.toBeInTheDocument();
+    expect(screen.getByText(/45,00.*€/)).toBeInTheDocument();
   });
 
   it('shows the not-found state when id is missing', () => {

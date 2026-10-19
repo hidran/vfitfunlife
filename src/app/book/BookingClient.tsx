@@ -73,11 +73,12 @@ export default function ProviderBookingPage() {
   // Not until the store holds this provider: a service left over from another provider's
   // flow is about to be cleared and must not be asked about here.
   const providerSelected = !!provider && selectedProvider?.id === provider.id;
+  const isOwnProvider = !!provider && firebaseUser?.uid === provider.id;
   useEffect(() => {
-    if (provider && providerSelected && selectedService && selectedDate && firebaseUser) {
+    if (provider && providerSelected && !isOwnProvider && selectedService && selectedDate && firebaseUser) {
       fetchAvailability(provider.id, selectedService.id, selectedDate);
     }
-  }, [provider, providerSelected, selectedService, selectedDate, firebaseUser, fetchAvailability]);
+  }, [provider, providerSelected, isOwnProvider, selectedService, selectedDate, firebaseUser, fetchAvailability]);
 
   // Which days of the month on show have a free start, so the calendar only offers those.
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
@@ -86,7 +87,7 @@ export default function ProviderBookingPage() {
     provider?.id,
     selectedService?.id,
     calendarMonth,
-    providerSelected && !!firebaseUser,
+    providerSelected && !isOwnProvider && !!firebaseUser,
   );
 
   const slotsNotice = (authReady && !firebaseUser) || availabilityError === 'signin' ? (
@@ -121,7 +122,7 @@ export default function ProviderBookingPage() {
     }
   };
 
-  const canContinue = providerSelected && selectedService && selectedDate && selectedTime;
+  const canContinue = providerSelected && !isOwnProvider && selectedService && selectedDate && selectedTime;
 
   const handleContinue = () => {
     if (canContinue) {
@@ -282,18 +283,25 @@ export default function ProviderBookingPage() {
               className="space-y-4"
             >
               <h3 className="font-semibold text-content mb-4">{t('booking.services.selectService')}</h3>
+              {services.some(s => s.kind === 'group') && <a className="block mb-4 underline text-section-primary" href="/courses">{t('courses.title')}</a>}
               {/* A deactivated service must not be bookable, or the provider-side toggle
                   is decorative. */}
-              {services.filter((s) => s.isActive !== false).map((service) => (
-                <ServiceCard
-                  key={service.id}
-                  service={{ ...service, description: service.description ?? '' }}
-                  isSelected={selectedService?.id === service.id}
-                  onSelect={handleServiceSelect}
-                />
-              ))}
+              {isOwnProvider ? (
+                <p role="alert" className="rounded-xl border border-hairline bg-surface-elevated/50 p-4 text-sm text-text-secondary">
+                  {t('booking.error.cannotBookOwnService')}
+                </p>
+              ) : (
+                services.filter((s) => s.isActive !== false && s.kind !== 'group').map((service) => (
+                  <ServiceCard
+                    key={service.id}
+                    service={{ ...service, description: service.description ?? '' }}
+                    isSelected={selectedService?.id === service.id}
+                    onSelect={handleServiceSelect}
+                  />
+                ))
+              )}
 
-              {selectedService && (
+              {!isOwnProvider && selectedService && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
@@ -309,7 +317,7 @@ export default function ProviderBookingPage() {
                     isLoading={isLoadingAvailability}
                     slotsNotice={slotsNotice}
                     bookableDays={bookableDays}
-                    isCheckingDays={isCheckingDays && !bookableDays}
+                    isCheckingDays={isCheckingDays}
                     onMonthChange={handleMonthChange}
                   />
                 </motion.div>

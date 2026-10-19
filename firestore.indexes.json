@@ -47,6 +47,94 @@
   //   },
   // ]
   "indexes": [
+{
+  "collectionGroup": "courses",
+  "queryScope": "COLLECTION",
+  "fields": [
+    {
+      "fieldPath": "state",
+      "order": "ASCENDING"
+    },
+    {
+      "fieldPath": "providerEligible",
+      "order": "ASCENDING"
+    },
+    {
+      "fieldPath": "nextStartsAt",
+      "order": "ASCENDING"
+    }
+  ]
+},
+{
+  "collectionGroup": "courses",
+  "queryScope": "COLLECTION",
+  "fields": [
+    {
+      "fieldPath": "state",
+      "order": "ASCENDING"
+    },
+    {
+      "fieldPath": "nextStartsAt",
+      "order": "ASCENDING"
+    }
+  ]
+},
+{
+  "collectionGroup": "courseEnrollments",
+  "queryScope": "COLLECTION",
+  "fields": [
+    {
+      "fieldPath": "state",
+      "order": "ASCENDING"
+    },
+    {
+      "fieldPath": "holdExpiresAt",
+      "order": "ASCENDING"
+    }
+  ]
+},
+{
+  "collectionGroup": "courseRefunds",
+  "queryScope": "COLLECTION",
+  "fields": [
+    {
+      "fieldPath": "paymentMode",
+      "order": "ASCENDING"
+    },
+    {
+      "fieldPath": "status",
+      "order": "ASCENDING"
+    }
+  ]
+},
+{
+  "collectionGroup": "sessions",
+  "queryScope": "COLLECTION_GROUP",
+  "fields": [
+    {
+      "fieldPath": "state",
+      "order": "ASCENDING"
+    },
+    {
+      "fieldPath": "cancellationReconciled",
+      "order": "ASCENDING"
+    }
+  ]
+},
+{
+  "collectionGroup": "sessions",
+  "queryScope": "COLLECTION_GROUP",
+  "fields": [
+    {
+      "fieldPath": "state",
+      "order": "ASCENDING"
+    },
+    {
+      "fieldPath": "startsAt",
+      "order": "ASCENDING"
+    }
+  ]
+},
     // Chat inbox (/chat): participantIds array-contains <uid>, newest conversation first.
     {
       "collectionGroup": "conversations",
@@ -540,11 +628,40 @@
         { "fieldPath": "isRead", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "gymSessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "venueId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "startsAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "gymSessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "venueId", "order": "ASCENDING" },
+        { "fieldPath": "startsAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "gymBookings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "sessionId", "order": "ASCENDING" },
+        { "fieldPath": "state", "order": "ASCENDING" }
+      ]
     }
     // mergeServiceCategories runs a collection-group query on services.categoryId. That
     // needs NO composite entry — Firestore maintains single-field indexes at collection
     // GROUP scope automatically, and declaring one here is rejected outright as
     // unnecessary.
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [{ "collectionGroup": "sessions", "fieldPath": "state", "indexes": [
+    { "order": "ASCENDING", "queryScope": "COLLECTION" },
+    { "order": "DESCENDING", "queryScope": "COLLECTION" },
+    { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" }
+  ] }]
 }

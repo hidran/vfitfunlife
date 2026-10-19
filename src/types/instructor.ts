@@ -48,6 +48,8 @@ export interface Provider {
 }
 
 export interface InstructorService {
+  kind?: "individual" | "group";
+  courseId?: string;
   id: string;
   name: string;
   description?: string;
@@ -71,4 +73,6 @@ export interface ProviderListOptions {
   /** Taxonomy id — a group matches its whole subtree via denormalized ancestry. */
   categoryId?: string;
   onlyVerified?: boolean;
+  /** Prevent a query when a screen has no matching provider directory. */
+  enabled?: boolean;
 }

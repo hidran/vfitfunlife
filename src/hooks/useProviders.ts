@@ -25,6 +25,7 @@ export function useProviders(opts: ProviderListOptions = {}) {
   return useQuery({
     queryKey: ['providers', opts],
     queryFn: () => fetchProviders(opts),
+    enabled: opts.enabled ?? true,
     staleTime: STALE_5_MIN,
   });
 }

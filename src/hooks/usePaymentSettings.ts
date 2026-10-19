@@ -16,17 +16,20 @@ import { queryKeys } from '@/lib/queryKeys';
 export interface PaymentSettings {
   stripePaymentsEnabled: boolean;
   subscriptionsEnabled: boolean;
+  courseCheckoutEnabled?: boolean;
 }
 
 export const DEFAULT_PAYMENT_SETTINGS: PaymentSettings = {
   stripePaymentsEnabled: false,
   subscriptionsEnabled: false,
+  courseCheckoutEnabled: false,
 };
 
 export function mergePaymentSettings(stored: Record<string, unknown> | undefined): PaymentSettings {
   return {
     stripePaymentsEnabled: stored?.stripePaymentsEnabled === true,
     subscriptionsEnabled: stored?.subscriptionsEnabled === true,
+    courseCheckoutEnabled: stored?.courseCheckoutEnabled === true,
   };
 }
 
@@ -47,6 +50,7 @@ export function usePaymentSettings() {
     settings,
     isLoading,
     stripePaymentsEnabled: settings.stripePaymentsEnabled,
+    courseCheckoutEnabled: settings.stripePaymentsEnabled && settings.courseCheckoutEnabled === true,
     // A subscription is a Stripe charge, so it needs both switches.
     subscriptionsEnabled: settings.stripePaymentsEnabled && settings.subscriptionsEnabled,
   };

@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Clock, Calendar } from 'lucide-react';
+import React, { useState, useEffect, useRef, useId } from 'react';
+import { ChevronLeft, ChevronRight, Clock, Calendar, X } from 'lucide-react';
+import { Modal } from '@/components/ui/Modal';
 import { cn } from '@/lib/utils';
 import { Spinner } from '@/components/ui/Spinner';
 import { useI18n } from '@/hooks/useI18n';
@@ -23,8 +24,8 @@ interface AvailabilityPickerProps {
   /** Shown instead of the time slots, e.g. "sign in to see times" or a load failure. */
   slotsNotice?: React.ReactNode;
   /**
-   * Which days have ≥1 free start (see useBookableDays). A day answered `false` is disabled;
-   * a day not in the map stays selectable, so a failed check never locks the calendar.
+   * Which days have ≥1 free start (see useBookableDays). Only a confirmed `false` disables
+   * a day; unknown days stay selectable while they load so the calendar is usable immediately.
    */
   bookableDays?: BookableDays;
   /** While true, days not answered yet are shown as loading and can't be picked. */
@@ -50,7 +51,35 @@ export function AvailabilityPicker({
   onMonthChange,
 }: AvailabilityPickerProps) {
   const { t, locale } = useI18n();
+  const slotsTitleId = useId();
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [slotsOpen, setSlotsOpen] = useState(false);
+  const [slotsDate, setSlotsDate] = useState<Date | null>(null);
+  const [awaitingAvailability, setAwaitingAvailability] = useState(false);
+  const availabilityLoadStarted = useRef(false);
+
+  useEffect(() => {
+    if (isLoading) {
+      availabilityLoadStarted.current = true;
+    } else if (availabilityLoadStarted.current) {
+      availabilityLoadStarted.current = false;
+      setAwaitingAvailability(false);
+    } else if (slotsNotice) {
+      setAwaitingAvailability(false);
+    }
+  }, [isLoading, slotsNotice]);
+
+  const handleDateSelect = (date: Date) => {
+    setSlotsDate(date);
+    setSlotsOpen(true);
+    setAwaitingAvailability(true);
+    onSelectDate(date);
+  };
+
+  const handleTimeSelect = (time: string) => {
+    onSelectTime(time);
+    setSlotsOpen(false);
+  };
 
   useEffect(() => {
     onMonthChange?.(currentMonth);
@@ -120,7 +149,7 @@ export function AvailabilityPicker({
       // Only days with a free start are pickable: a weekend or a day inside the minimum
       // notice used to open an empty "no available times" list.
       const isPending = !outOfRange && isCheckingDays && status === 'unknown';
-      const isDisabled = outOfRange || status === 'unavailable' || isPending;
+      const isDisabled = outOfRange || status === 'unavailable';
 
       days.push({
         date,
@@ -171,7 +200,15 @@ export function AvailabilityPicker({
     return hour >= 17;
   });
 
-  const TimeSlotGroup = ({ title, slots }: { title: string; slots: TimeSlot[] }) => {
+  const TimeSlotGroup = ({
+    title,
+    slots,
+    onSelectTime,
+  }: {
+    title: string;
+    slots: TimeSlot[];
+    onSelectTime: (time: string) => void;
+  }) => {
     if (slots.length === 0) return null;
 
     return (
@@ -257,7 +294,7 @@ export function AvailabilityPicker({
           {calendarDays.map((day, index) => (
             <button
               key={index}
-              onClick={() => !day.isDisabled && onSelectDate(day.date)}
+              onClick={() => !day.isDisabled && handleDateSelect(day.date)}
               disabled={day.isDisabled}
               aria-disabled={day.isDisabled || undefined}
               aria-busy={day.isPending || undefined}
@@ -285,54 +322,88 @@ export function AvailabilityPicker({
         </div>
       </div>
 
-      {/* Time slots */}
-      {selectedDate && (
-        <div className="bg-surface-elevated/50 rounded-2xl p-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-[var(--section-primary)]" />
-              <h3 className="font-semibold text-content">
-                {t('booking.availability.slotsTitle')}
-              </h3>
-            </div>
-            <span className="text-sm text-text-secondary">
-              {selectedDate.toLocaleDateString(toLocaleTag(locale), {
-                weekday: 'short',
-                day: 'numeric',
-                month: 'short',
-              })}
-            </span>
-          </div>
-
-          {slotsNotice ? (
-            <div className="py-8 text-center text-text-secondary">{slotsNotice}</div>
-          ) : isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Spinner size="md" />
-            </div>
-          ) : availability.length === 0 ? (
-            <div className="text-center py-8 text-text-secondary">
-              <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              <p>{t('booking.availability.noSlots')}</p>
-              <p className="text-sm text-text-tertiary mt-1">
-                {t('booking.availability.tryAnotherDate')}
+      {/* Selected-day slots open as a bottom sheet on mobile and a centered dialog on desktop. */}
+      {slotsOpen && slotsDate && (
+        <Modal
+          onClose={() => {
+            setSlotsOpen(false);
+            setAwaitingAvailability(false);
+          }}
+          labelledBy={slotsTitleId}
+          placement="bottom"
+          className="w-full sm:max-w-lg self-end sm:self-auto rounded-t-3xl sm:rounded-2xl border border-hairline bg-background-dark p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] max-h-[85dvh] sm:max-h-[80vh] animate-slide-up"
+        >
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 shrink-0 text-[var(--section-primary)]" />
+                <h3 id={slotsTitleId} className="font-semibold text-content">
+                  {t('booking.availability.slotsTitle')}
+                </h3>
+              </div>
+              <p className="mt-1 text-sm text-text-secondary">
+                {slotsDate.toLocaleDateString(toLocaleTag(locale), {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                })}
               </p>
             </div>
-          ) : (
-            <div className="max-h-[300px] overflow-y-auto scrollbar-hide">
-              <TimeSlotGroup title={t('booking.availability.morning')} slots={morningSlots} />
-              <TimeSlotGroup title={t('booking.availability.afternoon')} slots={afternoonSlots} />
-              <TimeSlotGroup title={t('booking.availability.evening')} slots={eveningSlots} />
-            </div>
-          )}
+            <button
+              type="button"
+              onClick={() => {
+                setSlotsOpen(false);
+                setAwaitingAvailability(false);
+              }}
+              aria-label={t('common.close')}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full hover:bg-content/10"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
 
-          {/* Timezone indicator */}
-          <div className="mt-4 pt-3 border-t border-hairline">
-            <p className="text-xs text-text-tertiary text-center">
+          <div className="max-h-[55dvh] overflow-y-auto scrollbar-hide">
+            {slotsNotice ? (
+              <div className="py-8 text-center text-text-secondary">{slotsNotice}</div>
+            ) : isLoading || awaitingAvailability ? (
+              <div className="flex items-center justify-center py-8">
+                <Spinner size="md" />
+              </div>
+            ) : availability.length === 0 ? (
+              <div className="py-8 text-center text-text-secondary">
+                <Clock className="mx-auto mb-2 h-8 w-8 opacity-50" />
+                <p>{t('booking.availability.noSlots')}</p>
+                <p className="mt-1 text-sm text-text-tertiary">
+                  {t('booking.availability.tryAnotherDate')}
+                </p>
+              </div>
+            ) : (
+              <div>
+                <TimeSlotGroup
+                  title={t('booking.availability.morning')}
+                  slots={morningSlots}
+                  onSelectTime={handleTimeSelect}
+                />
+                <TimeSlotGroup
+                  title={t('booking.availability.afternoon')}
+                  slots={afternoonSlots}
+                  onSelectTime={handleTimeSelect}
+                />
+                <TimeSlotGroup
+                  title={t('booking.availability.evening')}
+                  slots={eveningSlots}
+                  onSelectTime={handleTimeSelect}
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4 border-t border-hairline pt-3">
+            <p className="text-center text-xs text-text-tertiary">
               {t('booking.availability.timezone', { tz: timezone })}
             </p>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

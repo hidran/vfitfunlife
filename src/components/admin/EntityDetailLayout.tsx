@@ -5,6 +5,7 @@ import { ArrowLeft, Edit, Save, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useI18n } from '@/hooks/useI18n';
 import { SuperadminOnly } from './SuperadminOnly';
+import { useAuthStore } from '@/stores/authStore';
 
 interface Props {
   title: string;
@@ -16,15 +17,19 @@ interface Props {
   onCancelEdit?: () => void;
   onSave?: () => void;
   onDelete?: () => void;
+  /** Set when admins may soft-delete this entity; hard deletes remain superadmin-only. */
+  allowAdminDelete?: boolean;
   children: ReactNode;
 }
 
 export function EntityDetailLayout({
   title, subtitle, backHref, isEditing, isSaving,
-  onEdit, onCancelEdit, onSave, onDelete, children,
+  onEdit, onCancelEdit, onSave, onDelete, allowAdminDelete = false, children,
 }: Props) {
   const router = useRouter();
   const { t } = useI18n();
+  const role = useAuthStore((s) => s.user?.role);
+  const canDelete = role === 'superadmin' || (allowAdminDelete && role === 'admin');
   return (
     <div className="space-y-6">
       <Button variant="ghost" onClick={() => router.push(backHref)} className="text-content-muted">
@@ -55,13 +60,20 @@ export function EntityDetailLayout({
               </Button>
             </>
           )}
-          {onDelete && (
-            <SuperadminOnly>
+          {onDelete && canDelete && (
+            allowAdminDelete && role === 'admin' ? (
               <Button variant="secondary" size="sm" onClick={onDelete} className="text-red-400 light:text-red-700 hover:text-red-400 light:hover:text-red-700">
                 <Trash2 className="mr-1 h-4 w-4" />
                 {t('admin.detail.delete')}
               </Button>
-            </SuperadminOnly>
+            ) : (
+              <SuperadminOnly>
+                <Button variant="secondary" size="sm" onClick={onDelete} className="text-red-400 light:text-red-700 hover:text-red-400 light:hover:text-red-700">
+                  <Trash2 className="mr-1 h-4 w-4" />
+                  {t('admin.detail.delete')}
+                </Button>
+              </SuperadminOnly>
+            )
           )}
         </div>
       </div>

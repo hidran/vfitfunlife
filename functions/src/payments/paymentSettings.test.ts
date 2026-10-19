@@ -13,6 +13,7 @@ describe("mergePaymentSettings", () => {
     expect(mergePaymentSettings(null)).toEqual({
       stripePaymentsEnabled: false,
       subscriptionsEnabled: false,
+      courseCheckoutEnabled: false,
     });
   });
 
@@ -20,6 +21,7 @@ describe("mergePaymentSettings", () => {
     expect(mergePaymentSettings({ stripePaymentsEnabled: true })).toEqual({
       stripePaymentsEnabled: true,
       subscriptionsEnabled: false,
+      courseCheckoutEnabled: false,
     });
   });
 
@@ -53,4 +55,10 @@ describe("validatePaymentSettingsUpdate", () => {
     expect(() => validatePaymentSettingsUpdate({ commission: true } as never)).toThrow(/Unknown setting/);
     expect(() => validatePaymentSettingsUpdate({ stripePaymentsEnabled: "yes" } as never)).toThrow(/boolean/);
   });
+});
+
+
+it("course checkout defaults off and accepts an explicit admin flag", () => {
+  expect(mergePaymentSettings(undefined).courseCheckoutEnabled).toBe(false);
+  expect(validatePaymentSettingsUpdate({ courseCheckoutEnabled: true })).toEqual({ courseCheckoutEnabled: true });
 });

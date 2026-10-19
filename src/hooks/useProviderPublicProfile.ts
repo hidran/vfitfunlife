@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { doc, getDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { getPortfolioImages } from '@/lib/firebase/storage';
 import type { ProviderProfile } from '@/types/firebase';
@@ -33,6 +33,7 @@ export class ProviderNotFoundError extends Error {
 }
 
 type Data = Record<string, unknown>;
+type PublicService = ProviderProfile['servicePricing'][number];
 const str = (v: unknown): string | undefined => (typeof v === 'string' && v ? v : undefined);
 const num = (v: unknown): number | undefined => (typeof v === 'number' ? v : undefined);
 const arr = <T>(v: unknown): T[] | undefined => (Array.isArray(v) ? (v as T[]) : undefined);
@@ -64,7 +65,7 @@ export function toProviderPublicProfile(
     rating: num(data.ratingAvg) ?? num(p.rating) ?? 0,
     reviewCount: num(data.reviewCount) ?? num(p.reviewCount) ?? 0,
     portfolioImages,
-    servicePricing: arr(p.servicePricing) ?? [],
+    servicePricing: arr<PublicService>(p.servicePricing) ?? [],
     availabilitySchedule: null,
   };
   return {
@@ -92,7 +93,32 @@ async function fetchProviderPublicProfile(providerId: string): Promise<ProviderP
   const data = snap.data() as Data;
   // Venue-hosted activities (events, parties…) share the collection but are not people.
   if (data.activityKind) throw new ProviderNotFoundError();
-  return toProviderPublicProfile(snap.id, data, portfolioImages);
+
+  const services = await getDocs(collection(db, 'instructors', providerId, 'services'));
+  const subcollectionServices: PublicService[] = services.docs.map((service) => {
+    const serviceData = service.data() as Data;
+    return {
+      id: service.id,
+      ...(serviceData.kind === "group" ? { kind: "group" as const, courseId: str(serviceData.courseId) } : {}),
+      serviceName: str(serviceData.name) ?? str(serviceData.serviceName) ?? '',
+      description: str(serviceData.description) ?? '',
+      price: num(serviceData.price) ?? 0,
+      durationMinutes: num(serviceData.durationMinutes) ?? 0,
+      isActive: serviceData.isActive !== false,
+    };
+  });
+  const profileData = {
+    ...data,
+    providerProfile: {
+      ...((data.providerProfile ?? {}) as Data),
+      // The services subcollection is the booking flow's source of truth. Keep inline pricing
+      // only as a fallback for older provider profiles that have not migrated their services.
+      servicePricing: subcollectionServices.length
+        ? subcollectionServices
+        : ((data.providerProfile as Data | undefined)?.servicePricing ?? []),
+    },
+  };
+  return toProviderPublicProfile(snap.id, profileData, portfolioImages);
 }
 
 export function useProviderPublicProfile(providerId: string | undefined) {

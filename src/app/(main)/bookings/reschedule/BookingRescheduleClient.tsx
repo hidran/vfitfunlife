@@ -6,7 +6,7 @@ import { ArrowLeft, Calendar, CheckCircle2, Clock, RotateCcw } from 'lucide-reac
 import { cn } from '@/lib/utils';
 import { useBookingStore } from '@/stores/bookingStore';
 import { useAuthStore } from '@/stores/authStore';
-import { buildFallbackBooking, getBookingSectionMeta } from '@/lib/bookingUtils';
+import { getBookingSectionMeta } from '@/lib/bookingUtils';
 import { canReschedule } from '@/lib/bookingStatus';
 import { rescheduleErrorKey } from '@/lib/availability/errors';
 import { useI18n } from '@/hooks/useI18n';
@@ -48,50 +48,58 @@ export default function BookingRescheduleClient() {
   } = useBookingStore();
   const { user } = useAuthStore();
 
-  const isKnown =
-    userBookings.some((entry) => entry.id === bookingId) || currentBooking?.id === bookingId;
+  const storedBooking = userBookings.find((entry) => entry.id === bookingId) ??
+    (currentBooking?.id === bookingId ? currentBooking : null);
+  const [fetchedBooking, setFetchedBooking] = useState<typeof storedBooking>(null);
+  const [isLoadingBooking, setIsLoadingBooking] = useState(false);
+  const isKnown = Boolean(storedBooking || fetchedBooking);
 
   useEffect(() => {
     // Both entry points can land here with an empty client store: a deep link from a push, and
     // the trainer's own booking screen, which fills a different store entirely. Keyed on `user`
     // because a cold load restores the Firebase session asynchronously, and the read is denied
     // to nobody-in-particular.
-    if (!bookingId || !user || isKnown) return;
-    void fetchBooking(bookingId);
-  }, [bookingId, fetchBooking, isKnown, user]);
+    if (!bookingId || !user?.uid || isKnown) return;
+    let cancelled = false;
+    setIsLoadingBooking(true);
+    void fetchBooking(bookingId)
+      .then((loaded) => {
+        if (!cancelled) setFetchedBooking(loaded);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingBooking(false);
+      });
+    return () => { cancelled = true; };
+  }, [bookingId, fetchBooking, isKnown, user?.uid]);
 
-  const booking = useMemo(() => {
-    return (
-      userBookings.find((entry) => entry.id === bookingId) ||
-      (currentBooking?.id === bookingId ? currentBooking : null) ||
-      buildFallbackBooking(bookingId)
-    );
-  }, [bookingId, currentBooking, userBookings]);
+  const booking = storedBooking ?? fetchedBooking;
+  const isLoading = !booking && (isLoadingBooking || !user?.uid);
 
   // `instructorId` is the canonical trainer link on a booking document; `providerId` only
   // survives on pre-P0-1 ones. Reading providerId alone left the picker with nothing to ask about.
-  const instructorId = booking.instructorId || booking.providerId || '';
+  const instructorId = booking?.instructorId || booking?.providerId || '';
   // Same story for the trainer's name: booking documents denormalize `instructorName`.
-  const instructorName = booking.providerName || booking.instructorName || '';
-  const sectionMeta = getBookingSectionMeta(booking.serviceName);
-  const currentDate = booking.scheduledAt.toDate();
-  const currentTime = formatTime(currentDate);
+  const instructorName = booking?.providerName || booking?.instructorName || '';
+  const sectionMeta = getBookingSectionMeta(booking?.serviceName);
+  const currentDate = booking?.scheduledAt.toDate();
+  const currentTime = currentDate ? formatTime(currentDate) : '';
   // The same gate the entry points use, so a booking can never be offered here and refused
   // on arrival. The server checks it again, and owns the verdict.
-  const isReschedulable = Boolean(bookingId) && canReschedule(booking.status, currentDate < new Date());
+  const isReschedulable = Boolean(bookingId && booking && currentDate) &&
+    canReschedule(booking?.status ?? 'requested', currentDate ? currentDate < new Date() : false);
 
-  const [selectedDate, setSelectedDate] = useState<Date | null>(currentDate);
-  const [selectedTime, setSelectedTime] = useState<string | null>(currentTime);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(currentDate ?? null);
+  const [selectedTime, setSelectedTime] = useState<string | null>(currentTime || null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isReschedulable || !instructorId || !booking.serviceId || !selectedDate) return;
+    if (!isReschedulable || !instructorId || !booking?.serviceId || !selectedDate) return;
     // Excluding this booking is what lets its own current time still show as free, instead of
     // the booking blocking the slot it is sitting in.
     void fetchAvailability(instructorId, booking.serviceId, selectedDate, booking.id);
-  }, [booking.id, booking.serviceId, fetchAvailability, instructorId, isReschedulable, selectedDate]);
+  }, [booking?.id, booking?.serviceId, fetchAvailability, instructorId, isReschedulable, selectedDate]);
 
   // Which days of the month on show have a free start, so the calendar only offers those.
   // Excludes this booking for the same reason as the slot list above.
@@ -99,21 +107,21 @@ export default function BookingRescheduleClient() {
   const handleMonthChange = useCallback((month: Date) => setCalendarMonth(month), []);
   const { data: bookableDays, isFetching: isCheckingDays } = useBookableDays(
     instructorId || undefined,
-    booking.serviceId || undefined,
+    booking?.serviceId || undefined,
     calendarMonth,
     isReschedulable && !!user,
-    booking.id,
+    booking?.id,
   );
 
   const hasChanged = useMemo(() => {
     if (!selectedDate || !selectedTime) return false;
     return (
-      selectedDate.toDateString() !== currentDate.toDateString() || selectedTime !== currentTime
+      selectedDate.toDateString() !== currentDate?.toDateString() || selectedTime !== currentTime
     );
   }, [currentDate, currentTime, selectedDate, selectedTime]);
 
   const handleConfirm = async () => {
-    if (!selectedDate || !selectedTime || !isReschedulable) return;
+    if (!selectedDate || !selectedTime || !isReschedulable || !booking) return;
 
     // The slot's own instant: its time is Italian time whatever the device's zone is. Refuse to
     // assemble one from the picked day plus "HH:mm" — that would move the booking to a different
@@ -159,7 +167,11 @@ export default function BookingRescheduleClient() {
         </div>
       </div>
 
-      <div className="space-y-4 p-4 pb-28">
+      {isLoading ? (
+        <p role="status" className="p-4 text-sm text-text-secondary">{t('common.loading')}</p>
+      ) : !booking ? (
+        <p role="status" className="p-4 text-sm text-text-secondary">{t('bookings.detail.notFound')}</p>
+      ) : <div className="space-y-4 p-4 pb-28">
         <div className="rounded-2xl border border-hairline bg-surface-2 p-4">
           <div className="mb-2 flex items-center gap-2">
             <span
@@ -208,7 +220,7 @@ export default function BookingRescheduleClient() {
               <div className="grid gap-2 text-sm text-text-secondary">
                 <p className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-[var(--section-primary)]" />
-                  {currentDate.toLocaleDateString(toLocaleTag(locale), {
+                  {currentDate?.toLocaleDateString(toLocaleTag(locale), {
                     weekday: 'long',
                     day: 'numeric',
                     month: 'long',
@@ -230,7 +242,7 @@ export default function BookingRescheduleClient() {
               onSelectTime={setSelectedTime}
               isLoading={isLoadingAvailability}
               bookableDays={bookableDays}
-              isCheckingDays={isCheckingDays && !bookableDays}
+              isCheckingDays={isCheckingDays}
               onMonthChange={handleMonthChange}
             />
 
@@ -258,9 +270,9 @@ export default function BookingRescheduleClient() {
             {error}
           </div>
         )}
-      </div>
+      </div>}
 
-      {isReschedulable && !isComplete && (
+      {booking && isReschedulable && !isComplete && (
         <div className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] left-0 right-0 z-40 border-t border-hairline bg-background-dark/90 p-4 pr-20 backdrop-blur-xl">
           <Button
             className={cn('w-full', hasChanged ? '' : 'opacity-70')}

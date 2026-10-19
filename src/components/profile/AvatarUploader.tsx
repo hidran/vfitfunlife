@@ -47,8 +47,9 @@ export function AvatarUploader({ currentUrl, uid, onUploaded }: Props) {
       const url = await getDownloadURL(objRef);
       await mut.mutateAsync(url);
       onUploaded?.(url);
-    } catch (err) {
-      setError((err as Error).message || 'Upload failed');
+    } catch {
+      // Callable errors can include internal schema details; keep those out of the profile UI.
+      setError(t('profile.settings.avatar.uploadError'));
     } finally {
       setBusy(false);
       if (inputRef.current) inputRef.current.value = '';

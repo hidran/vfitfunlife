@@ -18,6 +18,18 @@ describe('markerInfoContent', () => {
     expect(markerInfoContent({ ...base, partnerLabel: 'Partner' }).textContent).toContain('Partner');
   });
 
+  it('omits rating details when no rating data is available', () => {
+    const root = markerInfoContent({ name: 'A', city: 'B' });
+    expect(root.textContent).not.toContain('★');
+    expect(root.textContent).toBe('AB');
+  });
+
+  it('omits rating details when no rating data is available', () => {
+    const root = markerInfoContent({ name: 'A', city: 'B' });
+    expect(root.textContent).not.toContain('★');
+    expect(root.textContent).toBe('AB');
+  });
+
   it('treats names as text, never as markup', () => {
     const root = markerInfoContent({
       name: '<img src=x onerror=alert(1)>',

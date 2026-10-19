@@ -99,6 +99,7 @@ export default function ProviderProfileClient() {
   }
 
   const providerData = profile.providerProfile;
+  const publicServices = providerData?.servicePricing.filter((service) => service.isActive) ?? [];
   const initials = profile.fullName
     .split(' ')
     .map((n) => n[0])
@@ -232,41 +233,40 @@ export default function ProviderProfileClient() {
       )}
 
       {/* Services & Pricing */}
-      {providerData?.servicePricing && providerData.servicePricing.length > 0 && (
+      {publicServices.length > 0 && (
         <div className="px-4 py-4 border-t border-white/5">
           <div className="flex items-center gap-2 mb-3">
             <Clock size={18} className="text-section-primary" />
             <h2 className="font-semibold text-text-inverse">{t('providerProfile.services')}</h2>
           </div>
           <div className="space-y-3">
-            {providerData.servicePricing
-              .filter((service) => service.isActive)
-              .map((service) => (
-                <div
-                  key={service.id}
-                  className="p-4 rounded-xl bg-background-secondary/5 border border-white/5"
-                >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="font-medium text-text-inverse">{service.serviceName}</h3>
-                      {service.description && (
-                        <p className="text-sm text-text-secondary mt-1">{service.description}</p>
-                      )}
-                      <div className="flex items-center gap-3 mt-2">
-                        <span className="flex items-center gap-1 text-sm text-text-tertiary">
-                          <Clock size={14} />
-                          {t('providerProfile.durationMin', { count: service.durationMinutes })}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xl font-bold text-section-primary">
-                        {formatPrice(service.price, locale)}
-                      </p>
+            {publicServices.map((service) => (
+              <div
+                key={service.id}
+                className="p-4 rounded-xl bg-background-secondary/5 border border-white/5"
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="font-medium text-text-inverse">{service.serviceName}</h3>
+                    {service.courseId && <a href={`/courses?id=${encodeURIComponent(service.courseId)}`} className="block mt-2 underline text-section-primary">{t('courses.sessions')}</a>}
+                    {service.description && (
+                      <p className="text-sm text-text-secondary mt-1">{service.description}</p>
+                    )}
+                    <div className="flex items-center gap-3 mt-2">
+                      <span className="flex items-center gap-1 text-sm text-text-tertiary">
+                        <Clock size={14} />
+                        {t('providerProfile.durationMin', { count: service.durationMinutes })}
+                      </span>
                     </div>
                   </div>
+                  <div className="text-right">
+                    <p className="text-xl font-bold text-section-primary">
+                      {formatPrice(service.price, locale)}
+                    </p>
+                  </div>
                 </div>
-              ))}
+              </div>
+            ))}
           </div>
         </div>
       )}

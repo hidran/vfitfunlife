@@ -42,7 +42,7 @@ const markerIcon = (rating: string, isPartner?: boolean): google.maps.Icon => ({
   url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
     <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
       <circle cx="18" cy="18" r="16" fill="${isPartner ? '#00C9FF' : '#7B61FF'}" stroke="white" stroke-width="2"/>
-      <text x="18" y="22" text-anchor="middle" fill="white" font-size="12" font-weight="bold">${rating}</text>
+      ${rating ? `<text x="18" y="22" text-anchor="middle" fill="white" font-size="12" font-weight="bold">${rating}</text>` : ''}
     </svg>
   `)}`,
   scaledSize: new google.maps.Size(36, 36),
@@ -61,6 +61,10 @@ export function GoogleMap({ gyms, userLocation, onGymSelect, linkLabel, classNam
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim();
   const hasPlaceholderKey = !apiKey || /your_|example|xxx/i.test(apiKey);
   const mapRef = useRef<HTMLDivElement>(null);
+  const gymsRef = useRef(gyms);
+  useEffect(() => {
+    gymsRef.current = gyms;
+  }, [gyms]);
   const googleMapRef = useRef<google.maps.Map | null>(null);
   // The map is created asynchronously (and again when userLocation changes), so the marker
   // effect keys on this state rather than on the ref.
@@ -99,12 +103,16 @@ export function GoogleMap({ gyms, userLocation, onGymSelect, linkLabel, classNam
     loader.load().then(() => {
       if (cancelled || !mapRef.current) return;
 
-      // Default to Milan if no user location
-      const center = userLocation || { lat: 45.4642, lng: 9.1900 };
+      const firstLocatedGym = gymsRef.current.find((gym) =>
+        typeof gym.lat === 'number' && typeof gym.lng === 'number'
+      );
+      const center = userLocation ?? (firstLocatedGym
+        ? { lat: firstLocatedGym.lat!, lng: firstLocatedGym.lng! }
+        : null);
 
       const mapOptions: google.maps.MapOptions = {
-        center,
-        zoom: 13,
+        ...(center ? { center } : {}),
+        zoom: center ? 13 : 2,
         mapTypeId: 'roadmap',
         mapTypeControl: false,
         streetViewControl: false,
@@ -177,8 +185,10 @@ export function GoogleMap({ gyms, userLocation, onGymSelect, linkLabel, classNam
       markerInfoContent({
         name: gym.name,
         city: gym.city,
-        rating: formatDecimal(gym.rating, locale, 1),
-        reviewsLabel: t('map.google.reviews', { count: gym.reviewCount }),
+        ...(gym.rating > 0 ? {
+          rating: formatDecimal(gym.rating, locale, 1),
+          ...(gym.reviewCount > 0 ? { reviewsLabel: t('map.google.reviews', { count: gym.reviewCount }) } : {}),
+        } : {}),
         partnerLabel: gym.isPartner ? t('map.google.partner') : undefined,
         link: gym.href
           ? {
@@ -213,7 +223,7 @@ export function GoogleMap({ gyms, userLocation, onGymSelect, linkLabel, classNam
       seen.add(gym.id);
       const position = { lat: gym.lat, lng: gym.lng };
       bounds.extend(position);
-      const rating = formatDecimal(gym.rating, locale, 1);
+      const rating = gym.rating > 0 ? formatDecimal(gym.rating, locale, 1) : '';
       const iconKey = `${rating}|${gym.isPartner ? 1 : 0}`;
 
       const existing = entries.get(gym.id);

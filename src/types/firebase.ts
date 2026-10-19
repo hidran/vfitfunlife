@@ -84,6 +84,8 @@ export interface ProviderProfile {
 
 // Service pricing type
 export interface ServicePricing {
+  kind?: "individual" | "group";
+  courseId?: string;
   id: string;
   serviceName: string;
   description: string;
@@ -155,6 +157,8 @@ export interface User {
   // Season 0 profile fields (optional until set)
   interests: string[];
   homeCity: string | null;
+  /** Private, approximate customer location used to default nearby discovery. */
+  searchLocation?: { lat: number; lng: number; geohash: string } | null;
 
   // Preferences
   preferredLanguage: AppLocale;
@@ -294,6 +298,10 @@ export interface Venue {
 
   // Flags
   isPartner: boolean;
+  partnerStatus?: 'pending' | 'active' | 'suspended';
+  memberDiscountPercent?: number;
+  partnerInstructorExtraPercent?: number;
+  ownerId?: string;
   isFeatured: boolean;
   isActive: boolean;
 

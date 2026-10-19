@@ -2206,3 +2206,37 @@ Firestore-triggered handlers (no direct invocation).
 - **Source:** [`../../functions/src/auth/index.ts`](../../functions/src/auth/index.ts)
 - **Trigger:** `onDocumentCreated` on `deletedUsers/{userId}`
 - **Behavior:** Logs the deletion. Hook for future cleanup logic (Firestore data, Auth user, storage).
+
+## Group course API
+
+All callables run in `europe-west1`. Course mutations reject unauthenticated/inactive/unauthorized callers, invalid categories/schedules/prices and capacity/deadline violations. Writes are server-owned.
+
+`previewCourse` and `saveCourse` return `invalid-argument` / `course_validation_failed`
+with `details.fields` for schema errors. Schedule/pricing preconditions also include
+`details.fields`. Clients translate these field names into correction guidance; raw schema
+JSON is not a user-facing error message.
+
+| Function | Input | Result / authorization |
+|---|---|---|
+| `previewCourse` | `{course: CourseDraft}` | Concrete lesson IDs and ISO start/end instants; authenticated |
+| `saveCourse` | `{course, courseId?, providerId?}` | `{courseId}`; verified owner or authorized admin; authorized venue linkage if provided |
+| `enrollInCourse` | `{courseId, scope: lesson\|series, sessionId?, paymentMode: direct\|stripe, requestId}` | `{enrollmentId, state, totalCents}`; authenticated customer; repeat request IDs are idempotent |
+| `cancelCourseEnrollment` | `{enrollmentId, sessionIds?, reason?}` | `{success}`; customer within deadline or owner/admin; duplicate IDs cannot duplicate refunds |
+| `recordCoursePayment` | `{enrollmentId, method: cash\|satispay\|bank_transfer\|other}` | Full active direct-payment confirmation; owner/admin; advance payment supported |
+| `manageCourseSession` | `{courseId, sessionId, action: attendance\|cancel\|reschedule, userId?, attendance?, startsAt?, reason?}` | Owner/admin; reschedule uses ISO instant; changes/cancellation require reason |
+| `cancelRemainingCourse` | `{courseId, reason}` | Closes enrollment and cancels future lessons; owner/admin |
+| `confirmCourseRefund` | `{refundId}` | Records direct refund completion; owner/admin |
+| `createCourseCheckout` | `{enrollmentId}` | `{url}`; enrollment customer; both payment flags required; server-derived price, stable Stripe idempotency parameters |
+| `setPaymentSettings` | `{stripePaymentsEnabled?, subscriptionsEnabled?, courseCheckoutEnabled?}` | Audited superadmin-only settings update; unknown/nonboolean keys rejected |
+
+`courseStripeWebhook` is an HTTP endpoint with Stripe raw-body signature verification. Configure Checkout completed/expired and refund.updated events. Browser redirects never mark paid. Repeated events preserve settlement/refund state. Payments received after hold expiry/cancellation enqueue refunds.
+
+Scheduled: `maintainCourseEnrollments` every five minutes releases expired holds, advances discovery, reconciles interrupted lesson cancellations and paginates pending/processing refunds. `remindCourseParticipants` every hour paginates all upcoming lessons and queues idempotent reminders. Triggers: `onCourseNotification` delivers outbox entries; `onCourseProviderEligibility` maintains public eligibility.
+
+### Provider course participants
+
+- `enrollCourseParticipant({courseId,userId,scope:"lesson"|"series",sessionId?,requestId})`: course owner/admin only, requires that participant’s provider-client pair, atomically reserves capacity using the same policy checks as customer enrollment. Direct payment only; returns the ordinary enrollment response. `createdBy` audits the actor. Retry with the same request ID is idempotent.
+- `createClientAccount({fullName,email,phone?,notifyByEmail?})`: verified provider only; creates an invited identity and client pair or reuses the existing normalized-email account. `notifyByEmail` defaults true; course enrollment UI passes false so invitation is an explicit subsequent action. Name/email required, phone optional. Shared account lookup/creation rate limit remains 20/day.
+- `notifyCourseParticipant({userId,channel:"email"|"phone"})`: active verified provider and existing pair required. Email returns `{status:"sent"|"failed"}`; pending account setup links go only to the actual profile email. Phone requires a stored number and returns `{status:"ready",url,message,smsUrl,whatsAppUrl}`. The URL is a credential-free registration landing page for invitees or course bookings for existing users. The provider must send the phone message themselves. Rate: 100 attempts/hour/provider.
+
+`/auth/participant/?email=...` publicly completes an invited account by requesting private email password setup; it does not create a second UID. First successful account claiming through `syncEmailVerification` activates all provider relationships.

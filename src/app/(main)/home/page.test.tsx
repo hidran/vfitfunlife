@@ -1,39 +1,51 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
-import HomePage from './page';
-import { SectionProvider } from '@/contexts/SectionContext';
+import { render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Mock useRouter
-const mockPush = vi.fn();
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: mockPush,
-  }),
+const state = vi.hoisted(() => ({ section: 'fit' as 'fit' | 'fun' | 'life' }));
+
+vi.mock('next/link', () => ({
+  default: ({ href, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
+    <a href={href} {...props}>{children}</a>
+  ),
 }));
+vi.mock('@/contexts/SectionContext', () => ({ useSection: () => ({ section: state.section }) }));
+vi.mock('@/hooks/useI18n', () => ({ useI18n: () => ({ t: (key: string) => key, locale: 'en' }) }));
+vi.mock('@/hooks/useVenues', () => ({
+  useVenues: () => ({ data: [], isLoading: false }),
+  useNearbyVenues: () => ({ data: [], isLoading: false }),
+}));
+vi.mock('@/hooks/useProviders', () => ({ useProviders: () => ({ data: [], isLoading: false }) }));
+vi.mock('@/hooks/useCustomerSearchLocation', () => ({ useCustomerSearchLocation: () => ({ data: { coords: null } }) }));
+vi.mock('@/hooks/useNearMe', () => ({ useNearMe: () => ({ userLocation: null }) }));
+vi.mock('@tanstack/react-query', () => ({ useQuery: () => ({ data: [], isLoading: false }) }));
+vi.mock('@/hooks', () => ({
+  useTodayClasses: () => ({ data: [], isLoading: false }),
+  useTestimonials: () => ({ data: [], isLoading: false }),
+}));
+vi.mock('@/hooks/useFunActivities', () => ({ useFunActivities: () => ({ data: [], isLoading: false }) }));
 
-describe('HomePage', () => {
-  it('renders the SectionSwitcher', () => {
-    render(
-      <SectionProvider>
-        <HomePage />
-      </SectionProvider>
-    );
-    expect(screen.getByText('FIT')).toBeInTheDocument();
-    expect(screen.getByText('FUN')).toBeInTheDocument();
-    expect(screen.getByText('LIFE')).toBeInTheDocument();
+import HomePage from './page';
+
+beforeEach(() => {
+  state.section = 'fit';
+});
+
+describe('HomePage catalog data', () => {
+  it('shows real-catalog empty states instead of invented gyms, trainers, or classes', () => {
+    render(<HomePage />);
+
+    expect(screen.getByText('home.fit.gyms.empty')).toBeInTheDocument();
+    expect(screen.getByText('home.fit.trainers.empty')).toBeInTheDocument();
+    expect(screen.getByText('home.fit.classes.emptyToday')).toBeInTheDocument();
+    expect(screen.queryByText(/demo|sample|placeholder/i)).not.toBeInTheDocument();
   });
 
-  it('changes section when a button is clicked', () => {
-    render(
-      <SectionProvider>
-        <HomePage />
-      </SectionProvider>
-    );
+  it('does not invent customer reviews when the review catalog is empty', () => {
+    state.section = 'life';
+    render(<HomePage />);
 
-    const funButton = screen.getByText('FUN');
-    fireEvent.click(funButton);
-
-    // Check if the content for the 'fun' section is rendered
-    expect(screen.getByText('Entertainment & Events')).toBeInTheDocument();
+    expect(screen.getByText('home.life.recentReviews.title')).toBeInTheDocument();
+    expect(screen.queryByText(/".+"/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/demo|sample|placeholder/i)).not.toBeInTheDocument();
   });
 });

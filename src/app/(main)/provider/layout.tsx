@@ -28,6 +28,7 @@ import type { MessageKey } from '@/i18n/messages';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import { AssistantMenuButton } from '@/components/assistant/AssistantMenuButton';
+import { DashboardModeSwitch } from '@/components/layout/DashboardModeSwitch';
 
 interface ProviderLayoutProps {
   children: ReactNode;
@@ -44,6 +45,7 @@ const NAV_ITEMS: { icon: LucideIcon; labelKey: MessageKey; href: string }[] = [
   { icon: ChefHat, labelKey: 'provider.layout.nav.recipes', href: '/provider/recipes' },
   { icon: Wallet, labelKey: 'provider.layout.nav.earnings', href: '/provider/earnings' },
   { icon: Briefcase, labelKey: 'provider.layout.nav.services', href: '/provider/services' },
+  { icon: Users, labelKey: 'courses.manage', href: '/provider/courses' },
   { icon: Settings, labelKey: 'provider.layout.nav.availability', href: '/provider/availability' },
   { icon: MapPin, labelKey: 'provider.layout.nav.location', href: '/provider/location' },
 ];
@@ -57,7 +59,10 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
   const isInitialized = useAuthStore((s) => s.isInitialized);
   const status = user?.providerStatus ?? 'none';
   const isStaff = user?.role === 'admin' || user?.role === 'superadmin';
-  const canAccess = isStaff || canAccessProviderArea(status);
+  const canAccess =
+    isStaff ||
+    canAccessProviderArea(status) ||
+    (user?.role === 'provider' && status === 'none');
 
   useEffect(() => {
     if (isInitialized && user && !canAccess) {
@@ -76,6 +81,7 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
         <div className="p-6">
           <h2 className="text-lg font-semibold text-content">{t('provider.layout.title')}</h2>
           <p className="text-sm text-content-muted">{t('provider.layout.subtitle')}</p>
+          <DashboardModeSwitch mode="professional" className="mt-4" />
         </div>
 
         <nav className="px-3 pb-6">
@@ -127,6 +133,7 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
             )}
           </button>
         </div>
+        <DashboardModeSwitch mode="professional" className="mx-4 mb-3" />
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (

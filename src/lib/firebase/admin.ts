@@ -857,6 +857,20 @@ export async function createServiceCategory(data: ServiceCategoryData): Promise<
   }
 }
 
+/** Persist all missing built-in categories; available to both admin roles. */
+export async function seedServiceCategoryCatalog(): Promise<{
+  created: number;
+  updated: number;
+  unknown: string[];
+}> {
+  const functions = await getFunctionsInstance();
+  const seed = httpsCallable<void, { created: number; updated: number; unknown: string[] }>(
+    functions,
+    'seedServiceCategories',
+  );
+  return (await seed()).data;
+}
+
 // Update service category
 export async function updateServiceCategory(id: string, data: ServiceCategoryData): Promise<void> {
   try {

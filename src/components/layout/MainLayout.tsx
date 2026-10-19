@@ -15,7 +15,6 @@ interface MainLayoutProps {
   userEmail?: string;
   pointsBalance?: number;
   walletBalance?: number;
-  isProfessionalMode?: boolean;
 }
 
 export function MainLayout({
@@ -26,7 +25,6 @@ export function MainLayout({
   userEmail,
   pointsBalance = 0,
   walletBalance = 0,
-  isProfessionalMode = false,
 }: MainLayoutProps) {
   const { section } = useSection();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -59,7 +57,6 @@ export function MainLayout({
         userAvatarUrl={userAvatarUrl}
         pointsBalance={pointsBalance}
         walletBalance={walletBalance}
-        isProfessionalMode={isProfessionalMode}
       />
 
       {/* Main Content Area */}

@@ -81,3 +81,4 @@ test-results/
 
 # Firebase emulator persisted data
 .emulator-data/
+output/

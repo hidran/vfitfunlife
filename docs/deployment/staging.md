@@ -135,10 +135,11 @@ seedServiceCategories → seedUserTypes → seedExerciseLibrary → seedDemoData
 → backfillServiceCategories {"apply":true}
 ```
 
-All are superadmin-only callables at
-`https://europe-west1-vfit-app-staging.cloudfunctions.net/<name>`, called with a Firebase
-ID token for `admin@vfit.com`. `clearAllData` wipes demo content so the environment can be
-rebuilt freely — that is the point of it.
+`seedServiceCategories` is available to active admins and superadmins; the remaining seed
+callables are superadmin-only. They are called at
+`https://europe-west1-vfit-app-staging.cloudfunctions.net/<name>` with a Firebase ID token
+for an authorized account (the staging superadmin is `admin@vfit.com`). `clearAllData` wipes
+demo content so the environment can be rebuilt freely — that is the point of it.
 
 The demo seeder predates the service taxonomy, so its services carry no `categoryId`.
 Run `backfillServiceCategories` after seeding or category search returns nothing.
@@ -161,3 +162,150 @@ Run `backfillServiceCategories` after seeding or category search returns nothing
   clears on its own — don't go debugging permissions that aren't broken.
 - **Hosting caches `/_next/static/**` as immutable.** After deploying, a browser holding an
   old bundle will keep running it. Hard-reload before concluding a fix didn't work.
+
+## Group courses release — 2026-10-06
+
+Group courses are deployed to `vfit-app-staging` at `/courses/` and
+`/provider/courses/`. Hosting was built with `npm run build:staging`; the deployment
+project guard passed. Firestore rules/indexes and these 17 scoped functions were deployed:
+`saveCourse`, `previewCourse`, `enrollInCourse`, `cancelCourseEnrollment`,
+`recordCoursePayment`, `manageCourseSession`, `cancelRemainingCourse`,
+`confirmCourseRefund`, `createCourseCheckout`, `courseStripeWebhook`,
+`maintainCourseEnrollments`, `remindCourseParticipants`, `onCourseNotification`,
+`onCourseProviderEligibility`, `setPaymentSettings`, `createBooking`, and
+`createBookingAsTrainer`. Existing remote indexes omitted from the local configuration
+were preserved. Unrelated working-tree changes were retained; no production deployment
+was performed.
+
+Validation:
+
+- Full frontend suite: 133 files / 843 tests passed.
+- Full backend suite: 91 files / 981 tests passed with Firestore emulator and
+  `GCLOUD_PROJECT=demo-vfit-test`. After the browser-discovered cancellation fix,
+  all 16 course integration tests passed, including the new archive regression.
+- Frontend staging build, TypeScript, backend lint/build and course frontend lint passed.
+  Repository-wide frontend lint has an existing unrelated synchronous-setState error in
+  `MetricsClient.tsx`; course files pass lint.
+- Staging API smoke: provider preview/publication, public discovery, single lesson,
+  idempotent replay, whole-course all-or-none capacity, concurrent last seat, duplicate
+  membership, direct payment, private roster denial, cancellation/refund reconciliation,
+  rescheduling, remaining-course cancellation and disabled Stripe/escrow requests.
+- Playwright browser smoke: provider creates/previews/publishes a three-lesson course;
+  customer books the €40 series; provider records cash payment; customer sees Paid and
+  cancels one lesson, creating a €13.34 direct-refund obligation. Checkout controls remain
+  hidden. Mobile viewport 390×844 and desktop 1280×900 were inspected; provider mobile
+  document width equals viewport width.
+
+Repeat the API checks from the repository root:
+
+```bash
+node scripts/smoke-group-courses-staging.mjs
+```
+
+The script enforces the staging project, uses documented demo accounts (environment
+variables can override them), creates synthetic courses and leaves one published demo
+for browser QA. It never changes payment switches. Evidence is written to
+`output/playwright/group-courses-staging-smoke.json`; browser screenshots are stored
+beside it as `course-*.png`. The script contains no authentication tokens in its output.
+Use `/auth/login/` to enter staging; its existing allowlist gate redirects signed-out
+visitors on other routes to production.
+
+`stripePaymentsEnabled` and `courseCheckoutEnabled` remain false. Hosted checkout,
+signed webhooks, expiry and refund reconciliation have automated coverage; actual Stripe
+sandbox charges were not attempted because staging secrets remain placeholders. Configure
+test secrets and the `courseStripeWebhook` endpoint before an admin enables both switches.
+Checkout records provider liabilities; automatic payouts and customer-selectable VFit
+escrow remain future work. See the [course user journeys](../user-journeys/group-courses.md).
+
+### Course editor fixes — 2026-10-06
+
+Creation now opens `/provider/courses/create/`, and editing opens
+`/provider/courses/edit/?id=…`. The form is a full page. Draft values are saved in
+`sessionStorage`, scoped to the signed-in provider and course, and cleared only after a
+successful save. Category selection is a typeahead combobox with locale-aware alphabetical
+sorting, accent-insensitive filtering, and arrow/Enter/Escape controls.
+
+Preview validates required form inputs first. Server validation now returns structured
+field names for schema, pricing, weekdays, timezone and DST errors; the editor renders
+translated field guidance and never raw validation JSON. Verification: 8 course UI tests,
+30 backend course tests, scoped frontend lint, backend lint/build and staging build passed.
+Deployment includes staging hosting plus `saveCourse` and `previewCourse`.
+
+Staging browser smoke passed in Italian: dedicated create/edit navigation; all 67 category
+labels sorted by translated name; typed search and arrow/Enter selection; outside-click
+and reload draft preservation; required-field validation; three daily preview dates;
+create/edit saves; creation draft cleared after save. The invalid-pricing check displayed
+“Controlla questi campi: Prezzo per lezione (€), Prezzo intero corso (€).” with no JSON or
+literal placeholders. Evidence: `output/playwright/course-editor-staging-smoke.json`,
+`course-editor-route-mobile.png`, and `course-editor-validation-mobile.png`.
+
+### Annual weekly preview explanation — 2026-10-06
+
+Verified the reported 2026-10-08 → 2027-10-07 range against staging `previewCourse`:
+Monday-only produces 52 lessons, Thursday-only 53; Monday+Wednesday hits
+`maximum_100_sessions`. The dates and Europe/Rome 18:00 are valid. Hosting now displays
+a specific translated explanation of the 100-lesson limit and suggests fewer weekdays,
+a longer repeat interval or an earlier end date. Verified the Italian browser displays
+this explanation with two weekdays and successfully previews 52 lessons after deselecting
+Wednesday. No course was saved during this check. Nine course UI tests and ten core tests,
+staging build and scoped frontend lint passed. Evidence:
+`output/playwright/course-annual-date-smoke.json` and `course-annual-limit.png`.
+
+### Annual course support — 2026-10-06 (supersedes the lesson-limit note above)
+
+The 100-lesson cap is removed from generation and explicit cancellation selection. Annual
+weekly schedules with multiple weekdays, annual daily schedules and leap years are
+supported. The existing three-year date-span bound remains. Long cancellation-notification
+IDs are hashed to remain within document ID limits. Refund allocations are calculated once;
+zero-cent allocations release seats without generating invalid zero-amount refunds. Stripe
+refund recovery paginates beyond the first 100 external refunds.
+
+Verification: 34 backend course tests and 8 course UI tests passed, including annual
+365-lesson competing last-seat reservations, full payment/cancellation and exact refund
+allocation, leap-year generation, zero-cent Stripe allocations, and second-page Stripe
+refund recovery. Backend lint/build, scoped frontend lint and staging build passed.
+Hosting and affected course functions deployed to staging.
+
+Staging API smoke passed for the reported 104-lesson weekly schedule and a 365-lesson daily
+course: publication, concurrent series reservation, payment, full explicit cancellation,
+€600 total refund, refund reconciliation and QA archiving. Italian browser smoke previews
+104 lessons for 2026-10-08 through 2027-10-07 with Monday/Wednesday selected and shows no
+100-lesson warning. Evidence: `output/playwright/course-year-staging-smoke.json` and
+`course-annual-104-lessons.png`. Repeat the release's API verification with
+`node scripts/smoke-annual-courses-staging.mjs` while its published start dates remain future.
+Stripe checkout stays disabled; sandbox charges require configured test secrets.
+
+Firestore transactions retain atomic series reservations for these larger schedules.
+The obsolete 500-write count cap was removed by Firestore; current limits include request
+size and transaction duration. See [Firestore release notes](https://docs.cloud.google.com/firestore/docs/release-notes)
+and [current quotas](https://firebase.google.com/docs/firestore/quotas).
+
+### Provider-managed course participants — 2026-10-06
+
+Providers can add linked clients to a future lesson or full course, or create a participant inline with full name/email and optional surname/phone. Existing normalized-email accounts are reused, and the `clients` collection holds independent provider/user pairs. Invited account completion retains the same UID, bookings and every provider link. Providers can explicitly request email delivery or prepare SMS/WhatsApp composers; phone messages contain no Auth credential.
+
+The staging release includes `enrollCourseParticipant`, `notifyCourseParticipant`, updated `enrollInCourse`, `createClientAccount`, `addClientByEmail`, `resendClientAccountEmail`, `syncEmailVerification`, and `onCourseNotification`, plus hosting and client-pair identity protection in Firestore rules. Stripe remains admin-gated and provider-created enrollments use direct payment. Email delivery requires a working Resend secret; staging placeholders return an honest failure. Phone delivery uses the provider’s device, not an automatic SMS gateway.
+
+Validation: 856 frontend tests and 998 backend tests passed. Run backend tests with `GCLOUD_PROJECT=demo-vfit-test FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 npx vitest run --no-file-parallelism`; older suites share emulator data and need a clean emulator. Targeted course tests cover ownership/pair enforcement, private invitation recipients, credential-free phone links, invited-account activation, identity reuse, and course-capacity retries. Review caught and resolved cached identity reuse after editing a failed participant form. The second provider’s new relationship retains the invited badge until activation.
+
+Repeat API smoke with `node scripts/smoke-course-participants-staging.mjs`. It uses synthetic recipients only, creates/archives a QA course, and privately exercises password setup through Firebase’s admin API using `gcloud` credentials and the staging quota project. Setup credentials/passwords are never saved in evidence. Browser evidence: `output/playwright/provider-add-course-participant.png`, `provider-new-course-participant.png`, and `participant-registration-landing.png`. Registration landing works signed out on staging and preserves email query-prefill.
+
+Final staging API smoke passed all 10 checks: existing account reuse, owner-only lesson enrollment, minimal-field participant creation, whole-course reservation, a second independent provider link, credential-free phone composers, honest email delivery failure, real password setup/sign-in, activation of both links on the same UID with enrollment preserved, and QA cancellation/archiving. Evidence: `output/playwright/course-participants-staging-smoke.json`. Browser smoke reserved a real demo lesson through the Italian provider UI, then cancelled that QA reservation; the new-participant form has only name/email required and no horizontal overflow. Form evidence: `output/playwright/provider-new-participant-form.png`. Actual email delivery remains unverified while the staging Resend secret is a placeholder.
+
+### Three-provider browser verification and general search — 2026-10-06
+
+Three published demonstration courses were created through Playwright UI:
+
+| Course | Provider login | Lessons | Per lesson / whole course |
+|---|---|---:|---|
+| Demo Karate annuale Torino | demo.provider@vitfitdemo.dev | 53 weekly | €25 / €600 |
+| Demo Fitness funzionale Torino | demo.trainer@vitfitdemo.dev | 8 daily | €15 / €100 |
+| Demo Yoga benessere Torino | demo.gym@vitfitdemo.dev | 4 weekly | €20 / €70 |
+
+The third provider is a staging-only demo fixture (`demo-gym-courses-vfit`, standard demo password), cloned from the verified demo provider profile with its own Auth UID, email and name. Courses remain published for manual review. Each provider added the same existing demo customer and a separate previously nonexistent synthetic participant through the UI. Only name/email were supplied for the new participants. The existing customer retains one UID across three provider relationships; the fitness newcomer was booked for the full course.
+
+Customer course browsing showed all three courses, including category and Torino city filtering. Exact-name general activity search originally returned no results because it searched providers only. The fix adds matching public course cards and direct links to `/courses?id=...`, with text/category/price filters and pagination. Full next lessons remain discoverable for later lesson bookings. Seven targeted tests and the full 861-test frontend suite passed; scoped lint and staging build passed. The existing booking page image warning remains unchanged.
+
+Evidence: `output/playwright/three-demo-courses-verification.json`, `three-courses-karate-participants.png`, `three-courses-fitness-participants.png`, `three-courses-yoga-participants.png`, and `three-courses-customer-browse.png`.
+
+Post-deployment Playwright verification passed: each exact course title returned its course card without the incorrect No results message; the shared `Demo` query showed all three; the yoga result’s Lessons link opened the correct four-lesson course with its live capacity and prices. General search evidence: `three-courses-general-search-karate.png`, `three-courses-general-search-fitness.png`, `three-courses-general-search-yoga.png`, `three-courses-general-search-all.png`, and `three-courses-general-results.png`. All three demonstration courses remain published for review.

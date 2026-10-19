@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -17,6 +19,7 @@ import { BookingCard } from '@/components/booking';
 import { useI18n } from '@/hooks/useI18n';
 import { isActive, isCancelled, isDelivered } from '@/lib/bookingStatus';
 import type { Booking } from '@/types/booking';
+import { GymBookings } from '@/components/gym/GymBookings';
 
 type BookingTab = 'upcoming' | 'past' | 'cancelled';
 
@@ -98,6 +101,8 @@ export default function BookingsPage() {
 
   return (
     <div className="min-h-screen bg-background-dark">
+      <Link href="/courses?tab=bookings" className="inline-flex mb-4 rounded-xl border border-hairline px-4 py-3 text-section-primary font-semibold">{t('courses.myBookings')}</Link>
+      <GymBookings />
       {/* Pull to refresh indicator */}
       <AnimatePresence>
         {isRefreshing && (

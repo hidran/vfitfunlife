@@ -503,6 +503,7 @@ export function isEmailProvider(user: User): boolean {
 /**
  * Update user profile data
  */
+/** Update user profile data */
 export async function updateUserProfile(
   userId: string,
   data: {

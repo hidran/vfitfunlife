@@ -3,24 +3,13 @@ import type { ServiceCategoryDoc } from '@/types/serviceCategory';
 export type { ServiceCategory } from '@/types/serviceCategory';
 
 /**
- * The launch tree: 8 groups, 21 leaves.
+ * Shared service taxonomy for provider onboarding, discovery, and category seeding.
+ * The bundled tree is also the UI fallback, so new categories remain selectable while
+ * Firestore catalog additions are being rolled out. Legacy category IDs and Italian
+ * specialty labels are retained for existing provider profiles.
  *
- * Doubles as the bundled fallback (rendered when the Firestore catalogue is loading,
- * errored, or empty) and as the payload for the seedServiceCategories callable, so the two
- * can never disagree.
- *
- * The Italian labels of the leaves are EXACTLY the strings already stored in
- * instructors.specialties in production. That is what makes the phase-2 backfill an exact
- * match rather than a guess — including the three values that exist only in seeded data
- * (Yoga Therapy, Psicologia, Osteopatia) and appear in no other list in this codebase.
- *
- * Five leaves currently have no providers (Group Fitness, Danza, Arti Marziali, Nuoto,
- * Spinning). They ship active on purpose: deactivating an empty category later is trivial,
- * a missing one blocks a provider at signup.
- *
- * VFun has no group yet — the structure is ready for events, parties and VR.
- *
- * Spec: docs/superpowers/specs/2026-08-13-service-taxonomy-design.md §5
+ * The client tree must stay in parity with functions/src/categories/tree.ts.
+ * See src/lib/serviceCategories.test.ts for the cross-project parity checks.
  */
 export const SERVICE_CATEGORY_TREE: Record<string, ServiceCategoryDoc> = {
   // ---------------------------------------------------------------- groups
@@ -215,6 +204,381 @@ export const SERVICE_CATEGORY_TREE: Record<string, ServiceCategoryDoc> = {
     names: {
       it: 'Mental Coaching', en: 'Mental Coaching', es: 'Coaching Mental',
       fr: 'Coaching Mental', de: 'Mentalcoaching',
+    },
+  },
+
+  // --------------------------------------------------------- Photo & video
+  photo_video: {
+    parentId: null, icon: '📷', sections: ['fun'], order: 90, isActive: true,
+    names: {
+      it: 'Foto e Video', en: 'Photography & Video', es: 'Fotografía y Vídeo',
+      fr: 'Photo et Vidéo', de: 'Foto & Video',
+    },
+  },
+  photographer: {
+    parentId: 'photo_video', icon: '📸', sections: ['fun'], order: 91, isActive: true,
+    names: {
+      it: 'Fotografo', en: 'Photographer', es: 'Fotógrafo',
+      fr: 'Photographe', de: 'Fotograf',
+    },
+  },
+  videographer: {
+    parentId: 'photo_video', icon: '🎥', sections: ['fun'], order: 92, isActive: true,
+    names: {
+      it: 'Videomaker', en: 'Videographer', es: 'Videógrafo',
+      fr: 'Vidéaste', de: 'Videograf',
+    },
+  },
+  wedding_photographer: {
+    parentId: 'photo_video', icon: '💍', sections: ['fun'], order: 93, isActive: true,
+    names: {
+      it: 'Fotografo per Matrimoni', en: 'Wedding Photographer',
+      es: 'Fotógrafo de Bodas', fr: 'Photographe de Mariage', de: 'Hochzeitsfotograf',
+    },
+  },
+  photo_booth: {
+    parentId: 'photo_video', icon: '🖼️', sections: ['fun'], order: 94, isActive: true,
+    names: {
+      it: 'Photo Booth', en: 'Photo Booth', es: 'Fotomatón',
+      fr: 'Photobooth', de: 'Fotobox',
+    },
+  },
+
+  // ------------------------------------------------------ Events & parties
+  events_parties: {
+    parentId: null, icon: '🎉', sections: ['fun'], order: 100, isActive: true,
+    names: {
+      it: 'Eventi e Feste', en: 'Events & Parties', es: 'Eventos y Fiestas',
+      fr: 'Événements et Fêtes', de: 'Events & Feiern',
+    },
+  },
+  event_planner: {
+    parentId: 'events_parties', icon: '🗓️', sections: ['fun'], order: 101, isActive: true,
+    names: {
+      it: 'Organizzatore di Eventi', en: 'Event Planner', es: 'Organizador de Eventos',
+      fr: 'Organisateur d’Événements', de: 'Eventplaner',
+    },
+  },
+  wedding_planner: {
+    parentId: 'events_parties', icon: '💍', sections: ['fun'], order: 102, isActive: true,
+    names: {
+      it: 'Wedding Planner', en: 'Wedding Planner', es: 'Organizador de Bodas',
+      fr: 'Organisateur de Mariage', de: 'Hochzeitsplaner',
+    },
+  },
+  party_venue: {
+    parentId: 'events_parties', icon: '🏛️', sections: ['fun'], order: 103, isActive: true,
+    names: {
+      it: 'Location per Feste ed Eventi', en: 'Party & Event Venue',
+      es: 'Espacio para Fiestas y Eventos', fr: 'Lieu de Réception', de: 'Eventlocation',
+    },
+  },
+  dj: {
+    parentId: 'events_parties', icon: '🎧', sections: ['fun'], order: 104, isActive: true,
+    names: { it: 'DJ', en: 'DJ', es: 'DJ', fr: 'DJ', de: 'DJ' },
+  },
+  live_music: {
+    parentId: 'events_parties', icon: '🎸', sections: ['fun'], order: 105, isActive: true,
+    names: {
+      it: 'Musica dal Vivo', en: 'Live Music', es: 'Música en Directo',
+      fr: 'Musique Live', de: 'Live-Musik',
+    },
+  },
+  entertainer: {
+    parentId: 'events_parties', icon: '🎭', sections: ['fun'], order: 106, isActive: true,
+    names: {
+      it: 'Animatore e Intrattenitore', en: 'Entertainer',
+      es: 'Animador', fr: 'Animateur', de: 'Unterhalter',
+    },
+  },
+  catering: {
+    parentId: 'events_parties', icon: '🍽️', sections: ['fun'], order: 107, isActive: true,
+    names: {
+      it: 'Catering', en: 'Catering', es: 'Catering', fr: 'Traiteur', de: 'Catering',
+    },
+  },
+  event_decoration: {
+    parentId: 'events_parties', icon: '🎈', sections: ['fun'], order: 108, isActive: true,
+    names: {
+      it: 'Allestimenti e Decorazioni', en: 'Event Decoration',
+      es: 'Decoración de Eventos', fr: 'Décoration Événementielle', de: 'Eventdekoration',
+    },
+  },
+
+  // ------------------------------------------------- Beauty & personal care
+  beauty_personal_care: {
+    parentId: null, icon: '💄', sections: ['life'], order: 110, isActive: true,
+    names: {
+      it: 'Bellezza e Cura della Persona', en: 'Beauty & Personal Care',
+      es: 'Belleza y Cuidado Personal', fr: 'Beauté et Soins Personnels',
+      de: 'Beauty & Körperpflege',
+    },
+  },
+  esthetician: {
+    parentId: 'beauty_personal_care', icon: '✨', sections: ['life'], order: 111, isActive: true,
+    names: {
+      it: 'Estetista', en: 'Beautician', es: 'Esteticista',
+      fr: 'Esthéticienne', de: 'Kosmetiker',
+    },
+  },
+  hairdresser: {
+    parentId: 'beauty_personal_care', icon: '💇', sections: ['life'], order: 112, isActive: true,
+    names: {
+      it: 'Parrucchiere', en: 'Hairdresser', es: 'Peluquero',
+      fr: 'Coiffeur', de: 'Friseur',
+    },
+  },
+  barber: {
+    parentId: 'beauty_personal_care', icon: '💈', sections: ['life'], order: 113, isActive: true,
+    names: {
+      it: 'Barbiere', en: 'Barber', es: 'Barbero', fr: 'Barbier', de: 'Barbier',
+    },
+  },
+  nail_technician: {
+    parentId: 'beauty_personal_care', icon: '💅', sections: ['life'], order: 114, isActive: true,
+    names: {
+      it: 'Onicotecnica', en: 'Nail Technician', es: 'Técnico de Uñas',
+      fr: 'Prothésiste Ongulaire', de: 'Nageldesigner',
+    },
+  },
+  makeup_artist: {
+    parentId: 'beauty_personal_care', icon: '💄', sections: ['life'], order: 115, isActive: true,
+    names: {
+      it: 'Make-up Artist', en: 'Makeup Artist', es: 'Maquillador',
+      fr: 'Maquilleur', de: 'Make-up-Artist',
+    },
+  },
+  waxing: {
+    parentId: 'beauty_personal_care', icon: '🌿', sections: ['life'], order: 116, isActive: true,
+    names: {
+      it: 'Depilazione', en: 'Waxing & Hair Removal', es: 'Depilación',
+      fr: 'Épilation', de: 'Haarentfernung',
+    },
+  },
+  bridal_beauty: {
+    parentId: 'beauty_personal_care', icon: '👰', sections: ['life', 'fun'], order: 117, isActive: true,
+    names: {
+      it: 'Beauty Sposa', en: 'Bridal Beauty', es: 'Belleza para Novias',
+      fr: 'Beauté de la Mariée', de: 'Brautstyling',
+    },
+  },
+
+  // -------------------------------------------------------- Home services
+  home_maintenance: {
+    parentId: null, icon: '🏠', sections: ['life'], order: 120, isActive: true,
+    names: {
+      it: 'Casa e Manutenzione', en: 'Home & Maintenance',
+      es: 'Hogar y Mantenimiento', fr: 'Maison et Entretien', de: 'Haus & Instandhaltung',
+    },
+  },
+  plumbing: {
+    parentId: 'home_maintenance', icon: '🚰', sections: ['life'], order: 121, isActive: true,
+    names: { it: 'Idraulico', en: 'Plumber', es: 'Fontanero', fr: 'Plombier', de: 'Klempner' },
+  },
+  electrician: {
+    parentId: 'home_maintenance', icon: '🔌', sections: ['life'], order: 122, isActive: true,
+    names: { it: 'Elettricista', en: 'Electrician', es: 'Electricista', fr: 'Électricien', de: 'Elektriker' },
+  },
+  cleaning: {
+    parentId: 'home_maintenance', icon: '🧹', sections: ['life'], order: 123, isActive: true,
+    names: {
+      it: 'Pulizie', en: 'Cleaning', es: 'Limpieza', fr: 'Nettoyage', de: 'Reinigung',
+    },
+  },
+  gardening: {
+    parentId: 'home_maintenance', icon: '🌱', sections: ['life'], order: 124, isActive: true,
+    names: {
+      it: 'Giardinaggio', en: 'Gardening', es: 'Jardinería',
+      fr: 'Jardinage', de: 'Gartenpflege',
+    },
+  },
+  handyman: {
+    parentId: 'home_maintenance', icon: '🛠️', sections: ['life'], order: 125, isActive: true,
+    names: {
+      it: 'Tuttofare', en: 'Handyman', es: 'Manitas', fr: 'Homme à tout faire', de: 'Allround-Handwerker',
+    },
+  },
+  carpenter: {
+    parentId: 'home_maintenance', icon: '🪚', sections: ['life'], order: 126, isActive: true,
+    names: {
+      it: 'Falegname', en: 'Carpenter', es: 'Carpintero',
+      fr: 'Menuisier', de: 'Tischler',
+    },
+  },
+  painter: {
+    parentId: 'home_maintenance', icon: '🖌️', sections: ['life'], order: 127, isActive: true,
+    names: {
+      it: 'Imbianchino', en: 'Painter & Decorator', es: 'Pintor',
+      fr: 'Peintre en Bâtiment', de: 'Maler',
+    },
+  },
+  locksmith: {
+    parentId: 'home_maintenance', icon: '🔑', sections: ['life'], order: 128, isActive: true,
+    names: { it: 'Fabbro', en: 'Locksmith', es: 'Cerrajero', fr: 'Serrurier', de: 'Schlosser' },
+  },
+  appliance_repair: {
+    parentId: 'home_maintenance', icon: '🧰', sections: ['life'], order: 129, isActive: true,
+    names: {
+      it: 'Riparazione Elettrodomestici', en: 'Appliance Repair',
+      es: 'Reparación de Electrodomésticos', fr: 'Réparation Électroménager',
+      de: 'Gerätereparatur',
+    },
+  },
+  moving: {
+    parentId: 'home_maintenance', icon: '📦', sections: ['life'], order: 130, isActive: true,
+    names: { it: 'Traslochi', en: 'Moving Services', es: 'Mudanzas', fr: 'Déménagement', de: 'Umzug' },
+  },
+  pest_control: {
+    parentId: 'home_maintenance', icon: '🪲', sections: ['life'], order: 131, isActive: true,
+    names: {
+      it: 'Disinfestazione', en: 'Pest Control', es: 'Control de Plagas',
+      fr: 'Désinsectisation', de: 'Schädlingsbekämpfung',
+    },
+  },
+
+  // -------------------------------------------------------- Lessons & tutors
+  lessons_tutoring: {
+    parentId: null, icon: '📚', sections: ['life'], order: 140, isActive: true,
+    names: {
+      it: 'Lezioni e Ripetizioni', en: 'Lessons & Tutoring',
+      es: 'Clases y Tutorías', fr: 'Cours et Soutien Scolaire', de: 'Unterricht & Nachhilfe',
+    },
+  },
+  tutor: {
+    parentId: 'lessons_tutoring', icon: '📖', sections: ['life'], order: 141, isActive: true,
+    names: {
+      it: 'Ripetizioni', en: 'Tutor', es: 'Profesor Particular',
+      fr: 'Soutien Scolaire', de: 'Nachhilfelehrer',
+    },
+  },
+  language_tutor: {
+    parentId: 'lessons_tutoring', icon: '🌍', sections: ['life'], order: 142, isActive: true,
+    names: {
+      it: 'Lezioni di Lingua', en: 'Language Tutor', es: 'Clases de Idiomas',
+      fr: 'Cours de Langues', de: 'Sprachunterricht',
+    },
+  },
+  music_teacher: {
+    parentId: 'lessons_tutoring', icon: '🎹', sections: ['life'], order: 143, isActive: true,
+    names: {
+      it: 'Lezioni di Musica', en: 'Music Teacher', es: 'Profesor de Música',
+      fr: 'Professeur de Musique', de: 'Musiklehrer',
+    },
+  },
+  dance_teacher: {
+    parentId: 'lessons_tutoring', icon: '🩰', sections: ['fit', 'life'], order: 144, isActive: true,
+    names: {
+      it: 'Insegnante di Danza', en: 'Dance Teacher', es: 'Profesor de Baile',
+      fr: 'Professeur de Danse', de: 'Tanzlehrer',
+    },
+  },
+
+  // ----------------------------------------------------------- Technology
+  technology_support: {
+    parentId: null, icon: '💻', sections: ['life'], order: 150, isActive: true,
+    names: {
+      it: 'Informatica e Tecnologia', en: 'Technology & IT',
+      es: 'Tecnología e Informática', fr: 'Technologie et Informatique',
+      de: 'Technologie & IT',
+    },
+  },
+  computer_repair: {
+    parentId: 'technology_support', icon: '🖥️', sections: ['life'], order: 151, isActive: true,
+    names: {
+      it: 'Riparazione Computer', en: 'Computer Repair', es: 'Reparación de Ordenadores',
+      fr: 'Dépannage Informatique', de: 'Computerreparatur',
+    },
+  },
+  web_design: {
+    parentId: 'technology_support', icon: '🌐', sections: ['life'], order: 152, isActive: true,
+    names: {
+      it: 'Web Design', en: 'Web Design', es: 'Diseño Web',
+      fr: 'Conception Web', de: 'Webdesign',
+    },
+  },
+  graphic_design: {
+    parentId: 'technology_support', icon: '🎨', sections: ['life'], order: 153, isActive: true,
+    names: {
+      it: 'Graphic Design', en: 'Graphic Design', es: 'Diseño Gráfico',
+      fr: 'Design Graphique', de: 'Grafikdesign',
+    },
+  },
+  it_support: {
+    parentId: 'technology_support', icon: '🛜', sections: ['life'], order: 154, isActive: true,
+    names: {
+      it: 'Assistenza Informatica', en: 'IT Support', es: 'Soporte Informático',
+      fr: 'Assistance Informatique', de: 'IT-Support',
+    },
+  },
+
+  // ------------------------------------------------ Professional services
+  professional_services: {
+    parentId: null, icon: '💼', sections: ['life'], order: 160, isActive: true,
+    names: {
+      it: 'Servizi Professionali', en: 'Professional Services',
+      es: 'Servicios Profesionales', fr: 'Services Professionnels', de: 'Professionelle Dienste',
+    },
+  },
+  accountant: {
+    parentId: 'professional_services', icon: '🧾', sections: ['life'], order: 161, isActive: true,
+    names: {
+      it: 'Commercialista', en: 'Accountant', es: 'Contable',
+      fr: 'Expert-Comptable', de: 'Steuerberater',
+    },
+  },
+  lawyer: {
+    parentId: 'professional_services', icon: '⚖️', sections: ['life'], order: 162, isActive: true,
+    names: {
+      it: 'Avvocato', en: 'Lawyer', es: 'Abogado', fr: 'Avocat', de: 'Rechtsanwalt',
+    },
+  },
+  translator: {
+    parentId: 'professional_services', icon: '🗣️', sections: ['life'], order: 163, isActive: true,
+    names: {
+      it: 'Traduttore', en: 'Translator', es: 'Traductor',
+      fr: 'Traducteur', de: 'Übersetzer',
+    },
+  },
+  marketing_consultant: {
+    parentId: 'professional_services', icon: '📈', sections: ['life'], order: 164, isActive: true,
+    names: {
+      it: 'Consulente Marketing', en: 'Marketing Consultant',
+      es: 'Consultor de Marketing', fr: 'Consultant Marketing', de: 'Marketingberater',
+    },
+  },
+  interior_designer: {
+    parentId: 'professional_services', icon: '🛋️', sections: ['life'], order: 165, isActive: true,
+    names: {
+      it: 'Interior Designer', en: 'Interior Designer', es: 'Diseñador de Interiores',
+      fr: 'Architecte d’Intérieur', de: 'Innenarchitekt',
+    },
+  },
+
+  // ------------------------------------------------------ Automotive services
+  automotive: {
+    parentId: null, icon: '🚗', sections: ['life'], order: 170, isActive: true,
+    names: {
+      it: 'Auto e Veicoli', en: 'Automotive', es: 'Automoción',
+      fr: 'Automobile', de: 'Auto & Fahrzeuge',
+    },
+  },
+  mechanic: {
+    parentId: 'automotive', icon: '🔧', sections: ['life'], order: 171, isActive: true,
+    names: { it: 'Meccanico', en: 'Mechanic', es: 'Mecánico', fr: 'Mécanicien', de: 'Mechaniker' },
+  },
+  auto_electrician: {
+    parentId: 'automotive', icon: '🔋', sections: ['life'], order: 172, isActive: true,
+    names: {
+      it: 'Elettrauto', en: 'Auto Electrician', es: 'Electricista de Automóviles',
+      fr: 'Électricien Automobile', de: 'Kfz-Elektriker',
+    },
+  },
+  car_wash: {
+    parentId: 'automotive', icon: '🚿', sections: ['life'], order: 173, isActive: true,
+    names: {
+      it: 'Autolavaggio e Detailing', en: 'Car Wash & Detailing',
+      es: 'Lavado y Detallado de Coches', fr: 'Lavage et Entretien Auto',
+      de: 'Autowäsche & Fahrzeugpflege',
     },
   },
 };

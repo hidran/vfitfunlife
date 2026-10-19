@@ -14,6 +14,7 @@ import { queryKeys } from '@/lib/queryKeys';
 import { VenueFormView, type VenueFormData } from './VenueFormView';
 import type { Venue } from '@/types/firebase';
 import { useI18n } from '@/hooks/useI18n';
+import { GymInstructorPanel } from './GymInstructorPanel';
 
 export function VenueDetailView({ venueId }: { venueId: string }) {
   const router = useRouter();
@@ -35,7 +36,11 @@ export function VenueDetailView({ venueId }: { venueId: string }) {
         name: data.name,
         type: data.type,
         isActive: data.isActive,
-        isPartner: data.isPartner,
+        isPartner: data.partnerStatus === 'active',
+        partnerStatus: data.partnerStatus,
+        memberDiscountPercent: data.memberDiscountPercent,
+        partnerInstructorExtraPercent: data.partnerInstructorExtraPercent,
+        ownerId: data.ownerId,
         address: {
           street: data.street,
           city: data.city,
@@ -61,7 +66,11 @@ export function VenueDetailView({ venueId }: { venueId: string }) {
               name: data.name,
               type: data.type,
               isActive: data.isActive,
-              isPartner: data.isPartner,
+              isPartner: data.partnerStatus === 'active',
+              partnerStatus: data.partnerStatus,
+              memberDiscountPercent: data.memberDiscountPercent,
+              partnerInstructorExtraPercent: data.partnerInstructorExtraPercent,
+              ownerId: data.ownerId,
               address: {
                 street: data.street,
                 city: data.city,
@@ -114,6 +123,7 @@ export function VenueDetailView({ venueId }: { venueId: string }) {
           onSubmit={(d) => updateMut.mutate(d)}
         />
       </EntityDetailLayout>
+      {venue.type === 'gym' && <GymInstructorPanel venueId={venueId} />}
       <ConfirmDeleteDialog
         open={confirmOpen}
         entityLabel={t('admin.venues.entityLabel')}

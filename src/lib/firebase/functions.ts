@@ -223,6 +223,7 @@ export async function createClientAccount(data: {
   email: string;
   fullName: string;
   phone?: string;
+  notifyByEmail?: boolean;
 }): Promise<CreateClientAccountResult> {
   const functions = await getFunctionsInstance();
   const fn = httpsCallable<typeof data, CreateClientAccountResult>(functions, 'createClientAccount');

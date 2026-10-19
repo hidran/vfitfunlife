@@ -19,7 +19,7 @@ export default defineConfig({
     // `.claude/**` excludes leftover agent worktrees (`.claude/worktrees/*`), which are full
     // checkouts of this repo and would otherwise have their own `src/**/*.test.ts` collected
     // a second time by whichever worktree (or the main checkout) runs the suite.
-    exclude: [...configDefaults.exclude, 'e2e/**', '.claude/**'],
+    exclude: [...configDefaults.exclude, 'e2e/**', '.claude/**', 'functions/**'],
     coverage: {
       reporter: ['text', 'html', 'json'],
       exclude: [

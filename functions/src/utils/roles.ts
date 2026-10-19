@@ -1,5 +1,6 @@
 import * as admin from "firebase-admin";
 import { UserRole, Permission, RoleDefinition } from "../types";
+import { effectivePermissions } from "../users/customerProfile";
 
 const db = admin.firestore();
 
@@ -119,6 +120,23 @@ export function getDefaultPermissionsForRole(role: UserRole): Permission[] {
 }
 
 /**
+ * Add customer capabilities to privileged accounts so they can use the customer experience
+ * without replacing their provider/admin role or removing their management permissions.
+ */
+export function getEffectivePermissions(
+  role: UserRole,
+  assignedPermissions?: Permission[],
+): Permission[] {
+  const defaults = getDefaultPermissionsForRole(role);
+  return effectivePermissions(
+    role,
+    assignedPermissions,
+    defaults,
+    ROLE_DEFINITIONS.customer.defaultPermissions,
+  );
+}
+
+/**
  * Check if a role is a valid UserRole
  * @param {string} role - The role to check
  * @returns {boolean} True if valid
@@ -187,9 +205,11 @@ export async function getUserRoleInfo(userId: string): Promise<{
     return null;
   }
 
+  const role = (userData.role || "customer") as UserRole;
+
   return {
-    role: userData.role || "customer",
-    permissions: userData.permissions || getDefaultPermissionsForRole(userData.role || "customer"),
+    role,
+    permissions: getEffectivePermissions(role, userData.permissions as Permission[] | undefined),
     isActive: userData.isActive !== false, // Default to true if not set
   };
 }

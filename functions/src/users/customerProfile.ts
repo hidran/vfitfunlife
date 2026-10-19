@@ -19,6 +19,25 @@ export const CUSTOMER_DEFAULT_PERMISSIONS: readonly string[] = [
   "promotions:read",
 ];
 
+/** Provider-specific defaults remain separate so booking-as-a-customer is additive. */
+export const PROVIDER_DEFAULT_PERMISSIONS: readonly string[] = [
+  "bookings:read",
+  "services:read",
+  "venues:read",
+];
+
+/** Resolve assigned/default permissions while preserving customer features for staff/providers. */
+export function effectivePermissions<TPermission extends string>(
+  role: string,
+  assignedPermissions: readonly TPermission[] | undefined,
+  roleDefaults: readonly TPermission[],
+  customerPermissions: readonly TPermission[],
+): TPermission[] {
+  const ownPermissions = assignedPermissions ?? roleDefaults;
+  if (role === "customer") return [...ownPermissions];
+  return [...new Set([...ownPermissions, ...customerPermissions])];
+}
+
 /**
  * users/{uid}.accountStatus — set ONLY on accounts a trainer created for a client:
  * `invited` until the person first signs in (sets a password via the emailed link, or signs in

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useId, useRef, useState } from 'react';
 import { Plus, Edit, Copy, Trash2, MoreVertical, Check, X, Clock, DollarSign, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -194,6 +195,8 @@ export default function ProviderServicesPage() {
         </Button>
       </div>
 
+      <Link href="/provider/courses/create" className="inline-flex items-center gap-2 rounded-xl border border-hairline px-4 py-3 text-section-primary font-semibold">{t('courses.create')}</Link>
+      {services.some(s => s.kind === 'group') && <p className="text-sm text-content-muted">{t('courses.manage')}: <Link className="underline" href="/provider/courses">{t('courses.title')}</Link></p>}
       {/* Tab Bar */}
       <div className="mb-4 flex gap-2 border-b border-hairline">
         <button
@@ -263,7 +266,7 @@ export default function ProviderServicesPage() {
       ) : (
       /* Services Grid */
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {services.map((service) => (
+        {services.filter(s => s.kind !== 'group').map((service) => (
           <div
             key={service.id}
             className={cn(

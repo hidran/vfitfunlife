@@ -7,9 +7,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  * write). Both are asserted here.
  */
 
-const addDoc = vi.fn(async () => ({ id: 'generated-id' }));
-const updateDoc = vi.fn(async () => undefined);
-const deleteDoc = vi.fn(async () => undefined);
+const addDoc = vi.fn(async (_ref: unknown, _data: unknown) => ({ id: 'generated-id' }));
+const updateDoc = vi.fn(async (_ref: unknown, _data: unknown) => undefined);
+const deleteDoc = vi.fn(async (_ref: unknown) => undefined);
 const getDocs = vi.fn();
 const query = vi.fn((_collection: unknown, ...constraints: unknown[]) => ({ constraints }));
 const where = vi.fn((field: string, op: string, value: unknown) => ({ field, op, value }));
@@ -19,14 +19,14 @@ vi.mock('firebase/firestore', () => ({
   // Path builders return the segments so assertions can read the target directly.
   collection: (_db: unknown, ...segments: string[]) => ({ path: segments.join('/') }),
   doc: (_db: unknown, ...segments: string[]) => ({ path: segments.join('/') }),
-  addDoc: (...args: unknown[]) => addDoc(...(args as [])),
-  updateDoc: (...args: unknown[]) => updateDoc(...(args as [])),
-  deleteDoc: (...args: unknown[]) => deleteDoc(...(args as [])),
+  addDoc: (...args: unknown[]) => addDoc(args[0], args[1]),
+  updateDoc: (...args: unknown[]) => updateDoc(args[0], args[1]),
+  deleteDoc: (...args: unknown[]) => deleteDoc(args[0]),
   getDoc: vi.fn(),
-  getDocs: (...args: unknown[]) => getDocs(...(args as [])),
-  query: (...args: unknown[]) => query(...(args as [])),
-  where: (...args: unknown[]) => where(...(args as [string, string, unknown])),
-  limit: (...args: unknown[]) => limit(...(args as [number])),
+  getDocs: (...args: unknown[]) => getDocs(args[0]),
+  query: (...args: unknown[]) => query(args[0], ...(args.slice(1) as unknown[])),
+  where: (...args: unknown[]) => where(args[0] as string, args[1] as string, args[2]),
+  limit: (...args: unknown[]) => limit(args[0] as number),
 }));
 
 vi.mock('./config', () => ({ db: {} }));

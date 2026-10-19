@@ -135,7 +135,7 @@ service cloud.firestore {
         // be able to mark its own address verified.
         'updatedAt', 'lastLoginAt', 'phoneVerified',
         'socialLinks', 'notificationSettings', 'privacySettings', 'providerProfile', 'providerStatus',
-        'theme'
+        'searchLocation', 'theme'
       ]);
     }
 
@@ -352,6 +352,20 @@ service cloud.firestore {
         allow read: if isAdmin() || isVenueStaff(venueId);
         allow write: if isAdmin() || isVenueStaff(venueId);
       }
+
+      match /locations/{locationId} {
+        allow read: if true;
+        allow write: if false; // saveGymSpace validates staff and timezone
+        match /rooms/{roomId} {
+          allow read: if true;
+          allow write: if false;
+        }
+      }
+
+      match /instructors/{instructorId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
     }
 
     // ============================================
@@ -373,7 +387,8 @@ service cloud.firestore {
         (isAuthenticated() &&
          request.resource.data.uid == request.auth.uid &&
          request.resource.data.get(['providerProfile', 'isVerified'], false) == false &&
-         request.resource.data.get('applicationStatus', 'pending') == 'pending');
+         request.resource.data.get('applicationStatus', 'pending') == 'pending' &&
+         request.resource.data.get('partnerStatus', 'pending') == 'pending');
 
       // Update: admin can change anything; the owner may edit their profile but may
       // NOT change isVerified or applicationStatus (only admin verifies/rejects).
@@ -385,7 +400,9 @@ service cloud.firestore {
          request.resource.data.get(['providerProfile', 'isVerified'], false) ==
            resource.data.get(['providerProfile', 'isVerified'], false) &&
          request.resource.data.get('applicationStatus', 'pending') ==
-           resource.data.get('applicationStatus', 'pending'));
+           resource.data.get('applicationStatus', 'pending') &&
+         request.resource.data.get('partnerStatus', 'pending') ==
+           resource.data.get('partnerStatus', 'pending'));
 
       allow delete: if isAdmin();
 
@@ -403,8 +420,19 @@ service cloud.firestore {
         // ownership doesn't depend on a legacy instructor doc carrying a matching uid
         // (older verified providers have a missing/stale one). The caller must be an
         // approved provider, not merely one who gave themselves role 'provider'.
-        allow write: if isAdmin() ||
-          (request.auth != null && request.auth.uid == instructorId && isVerifiedProvider());
+        allow create: if (isAdmin() ||
+          (request.auth != null && request.auth.uid == instructorId && isVerifiedProvider())) &&
+          request.resource.data.get('kind', 'individual') != 'group' &&
+          request.resource.data.get('courseId', null) == null;
+        allow update: if (isAdmin() ||
+          (request.auth != null && request.auth.uid == instructorId && isVerifiedProvider())) &&
+          resource.data.get('kind', 'individual') != 'group' &&
+          resource.data.get('courseId', null) == null &&
+          request.resource.data.get('kind', 'individual') != 'group' &&
+          request.resource.data.get('courseId', null) == null;
+        allow delete: if (isAdmin() ||
+          (request.auth != null && request.auth.uid == instructorId && isVerifiedProvider())) &&
+          resource.data.get('kind', 'individual') != 'group' && resource.data.get('courseId', null) == null;
       }
 
       // Date exceptions to the weekly hours. Public: anyone may see when a provider is off.
@@ -427,6 +455,92 @@ service cloud.firestore {
     // Every booking state transition runs through a Cloud Function using the Admin SDK,
     // which bypasses these rules. They are therefore a deny-by-default backstop, not the
     // enforcement layer. See docs/superpowers/specs/2026-08-08-booking-manual-payment-design.md §10
+    // Shared-capacity services: all mutations go through the course callables.
+    match /courses/{courseId} {
+      function managesCourse() {
+        return isAuthenticated() &&
+          (request.auth.uid == get(/databases/$(database)/documents/courses/$(courseId)).data.providerId || isAdmin());
+      }
+      function canReadCourse() {
+        return (get(/databases/$(database)/documents/courses/$(courseId)).data.state == 'published' &&
+          get(/databases/$(database)/documents/courses/$(courseId)).data.providerEligible == true) ||
+          managesCourse() || (isAuthenticated() &&
+          exists(/databases/$(database)/documents/courses/$(courseId)/customers/$(request.auth.uid)));
+      }
+      allow read: if (resource.data.state == 'published' && resource.data.providerEligible == true) ||
+        (isAuthenticated() && (resource.data.providerId == request.auth.uid || isAdmin() ||
+         exists(/databases/$(database)/documents/courses/$(courseId)/customers/$(request.auth.uid))));
+      allow write: if false;
+      match /sessions/{sessionId} {
+        allow read: if canReadCourse();
+        allow write: if false;
+        match /participants/{participantId} {
+          allow read: if managesCourse() || (isAuthenticated() && participantId == request.auth.uid);
+          allow write: if false;
+        }
+      }
+      match /customers/{customerId} {
+        allow read: if managesCourse() || (isAuthenticated() && customerId == request.auth.uid);
+        allow write: if false;
+      }
+    }
+    match /courseEnrollments/{enrollmentId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid ||
+        resource.data.providerId == request.auth.uid || isAdmin());
+      allow write: if false;
+    }
+    match /courseRefunds/{refundId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid ||
+        resource.data.providerId == request.auth.uid || isAdmin());
+      allow write: if false;
+    }
+    match /courseNotifications/{notificationId} {
+      allow read, write: if false;
+    }
+
+    function managesGym(venueId) {
+      return isAuthenticated() && (isAdmin() || (
+        exists(/databases/$(database)/documents/venueStaff/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/venueStaff/$(request.auth.uid)).data.venueId == venueId &&
+        get(/databases/$(database)/documents/venueStaff/$(request.auth.uid)).data.get('isActive', true) == true) ||
+        get(/databases/$(database)/documents/venues/$(venueId)).data.get('ownerId', '') == request.auth.uid);
+    }
+
+    function activePartnerGym(venueId) {
+      return get(/databases/$(database)/documents/venues/$(venueId)).data.get('type', '') == 'gym' &&
+        get(/databases/$(database)/documents/venues/$(venueId)).data.get('partnerStatus', 'pending') == 'active' &&
+        get(/databases/$(database)/documents/venues/$(venueId)).data.get('isActive', true) == true;
+    }
+
+    match /gymSessions/{sessionId} {
+      allow read: if (resource.data.status == 'published' && activePartnerGym(resource.data.venueId)) ||
+        managesGym(resource.data.venueId);
+      allow write: if false;
+    }
+
+    match /gymBookings/{bookingId} {
+      allow read: if isAuthenticated() &&
+        (resource.data.userId == request.auth.uid || managesGym(resource.data.venueId));
+      allow write: if false;
+    }
+
+    match /gymSeries/{seriesId} {
+      allow read: if managesGym(resource.data.venueId);
+      allow write: if false;
+    }
+
+    match /gymScheduleLocks/{lockId} {
+      allow read, write: if false;
+    }
+
+    match /gymSessionMembers/{memberId} {
+      allow read, write: if false;
+    }
+
+    match /gymNotifications/{notificationId} {
+      allow read, write: if false;
+    }
+
     match /bookings/{bookingId} {
       // Read: Owner, assigned trainer, or admin
       allow read: if isAuthenticated() && (
@@ -514,7 +628,9 @@ service cloud.firestore {
 
     match /serviceCategories/{categoryId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create, update: if isAdmin();
+      // Category removal is a superadmin action; ordinary admins can deactivate via update.
+      allow delete: if isSuperAdmin();
     }
 
     // ============================================
@@ -793,8 +909,13 @@ service cloud.firestore {
       allow read: if isAdmin() ||
                     (isAuthenticated() && resource.data.providerId == request.auth.uid) ||
                     (isAuthenticated() && resource.data.userId == request.auth.uid);
-      allow write: if isAdmin() ||
-                     (isAuthenticated() && request.resource.data.providerId == request.auth.uid);
+      allow create: if isAdmin();
+      allow update: if (isAdmin() ||
+                       (isAuthenticated() && resource.data.providerId == request.auth.uid)) &&
+                      request.resource.data.providerId == resource.data.providerId &&
+                      request.resource.data.userId == resource.data.userId;
+      allow delete: if isAdmin() ||
+                       (isAuthenticated() && resource.data.providerId == request.auth.uid);
 
       match /notes/{noteId} {
         allow read, write: if isAdmin() ||

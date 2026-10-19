@@ -121,6 +121,9 @@ async function addExisting(trainer: AuthorizedTrainer, clientUserId: string) {
 
 export const createClientAccount = onCall({ region, secrets: EMAIL_SECRETS }, async (req) => {
   if (!req.auth?.uid) throw new HttpsError("unauthenticated", "Must be authenticated");
+  if (req.data.notifyByEmail !== undefined && typeof req.data.notifyByEmail !== "boolean") {
+    throw new HttpsError("invalid-argument", "invalid_notification_option");
+  }
   const { email, fullName, phone } = validateCreateClientAccountRequest(req.data);
   const trainer = await authorizeTrainer(req, email);
   const db = getFirestore();
@@ -164,7 +167,8 @@ export const createClientAccount = onCall({ region, secrets: EMAIL_SECRETS }, as
 
   const { doc } = await ensureRosterDoc(db, trainer.trainerId, uid, { accountStatus: ACCOUNT_STATUS_INVITED });
 
-  const emailSent = await sendAccountConfirmation(email, fullName, preferredLanguage, trainer.trainerName);
+  const emailSent = req.data.notifyByEmail !== false &&
+    await sendAccountConfirmation(email, fullName, preferredLanguage, trainer.trainerName);
   logger.info("[createClientAccount] created", { trainerId: trainer.trainerId, uid, clientId: doc.id, emailSent });
   return {
     status: "created" as const,

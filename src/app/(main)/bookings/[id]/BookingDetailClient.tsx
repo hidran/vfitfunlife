@@ -24,7 +24,6 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn, formatPrice } from '@/lib/utils';
-import { buildFallbackBooking } from '@/lib/bookingUtils';
 import { useBookingStore } from '@/stores/bookingStore';
 import { useAuthStore } from '@/stores/authStore';
 import { PaymentConfirmationBanner } from '@/components/booking/PaymentConfirmationBanner';
@@ -46,7 +45,7 @@ import {
   canReschedule as canRescheduleBooking,
   canReview as canReviewBooking,
 } from '@/lib/bookingStatus';
-import type { Booking, BookingStatus } from '@/types/booking';
+import type { BookingStatus } from '@/types/booking';
 import { queryKeys } from '@/lib/queryKeys';
 import { chatHref } from '@/lib/routes';
 
@@ -73,9 +72,8 @@ export default function BookingDetailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t, locale } = useI18n();
-  // Served from /bookings/detail?id=... ; the [id] path param only ever resolves to the
-  // static 'placeholder' under output:'export', so the query string wins.
-  // Served from /bookings/detail?id=... . useSearchParams can hydrate empty on the first
+  // Served from /bookings/detail?id=...; the [id] path param only ever resolves to the
+  // static 'placeholder' under output:'export'. useSearchParams can hydrate empty on first
   // paint under output:'export', so fall back to the raw URL, then to the [id] segment.
   const bookingId = (searchParams.get('id') ??
     (typeof window !== 'undefined'
@@ -112,11 +110,9 @@ export default function BookingDetailPage() {
   // While the cancel request is in flight the dialog stays open: Esc, the backdrop and Keep
   // are ignored, so the outcome (or the error) is never lost behind a closed dialog.
   const [isCancelling, setIsCancelling] = useState(false);
-  const [localBookingOverride, setLocalBookingOverride] = useState<Booking | null>(null);
 
-  // Deep links (push notifications, emailed links, a shared URL) land here with an empty
-  // store, and the render below falls back to a SYNTHETIC booking — so without this the
-  // client sees fabricated data instead of their real one.
+  // Deep links (push notifications, emailed links, a shared URL) can land here with an
+  // empty store, so load the requested booking before rendering its details.
   //
   // Gated on `user`: Firebase restores the session asynchronously, so fetching on mount
   // alone would run before there is a uid and never retry. TanStack Query (rather than a
@@ -141,28 +137,28 @@ export default function BookingDetailPage() {
     );
   }, [bookingId, currentBooking, userBookings]);
 
-  const booking = localBookingOverride ?? storeBooking ?? buildFallbackBooking(bookingId);
-  const isFallbackBooking = !localBookingOverride && !storeBooking;
+  const booking = storeBooking;
+  const bookingFetch = useQuery({
+    queryKey: ['booking-detail', user?.uid, bookingId],
+    queryFn: async () => {
+      if (!bookingId) return null;
+      return useBookingStore.getState().fetchBooking(bookingId);
+    },
+    enabled: !!user?.uid && !booking,
+    staleTime: 60 * 1000,
+    retry: false,
+  });
+  const isBookingLoading = !booking && (!user?.uid || bookingFetch.isLoading);
   // `confirmed=true` only says the client just sent the request; the trainer has not
   // accepted it yet. Show it while the booking is still waiting: not once it is cancelled,
-  // declined or accepted, and not over a placeholder booking.
-  const showRequestSent =
-    justConfirmed && !isFallbackBooking && booking.status === 'requested';
-
-  const qrCells = useMemo(() => {
-    const source = `${booking.id}-${booking.providerId ?? ''}-${booking.scheduledAt.toDate().toISOString()}`;
-    const values = source.split('').map((char) => char.charCodeAt(0));
-
-    return Array.from({ length: 21 * 21 }, (_, index) => {
-      const seed = values[index % values.length] ?? 0;
-      return ((seed + index * 13) % 4) <= 1;
-    });
-  }, [booking.id, booking.providerId, booking.scheduledAt]);
+  // declined or accepted.
+  const showRequestSent = justConfirmed && booking?.status === 'requested';
 
   const handleRespondToPayment = async (
     response: 'confirmed' | 'disputed',
     disputeReason?: string,
   ) => {
+    if (!booking) return;
     const result = await respondToPaymentConfirmation({ bookingId, response, disputeReason });
     const xpAwarded = result.xpAwarded ?? 0;
     const updated = {
@@ -182,22 +178,13 @@ export default function BookingDetailPage() {
   // Who the session is with. Trainer sessions store the name as instructorName (createBooking
   // never writes providerName, which only venue bookings carry), so reading providerName
   // alone left the booking card with a "?" avatar and no name.
-  const providerDisplayName = booking.instructorName || booking.providerName || '';
+  const providerDisplayName = booking?.instructorName || booking?.providerName || '';
 
   const handleCancel = async () => {
     if (isCancelling) return;
     setIsCancelling(true);
     try {
-      if (isFallbackBooking) {
-        setLocalBookingOverride({
-          ...booking,
-          status: 'cancelled_by_client',
-          cancellationReason: "Annullato dall'utente",
-        });
-        setShowCancelModal(false);
-        return;
-      }
-
+      if (!booking) return;
       await cancelBooking(bookingId, "Annullato dall'utente");
       const cancelledBooking = {
         ...booking,
@@ -222,7 +209,7 @@ export default function BookingDetailPage() {
 
     const event = {
       title: booking.serviceName || t('bookings.detail.defaultBookingTitle'),
-      description: `Prenotazione con ${providerDisplayName || 'Provider'}`,
+      description: providerDisplayName ? `Prenotazione con ${providerDisplayName}` : '',
       location: booking.location?.address || '',
       startTime: start.toISOString(),
       endTime: end.toISOString(),
@@ -242,6 +229,7 @@ export default function BookingDetailPage() {
   };
 
   const handleShare = async () => {
+    if (!booking) return;
     const shareData = {
       title: 'La mia prenotazione VFit',
       text: `Ho prenotato ${booking.serviceName} con ${providerDisplayName}`,
@@ -263,9 +251,9 @@ export default function BookingDetailPage() {
 
   // Trainer sessions carry the trainer's uid in instructorId (booking.providerId is never
   // written). Venue bookings have no one to chat with, so the button is hidden for them.
-  const chatWith = booking.instructorId || null;
+  const chatWith = booking?.instructorId || null;
   const handleChat = () => {
-    if (!chatWith) return;
+    if (!chatWith || !booking) return;
     router.push(
       chatHref(chatWith, {
         name: providerDisplayName,
@@ -279,28 +267,25 @@ export default function BookingDetailPage() {
     router.push(`/bookings/review?id=${encodeURIComponent(bookingId)}`);
   };
 
-  const statusEntry = BOOKING_STATUS_META[booking.status];
-  const StatusIcon = statusIcons[booking.status];
-  const statusLabel = t(statusEntry.labelKey as Parameters<typeof t>[0]);
-  const scheduledAt = booking.scheduledAt.toDate();
-  const isPast = scheduledAt < new Date();
+  const statusEntry = booking ? BOOKING_STATUS_META[booking.status] : null;
+  const StatusIcon = booking ? statusIcons[booking.status] : AlertCircle;
+  const statusLabel = statusEntry ? t(statusEntry.labelKey as Parameters<typeof t>[0]) : '';
+  const scheduledAt = booking ? booking.scheduledAt.toDate() : null;
+  const isPast = scheduledAt ? scheduledAt < new Date() : false;
   // Derived from the shared helpers so these gates cannot drift from the status machine.
-  const canCancel = canClientCancel(booking.status) && !isPast;
+  const canCancel = !!booking && canClientCancel(booking.status) && !isPast;
   // PILOT: late cancellations are flagged for data collection, never charged.
-  const showLateCancelWarning = wouldBeLateCancellation(booking.scheduledAt.toDate());
-  const canReschedule = canRescheduleBooking(booking.status, isPast);
-  const canReview = canReviewBooking(booking.status, booking.hasReviewed);
+  const showLateCancelWarning = booking ? wouldBeLateCancellation(booking.scheduledAt.toDate()) : false;
+  const canReschedule = !!booking && canRescheduleBooking(booking.status, isPast);
+  const canReview = !!booking && canReviewBooking(booking.status, booking.hasReviewed);
 
   return (
     <div className="min-h-screen bg-background-dark">
-      {(showRequestSent || justRescheduled || justReviewed || isFallbackBooking) && (
+      {booking && (showRequestSent || justRescheduled || justReviewed) && (
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className={cn(
-            'border-b p-4',
-            isFallbackBooking ? 'border-warning/30 bg-warning/15' : 'border-success/30 bg-success/20'
-          )}
+          className="border-b border-success/30 bg-success/20 p-4"
         >
           {showRequestSent && (
             <div className="mb-2 flex items-center gap-3 last:mb-0">
@@ -326,17 +311,6 @@ export default function BookingDetailPage() {
               <div>
                 <p className="font-semibold text-success">{t('bookings.detail.reviewedTitle')}</p>
                 <p className="text-sm text-success/80">{t('bookings.detail.reviewedSubtitle')}</p>
-              </div>
-            </div>
-          )}
-          {isFallbackBooking && (
-            <div className="flex items-center gap-3">
-              <AlertCircle className="h-6 w-6 text-warning" />
-              <div>
-                <p className="font-semibold text-warning">{t('bookings.detail.fallbackTitle')}</p>
-                <p className="text-sm text-warning/90">
-                  {t('bookings.detail.fallbackSubtitle')}
-                </p>
               </div>
             </div>
           )}
@@ -366,7 +340,7 @@ export default function BookingDetailPage() {
         </div>
       </div>
 
-      <div className="p-4 space-y-4 pb-32">
+      {booking ? <div className="p-4 space-y-4 pb-32">
         {/* The trainer recorded the off-platform payment; the client confirms the service was
             received (+XP, once) or disputes. Silence auto-confirms after 48h, without XP. */}
         {booking.paymentConfirmation && (
@@ -401,7 +375,7 @@ export default function BookingDetailPage() {
                 <p className="font-semibold text-content">{statusLabel}</p>
               </div>
             </div>
-            <Badge variant={statusEntry.tone}>{statusLabel}</Badge>
+            {statusEntry && <Badge variant={statusEntry.tone}>{statusLabel}</Badge>}
           </div>
         </div>
 
@@ -433,37 +407,6 @@ export default function BookingDetailPage() {
           </div>
         </div>
 
-        {/* Check-in ticket */}
-        {isActive(booking.status) && (
-          <div className="bg-surface-elevated/60 rounded-2xl border border-hairline p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <div>
-                <p className="text-xs uppercase tracking-wide text-text-tertiary">Check-in</p>
-                <p className="font-semibold text-content">{t('bookings.detail.checkinLabel')}</p>
-              </div>
-              <Badge variant="partner" size="sm">QR Ticket</Badge>
-            </div>
-
-            <div className="mx-auto w-fit rounded-xl bg-white p-3 shadow-lg">
-              <div
-                className="grid h-40 w-40 gap-0.5 bg-white"
-                style={{ gridTemplateColumns: 'repeat(21, minmax(0, 1fr))' }}
-              >
-                {qrCells.map((filled, index) => (
-                  <span
-                    key={index}
-                    className={cn('h-1.5 w-1.5 rounded-[1px]', filled ? 'bg-black' : 'bg-white')}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <p className="mt-3 text-center text-xs font-mono tracking-wide text-text-secondary">
-              {booking.id.toUpperCase()}
-            </p>
-          </div>
-        )}
-
         {/* Date & Time */}
         <div className="bg-surface-elevated/50 rounded-2xl p-4 space-y-3">
           <h3 className="font-semibold text-content">{t('bookings.detail.dateAndTime')}</h3>
@@ -472,7 +415,7 @@ export default function BookingDetailPage() {
             <Calendar className="w-5 h-5 text-[var(--section-primary)]" />
             <div>
               <p className="text-content">
-                {scheduledAt.toLocaleDateString(toLocaleTag(locale), {
+                {scheduledAt?.toLocaleDateString(toLocaleTag(locale), {
                   weekday: 'long',
                   day: 'numeric',
                   month: 'long',
@@ -486,7 +429,7 @@ export default function BookingDetailPage() {
             <Clock className="w-5 h-5 text-[var(--section-primary)]" />
             <div>
               <p className="text-content">
-                {scheduledAt.toLocaleTimeString(toLocaleTag(locale), {
+                {scheduledAt?.toLocaleTimeString(toLocaleTag(locale), {
                   hour: '2-digit',
                   minute: '2-digit',
                 })}
@@ -531,9 +474,9 @@ export default function BookingDetailPage() {
                 <GoogleMap
                   gyms={[{
                     id: booking.id,
-                    name: providerDisplayName || 'Provider',
-                    city: 'Milano',
-                    rating: 5,
+                    name: providerDisplayName,
+                    city: booking.location.address ?? '',
+                    rating: 0,
                     reviewCount: 0,
                     lat: booking.location.lat,
                     lng: booking.location.lng,
@@ -632,7 +575,11 @@ export default function BookingDetailPage() {
             </button>
           )}
         </div>
-      </div>
+      </div> : (
+        <p role="status" className="p-4 text-sm text-text-secondary">
+          {isBookingLoading ? t('common.loading') : t('bookings.detail.notFound')}
+        </p>
+      )}
 
       {/* Cancel Modal */}
       {showCancelModal && (

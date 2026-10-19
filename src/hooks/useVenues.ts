@@ -25,6 +25,7 @@ export function useVenues(opts: VenueListOptions = {}) {
   return useQuery({
     queryKey: ['venues', opts],
     queryFn: () => fetchVenues(opts),
+    enabled: opts.enabled ?? true,
     staleTime: STALE_5_MIN,
   });
 }

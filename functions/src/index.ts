@@ -68,3 +68,8 @@ if (stagingAllowlistEnabled()) {
     removeStagingAccess: staging.removeStagingAccess,
   });
 }
+
+export * from "./courses";
+export * from "./partnerGyms/schedule";
+export * from "./partnerGyms/bookings";
+export * from "./partnerGyms/notifications";

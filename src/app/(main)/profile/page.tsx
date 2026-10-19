@@ -52,6 +52,7 @@ import { usePaymentSettings } from '@/hooks/usePaymentSettings';
 import { useI18n } from '@/hooks/useI18n';
 import type { MessageKey } from '@/i18n/messages';
 import { providerProfileHref, providerReviewsHref } from '@/lib/routes';
+import { DashboardModeSwitch } from '@/components/layout/DashboardModeSwitch';
 
 interface ProfileMenuItem {
   icon: typeof User;
@@ -236,9 +237,6 @@ export default function ProfilePage() {
   const phoneVerified = user?.phoneVerified || false;
   const bio = user?.bio;
   const role = user?.role || 'customer';
-  const hasProfessionalStatus = user?.providerStatus === 'pending' || user?.providerStatus === 'verified';
-  const isProfessionalMode = role === 'provider' || isProviderUser || hasProfessionalStatus;
-
   // Provider profile data
   const providerProfile = user?.providerProfile;
 
@@ -298,30 +296,12 @@ export default function ProfilePage() {
               )}
             </div>
 
-            <div className="mt-4 w-full max-w-[240px] rounded-full bg-surface-2 p-1">
-              <div className="grid grid-cols-2 gap-1">
-                <div
-                  className={cn(
-                    'rounded-full px-3 py-2 text-center text-sm font-semibold transition-colors',
-                    isProfessionalMode
-                      ? 'bg-vlife-primary text-background-dark light:text-content shadow-[0_0_16px_rgba(0,230,118,0.32)]'
-                      : 'text-text-tertiary'
-                  )}
-                >
-                  {t('profile.mode.professional')}
-                </div>
-                <div
-                  className={cn(
-                    'rounded-full px-3 py-2 text-center text-sm font-semibold transition-colors',
-                    !isProfessionalMode
-                      ? 'bg-white text-text-primary light:shadow-sm'
-                      : 'text-text-tertiary'
-                  )}
-                >
-                  {t('profile.mode.private')}
-                </div>
-              </div>
-            </div>
+            <DashboardModeSwitch
+              mode="customer"
+              customerLabelKey="profile.mode.private"
+              professionalLabelKey="profile.mode.professional"
+              className="mt-4 w-full max-w-[280px]"
+            />
 
             {/* Contact & Verification Status */}
             <div className="mt-3 flex flex-wrap items-center justify-center gap-3">

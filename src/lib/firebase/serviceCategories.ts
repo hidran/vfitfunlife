@@ -53,7 +53,10 @@ export async function fetchAllServiceCategories(
   locale: AppLocale
 ): Promise<ServiceCategory[]> {
   const snap = await getDocs(collection(db, 'serviceCategories'));
-  return snap.docs
-    .map((d) => toResolved(d.id, d.data() as Partial<ServiceCategoryDoc>, locale))
-    .sort((a, b) => a.order - b.order);
+  const fromFirestore = snap.docs.map((d) =>
+    toResolved(d.id, d.data() as Partial<ServiceCategoryDoc>, locale)
+  );
+  const knownIds = new Set(fromFirestore.map((category) => category.id));
+  const bundledAdditions = fallbackCategories(locale).filter((category) => !knownIds.has(category.id));
+  return [...fromFirestore, ...bundledAdditions].sort((a, b) => a.order - b.order);
 }

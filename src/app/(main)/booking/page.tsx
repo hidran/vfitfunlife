@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
   Search,
   Filter,
@@ -27,6 +27,8 @@ import { Avatar } from '@/components/ui/Avatar';
 import { MapPlaceholder } from '@/components/map/MapPlaceholder';
 import type { ProviderSearchResult, SearchParams } from '@/types/booking';
 import { useNearMe } from '@/hooks/useNearMe';
+import { useCustomerSearchLocation } from '@/hooks/useCustomerSearchLocation';
+import { CustomerLocationPrompt, CUSTOMER_LOCATION_PROMPT_DISMISSED_KEY } from '@/components/booking/CustomerLocationPrompt';
 import { RadiusFilter } from '@/components/map/RadiusFilter';
 import { useQuery } from '@tanstack/react-query';
 import { annotateAndSortByDistance, roundLocation, type LatLng } from '@/lib/geo';
@@ -34,6 +36,8 @@ import { applyProviderSearchFilters, searchProvidersNear } from '@/lib/firebooki
 import { useServiceCategoryGroups } from '@/hooks/useServiceCategories';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
+import { useCourses } from '@/hooks/useCourses';
+import { CourseSearchResults, filterActivityCourses } from '@/components/courses/CourseSearchResults';
 
 // Map view is a toggle away from the default list view, so GoogleMap (and its
 // @googlemaps/js-api-loader dependency) shouldn't sit in this route's initial JS.
@@ -44,11 +48,11 @@ const GoogleMap = dynamic(() => import('@/components/map/GoogleMap').then((mod) 
 
 export default function BookingPage() {
   const { t, locale } = useI18n();
-  // Groups, not the full catalogue: 29 chips is an unusable row, 8 is a browse bar. A
-  // group chip still matches every provider beneath it, because categoryIds carries the
-  // leaf AND its ancestors.
+  // Groups, not the full catalogue: a group chip matches every provider beneath it,
+  // because categoryIds carries the leaf and its ancestors.
   const categoryGroups = useServiceCategoryGroups();
   const router = useRouter();
+  const urlSearchParams = useSearchParams();
   const {
     searchResults,
     isSearching,
@@ -58,11 +62,43 @@ export default function BookingPage() {
     selectProvider,
   } = useBookingStore();
 
-  const { userLocation, radiusKm, isLocating, error, requestLocation, clearLocation, setRadiusKm } = useNearMe();
+  const { data: savedSearchLocation, isLoading: isSavedLocationLoading } = useCustomerSearchLocation();
+  const { userLocation, radiusKm, isLocating, error, requestLocation, clearLocation, setRadiusKm } =
+    useNearMe(savedSearchLocation?.coords ?? null);
+  const [locationPromptDismissed, setLocationPromptDismissed] = useState(() => {
+    try {
+      return window.sessionStorage.getItem(CUSTOMER_LOCATION_PROMPT_DISMISSED_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
+  const showLocationPrompt = !isSavedLocationLoading && !savedSearchLocation && !locationPromptDismissed;
+
+  const dismissLocationPrompt = useCallback(() => {
+    setLocationPromptDismissed(true);
+    try {
+      window.sessionStorage.setItem(CUSTOMER_LOCATION_PROMPT_DISMISSED_KEY, '1');
+    } catch {
+      // The current page view still dismisses the prompt.
+    }
+  }, []);
 
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [showFilters, setShowFilters] = useState(false);
+  const urlQuery = urlSearchParams.get('query') ?? '';
+  const urlCategory = urlSearchParams.get('category') ?? undefined;
+  const hasUrlSearchParams = urlSearchParams.has('query') || urlSearchParams.has('category');
   const [searchQuery, setSearchQuery] = useState(searchFilters.query || '');
+  const effectiveSearchFilters = useMemo(
+    () => hasUrlSearchParams
+      ? { ...searchFilters, query: urlQuery || undefined, category: urlCategory }
+      : searchFilters,
+    [hasUrlSearchParams, searchFilters, urlCategory, urlQuery],
+  );
+  const effectiveSearchQuery = hasUrlSearchParams ? urlQuery : searchQuery;
+  const courseQuery = useCourses();
+  const matchingCourses = filterActivityCourses(courseQuery.data?.pages.flatMap(page => page.courses) ?? [],
+    { ...effectiveSearchFilters, query: effectiveSearchQuery });
 
   // Located with a radius: a bounded geohash search around the user, not a distance filter
   // over the store's first-50-by-id page (which may hold nobody nearby). Radius "Tutti" and
@@ -70,7 +106,7 @@ export default function BookingPage() {
   // price and rating filter the fetched page in memory, so typing costs no reads.
   const nearCenter = userLocation ? roundLocation(userLocation) : null;
   const geoSearch = nearCenter != null && radiusKm != null;
-  const nearCategory = searchFilters.category;
+  const nearCategory = effectiveSearchFilters.category;
   const nearQuery = useQuery({
     queryKey: ['providers-near', nearCategory ?? null, nearCenter, radiusKm],
     queryFn: () =>
@@ -82,8 +118,8 @@ export default function BookingPage() {
   const displayedProviders = useMemo<(ProviderSearchResult & { distanceKm?: number })[]>(() => {
     if (geoSearch) {
       return applyProviderSearchFilters(nearQuery.data ?? [], {
-        ...searchFilters,
-        query: searchQuery,
+        ...effectiveSearchFilters,
+        query: effectiveSearchQuery,
         sortBy: undefined, // distance order, as the near-me list always had
       });
     }
@@ -91,12 +127,12 @@ export default function BookingPage() {
     return annotateAndSortByDistance(searchResults, userLocation, (p) =>
       p.location ? { lat: p.location.lat, lng: p.location.lng } : null
     );
-  }, [geoSearch, nearQuery.data, searchFilters, searchQuery, searchResults, userLocation]);
+  }, [geoSearch, nearQuery.data, effectiveSearchFilters, effectiveSearchQuery, searchResults, userLocation]);
   const isLoadingProviders = geoSearch ? nearQuery.isLoading : isSearching;
 
   const runSearch = useCallback(() => {
-    return searchProviders({ ...searchFilters, query: searchQuery });
-  }, [searchProviders, searchFilters, searchQuery]);
+    return searchProviders({ ...effectiveSearchFilters, query: effectiveSearchQuery });
+  }, [searchProviders, effectiveSearchFilters, effectiveSearchQuery]);
 
   // Debounced search. Skipped while the radius search drives the list: its page would be
   // thrown away. Flipping geoSearch back re-runs it with the current filters.
@@ -118,8 +154,21 @@ export default function BookingPage() {
     setSearchFilters({ sortBy });
   };
 
+  const handleCategoryChange = (category: string | undefined) => {
+    setSearchFilters({ category });
+    if (hasUrlSearchParams) {
+      const params = new URLSearchParams();
+      if (urlQuery) params.set('query', urlQuery);
+      if (category) params.set('category', category);
+      router.replace(`/booking${params.size ? `?${params.toString()}` : ''}`);
+      setSearchQuery(urlQuery);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background-dark">
+      <div className="px-4 pt-4"><Link href="/courses" className="inline-flex rounded-xl border border-hairline px-4 py-3 font-semibold text-section-primary">{t('courses.title')}</Link></div>
+      <CustomerLocationPrompt open={showLocationPrompt} onDismiss={dismissLocationPrompt} />
       {/* Search/filter sub-header — non-sticky so it sits below the app header (MainLayout) */}
       <div className="border-b border-hairline bg-background-dark/95 backdrop-blur-md">
         <div className="p-4 space-y-4">
@@ -164,8 +213,17 @@ export default function BookingPage() {
           <div className="flex gap-2">
             <Input
               placeholder={t('booking.search.placeholder')}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={effectiveSearchQuery}
+              onChange={(e) => {
+                if (hasUrlSearchParams) {
+                  const params = new URLSearchParams();
+                  if (e.target.value) params.set('query', e.target.value);
+                  if (urlCategory) params.set('category', urlCategory);
+                  router.replace(`/booking${params.size ? `?${params.toString()}` : ''}`);
+                } else {
+                  setSearchQuery(e.target.value);
+                }
+              }}
               leftIcon={<Search className="w-5 h-5" />}
               className="flex-1"
             />
@@ -182,10 +240,10 @@ export default function BookingPage() {
           {/* Categories */}
           <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
             <button
-              onClick={() => setSearchFilters({ category: undefined })}
+              onClick={() => handleCategoryChange(undefined)}
               className={cn(
                 'flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors',
-                !searchFilters.category
+                !effectiveSearchFilters.category
                   ? 'bg-[var(--section-primary)] text-white'
                   : 'bg-surface-elevated text-text-secondary hover:text-content'
               )}
@@ -198,10 +256,10 @@ export default function BookingPage() {
                 // The id, not the name: categoryIds carries ancestry, so selecting a
                 // group matches its whole subtree, and renaming a category in
                 // /admin/services no longer changes who is findable.
-                onClick={() => setSearchFilters({ category: cat.id })}
+                onClick={() => handleCategoryChange(cat.id)}
                 className={cn(
                   'flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5',
-                  searchFilters.category === cat.id
+                  effectiveSearchFilters.category === cat.id
                     ? 'bg-[var(--section-primary)] text-white'
                     : 'bg-surface-elevated text-text-secondary hover:text-content'
                 )}
@@ -355,7 +413,11 @@ export default function BookingPage() {
       </AnimatePresence>
 
       {/* Content */}
-      <div className="p-4">
+      <div className="p-4 space-y-6">
+        <CourseSearchResults courses={matchingCourses} />
+        {courseQuery.isLoading && <p className="text-content-muted">{t('common.loading')}</p>}
+        {courseQuery.isError && <p role="alert" className="text-content">{t('courses.loadError')} <Button onClick={() => courseQuery.refetch()}>{t('common.retry')}</Button></p>}
+        {courseQuery.hasNextPage && <Button disabled={courseQuery.isFetchingNextPage} onClick={() => courseQuery.fetchNextPage()}>{t('courses.more')}</Button>}
         {isLoadingProviders ? (
           <div className="flex flex-col items-center justify-center py-12">
             <Spinner size="lg" />
@@ -367,7 +429,7 @@ export default function BookingPage() {
               gyms={displayedProviders.map((p) => ({
                 id: p.id,
                 name: p.fullName,
-                city: p.location?.address || 'Milano',
+                city: p.location?.address || '',
                 rating: p.rating,
                 reviewCount: p.reviewCount,
                 lat: p.location?.lat,
@@ -385,7 +447,7 @@ export default function BookingPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {displayedProviders.length === 0 ? (
+            {displayedProviders.length === 0 && matchingCourses.length === 0 && !courseQuery.isLoading ? (
               <div className="text-center py-12">
                 <Search className="w-12 h-12 text-text-tertiary mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-content mb-2">
@@ -433,17 +495,21 @@ export default function BookingPage() {
                             <h3 className="font-semibold text-content truncate">
                               {provider.fullName}
                             </h3>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <div className="flex items-center gap-1">
-                                <Star className="w-3.5 h-3.5 text-warning fill-warning" />
-                                <span className="text-sm text-content">
-                                  {formatDecimal(provider.rating, locale, 1)}
-                                </span>
+                            {provider.rating > 0 && (
+                              <div className="mt-0.5 flex items-center gap-2">
+                                <div className="flex items-center gap-1">
+                                  <Star className="w-3.5 h-3.5 text-warning fill-warning" />
+                                  <span className="text-sm text-content">
+                                    {formatDecimal(provider.rating, locale, 1)}
+                                  </span>
+                                </div>
+                                {provider.reviewCount > 0 && (
+                                  <span className="text-text-tertiary text-sm">
+                                    {t('booking.provider.reviews', { count: provider.reviewCount })}
+                                  </span>
+                                )}
                               </div>
-                              <span className="text-text-tertiary text-sm">
-                                {t('booking.provider.reviews', { count: provider.reviewCount })}
-                              </span>
-                            </div>
+                            )}
                           </div>
                           {provider.isVerified && (
                             <Badge variant="partner" size="sm" className="shrink-0">{t('booking.provider.verified')}</Badge>
@@ -469,7 +535,9 @@ export default function BookingPage() {
 
                         {/* Languages & Experience */}
                         <div className="flex items-center gap-3 mt-2 text-xs text-text-tertiary">
-                          <span>{t('booking.provider.yearsExp', { count: provider.yearsOfExperience })}</span>
+                          {provider.yearsOfExperience > 0 && (
+                            <span>{t('booking.provider.yearsExp', { count: provider.yearsOfExperience })}</span>
+                          )}
                           {provider.languages.length > 0 && (
                             <span>{provider.languages.join(', ')}</span>
                           )}

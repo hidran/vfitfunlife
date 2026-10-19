@@ -34,6 +34,7 @@ import {
   KeyRound,
 } from "lucide-react";
 import { isStagingProject } from "@/lib/staging/stagingGate";
+import { DashboardModeSwitch } from "@/components/layout/DashboardModeSwitch";
 
 interface SidebarProps {
   userRole: UserRole;
@@ -219,6 +220,12 @@ export function Sidebar({
             )}
           </button>
         </div>
+
+        {!isCollapsed && (
+          <div className="px-3 pt-4">
+            <DashboardModeSwitch mode="professional" />
+          </div>
+        )}
 
         {/* Navigation */}
         <nav className="flex-1 py-4 overflow-y-auto">

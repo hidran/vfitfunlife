@@ -14,6 +14,7 @@ import { bookingInvolvesDemo } from "../lib/demo";
 import { getFirestore, FieldValue, Timestamp, type Firestore } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
 import { addMinutes } from "date-fns";
+import { assertIndividualService } from "./bookingGuards";
 import type { ServiceData, UserData } from "../types";
 import type { BookingStatus, StatusActorRole } from "./types";
 import { bookingDayRef, readDayDocs } from "../availability/dayReads";
@@ -51,6 +52,7 @@ async function loadTrainerService(
     .collection("services").doc(serviceId).get();
   if (snap.exists) {
     const service = snap.data() as ServiceData;
+    assertIndividualService(service as ServiceData & { kind?: string; courseId?: string });
     if (service.isActive === false) throw new HttpsError("failed-precondition", "service_inactive");
     return service;
   }

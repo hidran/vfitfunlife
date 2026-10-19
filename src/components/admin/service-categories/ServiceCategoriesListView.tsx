@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
@@ -11,6 +12,9 @@ import { formatDate, toDate } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
 import { Spinner } from '@/components/ui/Spinner';
 import { Plus } from 'lucide-react';
+import { useAuthStore } from '@/stores/authStore';
+import { seedServiceCategoryCatalog } from '@/lib/firebase/admin';
+import { notify } from '@/lib/notify';
 import { resolveCategoryName } from '@/lib/firebase/serviceCategories';
 
 interface ServiceCategoryRow {
@@ -28,10 +32,26 @@ const SERVICE_CATEGORIES_COLLECTION = 'serviceCategories';
 export function ServiceCategoriesListView() {
   const { t, locale } = useI18n();
   const router = useRouter();
+  const role = useAuthStore((state) => state.user?.role);
+  const queryClient = useQueryClient();
   const [searchValue, setSearchValue] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [serviceCategories, setServiceCategories] = useState<ServiceCategoryRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reload, setReload] = useState(0);
+  const seedMutation = useMutation({
+    mutationFn: seedServiceCategoryCatalog,
+    onSuccess: (result) => {
+      notify.success(t('admin.serviceCategories.seed.success', {
+        created: result.created,
+        updated: result.updated,
+      }));
+      void queryClient.invalidateQueries({ queryKey: ['serviceCategories'] });
+      setLoading(true);
+      setReload((value) => value + 1);
+    },
+    onError: () => notify.error(t('admin.serviceCategories.seed.error')),
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -75,7 +95,7 @@ export function ServiceCategoriesListView() {
     return () => {
       cancelled = true;
     };
-  }, [locale]);
+  }, [locale, reload]);
 
   const columns: Column<ServiceCategoryRow>[] = [
     {
@@ -153,14 +173,28 @@ export function ServiceCategoriesListView() {
           </h1>
           <p className="text-content-muted mt-1">{t('admin.serviceCategories.subtitle')}</p>
         </div>
-        <Button
-          variant="primary"
-          className="flex items-center gap-2"
-          onClick={() => router.push('/admin/services/?id=new')}
-        >
-          <Plus className="w-4 h-4" />
-          {t('admin.serviceCategories.addServiceCategory')}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {(role === 'admin' || role === 'superadmin') && (
+            <Button
+              variant="secondary"
+              className="flex items-center gap-2"
+              onClick={() => seedMutation.mutate()}
+              isLoading={seedMutation.isPending}
+            >
+              {t('admin.serviceCategories.seed.button')}
+            </Button>
+          )}
+          {(role === 'admin' || role === 'superadmin') && (
+            <Button
+              variant="primary"
+              className="flex items-center gap-2"
+              onClick={() => router.push('/admin/services/?id=new')}
+            >
+              <Plus className="w-4 h-4" />
+              {t('admin.serviceCategories.addServiceCategory')}
+            </Button>
+          )}
+        </div>
       </div>
 
       <FilterBar

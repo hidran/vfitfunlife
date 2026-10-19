@@ -19,6 +19,7 @@ import { cancellationTarget, newRequestTarget, type NotifyTarget } from "./notif
 import { sanitizeUserNotes } from "./userNotes";
 import { computeBookingPricing, type PromoTerms } from "./pricing";
 import { bookingInvolvesDemo } from "../lib/demo";
+import { assertCustomerIsNotInstructor, assertIndividualService } from "./bookingGuards";
 
 const db = admin.firestore();
 
@@ -155,6 +156,7 @@ async function fetchBookingResources(
   }
 
   if (!service) throw new HttpsError("not-found", "Service not found");
+  assertIndividualService(service as ServiceData & { kind?: string; courseId?: string });
 
   return {
     userData: userDoc.data() as UserData,
@@ -248,6 +250,10 @@ export const createBooking = onCall<BookingData>(
       usePoints,
       userNotes,
     } = request.data;
+
+    // Trainer sessions are customer bookings against a provider's own schedule. A provider
+    // must never be able to create a customer booking for their own instructor account.
+    assertCustomerIsNotInstructor(userId, !venueId ? instructorId : undefined);
 
     // 1. Fetch Resources
     const { userData, venue, service, instructor } = await fetchBookingResources(

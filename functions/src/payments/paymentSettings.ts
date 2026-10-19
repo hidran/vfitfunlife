@@ -19,11 +19,13 @@ export interface PaymentSettings {
    * a subscription is a Stripe charge — so it is stored as chosen and combined on read.
    */
   subscriptionsEnabled: boolean;
+  courseCheckoutEnabled?: boolean;
 }
 
 export const DEFAULT_PAYMENT_SETTINGS: PaymentSettings = {
   stripePaymentsEnabled: false,
   subscriptionsEnabled: false,
+  courseCheckoutEnabled: false,
 };
 
 const KEYS = Object.keys(DEFAULT_PAYMENT_SETTINGS) as (keyof PaymentSettings)[];

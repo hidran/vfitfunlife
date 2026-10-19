@@ -34,7 +34,7 @@ export function PaymentSettingsPanel() {
 
   return (
     <PaymentSettingsForm
-      key={`${settings.stripePaymentsEnabled}-${settings.subscriptionsEnabled}`}
+      key={`${settings.stripePaymentsEnabled}-${settings.subscriptionsEnabled}-${settings.courseCheckoutEnabled}`}
       initial={settings}
     />
   );
@@ -43,14 +43,15 @@ export function PaymentSettingsPanel() {
 function PaymentSettingsForm({ initial }: { initial: PaymentSettings }) {
   const { t } = useI18n();
   const queryClient = useQueryClient();
-  const [draft, setDraft] = useState(initial);
+  const [draft, setDraft] = useState({ ...initial, courseCheckoutEnabled: initial.courseCheckoutEnabled === true });
 
   const save = useMutation({
     mutationFn: setPaymentSettings,
-    onSuccess: ({ stripePaymentsEnabled, subscriptionsEnabled }) => {
+    onSuccess: ({ stripePaymentsEnabled, subscriptionsEnabled, courseCheckoutEnabled }) => {
       queryClient.setQueryData(queryKeys.paymentSettings(), {
         stripePaymentsEnabled,
         subscriptionsEnabled,
+        courseCheckoutEnabled: courseCheckoutEnabled === true,
       });
       notify.success(t("admin.settings.savedSuccess"));
     },
@@ -58,7 +59,8 @@ function PaymentSettingsForm({ initial }: { initial: PaymentSettings }) {
 
   const dirty =
     draft.stripePaymentsEnabled !== initial.stripePaymentsEnabled ||
-    draft.subscriptionsEnabled !== initial.subscriptionsEnabled;
+    draft.subscriptionsEnabled !== initial.subscriptionsEnabled ||
+    draft.courseCheckoutEnabled !== (initial.courseCheckoutEnabled === true);
 
   return (
     <div className="bg-surface rounded-2xl border border-hairline p-6 lg:col-span-2">
@@ -91,6 +93,7 @@ function PaymentSettingsForm({ initial }: { initial: PaymentSettings }) {
             ...d,
             stripePaymentsEnabled: v,
             subscriptionsEnabled: v ? d.subscriptionsEnabled : false,
+            courseCheckoutEnabled: v ? d.courseCheckoutEnabled : false,
           }))
         }
       />
@@ -108,6 +111,11 @@ function PaymentSettingsForm({ initial }: { initial: PaymentSettings }) {
         disabled={!draft.stripePaymentsEnabled}
         onChange={(v) => setDraft((d) => ({ ...d, subscriptionsEnabled: v }))}
       />
+
+      <SwitchRow labelKey="courses.checkoutSetting" hintKey="courses.checkoutHint"
+        checked={draft.stripePaymentsEnabled && draft.courseCheckoutEnabled}
+        disabled={!draft.stripePaymentsEnabled}
+        onChange={v => setDraft(d => ({ ...d, courseCheckoutEnabled: v }))} />
 
       {save.isError && (
         <p className="text-sm text-[#EF4444] light:text-red-700 mt-4">

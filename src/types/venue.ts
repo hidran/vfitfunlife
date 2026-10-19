@@ -44,6 +44,10 @@ export interface Venue {
   rating: number;
   reviewCount: number;
   isPartner: boolean;
+  partnerStatus?: 'pending' | 'active' | 'suspended';
+  memberDiscountPercent?: number;
+  partnerInstructorExtraPercent?: number;
+  ownerId?: string;
   isActive: boolean;
   description: string;
   heroGradients: string[];
@@ -78,4 +82,6 @@ export interface VenueListOptions {
   limit?: number;
   /** Highest-rated first: the bounded list shown when the user's location is unknown. */
   orderByRating?: boolean;
+  /** Prevent fetching when the current screen does not show venues. */
+  enabled?: boolean;
 }

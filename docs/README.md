@@ -7,6 +7,7 @@ Index of project documentation. Each file is the canonical source for its topic;
 | Doc | What's in it |
 |---|---|
 | [architecture.md](architecture.md) | System architecture, data flow, key technical decisions |
+| [preventivo-aggiornato-2026-10-06.md](preventivo-aggiornato-2026-10-06.md) · [PDF](preventivo-aggiornato-2026-10-06.pdf) | Updated scope and development estimate, including company management; original estimate retained for reference |
 | [features.md](features.md) | Feature catalog across VFit / VFun / VLife verticals |
 | [user-flows.md](user-flows.md) | End-to-end user journeys (auth, booking, payment, etc.) |
 | [user-journeys/signup-to-booking.md](user-journeys/signup-to-booking.md) · [Italiano](user-journeys/signup-to-booking.it.md) | Screenshot walkthrough (dark theme, mobile): provider and customer from signup to a confirmed booking, in English and Italian (each also as `.docx`) |
@@ -60,3 +61,5 @@ Index of project documentation. Each file is the canonical source for its topic;
 - **Path references in docs** are relative to the repo root (e.g. `src/styles/globals.css`), not absolute machine paths.
 - **`CLAUDE.md`** and **`GEMINI.md`** at the repo root are tool/agent config, not project docs — they intentionally live outside `docs/`.
 - **Code-adjacent docs** (e.g. `functions/docs/SEEDING.md`, `src/dataconnect-generated/README.md`, `scripts/README.md`) stay next to their code.
+
+- [Group courses: provider creation, customer bookings and payments](user-journeys/group-courses.md)

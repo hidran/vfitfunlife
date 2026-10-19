@@ -7,6 +7,12 @@ beforeEach(() => {
 });
 
 describe('useNearMe', () => {
+  it('defaults to the saved location and radius 25 when available', () => {
+    const saved = { lat: 45.46, lng: 9.19 };
+    const { result } = renderHook(() => useNearMe(saved));
+    expect(result.current.userLocation).toEqual(saved);
+    expect(result.current.radiusKm).toBe(25);
+  });
   it('defaults to no location and radius 25', () => {
     const { result } = renderHook(() => useNearMe());
     expect(result.current.userLocation).toBeNull();

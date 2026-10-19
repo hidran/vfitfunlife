@@ -31,7 +31,7 @@ function flattenProvider(id: string, data: Record<string, unknown>): Provider {
   const profile = (data.providerProfile ?? {}) as Record<string, unknown>;
   return {
     id,
-    fullName: (data.fullName as string) ?? (data.name as string) ?? 'Provider',
+    fullName: (data.fullName as string) ?? (data.name as string) ?? '',
     avatarUrl: (data.avatarUrl as string | null) ?? null,
     rating: (data.ratingAvg as number) ?? (profile.rating as number) ?? 0,
     reviewCount: (data.reviewCount as number) ?? (profile.reviewCount as number) ?? 0,

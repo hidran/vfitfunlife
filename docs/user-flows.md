@@ -806,3 +806,7 @@ flowchart TD
 5. Update booking status
 6. Notify parties
 7. Refund arrives in 5-10 business days
+
+## Provider-managed group participants
+
+Manage courses → Participants → choose a future lesson → search linked clients or add a new person (full name/email required; surname/phone optional) → choose lesson/full course → reserve with direct provider payment → optionally notify by email or open SMS/WhatsApp. New participants complete private email password setup and sign in with the same account. The participant remains linked to all their providers. See [group course user journey](user-journeys/group-courses.md#provider-adds-participants).

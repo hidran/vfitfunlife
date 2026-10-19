@@ -118,7 +118,7 @@ export function providerSearchResultFromDoc(
 
   return {
     id,
-    fullName: data.fullName || 'Unknown',
+    fullName: data.fullName || '',
     avatarUrl: data.avatarUrl || undefined,
     rating: profile.rating || 0,
     reviewCount: profile.reviewCount || 0,

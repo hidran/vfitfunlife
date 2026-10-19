@@ -35,6 +35,7 @@ describe('paths', () => {
     expect(isPublicStagingPath('/auth/forgot-password/')).toBe(true);
     expect(isPublicStagingPath('/')).toBe(false);
     expect(isPublicStagingPath('/auth/register/')).toBe(true);
+    expect(isPublicStagingPath('/auth/participant/')).toBe(true);
     expect(isPublicStagingPath('/auth/login-extra')).toBe(false);
   });
 

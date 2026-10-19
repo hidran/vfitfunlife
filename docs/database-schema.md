@@ -1007,3 +1007,31 @@ Index: `conversations` — `participantIds` ARRAY_CONTAINS, `lastMessageAt` DESC
 ## Security Rules
 
 See `firestore.rules` file for complete security rules implementation.
+
+## Group course collections
+
+| Collection | Responsibility | Client access |
+|---|---|---|
+| `courses/{id}` | Provider/service/category links, publication/eligibility, recurrence/timezone, prices in cents, policies, next-session availability | Published eligible courses public; owner/admin/customer history read; no client writes |
+| `courses/{id}/sessions/{dateId}` | Concrete UTC start/end, capacity, occupied/held counts, state, instructor/location | Course audience read; no client writes |
+| `courses/{id}/sessions/{dateId}/participants/{uid}` | Unique enrollment membership, private name, attendance | Customer/owner/admin read; no client writes |
+| `courses/{id}/customers/{uid}` | Persistent enrollment-history access to archived courses | Customer/owner/admin read; no client writes |
+| `courseEnrollments/{id}` | Request-id-derived identity, lesson/series selection, immutable price allocations and cancellation policy, active/cancelled session IDs, direct/Stripe payment, hold expiry, settlement/liability | Customer/provider/admin read; no client writes |
+| `courseRefunds/{enrollment_session}` | Eligible per-lesson refund amount, direct refund confirmation or Stripe refund identity/status | Customer/provider/admin read; no client writes |
+| `courseNotifications/{id_event_uid}` | Durable idempotent notification outbox | Server only |
+
+Instructor services gain `kind: group` and `courseId` when linked to a course. Only server callables can create/edit/delete that linkage. Legacy services without `kind` remain individual. Public participant records are never embedded in course/session documents.
+
+Course publication denormalizes `providerEligible`; an instructor-write trigger keeps it synchronized with verification/active/application status. Enrollment independently rechecks eligibility inside its transaction. A transaction reads all selected sessions and unique participant IDs before changing capacity. Cancellation uses unique session IDs and records history; historical sessions cannot be removed through schedule editing.
+
+`systemSettings/payments.courseCheckoutEnabled` defaults false and is effective only alongside `stripePaymentsEnabled`. Enrollment defaults to direct payment. Escrow cannot be submitted. Course/session discovery, held-enrollment expiry, refund reconciliation and session reminder/recovery indexes are in `firestore.indexes.json`; deploy them before expecting production query behavior.
+
+### Provider–participant relationships
+
+`clients/{providerId_userId}` is the many-to-many provider/user join; existing legacy pair IDs are reused. Each record stores `providerId`, `userId`, contact display fields, visit/booking summaries, provider notes, and optional `accountStatus: invited|active`. Relationships have zero booking totals and null visit dates until relevant activity exists. Customer course bookings create a missing pair within the reservation transaction; provider-created reservations require an existing pair.
+
+Clients cannot create root join records or change their `providerId`/`userId`. Providers can update descriptive fields on their own pair and delete it; customers can read their own pairs. Server account/roster callables own identity creation. Notes and other provider relationships remain independent.
+
+`courseEnrollments.createdBy` records the actor; `userId` remains the participant. Provider-added enrollments use direct payment. `participantInvitationDeliveries` is a server-only audit containing provider/user/channel/status/timestamp, with no Auth setup credentials. Phone composer preparation is not a delivered-message audit. Invitation sending is scoped to a known provider/user pair and limited to 100 attempts per provider/hour.
+
+Invited users keep a reserved Firebase Auth UID and `users.accountStatus: invited`. Verified account claiming activates that UID and the invited status on all related client pairs; existing enrollments keep their participant UID.

@@ -2,8 +2,8 @@ export interface MarkerInfo {
   name: string;
   city: string;
   /** Already formatted in the app locale (`formatDecimal(rating, locale, 1)`). */
-  rating: string;
-  reviewsLabel: string;
+  rating?: string;
+  reviewsLabel?: string;
   partnerLabel?: string;
   /** The pop-up's way in: a real link (so it can be opened in a new tab or focused), whose
    *  plain clicks `onClick` may take over for in-app navigation. */
@@ -31,13 +31,15 @@ export function markerInfoContent(info: MarkerInfo): HTMLElement {
     el('p', 'm-0 mb-1 text-sm text-content-muted', info.city)
   );
 
-  const rating = el('div', 'flex items-center gap-2 mt-2 text-sm');
-  rating.append(
-    el('span', 'text-warning', '★'),
-    el('span', 'font-semibold text-content', info.rating),
-    el('span', 'text-content-muted', `(${info.reviewsLabel})`)
-  );
-  root.append(rating);
+  if (info.rating !== undefined) {
+    const rating = el('div', 'flex items-center gap-2 mt-2 text-sm');
+    rating.append(
+      el('span', 'text-warning', '★'),
+      el('span', 'font-semibold text-content', info.rating),
+      ...(info.reviewsLabel ? [el('span', 'text-content-muted', `(${info.reviewsLabel})`)] : [])
+    );
+    root.append(rating);
+  }
 
   if (info.partnerLabel) {
     root.append(

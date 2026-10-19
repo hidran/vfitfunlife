@@ -42,6 +42,7 @@ import { queryKeys } from '@/lib/queryKeys';
 import { updateBookingPrivateNotes } from '@/lib/firebase/functions';
 import { findClientIdForUser } from '@/lib/firebase/provider';
 import { chatHref } from '@/lib/routes';
+import { createBookingInvoiceHtml, downloadBookingInvoice } from '@/lib/providerBookingInvoice';
 
 export default function BookingDetailClient() {
   const { t, locale } = useI18n();
@@ -78,6 +79,8 @@ export default function BookingDetailClient() {
   const user = useAuthStore((s) => s.user);
   const [showPaymentSheet, setShowPaymentSheet] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [bookingAction, setBookingAction] = useState<'confirm' | 'decline' | null>(null);
+  const [bookingActionFailed, setBookingActionFailed] = useState(false);
 
   const booking = bookings.find((entry) => entry.id === id);
   // Mirrors the server guard in canTransition: completed/no_show are only valid once the
@@ -175,11 +178,27 @@ export default function BookingDetailClient() {
   }
 
   const handleConfirm = async () => {
-    await confirmBooking(booking.id);
+    if (bookingAction) return;
+    setBookingAction('confirm');
+    setBookingActionFailed(false);
+    try {
+      const confirmed = await confirmBooking(booking.id);
+      setBookingActionFailed(!confirmed);
+    } finally {
+      setBookingAction(null);
+    }
   };
 
   const handleDecline = async () => {
-    await declineBooking(booking.id);
+    if (bookingAction) return;
+    setBookingAction('decline');
+    setBookingActionFailed(false);
+    try {
+      const declined = await declineBooking(booking.id);
+      setBookingActionFailed(!declined);
+    } finally {
+      setBookingAction(null);
+    }
   };
 
   const handleNoShow = async () => {
@@ -218,6 +237,39 @@ export default function BookingDetailClient() {
     if (!date) return 'N/A';
     const d = typeof date === 'object' && 'toDate' in date ? date.toDate() : date;
     return new Date(d).toLocaleString(toLocaleTag(locale));
+  };
+
+  const handleDownloadInvoice = () => {
+    const rows = [
+      { label: t('provider.bookingDetail.clientInfo'), value: booking.userName },
+      { label: t('provider.bookingDetail.service'), value: booking.serviceName },
+      { label: t('provider.bookingDetail.type'), value: bookingTypeLabel(t, booking.bookingType) },
+      { label: t('provider.bookingDetail.date'), value: formatDate(booking.scheduledAt) },
+      {
+        label: t('provider.bookingDetail.time'),
+        value: `${formatTime(booking.scheduledAt)} - ${formatTime(booking.scheduledEndAt)}`,
+      },
+      { label: t('provider.bookingDetail.duration'), value: t('provider.bookingDetail.durationMinutes', { count: booking.durationMinutes }) },
+      { label: t('provider.bookingDetail.paymentStatus'), value: paymentStatusLabel(t, booking.paymentStatus) },
+      { label: t('provider.bookingDetail.status'), value: statusBadgeLabel },
+      { label: t('provider.bookingDetail.originalPrice'), value: formatPrice(booking.originalPrice, locale) },
+      ...(booking.discountAmount > 0
+        ? [{ label: t('provider.bookingDetail.discount'), value: `-${formatPrice(booking.discountAmount, locale)}` }]
+        : []),
+      ...(booking.homeServiceFee > 0
+        ? [{ label: t('provider.bookingDetail.homeServiceFee'), value: formatPrice(booking.homeServiceFee, locale) }]
+        : []),
+      { label: t('provider.bookingDetail.total'), value: formatPrice(booking.finalPrice, locale) },
+    ];
+    const html = createBookingInvoiceHtml({
+      language: toLocaleTag(locale),
+      title: t('provider.bookingDetail.invoiceTitle'),
+      reference: t('provider.bookingDetail.bookingId', { id: booking.id }),
+      disclaimer: t('provider.bookingDetail.invoiceDisclaimer'),
+      printLabel: t('provider.bookingDetail.printInvoice'),
+      rows,
+    });
+    downloadBookingInvoice(html, booking.id);
   };
 
   const statusMeta = BOOKING_STATUS_META[booking.status];
@@ -261,11 +313,24 @@ export default function BookingDetailClient() {
         <div className="flex flex-wrap items-center gap-2">
           {booking.status === 'requested' && (
             <>
-              <Button onClick={handleConfirm}>
+              <Button
+                onClick={handleConfirm}
+                isLoading={bookingAction === 'confirm'}
+                loadingText={t('provider.bookingDetail.confirming')}
+                disabled={bookingAction !== null}
+                aria-busy={bookingAction === 'confirm'}
+              >
                 <CheckCircle className="w-4 h-4 mr-2" />
                 {t('provider.bookingDetail.confirm')}
               </Button>
-              <Button variant="outline" onClick={handleDecline} className="border-red-500/50 text-red-400 light:text-red-700 hover:bg-red-500/10">
+              <Button
+                variant="outline"
+                onClick={handleDecline}
+                isLoading={bookingAction === 'decline'}
+                disabled={bookingAction !== null}
+                aria-busy={bookingAction === 'decline'}
+                className="border-red-500/50 text-red-400 light:text-red-700 hover:bg-red-500/10"
+              >
                 <XCircle className="w-4 h-4 mr-2" />
                 {t('provider.bookingDetail.decline')}
               </Button>
@@ -301,13 +366,19 @@ export default function BookingDetailClient() {
             </>
           )}
           {(booking.status === 'accepted' || booking.status === 'requested') && (
-            <Button variant="outline" onClick={() => setShowCancelDialog(true)} className="border-red-500/50 text-red-400 light:text-red-700 hover:bg-red-500/10">
+            <Button variant="outline" onClick={() => setShowCancelDialog(true)} disabled={bookingAction !== null} className="border-red-500/50 text-red-400 light:text-red-700 hover:bg-red-500/10">
               <XCircle className="w-4 h-4 mr-2" />
               {t('provider.bookingDetail.cancel')}
             </Button>
           )}
         </div>
       </div>
+
+      {bookingActionFailed && (
+        <p role="alert" className="text-sm text-error">
+          {bookingError || t('provider.bookingDetail.actionError')}
+        </p>
+      )}
 
       <CancelBookingDialog
         open={showCancelDialog}
@@ -617,11 +688,20 @@ export default function BookingDetailClient() {
 
           {/* Actions */}
           <div className="space-y-3">
-            <Button variant="secondary" fullWidth>
+            <Button
+              variant="secondary"
+              fullWidth
+              onClick={() => router.push(chatHref(booking.userId, {
+                name: booking.userName,
+                photoUrl: booking.clientPhotoUrl ?? null,
+                bookingId: booking.id,
+              }))}
+              disabled={!booking.userId || booking.userId === user?.uid}
+            >
               <MessageSquare className="w-4 h-4 mr-2" />
               {t('provider.bookingDetail.messageClient')}
             </Button>
-            <Button variant="outline" fullWidth>
+            <Button variant="outline" fullWidth onClick={handleDownloadInvoice}>
               <FileText className="w-4 h-4 mr-2" />
               {t('provider.bookingDetail.downloadInvoice')}
             </Button>

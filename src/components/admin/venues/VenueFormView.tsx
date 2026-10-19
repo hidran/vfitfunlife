@@ -14,7 +14,10 @@ const venueSchema = z.object({
   zipCode: z.string().min(1),
   country: z.string().min(1),
   isActive: z.boolean(),
-  isPartner: z.boolean(),
+  partnerStatus: z.enum(['pending', 'active', 'suspended']),
+  memberDiscountPercent: z.number().int().min(0).max(100),
+  partnerInstructorExtraPercent: z.number().int().min(0).max(100),
+  ownerId: z.string().trim().max(128),
 });
 
 export type VenueFormData = z.infer<typeof venueSchema>;
@@ -40,7 +43,10 @@ export function VenueFormView({ mode, initial, onSubmit }: Props) {
     zipCode: addrObj?.zipCode ?? '',
     country: addrObj?.country ?? 'IT',
     isActive: initial?.isActive ?? true,
-    isPartner: initial?.isPartner ?? false,
+    partnerStatus: initial?.partnerStatus ?? 'pending',
+    memberDiscountPercent: initial?.memberDiscountPercent ?? 0,
+    partnerInstructorExtraPercent: initial?.partnerInstructorExtraPercent ?? 0,
+    ownerId: initial?.ownerId ?? '',
   };
   const {
     register,
@@ -92,11 +98,21 @@ export function VenueFormView({ mode, initial, onSubmit }: Props) {
           <span>{t('admin.venues.field.isActive')}</span>
         </label>
       </Field>
-      <Field label={t('admin.venues.field.isPartner')}>
-        <label className="flex items-center gap-2 text-content">
-          <input type="checkbox" {...register('isPartner')} disabled={readonly} />
-          <span>{t('admin.venues.field.isPartner')}</span>
-        </label>
+      <Field label={t('gym.partnerStatus')}>
+        <select {...register('partnerStatus')} disabled={readonly} className="admin-input">
+          <option value="pending">{t('gym.pending')}</option>
+          <option value="active">{t('gym.active')}</option>
+          <option value="suspended">{t('gym.suspended')}</option>
+        </select>
+      </Field>
+      <Field label={t('gym.ownerId')} error={errors.ownerId?.message}>
+        <input {...register('ownerId')} disabled={readonly} className="admin-input" />
+      </Field>
+      <Field label={t('gym.memberDiscount')} error={errors.memberDiscountPercent?.message}>
+        <input type="number" min="0" max="100" {...register('memberDiscountPercent', { valueAsNumber: true })} disabled={readonly} className="admin-input" />
+      </Field>
+      <Field label={t('gym.instructorDiscount')} error={errors.partnerInstructorExtraPercent?.message}>
+        <input type="number" min="0" max="100" {...register('partnerInstructorExtraPercent', { valueAsNumber: true })} disabled={readonly} className="admin-input" />
       </Field>
     </form>
   );

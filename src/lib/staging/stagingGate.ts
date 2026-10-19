@@ -39,7 +39,7 @@ function stripTrailingSlash(pathname: string): string {
  * complete the profile. Creating an account is still refused server-side for anyone who is
  * not allowlisted (the beforeUserCreated blocking function).
  */
-const PUBLIC_PATHS = new Set(['/auth/login', '/auth/forgot-password', '/auth/register']);
+const PUBLIC_PATHS = new Set(['/auth/login', '/auth/forgot-password', '/auth/register', '/auth/participant']);
 
 export function isPublicStagingPath(pathname: string): boolean {
   return PUBLIC_PATHS.has(stripTrailingSlash(pathname));

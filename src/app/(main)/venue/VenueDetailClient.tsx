@@ -149,6 +149,12 @@ export default function VenueDetailClient() {
           </button>
         )}
 
+        {venue.type === 'gym' && venue.partnerStatus === 'active' && <Link
+          href={`/fit/gyms/timetable?id=${venue.id}`}
+          className="mt-6 inline-flex min-h-11 items-center rounded-xl bg-section-primary px-5 font-semibold text-white">
+          {t('gym.timetable')}
+        </Link>}
+
         <div className="mt-6 flex gap-2 border-b border-hairline">
           <button
             type="button"

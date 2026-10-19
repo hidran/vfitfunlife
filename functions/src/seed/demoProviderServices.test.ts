@@ -61,12 +61,13 @@ describe("categoryIdForSpecialty", () => {
     expect(categoryIdForSpecialty("Nutrizione")).toBe("nutrition");
   });
 
-  it("reaches every leaf of the taxonomy, so no category browses to an empty page", () => {
-    const leaves = Object.entries(SERVICE_CATEGORY_TREE)
-      .filter(([, doc]) => doc.parentId !== null)
-      .map(([id]) => id);
+  it("keeps generated demo providers scoped to the explicitly curated demo specialties", () => {
     const covered = new Set(DEMO_SPECIALTIES.map(categoryIdForSpecialty));
-    expect([...leaves].filter((id) => !covered.has(id))).toEqual([]);
+    expect(covered.size).toBeGreaterThan(0);
+    expect(covered.has("photographer")).toBe(false);
+    expect(covered.has("plumbing")).toBe(false);
+    expect(covered.has("wedding_planner")).toBe(false);
+    expect(Object.keys(SERVICE_CATEGORY_TREE).some((id) => !covered.has(id))).toBe(true);
   });
 
   it("maps the labels that are not their own id", () => {

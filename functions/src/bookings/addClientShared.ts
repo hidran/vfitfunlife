@@ -173,7 +173,8 @@ export async function addExistingUserToRoster(
   const client = (await db.collection("users").doc(clientUserId).get()).data();
   if (!client || client.isDeleted === true) throw new HttpsError("not-found", "client_not_found");
 
-  const { write, doc } = await ensureRosterDoc(db, trainer.trainerId, clientUserId);
+  const { write, doc } = await ensureRosterDoc(db, trainer.trainerId, clientUserId,
+    client.accountStatus === "invited" ? { accountStatus: "invited" } : {});
   if (write?.kind === "create") {
     await notifyClientAdded(clientUserId, client.preferredLanguage, trainer.trainerId, trainer.trainerName);
   }

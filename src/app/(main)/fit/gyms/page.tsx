@@ -13,6 +13,7 @@ import { useNearbyVenues, type VenueWithDistance } from '@/hooks/useVenues';
 import { Spinner } from '@/components/ui/Spinner';
 import { PhotoCover } from '@/components/gallery/PhotoCover';
 import { useNearMe } from '@/hooks/useNearMe';
+import { useCustomerSearchLocation } from '@/hooks/useCustomerSearchLocation';
 import { RadiusFilter } from '@/components/map/RadiusFilter';
 
 const filterKeys: MessageKey[] = [
@@ -37,7 +38,9 @@ export default function GymsPage() {
   const [view, setView] = useState<'list' | 'map'>('list');
   const [query, setQuery] = useState('');
 
-  const { userLocation, radiusKm, isLocating, error, requestLocation, clearLocation, setRadiusKm } = useNearMe();
+  const { data: savedSearchLocation } = useCustomerSearchLocation();
+  const { userLocation, radiusKm, isLocating, error, requestLocation, clearLocation, setRadiusKm } =
+    useNearMe(savedSearchLocation?.coords ?? null);
 
   // Bounded read either way: a geohash radius search when located, else the top-rated gyms.
   // Results arrive already distance-sorted (and radius-filtered) when a location is known.

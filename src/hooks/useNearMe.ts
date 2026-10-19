@@ -13,8 +13,9 @@ export interface UseNearMe {
   setRadiusKm: (r: RadiusKm) => void;
 }
 
-export function useNearMe(): UseNearMe {
-  const [userLocation, setUserLocation] = useState<LatLng | null>(null);
+export function useNearMe(savedLocation: LatLng | null = null): UseNearMe {
+  const [manualLocation, setManualLocation] = useState<LatLng | null | undefined>(undefined);
+  const userLocation = manualLocation === undefined ? savedLocation : manualLocation;
   const [radiusKm, setRadiusKm] = useState<RadiusKm>(25);
   const [isLocating, setIsLocating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,12 +29,12 @@ export function useNearMe(): UseNearMe {
     setError(null);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setManualLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         setIsLocating(false);
       },
       (err) => {
         setError(err?.message || 'Posizione non disponibile');
-        setUserLocation(null);
+        setManualLocation(null);
         setIsLocating(false);
       },
       { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
@@ -41,7 +42,7 @@ export function useNearMe(): UseNearMe {
   }, []);
 
   const clearLocation = useCallback(() => {
-    setUserLocation(null);
+    setManualLocation(null);
     setError(null);
   }, []);
 

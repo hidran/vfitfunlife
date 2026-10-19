@@ -1,6 +1,3 @@
-import type { Timestamp } from 'firebase/firestore';
-import type { Booking } from '@/types/booking';
-
 export type BookingSection = 'fit' | 'fun' | 'life';
 
 interface SectionMeta {
@@ -56,12 +53,6 @@ const FUN_KEYWORDS = [
   'show',
 ];
 
-function toTimestampLike(date: Date): Timestamp {
-  return {
-    toDate: () => date,
-  } as unknown as Timestamp;
-}
-
 export function inferBookingSection(serviceName?: string | null): BookingSection {
   const normalized = (serviceName ?? '').toLowerCase();
 
@@ -79,42 +70,4 @@ export function inferBookingSection(serviceName?: string | null): BookingSection
 export function getBookingSectionMeta(serviceName?: string | null): SectionMeta {
   const section = inferBookingSection(serviceName);
   return SECTION_META[section];
-}
-
-export function buildFallbackBooking(bookingId: string): Booking {
-  const now = Date.now();
-  const scheduled = new Date(now + 1000 * 60 * 60 * 24 * 2);
-  const scheduledEnd = new Date(scheduled.getTime() + 60 * 60 * 1000);
-
-  return {
-    id: bookingId,
-    userId: 'demo-user',
-    providerId: 'demo-provider',
-    serviceId: 'demo-service',
-    serviceName: 'Sessione Personal Training',
-    providerName: 'Coach Demo',
-    // No avatar: the Avatar falls back to initials. (/images/placeholder.jpg never existed,
-    // so every detail page logged a 404 while the real booking loaded.)
-    providerAvatar: undefined,
-    scheduledAt: toTimestampLike(scheduled),
-    scheduledEndAt: toTimestampLike(scheduledEnd),
-    duration: 60,
-    locationType: 'in_person',
-    location: {
-      address: 'Via Roma 123, Milano',
-      lat: 45.4642,
-      lng: 9.19,
-    },
-    servicePrice: 60,
-    platformFee: 3,
-    discountAmount: 0,
-    pointsUsed: 0,
-    pointsValue: 0,
-    totalPrice: 63,
-    status: 'accepted',
-    paymentStatus: 'paid',
-    hasReviewed: false,
-    createdAt: toTimestampLike(new Date(now - 1000 * 60 * 60 * 6)),
-    updatedAt: toTimestampLike(new Date(now - 1000 * 60 * 10)),
-  };
 }

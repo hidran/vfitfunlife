@@ -19,6 +19,8 @@ export interface ModalProps {
   describedBy?: string;
   /** Close on a click outside the box (default true). Pass false while e.g. a form is mid-submit. */
   closeOnBackdrop?: boolean;
+  /** Align the dialog to the bottom on small screens, while remaining centered on desktop. */
+  placement?: 'center' | 'bottom';
   /** Where focus goes on close when the opener is gone, e.g. the menu button whose (now
    *  unmounted) item opened the dialog. Defaults to the element focused when it opened. */
   returnFocusRef?: RefObject<HTMLElement | null>;
@@ -49,6 +51,7 @@ export function Modal({
   ariaLabel,
   describedBy,
   closeOnBackdrop = true,
+  placement = 'center',
   returnFocusRef,
 }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -106,7 +109,10 @@ export function Modal({
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className={cn(
+      'fixed inset-0 z-50 flex justify-center',
+      placement === 'bottom' ? 'items-end p-0 sm:items-center sm:p-4' : 'items-center p-4',
+    )}>
       {/* Backdrop: it covers the whole wrapper, so this is where clicks outside the box land. */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
@@ -124,7 +130,10 @@ export function Modal({
         aria-describedby={describedBy}
         tabIndex={-1}
         className={cn(
-          'relative z-10 max-h-full overflow-y-auto outline-none animate-in fade-in zoom-in-95 duration-200',
+          'relative z-10 max-h-full overflow-y-auto outline-none duration-200',
+          placement === 'bottom'
+            ? 'animate-slide-up sm:animate-in sm:fade-in sm:zoom-in-95'
+            : 'animate-in fade-in zoom-in-95',
           className
         )}
         onClick={(e) => e.stopPropagation()}

@@ -38,14 +38,16 @@ export function daysToCheck(month: Date, now: Date, maxDate?: Date): Date[] {
 
 /**
  * Asks `countSlots` about every day, at most `concurrency` at a time (a month is ~30 calls),
- * and records which have ≥1 slot. A day whose question fails is left out rather than marked
- * unavailable: an error is not proof the day is full, and the slot list will show the real
- * reason when the day is picked.
+ * and records which have ≥1 slot. `onDayResolved` publishes partial results as each request
+ * finishes, so a calendar can show availability before the slowest day has loaded. A day whose
+ * question fails is left out rather than marked unavailable: an error is not proof the day is
+ * full, and the slot list will show the real reason when the day is picked.
  */
 export async function findBookableDays(
   days: Date[],
   countSlots: (day: Date) => Promise<number>,
   concurrency = 6,
+  onDayResolved?: (bookableDays: BookableDays) => void,
 ): Promise<BookableDays> {
   const result: BookableDays = {};
   let next = 0;
@@ -54,6 +56,7 @@ export async function findBookableDays(
       const day = days[next++];
       try {
         result[localDateKey(day)] = (await countSlots(day)) > 0;
+        onDayResolved?.({ ...result });
       } catch {
         // unknown: see above
       }

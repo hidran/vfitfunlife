@@ -58,6 +58,26 @@ describe('findBookableDays', () => {
     expect(dayAvailability(result, days[2])).toBe('unavailable');
   });
 
+  it('publishes each successful day as soon as it resolves, without waiting for slower days', async () => {
+    const onDayResolved = vi.fn();
+    let resolveSlowDay!: (count: number) => void;
+    const slowDay = new Promise<number>((resolve) => { resolveSlowDay = resolve; });
+    const first = new Date(2026, 9, 5);
+    const second = new Date(2026, 9, 6);
+    const resultPromise = findBookableDays(
+      [first, second],
+      (day) => (localDateKey(day) === '2026-10-05' ? Promise.resolve(2) : slowDay),
+      2,
+      onDayResolved,
+    );
+
+    await vi.waitFor(() => expect(onDayResolved).toHaveBeenCalledWith({ '2026-10-05': true }));
+    expect(onDayResolved).toHaveBeenCalledTimes(1);
+    resolveSlowDay(0);
+    await expect(resultPromise).resolves.toEqual({ '2026-10-05': true, '2026-10-06': false });
+    expect(onDayResolved).toHaveBeenLastCalledWith({ '2026-10-05': true, '2026-10-06': false });
+  });
+
   it('never runs more than `concurrency` questions at once and asks each day once', async () => {
     let inFlight = 0;
     let peak = 0;

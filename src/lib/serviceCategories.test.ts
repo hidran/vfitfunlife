@@ -23,10 +23,37 @@ describe('taxonomy parity', () => {
 });
 
 describe('tree shape', () => {
-  it('has 8 groups and 21 leaves', () => {
+  it('has 16 groups and 67 leaves across fitness, wellness, events, and professional services', () => {
     const entries = Object.values(SERVICE_CATEGORY_TREE);
-    expect(entries.filter((c) => c.parentId === null)).toHaveLength(8);
-    expect(entries.filter((c) => c.parentId !== null)).toHaveLength(21);
+    expect(entries.filter((c) => c.parentId === null)).toHaveLength(16);
+    expect(entries.filter((c) => c.parentId !== null)).toHaveLength(67);
+  });
+
+  it('includes the professional services commonly requested in a local marketplace', () => {
+    for (const id of [
+      'photographer', 'videographer', 'wedding_photographer', 'event_planner',
+      'wedding_planner', 'party_venue', 'dj', 'live_music', 'entertainer', 'catering',
+      'esthetician', 'hairdresser', 'barber', 'nail_technician', 'makeup_artist',
+      'plumbing', 'electrician', 'cleaning', 'gardening', 'handyman', 'carpenter',
+      'painter', 'locksmith', 'moving', 'tutor', 'language_tutor', 'computer_repair',
+      'accountant', 'lawyer', 'mechanic',
+    ]) {
+      expect(SERVICE_CATEGORY_TREE[id], `missing category ${id}`).toBeDefined();
+      expect(SERVICE_CATEGORY_TREE[id].parentId, `${id} must be selectable`).not.toBeNull();
+    }
+  });
+
+  it('keeps local-service categories in relevant sections', () => {
+    expect(SERVICE_CATEGORY_TREE.photographer.sections).toContain('fun');
+    expect(SERVICE_CATEGORY_TREE.wedding_planner.sections).toContain('fun');
+    expect(SERVICE_CATEGORY_TREE.hairdresser.sections).toContain('life');
+    expect(SERVICE_CATEGORY_TREE.plumbing.sections).toContain('life');
+  });
+
+  it('marks all additions active so providers can choose them at signup', () => {
+    for (const [id, category] of Object.entries(SERVICE_CATEGORY_TREE)) {
+      expect(category.isActive, `${id} should be available`).toBe(true);
+    }
   });
 
   it('is exactly two levels — every leaf points at a group, never at another leaf', () => {
@@ -48,7 +75,7 @@ describe('tree shape', () => {
 
   it('orders groups', () => {
     expect(GROUP_IDS[0]).toBe('strength_conditioning');
-    expect(GROUP_IDS).toHaveLength(8);
+    expect(GROUP_IDS).toHaveLength(16);
   });
 
   it('keeps the ids of the six categories that already exist in production', () => {

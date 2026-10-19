@@ -53,6 +53,7 @@ describe('PaymentSettingsPanel', () => {
       success: true,
       stripePaymentsEnabled: true,
       subscriptionsEnabled: false,
+      courseCheckoutEnabled: false,
     });
     renderPanel();
     fireEvent.click(screen.getByRole('switch', { name: 'admin.settings.paymentSwitches.stripe.label' }));
@@ -62,6 +63,7 @@ describe('PaymentSettingsPanel', () => {
     expect(setPaymentSettings).toHaveBeenCalledWith({
       stripePaymentsEnabled: true,
       subscriptionsEnabled: false,
+      courseCheckoutEnabled: false,
     });
   });
 
@@ -74,4 +76,18 @@ describe('PaymentSettingsPanel', () => {
     expect(await screen.findByText('admin.settings.paymentSwitches.saveError')).toBeInTheDocument();
     expect(success).not.toHaveBeenCalled();
   });
+});
+
+
+it('keeps course checkout off and unavailable until Stripe is enabled', () => {
+  renderPanel();
+  const courses = screen.getByRole('switch', { name: 'courses.checkoutSetting' });
+  expect(courses).toHaveAttribute('aria-checked', 'false');
+  expect(courses).toBeDisabled();
+  fireEvent.click(screen.getByRole('switch', { name: 'admin.settings.paymentSwitches.stripe.label' }));
+  expect(courses).toBeEnabled();
+  fireEvent.click(courses);
+  expect(courses).toHaveAttribute('aria-checked', 'true');
+  fireEvent.click(screen.getByRole('switch', { name: 'admin.settings.paymentSwitches.stripe.label' }));
+  expect(courses).toHaveAttribute('aria-checked', 'false');
 });

@@ -4,8 +4,8 @@
  * Requires the emulator: `firebase emulators:start --only firestore`
  *
  * The catalogue is read by signed-out visitors (the booking chips render before login) and
- * written only by admins. These pin both halves, because a publicly writable taxonomy
- * would let anyone reclassify every provider on the platform.
+ * managed by admins/superadmins, while permanent document deletion stays superadmin-only.
+ * These pin both halves, because a publicly writable taxonomy could reclassify every provider.
  */
 
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest';
@@ -78,6 +78,26 @@ describe('serviceCategories', () => {
     const fs2 = testEnv.authenticatedContext('admin-1').firestore();
     await assertSucceeds(fs2.doc('serviceCategories/boxing').set(CATEGORY));
     await assertSucceeds(fs2.doc('serviceCategories/boxing').update({ isActive: false }));
+  });
+
+  it('lets a superadmin create, update, and permanently delete a category', async () => {
+    await seedUser('superadmin-1', 'superadmin');
+    const fs2 = testEnv.authenticatedContext('superadmin-1').firestore();
+    const category = fs2.doc('serviceCategories/boxing');
+
+    await assertSucceeds(category.set(CATEGORY));
+    await assertSucceeds(category.update({ isActive: false }));
+    await assertSucceeds(category.delete());
+  });
+
+  it('refuses an admin permanent delete; admins deactivate categories with an update', async () => {
+    await seedCategory();
+    await seedUser('admin-2', 'admin');
+    const category = testEnv.authenticatedContext('admin-2').firestore()
+      .doc('serviceCategories/boxing');
+
+    await assertSucceeds(category.update({ isActive: false }));
+    await assertFails(category.delete());
   });
 
   it('refuses a customer write — otherwise anyone could reclassify every provider', async () => {
