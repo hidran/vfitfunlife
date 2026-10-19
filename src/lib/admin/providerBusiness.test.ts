@@ -8,7 +8,7 @@ const COMPANY = {
   affiliationNumber: 'CONI-123',
   displayName: 'Karate Club Milano',
   description: 'Corsi per tutte le età',
-  website: 'https://karate.example.it',
+  website: 'https://karate.example.it/',
   logoUrl: 'https://cdn.example.it/logo.png',
   city: 'Milano',
   venueType: 'school',

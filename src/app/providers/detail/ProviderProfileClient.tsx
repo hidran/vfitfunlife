@@ -31,6 +31,43 @@ import { Rating } from '@/components/ui/Rating';
 import { BusinessBadge, BusinessWebsiteLink } from '@/components/provider/BusinessBadge';
 import { Timestamp } from 'firebase/firestore';
 import { ProviderNotFoundError, useProviderPublicProfile } from '@/hooks/useProviderPublicProfile';
+import { socialLinkHref } from '@/lib/socialLinks';
+
+const SOCIAL_PILL_CLASS =
+  'flex items-center gap-2 px-4 py-2 rounded-lg bg-background-secondary/10 text-text-secondary';
+
+/**
+ * A social link on the public profile. `socialLinks` are written by the provider straight to
+ * Firestore, so the value only becomes an href through `socialLinkHref` (http(s) URLs, bare
+ * hosts, and @handles on the platforms that have profile URLs); anything else (`javascript:`,
+ * `data:`, junk) is shown as plain, unclickable text.
+ */
+function SocialPill({
+  value,
+  linkKey,
+  children,
+}: {
+  value: string;
+  linkKey: 'website' | 'instagram' | 'linkedin';
+  children: React.ReactNode;
+}) {
+  const href = socialLinkHref(value, linkKey);
+  if (!href) {
+    return (
+      <span className={cn(SOCIAL_PILL_CLASS, 'text-sm break-all')}>{value}</span>
+    );
+  }
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={cn(SOCIAL_PILL_CLASS, 'hover:bg-background-secondary/20 transition-colors')}
+    >
+      {children}
+    </a>
+  );
+}
 
 export default function ProviderProfileClient() {
   const { t, locale } = useI18n();
@@ -442,35 +479,20 @@ export default function ProviderProfileClient() {
           <h2 className="font-semibold text-text-inverse mb-3">{t('providerProfile.connect')}</h2>
           <div className="flex flex-wrap gap-3">
             {profile.socialLinks.website && (
-              <a
-                href={profile.socialLinks.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-background-secondary/10 text-text-secondary hover:bg-background-secondary/20 transition-colors"
-              >
+              <SocialPill value={profile.socialLinks.website} linkKey="website">
                 <Globe size={16} />
                 <span className="text-sm">{t('providerProfile.website')}</span>
-              </a>
+              </SocialPill>
             )}
             {profile.socialLinks.instagram && (
-              <a
-                href={`https://instagram.com/${profile.socialLinks.instagram.replace('@', '')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-background-secondary/10 text-text-secondary hover:bg-background-secondary/20 transition-colors"
-              >
+              <SocialPill value={profile.socialLinks.instagram} linkKey="instagram">
                 <span className="text-sm font-semibold">Instagram</span>
-              </a>
+              </SocialPill>
             )}
             {profile.socialLinks.linkedin && (
-              <a
-                href={profile.socialLinks.linkedin}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-background-secondary/10 text-text-secondary hover:bg-background-secondary/20 transition-colors"
-              >
+              <SocialPill value={profile.socialLinks.linkedin} linkKey="linkedin">
                 <span className="text-sm font-semibold">LinkedIn</span>
-              </a>
+              </SocialPill>
             )}
           </div>
         </div>

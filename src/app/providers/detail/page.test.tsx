@@ -125,3 +125,61 @@ describe('/providers/detail company page', () => {
     expect(screen.queryByText('Azienda')).toBeNull();
   });
 });
+
+describe('/providers/detail social links', () => {
+  const profileWith = (socialLinks: Record<string, string>) => ({
+    data: {
+      id: 'prov-42',
+      fullName: 'Anna Verdi',
+      avatarUrl: null,
+      bio: null,
+      providerProfile: { isVerified: true, rating: 0, reviewCount: 0, yearsOfExperience: 0, servicePricing: [] },
+      socialLinks,
+      isProvider: true,
+      portfolioImages: [],
+    },
+    isLoading: false,
+    error: null,
+  });
+
+  beforeEach(() => {
+    mockSearchParams = new URLSearchParams('id=prov-42');
+  });
+
+  it('links http(s) social links but shows anything else as plain text', () => {
+    mockUseProfile.mockReturnValue(
+      profileWith({ website: 'javascript:alert(1)', linkedin: 'https://linkedin.com/in/anna' })
+    );
+    render(<ProviderProfilePage />);
+
+    expect(document.querySelector('a[href^="javascript:"]')).toBeNull();
+    expect(screen.getByText('javascript:alert(1)').closest('a')).toBeNull();
+    const linkedin = screen.getByRole('link', { name: 'LinkedIn' });
+    expect(linkedin).toHaveAttribute('href', 'https://linkedin.com/in/anna');
+    expect(linkedin).toHaveAttribute('rel', 'noopener noreferrer');
+  });
+
+  it('builds the Instagram link with socialLinkHref and never links an unsafe value', () => {
+    const handle = (() => {
+      mockUseProfile.mockReturnValue(profileWith({ instagram: '@anna' }));
+      return render(<ProviderProfilePage />);
+    })();
+    const link = screen.getByRole('link', { name: 'Instagram' });
+    expect(link).toHaveAttribute('href', 'https://instagram.com/anna');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    handle.unmount();
+
+    mockUseProfile.mockReturnValue(profileWith({ instagram: 'javascript:alert(1)' }));
+    render(<ProviderProfilePage />);
+    expect(document.querySelector('a[href^="javascript:"]')).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Instagram' })).toBeNull();
+    expect(screen.getByText('javascript:alert(1)').closest('a')).toBeNull();
+  });
+
+  it('does not link the Instagram pill to a foreign host', () => {
+    mockUseProfile.mockReturnValue(profileWith({ instagram: 'https://instagram.com.evil.example/anna' }));
+    render(<ProviderProfilePage />);
+    expect(screen.queryByRole('link', { name: 'Instagram' })).toBeNull();
+    expect(screen.getByText('https://instagram.com.evil.example/anna').closest('a')).toBeNull();
+  });
+});

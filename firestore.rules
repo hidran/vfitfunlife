@@ -145,6 +145,46 @@ service cloud.firestore {
     }
 
     /**
+     * socialLinks.* (users and instructors; rendered as links on the public profile). A value
+     * is absent, null, '' , an http(s) URL, or an @handle, at most 200 characters; `javascript:`
+     * and the like are refused. Only keys that CHANGE are checked (diff), and they must be one
+     * of the six the updateSocialLinks callable knows: a doc carrying an older, odd value keeps
+     * accepting unrelated edits, while the value cannot be written or replaced with a bad one.
+     * Rules regexes have no case-insensitive flag, hence the spelled-out scheme.
+     */
+    function isSocialLinkValue(value) {
+      return value == null || value == '' ||
+        (value is string && value.size() <= 200 &&
+          (value.matches('^[hH][tT][tT][pP][sS]?://\\S+$') || value.matches('^@[A-Za-z0-9._]+$')));
+    }
+
+    function socialLinkKeyOk(changed, after, key) {
+      return !(key in changed) || isSocialLinkValue(after.get(key, null));
+    }
+
+    function socialLinksMapOk(before, after) {
+      let changed = after.diff(before).affectedKeys();
+      return changed.hasOnly(['instagram', 'facebook', 'twitter', 'linkedin', 'tiktok', 'website']) &&
+        socialLinkKeyOk(changed, after, 'instagram') &&
+        socialLinkKeyOk(changed, after, 'facebook') &&
+        socialLinkKeyOk(changed, after, 'twitter') &&
+        socialLinkKeyOk(changed, after, 'linkedin') &&
+        socialLinkKeyOk(changed, after, 'tiktok') &&
+        socialLinkKeyOk(changed, after, 'website');
+    }
+
+    /** `before`/`after`: the stored and the written `socialLinks` (null when absent). */
+    function socialLinksOk(before, after) {
+      return after == before || after == null ||
+        (after is map && socialLinksMapOk(before is map ? before : {}, after));
+    }
+
+    /** socialLinks of an update: the written value against the stored one. */
+    function socialLinksUpdateOk() {
+      return socialLinksOk(resource.data.get('socialLinks', null), request.resource.data.get('socialLinks', null));
+    }
+
+    /**
      * Validate role update (admin only fields)
      */
     function isValidRoleUpdate() {
@@ -211,7 +251,7 @@ service cloud.firestore {
       // and never role, permissions, or any suspend/soft-delete flag — not by an admin, and
       // not by the other superadmin. Everything else keeps the existing behavior, with the
       // same "never mint a superadmin" guard as create.
-      allow update: if isExistingSuperadmin()
+      allow update: if socialLinksUpdateOk() && (isExistingSuperadmin()
         ? (isOwner(userId) && !touchesProtectedSuperadminFields() && isAllowedAdminUserProviderUpdate())
         : (isValidSuperadminTarget(userId) && (
             (
@@ -229,7 +269,7 @@ service cloud.firestore {
               resource.data.role != 'superadmin' &&
               !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'permissions'])
             )
-          ));
+          )));
 
       // Delete rules - superadmin only, and a superadmin account can never be deleted.
       allow delete: if isSuperAdmin() && resource.data.get('role', '') != 'superadmin';
@@ -502,13 +542,14 @@ service cloud.firestore {
       // Create: admin, or the user creating their OWN unverified pending profile — never
       // with a `business` map: a company is created only by applyAsProvider, which checks
       // the tax id and takes the businessVat claim first (D3, D5).
-      allow create: if !isBusinessUser(instructorId) && ((isAdmin() && !('business' in request.resource.data)) ||
+      allow create: if !isBusinessUser(instructorId) && (((isAdmin() && !('business' in request.resource.data)) ||
         (isAuthenticated() &&
          request.resource.data.uid == request.auth.uid &&
          request.resource.data.get(['providerProfile', 'isVerified'], false) == false &&
          request.resource.data.get('applicationStatus', 'pending') == 'pending' &&
          request.resource.data.get('partnerStatus', 'pending') == 'pending' &&
-         !('business' in request.resource.data)));
+         !('business' in request.resource.data)))) &&
+        socialLinksOk(null, request.resource.data.get('socialLinks', null));
 
       // Update: business legal/verification changes use callables; the owner may
       // NOT change isVerified or applicationStatus (only admin verifies/rejects).
@@ -516,7 +557,7 @@ service cloud.firestore {
       // `uid`, and their owners must still be able to set their own location (D4).
       // A business owner may edit only the display fields of `business` (D6, B4) — see
       // isAllowedOwnerBusinessUpdate; for an individual provider that check is a no-op.
-      allow update: if (isAdmin() && isAllowedAdminInstructorUpdate(instructorId)) ||
+      allow update: if socialLinksUpdateOk() && ((isAdmin() && isAllowedAdminInstructorUpdate(instructorId)) ||
         (isAuthenticated() &&
          (resource.data.get('uid', null) == request.auth.uid || request.auth.uid == instructorId) &&
          request.resource.data.get(['providerProfile', 'isVerified'], false) ==
@@ -525,7 +566,7 @@ service cloud.firestore {
            resource.data.get('applicationStatus', 'pending') &&
          request.resource.data.get('partnerStatus', 'pending') ==
            resource.data.get('partnerStatus', 'pending') &&
-         isAllowedOwnerBusinessUpdate());
+         isAllowedOwnerBusinessUpdate()));
 
       allow delete: if isAdmin() && !('business' in resource.data) && !isBusinessUser(instructorId);
 

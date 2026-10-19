@@ -15,14 +15,22 @@ import { BUSINESS_LEGAL_FORMS } from '@/lib/businessDetails';
  * they are http(s) URLs.
  */
 
-/** `value` when it is a string URL with an http(s) scheme, else undefined. Re-check at render time. */
-export function safeHttpUrl(value: unknown): string | undefined {
-  if (typeof value !== 'string') return undefined;
+/**
+ * A stored URL as a safe href, or null when it is not an http(s) URL with a host. Owners write
+ * these fields straight to Firestore, so anything rendered as a link must be re-checked at render
+ * time: a `javascript:` value must become plain text, never an href.
+ *
+ * Returns the NORMALISED form (`URL.href`: trimmed, scheme and host lowercased, a bare origin
+ * gets its `/`), not the stored string.
+ */
+export function safeHttpUrl(value: unknown): string | null {
+  if (typeof value !== 'string' || !value.trim()) return null;
   try {
-    const url = new URL(value);
-    return url.protocol === 'https:' || url.protocol === 'http:' ? value : undefined;
+    const url = new URL(value.trim());
+    const http = url.protocol === 'http:' || url.protocol === 'https:';
+    return http && url.hostname ? url.href : null;
   } catch {
-    return undefined;
+    return null;
   }
 }
 

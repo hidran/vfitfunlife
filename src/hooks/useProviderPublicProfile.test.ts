@@ -119,11 +119,11 @@ describe('toProviderPublicProfile company data', () => {
       'b',
       {
         fullName: 'Acme',
-        business: { legalName: 'Acme Srl', vatNumber: '12345678903', displayName: 'Acme', website: 'https://acme.it' },
+        business: { legalName: 'Acme Srl', vatNumber: '12345678903', displayName: 'Acme', website: 'https://acme.it/' },
       },
       [],
     );
-    expect(p.business).toEqual({ displayName: 'Acme', website: 'https://acme.it' });
+    expect(p.business).toEqual({ displayName: 'Acme', website: 'https://acme.it/' });
   });
 
   it('leaves individuals without a business key', () => {

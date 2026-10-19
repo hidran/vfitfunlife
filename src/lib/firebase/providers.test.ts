@@ -108,13 +108,13 @@ describe('company accounts in fetchProviders', () => {
             affiliationNumber: 'AFF-1',
             displayName: 'Acme',
             city: 'Milano',
-            website: 'https://acme.example',
+            website: 'https://acme.example/',
           },
         }),
       ],
     });
     const [p] = await fetchProviders({ limit: 5 });
-    expect(p.business).toEqual({ displayName: 'Acme', city: 'Milano', website: 'https://acme.example' });
+    expect(p.business).toEqual({ displayName: 'Acme', city: 'Milano', website: 'https://acme.example/' });
     expect(JSON.stringify(p)).not.toMatch(/12345678903|L Srl|AFF-1/);
   });
 

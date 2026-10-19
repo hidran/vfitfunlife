@@ -6,7 +6,7 @@ const valid = {
   vatNumber: '12345678903',
   displayName: ' Palestra Roma ',
   description: 'Fitness',
-  website: 'https://palestra.it',
+  website: 'https://palestra.it/',
   logoUrl: 'https://cdn.x/logo.png',
   city: 'Roma',
   legalForm: 'association',
@@ -16,12 +16,22 @@ const valid = {
 describe('safeHttpUrl', () => {
   it('accepts only http(s) URLs', () => {
     expect(safeHttpUrl('https://a.it/x')).toBe('https://a.it/x');
-    expect(safeHttpUrl('http://a.it')).toBe('http://a.it');
-    expect(safeHttpUrl('javascript:alert(1)')).toBeUndefined();
-    expect(safeHttpUrl('data:text/html,x')).toBeUndefined();
-    expect(safeHttpUrl('not a url')).toBeUndefined();
-    expect(safeHttpUrl(42)).toBeUndefined();
-    expect(safeHttpUrl(null)).toBeUndefined();
+    expect(safeHttpUrl('javascript:alert(1)')).toBeNull();
+    expect(safeHttpUrl('data:text/html,x')).toBeNull();
+    expect(safeHttpUrl('not a url')).toBeNull();
+    expect(safeHttpUrl(42)).toBeNull();
+    expect(safeHttpUrl(null)).toBeNull();
+    expect(safeHttpUrl('   ')).toBeNull();
+  });
+
+  it('returns the normalised href: trimmed, scheme and host lowercased, a bare origin gets its slash', () => {
+    expect(safeHttpUrl('http://a.it')).toBe('http://a.it/');
+    expect(safeHttpUrl('  HTTPS://A.it/X ')).toBe('https://a.it/X');
+  });
+
+  it('rejects a value with no host', () => {
+    expect(safeHttpUrl('http://')).toBeNull();
+    expect(safeHttpUrl('http:')).toBeNull();
   });
 });
 
@@ -38,7 +48,7 @@ describe('readBusinessDetails', () => {
       vatNumber: '12345678903',
       displayName: 'Palestra Roma',
       description: 'Fitness',
-      website: 'https://palestra.it',
+      website: 'https://palestra.it/',
       logoUrl: 'https://cdn.x/logo.png',
       city: 'Roma',
       legalForm: 'association',
@@ -68,7 +78,7 @@ describe('toPublicBusiness', () => {
     expect(pub).toEqual({
       displayName: 'Palestra Roma',
       description: 'Fitness',
-      website: 'https://palestra.it',
+      website: 'https://palestra.it/',
       logoUrl: 'https://cdn.x/logo.png',
       city: 'Roma',
     });
