@@ -167,3 +167,37 @@ describe('instructors/{uid} create — socialLinks', () => {
     await assertFails(mk('c2', { website: 'javascript:alert(1)' }));
   });
 });
+
+// The profile editor normalises social links with socialLinkForStorage (src/lib/socialLinks.ts)
+// and saves them in the SAME update as the personal fields. What it stores must pass the rules;
+// what it would store without normalising (placeholder-style bare hosts) must not.
+describe('users/{uid} — what the profile editor stores', () => {
+  const seedUser = async (uid: string, extra: Record<string, unknown> = {}) => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await ctx.firestore().collection('users').doc(uid).set({ uid, role: 'customer', email: 'a@b.c', ...extra });
+    });
+  };
+  const userDoc = (uid: string) => testEnv.authenticatedContext(uid).firestore().collection('users').doc(uid);
+
+  it('accepts the normalised placeholder-style links together with the profile fields, one write', async () => {
+    await seedUser('e1', { socialLinks: { tiktok: 'https://tiktok.com/@old' } });
+    await assertSucceeds(userDoc('e1').update({
+      fullName: 'Mia Rossi',
+      bio: 'Ciao',
+      socialLinks: {
+        website: 'https://yourwebsite.com/',          // typed: yourwebsite.com
+        linkedin: 'https://linkedin.com/in/x',        // typed: linkedin.com/in/x
+        facebook: 'https://facebook.com/username',    // typed: facebook.com/username
+        instagram: '@mia.rossi',
+        tiktok: 'https://tiktok.com/@old',            // a key the form has no field for, carried over
+      },
+    }));
+  });
+
+  it('refuses the same links un-normalised (bare hosts) and a javascript: one', async () => {
+    await seedUser('e2');
+    await assertFails(userDoc('e2').update({ socialLinks: { website: 'yourwebsite.com' } }));
+    await assertFails(userDoc('e2').update({ socialLinks: { linkedin: 'linkedin.com/in/x' } }));
+    await assertFails(userDoc('e2').update({ socialLinks: { website: 'javascript:alert(1)' } }));
+  });
+});

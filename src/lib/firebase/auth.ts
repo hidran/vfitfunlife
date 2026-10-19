@@ -514,6 +514,8 @@ export async function updateUserProfile(
     preferredSection?: "fit" | "fun" | "life";
     preferredLanguage?: AppLocale;
     avatarUrl?: string;
+    /** Already normalised (socialLinkForStorage): saved in the same write as the rest. */
+    socialLinks?: SocialLinks;
   }
 ): Promise<void> {
   const { db, doc, updateDoc, serverTimestamp } = await loadFirestore();

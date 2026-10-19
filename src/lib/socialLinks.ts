@@ -32,8 +32,12 @@ function hostMatches(hostname: string, domain: string): boolean {
  * hostname must also belong to that platform: `instagram.com` and its subdomains match,
  * `instagram.com.evil.example` and `evil.example/instagram.com` do not. The comparison is on
  * the URL's parsed hostname, so userinfo tricks (`https://instagram.com@evil.example`) resolve
- * to the real host. A bare word with no `@` and no dot (`rossi`) is not a handle: it parses as
- * the host `rossi`, matches no platform, and comes out null.
+ * to the real host. The host must contain a dot, so a bare word (`rossi`) never becomes
+ * `https://rossi/`, whatever the key.
+ *
+ * Legacy bare Instagram/Twitter handles without the `@` (`anna`) are NOT linked: they have no dot,
+ * so they come out null and the profile shows them as plain text. Guessing a profile URL from a bare
+ * word would turn any junk into a link on someone's page; the editor stores `@anna` instead.
  */
 export function socialLinkHref(value: string | null | undefined, key?: string): string | null {
   const text = value?.trim();
@@ -51,6 +55,8 @@ export function socialLinkHref(value: string | null | undefined, key?: string): 
   // becomes "https://javascript:alert(1)", which does not parse, rather than a script URL.
   const href = safeHttpUrl(/^https?:/i.test(text) ? text : `https://${text}`);
   if (!href) return null;
+  // `https://rossi/` is a bare word, not a site: require a dot in the host.
+  if (!new URL(href).hostname.includes('.')) return null;
 
   const domains = key ? PLATFORM_HOSTS[key] : undefined;
   if (domains) {
@@ -58,4 +64,30 @@ export function socialLinkHref(value: string | null | undefined, key?: string): 
     if (!domains.some((domain) => hostMatches(hostname, domain))) return null;
   }
   return href;
+}
+
+/** Longest stored link; mirrors firestore.rules (socialLinks.*). */
+export const SOCIAL_LINK_MAX_LENGTH = 200;
+
+/**
+ * What to store for a social link typed into an editor, so the value always satisfies the
+ * firestore.rules for `socialLinks.*` (http(s) URL or `@handle`, at most 200 characters):
+ *
+ * - blank ⇒ `''` (the caller leaves the key out);
+ * - an `@handle` on instagram/twitter ⇒ kept as typed (letters, digits, `.` and `_` only);
+ * - anything else ⇒ the normalised https href from `socialLinkHref(value, key)`, so
+ *   `yourwebsite.com` is stored as `https://yourwebsite.com/` and `linkedin.com/in/x` as
+ *   `https://linkedin.com/in/x`, and a foreign host on a platform key is refused;
+ * - everything invalid (`javascript:`, a bare word, too long, a handle on a platform with no
+ *   handle URLs) ⇒ `null`: the editor shows an inline error and writes nothing.
+ */
+export function socialLinkForStorage(value: string | null | undefined, key: string): string | null {
+  const text = value?.trim() ?? '';
+  if (!text) return '';
+  if (text.startsWith('@')) {
+    const ok = (key === 'instagram' || key === 'twitter') && /^@[A-Za-z0-9._]+$/.test(text);
+    return ok && text.length <= SOCIAL_LINK_MAX_LENGTH ? text : null;
+  }
+  const href = socialLinkHref(text, key);
+  return href && href.length <= SOCIAL_LINK_MAX_LENGTH ? href : null;
 }

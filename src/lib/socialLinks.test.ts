@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { socialLinkHref } from './socialLinks';
+import { socialLinkForStorage, socialLinkHref } from './socialLinks';
 
 describe('socialLinkHref', () => {
   it('links http(s) URLs and adds https:// to a bare host', () => {
@@ -98,6 +98,14 @@ describe('socialLinkHref', () => {
       expect(socialLinkHref('x.com/foo', 'twitter')).toBe('https://x.com/foo');
     });
 
+    it('never links a bare word, on a platform key or on website (legacy handle "anna" stays plain text)', () => {
+      expect(socialLinkHref('rossi', 'website')).toBeNull();
+      expect(socialLinkHref('https://rossi', 'website')).toBeNull();
+      expect(socialLinkHref('anna', 'instagram')).toBeNull();
+      expect(socialLinkHref('localhost', undefined)).toBeNull();
+      expect(socialLinkHref('rossi.fit', 'website')).toBe('https://rossi.fit/');
+    });
+
     it('does not treat a bare word as a handle: only @handle is', () => {
       expect(socialLinkHref('rossi', 'instagram')).toBeNull();
       expect(socialLinkHref('rossi.fit', 'instagram')).toBeNull();
@@ -111,5 +119,35 @@ describe('socialLinkHref', () => {
     expect(socialLinkHref('https://anything.example', 'somethingelse')).toBe('https://anything.example/');
     expect(socialLinkHref('https://anything.example')).toBe('https://anything.example/');
     expect(socialLinkHref('javascript:alert(1)', 'website')).toBeNull();
+  });
+});
+
+describe('socialLinkForStorage', () => {
+  it('stores placeholder-style input as https URLs', () => {
+    expect(socialLinkForStorage('yourwebsite.com', 'website')).toBe('https://yourwebsite.com/');
+    expect(socialLinkForStorage('linkedin.com/in/x', 'linkedin')).toBe('https://linkedin.com/in/x');
+    expect(socialLinkForStorage('facebook.com/username', 'facebook')).toBe('https://facebook.com/username');
+    expect(socialLinkForStorage('  https://example.com/me ', 'website')).toBe('https://example.com/me');
+  });
+
+  it('keeps an @handle for instagram and twitter only', () => {
+    expect(socialLinkForStorage('@anna.verdi', 'instagram')).toBe('@anna.verdi');
+    expect(socialLinkForStorage('@anna_v', 'twitter')).toBe('@anna_v');
+    expect(socialLinkForStorage('@anna', 'linkedin')).toBeNull();
+    expect(socialLinkForStorage('@a/b', 'instagram')).toBeNull();
+    expect(socialLinkForStorage('@', 'instagram')).toBeNull();
+  });
+
+  it('returns an empty string for blank input', () => {
+    expect(socialLinkForStorage('   ', 'website')).toBe('');
+    expect(socialLinkForStorage(undefined, 'website')).toBe('');
+  });
+
+  it('refuses scripts, bare words, foreign hosts on a platform and over-long values', () => {
+    expect(socialLinkForStorage('javascript:alert(1)', 'website')).toBeNull();
+    expect(socialLinkForStorage('rossi', 'website')).toBeNull();
+    expect(socialLinkForStorage('anna', 'instagram')).toBeNull();
+    expect(socialLinkForStorage('https://evil.example/instagram.com', 'instagram')).toBeNull();
+    expect(socialLinkForStorage(`https://example.com/${'a'.repeat(200)}`, 'website')).toBeNull();
   });
 });

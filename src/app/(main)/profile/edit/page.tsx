@@ -30,7 +30,6 @@ import {
   updateUserProfile,
   updateProviderProfile,
   isProvider,
-  updateSocialLinks,
   verifyPhoneNumber,
 } from '@/lib/firebase/auth';
 import { SectionSelector } from '@/components/ui/section-selector';
@@ -48,6 +47,7 @@ import { useProviderStatus } from '@/hooks/useProviderApplication';
 import { useProvider, useProviderServices } from '@/hooks/useProviders';
 import { updateRequestedCategories } from '@/lib/firebase/providerApplication';
 import { canAccessProviderArea } from '@/lib/providerStatus';
+import { socialLinkForStorage } from '@/lib/socialLinks';
 import { CategoryLeafPicker } from '@/components/provider/CategoryLeafPicker';
 import { MissingLocationBanner } from '@/components/provider/MissingLocationBanner';
 import {
@@ -58,6 +58,8 @@ import { useMyLocation } from '@/hooks/useMyLocation';
 import Link from 'next/link';
 
 // Form validation
+type SocialLinkErrors = Partial<Record<keyof SocialLinks, string>>;
+
 interface FormErrors {
   fullName?: string;
   phone?: string;
@@ -133,6 +135,7 @@ export default function EditProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isProviderUser, setIsProviderUser] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
+  const [socialErrors, setSocialErrors] = useState<SocialLinkErrors>({});
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [activeTab, setActiveTab] = useState<TabType>('personal');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -275,6 +278,30 @@ export default function EditProfilePage() {
     return Object.keys(newErrors).length === 0;
   };
 
+  /**
+   * Every social field, normalised for storage (https URL or @handle: what firestore.rules
+   * accepts). Runs BEFORE anything is written, so one bad link cannot leave a half-saved
+   * profile. Blank fields are left out. Returns null (and shows the errors) when any is invalid.
+   */
+  const validateSocialLinks = (): SocialLinks | null => {
+    // Keys this form has no field for (a tiktok link saved elsewhere) are carried over untouched.
+    const known = new Set<string>(SOCIAL_PLATFORMS.map((platform) => platform.key));
+    const normalised: SocialLinks = Object.fromEntries(
+      Object.entries(socialLinks).filter(([key, value]) => !known.has(key) && value)
+    );
+    const nextErrors: SocialLinkErrors = {};
+    for (const platform of SOCIAL_PLATFORMS) {
+      const stored = socialLinkForStorage(socialLinks[platform.key], platform.key);
+      if (stored === null) {
+        nextErrors[platform.key] = t(`profile.social.validation.${platform.key}` as MessageKey);
+      } else if (stored) {
+        normalised[platform.key] = stored;
+      }
+    }
+    setSocialErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0 ? normalised : null;
+  };
+
   const validateUrl = (url: string): boolean => {
     if (!url) return true;
     const urlPattern = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
@@ -284,7 +311,10 @@ export default function EditProfilePage() {
 
   const handleSave = async () => {
     if (!user?.id) return;
-    if (!validateForm()) return;
+    const formOk = validateForm();
+    const normalisedSocialLinks = validateSocialLinks();
+    if (!normalisedSocialLinks) setActiveTab('personal');
+    if (!formOk || !normalisedSocialLinks) return;
 
     setIsSaving(true);
     setSaveStatus('saving');
@@ -308,10 +338,10 @@ export default function EditProfilePage() {
         bio: formData.bio || undefined,
         dateOfBirth: formData.dateOfBirth ? new Date(formData.dateOfBirth) : undefined,
         preferredSection: formData.preferredSection,
+        // One write with the personal fields: validated and normalised above.
+        socialLinks: normalisedSocialLinks,
       });
-
-      // Update social links
-      await updateSocialLinks(user.id, socialLinks);
+      setSocialLinks(normalisedSocialLinks);
 
       // Update professional info for verified providers. Pending applicants can
       // edit categories too, but cannot edit provider-only profile fields yet.
@@ -390,6 +420,7 @@ export default function EditProfilePage() {
 
   const updateSocialLink = (platform: keyof SocialLinks, value: string) => {
     setSocialLinks((prev) => ({ ...prev, [platform]: value }));
+    setSocialErrors((prev) => ({ ...prev, [platform]: undefined }));
     setHasUnsavedChanges(true);
   };
 
@@ -655,6 +686,7 @@ export default function EditProfilePage() {
                     placeholder={t(platform.placeholderKey)}
                     value={socialLinks[platform.key] || ''}
                     onChange={(e) => updateSocialLink(platform.key, e.target.value)}
+                    error={socialErrors[platform.key]}
                   />
                 ))}
               </div>
