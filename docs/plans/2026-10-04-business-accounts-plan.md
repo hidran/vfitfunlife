@@ -118,7 +118,7 @@ token and booking screen shows the company name with no further change.
 - **Done when:** rules tests: owner edits display field ✔, owner edits P.IVA ✘, owner adds `business` to an
   individual ✘, other user ✘, admin ✔, client read of `businessVat` ✘.
 
-### B5 `[ ]` Signup: individual or company (Large)
+### B5 `[x]` (683bf37, 1b66998, 115aac0) Signup: individual or company (Large)
 - Files: `src/app/auth/register/RegisterClient.tsx` (both `submitProviderApplication` call sites),
   `src/hooks/useProviderApplication.ts`, `src/lib/firebase/providerApplication.ts`,
   `src/components/profile/BecomeProviderCard.tsx`, new `src/components/provider/BusinessDetailsForm.tsx`
