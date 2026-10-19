@@ -11,6 +11,7 @@ import { VenueNotFound } from '@/components/venue/VenueNotFound';
 import { Spinner } from '@/components/ui/Spinner';
 import { PhotoGallery } from '@/components/gallery/PhotoGallery';
 import { useI18n } from '@/hooks/useI18n';
+import { hostsCourses } from '@/types/venue';
 
 type TabOption = 'services' | 'classes';
 
@@ -149,7 +150,7 @@ export default function VenueDetailClient() {
           </button>
         )}
 
-        {venue.type === 'gym' && venue.partnerStatus === 'active' && <Link
+        {hostsCourses(venue.type) && venue.partnerStatus === 'active' && <Link
           href={`/fit/gyms/timetable?id=${venue.id}`}
           className="mt-6 inline-flex min-h-11 items-center rounded-xl bg-section-primary px-5 font-semibold text-white">
           {t('gym.timetable')}

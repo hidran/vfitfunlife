@@ -1274,7 +1274,7 @@ export const esMessages: Messages = {
   'search.section.fun': 'VFun',
   'search.section.life': 'VLife',
 
-  'fit.gyms.title': 'Gimnasios VFit',
+  'fit.gyms.title': 'Gimnasios y escuelas',
   'fit.gyms.subtitle': 'Consulta los gimnasios partner publicados en el catálogo.',
   'fit.gyms.searchPlaceholder': 'Buscar gimnasio o zona...',
   'fit.gyms.clear': 'Limpiar',

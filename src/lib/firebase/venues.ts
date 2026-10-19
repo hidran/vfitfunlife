@@ -9,6 +9,7 @@ import {
   limit as limitQuery,
   orderBy,
   type Query,
+  type QueryConstraint,
   type CollectionReference,
 } from 'firebase/firestore';
 import { db } from './config';
@@ -19,7 +20,18 @@ import type {
   VenueListOptions,
   VenueService,
   VenueCourse,
+  VenueType,
 } from '@/types/venue';
+
+/**
+ * The `type` filter for a venue query: `in` for a list of types, `==` for one. Both use the
+ * same (type, rating) / (type, geohash) composite indexes, so a list needs no extra index.
+ */
+function typeFilter(opts: { type?: VenueType; types?: VenueType[] }): QueryConstraint[] {
+  if (opts.types?.length) return [where('type', 'in', opts.types)];
+  if (opts.type) return [where('type', '==', opts.type)];
+  return [];
+}
 
 export async function fetchVenue(id: string): Promise<Venue | null> {
   try {
@@ -34,8 +46,7 @@ export async function fetchVenue(id: string): Promise<Venue | null> {
 
 export async function fetchVenues(opts: VenueListOptions = {}): Promise<Venue[]> {
   try {
-    const constraints = [];
-    if (opts.type) constraints.push(where('type', '==', opts.type));
+    const constraints: QueryConstraint[] = typeFilter(opts);
     if (opts.city) constraints.push(where('city', '==', opts.city));
     // With `type`, needs the (type, rating desc) composite index.
     if (opts.orderByRating) constraints.push(orderBy('rating', 'desc'));
@@ -55,12 +66,13 @@ export interface NearbyVenueOptions {
   center: LatLng;
   radiusKm: number;
   type?: Venue['type'];
+  types?: Venue['type'][];
 }
 
 /**
  * Venues within `radiusKm` of `center`, nearest-first, each with `distanceKm`. A bounded
  * geohash range search (see geoRangeQuery) instead of reading the whole collection.
- * With `type`, needs the (type, geohash) composite index.
+ * With `type`/`types`, needs the (type, geohash) composite index.
  */
 export async function fetchVenuesNear(
   opts: NearbyVenueOptions
@@ -68,7 +80,7 @@ export async function fetchVenuesNear(
   try {
     return await geoRangeQuery<Venue>({
       collectionPath: 'venues',
-      filters: opts.type ? [where('type', '==', opts.type)] : [],
+      filters: typeFilter(opts),
       center: opts.center,
       radiusKm: opts.radiusKm,
       fromDoc: (id, data) =>

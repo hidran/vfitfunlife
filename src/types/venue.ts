@@ -91,6 +91,8 @@ export interface VenueCourse {
 
 export interface VenueListOptions {
   type?: VenueType;
+  /** Several types at once (`type in [...]`); wins over `type` when both are given. */
+  types?: VenueType[];
   city?: string;
   limit?: number;
   /** Highest-rated first: the bounded list shown when the user's location is unknown. */

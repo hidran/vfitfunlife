@@ -123,3 +123,40 @@ describe('partner gym bookings', () => {
     expect((await db.doc(`gymSessions/${sessionId}`).get()).data()?.booked).toBe(1);
   });
 });
+
+describe('venue types that host a timetable', () => {
+  const asType = (type: string) => db.doc('venues/gym').update({ type });
+
+  it.each(['school', 'studio'])('lets the owner of a %s publish and customers book', async (type) => {
+    await asType(type);
+    const sessionId = (await schedule.saveGymSchedule.run(req('owner', input))).sessionIds[0];
+    const quote = await bookings.quoteGymBooking.run(req('u', { sessionId }));
+    expect(quote.availablePlaces).toBe(1);
+    const booked = await bookings.bookGymClass.run(req('u', { sessionId,
+      expectedFinalPriceCents: quote.finalPriceCents, expectedRevision: 1, requestId: `book-${type}` }));
+    expect(booked.state).toBe('confirmed');
+  });
+
+  it('lets an admin link a verified instructor to a school', async () => {
+    await asType('school');
+    await db.doc('users/admin').set({ role: 'admin', isActive: true, fullName: 'admin' });
+    await expect(schedule.configureGymInstructor.run(req('admin', { venueId: 'gym', instructorId: 'coach2',
+      partnerStatus: 'active', isActive: true }))).resolves.toEqual({ success: true });
+    expect((await db.doc('instructors/coach2').get()).data()?.partnerStatus).toBe('active');
+  });
+
+  it('still refuses venues that do not host a timetable (spa), for staff and for the admin link', async () => {
+    await asType('spa');
+    await db.doc('users/admin').set({ role: 'admin', isActive: true, fullName: 'admin' });
+    await expect(schedule.saveGymSchedule.run(req('owner', input))).rejects.toThrow('gym_not_found');
+    await expect(schedule.configureGymInstructor.run(req('admin', { venueId: 'gym', instructorId: 'coach2',
+      partnerStatus: 'active', isActive: true }))).rejects.toThrow('verified_instructor_required');
+  });
+
+  it('does not take bookings at an inactive-type venue even if it was once a school', async () => {
+    await asType('school');
+    const sessionId = (await schedule.saveGymSchedule.run(req('owner', input))).sessionIds[0];
+    await asType('spa');
+    await expect(bookings.quoteGymBooking.run(req('u', { sessionId }))).rejects.toThrow('active_partner_gym_required');
+  });
+});

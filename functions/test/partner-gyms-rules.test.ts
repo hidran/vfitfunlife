@@ -12,6 +12,10 @@ beforeAll(async () => {
   await env.withSecurityRulesDisabled(async context => {
     const db = context.firestore();
     await db.doc('venues/gym').set({ type: 'gym', isActive: true, ownerId: 'owner', partnerStatus: 'active' });
+    for (const type of ['school', 'studio', 'spa']) {
+      await db.doc(`venues/${type}`).set({ type, isActive: true, ownerId: 'owner', partnerStatus: 'active' });
+      await db.doc(`gymSessions/${type}`).set({ venueId: type, status: 'published', startsAt: new Date('2099-10-12') });
+    }
     await db.doc('venues/gym/locations/main').set({ name: 'Centro', timezone: 'Europe/Rome' });
     await db.doc('venues/gym/locations/main/rooms/studio').set({ name: 'Studio' });
     await db.doc('venueStaff/staff').set({ venueId: 'gym', isActive: true });
@@ -37,6 +41,16 @@ describe('partner gym security', () => {
     await env.withSecurityRulesDisabled(async context => context.firestore()
       .doc('venueStaff/inactive').set({ venueId: 'gym', isActive: false }));
     await assertFails(env.authenticatedContext('inactive').firestore().doc('gymSessions/draft').get());
+  });
+
+  it('shows published sessions at active school and studio partners, but not at other venue types', async () => {
+    const publicDb = env.unauthenticatedContext().firestore();
+    await assertSucceeds(publicDb.doc('gymSessions/school').get());
+    await assertSucceeds(publicDb.doc('gymSessions/studio').get());
+    await assertFails(publicDb.doc('gymSessions/spa').get());
+    const result = await assertSucceeds(publicDb.collection('gymSessions')
+      .where('venueId', '==', 'school').where('status', '==', 'published').get());
+    expect(result.size).toBe(1);
   });
 
   it('keeps bookings private and all capacity and money writes server-owned', async () => {

@@ -47,7 +47,7 @@ export const decideProviderApplication = onCall<DecideProviderApplicationData>(
 
     const caller = (await getFirestore().collection("users").doc(callerUid).get()).data() ?? {};
 
-    const { draftServicesSeeded } = await commitProviderDecision({
+    const { draftServicesSeeded, venueId } = await commitProviderDecision({
       providerId,
       decision,
       notes,
@@ -58,6 +58,6 @@ export const decideProviderApplication = onCall<DecideProviderApplicationData>(
       },
     });
 
-    return { success: true, providerId, decision, draftServicesSeeded };
+    return { success: true, providerId, decision, draftServicesSeeded, venueId };
   },
 );

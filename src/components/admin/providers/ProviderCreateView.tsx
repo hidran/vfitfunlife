@@ -23,6 +23,8 @@ export function ProviderCreateView() {
         bio: data.bio || null,
         role: 'provider',
         providerStatus: 'pending',
+        // Admin-created accounts are people; companies come through the application flow.
+        providerType: 'individual',
         providerProfile: {
           professionalBio: data.professionalBio || '',
           specialties,

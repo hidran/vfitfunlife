@@ -7,6 +7,7 @@ import { localInstant, occurrences, scheduleSchema, seriesId } from "./core";
 import { activePartner, assertGymManager, authUid, db, membershipId, safeId, serverTime,
   slotOf, updateScheduleLocks, type GymSession, type Slot } from "./store";
 import { queueGymNotification } from "./notifications";
+import { hostsCourses, type VenueType } from "../types";
 
 const spaceSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("location"), venueId: z.string(), id: z.string().optional(),
@@ -61,7 +62,7 @@ export const configureGymInstructor = onCall({ region }, async (req) => {
     if (!["admin", "superadmin"].includes(actor.data()?.role)) {
       throw new HttpsError("permission-denied", "admin_required");
     }
-    if (venue.data()?.type !== "gym" || instructor.data()?.providerProfile?.isVerified !== true) {
+    if (!hostsCourses(venue.data()?.type as VenueType) || instructor.data()?.providerProfile?.isVerified !== true) {
       throw new HttpsError("failed-precondition", "verified_instructor_required");
     }
     tx.set(db.doc(`venues/${venueId}/instructors/${instructorId}`), {

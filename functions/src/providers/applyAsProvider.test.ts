@@ -339,7 +339,9 @@ describe("commitProviderDecision on a business application", () => {
       applicationStatus: "verified",
       providerProfile: { isVerified: true },
     });
-    expect(instructor?.business).toEqual(before);
+    // The business map is exactly what the application stored, plus the link to the venue
+    // approval created for it.
+    expect(instructor?.business).toEqual({ ...before, venueId: expect.any(String) });
     expect(instructor?.business).toMatchObject({ venueType: "school", address: "Via Po 2" });
     expect(dottedKeys(instructor)).toEqual([]);
 

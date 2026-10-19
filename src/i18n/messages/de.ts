@@ -1278,7 +1278,7 @@ export const deMessages: Messages = {
   'search.section.fun': 'VFun',
   'search.section.life': 'VLife',
 
-  'fit.gyms.title': 'VFit Studios',
+  'fit.gyms.title': 'Studios & Schulen',
   'fit.gyms.subtitle': 'Entdecke Partner-Studios im Katalog.',
   'fit.gyms.searchPlaceholder': 'Studio oder Gebiet suchen...',
   'fit.gyms.clear': 'Löschen',

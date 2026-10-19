@@ -180,7 +180,7 @@ Order: `firestore.rules` → functions (`applyAsProvider`, new/changed callables
 the same on prod with a throwaway P.IVA claim removed afterwards.
 - **Done when:** staging and prod run the commit; prod smoke leaves no test company behind.
 
-### B12 `[ ]` Approval creates the business's venue (Medium)
+### B12 `[x]` Approval creates the business's venue (Medium)
 Added 2026-10-19 from `docs/superpowers/specs/2026-10-19-unified-group-courses-design.md` §3.
 - `VenueType` (`src/types/venue.ts`, functions types) gains `'school' | 'studio'`; a shared helper
   `hostsCourses(type)` = gym | school | studio replaces every `type === 'gym'` gate
@@ -236,3 +236,4 @@ Added 2026-10-19 from `docs/superpowers/specs/2026-10-19-unified-group-courses-d
 - 2026-10-19 — B3 done (6ba0f15): businessApplication.ts validator, transactional businessVat claim, always-pending for business, review-bypass guards (business lock, rejected never auto-approves, verified no-op incl. legacy docs), result gains `status`; `ApplyAsProviderErrorCode` exported; `BUSINESS_VAT_COLLECTION` exported for B8. Deferred: extract businessVatClaim.ts in B8; audit entry lacks providerType.
 - 2026-10-19 — B2 done (63d0680): canonical 8-value `VenueType` (adds school/studio; keeps outdoor_space/event_space), `hostsCourses` in both trees with Record-table tests; B12 must also add school/studio to VenueFormView/VenuesListView options and functions/src/ai/tools/index.ts enum.
 - 2026-10-19 — B1 done (e308d61): validator in both trees, 19+19 tests; follow-up for B3: add a check-digit-0 fixture (e.g. 50500000000) and `typeof === 'string'` guard before calling from callables.
+- 2026-10-19 — B12 done: `commitProviderDecision` creates `venues/{auto}` (pending, non-partner, owned by the business; built by pure `providers/businessVenue.ts`) in the approval batch and links it as nested `business.venueId`; idempotent via that field. `syncBusinessVenueLocation` mirrors the owner's lat/lng/city onto the venue (geohash trigger follows). `hostsCourses` replaces the gym gates (schedule, store, `activePartnerGym` rule, VenueDetailClient, plus the admin `GymInstructorPanel` gate in VenueDetailView); `/fit/gyms` lists gym+school+studio via `types` (`where in`, same composite indexes), title "Palestre e scuole" ×5; ProviderCreateView writes `providerType: 'individual'`. **B11 deploys the new trigger (`functions:syncBusinessVenueLocation`) and the rules.** Known gaps: a business approved before B12 shipped has no venue (re-approval creates one); two concurrent approvals could each create a venue (venue id is auto, the guard is a read before the batch); `venueType` of an already-approved business can't be changed by the owner (rules freeze it).

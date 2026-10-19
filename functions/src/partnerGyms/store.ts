@@ -1,6 +1,7 @@
 import { createHash } from "crypto";
 import { getFirestore, FieldValue, Timestamp, Transaction } from "firebase-admin/firestore";
 import { HttpsError } from "firebase-functions/v2/https";
+import { hostsCourses, type VenueType } from "../types";
 
 export const db = getFirestore();
 export const serverTime = () => FieldValue.serverTimestamp();
@@ -50,7 +51,7 @@ export async function assertGymManager(uid: string, venueId: string, tx: Transac
   if (!user || user.isActive === false || ["suspended", "deleted"].includes(user.accountStatus)) {
     throw new HttpsError("permission-denied", "account_inactive");
   }
-  if (!venue || venue.type !== "gym") throw new HttpsError("not-found", "gym_not_found");
+  if (!venue || !hostsCourses(venue.type as VenueType)) throw new HttpsError("not-found", "gym_not_found");
   if (user.role !== "admin" && user.role !== "superadmin" && venue.ownerId !== uid &&
     (staffDoc.data()?.venueId !== venueId || staffDoc.data()?.isActive === false)) {
     throw new HttpsError("permission-denied", "gym_staff_required");
@@ -59,7 +60,8 @@ export async function assertGymManager(uid: string, venueId: string, tx: Transac
 }
 
 export function activePartner(venue: FirebaseFirestore.DocumentData | undefined) {
-  return !!venue && venue.type === "gym" && venue.isActive !== false && venue.partnerStatus === "active";
+  return !!venue && hostsCourses(venue.type as VenueType) && venue.isActive !== false &&
+    venue.partnerStatus === "active";
 }
 
 export type Slot = { id: string; venueId: string; locationId: string; roomId: string;

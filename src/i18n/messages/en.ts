@@ -1391,7 +1391,7 @@ export const enMessages: Messages = {
   'search.section.fun': 'VFun',
   'search.section.life': 'VLife',
 
-  'fit.gyms.title': 'VFit Gyms',
+  'fit.gyms.title': 'Gyms & schools',
   'fit.gyms.subtitle': 'Browse partner fitness clubs listed in the catalog.',
   'fit.gyms.searchPlaceholder': 'Search gym or area...',
   'fit.gyms.clear': 'Clear',

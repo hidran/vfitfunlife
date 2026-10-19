@@ -560,8 +560,10 @@ service cloud.firestore {
         get(/databases/$(database)/documents/venues/$(venueId)).data.get('ownerId', '') == request.auth.uid);
     }
 
+    // The venue types that host a timetable: keep in step with hostsCourses() in
+    // src/types/venue.ts and functions/src/types.ts.
     function activePartnerGym(venueId) {
-      return get(/databases/$(database)/documents/venues/$(venueId)).data.get('type', '') == 'gym' &&
+      return get(/databases/$(database)/documents/venues/$(venueId)).data.get('type', '') in ['gym', 'school', 'studio'] &&
         get(/databases/$(database)/documents/venues/$(venueId)).data.get('partnerStatus', 'pending') == 'active' &&
         get(/databases/$(database)/documents/venues/$(venueId)).data.get('isActive', true) == true;
     }

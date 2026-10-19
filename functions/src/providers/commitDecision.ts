@@ -10,6 +10,7 @@ import {
 } from "./applicationDecision";
 import { DEFAULT_WEEKLY_HOURS } from "../availability/slots";
 import { isProtectedSuperadmin } from "../lib/superadmins";
+import { buildBusinessVenue } from "./businessVenue";
 import type { ProviderType } from "../types";
 
 /** Who the audit entry should name as responsible for the decision. */
@@ -48,7 +49,7 @@ export interface CommitDecisionOptions {
  */
 export async function commitProviderDecision(
   opts: CommitDecisionOptions
-): Promise<{ draftServicesSeeded: number }> {
+): Promise<{ draftServicesSeeded: number; venueId?: string | null }> {
   const { providerId, decision, actor, notes, application } = opts;
 
   const db = getFirestore();
@@ -144,6 +145,22 @@ export async function commitProviderDecision(
   if (verified && needsDefaultHours(instructor)) {
     instructorPatch.availabilitySchedule = DEFAULT_WEEKLY_HOURS;
   }
+
+  // A verified business with premises gets its venue in this same batch. The link goes in
+  // as a NESTED map: merge deep-merges it, so legalName/vatNumber/etc. survive, whereas a
+  // dotted "business.venueId" key would be stored literally by set(..., { merge: true }).
+  // buildBusinessVenue returns null once business.venueId exists, which is what keeps a
+  // re-run of the decision from creating a second venue.
+  let venueId: string | null = null;
+  if (verified) {
+    const venue = buildBusinessVenue({ providerId, instructor, now });
+    if (venue) {
+      const venueRef = db.collection("venues").doc();
+      batch.set(venueRef, venue);
+      instructorPatch.business = { venueId: venueRef.id };
+      venueId = venueRef.id;
+    }
+  }
   batch.set(instructorRef, instructorPatch, { merge: true });
 
   let seeded = 0;
@@ -172,11 +189,12 @@ export async function commitProviderDecision(
       providerStatus: decision,
       role: rolePatch?.role ?? user.role ?? null,
       draftServicesSeeded: seeded,
+      ...(venueId ? { venueId } : {}),
     },
     ...(notes ? { reason: notes } : {}),
   }));
 
   await batch.commit();
 
-  return { draftServicesSeeded: seeded };
+  return { draftServicesSeeded: seeded, venueId };
 }

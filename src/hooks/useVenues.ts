@@ -43,21 +43,23 @@ export type VenueWithDistance = Venue & { distanceKm?: number };
  */
 export function useNearbyVenues(opts: {
   type?: VenueType;
+  /** Several types at once, e.g. every venue that hosts courses. */
+  types?: VenueType[];
   userLocation: LatLng | null;
   radiusKm: number | null;
 }) {
-  const { type, userLocation, radiusKm } = opts;
+  const { type, types, userLocation, radiusKm } = opts;
   const center = userLocation ? roundLocation(userLocation) : null;
   const geo = center && radiusKm != null;
 
   const nearQuery = useQuery({
-    queryKey: ['venues-near', type ?? null, center, radiusKm],
-    queryFn: () => fetchVenuesNear({ type, center: center as LatLng, radiusKm: radiusKm as number }),
+    queryKey: ['venues-near', type ?? null, types ?? null, center, radiusKm],
+    queryFn: () => fetchVenuesNear({ type, types, center: center as LatLng, radiusKm: radiusKm as number }),
     enabled: !!geo,
     staleTime: STALE_5_MIN,
   });
 
-  const listOpts: VenueListOptions = { type, orderByRating: true, limit: NEARBY_FALLBACK_LIMIT };
+  const listOpts: VenueListOptions = { type, types, orderByRating: true, limit: NEARBY_FALLBACK_LIMIT };
   const topQuery = useQuery({
     queryKey: ['venues', listOpts],
     queryFn: () => fetchVenues(listOpts),
