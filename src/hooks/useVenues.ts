@@ -44,7 +44,7 @@ export type VenueWithDistance = Venue & { distanceKm?: number };
 export function useNearbyVenues(opts: {
   type?: VenueType;
   /** Several types at once, e.g. every venue that hosts courses. */
-  types?: VenueType[];
+  types?: readonly VenueType[];
   userLocation: LatLng | null;
   radiusKm: number | null;
 }) {

@@ -49,7 +49,8 @@ export default function VenueDetailClient() {
   const slides = venue.heroGradients ?? [];
   const services = servicesQuery.data ?? [];
   const courses = coursesQuery.data ?? [];
-  const visibleHours = showAllHours ? venue.hours : venue.hours.slice(0, 1);
+  const hours = venue.hours ?? [];
+  const visibleHours = showAllHours ? hours : hours.slice(0, 1);
 
   return (
     <div className="min-h-screen bg-background-dark pb-24">
@@ -100,31 +101,33 @@ export default function VenueDetailClient() {
           </div>
         </div>
 
-        <div className="mt-4 rounded-2xl border border-hairline bg-content/5 p-3">
-          <div className="flex items-center gap-2 text-sm font-semibold text-content/80">
-            <Clock className="h-4 w-4" /> {t('venueDetail.hours.title')}
+        {hours.length > 0 && (
+          <div className="mt-4 rounded-2xl border border-hairline bg-content/5 p-3">
+            <div className="flex items-center gap-2 text-sm font-semibold text-content/80">
+              <Clock className="h-4 w-4" /> {t('venueDetail.hours.title')}
+            </div>
+            <ul className="mt-2 space-y-1 text-sm text-content/80">
+              {visibleHours.map((h) => (
+                <li key={h.day} className="flex justify-between">
+                  <span>{h.day}</span>
+                  <span>{h.time}</span>
+                </li>
+              ))}
+            </ul>
+            {hours.length > 1 && (
+              <button
+                type="button"
+                onClick={() => setShowAllHours((v) => !v)}
+                className="mt-2 text-xs font-medium text-vfit-accent light:text-violet-700"
+              >
+                {showAllHours ? t('venueDetail.hours.showLess') : t('venueDetail.hours.showAll', { count: hours.length })}
+              </button>
+            )}
           </div>
-          <ul className="mt-2 space-y-1 text-sm text-content/80">
-            {visibleHours.map((h) => (
-              <li key={h.day} className="flex justify-between">
-                <span>{h.day}</span>
-                <span>{h.time}</span>
-              </li>
-            ))}
-          </ul>
-          {venue.hours.length > 1 && (
-            <button
-              type="button"
-              onClick={() => setShowAllHours((v) => !v)}
-              className="mt-2 text-xs font-medium text-vfit-accent light:text-violet-700"
-            >
-              {showAllHours ? t('venueDetail.hours.showLess') : t('venueDetail.hours.showAll', { count: venue.hours.length })}
-            </button>
-          )}
-        </div>
+        )}
 
         <div className="mt-4 flex flex-wrap gap-2">
-          {venue.amenities.map((a) => {
+          {(venue.amenities ?? []).map((a) => {
             const Icon = amenityIcon(a.kind);
             return (
               <span

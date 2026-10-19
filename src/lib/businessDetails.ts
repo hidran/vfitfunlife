@@ -1,5 +1,6 @@
 import type { MessageKey } from '@/i18n/messages';
 import type { BusinessDetails, BusinessVenueType } from '@/types/firebase';
+import { COURSE_VENUE_TYPES } from '@/types/venue';
 import type { BusinessApplicationInput } from '@/lib/firebase/functions';
 import type { BusinessProfilePatch } from '@/lib/firebase/business';
 import { isValidItalianVat, normalizeVatNumber } from '@/lib/vatNumber';
@@ -41,7 +42,8 @@ export const BUSINESS_FIELD_ORDER: readonly BusinessDetailsField[] = [
   'website',
 ];
 
-export const BUSINESS_VENUE_TYPES: readonly BusinessVenueType[] = ['gym', 'school', 'studio', 'none'];
+// The venue types a business can pick: the ones that host courses, or none (no fixed premises).
+export const BUSINESS_VENUE_TYPES: readonly BusinessVenueType[] = [...COURSE_VENUE_TYPES, 'none'];
 
 export const EMPTY_BUSINESS_DETAILS: BusinessDetailsValues = {
   legalName: '',

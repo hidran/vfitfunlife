@@ -1,4 +1,4 @@
-import type { BusinessDetails, BusinessVenueType, ProviderType } from "../types";
+import { BUSINESS_VENUE_TYPES, type BusinessDetails, type BusinessVenueType, type ProviderType } from "../types";
 import { isValidItalianVat, normalizeVatNumber } from "./vatNumber";
 
 /**
@@ -61,8 +61,6 @@ export interface ValidatedBusiness extends BusinessDetails {
   venueType: BusinessVenueType;
   address: string | null;
 }
-
-const VENUE_TYPES: ReadonlyArray<BusinessVenueType> = ["gym", "school", "studio", "none"];
 
 /** Absent means an individual, so every existing caller keeps its behaviour. */
 export function parseProviderType(input: unknown): ProviderType {
@@ -146,7 +144,7 @@ export function validateBusinessApplication(input: unknown): ValidatedBusiness {
 
   let venueType: BusinessVenueType = "gym";
   if (raw.venueType !== undefined && raw.venueType !== null) {
-    if (typeof raw.venueType !== "string" || !VENUE_TYPES.includes(raw.venueType as BusinessVenueType)) {
+    if (typeof raw.venueType !== "string" || !BUSINESS_VENUE_TYPES.includes(raw.venueType as BusinessVenueType)) {
       throw new BusinessApplicationError("business_venue_type_invalid");
     }
     venueType = raw.venueType as BusinessVenueType;

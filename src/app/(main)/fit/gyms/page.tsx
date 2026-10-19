@@ -15,7 +15,7 @@ import { PhotoCover } from '@/components/gallery/PhotoCover';
 import { useNearMe } from '@/hooks/useNearMe';
 import { useCustomerSearchLocation } from '@/hooks/useCustomerSearchLocation';
 import { RadiusFilter } from '@/components/map/RadiusFilter';
-import type { VenueType } from '@/types/venue';
+import { COURSE_VENUE_TYPES } from '@/types/venue';
 
 const filterKeys: MessageKey[] = [
   'fit.gyms.filter.distance',
@@ -32,9 +32,6 @@ const GoogleMap = dynamic(() => import('@/components/map/GoogleMap').then((mod) 
 });
 
 const NO_GYMS: VenueWithDistance[] = [];
-
-// Every venue type that hosts a timetable (see hostsCourses): gyms, schools and studios.
-const COURSE_VENUE_TYPES: VenueType[] = ['gym', 'school', 'studio'];
 
 export default function GymsPage() {
   const router = useRouter();

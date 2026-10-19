@@ -26,9 +26,16 @@ import type {
 /**
  * The `type` filter for a venue query: `in` for a list of types, `==` for one. Both use the
  * same (type, rating) / (type, geohash) composite indexes, so a list needs no extra index.
+ *
+ * `types` takes precedence over `type`, and an empty `types` means "no type qualifies":
+ * null, which callers answer with no results rather than an unfiltered read of every venue
+ * (Firestore also rejects `in []`).
  */
-function typeFilter(opts: { type?: VenueType; types?: VenueType[] }): QueryConstraint[] {
-  if (opts.types?.length) return [where('type', 'in', opts.types)];
+export function typeFilter(opts: {
+  type?: VenueType;
+  types?: readonly VenueType[];
+}): QueryConstraint[] | null {
+  if (opts.types) return opts.types.length ? [where('type', 'in', [...opts.types])] : null;
   if (opts.type) return [where('type', '==', opts.type)];
   return [];
 }
@@ -46,7 +53,9 @@ export async function fetchVenue(id: string): Promise<Venue | null> {
 
 export async function fetchVenues(opts: VenueListOptions = {}): Promise<Venue[]> {
   try {
-    const constraints: QueryConstraint[] = typeFilter(opts);
+    const typeConstraints = typeFilter(opts);
+    if (!typeConstraints) return [];
+    const constraints: QueryConstraint[] = typeConstraints;
     if (opts.city) constraints.push(where('city', '==', opts.city));
     // With `type`, needs the (type, rating desc) composite index.
     if (opts.orderByRating) constraints.push(orderBy('rating', 'desc'));
@@ -65,8 +74,9 @@ export async function fetchVenues(opts: VenueListOptions = {}): Promise<Venue[]>
 export interface NearbyVenueOptions {
   center: LatLng;
   radiusKm: number;
-  type?: Venue['type'];
-  types?: Venue['type'][];
+  type?: VenueType;
+  /** See typeFilter: wins over `type`; empty matches nothing. */
+  types?: readonly VenueType[];
 }
 
 /**
@@ -78,9 +88,11 @@ export async function fetchVenuesNear(
   opts: NearbyVenueOptions
 ): Promise<(Venue & { distanceKm: number })[]> {
   try {
+    const filters = typeFilter(opts);
+    if (!filters) return [];
     return await geoRangeQuery<Venue>({
       collectionPath: 'venues',
-      filters: typeFilter(opts),
+      filters,
       center: opts.center,
       radiusKm: opts.radiusKm,
       fromDoc: (id, data) =>

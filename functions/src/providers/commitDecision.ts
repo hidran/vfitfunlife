@@ -10,8 +10,11 @@ import {
 } from "./applicationDecision";
 import { DEFAULT_WEEKLY_HOURS } from "../availability/slots";
 import { isProtectedSuperadmin } from "../lib/superadmins";
-import { buildBusinessVenue } from "./businessVenue";
+import { planBusinessVenue } from "./businessVenue";
 import type { ProviderType } from "../types";
+
+/** gRPC status code: a `create` hit a document that already exists. */
+const ALREADY_EXISTS = 6;
 
 /** Who the audit entry should name as responsible for the decision. */
 export interface DecisionActor {
@@ -49,7 +52,7 @@ export interface CommitDecisionOptions {
  */
 export async function commitProviderDecision(
   opts: CommitDecisionOptions
-): Promise<{ draftServicesSeeded: number; venueId?: string | null }> {
+): Promise<{ draftServicesSeeded: number; venueId: string | null }> {
   const { providerId, decision, actor, notes, application } = opts;
 
   const db = getFirestore();
@@ -146,20 +149,15 @@ export async function commitProviderDecision(
     instructorPatch.availabilitySchedule = DEFAULT_WEEKLY_HOURS;
   }
 
-  // A verified business with premises gets its venue in this same batch. The link goes in
-  // as a NESTED map: merge deep-merges it, so legalName/vatNumber/etc. survive, whereas a
-  // dotted "business.venueId" key would be stored literally by set(..., { merge: true }).
-  // buildBusinessVenue returns null once business.venueId exists, which is what keeps a
-  // re-run of the decision from creating a second venue.
-  let venueId: string | null = null;
-  if (verified) {
-    const venue = buildBusinessVenue({ providerId, instructor, now });
-    if (venue) {
-      const venueRef = db.collection("venues").doc();
-      batch.set(venueRef, venue);
-      instructorPatch.business = { venueId: venueRef.id };
-      venueId = venueRef.id;
-    }
+  // A verified business with premises gets its venue in this same batch, created (never
+  // set) under a deterministic id. The link back is a NESTED map: merge deep-merges it, so
+  // legalName/vatNumber/etc. survive, whereas a dotted "business.venueId" key would be
+  // stored literally by set(..., { merge: true }). planBusinessVenue returns null once
+  // business.venueId exists, which keeps a re-run from planning a second venue.
+  const venuePlan = verified ? planBusinessVenue({ providerId, instructor, now }) : null;
+  if (venuePlan) {
+    batch.create(db.collection("venues").doc(venuePlan.venueId), venuePlan.venue);
+    Object.assign(instructorPatch, venuePlan.instructorPatch);
   }
   batch.set(instructorRef, instructorPatch, { merge: true });
 
@@ -189,12 +187,22 @@ export async function commitProviderDecision(
       providerStatus: decision,
       role: rolePatch?.role ?? user.role ?? null,
       draftServicesSeeded: seeded,
-      ...(venueId ? { venueId } : {}),
+      ...(venuePlan ? { venueId: venuePlan.venueId } : {}),
     },
     ...(notes ? { reason: notes } : {}),
   }));
 
-  await batch.commit();
+  try {
+    await batch.commit();
+  } catch (err) {
+    // The whole batch is refused, so nothing else of the decision was written either:
+    // retrying once the clash is resolved (an admin looks at the existing venue, or the
+    // other approval finishes) is safe.
+    if (venuePlan && (err as { code?: unknown }).code === ALREADY_EXISTS) {
+      throw new HttpsError("already-exists", "venue_exists");
+    }
+    throw err;
+  }
 
-  return { draftServicesSeeded: seeded, venueId };
+  return { draftServicesSeeded: seeded, venueId: venuePlan?.venueId ?? null };
 }

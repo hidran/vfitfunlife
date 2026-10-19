@@ -66,7 +66,9 @@ describe("commitProviderDecision creates the business's venue", () => {
 
     const all = await venues();
     expect(all).toHaveLength(1);
-    expect(result.venueId).toBe(all[0].id);
+    // Deterministic id: what makes concurrent approvals collide instead of both creating.
+    expect(result.venueId).toBe("biz_biz");
+    expect(all[0].id).toBe("biz_biz");
     expect(all[0]).toMatchObject({
       name: "Palestra Rossi",
       slug: "palestra-rossi-torino",
@@ -181,5 +183,39 @@ describe("commitProviderDecision creates the business's venue", () => {
     const result = await approve("nodoc");
     expect(result.venueId).toBeNull();
     expect(await venues()).toHaveLength(0);
+  });
+});
+
+describe("commitProviderDecision venue races and clashes", () => {
+  it("two simultaneous approvals yield exactly one venue and never a second link", async () => {
+    await seedProvider("biz", { business });
+
+    const results = await Promise.allSettled([approve(), approve()]);
+
+    expect(await venues()).toHaveLength(1);
+    expect(results.filter((r) => r.status === "fulfilled").length).toBeGreaterThanOrEqual(1);
+    for (const r of results) {
+      if (r.status === "rejected") {
+        expect(r.reason).toMatchObject({ code: "already-exists", message: "venue_exists" });
+      }
+    }
+    expect((await read("instructors/biz"))?.business?.venueId).toBe("biz_biz");
+  });
+
+  it("never overwrites a venue that already lives at the id: the approval fails with venue_exists", async () => {
+    await seedProvider("biz", { business });
+    await db.doc("venues/biz_biz").set({ name: "Promoted", partnerStatus: "active", isPartner: true });
+
+    await expect(approve()).rejects.toMatchObject({ code: "already-exists", message: "venue_exists" });
+
+    expect(await read("venues/biz_biz")).toEqual({ name: "Promoted", partnerStatus: "active", isPartner: true });
+    // The batch is atomic: the decision itself was not half-applied.
+    expect(await read("users/biz")).toMatchObject({ providerStatus: "pending" });
+    expect((await read("instructors/biz"))?.business).toEqual(business);
+    expect((await db.collection("audit_logs").get()).empty).toBe(true);
+  });
+
+  it("an unrelated commit failure is not reported as venue_exists", async () => {
+    await expect(approve("missing-user")).rejects.toMatchObject({ code: "not-found" });
   });
 });

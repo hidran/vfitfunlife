@@ -58,3 +58,24 @@ describe('VenueDetailClient timetable button', () => {
     expect(screen.queryByRole('link', { name: 'Palinsesto palestra' })).toBeNull();
   });
 });
+
+describe('VenueDetailClient opening hours', () => {
+  it('renders the block when the venue has hours', () => {
+    mockVenue = venue({ hours: [{ day: 'Lun - Ven', time: '06:00 - 22:00' }] });
+    render(<VenueDetailClient />);
+    expect(screen.getByText('Orari')).toBeInTheDocument();
+    expect(screen.getByText('06:00 - 22:00')).toBeInTheDocument();
+  });
+
+  it('omits the block for a venue with no hours, such as a freshly approved business', () => {
+    mockVenue = venue({ hours: [] });
+    render(<VenueDetailClient />);
+    expect(screen.queryByText('Orari')).toBeNull();
+  });
+
+  it('does not throw when hours and amenities are absent altogether', () => {
+    mockVenue = venue({ hours: undefined, amenities: undefined });
+    expect(() => render(<VenueDetailClient />)).not.toThrow();
+    expect(screen.queryByText('Orari')).toBeNull();
+  });
+});

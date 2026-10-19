@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
   buildBusinessVenue,
+  businessVenueId,
   businessVenueType,
+  planBusinessVenue,
   venueLocationPatch,
   venueSlug,
 } from "./businessVenue";
@@ -37,6 +39,9 @@ describe("businessVenueType", () => {
 describe("venueSlug", () => {
   it("is ASCII kebab-case of name and city", () => {
     expect(venueSlug("Scuola di Danza Città", "Reggio Emilia")).toBe("scuola-di-danza-citta-reggio-emilia");
+  });
+  it("transliterates letters NFD does not decompose", () => {
+    expect(venueSlug("Straße Æsir Øst Œuvre", "Łódź")).toBe("strasse-aesir-ost-oeuvre-lodz");
   });
   it("omits an empty city and falls back when nothing is left", () => {
     expect(venueSlug("Palestra Rossi", "")).toBe("palestra-rossi");
@@ -135,5 +140,24 @@ describe("venueLocationPatch", () => {
   });
   it("is null when the document was deleted", () => {
     expect(venueLocationPatch(loc, undefined)).toBeNull();
+  });
+});
+
+describe("planBusinessVenue", () => {
+  const input = { providerId: "biz1", instructor: { business }, now: NOW };
+
+  it("pairs the venue with a deterministic id and a nested link back", () => {
+    const plan = planBusinessVenue(input);
+    expect(businessVenueId("biz1")).toBe("biz_biz1");
+    expect(plan?.venueId).toBe("biz_biz1");
+    expect(plan?.instructorPatch).toEqual({ business: { venueId: "biz_biz1" } });
+    expect(plan?.venue).toEqual(buildBusinessVenue(input));
+    expect(Object.keys(plan?.instructorPatch ?? {}).filter((k) => k.includes("."))).toEqual([]);
+  });
+
+  it("plans nothing wherever buildBusinessVenue builds nothing", () => {
+    expect(planBusinessVenue({ ...input, instructor: { business: { ...business, venueId: "x" } } })).toBeNull();
+    expect(planBusinessVenue({ ...input, instructor: { business: { ...business, venueType: "none" } } })).toBeNull();
+    expect(planBusinessVenue({ ...input, instructor: {} })).toBeNull();
   });
 });

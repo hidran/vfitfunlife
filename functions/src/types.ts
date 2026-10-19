@@ -19,9 +19,16 @@ export type VenueType =
   | "outdoor_space"
   | "event_space";
 
-/** Venue types that host group courses (a business's own timetable lives on these). */
+/**
+ * Venue types that host group courses (a business's own timetable lives on these). The one
+ * list behind hostsCourses and the business venue-type choices; the `activePartnerGym` rule
+ * in firestore.rules repeats it and a test pins the two together. Mirrored in
+ * src/types/venue.ts.
+ */
+export const COURSE_VENUE_TYPES = ["gym", "school", "studio"] as const satisfies readonly VenueType[];
+
 export function hostsCourses(type: VenueType): boolean {
-  return type === "gym" || type === "school" || type === "studio";
+  return (COURSE_VENUE_TYPES as readonly VenueType[]).includes(type);
 }
 
 export interface VenueData {
@@ -35,6 +42,7 @@ export type ProviderType = "individual" | "business";
 
 // What a business offers at its premises; "none" ⇒ no venue is created on approval.
 export type BusinessVenueType = "gym" | "school" | "studio" | "none";
+export const BUSINESS_VENUE_TYPES: readonly BusinessVenueType[] = [...COURSE_VENUE_TYPES, "none"];
 
 // Company details of a business provider (instructors/{uid}.business).
 export interface BusinessDetails {

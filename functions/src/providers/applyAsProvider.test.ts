@@ -53,7 +53,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  for (const name of ["users", "instructors", "businessVat", "audit_logs", "systemSettings"]) {
+  for (const name of ["users", "instructors", "businessVat", "audit_logs", "systemSettings", "venues"]) {
     await db.recursiveDelete(db.collection(name));
   }
   await setAutoApprove(true);

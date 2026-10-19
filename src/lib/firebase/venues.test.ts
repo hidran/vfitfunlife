@@ -5,6 +5,7 @@ import {
   fetchVenueServices,
   fetchVenueCourses,
   fetchVenuesNear,
+  typeFilter,
 } from './venues';
 
 vi.mock('./config', () => ({ db: {} }));
@@ -92,6 +93,21 @@ describe('type filters', () => {
     vi.mocked(where).mockClear();
     await fetchVenues();
     expect(where).not.toHaveBeenCalled();
+  });
+
+  it('types takes precedence over type', async () => {
+    mockGetDocs.mockResolvedValue({ docs: [] } as never);
+    await fetchVenues({ type: 'spa', types: ['gym', 'school'] });
+    expect(where).toHaveBeenCalledWith('type', 'in', ['gym', 'school']);
+    expect(where).not.toHaveBeenCalledWith('type', '==', 'spa');
+  });
+
+  it('an empty types list matches nothing instead of reading every venue', async () => {
+    expect(typeFilter({ types: [] })).toBeNull();
+    expect(typeFilter({ type: 'gym', types: [] })).toBeNull();
+    expect(await fetchVenues({ types: [] })).toEqual([]);
+    expect(await fetchVenuesNear({ types: [], center: { lat: 41, lng: 16 }, radiusKm: 5 })).toEqual([]);
+    expect(mockGetDocs).not.toHaveBeenCalled();
   });
 
   it("fetchVenuesNear combines 'in' with the geohash range", async () => {

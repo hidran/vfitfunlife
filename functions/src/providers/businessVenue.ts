@@ -1,4 +1,4 @@
-import type { BusinessVenueType } from "../types";
+import { BUSINESS_VENUE_TYPES, type BusinessVenueType } from "../types";
 
 /** Same rule as the client's isValidLatLng: finite, in range, and not the (0, 0) of a failed read. */
 function validCoords(lat: unknown, lng: unknown): lat is number {
@@ -15,16 +15,21 @@ const nonEmpty = (v: unknown): string | null => (typeof v === "string" && v.trim
 /** Hero slide a venue gets until an admin or the owner dresses it (same palette as the seeded venues). */
 const DEFAULT_HERO_GRADIENT = "from-vfit-secondary/40 via-vfit-primary/30 to-transparent";
 
-/** URL-safe kebab-case ASCII, as the seeders build venue slugs. */
+/** Letters NFD does not decompose into base + accent, so they would otherwise be dropped. */
+const LETTER_MAP: Record<string, string> = { "ß": "ss", "ø": "o", "æ": "ae", "œ": "oe", "ł": "l", "đ": "d" };
+
+/** URL-safe kebab-case ASCII (the seeders' toSlug, plus the extra letters above). */
 function toSlug(s: string): string {
   return s
     .toLowerCase()
+    .replace(/[ßøæœłđ]/g, (c) => LETTER_MAP[c])
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 }
 
+/** Seeders slug the name alone; a business venue appends the city so same-named venues differ. */
 export function venueSlug(name: string, city: string): string {
   return toSlug([name, city].filter(Boolean).join(" ")) || "venue";
 }
@@ -36,7 +41,7 @@ export function venueSlug(name: string, city: string): string {
 export function businessVenueType(business: Record<string, unknown>): BusinessVenueType {
   const t = business.venueType;
   if (t === undefined || t === null) return "gym";
-  return t === "gym" || t === "school" || t === "studio" || t === "none" ? t : "none";
+  return BUSINESS_VENUE_TYPES.includes(t as BusinessVenueType) ? (t as BusinessVenueType) : "none";
 }
 
 export interface BusinessVenueInput {
@@ -97,6 +102,32 @@ export function buildBusinessVenue(input: BusinessVenueInput): Record<string, un
     createdAt: input.now,
     updatedAt: input.now,
   };
+}
+
+/**
+ * The venue's document id. Deterministic on purpose: the approval batch `create`s it, so
+ * two approvals racing past the `business.venueId` check collide on this one id (the loser
+ * fails ALREADY_EXISTS) instead of each minting a venue, and a venue already living at this
+ * id, say one an admin has promoted, can never be overwritten.
+ */
+export function businessVenueId(providerId: string): string {
+  return `biz_${providerId}`;
+}
+
+export interface BusinessVenuePlan {
+  venueId: string;
+  /** The `venues/{venueId}` document, to be written with `create`. */
+  venue: Record<string, unknown>;
+  /** Merged into the instructors patch: a nested map, never the dotted `business.venueId`. */
+  instructorPatch: { business: { venueId: string } };
+}
+
+/** buildBusinessVenue plus the id it goes under and the link back from the instructor. */
+export function planBusinessVenue(input: BusinessVenueInput): BusinessVenuePlan | null {
+  const venue = buildBusinessVenue(input);
+  if (!venue) return null;
+  const venueId = businessVenueId(input.providerId);
+  return { venueId, venue, instructorPatch: { business: { venueId } } };
 }
 
 /**
