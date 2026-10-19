@@ -140,7 +140,7 @@ token and booking screen shows the company name with no further change.
 - **Done when:** owner can change public name and logo, search shows the new name after the index trigger
   runs, attempts to change P.IVA are impossible in the UI and rejected by rules (B4).
 
-### B7 `[ ]` Public listing and search (Medium)
+### B7 `[x]` (1251b2f, 14e7add) Public listing and search (Medium)
 - Files: `src/lib/firebase/providers.ts` (`flattenProvider` reads `providerType`, `business`),
   provider card and booking-page components, `functions/src/providers/onInstructorWriteSearchIndex.ts`
   (add `displayName` and `legalName` tokens), i18n `provider.badge.business` ("Azienda" in it).
@@ -226,6 +226,7 @@ Added 2026-10-19 from `docs/superpowers/specs/2026-10-19-unified-group-courses-d
 - 2026-10-04 — Plan written after the design was approved ("go for C"). No tasks started.
 - 2026-10-19 — B8 owner field corrected to `ownerId`; B12 added (venue on approval, school/studio types) per the unified-courses spec. Execution started (subagent-driven, on main).
 - 2026-10-19 — B5 done: "Privato / Azienda" toggle in ProviderOptInField and BecomeProviderCard, `BusinessDetailsForm`, `useBusinessDetails` hook (state, pure `validateBusinessDetails`, server-code mapping, deferred focus to the first bad field), 32 i18n keys ×5 locales, company pending copy on the profile card and the provider banner. B5 uses controlled state + pure validator instead of RHF+Zod (register page is hand-rolled state; avoids nested form); form adds venueType + address for B12.
+- 2026-10-19 — B7 done (14e7add): search index adds business names name-first; `providerImageUrl`/`publicBusiness` helpers in src/lib/bookingProvider.ts; Azienda badge on /booking rows and provider page. **B11 must run `scripts/backfill-provider-search.mjs` on each environment** so existing business docs get the new terms; B10 should eyeball the two-badge wrap at 320px it/de.
 - 2026-10-19 — B6 done (2c3a594): BusinessProfileSection on the professional tab, `updateBusinessDetails` allowlisted dotted paths + name/fullName mirror, logo to instructors/{uid}/gallery. Follow-up: the page's unsaved-changes guard ignores the section (own Save button).
 - 2026-10-19 — B4 done (9fe7b18): `accountTypeUnchanged` + allowlist `businessProtectedUnchanged` on instructors owner update, owner create cannot carry `business`/`providerType: business`, `businessVat` deny-all; 22 rules tests. Admins may change users.providerType (intended, D1).
 - 2026-10-19 — B3 done (6ba0f15): businessApplication.ts validator, transactional businessVat claim, always-pending for business, review-bypass guards (business lock, rejected never auto-approves, verified no-op incl. legacy docs), result gains `status`; `ApplyAsProviderErrorCode` exported; `BUSINESS_VAT_COLLECTION` exported for B8. Deferred: extract businessVatClaim.ts in B8; audit entry lacks providerType.
