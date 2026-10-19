@@ -140,10 +140,11 @@ service cloud.firestore {
     }
 
     /**
-     * Validate role update (admin only fields)
+     * Validate role update (admin only fields). providerType (individual/business) is
+     * set by applyAsProvider and tells the app which review path the account went through.
      */
     function isValidRoleUpdate() {
-      return request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'permissions', 'userType']);
+      return request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'permissions', 'userType', 'providerType']);
     }
 
     /**
@@ -372,6 +373,33 @@ service cloud.firestore {
     // INSTRUCTORS/PROVIDERS COLLECTION
     // ============================================
 
+    /**
+     * Business accounts: `providerType` and the `business` map are set by applyAsProvider
+     * (Admin SDK). An owner may touch neither — the map's presence IS the account type,
+     * so adding one to an individual or dropping one from a company would bypass review.
+     */
+    function providerTypeUnchanged() {
+      return request.resource.data.get('providerType', null) == resource.data.get('providerType', null) &&
+        (('business' in request.resource.data) == ('business' in resource.data));
+    }
+
+    /**
+     * Within `business`, the owner may edit presentation (displayName, description,
+     * website, logoUrl, city) but not legalName/vatNumber — they are what the admin
+     * verified and what the businessVat claim is keyed on — nor the venue binding
+     * (venueType, address, venueId), which ties the account to a venue the admin checked.
+     * Absent compared as null so a missing key can't be smuggled in or out.
+     */
+    function businessProtectedUnchanged() {
+      return !('business' in resource.data) || (
+        request.resource.data.business.get('legalName', null) == resource.data.business.get('legalName', null) &&
+        request.resource.data.business.get('vatNumber', null) == resource.data.business.get('vatNumber', null) &&
+        request.resource.data.business.get('venueType', null) == resource.data.business.get('venueType', null) &&
+        request.resource.data.business.get('address', null) == resource.data.business.get('address', null) &&
+        request.resource.data.business.get('venueId', null) == resource.data.business.get('venueId', null)
+      );
+    }
+
     match /instructors/{instructorId} {
       // Public read for verified instructors. The last clause matches the services rule's
       // reasoning below: ownership by path id, not by a `uid` field older/pending provider
@@ -391,7 +419,8 @@ service cloud.firestore {
          request.resource.data.get('partnerStatus', 'pending') == 'pending');
 
       // Update: admin can change anything; the owner may edit their profile but may
-      // NOT change isVerified or applicationStatus (only admin verifies/rejects).
+      // NOT change isVerified or applicationStatus (only admin verifies/rejects), nor
+      // providerType / the protected business fields (see the two helpers above).
       // Ownership by `uid` field or by path id, as for read: older provider docs lack a
       // `uid`, and their owners must still be able to set their own location (D4).
       allow update: if isAdmin() ||
@@ -402,7 +431,9 @@ service cloud.firestore {
          request.resource.data.get('applicationStatus', 'pending') ==
            resource.data.get('applicationStatus', 'pending') &&
          request.resource.data.get('partnerStatus', 'pending') ==
-           resource.data.get('partnerStatus', 'pending'));
+           resource.data.get('partnerStatus', 'pending') &&
+         providerTypeUnchanged() &&
+         businessProtectedUnchanged());
 
       allow delete: if isAdmin();
 
@@ -446,6 +477,12 @@ service cloud.firestore {
       match /bookingDays/{date} {
         allow read, write: if false;
       }
+    }
+
+    // P.IVA uniqueness claims for business accounts: written by applyAsProvider in a
+    // transaction (Admin SDK only); a client read would leak which VAT numbers are registered.
+    match /businessVat/{vatNumber} {
+      allow read, write: if false;
     }
 
     // ============================================
