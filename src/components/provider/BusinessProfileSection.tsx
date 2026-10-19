@@ -37,6 +37,9 @@ export function BusinessProfileSection({ uid }: BusinessProfileSectionProps) {
   const { setValues } = business;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Bumped by the retry button so the load effect runs again.
+  const [loadAttempt, setLoadAttempt] = useState(0);
+
   useEffect(() => {
     let cancelled = false;
     setLoadState('loading');
@@ -53,7 +56,7 @@ export function BusinessProfileSection({ uid }: BusinessProfileSectionProps) {
     return () => {
       cancelled = true;
     };
-  }, [uid, setValues]);
+  }, [uid, loadAttempt, setValues]);
 
   const handleSave = async () => {
     setSaveStatus('idle');
@@ -62,6 +65,7 @@ export function BusinessProfileSection({ uid }: BusinessProfileSectionProps) {
     try {
       await updateBusinessDetails(uid, toBusinessProfilePatch(business.values));
       setSaveStatus('saved');
+      setLogoError(null);
     } catch (error) {
       console.error('[BusinessProfileSection] save', error);
       setSaveStatus('error');
@@ -70,6 +74,12 @@ export function BusinessProfileSection({ uid }: BusinessProfileSectionProps) {
     }
   };
 
+  /**
+   * Upload, then point the company at the new file. If the Firestore write fails the
+   * uploaded object stays in storage, and a replaced logo is not deleted either: both are
+   * intentional — the gallery folder is cheap and an old URL may still be cached by
+   * clients, so nothing here removes files.
+   */
   const handleLogoPick = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -104,9 +114,14 @@ export function BusinessProfileSection({ uid }: BusinessProfileSectionProps) {
       )}
 
       {loadState === 'error' && (
-        <p role="alert" className="text-sm text-error">
-          {t('provider.business.edit.loadError')}
-        </p>
+        <div className="space-y-2">
+          <p role="alert" className="text-sm text-error">
+            {t('provider.business.edit.loadError')}
+          </p>
+          <Button type="button" variant="outline" size="md" className="min-h-11" onClick={() => setLoadAttempt((n) => n + 1)}>
+            {t('common.retry')}
+          </Button>
+        </div>
       )}
 
       {loadState === 'ready' && (
@@ -178,7 +193,7 @@ export function BusinessProfileSection({ uid }: BusinessProfileSectionProps) {
 
           <div aria-live="polite">
             {saveStatus === 'saved' && (
-              <p role="status" className="text-sm text-success-DEFAULT">
+              <p role="status" className="text-sm text-success">
                 {t('provider.business.edit.saved')}
               </p>
             )}

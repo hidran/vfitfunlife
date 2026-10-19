@@ -2099,6 +2099,7 @@ export const esMessages: Messages = {
   'provider.business.descriptionPlaceholder': 'Cuenta a los clientes qué ofrece tu empresa',
   'provider.business.frozenHint': 'Verificado por un administrador: contacta con soporte para cambiarlo.',
   'provider.business.edit.title': 'Datos de la empresa',
+  'provider.business.edit.displayNameHint': 'El nombre que ven los clientes.',
   'provider.business.edit.logo': 'Logotipo',
   'provider.business.edit.logoAlt': 'Logotipo de la empresa',
   'provider.business.edit.changeLogo': 'Cambiar logotipo',

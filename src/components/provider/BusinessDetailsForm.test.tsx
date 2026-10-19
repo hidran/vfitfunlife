@@ -130,6 +130,10 @@ describe('BusinessDetailsForm', () => {
       expect(onChange).not.toHaveBeenCalled();
       expect(vat.value).toBe('01234567897');
 
+      const display = screen.getByLabelText('Nome pubblico') as HTMLInputElement;
+      expect(display).not.toHaveAttribute('placeholder');
+      expect(display).toHaveAccessibleDescription('Il nome mostrato ai clienti.');
+
       const description = screen.getByLabelText('Descrizione (facoltativa)');
       expect(description).not.toHaveAttribute('readonly');
       fireEvent.change(description, { target: { value: 'Dal 1990' } });

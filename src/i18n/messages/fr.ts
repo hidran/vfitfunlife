@@ -2108,6 +2108,7 @@ export const frMessages: Messages = {
   'provider.business.descriptionPlaceholder': 'Expliquez aux clients ce que propose votre entreprise',
   'provider.business.frozenHint': 'Vérifié par un administrateur : contactez le support pour le modifier.',
   'provider.business.edit.title': 'Informations de l\'entreprise',
+  'provider.business.edit.displayNameHint': 'Le nom que voient les clients.',
   'provider.business.edit.logo': 'Logo',
   'provider.business.edit.logoAlt': 'Logo de l\'entreprise',
   'provider.business.edit.changeLogo': 'Changer le logo',

@@ -73,13 +73,20 @@ export function BusinessDetailsForm({
   const isFrozen = (field: BusinessDetailsField) => editing && FROZEN_IN_EDIT.includes(field);
 
   const set = (field: BusinessDetailsField, value: string) => {
-    if (isFrozen(field)) return;
     onClearError?.(field);
     onChange({ ...values, [field]: value });
   };
 
-  const text = (field: BusinessDetailsField) => (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-    set(field, e.target.value);
+  /** The change handler of a field, or none for a frozen one: its value never moves. */
+  const change = (field: BusinessDetailsField) =>
+    isFrozen(field)
+      ? undefined
+      : (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => set(field, e.target.value);
+
+  const normalizeVatOnBlur = () => {
+    const normalized = normalizeVatNumber(values.vatNumber);
+    if (normalized !== values.vatNumber) onChange({ ...values, vatNumber: normalized });
+  };
 
   const needsPremises = values.venueType !== 'none';
 
@@ -123,7 +130,7 @@ export function BusinessDetailsForm({
           type="text"
           autoComplete="organization"
           value={values.legalName}
-          onChange={text('legalName')}
+          onChange={change('legalName')}
           disabled={disabled}
           className={inputClass('legalName')}
           {...a11y('legalName')}
@@ -140,12 +147,8 @@ export function BusinessDetailsForm({
           autoComplete="off"
           placeholder={editing ? undefined : t('provider.business.vatPlaceholder')}
           value={values.vatNumber}
-          onChange={text('vatNumber')}
-          onBlur={() => {
-            if (isFrozen('vatNumber')) return;
-            const normalized = normalizeVatNumber(values.vatNumber);
-            if (normalized !== values.vatNumber) onChange({ ...values, vatNumber: normalized });
-          }}
+          onChange={change('vatNumber')}
+          onBlur={editing ? undefined : normalizeVatOnBlur}
           disabled={disabled}
           className={inputClass('vatNumber')}
           {...a11y('vatNumber')}
@@ -158,15 +161,17 @@ export function BusinessDetailsForm({
         <input
           id={id('displayName')}
           type="text"
-          placeholder={values.legalName}
+          placeholder={editing ? undefined : values.legalName}
           value={values.displayName}
-          onChange={text('displayName')}
+          onChange={change('displayName')}
           disabled={disabled}
           className={inputClass('displayName')}
           {...a11y('displayName', hintId)}
         />
         {renderError('displayName')}
-        <p id={hintId} className="mt-1 text-xs text-content-muted">{t('provider.business.displayNameHint')}</p>
+        <p id={hintId} className="mt-1 text-xs text-content-muted">
+          {t(editing ? 'provider.business.edit.displayNameHint' : 'provider.business.displayNameHint')}
+        </p>
       </div>
 
       {editing && (
@@ -178,7 +183,7 @@ export function BusinessDetailsForm({
             maxLength={2000}
             placeholder={t('provider.business.descriptionPlaceholder')}
             value={values.description}
-            onChange={text('description')}
+            onChange={change('description')}
             disabled={disabled}
             className={cn(inputClass('description'), 'resize-none')}
             {...a11y('description')}
@@ -190,11 +195,11 @@ export function BusinessDetailsForm({
       <div>
         {label('venueType', 'provider.business.venueType')}
         {editing ? (
+          // Display-only: a company stored without a venue type (see businessDetailsFromProvider) shows empty.
           <input
             id={id('venueType')}
             type="text"
-            value={t(VENUE_LABEL_KEY[values.venueType] ?? VENUE_LABEL_KEY.gym)}
-            onChange={() => undefined}
+            value={values.venueType ? t(VENUE_LABEL_KEY[values.venueType]) : ''}
             disabled={disabled}
             className={inputClass('venueType')}
             {...a11y('venueType')}
@@ -224,7 +229,7 @@ export function BusinessDetailsForm({
             type="text"
             autoComplete="street-address"
             value={values.address}
-            onChange={text('address')}
+            onChange={change('address')}
             disabled={disabled}
             className={inputClass('address')}
             {...a11y('address')}
@@ -241,7 +246,7 @@ export function BusinessDetailsForm({
             type="text"
             autoComplete="address-level2"
             value={values.city}
-            onChange={text('city')}
+            onChange={change('city')}
             disabled={disabled}
             className={inputClass('city')}
             {...a11y('city')}
@@ -259,7 +264,7 @@ export function BusinessDetailsForm({
           autoComplete="url"
           placeholder={t('provider.business.websitePlaceholder')}
           value={values.website}
-          onChange={text('website')}
+          onChange={change('website')}
           disabled={disabled}
           className={inputClass('website')}
           {...a11y('website')}

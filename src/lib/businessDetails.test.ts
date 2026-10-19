@@ -109,12 +109,14 @@ describe('businessDetailsFromProvider', () => {
       legalName: 'Palestra Rossi S.r.l.',
       vatNumber: '01234567897',
       displayName: 'Palestra Rossi',
-      venueType: 'gym',
+      venueType: '',
       address: '',
       city: 'Milano',
       website: '',
       description: '',
     });
+    expect(businessDetailsFromProvider({ legalName: 'X', vatNumber: '01234567897', displayName: 'X', venueType: 'studio' }).venueType)
+      .toBe('studio');
   });
 });
 

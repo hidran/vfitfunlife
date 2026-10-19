@@ -2125,6 +2125,7 @@ export const itMessages = {
   'provider.business.descriptionPlaceholder': 'Racconta ai clienti cosa offre la tua azienda',
   'provider.business.frozenHint': 'Verificato da un amministratore: contatta il supporto per modificarlo.',
   'provider.business.edit.title': 'Dati aziendali',
+  'provider.business.edit.displayNameHint': 'Il nome mostrato ai clienti.',
   'provider.business.edit.logo': 'Logo',
   'provider.business.edit.logoAlt': 'Logo aziendale',
   'provider.business.edit.changeLogo': 'Cambia logo',

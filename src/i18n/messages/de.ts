@@ -2106,6 +2106,7 @@ export const deMessages: Messages = {
   'provider.business.descriptionPlaceholder': 'Erzählen Sie Kunden, was Ihr Unternehmen anbietet',
   'provider.business.frozenHint': 'Von einem Administrator geprüft: Wenden Sie sich an den Support, um es zu ändern.',
   'provider.business.edit.title': 'Unternehmensangaben',
+  'provider.business.edit.displayNameHint': 'Der Name, den Kunden sehen.',
   'provider.business.edit.logo': 'Logo',
   'provider.business.edit.logoAlt': 'Firmenlogo',
   'provider.business.edit.changeLogo': 'Logo ändern',

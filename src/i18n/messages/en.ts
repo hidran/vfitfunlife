@@ -2125,6 +2125,7 @@ export const enMessages: Messages = {
   'provider.business.descriptionPlaceholder': 'Tell customers what your company offers',
   'provider.business.frozenHint': 'Verified by an admin: contact support to change it.',
   'provider.business.edit.title': 'Company details',
+  'provider.business.edit.displayNameHint': 'The name customers see.',
   'provider.business.edit.logo': 'Logo',
   'provider.business.edit.logoAlt': 'Company logo',
   'provider.business.edit.changeLogo': 'Change logo',

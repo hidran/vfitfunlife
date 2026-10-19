@@ -113,9 +113,49 @@ describe('BusinessProfileSection', () => {
     expect(screen.getByRole('img', { name: 'Logo aziendale' })).toHaveAttribute('src', 'https://storage.example/new-logo.jpg');
   });
 
-  it('says when the company could not be loaded', async () => {
-    fetchProvider.mockResolvedValue(null);
+  it('keeps the old logo and says so when the upload fails', async () => {
+    uploadBusinessLogo.mockRejectedValueOnce(new Error('storage/unauthorized'));
+    render(<BusinessProfileSection uid="u1" />);
+    await screen.findByLabelText('Partita IVA');
+
+    fireEvent.change(screen.getByLabelText('Cambia logo'), { target: { files: [new File(['x'], 'logo.png', { type: 'image/png' })] } });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Impossibile caricare il logo');
+    expect(updateBusinessDetails).not.toHaveBeenCalled();
+    expect(screen.getByRole('img', { name: 'Logo aziendale' })).toHaveAttribute('src', 'https://storage.example/logo.jpg');
+  });
+
+  it('blocks a description longer than the server allows', async () => {
+    render(<BusinessProfileSection uid="u1" />);
+    await screen.findByLabelText('Partita IVA');
+
+    fireEvent.change(screen.getByLabelText('Descrizione (facoltativa)'), { target: { value: 'x'.repeat(2001) } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salva dati aziendali' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Testo troppo lungo');
+    expect(screen.getByLabelText('Descrizione (facoltativa)')).toHaveFocus();
+    expect(updateBusinessDetails).not.toHaveBeenCalled();
+  });
+
+  it('drops the saved confirmation as soon as a field is edited again', async () => {
+    render(<BusinessProfileSection uid="u1" />);
+    await screen.findByLabelText('Partita IVA');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Salva dati aziendali' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Dati aziendali salvati');
+
+    fireEvent.change(screen.getByLabelText('Città'), { target: { value: 'Roma' } });
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('says when the company could not be loaded and retries on request', async () => {
+    fetchProvider.mockResolvedValueOnce(null);
     render(<BusinessProfileSection uid="u1" />);
     expect(await screen.findByRole('alert')).toHaveTextContent('Impossibile caricare i dati aziendali');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Riprova' }));
+
+    expect(await screen.findByLabelText('Partita IVA')).toBeInTheDocument();
+    expect(fetchProvider).toHaveBeenCalledTimes(2);
   });
 });

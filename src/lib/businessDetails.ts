@@ -168,13 +168,18 @@ export function toBusinessApplicationInput(values: BusinessDetailsValues): Busin
   return input;
 }
 
-/** The stored company as form values, for the profile card; blanks become empty strings. */
+/**
+ * The stored company as form values, for the profile card; blanks become empty strings.
+ * The venue type is kept as stored: in edit mode it is display-only (frozen, never
+ * written), so a company saved without one shows an empty field rather than a default
+ * the admin never verified.
+ */
 export function businessDetailsFromProvider(business: BusinessDetails): BusinessDetailsValues {
   return {
     legalName: business.legalName ?? '',
     vatNumber: business.vatNumber ?? '',
     displayName: business.displayName ?? '',
-    venueType: business.venueType ?? 'gym',
+    venueType: (business.venueType ?? '') as BusinessVenueType,
     address: business.address ?? '',
     city: business.city ?? '',
     website: business.website ?? '',
