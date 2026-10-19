@@ -77,7 +77,7 @@ token and booking screen shows the company name with no further change.
 
 ## 3. Phase 1 — registration, approval, listing, booking
 
-### B1 `[ ]` Italian P.IVA validator (Small)
+### B1 `[x]` (e308d61) Italian P.IVA validator (Small)
 - Files: `functions/src/providers/vatNumber.ts` (+ `.test.ts`), `src/lib/vatNumber.ts` (+ `.test.ts`) — the
   same ~15 lines in both trees (functions and web don't share a package), kept identical by a test fixture
   list used by both.
@@ -225,3 +225,4 @@ Added 2026-10-19 from `docs/superpowers/specs/2026-10-19-unified-group-courses-d
 
 - 2026-10-04 — Plan written after the design was approved ("go for C"). No tasks started.
 - 2026-10-19 — B8 owner field corrected to `ownerId`; B12 added (venue on approval, school/studio types) per the unified-courses spec. Execution started (subagent-driven, on main).
+- 2026-10-19 — B1 done (e308d61): validator in both trees, 19+19 tests; follow-up for B3: add a check-digit-0 fixture (e.g. 50500000000) and `typeof === 'string'` guard before calling from callables.
