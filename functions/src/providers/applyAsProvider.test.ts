@@ -205,6 +205,85 @@ describe("applyAsProvider for an individual (unchanged)", () => {
   });
 });
 
+describe("applyAsProvider cannot bypass review", () => {
+  const admin1 = { uid: "admin1", email: "admin@example.com", role: "admin" };
+
+  it("keeps a pending business pending when it re-applies as an individual with auto-approval on", async () => {
+    await apply("u1", { providerType: "business", business });
+    const before = await read("instructors/u1");
+
+    await expect(apply("u1", { providerType: "individual", fullName: "Mario" }))
+      .rejects.toMatchObject({ code: "failed-precondition", message: "provider_type_locked" });
+    await expect(apply("u1", { fullName: "Mario" }))
+      .rejects.toMatchObject({ code: "failed-precondition", message: "provider_type_locked" });
+
+    expect(await read("instructors/u1")).toEqual(before);
+    expect(await read("users/u1")).toMatchObject({ providerStatus: "pending", providerType: "business", role: "customer" });
+  });
+
+  it("treats a re-application from a business account as a business even when the request says individual", async () => {
+    await apply("u1", { providerType: "business", business });
+    const result = await apply("u1", { providerType: "individual", business: { ...business, city: "Milano" } });
+    expect(result.autoApproved).toBe(false);
+    expect(await read("instructors/u1")).toMatchObject({
+      providerType: "business", applicationStatus: "pending", fullName: "Palestra Rossi", business: { city: "Milano" },
+    });
+    expect(await read("users/u1")).toMatchObject({ providerStatus: "pending", providerType: "business" });
+  });
+
+  it("keeps a rejected business locked to business after rejection", async () => {
+    await apply("u1", { providerType: "business", business });
+    await decision.commitProviderDecision({ providerId: "u1", decision: "rejected", actor: admin1 });
+    await expect(apply("u1", {})).rejects.toMatchObject({ code: "failed-precondition", message: "provider_type_locked" });
+    expect(await read("users/u1")).toMatchObject({ providerStatus: "rejected" });
+  });
+
+  it("queues a rejected individual on re-apply even with auto-approval on", async () => {
+    await setAutoApprove(false);
+    await apply("u1", { fullName: "Anna" });
+    await decision.commitProviderDecision({ providerId: "u1", decision: "rejected", actor: admin1, notes: "No" });
+    await setAutoApprove(true);
+
+    const result = await apply("u1", { fullName: "Anna" });
+    expect(result).toMatchObject({ autoApproved: false, draftServicesSeeded: 0 });
+    expect(await read("users/u1")).toMatchObject({ providerStatus: "pending", role: "customer" });
+    expect(await read("instructors/u1")).toMatchObject({
+      applicationStatus: "pending", providerProfile: { isVerified: false },
+    });
+    expect((await db.collection("instructors/u1/services").get()).empty).toBe(true);
+  });
+
+  it("is a no-op for an already verified individual", async () => {
+    await apply("u1", { fullName: "Anna" });
+    const instructorBefore = await read("instructors/u1");
+    const userBefore = await read("users/u1");
+
+    const result = await apply("u1", { fullName: "Someone Else", categoryIds: ["yoga"] });
+    expect(result).toEqual({ success: true, providerId: "u1", autoApproved: false, draftServicesSeeded: 0 });
+    expect(await read("instructors/u1")).toEqual(instructorBefore);
+    expect(await read("users/u1")).toEqual(userBefore);
+  });
+
+  it("refuses to convert a verified individual into a business", async () => {
+    await apply("u1", { fullName: "Anna" });
+    await expect(apply("u1", { providerType: "business", business }))
+      .rejects.toMatchObject({ code: "failed-precondition", message: "provider_type_locked" });
+    expect((await db.collection("businessVat").get()).empty).toBe(true);
+    expect(await read("instructors/u1")).not.toHaveProperty("business");
+  });
+
+  it("is a no-op for an already verified business, keeping its claim", async () => {
+    await apply("u1", { providerType: "business", business });
+    await decision.commitProviderDecision({ providerId: "u1", decision: "verified", actor: admin1 });
+    const before = await read("instructors/u1");
+
+    const result = await apply("u1", { providerType: "business", business: { ...business, city: "Milano" } });
+    expect(result).toMatchObject({ autoApproved: false, draftServicesSeeded: 0 });
+    expect(await read("instructors/u1")).toEqual(before);
+    expect((await read(`businessVat/${VAT}`))?.uid).toBe("u1");
+  });
+});
+
 describe("commitProviderDecision on a business application", () => {
   const admin1 = { uid: "admin1", email: "admin@example.com", role: "admin" };
 

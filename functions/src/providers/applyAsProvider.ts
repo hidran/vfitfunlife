@@ -70,6 +70,22 @@ async function readOnboardingSettings(): Promise<ProviderOnboardingSettings> {
  *
  * Idempotent: re-applying merges rather than duplicating, and draft services are seeded only
  * when the provider has none.
+ *
+ * Re-applying can never route around a review (see applyAsProvider.test.ts):
+ *
+ * - An account that is a business (stored `providerType`/`business`) stays a business. A
+ *   re-application without a business payload fails `failed-precondition` /
+ *   `provider_type_locked` rather than being treated as an individual and auto-approved
+ *   with the company map still on the document.
+ * - A rejected applicant is always queued again, whatever `autoApprove` says: an admin
+ *   turned them down and only an admin may reverse that.
+ * - An already verified account is a no-op (nothing rewritten); a verified individual
+ *   cannot turn itself into a business here — conversions are an admin job.
+ *
+ * Known, accepted: an unverified account can hold a P.IVA claim it has no right to
+ * (squatting). It is bounded to one claim per uid — switching numbers releases the old
+ * one — and an admin frees a claim from the admin panel (plan B8); the pending review is
+ * where such an application is caught.
  */
 export const applyAsProvider = onCall<ApplyAsProviderData>(
   hotCallableOptions<ApplyAsProviderData>(),
@@ -92,36 +108,48 @@ export const applyAsProvider = onCall<ApplyAsProviderData>(
       throw new HttpsError("invalid-argument", "Too many categories");
     }
 
-    // The error message is the stable code (business_vat_invalid, …) the signup form maps
-    // to a localised inline error; see businessApplication.ts.
-    let providerType: ProviderType;
-    let business: ValidatedBusiness | null = null;
-    try {
-      providerType = parseProviderType(req.data?.providerType);
-      if (providerType === "business") {
-        business = validateBusinessApplication(req.data?.business);
-      }
-    } catch (err) {
-      if (err instanceof BusinessApplicationError) {
-        throw new HttpsError("invalid-argument", err.code);
-      }
-      throw err;
-    }
+    const requestedType = withApplicationErrors(() => parseProviderType(req.data?.providerType));
 
     const db = getFirestore();
-    const [settings, callerSnap] = await Promise.all([
+    const [settings, callerSnap, instructorSnap] = await Promise.all([
       readOnboardingSettings(),
       db.collection("users").doc(callerUid).get(),
+      db.collection("instructors").doc(callerUid).get(),
     ]);
     const caller = callerSnap.data() ?? {};
+    const existing = instructorSnap.data() ?? {};
     const applicantName = fullName ?? (caller.fullName as string) ?? null;
 
-    if (business) {
-      await queueBusinessApplication(db, callerUid, categoryIds, caller, business);
-      return { success: true, providerId: callerUid, autoApproved: false, draftServicesSeeded: 0 };
+    // What the account already is outranks what the request says: once a business, always
+    // a business, so a pending or rejected company cannot shed its map by re-applying as
+    // an individual. A verified individual cannot become a business either.
+    const isBusinessAccount =
+      caller.providerType === "business" ||
+      existing.providerType === "business" ||
+      (typeof existing.business === "object" && existing.business !== null);
+    const noop = { success: true, providerId: callerUid, autoApproved: false, draftServicesSeeded: 0 };
+
+    if (caller.providerStatus === "verified") {
+      if (requestedType === "business" && !isBusinessAccount) {
+        throw new HttpsError("failed-precondition", "provider_type_locked");
+      }
+      return noop;
     }
 
-    if (settings.autoApprove) {
+    const providerType: ProviderType = isBusinessAccount ? "business" : requestedType;
+    if (providerType === "business") {
+      if (isBusinessAccount && (req.data?.business === undefined || req.data?.business === null)) {
+        throw new HttpsError("failed-precondition", "provider_type_locked");
+      }
+      const business = withApplicationErrors(() => validateBusinessApplication(req.data?.business));
+      await queueBusinessApplication(db, callerUid, categoryIds, caller, business);
+      return noop;
+    }
+
+    const wasRejected =
+      caller.providerStatus === "rejected" || existing.applicationStatus === "rejected";
+
+    if (settings.autoApprove && !wasRejected) {
       const { draftServicesSeeded } = await commitProviderDecision({
         providerId: callerUid,
         decision: "verified",
@@ -172,6 +200,22 @@ export const applyAsProvider = onCall<ApplyAsProviderData>(
     return { success: true, providerId: callerUid, autoApproved: false, draftServicesSeeded: 0 };
   },
 );
+
+/**
+ * Runs a pure validator, turning its BusinessApplicationError into an `invalid-argument`
+ * HttpsError whose message is the stable code (business_vat_invalid, …) the signup form
+ * maps to a localised inline error; see businessApplication.ts.
+ */
+function withApplicationErrors<T>(fn: () => T): T {
+  try {
+    return fn();
+  } catch (err) {
+    if (err instanceof BusinessApplicationError) {
+      throw new HttpsError("invalid-argument", err.code);
+    }
+    throw err;
+  }
+}
 
 /** Known leaf ids only: the draft builder drops groups and invented ids. */
 function requestedLeafIds(categoryIds: string[], caller: Record<string, unknown>): string[] {
