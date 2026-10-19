@@ -52,6 +52,14 @@ describe('BecomeProviderCard', () => {
     mockLoadUserData.mockResolvedValue(null);
   });
 
+  it('has a live announcer for errors as soon as the form opens', () => {
+    renderCard();
+    fireEvent.click(screen.getByRole('button', { name: 'Inizia' }));
+    const announcer = document.querySelector('[aria-live="polite"]');
+    expect(announcer).toBeInTheDocument();
+    expect(announcer).toBeEmptyDOMElement();
+  });
+
   it('submits an individual application by default', async () => {
     mockSubmitProviderApplication.mockResolvedValueOnce({ success: true, status: 'verified' });
     renderCard();

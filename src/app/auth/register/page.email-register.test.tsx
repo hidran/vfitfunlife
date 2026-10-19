@@ -164,7 +164,7 @@ describe('RegisterPage Email Registration', () => {
     fireEvent.click(screen.getByRole('button', { name: /Crea Account/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/Le password non coincidono/i)).toBeInTheDocument();
+      expect(screen.getByText(/Le password non coincidono/i, { selector: 'p' })).toBeInTheDocument();
     });
 
     expect(mockRegisterWithEmail).not.toHaveBeenCalled();
@@ -235,7 +235,7 @@ describe('RegisterPage Email Registration', () => {
     fireEvent.click(screen.getByRole('button', { name: /Crea account/i }));
 
     await waitFor(() => {
-      expect(screen.getByText('Tocca almeno un servizio specifico (es. Personal Training): la categoria da sola non basta.')).toBeInTheDocument();
+      expect(screen.getByText('Tocca almeno un servizio specifico (es. Personal Training): la categoria da sola non basta.', { selector: 'p' })).toBeInTheDocument();
     });
     expect(mockRegisterWithEmail).not.toHaveBeenCalled();
   });
@@ -293,6 +293,17 @@ describe('RegisterPage Email Registration', () => {
     fireEvent.change(screen.getByLabelText('Indirizzo'), { target: { value: 'Via Roma 1' } });
     fireEvent.change(screen.getByLabelText('Città'), { target: { value: 'Milano' } });
   }
+
+  it('has a live announcer for submit errors on both forms before any error is shown', () => {
+    const { unmount } = render(<RegisterClient />);
+    fireEvent.click(screen.getByText('Email e Password'));
+    expect(document.querySelector('form [aria-live="polite"]')).toBeInTheDocument();
+    unmount();
+
+    mockAuthState.firebaseUser = { uid: 'social-uid', email: null };
+    render(<RegisterClient />);
+    expect(document.querySelector('form [aria-live="polite"]')).toBeInTheDocument();
+  });
 
   it('defaults the professional type to individual and reveals the company fields on Azienda', () => {
     mockSearchParams = new URLSearchParams('as=provider');
@@ -421,7 +432,7 @@ describe('RegisterPage Email Registration', () => {
     fireEvent.submit(document.querySelector('form')!);
 
     await waitFor(() => {
-      expect(screen.getByText(/Il nome completo è obbligatorio/i)).toBeInTheDocument();
+      expect(screen.getByText(/Il nome completo è obbligatorio/i, { selector: 'p' })).toBeInTheDocument();
     });
 
     expect(mockRegisterWithEmail).not.toHaveBeenCalled();
@@ -451,7 +462,7 @@ describe('RegisterPage Email Registration', () => {
     fireEvent.submit(document.querySelector('form')!);
 
     await waitFor(() => {
-      expect(screen.getByText(/Devi accettare i Termini/i)).toBeInTheDocument();
+      expect(screen.getByText(/Devi accettare i Termini/i, { selector: 'p' })).toBeInTheDocument();
     });
 
     expect(mockRegisterWithEmail).not.toHaveBeenCalled();

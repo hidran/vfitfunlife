@@ -129,11 +129,10 @@ export function BecomeProviderCard() {
             <p className="text-sm text-content-muted mb-2">{t('provider.optIn.pickServices')}</p>
             <CategoryLeafPicker value={selected} onChange={setSelected} disabled={submit.isPending} />
           </div>
-          <div aria-live="polite" className="empty:hidden">
-            {(errorKey || submit.isError) && (
-              <p className="text-sm text-[#EF4444]">{t(errorKey ?? 'provider.card.error')}</p>
-            )}
-          </div>
+          <div aria-live="polite" className="sr-only">{errorKey && t(errorKey)}</div>
+          {(errorKey || submit.isError) && (
+            <p className="text-sm text-[#EF4444]">{t(errorKey ?? 'provider.card.error')}</p>
+          )}
           <div className="flex gap-2">
             <Button size="sm" disabled={selected.length === 0 || submit.isPending} onClick={handleSubmit}>
               {submit.isPending ? t('provider.card.submitting') : t('provider.card.submit')}

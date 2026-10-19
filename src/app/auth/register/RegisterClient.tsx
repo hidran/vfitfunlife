@@ -403,8 +403,8 @@ export function RegisterClient() {
               </div>
             )}
 
-            {/* Error Message */}
-            <div aria-live="polite" className="empty:hidden">
+            {/* Error Message: a permanent screen-reader announcer, then the visual box. */}
+            <div aria-live="polite" className="sr-only">{!emailTaken ? error || storeError : null}</div>
             {!emailTaken && (error || storeError) && (
               <div className={cn(
                 "p-4 border rounded-lg",
@@ -445,7 +445,6 @@ export function RegisterClient() {
                 )}
               </div>
             )}
-            </div>
 
             {/* Full Name */}
             <div className="space-y-2">
@@ -655,14 +654,13 @@ export function RegisterClient() {
       {/* Form */}
       <div className="flex-1 px-6 pb-8">
         <form onSubmit={handleSocialSubmit} className="space-y-6 max-w-md mx-auto">
-          {/* Error Message */}
-          <div aria-live="polite" className="empty:hidden">
-            {error && (
-              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
-                <p className="text-red-400 text-sm text-center">{error}</p>
-              </div>
-            )}
-          </div>
+          {/* Error Message: a permanent screen-reader announcer, then the visual box. */}
+          <div aria-live="polite" className="sr-only">{error}</div>
+          {error && (
+            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+              <p className="text-red-400 text-sm text-center">{error}</p>
+            </div>
+          )}
 
           {/* Avatar Upload (placeholder for now) */}
           <div className="flex justify-center">

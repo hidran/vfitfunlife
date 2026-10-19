@@ -36,10 +36,10 @@ export function useBusinessDetails(idPrefix = DEFAULT_BUSINESS_ID_PREFIX, { disa
   // inputs can take focus again.
   const pendingFocus = useRef<BusinessDetailsField | null>(null);
   const [focusRequest, setFocusRequest] = useState(0);
-  const scheduleFocus = (field: BusinessDetailsField) => {
+  const scheduleFocus = useCallback((field: BusinessDetailsField) => {
     pendingFocus.current = field;
     setFocusRequest((n) => n + 1);
-  };
+  }, []);
 
   useEffect(() => {
     if (!pendingFocus.current || disabled) return;
@@ -66,7 +66,7 @@ export function useBusinessDetails(idPrefix = DEFAULT_BUSINESS_ID_PREFIX, { disa
       return null;
     }
     return toBusinessApplicationInput(values);
-  }, [values]);
+  }, [values, scheduleFocus]);
 
   /** Shows why the server refused and returns the message to announce. */
   const applyServerError = useCallback((err: unknown): MessageKey => {
@@ -76,7 +76,7 @@ export function useBusinessDetails(idPrefix = DEFAULT_BUSINESS_ID_PREFIX, { disa
       scheduleFocus(field);
     }
     return key;
-  }, []);
+  }, [scheduleFocus]);
 
   const reset = useCallback(() => {
     setValues(EMPTY_BUSINESS_DETAILS);
