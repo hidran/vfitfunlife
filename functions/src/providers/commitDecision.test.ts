@@ -75,7 +75,7 @@ describe("commitProviderDecision (one transaction)", () => {
     it("verifies an individual: role, status, catalogue entry, default hours, draft service and audit — one commit", async () => {
       await expect(
         commitProviderDecision({ providerId: "u1", decision: "verified", actor: SELF, application: SELF_APPLY }),
-      ).resolves.toEqual({ draftServicesSeeded: 1 });
+      ).resolves.toEqual({ draftServicesSeeded: 1, venueId: null });
       expect(h.state.commits).toBe(1);
       expect(h.read("users/u1")).toMatchObject({
         role: "provider",
@@ -127,7 +127,7 @@ describe("commitProviderDecision (one transaction)", () => {
       h.state.beforeCommit = () => h.put("users/u1", { ...USER, searchTokens: ["mario"] });
       await expect(
         commitProviderDecision({ providerId: "u1", decision: "verified", actor: SELF, application: SELF_APPLY }),
-      ).resolves.toEqual({ draftServicesSeeded: 1 });
+      ).resolves.toEqual({ draftServicesSeeded: 1, venueId: null });
       expect(h.state.attempts).toBe(2);
       expect(h.read("users/u1")).toMatchObject({ providerStatus: "verified", searchTokens: ["mario"] });
     });
@@ -150,7 +150,8 @@ describe("commitProviderDecision (one transaction)", () => {
     });
 
     it("a matching review of a company that holds its claim is approved; name, profile and business map are kept", async () => {
-      await expect(approve(REVIEWED)).resolves.toEqual({ draftServicesSeeded: 0 });
+      // COMPANY stores no venueType ⇒ "gym": its approval creates the venue (B12, see commitDecisionVenue.test.ts).
+      await expect(approve(REVIEWED)).resolves.toEqual({ draftServicesSeeded: 0, venueId: "biz_u1" });
       expect(h.read("instructors/u1")).toMatchObject({
         name: "Karate Club Milano",
         fullName: "Karate Club Milano",
@@ -236,7 +237,7 @@ describe("commitProviderDecision (one transaction)", () => {
 
     it("an unrelated concurrent write (the search-index trigger rewriting searchTerms) re-runs it — no spurious stale_review", async () => {
       h.state.beforeCommit = () => h.put("instructors/u1", { ...PENDING_COMPANY, searchTerms: ["karate"] });
-      await expect(approve(REVIEWED)).resolves.toEqual({ draftServicesSeeded: 0 });
+      await expect(approve(REVIEWED)).resolves.toEqual({ draftServicesSeeded: 0, venueId: "biz_u1" });
       expect(h.state.attempts).toBe(2);
       expect(h.read("instructors/u1")).toMatchObject({ applicationStatus: "verified", searchTerms: ["karate"] });
     });
@@ -257,7 +258,7 @@ describe("commitProviderDecision (one transaction)", () => {
     it("an individual's approval is unchanged: no review, no claim", async () => {
       await expect(
         commitProviderDecision({ providerId: "u1", decision: "verified", actor: ADMIN }),
-      ).resolves.toEqual({ draftServicesSeeded: 0 });
+      ).resolves.toEqual({ draftServicesSeeded: 0, venueId: null });
       expect(listed()).toBe(true);
     });
 
@@ -302,7 +303,7 @@ describe("commitProviderDecision (one transaction)", () => {
       h.put("instructors/u1/services/mine", { name: "Mio HIIT", isActive: true });
       await expect(
         commitProviderDecision({ providerId: "u1", decision: "verified", actor: ADMIN }),
-      ).resolves.toEqual({ draftServicesSeeded: 0 });
+      ).resolves.toEqual({ draftServicesSeeded: 0, venueId: null });
       expect(h.read("instructors/u1/services/requested-hiit")).toBeUndefined();
     });
   });

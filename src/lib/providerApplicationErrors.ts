@@ -105,7 +105,8 @@ export function reportProviderApplicationError(
  * `updateBusinessTaxId` callables (functions/src/providers/businessAdmin.ts;
  * `protected_account` refuses a protected superadmin; `vat_carried_by_other` — moving a company
  * onto a number another company's record still carries; `concurrent_update` — contention
- * outlasted the server transaction's retries, try again). Tax-id and legal-field codes reuse
+ * outlasted the server transaction's retries, try again; `venue_exists` — B12, approving a
+ * company whose venue id is already taken, so nothing was approved). Tax-id and legal-field codes reuse
  * the signup form's texts, except `vat_already_registered`: an admin can do something about it.
  */
 export const ADMIN_BUSINESS_ERROR_CODES = [
@@ -126,6 +127,7 @@ export const ADMIN_BUSINESS_ERROR_CODES = [
   'protected_account',
   'vat_carried_by_other',
   'concurrent_update',
+  'venue_exists',
 ] as const;
 
 export type AdminBusinessErrorCode = (typeof ADMIN_BUSINESS_ERROR_CODES)[number];
@@ -148,6 +150,7 @@ export const ADMIN_BUSINESS_ERRORS: Record<AdminBusinessErrorCode, MessageKey> =
   protected_account: 'admin.business.error.protectedAccount',
   vat_carried_by_other: 'admin.business.error.vatCarriedByOther',
   concurrent_update: 'admin.business.error.concurrentUpdate',
+  venue_exists: 'admin.providerDecision.error.venueExists',
 };
 
 const ADMIN_CODES: ReadonlySet<string> = new Set(ADMIN_BUSINESS_ERROR_CODES);

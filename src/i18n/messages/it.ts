@@ -547,6 +547,9 @@ export const itMessages = {
   'admin.business.field.website': 'Sito web',
   'admin.business.field.city': 'Città',
   'admin.business.field.description': 'Descrizione',
+  'admin.business.field.venue': 'Sede',
+  'admin.business.venue.open': 'Apri sede',
+  'admin.business.venue.onApproval': 'Creata all\'approvazione',
   'admin.business.loadError': 'Impossibile caricare i dati aziendali. Ricarica la pagina.',
   'admin.business.action.changeTaxId': 'Modifica P.IVA e dati legali',
   'admin.business.action.release': 'Libera la P.IVA',
@@ -580,6 +583,7 @@ export const itMessages = {
   'admin.business.error.protectedAccount': 'Questo account è protetto e non può essere modificato da qui.',
   'admin.business.error.vatCarriedByOther': "Questa P.IVA / codice fiscale è ancora presente nella scheda di un'altra azienda (per esempio una respinta la cui P.IVA è stata liberata): prima convertila in singolo professionista o cambiane la P.IVA.",
   'admin.business.error.concurrentUpdate': 'Qualcun altro ha modificato questo account nello stesso momento. Ricarica la pagina e riprova.',
+  'admin.providerDecision.error.venueExists': 'La sede di questa azienda esiste già, quindi non è stato approvato nulla. Controlla la sede in Sedi, poi riprova.',
 
   // ─── Admin: Verifications page ───────────────────────────────────────
   'admin.verificationsPage.title': 'Verifiche provider',

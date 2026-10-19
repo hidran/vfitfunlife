@@ -62,6 +62,28 @@ describe("checkBusinessReview — approve what the admin actually saw", () => {
     expect(review({ business: { ...BUSINESS, ...expected } }, "verified", expected)).toBe(VAT);
   });
 
+  it("B12: the venue type and address the approval builds the venue from are part of the review", () => {
+    const stored = { ...BUSINESS, venueType: "school", address: " Via Po 2 " };
+    const expected = { vatNumber: VAT, legalName: LEGAL_NAME, venueType: "school", address: "Via Po 2" };
+    expect(review({ business: stored }, "verified", expected)).toBe(VAT);
+    for (const change of [{ venueType: "gym" }, { venueType: "none" }, { address: "Via Roma 1" }, { address: null }]) {
+      expectHttpsError(() => review({ business: stored }, "verified", { ...expected, ...change }), "failed-precondition", "stale_review");
+    }
+    // Older clients omit them: that is the defaults only (a gym, no address).
+    expectHttpsError(() => review({ business: stored }, "verified", { vatNumber: VAT, legalName: LEGAL_NAME }), "failed-precondition", "stale_review");
+    expect(review({ business: BUSINESS }, "verified", { vatNumber: VAT, legalName: LEGAL_NAME })).toBe(VAT);
+    expect(review({ business: { ...BUSINESS, venueType: null, address: null } }, "verified", { vatNumber: VAT, legalName: LEGAL_NAME })).toBe(VAT);
+  });
+
+  it("B12: a malformed venue type or address in the review is review_required; an unusable stored one is stale", () => {
+    for (const bad of [{ venueType: "pool" }, { venueType: 3 }, { address: 5 }]) {
+      expectHttpsError(() => review(PENDING_BUSINESS, "verified", { vatNumber: VAT, legalName: LEGAL_NAME, ...bad }), "failed-precondition", "review_required");
+    }
+    for (const bad of [{ venueType: "pool" }, { venueType: 3 }, { address: 5 }]) {
+      expectHttpsError(() => review({ business: { ...BUSINESS, ...bad } }, "verified", { vatNumber: VAT, legalName: LEGAL_NAME }), "failed-precondition", "stale_review");
+    }
+  });
+
   it("does not treat malformed stored legal facts as legacy defaults", () => {
     for (const change of [{ legalForm: "unknown" }, { legalForm: null }, { affiliationNumber: 123 }, { affiliationNumber: null }] as Record<string, unknown>[]) {
       expectHttpsError(() => review({ business: { ...BUSINESS, ...change } }, "verified",

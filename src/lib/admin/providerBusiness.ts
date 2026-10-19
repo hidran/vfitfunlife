@@ -1,6 +1,6 @@
-import type { BusinessLegalForm } from '@/types/firebase';
+import type { BusinessLegalForm, BusinessVenueType } from '@/types/firebase';
 import type { BusinessReview } from '@/lib/firebase/functions';
-import { BUSINESS_LEGAL_FORMS } from '@/lib/businessDetails';
+import { BUSINESS_LEGAL_FORMS, BUSINESS_VENUE_TYPES } from '@/lib/businessDetails';
 import { safeHttpUrl } from '@/lib/publicBusiness';
 
 /**
@@ -25,6 +25,12 @@ export interface AdminBusiness {
   /** http(s) only, else null. */
   logoUrl: string | null;
   city: string;
+  /** B12: what the approval's venue is built from. Absent ⇒ 'gym' (the form's default); an unknown value ⇒ null. */
+  venueType: BusinessVenueType | null;
+  /** As stored; '' when none. */
+  address: string;
+  /** `venues/{id}` created at approval, null before it. */
+  venueId: string | null;
 }
 
 const text = (value: unknown): string => (typeof value === 'string' ? value : '');
@@ -48,10 +54,29 @@ export function readAdminBusiness(raw: unknown): AdminBusiness | null {
     website: safeHttpUrl(b.website) ?? null,
     logoUrl: safeHttpUrl(b.logoUrl) ?? null,
     city: text(b.city),
+    venueType:
+      b.venueType === undefined || b.venueType === null
+        ? 'gym'
+        : (BUSINESS_VENUE_TYPES as readonly unknown[]).includes(b.venueType)
+          ? (b.venueType as BusinessVenueType)
+          : null,
+    address: text(b.address),
+    venueId: text(b.venueId).trim() || null,
   };
 }
 
-/** What the admin approved: the tax id, legal name, legal form and affiliation number on screen, exactly as they were read. */
+/**
+ * What the admin approved: the tax id, legal name, legal form, affiliation number and (B12) the
+ * venue type and address on screen, exactly as they were read. An unknown stored venue type is
+ * left out, so the server refuses the approval as stale rather than guessing.
+ */
 export function businessReviewOf(business: AdminBusiness): BusinessReview {
-  return { vatNumber: business.vatNumber, legalName: business.legalName, legalForm: business.legalForm, affiliationNumber: business.affiliationNumber };
+  return {
+    vatNumber: business.vatNumber,
+    legalName: business.legalName,
+    legalForm: business.legalForm,
+    affiliationNumber: business.affiliationNumber,
+    ...(business.venueType ? { venueType: business.venueType } : {}),
+    address: business.address,
+  };
 }

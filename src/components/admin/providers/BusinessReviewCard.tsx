@@ -2,10 +2,11 @@
 
 import { useId, type ReactNode } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { BusinessBadge, BusinessWebsiteLink } from '@/components/provider/BusinessBadge';
 import { useI18n } from '@/hooks/useI18n';
 import type { AdminBusiness } from '@/lib/admin/providerBusiness';
-import { LEGAL_FORM_LABEL } from '@/lib/businessDetails';
+import { LEGAL_FORM_LABEL, VENUE_TYPE_LABEL } from '@/lib/businessDetails';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -39,6 +40,27 @@ export function BusinessReviewCard({ business, children, className }: Props) {
     { label: t('provider.business.reviewed.affiliationNumber'), value: show(business.affiliationNumber) },
     { label: t('admin.business.field.displayName'), value: show(business.displayName) },
     { label: t('admin.business.field.city'), value: show(business.city) },
+    // B12: what an approval creates. Read-only, and part of the review the approval sends back.
+    {
+      label: t('provider.business.reviewed.venueType'),
+      value: business.venueType ? t(VENUE_TYPE_LABEL[business.venueType]) : none,
+    },
+    { label: t('provider.business.reviewed.address'), value: show(business.address) },
+    {
+      label: t('admin.business.field.venue'),
+      value: business.venueId ? (
+        <Link
+          href={`/admin/venues/?id=${encodeURIComponent(business.venueId)}`}
+          className="text-section-primary underline-offset-2 hover:underline"
+        >
+          {t('admin.business.venue.open')}
+        </Link>
+      ) : business.venueType === 'none' ? (
+        none
+      ) : (
+        t('admin.business.venue.onApproval')
+      ),
+    },
     {
       label: t('admin.business.field.website'),
       value: business.website ? (

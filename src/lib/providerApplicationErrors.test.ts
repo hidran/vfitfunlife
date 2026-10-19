@@ -143,6 +143,8 @@ describe('admin business errors (B8: approve, release, convert, change tax id)',
         // Re-review: moving onto a number another record carries; contention after retries.
         'vat_carried_by_other',
         'concurrent_update',
+        // B12: a venue the approval must not overwrite already lives at biz_<uid>.
+        'venue_exists',
       ].sort()
     );
   });
@@ -171,6 +173,7 @@ describe('admin business errors (B8: approve, release, convert, change tax id)',
     expect(adminBusinessErrorMessageKey(new Error('protected_account'))).toBe('admin.business.error.protectedAccount');
     expect(adminBusinessErrorMessageKey(new Error('vat_carried_by_other'))).toBe('admin.business.error.vatCarriedByOther');
     expect(adminBusinessErrorMessageKey(new Error('concurrent_update'))).toBe('admin.business.error.concurrentUpdate');
+    expect(adminBusinessErrorMessageKey(new Error('venue_exists'))).toBe('admin.providerDecision.error.venueExists');
   });
 
   it('returns null for anything that is not one of its codes', () => {

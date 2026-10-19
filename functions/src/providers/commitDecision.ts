@@ -11,6 +11,10 @@ import {
 import { BUSINESS_VAT_COLLECTION, assertNotExistingBusiness } from "./businessApplication";
 import { assertApprovalHoldsClaim, checkBusinessReview } from "./businessAdminRules";
 import { isProtectedSuperadmin } from "../lib/superadmins";
+import { planBusinessVenue } from "./businessVenue";
+
+/** gRPC status code: a `create` hit a document that already exists. */
+const ALREADY_EXISTS = 6;
 
 /** Who the audit entry should name as responsible for the decision. */
 export interface DecisionActor {
@@ -65,6 +69,11 @@ export interface CommitDecisionOptions {
  *   a business with no review ⇒ `review_required`;
  * - I2, one tax id one holder: approving a company requires that it holds the claim on its tax
  *   id (`claim_missing` / `vat_already_registered`);
+ * - B12, an approved company with premises gets its venue in the same commit: `venues/biz_<uid>` is
+ *   `create`d (never set), so a venue already living at that id — one an admin has promoted — is
+ *   never overwritten and fails the whole decision with `already-exists` / `venue_exists`; two
+ *   racing approvals collide on the id, or the loser's re-run sees `business.venueId` and
+ *   plans nothing. See planBusinessVenue;
  * - a provider deleted mid-flight ends in `not-found` / `provider_not_found`; a protected
  *   superadmin is refused with `permission-denied` / `protected_account`.
  * A concurrent write that changes none of the reviewed facts — e.g. the search-index trigger
@@ -75,7 +84,7 @@ export interface CommitDecisionOptions {
  */
 export async function commitProviderDecision(
   opts: CommitDecisionOptions
-): Promise<{ draftServicesSeeded: number }> {
+): Promise<{ draftServicesSeeded: number; venueId: string | null }> {
   const { providerId, decision, actor, notes, application, expectedReview } = opts;
 
   const db = getFirestore();
@@ -83,9 +92,12 @@ export async function commitProviderDecision(
   const instructorRef = db.collection("instructors").doc(providerId);
   const claims = db.collection(BUSINESS_VAT_COLLECTION);
   const verified = decision === "verified";
+  // Whether the attempt that ended in an error was creating a venue (reset on every re-run).
+  let creatingVenue = false;
 
   try {
     return await db.runTransaction(async (tx) => {
+      creatingVenue = false;
       // --- Reads (all of them before any write) ---
       const userSnap = await tx.get(userRef);
       const instructorSnap = await tx.get(instructorRef);
@@ -179,11 +191,24 @@ export async function commitProviderDecision(
         requestedLeaves,
         now,
       });
+      // B12: planned from the instructor doc this transaction read (so a location saved a moment
+      // ago is either seen or forces a re-run). Null for rejections, individuals, venueType
+      // "none", or a company whose business.venueId is already set.
+      const venuePlan = verified ? planBusinessVenue({ providerId, instructor, now }) : null;
+      if (venuePlan) {
+        // Nested map: merge deep-merges it, so legalName/vatNumber/etc. survive; a dotted
+        // "business.venueId" key would be stored literally by set(..., { merge: true }).
+        Object.assign(instructorPatch, venuePlan.instructorPatch);
+        creatingVenue = true;
+      }
       const drafts = verified && !hasServices ? draftServicesForCategories(requestedLeaves, locale) : [];
 
       // --- Writes ---
       tx.update(userRef, userPatch);
       tx.set(instructorRef, instructorPatch, { merge: true });
+      if (venuePlan) {
+        tx.create(db.collection("venues").doc(venuePlan.venueId), venuePlan.venue);
+      }
       for (const draft of drafts) {
         tx.set(instructorRef.collection("services").doc(draft.id), draft.data);
       }
@@ -199,13 +224,20 @@ export async function commitProviderDecision(
           providerStatus: decision,
           role: rolePatch?.role ?? user.role ?? null,
           draftServicesSeeded: drafts.length,
+          ...(venuePlan ? { venueId: venuePlan.venueId } : {}),
         },
         ...(notes ? { reason: notes } : {}),
       }));
 
-      return { draftServicesSeeded: drafts.length };
+      return { draftServicesSeeded: drafts.length, venueId: venuePlan?.venueId ?? null };
     });
   } catch (err) {
+    // The commit is atomic, so nothing of the decision was written when the venue create
+    // failed: retrying once the clash is resolved is safe. Mapped BEFORE the contention
+    // mapping (ALREADY_EXISTS is not ABORTED, but the venue clash must never be swallowed).
+    if (creatingVenue && (err as { code?: unknown } | null)?.code === ALREADY_EXISTS) {
+      throw new HttpsError("already-exists", "venue_exists");
+    }
     throw toConcurrentUpdateError(err);
   }
 }

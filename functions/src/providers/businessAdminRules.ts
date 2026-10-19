@@ -1,5 +1,5 @@
 import { HttpsError } from "firebase-functions/v2/https";
-import type { BusinessDetails, BusinessLegalForm } from "./businessTypes";
+import type { BusinessDetails, BusinessLegalForm, BusinessVenueType } from "./businessTypes";
 import {
   isApproved,
   BUSINESS_LEGAL_FORMS,
@@ -10,6 +10,7 @@ import {
   parseVatNumber,
 } from "./businessApplication";
 import { isValidItalianVat, normalizeVatNumber } from "./vatNumber";
+import { BUSINESS_VENUE_TYPES } from "../types";
 
 /**
  * Pure pieces of the admin actions on a business (plan 2026-10-04, task B8): approving what was
@@ -27,6 +28,12 @@ export interface BusinessReview {
   legalName: string;
   legalForm?: BusinessLegalForm | null;
   affiliationNumber?: string;
+  /**
+   * B12: the venue the approval will create is built from these two, so they are part of what
+   * the admin approves. Omitted only by older clients ⇒ the defaults ("gym", no address).
+   */
+  venueType?: BusinessVenueType;
+  address?: string | null;
 }
 
 /**
@@ -42,14 +49,18 @@ function businessOf(instructor: Record<string, unknown> | undefined): Record<str
 /** `{ vatNumber, legalName }` when `raw` has both as strings, else null. */
 function asReview(raw: unknown): BusinessReview | null {
   if (!raw || typeof raw !== "object") return null;
-  const { vatNumber, legalName, legalForm, affiliationNumber } = raw as Record<string, unknown>;
+  const { vatNumber, legalName, legalForm, affiliationNumber, venueType, address } = raw as Record<string, unknown>;
   if (typeof vatNumber !== "string" || typeof legalName !== "string" ||
+    (venueType !== undefined && !BUSINESS_VENUE_TYPES.includes(venueType as BusinessVenueType)) ||
+    (address !== undefined && address !== null && typeof address !== "string") ||
     (legalForm !== undefined && legalForm !== null && !BUSINESS_LEGAL_FORMS.includes(legalForm as BusinessLegalForm)) ||
     (affiliationNumber !== undefined && typeof affiliationNumber !== "string")) return null;
   return {
     vatNumber, legalName,
     legalForm: legalForm === undefined ? "company" : legalForm as BusinessLegalForm | null,
     affiliationNumber: affiliationNumber === undefined ? "" : affiliationNumber,
+    venueType: venueType === undefined ? "gym" : venueType as BusinessVenueType,
+    address: typeof address === "string" ? address.trim() : "",
   };
 }
 
@@ -114,7 +125,14 @@ export function checkBusinessReview(opts: {
   }
   const sameForm = storedForm === review.legalForm;
   const sameAffiliation = storedAffiliation === review.affiliationNumber;
-  if (!sameVat || !sameName || !sameForm || !sameAffiliation) {
+  // B12: the venue is created from these. Absent ⇒ "gym" and no address, like the form's defaults.
+  const storedVenueType = business?.venueType === undefined || business.venueType === null ? "gym" : business.venueType;
+  const storedAddress = business?.address === undefined || business.address === null ? "" : business.address;
+  if (!BUSINESS_VENUE_TYPES.includes(storedVenueType as BusinessVenueType) || typeof storedAddress !== "string") {
+    throw new HttpsError("failed-precondition", "stale_review");
+  }
+  const sameVenue = storedVenueType === review.venueType && storedAddress.trim() === review.address;
+  if (!sameVat || !sameName || !sameForm || !sameAffiliation || !sameVenue) {
     throw new HttpsError("failed-precondition", "stale_review");
   }
 

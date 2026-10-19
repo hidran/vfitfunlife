@@ -11,6 +11,9 @@ const COMPANY = {
   website: 'https://karate.example.it',
   logoUrl: 'https://cdn.example.it/logo.png',
   city: 'Milano',
+  venueType: 'school',
+  address: 'Via Po 2',
+  venueId: 'biz_u1',
 };
 
 describe('readAdminBusiness', () => {
@@ -34,13 +37,22 @@ describe('readAdminBusiness', () => {
 
   it('keeps the stored tax id and legal name exactly, so the review matches what is stored', () => {
     const b = readAdminBusiness({ ...COMPANY, legalName: ' Karate Club ', vatNumber: 'IT 12345678903' })!;
-    expect(businessReviewOf(b)).toEqual({ vatNumber: 'IT 12345678903', legalName: ' Karate Club ', legalForm: 'association', affiliationNumber: 'CONI-123' });
+    expect(businessReviewOf(b)).toEqual({ vatNumber: 'IT 12345678903', legalName: ' Karate Club ', legalForm: 'association', affiliationNumber: 'CONI-123', venueType: 'school', address: 'Via Po 2' });
   });
 
   it('defaults an absent legal form to company (pre-B3b docs) and blanks an unknown one', () => {
     const { legalForm: _omit, ...withoutForm } = COMPANY;
     expect(readAdminBusiness(withoutForm)!.legalForm).toBe('company');
     expect(readAdminBusiness({ ...COMPANY, legalForm: 'gym' })!.legalForm).toBeNull();
+  });
+
+  it('reads the venue the approval creates: type defaults to gym, unknown is null, the link is null before approval', () => {
+    const { venueType: _t, venueId: _v, address: _a, ...bare } = COMPANY;
+    expect(readAdminBusiness(bare)).toMatchObject({ venueType: 'gym', address: '', venueId: null });
+    expect(readAdminBusiness({ ...COMPANY, venueType: 'pool' })!.venueType).toBeNull();
+    expect(readAdminBusiness({ ...COMPANY, venueType: 'none' })!.venueType).toBe('none');
+    // An unknown type is not sent, so the server answers stale_review instead of guessing.
+    expect(businessReviewOf(readAdminBusiness({ ...COMPANY, venueType: 'pool' })!)).not.toHaveProperty('venueType');
   });
 
   it('drops a website or logo that is not http(s), and coerces mistyped text to ""', () => {

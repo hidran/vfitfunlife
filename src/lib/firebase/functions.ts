@@ -804,6 +804,9 @@ export interface BusinessReview {
   /** Omitted only by older clients reviewing default company data. */
   legalForm?: BusinessLegalForm | null;
   affiliationNumber?: string;
+  /** B12: the venue an approval creates is built from these, so they are part of the review. */
+  venueType?: BusinessVenueType;
+  address?: string | null;
 }
 
 export interface DecideProviderApplicationRequest {
@@ -815,6 +818,13 @@ export interface DecideProviderApplicationRequest {
    * ignored for rejections and individuals. Send the values the detail view displayed.
    */
   expectedReview?: BusinessReview;
+}
+
+/** `venueId`: the `venues/{id}` an approved company got for its premises (B12); null when none was created. */
+export interface DecideProviderApplicationResult {
+  success: boolean;
+  draftServicesSeeded: number;
+  venueId?: string | null;
 }
 
 /**
@@ -832,13 +842,15 @@ export interface DecideProviderApplicationRequest {
  * account holds it now). `not-found` / `provider_not_found` when the account was deleted;
  * `invalid-argument` / `invalid_provider_id` for an id that can't name an account;
  * `permission-denied` / `protected_account` for a protected superadmin; `aborted` /
- * `concurrent_update` when contention outlasted the server transaction's retries (try again).
+ * `concurrent_update` when contention outlasted the server transaction's retries (try again);
+ * `already-exists` / `venue_exists` when approving a company whose venue id (`biz_<uid>`) is already
+ * taken by a venue the decision must not overwrite (nothing was changed).
  */
 export async function decideProviderApplication(
   data: DecideProviderApplicationRequest,
-): Promise<{ success: boolean; draftServicesSeeded: number }> {
+): Promise<DecideProviderApplicationResult> {
   const functions = await getFunctionsInstance();
-  const fn = httpsCallable<typeof data, { success: boolean; draftServicesSeeded: number }>(
+  const fn = httpsCallable<typeof data, DecideProviderApplicationResult>(
     functions,
     "decideProviderApplication",
   );

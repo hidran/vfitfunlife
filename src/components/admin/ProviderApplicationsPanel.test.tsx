@@ -105,7 +105,7 @@ describe('ProviderApplicationsPanel', () => {
     expect(h.decideProviderApplication.mock.calls[0][0]).toEqual({
       providerId: 'c1',
       decision: 'verified',
-      expectedReview: { vatNumber: '12345678903', legalName: 'Karate Club Milano S.r.l.', legalForm: 'company', affiliationNumber: '' },
+      expectedReview: { vatNumber: '12345678903', legalName: 'Karate Club Milano S.r.l.', legalForm: 'company', affiliationNumber: '', venueType: 'gym', address: '' },
     });
   });
 
@@ -120,7 +120,7 @@ describe('ProviderApplicationsPanel', () => {
     expect(h.decideProviderApplication.mock.calls[0][0]).toEqual({
       providerId: 'c1',
       decision: 'verified',
-      expectedReview: { vatNumber: '12345678903', legalName: 'Senza Nome S.r.l.', legalForm: 'company', affiliationNumber: '' },
+      expectedReview: { vatNumber: '12345678903', legalName: 'Senza Nome S.r.l.', legalForm: 'company', affiliationNumber: '', venueType: 'gym', address: '' },
     });
   });
 

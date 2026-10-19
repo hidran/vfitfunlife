@@ -165,8 +165,55 @@ describe('ProviderDetailView — a company', () => {
     await waitFor(() => expect(store.verifyProviderAction).toHaveBeenCalledTimes(1));
     expect(store.verifyProviderAction.mock.calls[0][1]).toMatchObject({
       status: 'verified',
-      expectedReview: { vatNumber: COMPANY.vatNumber, legalName: COMPANY.legalName },
+      expectedReview: { vatNumber: COMPANY.vatNumber, legalName: COMPANY.legalName, venueType: 'gym', address: '' },
     });
+  });
+
+  it('B12: shows the venue type and address the approval will use, and sends them back as the reviewed snapshot', async () => {
+    seedCompany();
+    h.docs.set('instructors/c1', {
+      applicationStatus: 'pending',
+      business: { ...COMPANY, venueType: 'school', address: 'Via Po 2' },
+    });
+    renderView();
+
+    const card = await waitFor(businessCard);
+    const value = (label: keyof typeof itMessages) =>
+      within(card).getByText(it_(label)).nextElementSibling?.textContent;
+    expect(value('provider.business.reviewed.venueType')).toBe(it_('provider.business.venue.school'));
+    expect(value('provider.business.reviewed.address')).toBe('Via Po 2');
+    // Nothing exists yet: no link, just the promise.
+    expect(value('admin.business.field.venue')).toBe(it_('admin.business.venue.onApproval'));
+
+    fireEvent.click(screen.getByRole('button', { name: it_('admin.providerDetail.verify') }));
+    await waitFor(() => expect(store.verifyProviderAction).toHaveBeenCalledTimes(1));
+    expect(store.verifyProviderAction.mock.calls[0][1]).toMatchObject({
+      expectedReview: { venueType: 'school', address: 'Via Po 2' },
+    });
+  });
+
+  it('B12: once approved, links to the venue the approval created', async () => {
+    seedCompany();
+    h.docs.set('instructors/c1', {
+      applicationStatus: 'verified',
+      business: { ...COMPANY, venueType: 'gym', address: 'Via Po 2', venueId: 'biz_c1' },
+    });
+    renderView();
+
+    const card = await waitFor(businessCard);
+    const link = within(card).getByRole('link', { name: it_('admin.business.venue.open') });
+    expect(link.getAttribute('href')).toMatch(/^\/admin\/venues\/?\?id=biz_c1$/);
+  });
+
+  it('B12: a company with no premises shows no venue to come', async () => {
+    seedCompany();
+    h.docs.set('instructors/c1', { applicationStatus: 'pending', business: { ...COMPANY, venueType: 'none' } });
+    renderView();
+    const card = await waitFor(businessCard);
+    expect(within(card).getByText(it_('admin.business.field.venue')).nextElementSibling?.textContent).toBe(
+      it_('admin.providerDetail.field.naValue'),
+    );
+    expect(within(card).queryByText(it_('admin.business.venue.onApproval'))).not.toBeInTheDocument();
   });
 
   it('refreshes rejection so a rejected business immediately offers claim release', async () => {
