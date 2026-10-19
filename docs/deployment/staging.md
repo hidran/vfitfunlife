@@ -417,7 +417,7 @@ Then `node scripts/backfill-search-tokens.mjs --project vfit-app-staging` (dry r
 4. The venue `biz_<uid>` exists and is listed under Gyms & schools on `/fit/gyms` once the owner saved a location (`/provider/location`); it appears in `/admin/venues` with the Owner column.
 5. Owner edits public name and logo (venue name follows, slug does not), tax id and venue fields are read-only; customer finds the company with the Company badge and books it (badge/logo on `/book`, the confirm page and the booking detail).
 6. Admin corrections: release a rejected company's claim (`releaseBusinessVat` with the number), convert to individual, correct the tax id (`updateBusinessTaxId`); each audited.
-7. Reject (or convert) an approved company: the venue becomes inactive and leaves `/fit/gyms`; approve again: it is reactivated, not duplicated.
+7. Reject (or convert) an approved company: the venue becomes inactive and leaves `/fit/gyms`; approve again: it is reactivated, not duplicated (a venue an admin switched off by hand is not: it has no `deactivatedBy: 'lifecycle'` marker).
 8. Admin detail header and tab strip at 320 and 390 px with a long email; the Individual/Company toggle by keyboard.
 9. Courses smoke (`node scripts/smoke-group-courses-staging.mjs`, `smoke-course-participants-staging.mjs`) if the courses stack is part of the release.
 

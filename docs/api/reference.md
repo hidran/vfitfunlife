@@ -811,7 +811,7 @@ POST /convertBusinessToIndividual
 // Requires: admin or superadmin role
 ```
 
-Removes the business map and every claim of the uid, resets the public name to the person's, and deactivates the company's venue (`isActive: false`, `ownerId` kept). Verification state is unchanged.
+Removes the business map and every claim of the uid, resets the public name to the person's, and deactivates the company's venue (`isActive: false`, `deactivatedBy: 'lifecycle'`, `ownerId` kept). Verification state is unchanged.
 
 ### Update Business Tax Id
 

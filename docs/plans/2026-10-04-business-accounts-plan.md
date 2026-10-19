@@ -275,14 +275,16 @@ transactional base** (the ported delta of main's rebuild, see the Log entry "Rec
   planning in `businessVenue.ts`): the transaction reads `venues/biz_<uid>` with the other reads and `planBusinessVenue` decides:
   create (`tx.create`, never `set`) a pending, non-partner, active venue `{name: displayName, slug, type, city, address, ownerId: uid,
   partnerStatus: 'pending', isPartner: false, isActive: true, ...}` and link it as the nested `business.venueId`; **reactivate** the
-  company's own inactive venue on re-approval (patch `isActive`/`updatedAt` only, so admin edits, photos and `partnerStatus`
-  survive) and relink; nothing when already active and linked, or when `venueId` is set but the venue was deleted (a deleted venue is
-  not recreated). `venue_exists` (`already-exists`) is raised only for an **unexpected owner clash** (a venue at `biz_<uid>` owned by
+  company's own venue on re-approval when the system had switched it off (`deactivatedBy: 'lifecycle'`; patch `isActive`/`updatedAt`
+  plus clearing the marker, so admin edits, photos and `partnerStatus` survive) and link `business.venueId` if it is empty; nothing
+  when it is already active and linked, when an admin switched it off by hand (no marker: it stays off), when `venueId` already
+  points at another venue (kept), or when `venueId` is set but the venue was deleted (a deleted venue is not recreated). `venue_exists` (`already-exists`) is raised only for an **unexpected owner clash** (a venue at `biz_<uid>` owned by
   someone else) or a lost `create` race. Individuals and `none` never get a venue. `decideProviderApplication` returns `venueId`
   (`null` unless a venue was created/brought back); the audit entry carries `venueId`, `venueReactivated`, `venueDeactivated`.
 - **Deactivation.** Rejection deactivates the company's own active venue; `convertBusinessToIndividual` does it in its transaction
-  (audit `venueDeactivated`); `deleteUserCascade` deactivates `venues where ownerId == uid` (`deactivateOwnedVenues`). `ownerId`
-  stays for audit; nothing is deleted (venues carry courses, sessions and bookings).
+  (audit `venueDeactivated`); `deleteUserCascade` deactivates the company's own `venues/biz_<uid>` (`deactivateOwnedVenues`), never
+  other venues whose `ownerId` is that uid (a partner gym's manager). All three mark the venue `deactivatedBy: 'lifecycle'`
+  (`venueDeactivation()`), which is what lets a later approval bring it back. `ownerId` stays for audit; nothing is deleted (venues carry courses, sessions and bookings).
 - **Mirror.** `syncBusinessVenueLocation` (`onDocumentWritten` on `instructors/{id}`, `retry: true`, so it needs `--force` on deploy)
   copies the owner's saved lat/lng and city, and `business.displayName` as the venue `name`. It re-reads the instructor's current
   values and writes only the announced fields (a move does not rewrite a name an admin edited). The slug is never changed. A
