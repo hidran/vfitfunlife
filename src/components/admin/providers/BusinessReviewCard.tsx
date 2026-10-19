@@ -43,7 +43,7 @@ export function BusinessReviewCard({ business, children, className }: Props) {
     // B12: what an approval creates. Read-only, and part of the review the approval sends back.
     {
       label: t('provider.business.reviewed.venueType'),
-      value: business.venueType ? t(VENUE_TYPE_LABEL[business.venueType]) : none,
+      value: business.venueType ? t(VENUE_TYPE_LABEL[business.venueType]) : t('admin.business.venue.unspecified'),
     },
     { label: t('provider.business.reviewed.address'), value: show(business.address) },
     {
@@ -55,7 +55,7 @@ export function BusinessReviewCard({ business, children, className }: Props) {
         >
           {t('admin.business.venue.open')}
         </Link>
-      ) : business.venueType === 'none' ? (
+      ) : !business.venueType || business.venueType === 'none' ? (
         none
       ) : (
         t('admin.business.venue.onApproval')

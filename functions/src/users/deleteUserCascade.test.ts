@@ -17,6 +17,7 @@ function fakeDeps(overrides: Partial<CascadeDeps> = {}) {
     recursiveDelete: vi.fn(async (p: string) => { calls.push(`fs:${p}`); }),
     deleteProviderApplications: vi.fn(async (uid: string) => { calls.push(`apps:${uid}`); }),
     deleteBusinessVatClaims: vi.fn(async (uid: string) => { calls.push(`vat:${uid}`); }),
+    deactivateOwnedVenues: vi.fn(async (uid: string) => { calls.push(`venues:${uid}`); }),
     deleteStoragePrefix: vi.fn(async (p: string) => { calls.push(`st:${p}`); }),
     deleteAuthUser: vi.fn(async (uid: string) => { calls.push(`auth:${uid}`); }),
     ...overrides,
@@ -33,7 +34,7 @@ describe("ownedStoragePrefixes", () => {
 });
 
 describe("deleteUserCascade", () => {
-  it("deletes Auth, then instructors, provider applications, tax-id claims and Storage, and users/{uid} LAST", async () => {
+  it("deletes Auth, then instructors, provider applications, tax-id claims, deactivates venues, clears Storage, and users/{uid} LAST", async () => {
     // users/{uid} must be the last thing removed: while it's still there, the user stays
     // listed in /admin/users and a partial failure can be found and retried (single delete
     // or a new bulk job) instead of vanishing with its instructor profile/avatars orphaned.
@@ -43,7 +44,8 @@ describe("deleteUserCascade", () => {
     expect(calls[1]).toBe("fs:instructors/u1");
     expect(calls[2]).toBe("apps:u1");
     expect(calls[3]).toBe("vat:u1");
-    expect(calls.slice(4, calls.length - 1)).toEqual(ownedStoragePrefixes("u1").map((p) => `st:${p}`));
+    expect(calls[4]).toBe("venues:u1");
+    expect(calls.slice(5, calls.length - 1)).toEqual(ownedStoragePrefixes("u1").map((p) => `st:${p}`));
     expect(calls.at(-1)).toBe("fs:users/u1");
   });
 
@@ -73,6 +75,7 @@ describe("deleteUserCascade", () => {
     expect(deps.recursiveDelete).not.toHaveBeenCalled();
     expect(deps.deleteProviderApplications).not.toHaveBeenCalled();
     expect(deps.deleteBusinessVatClaims).not.toHaveBeenCalled();
+    expect(deps.deactivateOwnedVenues).not.toHaveBeenCalled();
     expect(deps.deleteStoragePrefix).not.toHaveBeenCalled();
   });
 
@@ -97,5 +100,29 @@ describe("adminCascadeDeps().deleteBusinessVatClaims", () => {
 
     // Idempotent: a resumed cascade finds nothing left to delete.
     await expect(adminCascadeDeps().deleteBusinessVatClaims("u1")).resolves.toBeUndefined();
+  });
+});
+
+describe("adminCascadeDeps().deactivateOwnedVenues (S-4)", () => {
+  it("deactivates the venues the uid owns — kept, not deleted — and leaves everyone else's alone", async () => {
+    h.fake.reset();
+    h.fake.put("venues/biz_u1", { name: "Palestra", ownerId: "u1", isActive: true, partnerStatus: "active" });
+    h.fake.put("venues/other", { name: "Mine too", ownerId: "u1" }); // isActive absent counts as active
+    h.fake.put("venues/gone", { name: "Already off", ownerId: "u1", isActive: false });
+    h.fake.put("venues/biz_u2", { name: "Not theirs", ownerId: "u2", isActive: true });
+    h.fake.put("venues/biz_u1/locations/main", { name: "Centro" });
+
+    await adminCascadeDeps().deactivateOwnedVenues("u1");
+
+    expect(h.fake.read("venues/biz_u1")).toEqual({
+      name: "Palestra", ownerId: "u1", isActive: false, partnerStatus: "active", updatedAt: "NOW",
+    });
+    expect(h.fake.read("venues/other")).toMatchObject({ ownerId: "u1", isActive: false, updatedAt: "NOW" });
+    expect(h.fake.read("venues/gone")).toEqual({ name: "Already off", ownerId: "u1", isActive: false });
+    expect(h.fake.read("venues/biz_u2")).toEqual({ name: "Not theirs", ownerId: "u2", isActive: true });
+    expect(h.fake.read("venues/biz_u1/locations/main")).toEqual({ name: "Centro" });
+
+    // Idempotent: a resumed cascade changes nothing more.
+    await expect(adminCascadeDeps().deactivateOwnedVenues("u1")).resolves.toBeUndefined();
   });
 });

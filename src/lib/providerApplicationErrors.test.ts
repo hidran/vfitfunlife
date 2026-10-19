@@ -77,6 +77,8 @@ describe('PROVIDER_APPLICATION_ERRORS', () => {
         'invalid_business_city',
         'invalid_venue_type',
         'invalid_business_address',
+        'business_address_required',
+        'business_city_required',
         'invalid_provider_type',
         'invalid_legal_form',
         'invalid_affiliation_number',
@@ -107,6 +109,10 @@ describe('PROVIDER_APPLICATION_ERRORS', () => {
     // The premises (B12): each server code lands on its own field.
     expect(PROVIDER_APPLICATION_ERRORS.invalid_venue_type.field).toBe('venueType');
     expect(PROVIDER_APPLICATION_ERRORS.invalid_business_address.field).toBe('address');
+    expect(PROVIDER_APPLICATION_ERRORS.business_address_required.field).toBe('address');
+    expect(PROVIDER_APPLICATION_ERRORS.business_city_required.field).toBe('city');
+    expect(PROVIDER_APPLICATION_ERRORS.business_address_required.messageKey).toBe('provider.business.error.addressRequired');
+    expect(PROVIDER_APPLICATION_ERRORS.business_city_required.messageKey).toBe('provider.business.error.cityRequired');
     for (const { field } of Object.values(PROVIDER_APPLICATION_ERRORS)) {
       if (field) expect(Object.keys(EMPTY_BUSINESS_DETAILS)).toContain(field);
     }
@@ -173,7 +179,7 @@ describe('admin business errors (B8: approve, release, convert, change tax id)',
     expect(adminBusinessErrorMessageKey(new Error('protected_account'))).toBe('admin.business.error.protectedAccount');
     expect(adminBusinessErrorMessageKey(new Error('vat_carried_by_other'))).toBe('admin.business.error.vatCarriedByOther');
     expect(adminBusinessErrorMessageKey(new Error('concurrent_update'))).toBe('admin.business.error.concurrentUpdate');
-    expect(adminBusinessErrorMessageKey(new Error('venue_exists'))).toBe('admin.providerDecision.error.venueExists');
+    expect(adminBusinessErrorMessageKey(new Error('venue_exists'))).toBe('admin.business.error.venueExists');
   });
 
   it('returns null for anything that is not one of its codes', () => {

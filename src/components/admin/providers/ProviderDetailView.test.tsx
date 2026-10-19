@@ -165,8 +165,21 @@ describe('ProviderDetailView — a company', () => {
     await waitFor(() => expect(store.verifyProviderAction).toHaveBeenCalledTimes(1));
     expect(store.verifyProviderAction.mock.calls[0][1]).toMatchObject({
       status: 'verified',
-      expectedReview: { vatNumber: COMPANY.vatNumber, legalName: COMPANY.legalName, venueType: 'gym', address: '' },
+      expectedReview: { vatNumber: COMPANY.vatNumber, legalName: COMPANY.legalName, address: '' },
     });
+    // A company that never declared premises: no venue type is claimed in the review.
+    expect((store.verifyProviderAction.mock.calls[0][1] as { expectedReview: object }).expectedReview).not.toHaveProperty('venueType');
+  });
+
+  it('B12: a company without a stored venue type shows "not specified" and no venue to come', async () => {
+    seedCompany();
+    renderView();
+    const card = await waitFor(businessCard);
+    const value = (label: keyof typeof itMessages) =>
+      within(card).getByText(it_(label)).nextElementSibling?.textContent;
+    expect(value('provider.business.reviewed.venueType')).toBe(it_('admin.business.venue.unspecified'));
+    expect(value('admin.business.field.venue')).toBe(it_('admin.providerDetail.field.naValue'));
+    expect(within(card).queryByText(it_('admin.business.venue.onApproval'))).not.toBeInTheDocument();
   });
 
   it('B12: shows the venue type and address the approval will use, and sends them back as the reviewed snapshot', async () => {

@@ -94,13 +94,14 @@ describe("approving a company in a real transaction", () => {
     expect(await venues()).toHaveLength(1);
   });
 
-  it("a venue already at biz_<uid> is never overwritten: venue_exists, and nothing else was written", async () => {
+  it("a venue at biz_<uid> owned by someone else is never overwritten: venue_exists, and nothing else was written", async () => {
     await seedCompany();
-    await db.doc("venues/biz_biz").set({ name: "Promoted", partnerStatus: "active", isPartner: true });
+    const stranger = { name: "Promoted", partnerStatus: "active", isPartner: true, ownerId: "somebody-else" };
+    await db.doc("venues/biz_biz").set(stranger);
 
     await expect(approve()).rejects.toMatchObject({ code: "already-exists", message: "venue_exists" });
 
-    expect(await read("venues/biz_biz")).toEqual({ name: "Promoted", partnerStatus: "active", isPartner: true });
+    expect(await read("venues/biz_biz")).toEqual(stranger);
     expect(await read("users/biz")).toMatchObject({ providerStatus: "pending" });
     expect((await read("instructors/biz"))?.business).toEqual(BUSINESS);
     expect((await read("instructors/biz"))?.applicationStatus).toBe("pending");
@@ -120,6 +121,46 @@ describe("approving a company in a real transaction", () => {
     expect((await read("instructors/biz"))?.business?.venueId).toBe("biz_biz");
   });
 
+  it("reject-after-approve deactivates the venue; re-approval reactivates the same one and keeps the admin's edits", async () => {
+    await seedCompany();
+    await approve();
+    await db.doc("venues/biz_biz").update({ partnerStatus: "active", isPartner: true, amenities: ["Sauna"] });
+
+    await decision.commitProviderDecision({ providerId: "biz", decision: "rejected", actor: ADMIN });
+    expect(await read("venues/biz_biz")).toMatchObject({ isActive: false, ownerId: "biz", partnerStatus: "active" });
+    const audits = (await db.collection("audit_logs").get()).docs.map((d) => d.data());
+    expect(audits.some((a) => a.after?.venueDeactivated === true)).toBe(true);
+
+    await db.doc(`businessVat/${VAT}`).set({ uid: "biz", createdAt: admin.firestore.FieldValue.serverTimestamp() });
+    const again = await approve();
+
+    expect(again.venueId).toBe("biz_biz");
+    expect(await venues()).toHaveLength(1);
+    expect(await read("venues/biz_biz")).toMatchObject({
+      isActive: true, ownerId: "biz", partnerStatus: "active", isPartner: true, amenities: ["Sauna"],
+    });
+  });
+
+  it("an inactive venue whose link is gone is relinked and reactivated, not recreated", async () => {
+    await seedCompany();
+    await db.doc("venues/biz_biz").set({ name: "Old", ownerId: "biz", isActive: false, partnerStatus: "active" });
+    expect((await approve()).venueId).toBe("biz_biz");
+    expect(await read("venues/biz_biz")).toEqual({ name: "Old", ownerId: "biz", isActive: true, partnerStatus: "active", updatedAt: expect.anything() });
+    expect((await read("instructors/biz"))?.business).toEqual({ ...BUSINESS, venueId: "biz_biz" });
+  });
+
+  it("a company with no declared premises gets no venue", async () => {
+    await seedCompany();
+    const { venueType: _t, address: _a, ...legacy } = BUSINESS;
+    await db.doc("instructors/biz").set({ uid: "biz", providerProfile: { isVerified: false }, applicationStatus: "pending", business: legacy });
+    const result = await decision.commitProviderDecision({
+      providerId: "biz", decision: "verified", actor: ADMIN,
+      expectedReview: { vatNumber: VAT, legalName: BUSINESS.legalName, legalForm: "company", affiliationNumber: "" },
+    });
+    expect(result.venueId).toBeNull();
+    expect(await venues()).toHaveLength(0);
+  });
+
   it("a refused approval (stale review, missing claim) creates no venue", async () => {
     await seedCompany();
     await expect(
@@ -132,5 +173,42 @@ describe("approving a company in a real transaction", () => {
 
   it("an unrelated failure is not reported as venue_exists", async () => {
     await expect(approve("missing-user")).rejects.toMatchObject({ code: "not-found" });
+  });
+});
+
+describe("the venue leaves the listings with its owner's company (S-4), in real transactions and queries", () => {
+  it("convertBusinessToIndividual deactivates the company's venue in the same transaction, then re-approval reactivates it", async () => {
+    await seedCompany();
+    await approve();
+    await db.doc("users/admin1").set({ role: "admin", email: ADMIN.email, fullName: "Admin" });
+    const { convertBusinessToIndividual } = await import("../src/providers/businessAdmin");
+
+    await (convertBusinessToIndividual as unknown as { run: (r: unknown) => Promise<unknown> }).run({
+      auth: { uid: "admin1", token: { email: ADMIN.email } }, data: { providerId: "biz" },
+    });
+
+    expect(await read("venues/biz_biz")).toMatchObject({ isActive: false, ownerId: "biz" });
+    expect((await read("instructors/biz"))).not.toHaveProperty("business");
+    const audits = (await db.collection("audit_logs").get()).docs.map((d) => d.data());
+    expect(audits.some((a) => a.after?.venueDeactivated === true)).toBe(true);
+
+    // The company comes back (re-apply), and the approval brings the SAME venue back.
+    await db.doc("instructors/biz").set({ business: BUSINESS, applicationStatus: "pending" }, { merge: true });
+    await db.doc("users/biz").update({ providerType: "business", providerStatus: "pending" });
+    await db.doc(`businessVat/${VAT}`).set({ uid: "biz", createdAt: admin.firestore.FieldValue.serverTimestamp() });
+    expect((await approve()).venueId).toBe("biz_biz");
+    expect(await venues()).toHaveLength(1);
+    expect(await read("venues/biz_biz")).toMatchObject({ isActive: true });
+  });
+
+  it("the user-deletion cascade deactivates every venue the user owns (kept, not deleted)", async () => {
+    await db.doc("venues/biz_u1").set({ name: "A", ownerId: "u1", isActive: true });
+    await db.doc("venues/other").set({ name: "B", ownerId: "u2", isActive: true });
+    const { adminCascadeDeps } = await import("../src/users/deleteUserCascade");
+
+    await adminCascadeDeps().deactivateOwnedVenues("u1");
+
+    expect(await read("venues/biz_u1")).toMatchObject({ name: "A", ownerId: "u1", isActive: false });
+    expect(await read("venues/other")).toEqual({ name: "B", ownerId: "u2", isActive: true });
   });
 });

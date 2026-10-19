@@ -25,7 +25,10 @@ export interface AdminBusiness {
   /** http(s) only, else null. */
   logoUrl: string | null;
   city: string;
-  /** B12: what the approval's venue is built from. Absent ⇒ 'gym' (the form's default); an unknown value ⇒ null. */
+  /**
+   * B12: what the approval's venue is built from. null ⇒ not specified (absent, as on companies that
+   * predate the field or signed up from an old client, or an unusable value): approval creates no venue.
+   */
   venueType: BusinessVenueType | null;
   /** As stored; '' when none. */
   address: string;
@@ -54,12 +57,9 @@ export function readAdminBusiness(raw: unknown): AdminBusiness | null {
     website: safeHttpUrl(b.website) ?? null,
     logoUrl: safeHttpUrl(b.logoUrl) ?? null,
     city: text(b.city),
-    venueType:
-      b.venueType === undefined || b.venueType === null
-        ? 'gym'
-        : (BUSINESS_VENUE_TYPES as readonly unknown[]).includes(b.venueType)
-          ? (b.venueType as BusinessVenueType)
-          : null,
+    venueType: (BUSINESS_VENUE_TYPES as readonly unknown[]).includes(b.venueType)
+      ? (b.venueType as BusinessVenueType)
+      : null,
     address: text(b.address),
     venueId: text(b.venueId).trim() || null,
   };
@@ -67,8 +67,9 @@ export function readAdminBusiness(raw: unknown): AdminBusiness | null {
 
 /**
  * What the admin approved: the tax id, legal name, legal form, affiliation number and (B12) the
- * venue type and address on screen, exactly as they were read. An unknown stored venue type is
- * left out, so the server refuses the approval as stale rather than guessing.
+ * venue type and address on screen, exactly as they were read. A venue type that is not specified
+ * is left out: the server reads an omitted one as 'none', which is what an absent one is (and an
+ * unusable stored one is refused as stale rather than guessed).
  */
 export function businessReviewOf(business: AdminBusiness): BusinessReview {
   return {

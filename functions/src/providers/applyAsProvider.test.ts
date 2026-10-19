@@ -130,9 +130,9 @@ describe("applyAsProvider (handler)", () => {
     expect(dottedKeys(fake.ops)).toEqual([]);
   });
 
-  it("stores the premises (venueType, address) nested in the pending map, defaulting to a gym without an address", async () => {
+  it("stores the premises (venueType, address) nested in the pending map, defaulting to none (no venue) without an address", async () => {
     await call({ categoryIds: ["hiit"], providerType: "business", business: COMPANY });
-    expect(fake.read("instructors/u1")).toMatchObject({ business: { venueType: "gym", address: null } });
+    expect(fake.read("instructors/u1")).toMatchObject({ business: { venueType: "none", address: null } });
     expect(fake.read("instructors/u1")?.business).not.toHaveProperty("venueId");
   });
 
@@ -140,7 +140,7 @@ describe("applyAsProvider (handler)", () => {
     await call({
       categoryIds: ["hiit"],
       providerType: "business",
-      business: { ...COMPANY, venueType: "school", address: "  Via Roma 1, Milano " },
+      business: { ...COMPANY, venueType: "school", city: "Milano", address: "  Via Roma 1, Milano " },
     });
     expect(fake.read("instructors/u1")).toMatchObject({ business: { venueType: "school", address: "Via Roma 1, Milano" } });
     expect(dottedKeys(fake.ops)).toEqual([]);
@@ -150,10 +150,20 @@ describe("applyAsProvider (handler)", () => {
     await call({
       categoryIds: ["hiit"],
       providerType: "business",
-      business: { ...COMPANY, venueType: "studio", address: "Via Roma 1" },
+      business: { ...COMPANY, venueType: "studio", city: "Milano", address: "Via Roma 1" },
     });
     await call({ categoryIds: ["hiit"], providerType: "business", business: { ...COMPANY, venueType: "none" } });
     expect(fake.read("instructors/u1")).toMatchObject({ business: { venueType: "none", address: null } });
+  });
+
+  it("refuses premises without a street address or a city before touching anything", async () => {
+    await expect(
+      call({ categoryIds: ["hiit"], providerType: "business", business: { ...COMPANY, venueType: "gym", city: "Milano" } }),
+    ).rejects.toMatchObject({ code: "invalid-argument", message: "business_address_required" });
+    await expect(
+      call({ categoryIds: ["hiit"], providerType: "business", business: { ...COMPANY, venueType: "gym", address: "Via Roma 1" } }),
+    ).rejects.toMatchObject({ code: "invalid-argument", message: "business_city_required" });
+    expect(fake.ops).toEqual([]);
   });
 
   it("refuses an unknown venue type or an over-long address before touching anything", async () => {
@@ -161,7 +171,7 @@ describe("applyAsProvider (handler)", () => {
       call({ categoryIds: ["hiit"], providerType: "business", business: { ...COMPANY, venueType: "spa" } }),
     ).rejects.toMatchObject({ code: "invalid-argument", message: "invalid_venue_type" });
     await expect(
-      call({ categoryIds: ["hiit"], providerType: "business", business: { ...COMPANY, address: "a".repeat(201) } }),
+      call({ categoryIds: ["hiit"], providerType: "business", business: { ...COMPANY, venueType: "gym", city: "Milano", address: "a".repeat(201) } }),
     ).rejects.toMatchObject({ code: "invalid-argument", message: "invalid_business_address" });
     expect(fake.ops).toEqual([]);
   });

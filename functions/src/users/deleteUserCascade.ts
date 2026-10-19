@@ -1,4 +1,4 @@
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { getAuth } from "firebase-admin/auth";
 import { BUSINESS_VAT_COLLECTION } from "../providers/businessApplication";
@@ -9,6 +9,10 @@ import { BUSINESS_VAT_COLLECTION } from "../providers/businessApplication";
  * someone else's document. A company's `businessVat` tax-id claims go too: left behind they
  * would block the real owner of that tax id from ever registering (`vat_already_registered`)
  * with no account left to release them from.
+ *
+ * Venues the user owns (`venues.ownerId == uid`, e.g. a company's `biz_<uid>`) are DEACTIVATED,
+ * not deleted: a venue carries courses, sessions and bookings, which are kept records like the
+ * bookings above. `ownerId` stays for audit; the venue just leaves the public listings.
  */
 export function ownedStoragePrefixes(uid: string): string[] {
   return [
@@ -27,6 +31,8 @@ export interface CascadeDeps {
   deleteProviderApplications: (uid: string) => Promise<void>;
   /** Removes every `businessVat/{vat}` uniqueness claim whose uid == uid (business accounts). */
   deleteBusinessVatClaims: (uid: string) => Promise<void>;
+  /** Sets `isActive: false` on every venue with ownerId == uid (S-4); never deletes them. */
+  deactivateOwnedVenues: (uid: string) => Promise<void>;
   deleteStoragePrefix: (prefix: string) => Promise<void>;
   deleteAuthUser: (uid: string) => Promise<void>;
 }
@@ -62,6 +68,7 @@ export async function deleteUserCascade(uid: string, deps: CascadeDeps): Promise
   await deps.recursiveDelete(`instructors/${uid}`);
   await deps.deleteProviderApplications(uid);
   await deps.deleteBusinessVatClaims(uid);
+  await deps.deactivateOwnedVenues(uid);
 
   for (const prefix of ownedStoragePrefixes(uid)) {
     await deps.deleteStoragePrefix(prefix);
@@ -90,6 +97,18 @@ export function adminCascadeDeps(): CascadeDeps {
     deleteProviderApplications: (uid) => deleteWhere("providerApplications", "userId", uid),
     // Same automatic single-field index on `uid` that applyAsProvider's claim query uses.
     deleteBusinessVatClaims: (uid) => deleteWhere(BUSINESS_VAT_COLLECTION, "uid", uid),
+    deactivateOwnedVenues: async (uid) => {
+      const snap = await db.collection("venues").where("ownerId", "==", uid).get();
+      const CHUNK_SIZE = 400;
+      const active = snap.docs.filter((doc) => doc.data().isActive !== false);
+      for (let i = 0; i < active.length; i += CHUNK_SIZE) {
+        const batch = db.batch();
+        for (const doc of active.slice(i, i + CHUNK_SIZE)) {
+          batch.update(doc.ref, { isActive: false, updatedAt: FieldValue.serverTimestamp() });
+        }
+        await batch.commit();
+      }
+    },
     deleteStoragePrefix: async (prefix) => {
       await getStorage().bucket().deleteFiles({ prefix });
     },

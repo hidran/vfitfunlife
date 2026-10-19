@@ -212,7 +212,7 @@ describe("pendingApplicationPatches", () => {
         description: "",
         website: null,
         city: "Milano",
-        venueType: "gym",
+        venueType: "none",
         address: null,
       },
     });

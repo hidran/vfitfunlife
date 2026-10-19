@@ -822,7 +822,7 @@ export interface BusinessDetails {
   website?: string | null;
   logoUrl?: string | null;
   city?: string;
-  /** What the company offers at its premises. Absent ⇒ 'gym'; 'none' ⇒ no venue. Frozen for the owner. */
+  /** What the company offers at its premises. Absent ⇒ 'none'; 'none' ⇒ no venue. Frozen for the owner. */
   venueType?: BusinessVenueType;
   /** Street address of the venue created on approval. Frozen for the owner. */
   address?: string | null;

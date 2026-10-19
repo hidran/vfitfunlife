@@ -35,7 +35,7 @@ export interface BusinessDetails {
   logoUrl?: string | null;
   city?: string;
   /**
-   * What the company offers at its premises (B12). Absent ⇒ "gym"; "none" ⇒ no venue is
+   * What the company offers at its premises (B12). Absent ⇒ "none"; "none" ⇒ no venue is
    * created on approval. Admin-reviewed: the owner cannot change it after signup.
    */
   venueType?: BusinessVenueType;

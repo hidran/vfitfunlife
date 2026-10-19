@@ -150,8 +150,8 @@ describe("commitProviderDecision (one transaction)", () => {
     });
 
     it("a matching review of a company that holds its claim is approved; name, profile and business map are kept", async () => {
-      // COMPANY stores no venueType ⇒ "gym": its approval creates the venue (B12, see commitDecisionVenue.test.ts).
-      await expect(approve(REVIEWED)).resolves.toEqual({ draftServicesSeeded: 0, venueId: "biz_u1" });
+      // COMPANY stores no venueType ⇒ "none": no premises, no venue (B12, see commitDecisionVenue.test.ts).
+      await expect(approve(REVIEWED)).resolves.toEqual({ draftServicesSeeded: 0, venueId: null });
       expect(h.read("instructors/u1")).toMatchObject({
         name: "Karate Club Milano",
         fullName: "Karate Club Milano",
@@ -237,7 +237,7 @@ describe("commitProviderDecision (one transaction)", () => {
 
     it("an unrelated concurrent write (the search-index trigger rewriting searchTerms) re-runs it — no spurious stale_review", async () => {
       h.state.beforeCommit = () => h.put("instructors/u1", { ...PENDING_COMPANY, searchTerms: ["karate"] });
-      await expect(approve(REVIEWED)).resolves.toEqual({ draftServicesSeeded: 0, venueId: "biz_u1" });
+      await expect(approve(REVIEWED)).resolves.toEqual({ draftServicesSeeded: 0, venueId: null });
       expect(h.state.attempts).toBe(2);
       expect(h.read("instructors/u1")).toMatchObject({ applicationStatus: "verified", searchTerms: ["karate"] });
     });

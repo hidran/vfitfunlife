@@ -243,75 +243,118 @@ describe("business lifecycle (multi-call sequences)", () => {
     expectOneHolderPerTaxId();
   });
 
-  describe("B12: the venue an approval creates (through the callables)", () => {
+  describe("B12 / S-4: the venue follows the decisions (through the callables)", () => {
+    const GYM = { ...OWNER, venueType: "gym", city: "Torino", address: "Via Po 2" };
     const venueDocs = () => [...fake.docs.keys()].filter((path) => /^venues\/[^/]+$/.test(path));
     const auditCount = () => [...fake.docs.keys()].filter((path) => path.startsWith("audit_logs/")).length;
+    const reviewOf = (b: Data) => ({
+      vatNumber: b.vatNumber, legalName: b.legalName, ...(b.venueType ? { venueType: b.venueType } : {}), address: b.address ?? null,
+    });
+    const approveVenue = (uid: string, b: Data = GYM) =>
+      admin(decideProviderApplication, { providerId: uid, decision: "verified", expectedReview: reviewOf(b) });
+    const venue = (uid: string) => fake.read(`venues/biz_${uid}`) as Data | undefined;
 
     it("approving a company returns its venue id and creates exactly one venue; individuals and `none` create none", async () => {
-      await applyAsCompany("b", OWNER);
-      await expect(approve("b", OWNER)).resolves.toMatchObject({ success: true, venueId: "biz_b" });
+      await applyAsCompany("b", GYM);
+      await expect(approveVenue("b")).resolves.toMatchObject({ success: true, venueId: "biz_b" });
       expect(venueDocs()).toEqual(["venues/biz_b"]);
-      expect(fake.read("venues/biz_b")).toMatchObject({ ownerId: "b", type: "gym", partnerStatus: "pending", name: OWNER.displayName });
-      expect(instructor("b")).toMatchObject({ business: { ...OWNER, venueId: "biz_b" } });
+      expect(venue("b")).toMatchObject({ ownerId: "b", type: "gym", partnerStatus: "pending", name: OWNER.displayName, isActive: true });
+      expect(instructor("b")).toMatchObject({ business: { ...GYM, vatNumber: X, venueId: "biz_b" } });
 
       h.settings.autoApprove = false;
       await as("a", applyAsProvider, { categoryIds: ["hiit"], fullName: "Anna Abusiva" });
       await expect(approve("a")).resolves.toMatchObject({ success: true, venueId: null });
 
       fake.put("users/c", { fullName: "Carla", role: "customer", email: "c@example.it" });
-      await applyAsCompany("c", { ...OWNER, vatNumber: Y, venueType: "none" });
-      await expect(approve("c", { vatNumber: Y, legalName: OWNER.legalName })).rejects.toMatchObject({ message: "stale_review" });
-      await expect(
-        admin(decideProviderApplication, {
-          providerId: "c", decision: "verified",
-          expectedReview: { vatNumber: Y, legalName: OWNER.legalName, venueType: "none" },
-        }),
-      ).resolves.toMatchObject({ success: true, venueId: null });
+      const none = { ...OWNER, vatNumber: Y, venueType: "none" };
+      await applyAsCompany("c", none);
+      await expect(approve("c", { vatNumber: Y, legalName: OWNER.legalName })).resolves.toMatchObject({ success: true, venueId: null });
       expect(venueDocs()).toEqual(["venues/biz_b"]);
     });
 
+    it("a company that never declared premises (venueType omitted by an old client) gets no venue", async () => {
+      await applyAsCompany("b", OWNER);
+      expect((instructor("b")?.business as Data).venueType).toBe("none");
+      await expect(approve("b", OWNER)).resolves.toMatchObject({ success: true, venueId: null });
+      expect(venueDocs()).toEqual([]);
+    });
+
     it("a refused approval (stale_review, claim_missing, review_required) creates no venue", async () => {
-      await applyAsCompany("a", SQUATTER);
+      await applyAsCompany("a", { ...SQUATTER, venueType: "gym", city: "Torino", address: "Via Po 2" });
       await expect(approve("a", OWNER)).rejects.toMatchObject({ message: "stale_review" });
       await expect(admin(decideProviderApplication, { providerId: "a", decision: "verified" }))
         .rejects.toMatchObject({ message: "review_required" });
       await reject("a");
       await admin(releaseBusinessVat, { vatNumber: X });
-      await expect(approve("a", SQUATTER)).rejects.toMatchObject({ message: "claim_missing" });
+      await expect(approveVenue("a", { ...SQUATTER, venueType: "gym", address: "Via Po 2" })).rejects.toMatchObject({ message: "claim_missing" });
       expect(venueDocs()).toEqual([]);
       expect(isListed("a")).toBe(false);
     });
 
-    it("a rejection never creates a venue; the later approval creates it once", async () => {
-      await applyAsCompany("b", OWNER);
+    it("reject-after-approve deactivates the venue; the later approval reactivates the same one, keeping the admin's edits", async () => {
+      await applyAsCompany("b", GYM);
+      await approveVenue("b");
+      fake.put("venues/biz_b", { ...venue("b"), partnerStatus: "active", isPartner: true, photoUrls: ["https://example.com/p.jpg"] });
+
       await reject("b");
-      expect(venueDocs()).toEqual([]);
-      await applyAsCompany("b", OWNER); // re-applying takes the released claim back
-      await approve("b", OWNER);
-      await approve("b", OWNER);
+      expect(venue("b")).toMatchObject({ isActive: false, ownerId: "b", partnerStatus: "active" });
       expect(venueDocs()).toEqual(["venues/biz_b"]);
+
+      await applyAsCompany("b", GYM); // re-applying takes the released claim back
+      await expect(approveVenue("b")).resolves.toMatchObject({ success: true, venueId: "biz_b" });
+      expect(venueDocs()).toEqual(["venues/biz_b"]);
+      expect(venue("b")).toMatchObject({
+        isActive: true, partnerStatus: "active", isPartner: true, photoUrls: ["https://example.com/p.jpg"],
+      });
+      expect(instructor("b")).toMatchObject({ business: { venueId: "biz_b" } });
+    });
+
+    it("convert → re-apply as a company → approve reactivates the same venue instead of failing venue_exists", async () => {
+      await applyAsCompany("b", GYM);
+      await approveVenue("b");
+      fake.put("venues/biz_b", { ...venue("b"), name: "Palestra Rossi Centro", amenities: ["Sauna"] });
+
+      await admin(convertBusinessToIndividual, { providerId: "b" });
+      expect(instructor("b")).not.toHaveProperty("business");
+      expect(venue("b")).toMatchObject({ isActive: false, ownerId: "b", name: "Palestra Rossi Centro" });
+      const audit = [...fake.docs.entries()].filter(([path]) => path.startsWith("audit_logs/")).map(([, d]) => d).at(-1) as { after: Data };
+      expect(audit.after).toMatchObject({ venueId: "biz_b", venueDeactivated: true });
+
+      await applyAsCompany("b", GYM);
+      await expect(approveVenue("b")).resolves.toMatchObject({ success: true, venueId: "biz_b" });
+      expect(venueDocs()).toEqual(["venues/biz_b"]);
+      expect(venue("b")).toMatchObject({ isActive: true, name: "Palestra Rossi Centro", amenities: ["Sauna"], ownerId: "b" });
+      expect(instructor("b")).toMatchObject({ business: { venueId: "biz_b" } });
+    });
+
+    it("converting a company with no venue, or whose venue belongs to someone else, writes nothing to venues", async () => {
+      await applyAsCompany("b", { ...OWNER, venueType: "none" });
+      fake.put("venues/biz_b", { name: "Not b's", ownerId: "other", isActive: true });
+      await admin(convertBusinessToIndividual, { providerId: "b" });
+      expect(fake.read("venues/biz_b")).toEqual({ name: "Not b's", ownerId: "other", isActive: true });
     });
 
     it("an approval racing another approval of the same company: one venue, both succeed, the loser creates none", async () => {
-      await applyAsCompany("b", OWNER);
+      await applyAsCompany("b", GYM);
       let second: Promise<unknown> = Promise.resolve();
       fake.state.beforeCommit = async () => {
-        second = approve("b", OWNER);
+        second = approveVenue("b");
         await second;
       };
-      await expect(approve("b", OWNER)).resolves.toMatchObject({ success: true, venueId: null });
+      // The inner approval commits first and creates the venue; the outer one re-runs, sees it linked and active, and creates nothing.
+      await expect(approveVenue("b")).resolves.toMatchObject({ success: true, venueId: null });
       await expect(second).resolves.toMatchObject({ success: true, venueId: "biz_b" });
       expect(venueDocs()).toEqual(["venues/biz_b"]);
       expect(instructor("b")).toMatchObject({ business: { venueId: "biz_b" } });
       expectOneHolderPerTaxId();
     });
 
-    it("a venue already at biz_<uid> fails the approval with venue_exists and leaves the company pending, un-audited", async () => {
-      await applyAsCompany("b", OWNER);
+    it("a venue at biz_<uid> owned by someone else fails the approval with venue_exists and leaves the company pending, un-audited", async () => {
+      await applyAsCompany("b", GYM);
       const audited = auditCount();
-      fake.put("venues/biz_b", { name: "Promoted", partnerStatus: "active", isPartner: true });
-      await expect(approve("b", OWNER)).rejects.toMatchObject({ code: "already-exists", message: "venue_exists" });
-      expect(fake.read("venues/biz_b")).toEqual({ name: "Promoted", partnerStatus: "active", isPartner: true });
+      fake.put("venues/biz_b", { name: "Promoted", partnerStatus: "active", isPartner: true, ownerId: "other" });
+      await expect(approveVenue("b")).rejects.toMatchObject({ code: "already-exists", message: "venue_exists" });
+      expect(fake.read("venues/biz_b")).toEqual({ name: "Promoted", partnerStatus: "active", isPartner: true, ownerId: "other" });
       expect(isListed("b")).toBe(false);
       expect(fake.read("users/b")).toMatchObject({ providerStatus: "pending" });
       expect(auditCount()).toBe(audited);

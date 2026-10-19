@@ -730,7 +730,7 @@ export async function applyAsProvider(data: {
     description?: string;
     website?: string;
     city?: string;
-    /** What the company offers at its premises. Absent ⇒ 'gym'; 'none' ⇒ no venue is created on approval. */
+    /** What the company offers at its premises. Absent ⇒ 'none'; 'none' ⇒ no venue is created on approval. */
     venueType?: BusinessVenueType;
     /** Street address of the premises, at most 200 characters. Omitted for 'none'. */
     address?: string;

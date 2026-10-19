@@ -11,7 +11,7 @@ import {
 import { BUSINESS_VAT_COLLECTION, assertNotExistingBusiness } from "./businessApplication";
 import { assertApprovalHoldsClaim, checkBusinessReview } from "./businessAdminRules";
 import { isProtectedSuperadmin } from "../lib/superadmins";
-import { planBusinessVenue } from "./businessVenue";
+import { businessVenueId, planBusinessVenue } from "./businessVenue";
 
 /** gRPC status code: a `create` hit a document that already exists. */
 const ALREADY_EXISTS = 6;
@@ -69,11 +69,13 @@ export interface CommitDecisionOptions {
  *   a business with no review ⇒ `review_required`;
  * - I2, one tax id one holder: approving a company requires that it holds the claim on its tax
  *   id (`claim_missing` / `vat_already_registered`);
- * - B12, an approved company with premises gets its venue in the same commit: `venues/biz_<uid>` is
- *   `create`d (never set), so a venue already living at that id — one an admin has promoted — is
- *   never overwritten and fails the whole decision with `already-exists` / `venue_exists`; two
- *   racing approvals collide on the id, or the loser's re-run sees `business.venueId` and
- *   plans nothing. See planBusinessVenue;
+ * - B12, the company's venue follows the decision, in the same commit. The transaction READS
+ *   `venues/biz_<uid>` (with the other reads) and planBusinessVenue decides from it: approval
+ *   creates the venue (`create`, never set), or reactivates the company's own inactive one
+ *   touching only isActive/updatedAt (admin edits, photos and partnerStatus survive) and
+ *   relinks `business.venueId`; a rejection deactivates it. A venue at that id owned by
+ *   someone else fails the whole decision with `already-exists` / `venue_exists`, as does a
+ *   `create` that loses a race to another create (the read makes that a re-run first).
  * - a provider deleted mid-flight ends in `not-found` / `provider_not_found`; a protected
  *   superadmin is refused with `permission-denied` / `protected_account`.
  * A concurrent write that changes none of the reviewed facts — e.g. the search-index trigger
@@ -137,6 +139,11 @@ export async function commitProviderDecision(
         !(await tx.get(instructorRef.collection("services").limit(1))).empty :
         true;
 
+      // B12: the company's venue (read here, with the other reads). Only a company has one.
+      const venueRef = db.collection("venues").doc(businessVenueId(providerId));
+      const hasBusiness = !!instructor.business && typeof instructor.business === "object";
+      const venueSnap = hasBusiness ? await tx.get(venueRef) : null;
+
       // --- Pure computation ---
       const now = FieldValue.serverTimestamp();
       const rolePatch = verified ?
@@ -191,23 +198,30 @@ export async function commitProviderDecision(
         requestedLeaves,
         now,
       });
-      // B12: planned from the instructor doc this transaction read (so a location saved a moment
-      // ago is either seen or forces a re-run). Null for rejections, individuals, venueType
-      // "none", or a company whose business.venueId is already set.
-      const venuePlan = verified ? planBusinessVenue({ providerId, instructor, now }) : null;
-      if (venuePlan) {
-        // Nested map: merge deep-merges it, so legalName/vatNumber/etc. survive; a dotted
-        // "business.venueId" key would be stored literally by set(..., { merge: true }).
-        Object.assign(instructorPatch, venuePlan.instructorPatch);
-        creatingVenue = true;
-      }
+      // B12: planned from the instructor doc and the venue this transaction read (so a
+      // location saved a moment ago, or a venue created by a racing approval, is either seen or
+      // forces a re-run). Null for individuals, venueType absent/"none", or nothing to change.
+      const venuePlan = planBusinessVenue({
+        providerId,
+        decision,
+        instructor,
+        existing: venueSnap ? { exists: venueSnap.exists, data: venueSnap.data() } : undefined,
+        now,
+      });
+      const venueLink = venuePlan && venuePlan.kind !== "deactivate" ? venuePlan.instructorPatch : null;
+      // Nested map: merge deep-merges it, so legalName/vatNumber/etc. survive; a dotted
+      // "business.venueId" key would be stored literally by set(..., { merge: true }).
+      if (venueLink) Object.assign(instructorPatch, venueLink);
+      creatingVenue = venuePlan?.kind === "create";
       const drafts = verified && !hasServices ? draftServicesForCategories(requestedLeaves, locale) : [];
 
       // --- Writes ---
       tx.update(userRef, userPatch);
       tx.set(instructorRef, instructorPatch, { merge: true });
-      if (venuePlan) {
-        tx.create(db.collection("venues").doc(venuePlan.venueId), venuePlan.venue);
+      if (venuePlan?.kind === "create") {
+        tx.create(venueRef, venuePlan.venue);
+      } else if (venuePlan) {
+        tx.update(venueRef, venuePlan.venuePatch);
       }
       for (const draft of drafts) {
         tx.set(instructorRef.collection("services").doc(draft.id), draft.data);
@@ -225,11 +239,17 @@ export async function commitProviderDecision(
           role: rolePatch?.role ?? user.role ?? null,
           draftServicesSeeded: drafts.length,
           ...(venuePlan ? { venueId: venuePlan.venueId } : {}),
+          ...(venuePlan?.kind === "reactivate" ? { venueReactivated: true } : {}),
+          ...(venuePlan?.kind === "deactivate" ? { venueDeactivated: true } : {}),
         },
         ...(notes ? { reason: notes } : {}),
       }));
 
-      return { draftServicesSeeded: drafts.length, venueId: venuePlan?.venueId ?? null };
+      // A venue id is reported when the decision put a venue on the map (created or brought back).
+      return {
+        draftServicesSeeded: drafts.length,
+        venueId: venuePlan && venuePlan.kind !== "deactivate" ? venuePlan.venueId : null,
+      };
     });
   } catch (err) {
     // The commit is atomic, so nothing of the decision was written when the venue create

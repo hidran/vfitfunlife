@@ -55,7 +55,29 @@ describe("syncBusinessVenueLocation registration", () => {
 describe("mirrorBusinessVenueLocation", () => {
   it("copies a newly saved location onto the linked venue and touches nothing else", async () => {
     await deliver(LINKED, { ...LINKED, ...LOC });
-    expect(await readVenue()).toEqual({ name: "Palestra Rossi", address: "Via Po 2", ownerId: "biz", ...LOC });
+    expect(await readVenue()).toEqual({ name: "Palestra Rossi", address: "Via Po 2", ownerId: "biz", ...LOC, updatedAt: "NOW" });
+  });
+
+  it("a city-only change leaves the venue's lat/lng untouched (and stamps updatedAt)", async () => {
+    await db.doc("venues/v1").update({ lat: 40.1, lng: 8.2, city: "Torino" }); // e.g. an admin's correction
+    const before = { ...LINKED, ...LOC };
+    await deliver(before, { ...before, city: "Moncalieri" });
+    expect(await readVenue()).toMatchObject({ lat: 40.1, lng: 8.2, city: "Moncalieri", updatedAt: "NOW" });
+  });
+
+  it("a move leaves the venue's city alone when the city did not change", async () => {
+    await db.doc("venues/v1").update({ city: "Admin Chosen City" });
+    const before = { ...LINKED, ...LOC };
+    await deliver(before, { ...before, lat: 41.9, lng: 12.5 });
+    expect(await readVenue()).toMatchObject({ lat: 41.9, lng: 12.5, city: "Admin Chosen City" });
+  });
+
+  it("a city-only event writes the CURRENT city even if the instructor moved on since", async () => {
+    const before = { ...LINKED, ...LOC };
+    await deliver(before, { ...before, city: "Moncalieri" }, { ...before, city: "Chieri", lat: 1, lng: 1 });
+    const venue = await readVenue();
+    expect(venue).toMatchObject({ city: "Chieri" });
+    expect(venue).not.toHaveProperty("lat");
   });
 
   it("follows the provider when the location moves", async () => {
@@ -74,7 +96,7 @@ describe("mirrorBusinessVenueLocation", () => {
     const doc = { business: { venueId: "v1", displayName: "Palestra Rossi" }, ...LOC };
     await deliver(doc, { ...doc, business: { venueId: "v1", displayName: "Palestra Rossi Centro" } });
     expect(await readVenue()).toEqual({
-      name: "Palestra Rossi Centro", slug: "palestra-rossi", address: "Via Po 2", ownerId: "biz", ...LOC,
+      name: "Palestra Rossi Centro", slug: "palestra-rossi", address: "Via Po 2", ownerId: "biz", ...LOC, updatedAt: "NOW",
     });
   });
 

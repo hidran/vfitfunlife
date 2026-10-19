@@ -535,3 +535,52 @@ describe('users/{uid}.providerType — not client-writable by the owner', () => 
     await assertFails(ref.update({ providerType: 'business' }));
   });
 });
+
+// B12 / S-4: the venue a company gets on approval is created, reactivated and deactivated by
+// the server only. The owner of `venues/biz_<uid>` cannot create or edit it from the client
+// (isActive and partnerStatus included), and cannot make themselves venue staff to get around it.
+describe('venues/biz_<uid> and venueStaff — the owner has no client write access', () => {
+  const venueFor = (uid: string, extra: Record<string, unknown> = {}) => ({
+    name: 'Palestra', type: 'gym', ownerId: uid, isActive: true, partnerStatus: 'pending', isPartner: false, ...extra,
+  });
+
+  it('the owner cannot create venues/biz_<uid>, with or without their ownerId', async () => {
+    const f = await fixture();
+    const db = testEnv.authenticatedContext(f.owner).firestore();
+    await assertFails(db.doc(`venues/biz_${f.owner}`).set(venueFor(f.owner)));
+    await assertFails(db.doc(`venues/biz_${f.owner}`).set({ name: 'Palestra' }));
+  });
+
+  it('the owner cannot update their venue: not isActive, not partnerStatus, not the name', async () => {
+    const f = await fixture();
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await ctx.firestore().doc(`venues/biz_${f.owner}`).set(venueFor(f.owner, { isActive: false }));
+    });
+    const ref = testEnv.authenticatedContext(f.owner).firestore().doc(`venues/biz_${f.owner}`);
+    await assertFails(ref.update({ isActive: true }));
+    await assertFails(ref.update({ partnerStatus: 'active', isPartner: true }));
+    await assertFails(ref.update({ name: 'Renamed' }));
+    await assertFails(ref.delete());
+  });
+
+  it('the owner cannot write venueStaff/<uid> to become staff of their own or any venue', async () => {
+    const f = await fixture();
+    const db = testEnv.authenticatedContext(f.owner).firestore();
+    await assertFails(db.doc(`venueStaff/${f.owner}`).set({ venueId: `biz_${f.owner}`, isActive: true }));
+    await assertFails(db.doc(`venueStaff/${f.owner}`).set({ venueId: 'someone_elses_venue', isActive: true }));
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await ctx.firestore().doc(`venueStaff/${f.owner}`).set({ venueId: `biz_${f.owner}`, isActive: true });
+    });
+    await assertFails(db.doc(`venueStaff/${f.owner}`).update({ venueId: 'other' }));
+    await assertFails(db.doc(`venueStaff/${f.owner}`).delete());
+  });
+
+  it('control: an admin can write the venue, and anyone can read it', async () => {
+    const f = await fixture();
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await ctx.firestore().doc(`venues/biz_${f.owner}`).set(venueFor(f.owner));
+    });
+    await assertSucceeds(testEnv.authenticatedContext(f.admin).firestore().doc(`venues/biz_${f.owner}`).update({ isActive: false }));
+    await assertSucceeds(testEnv.unauthenticatedContext().firestore().doc(`venues/biz_${f.owner}`).get());
+  });
+});

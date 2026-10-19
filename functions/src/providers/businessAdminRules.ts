@@ -30,7 +30,8 @@ export interface BusinessReview {
   affiliationNumber?: string;
   /**
    * B12: the venue the approval will create is built from these two, so they are part of what
-   * the admin approves. Omitted only by older clients ⇒ the defaults ("gym", no address).
+   * the admin approves. Omitted ⇒ the defaults ("none", no address) — what a company that never
+   * declared premises has stored.
    */
   venueType?: BusinessVenueType;
   address?: string | null;
@@ -59,7 +60,7 @@ function asReview(raw: unknown): BusinessReview | null {
     vatNumber, legalName,
     legalForm: legalForm === undefined ? "company" : legalForm as BusinessLegalForm | null,
     affiliationNumber: affiliationNumber === undefined ? "" : affiliationNumber,
-    venueType: venueType === undefined ? "gym" : venueType as BusinessVenueType,
+    venueType: venueType === undefined ? "none" : venueType as BusinessVenueType,
     address: typeof address === "string" ? address.trim() : "",
   };
 }
@@ -125,8 +126,9 @@ export function checkBusinessReview(opts: {
   }
   const sameForm = storedForm === review.legalForm;
   const sameAffiliation = storedAffiliation === review.affiliationNumber;
-  // B12: the venue is created from these. Absent ⇒ "gym" and no address, like the form's defaults.
-  const storedVenueType = business?.venueType === undefined || business.venueType === null ? "gym" : business.venueType;
+  // B12: the venue is created from these. Absent ⇒ "none" (no premises) and no address; a
+  // review that omits them is therefore the review of a company that never declared any.
+  const storedVenueType = business?.venueType ?? "none";
   const storedAddress = business?.address === undefined || business.address === null ? "" : business.address;
   if (!BUSINESS_VENUE_TYPES.includes(storedVenueType as BusinessVenueType) || typeof storedAddress !== "string") {
     throw new HttpsError("failed-precondition", "stale_review");

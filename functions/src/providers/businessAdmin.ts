@@ -6,6 +6,7 @@ import { isProtectedSuperadmin } from "../lib/superadmins";
 import { region } from "../lib/runtimeOptions";
 import type { BusinessLegalForm } from "./businessTypes";
 import { toConcurrentUpdateError } from "./applicationDecision";
+import { businessVenueId, venueDeactivationPatch } from "./businessVenue";
 import {
   BUSINESS_VAT_COLLECTION,
   claimBusinessVat,
@@ -160,11 +161,14 @@ export const convertBusinessToIndividual = onCall<ConvertBusinessToIndividualDat
   const userRef = db.collection("users").doc(providerId);
   const instructorRef = db.collection("instructors").doc(providerId);
   const claims = db.collection(BUSINESS_VAT_COLLECTION);
+  const venueRef = db.collection("venues").doc(businessVenueId(providerId));
 
   const releasedClaims = await inTransaction(async (tx) => {
     const userSnap = await tx.get(userRef);
     const instructorSnap = await tx.get(instructorRef);
     const held = await tx.get(claims.where("uid", "==", providerId));
+    // B12: the company's venue (read with the rest, before any write).
+    const venueSnap = await tx.get(venueRef);
 
     if (!userSnap.exists) throw new HttpsError("not-found", "provider_not_found");
     const user = userSnap.data() ?? {};
@@ -183,12 +187,20 @@ export const convertBusinessToIndividual = onCall<ConvertBusinessToIndividualDat
       remove: FieldValue.delete(),
     });
     const claimIds = held.docs.map((claim) => claim.id);
+    // S-4: the premises of a company that is no longer one leave public listings. ownerId stays
+    // (audit); an approval of a company again reactivates it.
+    const venuePatch = venueDeactivationPatch(
+      providerId,
+      { exists: venueSnap.exists, data: venueSnap.data() },
+      FieldValue.serverTimestamp(),
+    );
 
     // update(), not set(merge): the docs exist (read above), the patches are flat, and a
     // FieldValue.delete() removes the field outright.
     tx.update(userRef, patches.user);
     if (patches.instructor) tx.update(instructorRef, patches.instructor);
     for (const claim of held.docs) tx.delete(claim.ref);
+    if (venuePatch) tx.update(venueRef, venuePatch);
     tx.set(auditLogDoc(), auditLogData({
       ...actorFields(actor),
       action: "update",
@@ -205,6 +217,7 @@ export const convertBusinessToIndividual = onCall<ConvertBusinessToIndividualDat
         business: null,
         claims: [],
         name: patches.publicName ?? instructor?.name ?? null,
+        ...(venuePatch ? { venueId: venueRef.id, venueDeactivated: true } : {}),
       },
       ...(reason ? { reason } : {}),
     }));

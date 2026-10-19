@@ -552,6 +552,7 @@ export const enMessages: Messages = {
   'admin.business.field.venue': 'Venue',
   'admin.business.venue.open': 'Open venue',
   'admin.business.venue.onApproval': 'Created on approval',
+  'admin.business.venue.unspecified': 'Not specified',
   'admin.business.loadError': "The business details couldn't be loaded. Reload the page.",
   'admin.business.action.changeTaxId': 'Change tax id / legal data',
   'admin.business.action.release': 'Release tax-id claim',
@@ -585,7 +586,7 @@ export const enMessages: Messages = {
   'admin.business.error.protectedAccount': "This account is protected and can't be changed here.",
   'admin.business.error.vatCarriedByOther': "Another company's record still carries this P.IVA / codice fiscale (for example a rejected one whose tax id was released): convert that company to an individual or change its tax id first.",
   'admin.business.error.concurrentUpdate': 'Someone else changed this account at the same time. Reload the page and try again.',
-  'admin.providerDecision.error.venueExists': 'This company\'s venue already exists, so nothing was approved. Check the venue in Venues, then try again.',
+  'admin.business.error.venueExists': 'This company\'s venue id is already taken by another record, so nothing was approved. Ask a superadmin to check the venue.',
 
   // ─── Admin: Verifications page ───────────────────────────────────────
   'admin.verificationsPage.title': 'Provider Verifications',

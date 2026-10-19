@@ -42,7 +42,7 @@ interface ApplyAsProviderData {
     description?: string;
     website?: string;
     city?: string;
-    /** What the company offers at its premises (B12). Absent ⇒ 'gym'; 'none' ⇒ no venue. */
+    /** Premises (B12). Absent ⇒ 'none'; gym, school and studio need `address` and `city`. */
     venueType?: BusinessVenueType;
     /** Street address of the premises (B12), at most 200 characters. */
     address?: string;

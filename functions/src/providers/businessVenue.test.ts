@@ -4,6 +4,7 @@ import {
   businessVenueId,
   businessVenueType,
   planBusinessVenue,
+  venueDeactivationPatch,
   venueLocationPatch,
   venueNamePatch,
   venueSlug,
@@ -18,15 +19,16 @@ const business = {
   description: "Functional training",
   city: "Torino",
   address: "Via Po 2",
+  venueType: "gym",
 };
 
 const build = (instructor: Record<string, unknown>) =>
   buildBusinessVenue({ providerId: "biz1", instructor, now: NOW });
 
 describe("businessVenueType", () => {
-  it("defaults to gym when absent", () => {
-    expect(businessVenueType({})).toBe("gym");
-    expect(businessVenueType({ venueType: null })).toBe("gym");
+  it("treats an absent venue type as none: a legacy company never asked for premises", () => {
+    expect(businessVenueType({})).toBe("none");
+    expect(businessVenueType({ venueType: null })).toBe("none");
   });
   it("passes the three hosting types and none through", () => {
     for (const t of ["gym", "school", "studio", "none"]) expect(businessVenueType({ venueType: t })).toBe(t);
@@ -96,13 +98,14 @@ describe("buildBusinessVenue", () => {
 
   it("falls back to business.city, then to empty strings", () => {
     expect(build({ business })?.city).toBe("Torino");
-    const bare = build({ business: { displayName: "Solo Nome" } });
+    const bare = build({ business: { displayName: "Solo Nome", venueType: "gym" } });
     expect(bare).toMatchObject({ city: "", address: "", description: "", slug: "solo-nome" });
   });
 
-  it("creates nothing for venueType none, an existing venueId, no business map or no name", () => {
+  it("builds nothing for venueType none or absent, no business map or no name", () => {
     expect(build({ business: { ...business, venueType: "none" } })).toBeNull();
-    expect(build({ business: { ...business, venueId: "v1" } })).toBeNull();
+    const { venueType: _omit, ...legacy } = business;
+    expect(build({ business: legacy })).toBeNull();
     expect(build({})).toBeNull();
     expect(build({ business: { ...business, displayName: "  ", legalName: "" } })).toBeNull();
   });
@@ -175,20 +178,75 @@ describe("venueNamePatch", () => {
 });
 
 describe("planBusinessVenue", () => {
-  const input = { providerId: "biz1", instructor: { business }, now: NOW };
+  const input = { providerId: "biz1", instructor: { business }, now: NOW, decision: "verified" as const, existing: undefined };
+  const own = (extra: Record<string, unknown> = {}) => ({ exists: true, data: { ownerId: "biz1", isActive: true, ...extra } });
+  const linked = { business: { ...business, venueId: "biz_biz1" } };
 
-  it("pairs the venue with a deterministic id and a nested link back", () => {
+  it("creates the venue under a deterministic id with a nested link back when nothing exists", () => {
     const plan = planBusinessVenue(input);
     expect(businessVenueId("biz1")).toBe("biz_biz1");
-    expect(plan?.venueId).toBe("biz_biz1");
-    expect(plan?.instructorPatch).toEqual({ business: { venueId: "biz_biz1" } });
-    expect(plan?.venue).toEqual(buildBusinessVenue(input));
-    expect(Object.keys(plan?.instructorPatch ?? {}).filter((k) => k.includes("."))).toEqual([]);
+    expect(plan).toMatchObject({ kind: "create", venueId: "biz_biz1", instructorPatch: { business: { venueId: "biz_biz1" } } });
+    expect(plan && plan.kind === "create" && plan.venue).toEqual(buildBusinessVenue(input));
+    expect(Object.keys(plan && plan.kind === "create" ? plan.instructorPatch : {}).filter((k) => k.includes("."))).toEqual([]);
   });
 
-  it("plans nothing wherever buildBusinessVenue builds nothing", () => {
-    expect(planBusinessVenue({ ...input, instructor: { business: { ...business, venueId: "x" } } })).toBeNull();
-    expect(planBusinessVenue({ ...input, instructor: { business: { ...business, venueType: "none" } } })).toBeNull();
+  it("plans nothing for no business map, venueType none or absent", () => {
     expect(planBusinessVenue({ ...input, instructor: {} })).toBeNull();
+    expect(planBusinessVenue({ ...input, instructor: { business: { ...business, venueType: "none" } } })).toBeNull();
+    const { venueType: _omit, ...legacy } = business;
+    expect(planBusinessVenue({ ...input, instructor: { business: legacy } })).toBeNull();
+    // ...even over a venue of its own that an earlier approval left inactive.
+    expect(planBusinessVenue({ ...input, instructor: { business: legacy }, existing: own({ isActive: false }) })).toBeNull();
+  });
+
+  it("an already linked company with an active venue plans nothing (a re-run); a deleted linked venue is not recreated", () => {
+    expect(planBusinessVenue({ ...input, instructor: linked, existing: own() })).toBeNull();
+    expect(planBusinessVenue({ ...input, instructor: linked, existing: own({ isActive: undefined }) })).toBeNull();
+    expect(planBusinessVenue({ ...input, instructor: linked, existing: { exists: false } })).toBeNull();
+    expect(planBusinessVenue({ ...input, instructor: { business: { ...business, venueId: "elsewhere" } } })).toBeNull();
+  });
+
+  it("reactivates the company's own inactive venue with isActive/updatedAt only, relinking when needed", () => {
+    expect(planBusinessVenue({ ...input, instructor: linked, existing: own({ isActive: false }) })).toEqual({
+      kind: "reactivate", venueId: "biz_biz1", venuePatch: { isActive: true, updatedAt: NOW }, instructorPatch: null,
+    });
+    // Converted to individual and back: the link is gone, the venue is still the company's.
+    expect(planBusinessVenue({ ...input, existing: own({ isActive: false }) })).toEqual({
+      kind: "reactivate", venueId: "biz_biz1", venuePatch: { isActive: true, updatedAt: NOW },
+      instructorPatch: { business: { venueId: "biz_biz1" } },
+    });
+    // Active but unlinked: relink without touching the venue's state.
+    expect(planBusinessVenue({ ...input, existing: own() })).toMatchObject({ kind: "reactivate", instructorPatch: { business: { venueId: "biz_biz1" } } });
+  });
+
+  it("a venue at the id owned by someone else is a genuine clash: venue_exists", () => {
+    for (const data of [{ ownerId: "someone-else" }, {}, { ownerId: null }]) {
+      expect(() => planBusinessVenue({ ...input, existing: { exists: true, data } })).toThrowError(
+        expect.objectContaining({ code: "already-exists", message: "venue_exists" }),
+      );
+    }
+  });
+
+  it("a rejection deactivates the company's own active venue and leaves anything else alone", () => {
+    const rejected = { ...input, decision: "rejected" as const, instructor: linked };
+    expect(planBusinessVenue({ ...rejected, existing: own() })).toEqual({
+      kind: "deactivate", venueId: "biz_biz1", venuePatch: { isActive: false, updatedAt: NOW },
+    });
+    expect(planBusinessVenue({ ...rejected, existing: own({ isActive: undefined }) })).toMatchObject({ kind: "deactivate" });
+    expect(planBusinessVenue({ ...rejected, existing: own({ isActive: false }) })).toBeNull();
+    expect(planBusinessVenue({ ...rejected, existing: { exists: false } })).toBeNull();
+    expect(planBusinessVenue({ ...rejected, existing: own({ ownerId: "someone-else" }) })).toBeNull();
+    expect(planBusinessVenue({ ...rejected, instructor: {}, existing: own() })).toBeNull();
+  });
+});
+
+describe("venueDeactivationPatch", () => {
+  const own = (extra: Record<string, unknown> = {}) => ({ exists: true, data: { ownerId: "biz1", ...extra } });
+  it("deactivates only the owner's own venue that is not already inactive", () => {
+    expect(venueDeactivationPatch("biz1", own(), NOW)).toEqual({ isActive: false, updatedAt: NOW });
+    expect(venueDeactivationPatch("biz1", own({ isActive: false }), NOW)).toBeNull();
+    expect(venueDeactivationPatch("biz1", own({ ownerId: "x" }), NOW)).toBeNull();
+    expect(venueDeactivationPatch("biz1", { exists: false }, NOW)).toBeNull();
+    expect(venueDeactivationPatch("biz1", undefined, NOW)).toBeNull();
   });
 });

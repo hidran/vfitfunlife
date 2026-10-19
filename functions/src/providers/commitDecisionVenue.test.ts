@@ -3,10 +3,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 /**
  * B12 — approving a company creates its venue, inside commitProviderDecision's ONE transaction
  * (shared stateful fake: test/fakes/fakeFirestore.ts). The venue is `create`d under
- * `venues/biz_<uid>`, so a venue already living at that id is never overwritten and fails the
- * whole decision atomically (`already-exists` / `venue_exists`); the guards of the branch's
- * transaction (review_required, stale_review, claim_missing, the tax-id claim) run first and a
- * refused decision creates nothing. The real-Firestore counterpart (real ALREADY_EXISTS from
+ * `venues/biz_<uid>`; a venue at that id owned by someone else is never overwritten and fails
+ * the whole decision atomically (`already-exists` / `venue_exists`). The transaction READS the
+ * venue first: the company's own inactive venue is reactivated (only isActive/updatedAt are
+ * written) and a rejection deactivates it. The guards of the branch's transaction
+ * (review_required, stale_review, claim_missing, the tax-id claim) run first and a refused
+ * decision touches no venue. The real-Firestore counterpart (real ALREADY_EXISTS from
  * the emulator, real concurrent transactions) is test/business-venue.test.ts.
  */
 
@@ -146,11 +148,14 @@ describe("approval creates the business's venue", () => {
     expect(venue).not.toHaveProperty("lng");
   });
 
-  it("a company stored without a venueType gets a gym", async () => {
+  it("a company stored without a venueType gets no venue: it never asked for premises", async () => {
     const { venueType: _omit, address: _address, ...old } = BUSINESS;
     seedCompany("biz", old);
-    await approve("biz", { vatNumber: VAT, legalName: BUSINESS.legalName, legalForm: "company", affiliationNumber: "CONI-1" });
-    expect(h.read("venues/biz_biz")).toMatchObject({ type: "gym", address: "" });
+    const result = await approve("biz", { vatNumber: VAT, legalName: BUSINESS.legalName, legalForm: "company", affiliationNumber: "CONI-1" });
+    expect(result.venueId).toBeNull();
+    expect(venues()).toHaveLength(0);
+    expect((h.read("instructors/biz") as { business: unknown }).business).toEqual(old);
+    expect(h.read("users/biz")).toMatchObject({ providerStatus: "verified" });
   });
 });
 
@@ -163,17 +168,6 @@ describe("approval that must not create a venue", () => {
     expect(second.venueId).toBeNull();
     expect(venues()).toHaveLength(1);
     expect(h.read("venues/biz_biz")).toEqual(before);
-    expect((h.read("instructors/biz") as { business: { venueId: string } }).business.venueId).toBe("biz_biz");
-  });
-
-  it("re-approval after a rejection reuses the venue it already has", async () => {
-    seedCompany();
-    await approve();
-    await reject();
-    h.put(`businessVat/${VAT}`, { uid: "biz", createdAt: "T1" }); // a rejection releases the claim; re-applying takes it again
-    const again = await approve();
-    expect(again.venueId).toBeNull();
-    expect(venues()).toHaveLength(1);
     expect((h.read("instructors/biz") as { business: { venueId: string } }).business.venueId).toBe("biz_biz");
   });
 
@@ -221,6 +215,98 @@ describe("approval that must not create a venue", () => {
   });
 });
 
+describe("the venue follows the decision (S-4): rejection deactivates, approval reactivates", () => {
+  const EDITED = {
+    name: "Palestra Rossi Centro", partnerStatus: "active", isPartner: true, memberDiscountPercent: 15,
+    photoUrls: ["https://example.com/a.jpg"], amenities: ["Sauna"], description: "Admin wrote this",
+  };
+
+  it("rejecting an approved company deactivates its venue (ownerId kept) and audits venueDeactivated", async () => {
+    seedCompany();
+    await approve();
+    h.put("venues/biz_biz", { ...(h.read("venues/biz_biz") as object), ...EDITED });
+
+    const result = await reject();
+
+    expect(result.venueId).toBeNull();
+    expect(h.read("venues/biz_biz")).toMatchObject({ ...EDITED, ownerId: "biz", isActive: false, updatedAt: "NOW" });
+    const update = h.ops.filter(([op, path]) => op === "update" && path === "venues/biz_biz").at(-1);
+    expect(update?.[2]).toEqual({ isActive: false, updatedAt: "NOW" });
+    const entry = audits().at(-1) as { after: Record<string, unknown> };
+    expect(entry.after).toMatchObject({ providerStatus: "rejected", venueId: "biz_biz", venueDeactivated: true });
+    // The link stays: the company still points at its (now inactive) venue.
+    expect((h.read("instructors/biz") as { business: { venueId: string } }).business.venueId).toBe("biz_biz");
+  });
+
+  it("re-approval reactivates the SAME venue without overwriting anything else", async () => {
+    seedCompany();
+    await approve();
+    h.put("venues/biz_biz", { ...(h.read("venues/biz_biz") as object), ...EDITED });
+    await reject();
+    h.put(`businessVat/${VAT}`, { uid: "biz", createdAt: "T1" }); // a rejection may release the claim; re-applying takes it again
+    h.ops.length = 0;
+
+    const again = await approve();
+
+    expect(again.venueId).toBe("biz_biz");
+    expect(venues()).toHaveLength(1);
+    expect(h.read("venues/biz_biz")).toMatchObject({ ...EDITED, ownerId: "biz", isActive: true });
+    expect(h.ops.some(([op, path]) => op === "create" && path === "venues/biz_biz")).toBe(false);
+    expect(h.ops.filter(([, path]) => path === "venues/biz_biz").map((o) => [o[0], o[2]])).toEqual([
+      ["update", { isActive: true, updatedAt: "NOW" }],
+    ]);
+    expect((audits().at(-1) as { after: Record<string, unknown> }).after).toMatchObject({
+      venueId: "biz_biz", venueReactivated: true,
+    });
+    expect((h.read("instructors/biz") as { business: unknown }).business).toEqual({ ...BUSINESS, venueId: "biz_biz" });
+  });
+
+  it("an inactive venue whose link is gone (converted to individual and back) is relinked and reactivated, not recreated", async () => {
+    seedCompany();
+    h.put("venues/biz_biz", { ...EDITED, ownerId: "biz", isActive: false });
+    const result = await approve();
+    expect(result.venueId).toBe("biz_biz");
+    expect(h.read("venues/biz_biz")).toMatchObject({ ...EDITED, isActive: true });
+    expect(venues()).toHaveLength(1);
+    expect((h.read("instructors/biz") as { business: unknown }).business).toEqual({ ...BUSINESS, venueId: "biz_biz" });
+    const instructorWrite = h.ops.find(([op, path]) => op === "set" && path === "instructors/biz");
+    expect((instructorWrite?.[2] as { business: unknown }).business).toEqual({ venueId: "biz_biz" });
+  });
+
+  it("an active, unlinked venue of the company is just relinked", async () => {
+    seedCompany();
+    h.put("venues/biz_biz", { ...EDITED, ownerId: "biz", isActive: true });
+    await approve();
+    expect(h.read("venues/biz_biz")).toMatchObject({ ...EDITED, isActive: true });
+    expect((h.read("instructors/biz") as { business: { venueId: string } }).business.venueId).toBe("biz_biz");
+  });
+
+  it("a rejection with no venue, or with a company that has no premises, writes nothing to venues", async () => {
+    seedCompany();
+    await reject();
+    seedCompany("none1", { ...BUSINESS, vatNumber: "00743110157", venueType: "none" });
+    await reject("none1");
+    expect(h.ops.some(([, path]) => path.startsWith("venues/"))).toBe(false);
+  });
+
+  it("a rejection never touches a venue the provider does not own", async () => {
+    seedCompany();
+    h.put("venues/biz_biz", { name: "Someone else's", ownerId: "other", isActive: true });
+    await reject();
+    expect(h.read("venues/biz_biz")).toEqual({ name: "Someone else's", ownerId: "other", isActive: true });
+  });
+
+  it("the venue read joins the transaction: a concurrent venue edit re-runs the rejection", async () => {
+    seedCompany();
+    await approve();
+    h.state.attempts = 0;
+    h.state.beforeCommit = () => h.put("venues/biz_biz", { ...(h.read("venues/biz_biz") as object), name: "Edited meanwhile" });
+    await reject();
+    expect(h.state.attempts).toBe(2);
+    expect(h.read("venues/biz_biz")).toMatchObject({ name: "Edited meanwhile", isActive: false });
+  });
+});
+
 describe("the transaction's guards still run first, and a refused decision creates no venue", () => {
   it("review_required: a company approved unseen", async () => {
     seedCompany();
@@ -237,7 +323,7 @@ describe("the transaction's guards still run first, and a refused decision creat
       { ...REVIEW, venueType: "gym" },
       { ...REVIEW, address: "Via Roma 1" },
       { ...REVIEW, address: null },
-      { vatNumber: VAT, legalName: BUSINESS.legalName, legalForm: "company", affiliationNumber: "CONI-1" }, // old client: defaults gym / no address
+      { vatNumber: VAT, legalName: BUSINESS.legalName, legalForm: "company", affiliationNumber: "CONI-1" }, // old client: defaults none / no address
     ]) {
       await expect(approve("biz", review)).rejects.toMatchObject({ code: "failed-precondition", message: "stale_review" });
     }
@@ -289,9 +375,9 @@ describe("the transaction's guards still run first, and a refused decision creat
 });
 
 describe("venue races and clashes", () => {
-  it("a venue already at biz_<uid> is never overwritten: venue_exists, and the decision is not half-applied", async () => {
+  it("a venue at biz_<uid> owned by someone else is never touched: venue_exists, and the decision is not half-applied", async () => {
     seedCompany();
-    const promoted = { name: "Promoted", partnerStatus: "active", isPartner: true };
+    const promoted = { name: "Promoted", partnerStatus: "active", isPartner: true, ownerId: "somebody-else", isActive: false };
     h.put("venues/biz_biz", promoted);
 
     await expect(approve()).rejects.toMatchObject({ code: "already-exists", message: "venue_exists" });
@@ -321,14 +407,23 @@ describe("venue races and clashes", () => {
     expect(audits()).toHaveLength(2);
   });
 
-  it("two approvals that both plan the venue (no contention seen) collide on the id: venue_exists, one venue", async () => {
+  it("a venue created by a racing approval between the read and the commit: the re-run sees it and plans nothing new", async () => {
     seedCompany();
-    // Simulates the commit-time ALREADY_EXISTS Firestore raises when a competing create lands
-    // on biz_<uid> without touching any doc this transaction read.
-    h.state.beforeCommit = () => h.put("venues/biz_biz", { name: "Raced", partnerStatus: "pending" });
+    h.state.beforeCommit = () => h.put("venues/biz_biz", { name: "Raced", ownerId: "biz", partnerStatus: "pending", isActive: true });
+    const result = await approve();
+    expect(h.state.attempts).toBe(2);
+    expect(result.venueId).toBe("biz_biz"); // relinked
+    expect(venues()).toHaveLength(1);
+    expect(h.read("venues/biz_biz")).toEqual({ name: "Raced", ownerId: "biz", partnerStatus: "pending", isActive: true, updatedAt: "NOW" });
+    expect((h.read("instructors/biz") as { business: { venueId: string } }).business.venueId).toBe("biz_biz");
+  });
+
+  it("a stranger's venue appearing at the id between the read and the commit ⇒ venue_exists on the re-run", async () => {
+    seedCompany();
+    h.state.beforeCommit = () => h.put("venues/biz_biz", { name: "Raced", ownerId: "other", partnerStatus: "pending" });
     await expect(approve()).rejects.toMatchObject({ code: "already-exists", message: "venue_exists" });
     expect(venues()).toHaveLength(1);
-    expect(h.read("venues/biz_biz")).toEqual({ name: "Raced", partnerStatus: "pending" });
+    expect(h.read("venues/biz_biz")).toEqual({ name: "Raced", ownerId: "other", partnerStatus: "pending" });
     expect(h.read("users/biz")).toMatchObject({ providerStatus: "pending" });
   });
 

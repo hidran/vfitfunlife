@@ -118,7 +118,7 @@ describe("validateBusinessInput", () => {
       description: "",
       website: null,
       city: "",
-      venueType: "gym",
+      venueType: "none",
       address: null,
     });
   });
@@ -363,20 +363,28 @@ describe("an association's codice fiscale as the tax id (D3)", () => {
       description: "",
       website: null,
       city: "",
-      venueType: "gym",
+      venueType: "none",
       address: null,
     });
   });
 });
 
 describe("the premises of a company (B12: venueType, address)", () => {
-  it("defaults an absent or null venue type to a gym", () => {
-    expect(validateBusinessInput(VALID).venueType).toBe("gym");
-    expect(validateBusinessInput({ ...VALID, venueType: null }).venueType).toBe("gym");
+  const PREMISES = { city: "Milano", address: "Via Roma 1" };
+
+  it("treats an absent or null venue type as none: an old cached client never asked for premises", () => {
+    expect(validateBusinessInput(VALID).venueType).toBe("none");
+    expect(validateBusinessInput({ ...VALID, venueType: null }).venueType).toBe("none");
+    // ...and what such a client sent as an address is dropped with it.
+    expect(validateBusinessInput({ ...VALID, address: "Via Roma 1" })).toMatchObject({ venueType: "none", address: null });
   });
 
-  it.each(["gym", "school", "studio", "none"])("accepts the venue type %s as given", (venueType) => {
-    expect(validateBusinessInput({ ...VALID, venueType }).venueType).toBe(venueType);
+  it.each(["gym", "school", "studio"])("accepts the venue type %s as given, with its city and address", (venueType) => {
+    expect(validateBusinessInput({ ...VALID, ...PREMISES, venueType })).toMatchObject({ venueType, ...PREMISES });
+  });
+
+  it("accepts none with no city and no address", () => {
+    expect(validateBusinessInput({ ...VALID, venueType: "none" })).toMatchObject({ venueType: "none", city: "", address: null });
   });
 
   it("offers exactly the course-hosting venue types plus none", () => {
@@ -393,35 +401,75 @@ describe("the premises of a company (B12: venueType, address)", () => {
     }
   });
 
-  it("trims the address and stores null when it is absent, null or blank", () => {
-    expect(validateBusinessInput({ ...VALID, address: "  Via Roma 1, 20100  " }).address).toBe("Via Roma 1, 20100");
-    for (const address of [undefined, null, "", "   "]) {
-      expect(validateBusinessInput({ ...VALID, address }).address).toBeNull();
+  it("requires a non-blank street address for every venue type that has premises", () => {
+    for (const venueType of ["gym", "school", "studio"]) {
+      for (const address of [undefined, null, "", "   "]) {
+        expectHttpsError(
+          () => validateBusinessInput({ ...VALID, venueType, city: "Milano", address }),
+          "invalid-argument",
+          "business_address_required",
+        );
+      }
     }
   });
 
-  it("accepts an address of exactly 200 characters and refuses 201 as invalid_business_address", () => {
-    expect(BUSINESS_FIELD_LIMITS.address).toBe(200);
-    expect(validateBusinessInput({ ...VALID, address: "a".repeat(200) }).address).toBe("a".repeat(200));
+  it("requires a non-blank city for every venue type that has premises", () => {
+    for (const venueType of ["gym", "school", "studio"]) {
+      for (const city of [undefined, null, "", "   "]) {
+        expectHttpsError(
+          () => validateBusinessInput({ ...VALID, venueType, city, address: "Via Roma 1" }),
+          "invalid-argument",
+          "business_city_required",
+        );
+      }
+    }
+  });
+
+  it("checks the format of a city or address before whether it is present", () => {
     expectHttpsError(
-      () => validateBusinessInput({ ...VALID, address: "a".repeat(201) }),
+      () => validateBusinessInput({ ...VALID, venueType: "gym", city: "d".repeat(81), address: "Via Roma 1" }),
+      "invalid-argument",
+      "invalid_business_city",
+    );
+    expectHttpsError(
+      () => validateBusinessInput({ ...VALID, venueType: "gym", city: "Milano", address: "a".repeat(201) }),
       "invalid-argument",
       "invalid_business_address",
     );
   });
 
-  it("refuses a non-string address", () => {
-    for (const address of [12, true, {}, ["Via Roma"]]) {
-      expectHttpsError(
-        () => validateBusinessInput({ ...VALID, address }),
-        "invalid-argument",
-        "invalid_business_address",
-      );
+  it("drops any address for none server-side (stores null), however it was sent", () => {
+    expect(validateBusinessInput({ ...VALID, venueType: "none", address: "  Via Roma 1 " }).address).toBeNull();
+  });
+
+  it("trims the address", () => {
+    expect(validateBusinessInput({ ...VALID, ...PREMISES, venueType: "gym", address: "  Via Roma 1, 20100  " }).address).toBe("Via Roma 1, 20100");
+  });
+
+  it("accepts an address of exactly 200 characters and refuses 201 as invalid_business_address", () => {
+    expect(BUSINESS_FIELD_LIMITS.address).toBe(200);
+    expect(validateBusinessInput({ ...VALID, ...PREMISES, venueType: "gym", address: "a".repeat(200) }).address).toBe("a".repeat(200));
+    expectHttpsError(
+      () => validateBusinessInput({ ...VALID, ...PREMISES, venueType: "gym", address: "a".repeat(201) }),
+      "invalid-argument",
+      "invalid_business_address",
+    );
+  });
+
+  it("refuses a non-string address, even for none", () => {
+    for (const venueType of ["gym", "none"]) {
+      for (const address of [12, true, {}, ["Via Roma"]]) {
+        expectHttpsError(
+          () => validateBusinessInput({ ...VALID, ...PREMISES, venueType, address }),
+          "invalid-argument",
+          "invalid_business_address",
+        );
+      }
     }
   });
 
   it("always writes both keys, so a pending re-apply replaces a stale venue instead of keeping it", () => {
-    const first = validateBusinessInput({ ...VALID, venueType: "studio", address: "Via Roma 1" });
+    const first = validateBusinessInput({ ...VALID, ...PREMISES, venueType: "studio" });
     const again = validateBusinessInput({ ...VALID, venueType: "none" });
     expect(first).toMatchObject({ venueType: "studio", address: "Via Roma 1" });
     expect(Object.keys(again)).toEqual(expect.arrayContaining(["venueType", "address"]));
@@ -429,7 +477,7 @@ describe("the premises of a company (B12: venueType, address)", () => {
   });
 
   it("never writes venueId: the server sets it at approval", () => {
-    expect(validateBusinessInput({ ...VALID, venueType: "gym", address: "Via Roma 1", venueId: "biz_x" })).not.toHaveProperty("venueId");
+    expect(validateBusinessInput({ ...VALID, ...PREMISES, venueType: "gym", venueId: "biz_x" })).not.toHaveProperty("venueId");
   });
 });
 
@@ -467,7 +515,7 @@ describe("buildBusinessInstructorPatch", () => {
         description: "",
         website: null,
         city: "Milano",
-        venueType: "gym",
+        venueType: "none",
         address: null,
       },
     });

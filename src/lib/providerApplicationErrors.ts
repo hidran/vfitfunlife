@@ -15,6 +15,8 @@ export const PROVIDER_APPLICATION_ERROR_CODES = [
   'invalid_business_city',
   'invalid_venue_type',
   'invalid_business_address',
+  'business_address_required',
+  'business_city_required',
   'invalid_provider_type',
   'invalid_legal_form',
   'invalid_affiliation_number',
@@ -49,6 +51,9 @@ export const PROVIDER_APPLICATION_ERRORS: Record<
   invalid_business_city: { field: 'city', messageKey: 'provider.business.error.cityInvalid' },
   invalid_venue_type: { field: 'venueType', messageKey: 'provider.business.error.venueTypeInvalid' },
   invalid_business_address: { field: 'address', messageKey: 'provider.business.error.addressInvalid' },
+  // A company with premises (gym / school / studio) must give both: the venue is built from them.
+  business_address_required: { field: 'address', messageKey: 'provider.business.error.addressRequired' },
+  business_city_required: { field: 'city', messageKey: 'provider.business.error.cityRequired' },
   invalid_website: { field: 'website', messageKey: 'provider.business.error.websiteInvalid' },
   invalid_business_description: {
     field: 'description',
@@ -106,7 +111,8 @@ export function reportProviderApplicationError(
  * `protected_account` refuses a protected superadmin; `vat_carried_by_other` — moving a company
  * onto a number another company's record still carries; `concurrent_update` — contention
  * outlasted the server transaction's retries, try again; `venue_exists` — B12, approving a
- * company whose venue id is already taken, so nothing was approved). Tax-id and legal-field codes reuse
+ * company whose venue id (`biz_<uid>`) is held by a venue it does not own, so nothing was
+ * approved: rare, a superadmin has to look at that venue). Tax-id and legal-field codes reuse
  * the signup form's texts, except `vat_already_registered`: an admin can do something about it.
  */
 export const ADMIN_BUSINESS_ERROR_CODES = [
@@ -150,7 +156,7 @@ export const ADMIN_BUSINESS_ERRORS: Record<AdminBusinessErrorCode, MessageKey> =
   protected_account: 'admin.business.error.protectedAccount',
   vat_carried_by_other: 'admin.business.error.vatCarriedByOther',
   concurrent_update: 'admin.business.error.concurrentUpdate',
-  venue_exists: 'admin.providerDecision.error.venueExists',
+  venue_exists: 'admin.business.error.venueExists',
 };
 
 const ADMIN_CODES: ReadonlySet<string> = new Set(ADMIN_BUSINESS_ERROR_CODES);

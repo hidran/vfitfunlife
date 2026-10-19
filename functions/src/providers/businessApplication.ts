@@ -111,12 +111,13 @@ export function parseLegalForm(value: unknown): BusinessLegalForm {
 }
 
 /**
- * What the company offers at its premises (B12): absent/null ⇒ 'gym'; "none" means no fixed
+ * What the company offers at its premises (B12): absent/null ⇒ 'none' (a client that omits it
+ * — an old cached one — never asked for premises, so none is invented); "none" means no fixed
  * premises, so approval creates no venue. Anything outside BUSINESS_VENUE_TYPES is refused
  * (`invalid_venue_type`).
  */
 export function parseVenueType(value: unknown): BusinessVenueType {
-  if (value === undefined || value === null) return "gym";
+  if (value === undefined || value === null) return "none";
   const known = BUSINESS_VENUE_TYPES.find((type) => type === value);
   if (!known) throw invalid("invalid_venue_type");
   return known;
@@ -144,12 +145,15 @@ export function parseAffiliationNumber(value: unknown): string {
  * - `legalForm`: one of BUSINESS_LEGAL_FORMS, 'company' when omitted (`invalid_legal_form`).
  * - `affiliationNumber`: optional CONI / RASD / ente di promozione registration
  *   (`invalid_affiliation_number`); informational, for the admin reviewing the application.
- * - `venueType` (B12): one of BUSINESS_VENUE_TYPES, 'gym' when omitted (`invalid_venue_type`);
- *   `address`: optional, ≤ 200 characters (`invalid_business_address`), null when not given.
- *   Both are reviewed with the rest of the application and frozen for the owner afterwards.
+ * - `venueType` (B12): one of BUSINESS_VENUE_TYPES, 'none' when omitted (`invalid_venue_type`).
+ *   For gym / school / studio the street `address` (≤ 200 characters, `invalid_business_address`)
+ *   and the `city` are REQUIRED (`business_address_required`, `business_city_required`): the
+ *   venue created on approval is built from them. For 'none' the address is dropped (stored
+ *   null) whatever was sent. Both are reviewed with the rest of the application and frozen for
+ *   the owner afterwards.
  * - Every text field is trimmed and length-capped (BUSINESS_FIELD_LIMITS).
  * - `legalForm`, `affiliationNumber`, `description`, `city` and `venueType` are always present
- *   ("" when not given, 'company' for the form, 'gym' for the venue type) and `website` and
+ *   ("" when not given, 'company' for the form, 'none' for the venue type) and `website` and
  *   `address` are always present (null when not given). The
  *   result is merged into `instructors/{uid}.business` with set(merge), which merges nested
  *   maps field by field — writing every field each time means a re-apply replaces what the
@@ -168,6 +172,14 @@ export function validateBusinessInput(raw: unknown): BusinessDetails {
     optionalText(input.displayName, BUSINESS_FIELD_LIMITS.displayName, "invalid_business_name") ||
     legalName;
 
+  const venueType = parseVenueType(input.venueType);
+  const city = optionalText(input.city, BUSINESS_FIELD_LIMITS.city, "invalid_business_city");
+  const address = parseBusinessAddress(input.address);
+  if (venueType !== "none") {
+    if (!city) throw invalid("business_city_required");
+    if (!address) throw invalid("business_address_required");
+  }
+
   return {
     legalName,
     vatNumber,
@@ -180,9 +192,9 @@ export function validateBusinessInput(raw: unknown): BusinessDetails {
       "invalid_business_description",
     ),
     website: parseWebsite(input.website),
-    city: optionalText(input.city, BUSINESS_FIELD_LIMITS.city, "invalid_business_city"),
-    venueType: parseVenueType(input.venueType),
-    address: parseBusinessAddress(input.address),
+    city,
+    venueType,
+    address: venueType === "none" ? null : address,
   };
 }
 

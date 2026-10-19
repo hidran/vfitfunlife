@@ -4,7 +4,7 @@ import {
   type DocumentSnapshot,
   type FirestoreEvent,
 } from "firebase-functions/v2/firestore";
-import { getFirestore } from "firebase-admin/firestore";
+import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { region } from "../lib/runtimeOptions";
 import { venueLocationPatch, venueNamePatch } from "./businessVenue";
 
@@ -30,27 +30,37 @@ type InstructorWriteEvent = FirestoreEvent<Change<DocumentSnapshot> | undefined,
  * moves and renames win over an admin's hand-edit of the same fields — intended: the venue
  * is where, and called what, the owner says.
  *
+ * Each mirror also stamps the venue's `updatedAt`.
+ *
  * `update()`, never `set()`: a deleted venue fails NOT_FOUND and stays deleted.
  */
 export async function mirrorBusinessVenueLocation(event: InstructorWriteEvent): Promise<void> {
   const after = event.data?.after;
   if (!after?.exists) return;
   const before = event.data?.before?.data();
-  const locationChanged = venueLocationPatch(before, after.data()) !== null;
+  // What the EVENT announced as changed: lat/lng together, the city, the public name.
+  const announcedLocation = venueLocationPatch(before, after.data());
   const nameChanged = venueNamePatch(before, after.data()) !== null;
-  if (!locationChanged && !nameChanged) return;
+  if (!announcedLocation && !nameChanged) return;
 
   const current = (await after.ref.get()).data();
   const venueId = (current?.business as { venueId?: unknown } | undefined)?.venueId;
   if (typeof venueId !== "string" || !venueId) return;
+  // Written: the instructor's CURRENT values of the announced fields only. A city-only change
+  // must not rewrite lat/lng (and a move must not rewrite a city or a name an admin edited).
+  const currentLocation = announcedLocation ? venueLocationPatch(undefined, current) : null;
   const patch = {
-    ...(locationChanged ? venueLocationPatch(undefined, current) : null),
+    ...(announcedLocation && currentLocation ?
+      Object.fromEntries(Object.entries(currentLocation).filter(([k]) =>
+        k in announcedLocation)) :
+      null),
     ...(nameChanged ? venueNamePatch(undefined, current) : null),
   };
   if (!Object.keys(patch).length) return;
 
   try {
-    await getFirestore().collection("venues").doc(venueId).update(patch);
+    const venue = getFirestore().collection("venues").doc(venueId);
+    await venue.update({ ...patch, updatedAt: FieldValue.serverTimestamp() });
   } catch (err) {
     if ((err as { code?: unknown }).code === NOT_FOUND) return;
     throw err;

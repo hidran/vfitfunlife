@@ -190,8 +190,9 @@ const businessFieldsSchema = z.object({
  * normalises them.
  *
  * A company with premises (any venue type but 'none') needs an address and a city: they are
- * what the venue created on approval is built from. The server only caps them (a company
- * without premises, or a client that omits them, is still accepted there).
+ * what the venue created on approval is built from. The server enforces the same rule
+ * (`business_address_required`, `business_city_required`) and treats a venue type the client
+ * omitted as 'none'.
  */
 export const businessDetailsSchema = businessFieldsSchema.superRefine((values, ctx) => {
   if (values.venueType === 'none') return;

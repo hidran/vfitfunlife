@@ -46,12 +46,14 @@ describe('readAdminBusiness', () => {
     expect(readAdminBusiness({ ...COMPANY, legalForm: 'gym' })!.legalForm).toBeNull();
   });
 
-  it('reads the venue the approval creates: type defaults to gym, unknown is null, the link is null before approval', () => {
+  it('reads the venue the approval creates: an absent type is not specified (null), the link is null before approval', () => {
     const { venueType: _t, venueId: _v, address: _a, ...bare } = COMPANY;
-    expect(readAdminBusiness(bare)).toMatchObject({ venueType: 'gym', address: '', venueId: null });
+    expect(readAdminBusiness(bare)).toMatchObject({ venueType: null, address: '', venueId: null });
+    expect(readAdminBusiness({ ...COMPANY, venueType: null })!.venueType).toBeNull();
     expect(readAdminBusiness({ ...COMPANY, venueType: 'pool' })!.venueType).toBeNull();
     expect(readAdminBusiness({ ...COMPANY, venueType: 'none' })!.venueType).toBe('none');
-    // An unknown type is not sent, so the server answers stale_review instead of guessing.
+    // Not specified is not sent: the server reads an omitted type as 'none', exactly an absent one.
+    expect(businessReviewOf(readAdminBusiness(bare)!)).not.toHaveProperty('venueType');
     expect(businessReviewOf(readAdminBusiness({ ...COMPANY, venueType: 'pool' })!)).not.toHaveProperty('venueType');
   });
 
