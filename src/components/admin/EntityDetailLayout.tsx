@@ -37,9 +37,10 @@ export function EntityDetailLayout({
         {t('admin.detail.back')}
       </Button>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-content">{title}</h1>
-          {subtitle && <p className="mt-1 text-content-muted">{subtitle}</p>}
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold text-content break-words">{title}</h1>
+          {/* Long emails have no break opportunity; without this they push the page wider than the viewport. */}
+          {subtitle && <p className="mt-1 break-all text-content-muted">{subtitle}</p>}
         </div>
         <div className="flex flex-wrap gap-2">
           {!isEditing && onEdit && (
