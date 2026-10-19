@@ -1,5 +1,6 @@
 import type { Timestamp, GeoPoint } from "firebase/firestore";
 import type { AppLocale } from "@/types/locale";
+import type { VenueType } from "@/types/venue";
 
 // Section type
 export type Section = "fit" | "fun" | "life";
@@ -291,7 +292,7 @@ export interface Venue {
   id: string;
   name: string;
   slug: string;
-  type: "gym" | "wellness_center" | "beauty_salon" | "outdoor_space" | "event_space";
+  type: VenueType;
   section: Section;
 
   // Contact

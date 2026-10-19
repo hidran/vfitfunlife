@@ -1,7 +1,15 @@
 // src/types/venue.ts
 import type { Timestamp } from 'firebase/firestore';
 
-export type VenueType = 'gym' | 'school' | 'studio' | 'wellness_center' | 'spa' | 'beauty_salon';
+export type VenueType =
+  | 'gym'
+  | 'wellness_center'
+  | 'spa'
+  | 'beauty_salon'
+  | 'school'
+  | 'studio'
+  | 'outdoor_space'
+  | 'event_space';
 
 /** Venue types that host group courses (a business's own timetable lives on these). */
 export function hostsCourses(type: VenueType): boolean {
