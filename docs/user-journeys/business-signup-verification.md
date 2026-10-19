@@ -1,5 +1,33 @@
 # Business (company) accounts: browser verification (plan task B10)
 
+> **Status banner (added 2026-10-19, reconciliation).** This log was written against **main's rebuild** of business accounts (staging
+> build `cf505de`, re-check at `20759f9`), which is **superseded**: the branch `feat/business-accounts` (production-deployed
+> 2026-10-06) is the base and main's delta was ported onto `reconcile/business-accounts` (see
+> `docs/reports/2026-10-19-business-reconciliation-analysis.md` and the plan log). Screenshot references below point at main's files
+> (`screenshots/business-*.png`), which are not in this tree; the branch's guides use `business-screenshots/`. Nothing here has been
+> re-run against the reconciled build, which is **not deployed anywhere**; the statuses below come from reading code and tests only,
+> so each "resolved" still needs the browser re-check in the staging runbook (`docs/deployment/staging.md`).
+>
+> | ID | Reconciled branch (by code reading) |
+> |--|--|
+> | D1 duplicate tax id then fix and resubmit | **Resolved in code**: `RegisterClient.tsx` keeps the created account (`createdAccount`) and re-sends only the application on retry; account fields are locked meanwhile (the cosmetic double message may remain) |
+> | D2 admin page not refreshed after Verify | **Resolved in code**: branch commit `b465288` (refresh after approval/rejection in `ProviderDetailView`, with a test) |
+> | D3 admin detail overflow (tab strip, long email) | **Resolved in code** by R6 `e41e796` (`EntityDetailLayout` wrapping, scrolling tab strip with focus-ring padding); re-check at 320/390 |
+> | D4 `/fit/gyms` top-50 without location | **Open** (`NEARBY_FALLBACK_LIMIT = 50`) |
+> | D5 a11y of the type toggle and required fields | **Resolved in code**: native radio group in `ProviderTypeChoice.tsx`, `aria-required` on required company fields, logo file input is `hidden` (not exposed) |
+> | D6 Company badge on `/book` | **Resolved in code** by R8 `1abdfb2` |
+> | D7 stale form-level banner | **Not applicable in code**: the branch's company form has no form-level "Check the highlighted company details" banner; re-check |
+> | D8 multi-word search | **Open** (not re-tested) |
+> | D9 plural "1 services selected" | **Open** (`provider.optIn.selectedCount`) |
+> | D10 `/profile` 6 px overflow at 320 | **Open**, not re-checked |
+> | D11 venue follows the public name | **Resolved in code** by R4/R4b: `syncBusinessVenueLocation` mirrors `business.displayName` to the venue `name` (slug unchanged) |
+> | D12 pending-applications cards without company indicator | **Resolved in code**: `ProviderApplicationsPanel.tsx` renders `BusinessBadge` |
+> | D13 auth touch targets < 44 px | **Open** (pre-existing, shared) |
+> | D14 booking detail logo / badge | **Resolved in code** by R8 (logo and badge from the provider profile); the badge disappears when the profile is unreadable (open follow-up) |
+> | D15 `/provider/location` ids from translated labels | **Open**, not re-checked |
+> | D16 raw `staging-access-denied` text on signup | **Open**, not re-checked (sign-in path maps it in `authStore.ts`) |
+
+
 | | |
 |--|--|
 | **Date** | 19 October 2026 |
