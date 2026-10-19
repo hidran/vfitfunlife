@@ -1,8 +1,13 @@
 import { useState } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import { BusinessDetailsForm, focusFirstBusinessError } from './BusinessDetailsForm';
-import { EMPTY_BUSINESS_DETAILS, type BusinessDetailsErrors, type BusinessDetailsValues } from '@/lib/businessDetails';
+import { BusinessDetailsForm } from './BusinessDetailsForm';
+import {
+  EMPTY_BUSINESS_DETAILS,
+  focusBusinessField,
+  type BusinessDetailsErrors,
+  type BusinessDetailsValues,
+} from '@/lib/businessDetails';
 
 function Harness({ errors, onChange }: { errors?: BusinessDetailsErrors; onChange?: (v: BusinessDetailsValues) => void }) {
   const [values, setValues] = useState(EMPTY_BUSINESS_DETAILS);
@@ -46,22 +51,19 @@ describe('BusinessDetailsForm', () => {
     expect(vat.getAttribute('aria-describedby')).toContain(error.id);
   });
 
-  it('keeps the public name equal to the legal name until it is edited', () => {
+  it('shows the legal name as the public name placeholder until one is typed', () => {
     const onChange = vi.fn();
     render(<Harness onChange={onChange} />);
     const legal = screen.getByLabelText('Ragione sociale');
     const display = screen.getByLabelText('Nome pubblico') as HTMLInputElement;
 
     fireEvent.change(legal, { target: { value: 'Palestra Rossi S.r.l.' } });
-    expect(display.value).toBe('Palestra Rossi S.r.l.');
+    expect(display.value).toBe('');
+    expect(display.placeholder).toBe('Palestra Rossi S.r.l.');
 
     fireEvent.change(display, { target: { value: 'Palestra Rossi' } });
-    fireEvent.change(legal, { target: { value: 'Palestra Rossi & C. S.r.l.' } });
     expect(display.value).toBe('Palestra Rossi');
-
-    // Emptied, it follows the legal name again.
-    fireEvent.change(display, { target: { value: '' } });
-    expect(display.value).toBe('Palestra Rossi & C. S.r.l.');
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ legalName: 'Palestra Rossi S.r.l.', displayName: 'Palestra Rossi' }));
   });
 
   it('normalises the P.IVA on blur', () => {
@@ -72,10 +74,10 @@ describe('BusinessDetailsForm', () => {
     expect(vat.value).toBe('01234567897');
   });
 
-  it('focuses the first field in error', () => {
-    render(<Harness errors={{ city: 'provider.business.error.cityRequired', legalName: 'provider.business.error.legalNameRequired' }} />);
-    expect(focusFirstBusinessError({ city: 'provider.business.error.cityRequired', legalName: 'provider.business.error.legalNameRequired' })).toBe(true);
+  it('exposes stable ids so a field can be focused by name', () => {
+    render(<Harness />);
+    expect(focusBusinessField('legalName')).toBe(true);
     expect(screen.getByLabelText('Ragione sociale')).toHaveFocus();
-    expect(focusFirstBusinessError({})).toBe(false);
+    expect(focusBusinessField('legalName', 'other-prefix')).toBe(false);
   });
 });

@@ -61,12 +61,14 @@ describe('BecomeProviderCard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Invia richiesta' }));
 
     await waitFor(() => {
-      expect(mockSubmitProviderApplication).toHaveBeenCalledWith({
-        fullName: 'Mario Rossi',
-        categoryIds: ['personal_training'],
-        providerType: 'individual',
-        business: undefined,
-      });
+      expect(mockSubmitProviderApplication).toHaveBeenCalledWith(
+        expect.objectContaining({
+          fullName: 'Mario Rossi',
+          categoryIds: ['personal_training'],
+          providerType: 'individual',
+        })
+      );
+      expect(mockSubmitProviderApplication.mock.calls[0][0].business).toBeUndefined();
     });
     expect(mockLoadUserData).toHaveBeenCalledWith('u1');
   });
@@ -127,6 +129,7 @@ describe('BecomeProviderCard', () => {
       expect(screen.getAllByText('Questa partita IVA è già registrata').length).toBeGreaterThan(0);
     });
     expect(screen.getByLabelText('Partita IVA')).toHaveAttribute('aria-invalid', 'true');
+    await waitFor(() => expect(screen.getByLabelText('Partita IVA')).toHaveFocus());
   });
 
   it('tells a pending company that its P.IVA is being verified', () => {

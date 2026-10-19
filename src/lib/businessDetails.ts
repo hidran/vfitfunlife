@@ -78,7 +78,8 @@ export function validateBusinessDetails(values: BusinessDetailsValues): Business
   if (!vat) errors.vatNumber = 'provider.business.error.vatRequired';
   else if (!isValidItalianVat(vat)) errors.vatNumber = 'provider.business.error.vatInvalid';
 
-  if (!displayName) errors.displayName = 'provider.business.error.displayNameRequired';
+  // The public name falls back to the legal name, so it is only missing when both are.
+  if (!displayName && !legalName) errors.displayName = 'provider.business.error.displayNameRequired';
   else if (displayName.length > MAX_NAME) errors.displayName = 'provider.business.error.tooLong';
 
   if (!BUSINESS_VENUE_TYPES.includes(values.venueType)) {
@@ -101,6 +102,21 @@ export function validateBusinessDetails(values: BusinessDetailsValues): Business
 /** The first field in screen order that carries an error, for moving focus on submit. */
 export function firstBusinessError(errors: BusinessDetailsErrors): BusinessDetailsField | null {
   return BUSINESS_FIELD_ORDER.find((field) => errors[field]) ?? null;
+}
+
+export const DEFAULT_BUSINESS_ID_PREFIX = 'business';
+
+/** The DOM id of one company input; the form and whoever focuses it must agree on this. */
+export function businessFieldId(field: BusinessDetailsField, prefix = DEFAULT_BUSINESS_ID_PREFIX): string {
+  return `${prefix}-${field}`;
+}
+
+/** Moves focus to one company input. Returns false when it is not on the page (or disabled). */
+export function focusBusinessField(field: BusinessDetailsField, prefix = DEFAULT_BUSINESS_ID_PREFIX): boolean {
+  const el = document.getElementById(businessFieldId(field, prefix));
+  if (!(el instanceof HTMLElement) || (el as HTMLInputElement).disabled) return false;
+  el.focus();
+  return document.activeElement === el;
 }
 
 /** Trim and normalise the form values into the callable's payload; empty optionals are dropped. */

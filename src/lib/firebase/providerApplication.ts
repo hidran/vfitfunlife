@@ -1,7 +1,8 @@
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from './config';
-import { applyAsProvider, type ApplyAsProviderResult, type BusinessApplicationInput } from './functions';
-import type { ProviderType } from '@/types/firebase';
+import { applyAsProvider, type ApplyAsProviderResult, type ProviderApplicationInput } from './functions';
+
+export type { ProviderApplicationInput };
 
 /**
  * User opts in as a provider and is approved on the spot: `instructors/{uid}` is created as a
@@ -9,6 +10,9 @@ import type { ProviderType } from '@/types/firebase';
  * `providerStatus: 'verified'`, default Mon-Fri hours are seeded, and one inactive, unpriced
  * draft service is created per requested category so the choices made at signup land in
  * /provider/services. An admin can un-verify afterwards from the back office.
+ *
+ * A company (`providerType: 'business'` + `business`) is never approved on the spot: it is
+ * queued for an admin and the result comes back with `status: 'pending'`.
  *
  * This is a callable, not a client batch. `firestore.rules` deliberately allows a user to
  * create only an *unverified, pending* instructors document and forbids them from ever
@@ -25,13 +29,7 @@ import type { ProviderType } from '@/types/firebase';
  * Throws on failure; callers (the registration form) surface the error.
  */
 export async function submitProviderApplication(
-  opts: {
-    fullName: string;
-    categoryIds: string[];
-    /** Absent ⇒ 'individual'. A 'business' application must carry `business` and never auto-approves. */
-    providerType?: ProviderType;
-    business?: BusinessApplicationInput;
-  }
+  opts: ProviderApplicationInput & { fullName: string }
 ): Promise<ApplyAsProviderResult> {
   const providerType = opts.providerType ?? 'individual';
   return applyAsProvider({

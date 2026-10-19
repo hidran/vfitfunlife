@@ -9,15 +9,8 @@ import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
 import { CategoryLeafPicker } from '@/components/provider/CategoryLeafPicker';
 import { ProviderTypeToggle } from '@/components/provider/ProviderTypeToggle';
-import { BusinessDetailsForm, focusFirstBusinessError } from '@/components/provider/BusinessDetailsForm';
-import {
-  EMPTY_BUSINESS_DETAILS,
-  providerApplicationErrorFor,
-  toBusinessApplicationInput,
-  validateBusinessDetails,
-  type BusinessDetailsErrors,
-  type BusinessDetailsValues,
-} from '@/lib/businessDetails';
+import { BusinessDetailsForm } from '@/components/provider/BusinessDetailsForm';
+import { useBusinessDetails } from '@/hooks/useBusinessDetails';
 import { useI18n } from '@/hooks/useI18n';
 import type { MessageKey } from '@/i18n/messages';
 import type { ProviderType } from '@/types/firebase';
@@ -34,37 +27,26 @@ export function BecomeProviderCard() {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [type, setType] = useState<ProviderType>('individual');
-  const [business, setBusiness] = useState<BusinessDetailsValues>(EMPTY_BUSINESS_DETAILS);
-  const [businessErrors, setBusinessErrors] = useState<BusinessDetailsErrors>({});
   const [errorKey, setErrorKey] = useState<MessageKey | null>(null);
-
-  const clearBusinessError = (field: keyof BusinessDetailsErrors) =>
-    setBusinessErrors((prev) => (prev[field] ? { ...prev, [field]: undefined } : prev));
+  const business = useBusinessDetails(CARD_ID_PREFIX, { disabled: submit.isPending });
 
   const handleSubmit = () => {
     setErrorKey(null);
     if (type === 'business') {
-      const errors = validateBusinessDetails(business);
-      setBusinessErrors(errors);
-      if (focusFirstBusinessError(errors, CARD_ID_PREFIX)) {
+      const payload = business.validate();
+      if (!payload) {
         setErrorKey('provider.business.error.fixFields');
         return;
       }
+      submit.mutate(
+        { categoryIds: selected, providerType: 'business', business: payload },
+        { onError: (err) => setErrorKey(business.applyServerError(err)) }
+      );
+      return;
     }
     submit.mutate(
-      type === 'business'
-        ? { categoryIds: selected, providerType: 'business', business: toBusinessApplicationInput(business) }
-        : { categoryIds: selected, providerType: 'individual' },
-      {
-        onError: (err) => {
-          const { key, field } = providerApplicationErrorFor(err);
-          if (field) {
-            setBusinessErrors({ [field]: key });
-            focusFirstBusinessError({ [field]: key }, CARD_ID_PREFIX);
-          }
-          setErrorKey(key);
-        },
-      }
+      { categoryIds: selected, providerType: 'individual' },
+      { onError: (err) => setErrorKey(business.applyServerError(err)) }
     );
   };
 
@@ -135,10 +117,10 @@ export function BecomeProviderCard() {
           <ProviderTypeToggle value={type} onChange={setType} disabled={submit.isPending} />
           {type === 'business' && (
             <BusinessDetailsForm
-              values={business}
-              onChange={setBusiness}
-              errors={businessErrors}
-              onClearError={clearBusinessError}
+              values={business.values}
+              onChange={business.setValues}
+              errors={business.errors}
+              onClearError={business.clearError}
               disabled={submit.isPending}
               idPrefix={CARD_ID_PREFIX}
             />
@@ -147,7 +129,7 @@ export function BecomeProviderCard() {
             <p className="text-sm text-content-muted mb-2">{t('provider.optIn.pickServices')}</p>
             <CategoryLeafPicker value={selected} onChange={setSelected} disabled={submit.isPending} />
           </div>
-          <div aria-live="polite">
+          <div aria-live="polite" className="empty:hidden">
             {(errorKey || submit.isError) && (
               <p className="text-sm text-[#EF4444]">{t(errorKey ?? 'provider.card.error')}</p>
             )}
@@ -159,7 +141,7 @@ export function BecomeProviderCard() {
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => { submit.reset(); setErrorKey(null); setBusinessErrors({}); setOpen(false); }}
+              onClick={() => { submit.reset(); setErrorKey(null); business.reset(); setOpen(false); }}
             >
               {t('provider.card.cancel')}
             </Button>

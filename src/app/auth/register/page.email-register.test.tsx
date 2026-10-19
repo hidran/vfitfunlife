@@ -366,6 +366,9 @@ describe('RegisterPage Email Registration', () => {
       expect(screen.getAllByText('Questa partita IVA è già registrata').length).toBeGreaterThan(0);
     });
     expect(screen.getByLabelText('Partita IVA')).toHaveAttribute('aria-invalid', 'true');
+    // The inputs were disabled while submitting; focus lands once they are enabled again.
+    await waitFor(() => expect(screen.getByLabelText('Partita IVA')).toHaveFocus());
+    expect(screen.getByLabelText('Partita IVA')).not.toBeDisabled();
     expect(mockPush).not.toHaveBeenCalled();
   });
 

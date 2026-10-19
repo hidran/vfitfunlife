@@ -33,6 +33,10 @@ describe('validateBusinessDetails', () => {
     });
   });
 
+  it('does not require a public name once the legal name is there (it falls back to it)', () => {
+    expect(validateBusinessDetails({ ...valid, displayName: '' })).toEqual({});
+  });
+
   it('rejects a P.IVA with a bad check digit', () => {
     expect(validateBusinessDetails({ ...valid, vatNumber: '01234567898' })).toEqual({
       vatNumber: 'provider.business.error.vatInvalid',

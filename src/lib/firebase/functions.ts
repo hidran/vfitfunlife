@@ -695,6 +695,15 @@ export async function updateAiAuthoringSettings(patch: Partial<AiAuthoringSettin
 export type BusinessApplicationInput = Pick<BusinessDetails, 'legalName' | 'vatNumber' | 'displayName'> &
   Partial<Pick<BusinessDetails, 'description' | 'website' | 'city' | 'venueType' | 'address'>>;
 
+/** The applyAsProvider request: who is applying, for what, and as whom. */
+export interface ProviderApplicationInput {
+  categoryIds: string[];
+  fullName?: string;
+  /** Absent ⇒ 'individual'. A 'business' application must carry `business` and never auto-approves. */
+  providerType?: ProviderType;
+  business?: BusinessApplicationInput;
+}
+
 export interface ApplyAsProviderResult {
   success: boolean;
   providerId: string;
@@ -722,12 +731,7 @@ export interface ApplyAsProviderResult {
  * It cannot be done from the client: firestore.rules lets a user create only an unverified,
  * pending instructors document and never lets them set `providerProfile.isVerified`.
  */
-export async function applyAsProvider(data: {
-  categoryIds: string[];
-  fullName?: string;
-  providerType?: ProviderType;
-  business?: BusinessApplicationInput;
-}): Promise<ApplyAsProviderResult> {
+export async function applyAsProvider(data: ProviderApplicationInput): Promise<ApplyAsProviderResult> {
   const functions = await getFunctionsInstance();
   const fn = httpsCallable<typeof data, ApplyAsProviderResult>(functions, "applyAsProvider");
   return (await fn(data)).data;

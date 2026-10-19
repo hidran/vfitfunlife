@@ -472,7 +472,8 @@
   }
 
   [data-theme='light'] .auth-page.auth-surface .auth-control,
-  [data-theme='light'] .auth-page.auth-surface input {
+  [data-theme='light'] .auth-page.auth-surface input,
+  [data-theme='light'] .auth-page.auth-surface select {
     background-color: #EAF2FB !important;
     border-color: #9FB6CF !important;
     color: #0F172A !important;

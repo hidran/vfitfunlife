@@ -20,15 +20,8 @@ import { ProviderOptInField } from '@/components/auth/ProviderOptInField';
 import { validatePasswordStrength } from '@/lib/auth/passwordPolicy';
 import { PasswordRequirements } from '@/components/auth/PasswordRequirements';
 import { alreadyRegisteredRoute, postAuthRoute } from '@/lib/auth/postAuthRoute';
-import {
-  EMPTY_BUSINESS_DETAILS,
-  providerApplicationErrorFor,
-  toBusinessApplicationInput,
-  validateBusinessDetails,
-  type BusinessDetailsErrors,
-  type BusinessDetailsValues,
-} from '@/lib/businessDetails';
-import { focusFirstBusinessError } from '@/components/provider/BusinessDetailsForm';
+import { useBusinessDetails } from '@/hooks/useBusinessDetails';
+import type { ProviderApplicationInput } from '@/lib/firebase/providerApplication';
 import type { ProviderType } from '@/types/firebase';
 
 const SECTIONS = [
@@ -86,47 +79,32 @@ export function RegisterClient() {
   const [wantsProvider, setWantsProvider] = useState(startsAsProvider);
   const [providerCategoryIds, setProviderCategoryIds] = useState<string[]>([]);
   const [providerType, setProviderType] = useState<ProviderType>('individual');
-  const [business, setBusiness] = useState<BusinessDetailsValues>(EMPTY_BUSINESS_DETAILS);
-  const [businessErrors, setBusinessErrors] = useState<BusinessDetailsErrors>({});
-  const clearBusinessError = (field: keyof BusinessDetailsErrors) =>
-    setBusinessErrors((prev) => (prev[field] ? { ...prev, [field]: undefined } : prev));
+  // Focus on a bad company field waits until the inputs are enabled again (isLoading).
+  const business = useBusinessDetails(undefined, { disabled: isLoading });
 
   /**
    * Checks the professional section and returns the payload for submitProviderApplication,
    * or null (with the error shown) when it is incomplete. A company must pass the client
    * validation before anything is created, so a typo in the P.IVA never costs an account.
    */
-  const providerPayload = (): Parameters<typeof submitProviderApplication>[0] | null => {
+  const providerPayload = (): (ProviderApplicationInput & { fullName: string }) | null => {
     if (providerCategoryIds.length === 0) {
       setError(t('provider.optIn.errorNoCategory'));
       return null;
     }
     if (providerType === 'business') {
-      const errors = validateBusinessDetails(business);
-      setBusinessErrors(errors);
-      if (focusFirstBusinessError(errors)) {
+      const payload = business.validate();
+      if (!payload) {
         setError(t('provider.business.error.fixFields'));
         return null;
       }
-      return {
-        fullName: fullName.trim(),
-        categoryIds: providerCategoryIds,
-        providerType: 'business',
-        business: toBusinessApplicationInput(business),
-      };
+      return { fullName: fullName.trim(), categoryIds: providerCategoryIds, providerType: 'business', business: payload };
     }
     return { fullName: fullName.trim(), categoryIds: providerCategoryIds, providerType: 'individual' };
   };
 
   /** The provider step failed after the account was created: say why, under the field when there is one. */
-  const showProviderError = (err: unknown) => {
-    const { key, field } = providerApplicationErrorFor(err);
-    if (field) {
-      setBusinessErrors({ [field]: key });
-      focusFirstBusinessError({ [field]: key });
-    }
-    setError(t(key));
-  };
+  const showProviderError = (err: unknown) => setError(t(business.applyServerError(err)));
 
   // Someone who already has a profile (opened /auth/register by hand, or followed an old
   // link) must not re-run registration over it: send them where a sign-in would. Skipped
@@ -426,8 +404,9 @@ export function RegisterClient() {
             )}
 
             {/* Error Message */}
+            <div aria-live="polite" className="empty:hidden">
             {!emailTaken && (error || storeError) && (
-              <div aria-live="polite" className={cn(
+              <div className={cn(
                 "p-4 border rounded-lg",
                 (error || storeError)?.includes('not enabled')
                   ? "bg-yellow-500/10 border-yellow-500/20"
@@ -466,6 +445,7 @@ export function RegisterClient() {
                 )}
               </div>
             )}
+            </div>
 
             {/* Full Name */}
             <div className="space-y-2">
@@ -610,10 +590,10 @@ export function RegisterClient() {
               onChangeCategoryIds={setProviderCategoryIds}
               providerType={providerType}
               onChangeProviderType={setProviderType}
-              business={business}
-              onChangeBusiness={setBusiness}
-              businessErrors={businessErrors}
-              onClearBusinessError={clearBusinessError}
+              business={business.values}
+              onChangeBusiness={business.setValues}
+              businessErrors={business.errors}
+              onClearBusinessError={business.clearError}
               disabled={isLoading}
             />
 
@@ -676,11 +656,13 @@ export function RegisterClient() {
       <div className="flex-1 px-6 pb-8">
         <form onSubmit={handleSocialSubmit} className="space-y-6 max-w-md mx-auto">
           {/* Error Message */}
-          {error && (
-            <div aria-live="polite" className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
-              <p className="text-red-400 text-sm text-center">{error}</p>
-            </div>
-          )}
+          <div aria-live="polite" className="empty:hidden">
+            {error && (
+              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+                <p className="text-red-400 text-sm text-center">{error}</p>
+              </div>
+            )}
+          </div>
 
           {/* Avatar Upload (placeholder for now) */}
           <div className="flex justify-center">
@@ -777,10 +759,10 @@ export function RegisterClient() {
             onChangeCategoryIds={setProviderCategoryIds}
             providerType={providerType}
             onChangeProviderType={setProviderType}
-            business={business}
-            onChangeBusiness={setBusiness}
-            businessErrors={businessErrors}
-            onClearBusinessError={clearBusinessError}
+            business={business.values}
+            onChangeBusiness={business.setValues}
+            businessErrors={business.errors}
+            onClearBusinessError={business.clearError}
             disabled={isLoading}
           />
 

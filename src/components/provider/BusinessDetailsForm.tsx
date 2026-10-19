@@ -1,12 +1,13 @@
 'use client';
 
-import { useId, useState, type ChangeEvent } from 'react';
+import { useId, type ChangeEvent } from 'react';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
 import { normalizeVatNumber } from '@/lib/vatNumber';
 import {
   BUSINESS_VENUE_TYPES,
-  firstBusinessError,
+  DEFAULT_BUSINESS_ID_PREFIX,
+  businessFieldId,
   type BusinessDetailsErrors,
   type BusinessDetailsField,
   type BusinessDetailsValues,
@@ -26,20 +27,6 @@ interface BusinessDetailsFormProps {
   idPrefix?: string;
 }
 
-export const DEFAULT_BUSINESS_ID_PREFIX = 'business';
-
-export function businessFieldId(field: BusinessDetailsField, prefix = DEFAULT_BUSINESS_ID_PREFIX): string {
-  return `${prefix}-${field}`;
-}
-
-/** Moves focus to the first field in error, in screen order. Returns false when nothing is wrong. */
-export function focusFirstBusinessError(errors: BusinessDetailsErrors, prefix = DEFAULT_BUSINESS_ID_PREFIX): boolean {
-  const field = firstBusinessError(errors);
-  if (!field) return false;
-  document.getElementById(businessFieldId(field, prefix))?.focus();
-  return true;
-}
-
 const VENUE_LABEL_KEY = {
   gym: 'provider.business.venue.gym',
   school: 'provider.business.venue.school',
@@ -52,8 +39,9 @@ const fieldClass =
 
 /**
  * Company details of a business provider, filled in at signup (or from the profile card).
- * Plain controlled inputs: the register page keeps its own state and so does this. The
- * public name follows the legal name until the user types one of their own.
+ * Plain controlled inputs over state the caller owns (see useBusinessDetails). The public
+ * name is whatever the user typed — empty means "same as the legal name", which the
+ * placeholder shows and toBusinessApplicationInput applies.
  */
 export function BusinessDetailsForm({
   values,
@@ -65,23 +53,12 @@ export function BusinessDetailsForm({
 }: BusinessDetailsFormProps) {
   const { t } = useI18n();
   const hintId = useId();
-  const [displayNameEdited, setDisplayNameEdited] = useState(false);
 
   const id = (field: BusinessDetailsField) => businessFieldId(field, idPrefix);
   const errorId = (field: BusinessDetailsField) => `${id(field)}-error`;
 
   const set = (field: BusinessDetailsField, value: string) => {
     onClearError?.(field);
-    if (field === 'legalName') {
-      onChange({ ...values, legalName: value, displayName: displayNameEdited ? values.displayName : value });
-      return;
-    }
-    if (field === 'displayName') {
-      // An emptied public name goes back to following the legal name.
-      setDisplayNameEdited(value !== '');
-      onChange({ ...values, displayName: value === '' ? values.legalName : value });
-      return;
-    }
     onChange({ ...values, [field]: value });
   };
 
@@ -150,6 +127,7 @@ export function BusinessDetailsForm({
         <input
           id={id('displayName')}
           type="text"
+          placeholder={values.legalName}
           value={values.displayName}
           onChange={text('displayName')}
           disabled={disabled}
