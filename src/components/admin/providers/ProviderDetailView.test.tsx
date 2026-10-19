@@ -166,6 +166,20 @@ describe('ProviderDetailView — company', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
+  it('never turns a non-http(s) website into a link', async () => {
+    mockFetchProvider.mockResolvedValueOnce({
+      id: 'biz',
+      providerType: 'business',
+      business: { legalName: 'Evil S.r.l.', vatNumber: '01234567897', displayName: 'Evil', website: 'javascript:alert(1)' },
+    });
+    renderView('biz');
+    await screen.findByText('Evil S.r.l.');
+
+    expect(screen.getByText('javascript:alert(1)')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /javascript/ })).not.toBeInTheDocument();
+    expect(document.querySelector('a[href^="javascript:"]')).toBeNull();
+  });
+
   it('shows nothing company-related for an individual, and never reads instructors/', () => {
     mockProvider = individual;
     renderView('solo');

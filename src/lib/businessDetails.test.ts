@@ -4,6 +4,7 @@ import {
   firstBusinessError,
   businessDetailsFromProvider,
   providerApplicationErrorFor,
+  safeHttpUrl,
   toBusinessApplicationInput,
   toBusinessProfilePatch,
   validateBusinessDetails,
@@ -159,6 +160,27 @@ describe('toBusinessApplicationInput', () => {
       venueType: 'none',
       website: 'https://x.it',
     });
+  });
+});
+
+describe('safeHttpUrl', () => {
+  it('returns the href for http(s) URLs only', () => {
+    expect(safeHttpUrl('https://palestrarossi.it')).toBe('https://palestrarossi.it/');
+    expect(safeHttpUrl('  http://example.com/path?x=1 ')).toBe('http://example.com/path?x=1');
+  });
+
+  it('refuses every other scheme, garbage and empty values', () => {
+    expect(safeHttpUrl('javascript:alert(1)')).toBeNull();
+    expect(safeHttpUrl('JavaScript:alert(1)')).toBeNull();
+    expect(safeHttpUrl('data:text/html,<script>alert(1)</script>')).toBeNull();
+    expect(safeHttpUrl('ftp://example.com')).toBeNull();
+    expect(safeHttpUrl('palestrarossi.it')).toBeNull();
+    expect(safeHttpUrl('not a url')).toBeNull();
+    expect(safeHttpUrl('')).toBeNull();
+    expect(safeHttpUrl('   ')).toBeNull();
+    expect(safeHttpUrl(null)).toBeNull();
+    expect(safeHttpUrl(undefined)).toBeNull();
+    expect(safeHttpUrl(42)).toBeNull();
   });
 });
 

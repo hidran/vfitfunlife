@@ -61,14 +61,24 @@ const MAX_CITY = 120;
 const MAX_WEBSITE = 300;
 const MAX_DESCRIPTION = 2000;
 
+/**
+ * A stored website as a safe href, or null when it is not an http(s) URL. Owners write
+ * `business.website` straight to Firestore (updateBusinessDetails), so anything rendered as a
+ * link must be re-checked here: a `javascript:` value must become plain text, never an href.
+ */
+export function safeHttpUrl(value: unknown): string | null {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
 /** http(s) URL check that mirrors the server's: parseable and an http/https scheme. */
 export function isValidWebsite(input: string): boolean {
-  try {
-    const url = new URL(input.trim());
-    return url.protocol === 'http:' || url.protocol === 'https:';
-  } catch {
-    return false;
-  }
+  return safeHttpUrl(input) !== null;
 }
 
 /**

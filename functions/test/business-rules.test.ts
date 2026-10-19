@@ -60,7 +60,24 @@ const as = (uid: string) => env.authenticatedContext(uid).firestore();
 
 describe('instructors/{uid}.business owner edits', () => {
   it.each(EDITABLE)('lets the owner edit business.%s', async field => {
-    await assertSucceeds(as('owner').doc('instructors/owner').update({ [`business.${field}`]: 'changed' }));
+    const value = field === 'website' ? 'https://changed.example' : 'changed';
+    await assertSucceeds(as('owner').doc('instructors/owner').update({ [`business.${field}`]: value }));
+  });
+  it('only accepts an http(s) website from the owner (it becomes a clickable href)', async () => {
+    const doc = as('owner').doc('instructors/owner');
+    await assertFails(doc.update({ 'business.website': 'javascript:alert(1)' }));
+    await assertFails(doc.update({ 'business.website': 'data:text/html,hi' }));
+    await assertFails(doc.update({ 'business.website': 'palestra.example' }));
+    await assertFails(doc.update({ 'business.website': 42 }));
+    await assertFails(doc.update({ 'business.website': `https://${'a'.repeat(300)}.example` }));
+    await assertSucceeds(doc.update({ 'business.website': 'https://example.com' }));
+    await assertSucceeds(doc.update({ 'business.website': 'http://example.com/path' }));
+    await assertSucceeds(doc.update({ 'business.website': '' }));
+    await assertSucceeds(doc.update({ 'business.website': null }));
+    await assertSucceeds(doc.update({ business: { ...business, website: 'javascript:alert(1)' } }).then(
+      () => { throw new Error('whole-map rewrite with a javascript: website must fail'); },
+      () => undefined,
+    ));
   });
   it('lets the owner rewrite the whole map when only editable fields differ', async () => {
     await assertSucceeds(as('owner').doc('instructors/owner').update({ business: { ...business, displayName: 'New', city: 'Torino' } }));

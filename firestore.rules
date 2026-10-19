@@ -396,6 +396,18 @@ service cloud.firestore {
           .hasOnly(['displayName', 'description', 'website', 'logoUrl', 'city']);
     }
 
+    /**
+     * The owner's website is rendered as a link in the admin panel and on the public profile:
+     * absent, null or '' is fine, anything else must be an http(s) URL of at most 300
+     * characters (the same cap as the business validator), so a `javascript:` value can never
+     * be stored. Admins are not bound (the branch is owner-only).
+     */
+    function businessWebsiteSafe() {
+      let website = request.resource.data.get(['business', 'website'], null);
+      return website == null || website == '' ||
+        (website is string && website.size() <= 300 && website.matches('^https?://.*'));
+    }
+
     match /instructors/{instructorId} {
       // Public read for verified instructors. The last clause matches the services rule's
       // reasoning below: ownership by path id, not by a `uid` field older/pending provider
@@ -434,7 +446,8 @@ service cloud.firestore {
          request.resource.data.get('partnerStatus', 'pending') ==
            resource.data.get('partnerStatus', 'pending') &&
          accountTypeUnchanged() &&
-         businessProtectedUnchanged());
+         businessProtectedUnchanged() &&
+         businessWebsiteSafe());
 
       allow delete: if isAdmin();
 

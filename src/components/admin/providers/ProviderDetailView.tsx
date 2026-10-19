@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { fetchProvider } from '@/lib/firebase/providers';
+import { safeHttpUrl } from '@/lib/businessDetails';
 import { releaseBusinessVat } from '@/lib/firebase/functions';
 import { useAdminStore } from '@/stores/adminStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -447,6 +448,8 @@ function BusinessDetailsCard({ providerId }: { providerId: string }) {
 
   const business = instructor?.business;
   const na = t('admin.providerDetail.field.naValue');
+  // Owners write business.website directly; a non-http(s) value is shown but never linked.
+  const websiteHref = safeHttpUrl(business?.website);
 
   // Only the uniqueness claim goes (releaseBusinessVat): the number stays on the profile, so
   // the block looks the same afterwards and the action is safe to repeat.
@@ -524,9 +527,9 @@ function BusinessDetailsCard({ providerId }: { providerId: string }) {
             <BusinessField label={t('admin.providerDetail.business.address')} value={business.address || na} />
             <BusinessField label={t('admin.providerDetail.business.city')} value={business.city || na} />
             <BusinessField label={t('admin.providerDetail.business.website')}>
-              {business.website ? (
+              {websiteHref ? (
                 <a
-                  href={business.website}
+                  href={websiteHref}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-sm text-[#00C9FF] light:text-cyan-700 hover:underline break-all"
@@ -535,7 +538,7 @@ function BusinessDetailsCard({ providerId }: { providerId: string }) {
                   <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true" />
                 </a>
               ) : (
-                <span className="text-sm text-content">{na}</span>
+                <span className="text-sm text-content break-all">{business.website || na}</span>
               )}
             </BusinessField>
           </dl>
