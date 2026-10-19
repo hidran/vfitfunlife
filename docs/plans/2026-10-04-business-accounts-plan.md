@@ -8,6 +8,10 @@
 > availability, services, reviews and payments are reused untouched.
 > **Resume rule:** find the first task whose status is not `[x]`/`[-]`, read its "Done when", continue.
 > Update the status box **and** the "Log" at the bottom in the same commit as the work.
+>
+> **Reconciled 2026-10-19:** this file is the branch's plan; main's parallel rebuild of the same tasks is summarised in the
+> appendix "Rebuild on main (superseded 2026-10-19)" at the end, together with the follow-ups that are still open. Task B12
+> (venue on approval) is new here; see the Log entry "Reconciliation 2026-10-19".
 
 Status legend: `[ ]` todo · `[~]` in progress (write who/when in the Log) · `[x]` done (commit hash) · `[-]` dropped (why) · `[?]` blocked on the user.
 
@@ -245,6 +249,52 @@ Order: `firestore.rules` → functions (`applyAsProvider`, new/changed callables
 `--only functions:<names> --force`, wait for indexes READY) → hosting. Staging smoke (B10 steps 1–4), then
 the same on prod with a throwaway P.IVA claim removed afterwards.
 - **Done when:** staging and prod run the commit; prod smoke leaves no test company behind.
+
+### B12 `[x]` Approval creates the business's venue (Medium) — reconciled 2026-10-19 (R1-R4b, code done; browser re-verification of the reconciled build still open)
+Added 2026-10-19 from `docs/superpowers/specs/2026-10-19-unified-group-courses-design.md` §3. Implemented **on this branch's
+transactional base** (the ported delta of main's rebuild, see the Log entry "Reconciliation 2026-10-19"); main's own B12
+(`0d849bd`, `9bd6762`) is superseded. Commits: **R4 `851f74d`** (venue created on approval inside `commitProviderDecision`),
+**R4b `205c786`** (lifecycle, legacy `venueType`, required premises, mirror precision, rules tests); groundwork **R1 `02e66a3`**
+(venue types, `hostsCourses`, owner-proof rules keys), **R2 `250de85`** (`/fit/gyms`, venue pages, admin forms), **R3 `0d146d7`**
+(company form and server contract carry `venueType` + `address`).
+- **Types.** `VenueType` gains `school` and `studio` (`src/types/venue.ts`, `functions/src/types.ts`). `COURSE_VENUE_TYPES`
+  (`gym | school | studio`) is the single list; `hostsCourses(type)` replaces every `type === 'gym'` gate (partner-gym schedule/store,
+  the `activePartnerGym` rule, the timetable button, the admin gym-instructor panel); a test pins the rule to the list.
+  `BUSINESS_VENUE_TYPES` = those three plus `none`. `/fit/gyms` lists all three types and is titled "Palestre e scuole" /
+  "Gyms & schools" (`fit.gyms.title`, five locales).
+- **Contract (`applyAsProvider`, `validateBusinessInput`).** `business.venueType` is `gym | school | studio | none`; an **absent
+  value means `none`** (no venue). This deviates from main's rebuild, where absent meant `gym`: an old cached signup client must
+  not make approval invent a gym. The web form still pre-selects `gym`. For gym/school/studio the street `address` (≤ 200,
+  `invalid_business_address`) and the `city` are **required server-side** (`business_address_required`, `business_city_required`);
+  for `none` the address is stored `null`. An unknown type is `invalid_venue_type`. All three of `venueType`, `address`, `venueId`
+  are in `businessKeys()` and `businessReviewedKeys()` of `firestore.rules`: the owner cannot change them (and the map can still be
+  edited for display fields).
+- **Approve what you saw.** The admin's `expectedReview` snapshot includes `venueType` and `address` (absent = `none`/empty), so a
+  company that changes its premises between the admin's view and the approval ends in `stale_review`.
+- **Venue on approval.** Inside the one transaction of `commitProviderDecision` (`functions/src/providers/commitDecision.ts`, pure
+  planning in `businessVenue.ts`): the transaction reads `venues/biz_<uid>` with the other reads and `planBusinessVenue` decides:
+  create (`tx.create`, never `set`) a pending, non-partner, active venue `{name: displayName, slug, type, city, address, ownerId: uid,
+  partnerStatus: 'pending', isPartner: false, isActive: true, ...}` and link it as the nested `business.venueId`; **reactivate** the
+  company's own inactive venue on re-approval (patch `isActive`/`updatedAt` only, so admin edits, photos and `partnerStatus`
+  survive) and relink; nothing when already active and linked, or when `venueId` is set but the venue was deleted (a deleted venue is
+  not recreated). `venue_exists` (`already-exists`) is raised only for an **unexpected owner clash** (a venue at `biz_<uid>` owned by
+  someone else) or a lost `create` race. Individuals and `none` never get a venue. `decideProviderApplication` returns `venueId`
+  (`null` unless a venue was created/brought back); the audit entry carries `venueId`, `venueReactivated`, `venueDeactivated`.
+- **Deactivation.** Rejection deactivates the company's own active venue; `convertBusinessToIndividual` does it in its transaction
+  (audit `venueDeactivated`); `deleteUserCascade` deactivates `venues where ownerId == uid` (`deactivateOwnedVenues`). `ownerId`
+  stays for audit; nothing is deleted (venues carry courses, sessions and bookings).
+- **Mirror.** `syncBusinessVenueLocation` (`onDocumentWritten` on `instructors/{id}`, `retry: true`, so it needs `--force` on deploy)
+  copies the owner's saved lat/lng and city, and `business.displayName` as the venue `name`. It re-reads the instructor's current
+  values and writes only the announced fields (a move does not rewrite a name an admin edited). The slug is never changed. A
+  deleted venue stays deleted (`update`).
+- **Admin.** The three approve surfaces map `venue_exists` through `ADMIN_BUSINESS_ERRORS` (`src/lib/providerApplicationErrors.ts`, text `admin.business.error.venueExists`);
+  `BusinessReviewCard` shows venue type and address; `/admin/venues` shows the Owner column from `ownerId` (links to the provider).
+- **Tests.** `functions/src/providers/businessVenue.test.ts`, `commitDecisionVenue.test.ts`, `businessLifecycle.test.ts`,
+  `syncBusinessVenueLocation.test.ts` and `businessApplication.test.ts` (fake Firestore); rules in
+  `functions/test/business-rules.test.ts` and the venue commit against the real transaction semantics in
+  `functions/test/business-venue.test.ts` (both need the Firestore emulator).
+- **Still open:** redeploy the reconciled commit to staging and repeat the B10 journey (see the deployment runbook in
+  `docs/deployment/staging.md`); the guide screenshots for the venue step are pending a re-shoot.
 
 ---
 
@@ -631,3 +681,86 @@ the same on prod with a throwaway P.IVA claim removed afterwards.
 - 2026-10-05 — Final staging code `1777547` published successfully. Playwright confirmed admin company detail has document width equal to viewport at **320 and 390px, light and dark**, with every tab reachable; corrected screenshots captured. Temporary layout fixture removed and browser auth-state files deleted. Screenshot PNG integrity/width checks and journey-document links pass. B5–B10 complete; B11 production deployment remains todo.
 
 - 2026-10-06 — **B11 production complete.** Published business release from `feat/business-accounts`, source `5410480` (application code `1777547`), leaving the shared dirty main checkout untouched. Restored this exact release to staging first: rules/indexes, 11 targeted functions, then hosting. Fresh staging company signup stayed pending and claimed its VAT; ordinary admin reviewed/approved it, nested instructor verification persisted, the public detail rendered, and admin detail fit 390px. QA cleanup verified. Production `vfit-funlife`: rules/indexes → the same 11 functions → production-configured hosting; all 53 indexes READY; 92 admin query shapes passed with zero missing indexes/errors. Hosting version `7ab4d5ab3a025f9d` replaces `837406685c76c8d3`. Fresh production business signup remained pending and owned its synthetic VAT claim; home, search/booking, bookings, chat and profile rendered without captured page exceptions. Auth account, users/instructors subcollections, application and claim removal verified; audit history retained. Required providerKind backfill: staging 0 changes; production 102 records updated, 0 failed; subsequent dry run 0 remaining. Provider search token dry runs required no changes. Fresh gates: release-focused frontend/i18n 351/351, functions src 882/882, rules emulator 69/69, staging and prod builds plus deploy preflight/lint/build passed. Broader root frontend-command run still has 23 failures in 5 suites, all reproduced with identical failure names on base main; not introduced by this release. See [release report](../reports/2026-10-06-business-production-release.md) and [production test checklist](../user-journeys/production-release-checklist.md). External payment/OAuth/SMS/native push delivery and production admin approval were not exercised.
+
+- 2026-10-19 — **Reconciliation 2026-10-19.** Two implementations of this plan existed: this branch (`feat/business-accounts`
+  @ `877b04c`, deployed to production 2026-10-06) and a rebuild on `main` (`556222f`..`1fa024b`, deployed to staging only) that also
+  added B12. Decision: **the branch is the base** (it has legal form/affiliation number, approve-what-you-saw, convert, tax-id
+  correction, claim cascade, a transactional `commitProviderDecision`); main's delta was ported by hand onto
+  `reconcile/business-accounts` (from `32ffc26`, the uncommitted-work snapshot with courses/partner gyms; merge of the branch
+  `58022d9`) as: R1 `02e66a3` (venue types, `hostsCourses`, owner-proof rules keys), R2 `250de85` (`/fit/gyms` lists gym+school+studio),
+  R3 `0d146d7` (company form and server contract carry `venueType` + `address`), R4 `851f74d` (venue on approval, in the transaction),
+  R4b `205c786` (lifecycle, legacy `venueType`, required premises, mirror precision), R5 `71e9ed6` (S-1 individual-path hardening:
+  `rejected` re-queued, verified = no-op, `provider_type_locked`; `selfApproval` guard inside `commitProviderDecision`), R6 `e41e796`
+  (`socialLinks` host allowlist + rules, admin header/tab strip at narrow widths), R7 `fcf5006` (S-5: `name == fullName ==
+  business.displayName` rule), R8 `1abdfb2` (Company badge and logo on `/book`, the booking confirm page and the booking detail).
+  Documentation and restoration of main-only files: the commits that follow R8 on the same branch. Main's `releaseBusinessVat`
+  (input `providerId`), `providerType` admin filter and indexes, `backfill-provider-type.mjs`, `businessVatClaim.ts` and the other
+  duplicates were dropped; the `releaseBusinessVat` contract is the branch's `{vatNumber, reason?}`. **State of the environments:**
+  production (`vfit-funlife`) still runs the branch tree from 2026-10-06 and was not touched; staging (`vfit-app-staging`) currently
+  runs main@`1fa024b`'s build and **must be redeployed** from the reconciled commit (runbook in `docs/deployment/staging.md`). The full
+  analysis is `docs/reports/2026-10-19-business-reconciliation-analysis.md`. Nothing of the reconciled build is deployed anywhere.
+
+---
+
+## Appendix: Rebuild on main (superseded 2026-10-19)
+
+Between 2026-10-19 and the reconciliation, `main` rebuilt tasks B1-B10 from the original plan text (commits `e308d61` .. `1fa024b`, deployed
+to **staging only**) and added B12. That implementation was **not** kept: this branch is the base, and main's useful delta was ported
+as R1-R8 (see the Log entry "Reconciliation 2026-10-19" and `docs/reports/2026-10-19-business-reconciliation-analysis.md`). The log
+below is main's, verbatim, kept so the findings and follow-ups are not lost. Names in it that no longer exist: the
+`releaseBusinessVat({providerId})` callable and `providerType` admin filter/indexes (here: `releaseBusinessVat({vatNumber})` and the
+derived `providerKind`), `scripts/backfill-provider-type.mjs` (deleted, not needed), `providers/businessVatClaim.ts`,
+`providers/releaseBusinessVat.ts`, `validateBusinessApplication`, `providerDecisionErrorKey`.
+
+### Open follow-ups carried over (as of 2026-10-19, checked against the reconciled code where noted)
+
+| ID | Follow-up | Status on the reconciled branch |
+|---|---|---|
+| D4 | `/fit/gyms` without a known location lists only the 50 best-rated venues (`NEARBY_FALLBACK_LIMIT = 50` in `src/hooks/useVenues.ts`), so a new, unrated company venue is missing until "Near me". Product question. | **Open** |
+| D8 | `/booking` search matches a multi-word query only as a phrase prefix of an indexed term (`Torino Centro` misses *Journey Fitness Torino Centro*). Probably pre-existing. | **Open** (not re-tested) |
+| D9 | Plural copy *1 services selected* / *1 servizi selezionati* (`provider.optIn.selectedCount` is `'{{count}} services selected'`); needs plural keys in all five locales. | **Open** |
+| D10 | `/profile` at 320 px overflows by 6 px from the amber `text-warning` row. | **Open** (not re-tested on the reconciled build) |
+| D12 | The *Pending applications* cards on `/admin/providers` show no company indicator. | Appears **resolved**: `src/components/admin/ProviderApplicationsPanel.tsx` renders `BusinessBadge` for a company. Confirm in the browser. |
+| D13 | Auth screens: touch targets under 44 px (*Back* 61x20, *Show* 32x16); pre-existing and shared. | **Open** |
+| D15 | `/provider/location` input ids derive from the translated label (`indirizzo-o-città`), so they change per language. | **Open** (not re-checked) |
+| D16 | Staging only: a non-allowlisted email shows the raw `staging-access-denied` Cloud Function text on the signup form. `authStore.ts` maps it to a friendly message on the sign-in path only. | **Open** for signup (not re-tested) |
+| Booking badge | The booking detail reads the provider through `useProvider`, so the Company badge and logo disappear when the provider's `instructors` profile is not publicly readable (or deleted). Consider denormalising the company flag and logo onto the booking at creation. | **Open** (R8 ports the badge, not the denormalisation) |
+| `socialLinks` rules | `socialLinks.website/linkedin` were owner-written and unconstrained in the rules. | **Done in R6** (`e41e796`): `socialLinksUpdateOk()` on `users` and `instructors` in `firestore.rules` (http(s) URL or `@handle`, ≤ 200, keys limited to six); the per-platform host allowlist is in `src/lib/socialLinks.ts` (`socialLinkHref`). |
+| Convert, then re-apply as a company | After `convertBusinessToIndividual` the account is a verified individual, so applying as a company is refused with `provider_type_locked`; an admin has to reject the account first (the conversion keeps the verification state). No self-service path. | **Open by design**; revisit if it hurts. |
+| Pending venues are public | A B12 venue starts `partnerStatus: 'pending'` and, once it has coordinates, is listed on `/fit/gyms` before any admin action. | **Decision (owner): keep.** |
+| Location race | Superseded: the reconciled approval reads the provider inside the transaction, so a location saved between read and commit forces a re-run (the gap main noted is closed). | Closed |
+| `VenueCreateView` address | Main noted `VenueCreateView` writes `address` as an object while `Venue` and the business-venue builder use a string. | Not re-checked |
+| Company name indexing | Main's `computeProviderSearchTerms` put company names before specialties (the 300-term cap truncates from the end). | **Already equivalent**: `functions/src/providers/searchIndex.ts` adds `business.displayName` and `legalName` right after `fullName`, before specialties. |
+
+Also still true from earlier: the page's unsaved-changes guard on `/profile/edit` ignores the Company details section (it has its own
+Save button), and `admin.verificationsPage.actionFailed` still says only a superadmin can verify.
+
+### Main's plan Log (verbatim)
+
+
+- 2026-10-04 — Plan written after the design was approved ("go for C"). No tasks started.
+- 2026-10-19 — B8 owner field corrected to `ownerId`; B12 added (venue on approval, school/studio types) per the unified-courses spec. Execution started (subagent-driven, on main).
+- 2026-10-19 — B8 done (1ed2c91, c3da677 + review fixes): providers list type filter + Azienda badge, company block with "Libera P.IVA" (`releaseBusinessVat`, audited, idempotent), `businessVatClaim.ts` extracted, venues owner column + school/studio, 4 new `users` indexes (deploy in B11). `business.website` is stored as the parsed href and the rules (`businessWebsiteSafe`) accept an http(s) value only when it CHANGES. **B11 runs `scripts/backfill-provider-type.mjs` per environment (dry run first, then `--apply`) before relying on the Privati filter; D1 "no migration" amended** — providers who applied before B3 carry no `providerType`, so `== 'individual'` misses them until it runs.
+- 2026-10-19 — Follow-up (not done): `socialLinks.website/linkedin` are owner-written and unconstrained in the rules; B8 only makes the UI render non-http(s) values as text (`socialLinkHref` / `safeHttpUrl`). Add a rules check like `businessWebsiteSafe` for `users.socialLinks` / `instructors.socialLinks`.
+- 2026-10-19 — B5 done: "Privato / Azienda" toggle in ProviderOptInField and BecomeProviderCard, `BusinessDetailsForm`, `useBusinessDetails` hook (state, pure `validateBusinessDetails`, server-code mapping, deferred focus to the first bad field), 32 i18n keys ×5 locales, company pending copy on the profile card and the provider banner. B5 uses controlled state + pure validator instead of RHF+Zod (register page is hand-rolled state; avoids nested form); form adds venueType + address for B12.
+- 2026-10-19 — B8 done (2483261): type filter + 4 users indexes (deploy first in B11), BusinessDetailsCard + audited `releaseBusinessVat`, businessVatClaim.ts extraction, venues owner column, safeHttpUrl + website rule, social link hrefs. Open minors: ProviderCreateView should write providerType 'individual' (fold into B12); Instagram href via socialLinkHref; backfill summary should label FAILED_PRECONDITION as 'skipped (changed)'.
+- 2026-10-19 — Execution order changed: B12 before B9/B10/B11 so docs, browser verification and deploy cover venue creation once.
+- 2026-10-19 — B7 done (14e7add): search index adds business names name-first; `providerImageUrl`/`publicBusiness` helpers in src/lib/bookingProvider.ts; Azienda badge on /booking rows and provider page. **B11 must run `scripts/backfill-provider-search.mjs` on each environment** so existing business docs get the new terms; B10 should eyeball the two-badge wrap at 320px it/de.
+- 2026-10-19 — B6 done (2c3a594): BusinessProfileSection on the professional tab, `updateBusinessDetails` allowlisted dotted paths + name/fullName mirror, logo to instructors/{uid}/gallery. Follow-up: the page's unsaved-changes guard ignores the section (own Save button).
+- 2026-10-19 — B4 done (9fe7b18): `accountTypeUnchanged` + allowlist `businessProtectedUnchanged` on instructors owner update, owner create cannot carry `business`/`providerType: business`, `businessVat` deny-all; 22 rules tests. Admins may change users.providerType (intended, D1).
+- 2026-10-19 — B3 done (6ba0f15): businessApplication.ts validator, transactional businessVat claim, always-pending for business, review-bypass guards (business lock, rejected never auto-approves, verified no-op incl. legacy docs), result gains `status`; `ApplyAsProviderErrorCode` exported; `BUSINESS_VAT_COLLECTION` exported for B8. Deferred: extract businessVatClaim.ts in B8; audit entry lacks providerType.
+- 2026-10-19 — B2 done (63d0680): canonical 8-value `VenueType` (adds school/studio; keeps outdoor_space/event_space), `hostsCourses` in both trees with Record-table tests; B12 must also add school/studio to VenueFormView/VenuesListView options and functions/src/ai/tools/index.ts enum.
+- 2026-10-19 — B1 done (e308d61): validator in both trees, 19+19 tests; follow-up for B3: add a check-digit-0 fixture (e.g. 50500000000) and `typeof === 'string'` guard before calling from callables.
+- 2026-10-19 — B12 done: `commitProviderDecision` creates `venues/{auto}` (pending, non-partner, owned by the business; built by pure `providers/businessVenue.ts`) in the approval batch and links it as nested `business.venueId`; idempotent via that field. `syncBusinessVenueLocation` mirrors the owner's lat/lng/city onto the venue (geohash trigger follows). `hostsCourses` replaces the gym gates (schedule, store, `activePartnerGym` rule, VenueDetailClient, plus the admin `GymInstructorPanel` gate in VenueDetailView); `/fit/gyms` lists gym+school+studio via `types` (`where in`, same composite indexes), title "Palestre e scuole" ×5; ProviderCreateView writes `providerType: 'individual'`. **B11 deploys the new trigger (`functions:syncBusinessVenueLocation`) and the rules.** Known gaps (see the follow-up entry below): a business approved before B12 shipped has no venue (re-approval creates one); `venueType` of an already-approved business can't be changed by the owner (rules freeze it).
+- 2026-10-19 — B12 review fixes: venue id is deterministic `biz_<uid>` and written with `batch.create`, so two racing approvals collide (loser gets `already-exists` / `venue_exists`, whole batch refused) and a venue already at that id (e.g. admin-promoted) is never overwritten; `syncBusinessVenueLocation` retries and writes the instructor's CURRENT location (admin hand-edits of the venue's city/lat/lng are overwritten by owner moves, intended); `COURSE_VENUE_TYPES` is the single list (client + functions, pinned to the `activePartnerGym` rule by a test); `types: []` matches nothing; hours block hidden for venues without hours. Known gaps / follow-ups: a provider saving a location between the decision's read and its commit leaves the venue without it until their next move; pending venues that have coordinates are publicly listed on /fit/gyms (intended); `VenueCreateView` writes `address` as an object while `Venue` and the business-venue builder use a string.
+- 2026-10-19 — B9 done (5d1b016): docs (features, cloud-functions, api reference, schema drift fixed, staging "Business accounts release" checklist), `business-signup.md` / `.it.md` guides (screenshots pending B10, file names `business-01..10-*.png`), Instagram link via `socialLinkHref`, `backfill-provider-type.mjs` reports FAILED_PRECONDITION as "skipped (changed)" without failing, `venue_exists` mapped to `admin.providerDecision.error.venueExists` ×5 at the three approve surfaces (`providerDecisionErrorKey`). `provider_type_locked` only comes from `applyAsProvider` and was already mapped. Open a11y points for B10 to check in a browser: `ProviderTypeToggle` is `role=radiogroup` but both buttons are tab stops with no arrow-key handling; required company fields carry no `required`/`aria-required`; the logo `sr-only` file input stays in the tab order next to its button; the admin provider detail has no link to the venue (B12 mentions one), only the Owner column on `/admin/venues`; `admin.verificationsPage.actionFailed` still says only a superadmin can verify.
+- 2026-10-19 — B10 browser-verification fixes (D1, D2, D3, D5, D6/D14, D7, D11; see `docs/user-journeys/business-signup-verification.md`). Out of scope, follow-ups (not done), one per defect:
+  - D4: `/fit/gyms` without a known location lists only the 50 best-rated venues, so a new unrated company venue is missing until "Near me" (product question: discoverability in the default view).
+  - D8: `/booking` search matches a multi-word query only as a phrase prefix of an indexed term (`Torino Centro` misses *Journey Fitness Torino Centro*); probably pre-existing search behaviour.
+  - D9: plural copy *1 services selected* / *1 servizi selezionati* on the register form (needs ICU-style plural keys in all five locales).
+  - D10: `/profile` at 320 px overflows by 6 px from the amber `text-warning` row.
+  - D12: the **Pending applications** cards on `/admin/providers` show no company indicator (the table below does).
+  - D13: auth screens have touch targets under 44 px (*Back* 61x20, *Show* 32x16), pre-existing and shared.
+  - D15: `/provider/location` builds input ids from the translated label (`indirizzo-o-città`), so ids change per language (fragile for tests).
+  - D16: staging only, a non-allowlisted email shows the raw `staging-access-denied` Cloud Function error text on the signup form.
+- 2026-10-19 — Follow-up (review of the B10 fixes, not done): the booking detail reads the provider through `useProvider`, so the Company badge and logo disappear for a provider whose `instructors` profile is not publicly readable (or deleted); consider denormalizing `providerType` and the logo onto the booking at creation.
