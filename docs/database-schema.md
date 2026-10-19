@@ -48,7 +48,7 @@ interface User {
   providerProfile: ProviderProfile | null; // populated for providers; see ProviderProfile in functions/src/types.ts
   isActive: boolean;                // soft-deactivation flag enforced by admin tooling
   isVerified: boolean;              // top-level verification (mirrors providerProfile.isVerified for providers)
-  providerType?: 'individual' | 'business'; // absent ⇒ 'individual'. 'business' = a company (gym, school, studio); company details live on instructors/{uid}.business. Set by the signup callable, not writable by the owner.
+  providerType?: 'individual' | 'business'; // absent ⇒ 'individual'. 'business' = a company (gym, school, studio); company details live on instructors/{uid}.business. Set by `applyAsProvider` (B3); absent ⇒ individual.
 
   // VIP Status
   isVip: boolean;
@@ -125,7 +125,7 @@ interface PointsTransaction {
 interface Venue {
   name: string;
   slug: string;
-  type: 'gym' | 'school' | 'studio' | 'wellness_center' | 'spa' | 'beauty_salon' | 'outdoor_space' | 'event_space';
+  type: 'gym' | 'school' | 'studio' | 'wellness_center' | 'spa' | 'beauty_salon';
                                   // 'school' and 'studio' were added for business accounts (see VenueType in src/types/venue.ts).
                                   // hostsCourses(type) is true for gym / school / studio: those venues can host group courses.
   section: 'fit' | 'fun' | 'life';
@@ -760,9 +760,9 @@ Create these composite indexes in `firestore.indexes.json`:
 
 ### businessVat
 - **Path:** `/businessVat/{vatNumber}` (doc id == the 11-digit P.IVA)
-- **Purpose:** Uniqueness claim so one P.IVA can belong to only one business provider. Created in a transaction by the business signup callable; released if the application is rejected or the account is deleted.
+- **Purpose:** Uniqueness claim so one P.IVA can belong to only one business provider. Created in a transaction by the business signup callable. Released only by an admin via the `releaseBusinessVat` callable (task B8); a rejected applicant keeps the claim so they can re-apply.
 - **Key fields:** `uid: string` (owner of the claim, == `instructors/{uid}`), `createdAt: Timestamp`.
-- **Access:** Admin SDK only — no client read or write (`allow read, write: if false` in `firestore.rules`).
+- **Access:** No client rule (default deny) until the B4 rules task adds an explicit `allow read, write: if false`; Admin SDK only.
 
 ## Additional Collections (Audit Sync 2026-05)
 
