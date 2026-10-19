@@ -7,6 +7,7 @@
 - [User Functions](#user-functions)
 - [Profile APIs](#profile-apis)
 - [Provider Functions](#provider-functions)
+- [Business Account Functions](#business-account-functions)
 - [Booking Functions](#booking-functions)
 - [Customer Booking APIs](#customer-booking-apis)
 - [Provider Booking APIs](#provider-booking-apis)
@@ -678,6 +679,163 @@ POST /setProviderAvailability
   success: boolean;
   updatedSlots: number;
 }
+```
+
+---
+
+## Business Account Functions
+
+Companies and associations (gyms, schools, studios) are providers with `users.providerType: 'business'` and an `instructors/{uid}.business` map. All callables run in `europe-west1`; error `message` values are stable codes the client maps to localised text. Full behaviour and the complete error list: [`../backend/cloud-functions.md`](../backend/cloud-functions.md#provider-applications--business-accounts-functionssrcproviders); source: [`../../functions/src/providers/`](../../functions/src/providers/).
+
+### Apply As Provider
+
+Opt in as a professional: as an individual (auto-approved unless the back office switched that off) or as a company (**always** queued for an admin). Source: [`applyAsProvider.ts`](../../functions/src/providers/applyAsProvider.ts), validators in [`businessApplication.ts`](../../functions/src/providers/businessApplication.ts).
+
+```typescript
+POST /applyAsProvider
+
+// Request
+{
+  categoryIds: string[];            // 1..30 taxonomy ids
+  fullName?: string;
+  providerType?: 'individual' | 'business';   // absent => 'individual'
+  business?: {                      // required for a company
+    legalName: string;              // <= 120
+    vatNumber: string;              // P.IVA or an association's codice fiscale: 11 digits + checksum; spaces and "IT" accepted
+    legalForm?: 'company' | 'sole_trader' | 'association' | 'other';  // absent => 'company'
+    affiliationNumber?: string;     // <= 40, optional
+    displayName?: string;           // <= 120, defaults to legalName
+    description?: string;           // <= 1000
+    website?: string | null;        // http(s) only, <= 200
+    city?: string;                  // <= 80
+    venueType?: 'gym' | 'school' | 'studio' | 'none';  // absent => 'none' (no venue)
+    address?: string | null;        // <= 200; dropped when venueType is 'none'
+  };
+}
+
+// Response
+{
+  success: true;
+  providerId: string;
+  autoApproved?: boolean;           // true only when this call verified them; absent when the account was already verified (nothing written)
+  draftServicesSeeded: number;
+}
+
+// Errors (HttpsError, `message` is the code)
+// invalid-argument:    invalid_vat | invalid_business | invalid_business_name | invalid_legal_form |
+//                      invalid_affiliation_number | invalid_business_description | invalid_website |
+//                      invalid_business_city | invalid_provider_type | invalid_venue_type |
+//                      invalid_business_address | business_city_required | business_address_required
+//                      (the last two when venueType is gym/school/studio)
+// already-exists:      vat_already_registered
+// failed-precondition: business_account_exists (a company re-applying as an individual) |
+//                      business_already_approved | vat_change_not_allowed | provider_type_locked (a verified individual applying as a company)
+// aborted:             concurrent_update
+
+// Requires: authenticated user
+```
+
+A **rejected** applicant is queued as pending again even with auto-approval on, and an **already verified** individual re-applying is a no-op.
+
+### Decide Provider Application
+
+Verify or reject a provider; for a company it also creates, reactivates or deactivates the company's venue. Source: [`decideProviderApplication.ts`](../../functions/src/providers/decideProviderApplication.ts), logic in [`commitDecision.ts`](../../functions/src/providers/commitDecision.ts).
+
+```typescript
+POST /decideProviderApplication
+
+// Request
+{
+  providerId: string;
+  decision: 'verified' | 'rejected';
+  notes?: string;
+  expectedReview?: {                // required to verify a company: what the admin saw
+    vatNumber: string;
+    legalName: string;
+    legalForm?: 'company' | 'sole_trader' | 'association' | 'other' | null;
+    affiliationNumber?: string;
+    venueType?: 'gym' | 'school' | 'studio' | 'none';
+    address?: string | null;
+  };
+}
+
+// Response
+{ success: true; providerId: string; decision: string; draftServicesSeeded: number; venueId: string | null }  // venueId: set when a venue was created or reactivated
+
+// Errors: permission-denied (Admin required | protected_account) | invalid-argument (invalid_provider_id) |
+//         not-found (provider_not_found) |
+//         failed-precondition (review_required | stale_review | claim_missing) |
+//         already-exists (vat_already_registered | venue_exists) | aborted (concurrent_update)
+
+// Requires: admin or superadmin role
+```
+
+Approving a company whose `venueType` is gym, school or studio creates `venues/biz_<uid>` in the same transaction; `venue_exists` is raised only when a venue at that id belongs to someone else (or a create race is lost), and then nothing of the decision is written.
+
+### Release Business VAT
+
+Free a `businessVat/{digits}` tax-id claim (a rejected company's, or a squatter's). Refused while the holder's instructors doc still carries the number and is not rejected, or is still listed. Audit-logged. Source: [`businessAdmin.ts`](../../functions/src/providers/businessAdmin.ts).
+
+```typescript
+POST /releaseBusinessVat
+
+// Request
+{
+  vatNumber: string;                // P.IVA / codice fiscale; spaces and "IT" allowed
+  reason?: string;
+}
+
+// Response
+{ success: true; vatNumber: string; releasedFrom: string | null }   // uid that held the claim
+
+// Errors: permission-denied (Admin required) | invalid-argument (invalid_vat | invalid_reason) |
+//         not-found (claim_not_found) | failed-precondition (claim_in_use) | aborted (concurrent_update)
+
+// Requires: admin or superadmin role
+```
+
+### Convert Business To Individual
+
+```typescript
+POST /convertBusinessToIndividual
+
+// Request
+{ providerId: string; reason?: string }
+
+// Response
+{ success: true; providerId: string; releasedClaims: string[] }
+
+// Errors: permission-denied (Admin required | protected_account) | invalid-argument (invalid_provider_id | invalid_reason) |
+//         not-found (provider_not_found) | failed-precondition (not_a_business)
+
+// Requires: admin or superadmin role
+```
+
+Removes the business map and every claim of the uid, resets the public name to the person's, and deactivates the company's venue (`isActive: false`, `ownerId` kept). Verification state is unchanged.
+
+### Update Business Tax Id
+
+```typescript
+POST /updateBusinessTaxId
+
+// Request
+{
+  providerId: string;
+  vatNumber: string;                // required
+  legalName?: string;
+  legalForm?: 'company' | 'sole_trader' | 'association' | 'other' | null;
+  affiliationNumber?: string | null;
+  reason?: string;
+}
+
+// Response
+{ success: true; providerId: string; vatNumber: string; releasedClaims: string[] }
+
+// Errors: permission-denied (Admin required) | invalid-argument (invalid_vat | invalid_business_name | invalid_legal_form |
+//         invalid_affiliation_number | invalid_provider_id | invalid_reason) |
+//         already-exists (vat_already_registered | vat_carried_by_other) | failed-precondition (not_a_business)
+
+// Requires: admin or superadmin role
 ```
 
 ---
