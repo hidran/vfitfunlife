@@ -151,7 +151,7 @@ token and booking screen shows the company name with no further change.
 - Files: `src/components/admin/providers/ProvidersListView.tsx` (+ test), `ProviderDetailView.tsx`,
   admin store/query for the type filter; a small admin callable `releaseBusinessVat` (superadmin or admin,
   audit-logged) to free a P.IVA claim; `src/components/admin/venues/VenuesListView.tsx` gets a read-only
-  "owner" column (empty until phase 3, but the column and field name `ownerUid` are fixed now).
+  "owner" column showing `venues.ownerId` (the field the venue types, partner-gym store and `managesGym` rule already use; **not** `ownerUid`).
 - List: type filter (all / individual / business) and a company badge. Detail: a business block with legal
   name, P.IVA, website, and the existing approve/reject actions. Every mutation writes `audit_log`
   (project policy).
@@ -180,13 +180,32 @@ Order: `firestore.rules` → functions (`applyAsProvider`, new/changed callables
 the same on prod with a throwaway P.IVA claim removed afterwards.
 - **Done when:** staging and prod run the commit; prod smoke leaves no test company behind.
 
+### B12 `[ ]` Approval creates the business's venue (Medium)
+Added 2026-10-19 from `docs/superpowers/specs/2026-10-19-unified-group-courses-design.md` §3.
+- `VenueType` (`src/types/venue.ts`, functions types) gains `'school' | 'studio'`; a shared helper
+  `hostsCourses(type)` = gym | school | studio replaces every `type === 'gym'` gate
+  (`configureGymInstructor` in `functions/src/partnerGyms/schedule.ts`, `assertGymManager` in
+  `functions/src/partnerGyms/store.ts`, the `activePartnerGym` rule, the timetable button in
+  `VenueDetailClient`). `/fit/gyms` lists all three types; its title becomes "Gyms & schools" in it/en/es/fr/de.
+- Company form (B5) gains `venueType: 'gym' | 'school' | 'studio' | 'none'` (default `gym`) and a street
+  address; `business` map stores `venueType`, `address`. `none` = no fixed premises → no venue.
+- `commitProviderDecision` approving a business with `venueType != 'none'` creates `venues/{auto}` in the
+  same transaction: `{name: business.displayName, type: venueType, address, city, ownerId: uid,
+  partnerStatus: 'pending', isPartner: false, isActive: true, memberDiscountPercent: 0,
+  partnerInstructorExtraPercent: 0, createdAt}` and writes `instructors/{uid}.business.venueId` (nested
+  map, no dotted keys). Idempotent: if `business.venueId` is already set, no second venue.
+- Admin provider detail (B8) shows a link to the venue; the venue detail already edits partner status.
+- **Done when:** tests cover: approval creates exactly one venue owned by the business, re-approval creates
+  none, `none` creates none, individual approval creates none, no dotted keys; the new venue appears in
+  `/fit/gyms` on staging; a school-type venue passes `hostsCourses` gates.
+
 ---
 
 ## 4. Later phases (planned separately once phase 1 ships)
 
 - **Phase 2 — Team:** `businessMembers` collection; the owner invites trainers by email; bookings of a
   business service route to a member; per-member availability; the business page lists its team.
-- **Phase 3 — Venues:** make `venueStaff` real (schema + admin tool), `venues.ownerUid` + "assign owner /
+- **Phase 3 — Venues:** make `venueStaff` real (schema + admin tool), `venues.ownerId` + "assign owner /
   manager" in `/admin/venues`, and a venue application path for real partner gyms. This is what finally
   gives admins ownership visibility over the ~130 seeded venues.
 
@@ -205,3 +224,4 @@ the same on prod with a throwaway P.IVA claim removed afterwards.
 ## 6. Log
 
 - 2026-10-04 — Plan written after the design was approved ("go for C"). No tasks started.
+- 2026-10-19 — B8 owner field corrected to `ownerId`; B12 added (venue on approval, school/studio types) per the unified-courses spec. Execution started (subagent-driven, on main).
