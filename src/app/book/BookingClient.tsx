@@ -181,6 +181,9 @@ export default function ProviderBookingPage() {
                   {t('booking.provider.verified')}
                 </Badge>
               )}
+              {provider.providerType === 'business' && (
+                <Badge variant="default" size="sm">{t('provider.badge.business')}</Badge>
+              )}
             </div>
 
             <div className="flex items-center gap-2 mt-1">

@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   updateBookingInList: vi.fn(),
   updateCurrentBooking: vi.fn(),
   booking: null as Booking | null,
+  instructor: undefined as Record<string, unknown> | undefined,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -32,6 +33,7 @@ vi.mock('@/hooks/useI18n', () => ({
     }[key] ?? key),
   }),
 }));
+vi.mock('@/hooks/useProviders', () => ({ useProvider: () => ({ data: mocks.instructor }) }));
 vi.mock('@/lib/firebase/functions', () => ({ respondToPaymentConfirmation: vi.fn() }));
 vi.mock('@/components/booking/PaymentConfirmationBanner', () => ({ PaymentConfirmationBanner: () => null }));
 vi.mock('@/stores/authStore', () => ({
@@ -102,6 +104,7 @@ describe('BookingDetailPage cancel dialog', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.booking = makeBooking();
+    mocks.instructor = undefined;
   });
 
   it('is described by its body text', () => {
@@ -148,5 +151,42 @@ describe('BookingDetailPage cancel dialog', () => {
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     alert.mockRestore();
+  });
+});
+
+describe('BookingDetailPage provider card', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.booking = makeBooking();
+  });
+
+  it('shows a company\'s logo and Company badge', () => {
+    mocks.instructor = {
+      id: 'trainer-1',
+      providerType: 'business',
+      avatarUrl: 'https://img.example/owner.jpg',
+      business: { displayName: 'Trainer One', logoUrl: 'https://img.example/logo.png' },
+    };
+    render(<BookingDetailPage />);
+
+    expect(screen.getByText('provider.badge.business')).toBeInTheDocument();
+    expect(document.querySelector('img[src*="logo.png"]')).not.toBeNull();
+    expect(document.querySelector('img[src*="owner.jpg"]')).toBeNull();
+  });
+
+  it('shows an individual\'s avatar and no badge', () => {
+    mocks.instructor = { id: 'trainer-1', providerType: 'individual', avatarUrl: 'https://img.example/owner.jpg' };
+    render(<BookingDetailPage />);
+
+    expect(screen.queryByText('provider.badge.business')).not.toBeInTheDocument();
+    expect(document.querySelector('img[src*="owner.jpg"]')).not.toBeNull();
+  });
+
+  it('keeps the initials when the provider profile is not available', () => {
+    mocks.instructor = undefined;
+    render(<BookingDetailPage />);
+
+    expect(screen.queryByText('provider.badge.business')).not.toBeInTheDocument();
+    expect(document.querySelector('img')).toBeNull();
   });
 });

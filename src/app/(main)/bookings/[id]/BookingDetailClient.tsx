@@ -48,6 +48,8 @@ import {
 import type { BookingStatus } from '@/types/booking';
 import { queryKeys } from '@/lib/queryKeys';
 import { chatHref } from '@/lib/routes';
+import { useProvider } from '@/hooks/useProviders';
+import { providerImageUrl } from '@/lib/bookingProvider';
 
 const statusIcons: Record<BookingStatus, LucideIcon> = {
   requested: AlertCircle,
@@ -180,6 +182,13 @@ export default function BookingDetailPage() {
   // alone left the booking card with a "?" avatar and no name.
   const providerDisplayName = booking?.instructorName || booking?.providerName || '';
 
+  // Bookings do not store the provider's picture, so read the live profile: a company shows
+  // its logo (and a Company badge), anyone else their avatar. Venue bookings have no
+  // instructorId and keep the initials.
+  const { data: instructor } = useProvider(booking?.instructorId || undefined);
+  const providerPicture = (instructor ? providerImageUrl(instructor) : undefined) ?? booking?.providerAvatar ?? undefined;
+  const isCompany = instructor?.providerType === 'business';
+
   const handleCancel = async () => {
     if (isCancelling) return;
     setIsCancelling(true);
@@ -257,7 +266,7 @@ export default function BookingDetailPage() {
     router.push(
       chatHref(chatWith, {
         name: providerDisplayName,
-        photoUrl: booking.providerAvatar ?? null,
+        photoUrl: providerPicture ?? null,
         bookingId: booking.id,
       }),
     );
@@ -383,13 +392,16 @@ export default function BookingDetailPage() {
         <div className="bg-surface-elevated/50 rounded-2xl p-4">
           <div className="flex items-center gap-4">
             <Avatar
-              src={booking.providerAvatar}
+              src={providerPicture}
               alt={providerDisplayName}
               size="xl"
               className="shrink-0"
             />
             <div className="flex-1 min-w-0">
-              <h2 className="font-semibold text-content break-words">{providerDisplayName}</h2>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="font-semibold text-content break-words">{providerDisplayName}</h2>
+                {isCompany && <Badge variant="default" size="sm">{t('provider.badge.business')}</Badge>}
+              </div>
               <p className="text-text-secondary">{booking.serviceName}</p>
             </div>
             {chatWith && (
