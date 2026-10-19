@@ -211,7 +211,7 @@ registration. Optional fields only — no existing behaviour changes.
 - Files: `src/components/admin/providers/ProvidersListView.tsx` (+ test), `ProviderDetailView.tsx`,
   admin store/query for the type filter; a small admin callable `releaseBusinessVat` (superadmin or admin,
   audit-logged) to free a P.IVA claim; `src/components/admin/venues/VenuesListView.tsx` gets a read-only
-  "owner" column (empty until phase 3, but the column and field name `ownerUid` are fixed now).
+  "owner" column (empty until phase 3, but the column and field name `ownerUid` are fixed now). *(Superseded 2026-10-19: the field is `venues.ownerId`, see B12.)*
 - List: type filter (all / individual / business) and a company badge. Detail: a business block with legal
   name, P.IVA, website, and the existing approve/reject actions. Every mutation writes `audit_log`
   (project policy).
@@ -318,7 +318,7 @@ transactional base** (the ported delta of main's rebuild, see the Log entry "Rec
   - Rules: owner-only writes under their own `instructors/{uid}`, public read only for a verified parent.
 - **Phase 3 — Team:** `businessMembers` collection; the owner invites trainers by email; bookings of a
   business service route to a member; per-member availability; the business page lists its team.
-- **Phase 4 — Venues:** make `venueStaff` real (schema + admin tool), `venues.ownerUid` + "assign owner /
+- **Phase 4 — Venues:** make `venueStaff` real (schema + admin tool), `venues.ownerId` (was planned as `ownerUid`) + "assign owner /
   manager" in `/admin/venues`, and a venue application path for real partner gyms. This is what finally
   gives admins ownership visibility over the ~130 seeded venues. Host sites in a class timetable can then
   link to a real venue (`location.venueId`).
@@ -572,7 +572,7 @@ transactional base** (the ported delta of main's rebuild, see the Log entry "Rec
   codes mapped through the new `ADMIN_BUSINESS_ERRORS` in `providerApplicationErrors.ts`
   (`vat_already_registered` gets an admin-specific text), refresh after success. **Venues:** read-only
   "Owner" column (uid, "—" + sr-only "no owner" when absent — every venue today); `Venue.ownerUid?`
-  reserved in the type and the schema doc. **Legacy `verifyProvider` callable** refuses a company
+  reserved in the type and the schema doc *(renamed `ownerId` and populated by B12, 2026-10-19)*. **Legacy `verifyProvider` callable** refuses a company
   (business map or `users.providerType === 'business'`) with `failed-precondition` /
   `use_decide_provider_application` before any write. Decisions not in the plan: (1) the owner
   column shows the uid, not a name (a users read per row for an always-empty column); (2) the

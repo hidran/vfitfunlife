@@ -130,7 +130,10 @@ interface PointsTransaction {
 interface Venue {
   name: string;
   slug: string;
-  type: 'gym' | 'wellness_center' | 'beauty_salon' | 'outdoor_space' | 'event_space';
+  type: 'gym' | 'wellness_center' | 'spa' | 'beauty_salon' | 'school' | 'studio' | 'outdoor_space' | 'event_space';
+                                  // Canonical union: VenueType in src/types/venue.ts (mirrored in functions/src/types.ts).
+                                  // Only gym, school and studio host group courses (COURSE_VENUE_TYPES / hostsCourses(type));
+                                  // `/fit/gyms` ("Palestre e scuole" / "Gyms & schools") lists exactly those three.
   section: 'fit' | 'fun' | 'life';
   
   // Contact
@@ -170,10 +173,18 @@ interface Venue {
   isFeatured: boolean;
   isActive: boolean;
 
-  // Ownership — RESERVED for phase 4 of the business-accounts plan (venue owners/managers).
-  // Nothing writes it yet; /admin/venues already shows it read-only in an "Owner" column
-  // ("—" when absent, which is every venue today).
-  ownerUid?: string;              // users/{uid} of the venue's owner
+  // Ownership & partnership (src/types/venue.ts). The field is `ownerId`, never `ownerUid`.
+  ownerId?: string;               // uid of the provider that owns/manages the venue; written by the company approval
+                                  // (biz_<uid>) or an admin; read by the managesGym rule and by /admin/venues
+                                  // (read-only Owner column linking to the provider)
+  partnerStatus?: 'pending' | 'active' | 'suspended'; // 'active' is required to publish/book a timetable
+  memberDiscountPercent?: number;
+  partnerInstructorExtraPercent?: number;
+  // Lifecycle marker, set only on a company venue the SYSTEM switched off (rejection, conversion to
+  // individual, deletion of the owner); a later approval reactivates only a venue that carries it, an
+  // admin's manual isActive: false (no marker) stays off. Cleared (null) on reactivation.
+  deactivatedBy?: 'lifecycle' | null;
+  deactivatedAt?: Timestamp | null;
   
   // Search
   searchKeywords: string[];
@@ -181,6 +192,19 @@ interface Venue {
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
+
+// Business venues. Approving a company (providerType 'business', business.venueType gym | school | studio)
+// creates /venues/biz_<providerUid> INSIDE the approval transaction (commitProviderDecision, with
+// functions/src/providers/businessVenue.ts): a deterministic id written with `create`, so a racing second
+// approval fails instead of overwriting; `venue_exists` is raised only when a venue at that id belongs to
+// someone else. Fields: name = business.displayName, slug (name + city, minted once), type = business.venueType,
+// address, city, ownerId = the provider's uid, partnerStatus 'pending', isPartner false, isActive true, discounts 0,
+// rating 0. lat/lng are flat numbers (not a GeoPoint), copied from instructors/{uid} when saved and kept in step by
+// syncBusinessVenueLocation (field-precise: lat/lng, city, and business.displayName -> name; the slug never
+// changes); syncVenueGeohash derives `geohash`. The link back is instructors/{uid}.business.venueId. Admins promote
+// it to a partner (partnerStatus) on the venue page. Venue writes are admin-only in the rules.
+// Re-approval reactivates a system-deactivated venue; rejection, convertBusinessToIndividual and deleteUserCascade
+// deactivate it (never delete). A company without premises (venueType absent or 'none') has no venue.
 
 // /venues/{venueId}/services/{serviceId}
 interface VenueService {
@@ -282,16 +306,20 @@ interface Instructor {
     website?: string | null;        // public website URL
     logoUrl?: string | null;        // public logo (Storage URL)
     city?: string;                  // public city
+    venueType?: 'gym' | 'school' | 'studio' | 'none'; // premises asked for at signup (absent => 'none'; 'none' => no venue on approval). Admin-reviewed, NOT owner-editable
+    address?: string | null;        // street address of the venue created on approval (required with a venue type other than 'none'); null for 'none'. NOT owner-editable
+    venueId?: string | null;        // 'biz_<uid>', set only by the approval transaction. NOT owner-editable
   };
-  // For a business, public name/fullName === business.displayName.
+  // For a business, public name/fullName === business.displayName: an owner update that touches any of
+  // name, fullName or business.displayName must leave all three equal (rule businessNameMirrorOk, S-5).
   // Owner client writes (firestore.rules, B4): `business` can't be created with the doc, added or
-  // removed; legalName/vatNumber/legalForm/affiliationNumber never change; no other keys; changed
+  // removed; legalName/vatNumber/legalForm/affiliationNumber and the venue keys venueType/address/venueId never change; no other keys; changed
   // values must fit displayName 1–120 (non-blank), description ≤ 1000, city ≤ 80, website null or
   // http(s) ≤ 200, logoUrl null or https ≤ 500. Admins may change anything, but changes to
   // legalName/vatNumber/legalForm/affiliationNumber should go through the updateBusinessTaxId
   // callable so the businessVat claim moves too; convertBusinessToIndividual removes the map
   // (FieldValue.delete(), never null). Approving a business needs the reviewed vatNumber +
-  // legalName (decideProviderApplication's expectedReview) and the businessVat claim on that
+  // legalName, legalForm, affiliationNumber, venueType and address (decideProviderApplication's expectedReview) and the businessVat claim on that
   // vatNumber held by this uid. updateBusinessTaxId queries `business.vatNumber ==` (automatic
   // single-field index on this nested field — do not exempt it).
 
@@ -718,6 +746,19 @@ interface StreamingSchedule {
 > - `status` + `completionReminderSentAt` + `scheduledEndAt` — `remindTrainerToComplete`
 > - `status` + `paymentConfirmation.clientResponse` + `paymentConfirmation.confirmedByTrainerAt` — `autoConfirmPayments`
 
+> **Update (business accounts and courses, reconciliation 2026-10-19):** `firestore.indexes.json` holds **62** indexes: the 53
+> deployed to production on 2026-10-06 plus 9 for courses and partner gyms that production has never had (`courses` x2,
+> `courseEnrollments`, `courseRefunds`, `sessions` collection-group x2, `gymSessions` x2, `gymBookings`; list in
+> [deployment/staging.md](deployment/staging.md#1-indexes-first-and-wait-for-ready)). Four of the 53 are `users` composites for
+> the `/admin/providers` account-type filter: the four shapes the list already used, each with `providerKind` (derived by the
+> admin-index trigger, `functions/src/users/adminIndex.ts`) before `providerVerification`/`createdAt DESC`. They must be READY
+> before the filter is used (a missing index makes the list throw into an empty state); `scripts/verify-admin-list-indexes.mjs`
+> checks every shape. There is **no** `providerType` index: that was main's superseded rebuild, and any `providerType` indexes on
+> staging are orphans to delete there. `/fit/gyms` lists gym, school and studio venues with the existing `venues`
+> (`type`, `geohash`) and (`type`, `rating`) indexes via `type in [...]`. `updateBusinessTaxId` queries
+> `instructors where business.vatNumber ==` and the claim lookups `businessVat where uid ==`: both use automatic single-field
+> indexes (do not exempt those fields). Never deploy indexes with `--force` on production.
+
 Create these composite indexes in `firestore.indexes.json`:
 
 ```json
@@ -1081,3 +1122,10 @@ Invited users keep a reserved Firebase Auth UID and `users.accountStatus: invite
 ### Business account writes
 
 Business account creation, conversion, tax-ID/legal-field changes and verification use server-side, audited callables. Admin and superadmin browser clients may read the legal fields and edit valid display fields, but cannot bypass the tax-ID claim or review checks. `businessVat` remains inaccessible to every browser client.
+
+Further rules that bear on business documents (`firestore.rules`):
+
+- **Frozen keys.** On `instructors/{uid}.business`, `legalName`, `vatNumber`, `legalForm`, `affiliationNumber`, `venueType`, `address` and `venueId` cannot be added, changed or removed by the owner or by an admin client (`businessReviewedKeys()`); the map accepts only the twelve keys of `businessKeys()`.
+- **Name mirror (S-5).** An owner update that touches `name`, `fullName` or `business.displayName` must leave all three equal (`businessNameMirrorOk()`); an update that touches none of them passes, so a document already out of step is never locked out.
+- **`socialLinks.*`** (`users` and `instructors`, `socialLinksUpdateOk()`): a changed key must be one of `instagram`, `facebook`, `twitter`, `linkedin`, `tiktok`, `website` and its value empty/null, an `http(s)://` URL or an `@handle`, at most 200 characters. The per-platform host allowlist (an `instagram` link must point at instagram.com) is applied when rendering, in `src/lib/socialLinks.ts` (`socialLinkHref`), not in the rules.
+- **Venues** are public-read, created by an admin or venue staff, updated by an admin only (owners of a company venue edit it through the provider profile and the mirror trigger), deleted by a superadmin. `activePartnerGym` accepts the venue types in `COURSE_VENUE_TYPES` (gym, school, studio).

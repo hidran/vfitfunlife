@@ -149,7 +149,8 @@ Bottom tabs with section-aware theming:
 
 ## 5. VFit Screens
 
-### 5.1 Gyms List (`/fit/gyms`)
+### 5.1 Gyms & Schools List (`/fit/gyms`)
+- [x] Lists venues of type gym, school and studio (title "Gyms & schools", Italian "Palestre e scuole"); only these types host group courses (`hostsCourses`). An approved company with a location is listed here; pending (not yet partner) venues with coordinates are public too (owner decision, keep). Without a known location the default view shows only the 50 best-rated venues, so a new unrated venue appears with "Near me" (open follow-up D4). See [Business (company) accounts](#business-company-accounts)
 - [x] Toggle: List view / Map view
 - [x] Filter bar UI: Distance, Rating, Amenities, Price range
 - [x] Sort: Nearest, Top rated, Price low-high
@@ -624,7 +625,7 @@ the authority where the two disagree.
   claim of a rejected company (`releaseBusinessVat`), convert to an individual
   (`convertBusinessToIndividual` — removes the business details and the claim, the public name
   reverts to the person's name).
-- **Venues** list shows a read-only "Owner" column (`ownerUid`, reserved for phase 4; "—" today).
+- **Venues** list shows a read-only "Owner" column from `ownerId` (a link to the provider; "—" with an sr-only "no owner" text when absent), and the venue type filter includes school and studio. The venue a company gets on approval is promoted to a partner on its detail page.
 
 ### Booking Management
 
@@ -779,6 +780,37 @@ the authority where the two disagree.
 - Background check (for certain categories)
 - Manual admin approval
 - Verified badge on profile
+
+## Business (company) accounts
+
+A company, association or school (gym, school, studio or any other business) is a **provider** in the same catalogue as individual trainers, with `users.providerType: 'business'` and a `business` map on its `instructors/{uid}` document (see [database-schema.md](database-schema.md)). One owner per company for now; teams are a later phase. Plan: [plans/2026-10-04-business-accounts-plan.md](plans/2026-10-04-business-accounts-plan.md).
+
+### Signup as a company
+- On `/auth/register` (after the professional opt-in) and in the "Become a professional" card on `/profile`, a two-option control chooses **Individual / Company or association** (Italian *Privato / Azienda*). Company reveals the form (`src/components/provider/BusinessDetailsForm.tsx`).
+- Fields: **legal name** (ragione sociale); **P.IVA or codice fiscale** (11 digits with checksum; an association without a P.IVA enters its codice fiscale; spaces and an `IT` prefix are accepted); **legal form** (company, sole trader, association, other); optional **affiliation number**; **public name** (defaults to the legal name); **venue type** (Gym, School, Studio, or No fixed premises; the form pre-selects Gym); **street address** and **city** (both required unless there are no premises, and enforced by the server too); optional description and **website** (http/https only).
+- Errors appear under the field that caused them, are announced, and focus moves to the first invalid field. A tax id already registered shows an inline "already registered" error; the account created by the same submit is kept, so fixing the number and pressing the button again re-sends only the application.
+
+### Always manually approved
+A company application is **always pending**, even with provider auto-approval on (`systemSettings/providerOnboarding.autoApprove`): the tax id and legal data need a human check. An individual still auto-approves. A **rejected** applicant is queued again rather than auto-approved, an already verified account re-applying is left untouched, a verified individual cannot turn itself into a company (`provider_type_locked`), and a company cannot re-apply as an individual (`business_account_exists`).
+
+### Unique tax id
+Each tax id can belong to one company: the claim is a `businessVat/{digits}` document created in the same transaction as the application. A rejected company **keeps** its claim so it can re-apply; an admin frees a claim with **Release tax-id claim** (`releaseBusinessVat({vatNumber})`), which is refused while a live (not rejected, or listed) company still carries the number.
+
+### Venue created on approval
+Approving a company whose venue type is gym, school or studio creates its venue **in the same transaction**: `venues/biz_<uid>` with the public name, type, address and city, `ownerId` = the company, `partnerStatus: 'pending'`, `isPartner: false`, linked as `business.venueId`. A company without premises (type none, or absent on a company that predates the field) gets none. Approving again reactivates a venue the system had deactivated and never creates a second one; rejecting the company, converting it to an individual or deleting the owner deactivates it. The venue's coordinates, city and name follow the owner's saved location and public name (`syncBusinessVenueLocation`). `venue_exists` is shown to the admin only when a venue with that id belongs to someone else. The admin review card shows venue type and address; they are part of what the admin approves (`stale_review` when they changed meanwhile).
+
+### Public listing and search
+- An approved company appears in **Book a service** (`/booking`) and on its page (`/providers/detail?id=...`) with its public name, **logo** and a **Company** badge (Italian *Azienda*); the badge and logo also show on `/book`, the booking confirmation and the booking detail (the detail loses them if the provider profile is not readable: open follow-up).
+- Search matches the public name and the legal name (`searchTerms`, kept by `onInstructorWriteSearchIndex`).
+- The company's venue is listed on `/fit/gyms` ("Gyms & schools").
+
+### Editing the company profile
+The owner edits **public name, description, website, city and logo** from the Professional tab of `/profile/edit` ("Company details", saved on its own). **Legal name, tax id, legal form, affiliation number, venue type and address are frozen**: read-only in the UI and refused by the rules. Renaming updates `name`/`fullName` too (the rules require the three to agree) and the venue's name; the search index follows. Social links are validated (http(s) URL or `@handle`, host checked per platform when rendered).
+
+### Admin tools (`/admin/providers`)
+- **Account type filter** (all / individuals / companies) on the derived `providerKind` field, with a *Company* badge on each company row and on the pending-applications cards.
+- **Provider detail:** the Company card with the reviewed facts, and the approve / reject actions. Corrections, audited with an optional reason: **change tax id / legal data** (`updateBusinessTaxId`), **release the tax-id claim** (`releaseBusinessVat`), **convert to individual** (`convertBusinessToIndividual`, which also deactivates the venue).
+- Every approval, rejection and correction writes an `audit_logs` entry.
 
 ## Group courses and activities
 
