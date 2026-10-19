@@ -30,6 +30,11 @@ export function BecomeProviderCard() {
   const [errorKey, setErrorKey] = useState<MessageKey | null>(null);
   const business = useBusinessDetails(CARD_ID_PREFIX, { disabled: submit.isPending });
 
+  // The "check the company details" banner belongs to the fields it points at: once none of
+  // them is flagged any more (the user fixed them) it is not shown, whatever the last submit said.
+  const hasBusinessErrors = Object.keys(business.errors).length > 0;
+  const shownErrorKey = errorKey === 'provider.business.error.fixFields' && !hasBusinessErrors ? null : errorKey;
+
   const handleSubmit = () => {
     setErrorKey(null);
     if (type === 'business') {
@@ -129,9 +134,9 @@ export function BecomeProviderCard() {
             <p className="text-sm text-content-muted mb-2">{t('provider.optIn.pickServices')}</p>
             <CategoryLeafPicker value={selected} onChange={setSelected} disabled={submit.isPending} />
           </div>
-          <div aria-live="polite" className="sr-only">{errorKey && t(errorKey)}</div>
-          {(errorKey || submit.isError) && (
-            <p className="text-sm text-[#EF4444]">{t(errorKey ?? 'provider.card.error')}</p>
+          <div aria-live="polite" className="sr-only">{shownErrorKey && t(shownErrorKey)}</div>
+          {(shownErrorKey || (submit.isError && !errorKey)) && (
+            <p className="text-sm text-[#EF4444]">{t(shownErrorKey ?? 'provider.card.error')}</p>
           )}
           <div className="flex gap-2">
             <Button size="sm" disabled={selected.length === 0 || submit.isPending} onClick={handleSubmit}>

@@ -120,6 +120,25 @@ describe('BecomeProviderCard', () => {
     expect(mockSubmitProviderApplication).not.toHaveBeenCalled();
   });
 
+  it('clears the "check the company details" banner once the bad field is corrected', async () => {
+    renderCard();
+
+    openAndPickService();
+    fireEvent.click(screen.getByRole('radio', { name: 'Azienda' }));
+    fireEvent.change(screen.getByLabelText('Ragione sociale'), { target: { value: 'Studio Pilates S.r.l.' } });
+    fireEvent.change(screen.getByLabelText('Partita IVA'), { target: { value: '123' } });
+    fireEvent.change(screen.getByLabelText('Tipo di sede'), { target: { value: 'none' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Invia richiesta' }));
+
+    expect(await screen.findByText("Controlla i dati dell'azienda evidenziati.", { selector: 'p' })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Partita IVA'), { target: { value: '01234567897' } });
+
+    await waitFor(() => {
+      expect(screen.queryByText("Controlla i dati dell'azienda evidenziati.", { selector: 'p' })).not.toBeInTheDocument();
+    });
+  });
+
   it('maps a duplicate P.IVA from the server to the inline message', async () => {
     mockSubmitProviderApplication.mockRejectedValueOnce(
       Object.assign(new Error('business_vat_taken'), { code: 'functions/already-exists' })

@@ -95,13 +95,19 @@ export function RegisterClient() {
     if (providerType === 'business') {
       const payload = business.validate();
       if (!payload) {
-        setError(t('provider.business.error.fixFields'));
+        setError(fixFieldsMessage);
         return null;
       }
       return { fullName: fullName.trim(), categoryIds: providerCategoryIds, providerType: 'business', business: payload };
     }
     return { fullName: fullName.trim(), categoryIds: providerCategoryIds, providerType: 'individual' };
   };
+
+  // The "check the company details" banner belongs to the fields it points at: once none of
+  // them is flagged any more (the user fixed them) it must go, not wait for the next submit.
+  const hasBusinessErrors = Object.keys(business.errors).length > 0;
+  const fixFieldsMessage = t('provider.business.error.fixFields');
+  const formError = error === fixFieldsMessage && !hasBusinessErrors ? '' : error;
 
   /** The provider step failed after the account was created: say why, under the field when there is one. */
   const showProviderError = (err: unknown) => setError(t(business.applyServerError(err)));
@@ -110,6 +116,10 @@ export function RegisterClient() {
   // link) must not re-run registration over it: send them where a sign-in would. Skipped
   // while this form is submitting, since registering creates the profile mid-submit.
   const submitting = useRef(false);
+  // The account (and, for social sign-ups, the profile) exists as soon as the first step
+  // succeeds. If the provider step then fails (e.g. a taken P.IVA) the user is already signed
+  // in, so a retry must only re-run the application, never create the account again.
+  const accountCreated = useRef(false);
   useEffect(() => {
     if (submitting.current || !profile?.fullName?.trim()) return;
     router.replace(alreadyRegisteredRoute(profile));
@@ -153,13 +163,16 @@ export function RegisterClient() {
     let stage: 'register' | 'provider' = 'register';
 
     try {
-      await completeRegistration(firebaseUser.uid, {
-        fullName: fullName.trim(),
-        email: email.trim() || undefined,
-        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
-        preferredSection,
-        preferredLanguage: locale,
-      });
+      if (!accountCreated.current) {
+        await completeRegistration(firebaseUser.uid, {
+          fullName: fullName.trim(),
+          email: email.trim() || undefined,
+          dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
+          preferredSection,
+          preferredLanguage: locale,
+        });
+        accountCreated.current = true;
+      }
 
       if (application) {
         stage = 'provider';
@@ -221,10 +234,13 @@ export function RegisterClient() {
 
     try {
       // Register with email/password
-      await registerWithEmail(email.trim(), password, fullName.trim(), locale, {
-        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
-        preferredSection,
-      });
+      if (!accountCreated.current) {
+        await registerWithEmail(email.trim(), password, fullName.trim(), locale, {
+          dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
+          preferredSection,
+        });
+        accountCreated.current = true;
+      }
 
       if (application) {
         const uid = useAuthStore.getState().firebaseUser?.uid;
@@ -404,23 +420,23 @@ export function RegisterClient() {
             )}
 
             {/* Error Message: a permanent screen-reader announcer, then the visual box. */}
-            <div aria-live="polite" className="sr-only">{!emailTaken ? error || storeError : null}</div>
-            {!emailTaken && (error || storeError) && (
+            <div aria-live="polite" className="sr-only">{!emailTaken ? formError || storeError : null}</div>
+            {!emailTaken && (formError || storeError) && (
               <div className={cn(
                 "p-4 border rounded-lg",
-                (error || storeError)?.includes('not enabled')
+                (formError || storeError)?.includes('not enabled')
                   ? "bg-yellow-500/10 border-yellow-500/20"
                   : "bg-red-500/10 border-red-500/20"
               )}>
                 <p className={cn(
                   "text-sm text-center",
-                  (error || storeError)?.includes('not enabled')
+                  (formError || storeError)?.includes('not enabled')
                     ? "text-yellow-400"
                     : "text-red-400"
                 )}>
-                  {error || storeError}
+                  {formError || storeError}
                 </p>
-                {(error || storeError)?.includes('not enabled') && (
+                {(formError || storeError)?.includes('not enabled') && (
                   <div className="mt-3 text-center">
                     <p className="text-xs text-text-tertiary mb-2">
                       {t('auth.register.emailForm.altMethodsHint')}
@@ -655,10 +671,10 @@ export function RegisterClient() {
       <div className="flex-1 px-6 pb-8">
         <form onSubmit={handleSocialSubmit} className="space-y-6 max-w-md mx-auto">
           {/* Error Message: a permanent screen-reader announcer, then the visual box. */}
-          <div aria-live="polite" className="sr-only">{error}</div>
-          {error && (
+          <div aria-live="polite" className="sr-only">{formError}</div>
+          {formError && (
             <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
-              <p className="text-red-400 text-sm text-center">{error}</p>
+              <p className="text-red-400 text-sm text-center">{formError}</p>
             </div>
           )}
 

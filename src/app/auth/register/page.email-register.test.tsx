@@ -340,7 +340,7 @@ describe('RegisterPage Email Registration', () => {
           venueType: 'gym',
           address: 'Via Roma 1',
           city: 'Milano',
-          website: 'https://palestrarossi.it',
+          website: 'https://palestrarossi.it/',
         },
       });
     });
@@ -362,6 +362,22 @@ describe('RegisterPage Email Registration', () => {
     expect(mockSubmitProviderApplication).not.toHaveBeenCalled();
   });
 
+  it('clears the "check the company details" banner once the bad field is corrected', async () => {
+    render(<RegisterClient />);
+
+    fillEmailForm();
+    fillCompany('01234567898');
+    fireEvent.click(screen.getByRole('button', { name: /Crea account/i }));
+
+    expect(await screen.findByText("Controlla i dati dell'azienda evidenziati.", { selector: 'p' })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Partita IVA'), { target: { value: '01234567897' } });
+
+    await waitFor(() => {
+      expect(screen.queryByText("Controlla i dati dell'azienda evidenziati.", { selector: 'p' })).not.toBeInTheDocument();
+    });
+  });
+
   it('maps a duplicate P.IVA from the server to the inline message', async () => {
     mockRegisterWithEmail.mockResolvedValueOnce(undefined);
     mockSubmitProviderApplication.mockRejectedValueOnce(
@@ -381,6 +397,37 @@ describe('RegisterPage Email Registration', () => {
     await waitFor(() => expect(screen.getByLabelText('Partita IVA')).toHaveFocus());
     expect(screen.getByLabelText('Partita IVA')).not.toBeDisabled();
     expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('retries only the provider application after a duplicate P.IVA (the account already exists)', async () => {
+    mockRegisterWithEmail.mockResolvedValueOnce(undefined);
+    mockSubmitProviderApplication
+      .mockRejectedValueOnce(Object.assign(new Error('business_vat_taken'), { code: 'functions/already-exists' }))
+      .mockResolvedValueOnce({ success: true, status: 'pending' });
+    render(<RegisterClient />);
+
+    fillEmailForm();
+    fillCompany();
+    fireEvent.click(screen.getByRole('button', { name: /Crea account/i }));
+
+    await waitFor(() => expect(screen.getByLabelText('Partita IVA')).toHaveFocus());
+    expect(screen.getByLabelText('Partita IVA')).not.toBeDisabled();
+    expect(screen.getByLabelText(/^Email/i)).not.toBeDisabled();
+    expect(mockRegisterWithEmail).toHaveBeenCalledTimes(1);
+
+    fireEvent.change(screen.getByLabelText('Partita IVA'), { target: { value: '12345678903' } });
+    fireEvent.click(screen.getByRole('button', { name: /Crea account/i }));
+
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/auth/permissions'));
+    // The second submit must not try to create the account again.
+    expect(mockRegisterWithEmail).toHaveBeenCalledTimes(1);
+    expect(mockSubmitProviderApplication).toHaveBeenCalledTimes(2);
+    expect(mockSubmitProviderApplication).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        providerType: 'business',
+        business: expect.objectContaining({ vatNumber: '12345678903' }),
+      })
+    );
   });
 
   it('lets an authenticated phone or social user opt in as a provider during profile completion', async () => {
