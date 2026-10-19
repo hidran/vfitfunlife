@@ -110,7 +110,7 @@ token and booking screen shows the company name with no further change.
 - **Done when:** tests cover: invalid P.IVA, duplicate P.IVA, idempotent re-apply, autoApprove ON still
   yields pending, individual path unchanged, no dotted keys, approval keeps the company name.
 
-### B4 `[ ]` Firestore rules (Medium)
+### B4 `[x]` (469e977, 9fe7b18) Firestore rules (Medium)
 - Files: `firestore.rules`, `functions/test/` rules test (emulator pattern of `chat-rules.test.ts`).
 - Owner update of `instructors/{uid}` may change `business.displayName/description/website/logoUrl/city`
   but not `business.legalName`, `business.vatNumber`, or create/remove the `business` map (D6).
@@ -225,6 +225,7 @@ Added 2026-10-19 from `docs/superpowers/specs/2026-10-19-unified-group-courses-d
 
 - 2026-10-04 — Plan written after the design was approved ("go for C"). No tasks started.
 - 2026-10-19 — B8 owner field corrected to `ownerId`; B12 added (venue on approval, school/studio types) per the unified-courses spec. Execution started (subagent-driven, on main).
+- 2026-10-19 — B4 done (9fe7b18): `accountTypeUnchanged` + allowlist `businessProtectedUnchanged` on instructors owner update, owner create cannot carry `business`/`providerType: business`, `businessVat` deny-all; 22 rules tests. Admins may change users.providerType (intended, D1).
 - 2026-10-19 — B3 done (6ba0f15): businessApplication.ts validator, transactional businessVat claim, always-pending for business, review-bypass guards (business lock, rejected never auto-approves, verified no-op incl. legacy docs), result gains `status`; `ApplyAsProviderErrorCode` exported; `BUSINESS_VAT_COLLECTION` exported for B8. Deferred: extract businessVatClaim.ts in B8; audit entry lacks providerType.
 - 2026-10-19 — B2 done (63d0680): canonical 8-value `VenueType` (adds school/studio; keeps outdoor_space/event_space), `hostsCourses` in both trees with Record-table tests; B12 must also add school/studio to VenueFormView/VenuesListView options and functions/src/ai/tools/index.ts enum.
 - 2026-10-19 — B1 done (e308d61): validator in both trees, 19+19 tests; follow-up for B3: add a check-digit-0 fixture (e.g. 50500000000) and `typeof === 'string'` guard before calling from callables.
