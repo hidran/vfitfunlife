@@ -73,6 +73,9 @@ const BUSINESS = {
   vatNumber: VALID_PIVA,
   legalForm: 'association',
   displayName: 'ASD Karate Roma',
+  venueType: 'gym',
+  address: 'Via Roma 1',
+  city: 'Roma',
   website: 'https://www.karateroma.it',
 };
 
@@ -91,6 +94,8 @@ function fillBusiness(vat = VALID_PIVA) {
   fireEvent.change(screen.getByLabelText(/^Ragione sociale/), { target: { value: 'ASD Karate Roma' } });
   fireEvent.change(screen.getByLabelText(/^P\.IVA \/ Codice fiscale/), { target: { value: vat } });
   fireEvent.change(screen.getByLabelText(/^Forma giuridica/), { target: { value: 'association' } });
+  fireEvent.change(screen.getByLabelText(/^Indirizzo/), { target: { value: 'Via Roma 1' } });
+  fireEvent.change(screen.getByLabelText(/^Città/), { target: { value: 'Roma' } });
   fireEvent.change(screen.getByLabelText(/^Sito web/), { target: { value: 'www.karateroma.it' } });
 }
 
@@ -171,6 +176,24 @@ describe('Register as a company or association', () => {
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/auth/permissions'));
     // The reloaded profile lagged: the callable's answer is in the store for the next screens.
     expect(mockAuthState.user).toMatchObject({ providerStatus: 'pending', providerType: 'business' });
+  });
+
+  it('sends the venue type chosen, and no address for a company without premises', async () => {
+    mockRegisterWithEmail.mockResolvedValueOnce(undefined);
+    mockSubmitProviderApplication.mockResolvedValueOnce({ success: true, providerId: 'new-uid', autoApproved: false });
+    render(<RegisterClient />);
+
+    fillAccount();
+    chooseCompany();
+    fillBusiness();
+    fireEvent.change(screen.getByLabelText(/^Tipo di sede/), { target: { value: 'none' } });
+    expect(screen.queryByLabelText(/^Indirizzo/)).toBeNull();
+    pickKarateAcceptAndSubmit();
+
+    await waitFor(() => expect(mockSubmitProviderApplication).toHaveBeenCalledTimes(1));
+    const [payload] = mockSubmitProviderApplication.mock.calls[0];
+    expect(payload.business).toEqual({ ...BUSINESS, venueType: 'none', address: undefined });
+    expect(payload.business).not.toHaveProperty('address');
   });
 
   it('sends exactly the individual payload after switching back from a company with a bad tax id', async () => {

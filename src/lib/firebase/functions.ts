@@ -11,6 +11,7 @@ import type {
 import type {
   BookingStatus,
   BusinessLegalForm,
+  BusinessVenueType,
   PaymentConfirmationMethod,
   ProviderType,
 } from "@/types/firebase";
@@ -703,7 +704,8 @@ export async function updateAiAuthoringSettings(patch: Partial<AiAuthoringSettin
  * Failures carry a stable code as the error message for the UI to localise: `invalid_vat`,
  * `invalid_business`, `invalid_business_name`, `invalid_legal_form`,
  * `invalid_affiliation_number` (over 40 characters), `invalid_website`,
- * `invalid_business_description`, `invalid_business_city`, `invalid_provider_type`,
+ * `invalid_business_description`, `invalid_business_city`, `invalid_venue_type`,
+ * `invalid_business_address` (over 200 characters), `invalid_provider_type`,
  * `vat_already_registered` (tax id claimed by another account), `business_already_approved`
  * (an approved company re-applying — changes go through its profile or an admin),
  * `vat_change_not_allowed` (backstop for the same case, not expected in practice),
@@ -728,6 +730,10 @@ export async function applyAsProvider(data: {
     description?: string;
     website?: string;
     city?: string;
+    /** What the company offers at its premises. Absent ⇒ 'gym'; 'none' ⇒ no venue is created on approval. */
+    venueType?: BusinessVenueType;
+    /** Street address of the premises, at most 200 characters. Omitted for 'none'. */
+    address?: string;
   };
 }): Promise<{
   success: boolean;

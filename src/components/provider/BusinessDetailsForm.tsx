@@ -21,7 +21,9 @@ import {
   BUSINESS_FIELD_LIMITS,
   BUSINESS_FORM_ERRORS,
   BUSINESS_LEGAL_FORMS,
+  BUSINESS_VENUE_TYPES,
   LEGAL_FORM_LABEL,
+  VENUE_TYPE_LABEL,
   EMPTY_BUSINESS_DETAILS,
   businessDetailsSchema,
   businessEditSchema,
@@ -61,6 +63,8 @@ const FIELD_ORDER: readonly BusinessField[] = [
   'legalForm',
   'affiliationNumber',
   'displayName',
+  'venueType',
+  'address',
   'city',
   'website',
   'description',
@@ -118,8 +122,10 @@ export interface BusinessDetailsFormProps {
 
 /**
  * The company / association details of a provider (plan 2026-10-04): legal name, P.IVA or an
- * association's codice fiscale, legal form, affiliation number, public name, city, website and
- * description. 'create' at signup (B5), 'edit' on the company profile (B6).
+ * association's codice fiscale, legal form, affiliation number, public name, venue type and
+ * address (B12: what the venue created on approval is built from; 'none' = no premises), city,
+ * website and description. 'create' at signup (B5), 'edit' on the company profile (B6), where
+ * the venue type and address are shown read-only with the other reviewed fields.
  *
  * A sub-form, not a `<form>`: at signup it sits inside the signup form (forms can't nest). It
  * keeps its own React Hook Form state and hands the result over through the ref (`validate`
@@ -145,7 +151,8 @@ export const BusinessDetailsForm = forwardRef<BusinessDetailsFormHandle, Busines
       setFocus,
       getValues,
       reset,
-      formState: { errors, isDirty },
+      trigger,
+      formState: { errors, isDirty, isSubmitted },
     } = useForm<BusinessDetailsFormValues>({
       // Same value shape in both modes; edit only drops the checks on the read-only fields
       // and requires the public name.
@@ -159,6 +166,19 @@ export const BusinessDetailsForm = forwardRef<BusinessDetailsFormHandle, Busines
     });
 
     const legalName = useWatch({ control, name: 'legalName' });
+    const venueType = useWatch({ control, name: 'venueType' });
+    // Signup only: address and city are required for a company with premises. In edit mode the
+    // venue is already decided (and shown read-only); the city stays optional there.
+    const needsPremises = !isEdit && venueType !== 'none';
+
+    // Switching to "no premises" drops the address and city requirements: re-check them, so an
+    // error that no longer applies goes away without the user having to touch those fields.
+    useEffect(() => {
+      if (isEdit) return;
+      if (isSubmitted) void trigger(['address', 'city']);
+      // Only the venue type switching is of interest here.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [venueType]);
 
     // Edit mode: what was last saved, to send only the fields that change.
     const savedValues = useRef<BusinessDetailsFormValues>(initialValues);
@@ -299,6 +319,16 @@ export const BusinessDetailsForm = forwardRef<BusinessDetailsFormHandle, Busines
                   value={initialValues.affiliationNumber}
                 />
               )}
+              {/* A company that signed up before the venue type existed has none to show. */}
+              {initialValues.venueType && (
+                <ReadOnlyRow
+                  label={t('provider.business.reviewed.venueType')}
+                  value={t(VENUE_TYPE_LABEL[initialValues.venueType])}
+                />
+              )}
+              {initialValues.address.trim() && (
+                <ReadOnlyRow label={t('provider.business.reviewed.address')} value={initialValues.address} />
+              )}
             </dl>
             <p className="text-xs text-content-muted break-words">
               {t(REVIEW_NOTE[reviewStatus])}
@@ -398,10 +428,54 @@ export const BusinessDetailsForm = forwardRef<BusinessDetailsFormHandle, Busines
           />
         </Field>
 
-        <Field id={idOf('city')} label={t('provider.business.field.city')} error={errorText(errors.city)}>
+        {!isEdit && (
+          <>
+            <Field
+              id={idOf('venueType')}
+              label={t('provider.business.venueType')}
+              error={errorText(errors.venueType)}
+            >
+              <select
+                {...register('venueType')}
+                {...a11y('venueType')}
+                className={cn(textareaOrSelect, 'min-h-[52px] truncate px-3', invalidClass('venueType'))}
+              >
+                {BUSINESS_VENUE_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {t(VENUE_TYPE_LABEL[type])}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            {needsPremises && (
+              <Field
+                id={idOf('address')}
+                label={t('provider.business.address')}
+                error={errorText(errors.address)}
+              >
+                <Input
+                  {...register('address')}
+                  {...a11y('address')}
+                  aria-required
+                  autoComplete="street-address"
+                  maxLength={BUSINESS_FIELD_LIMITS.address}
+                  className={cn(invalidClass('address'))}
+                />
+              </Field>
+            )}
+          </>
+        )}
+
+        <Field
+          id={idOf('city')}
+          label={t(needsPremises ? 'provider.business.field.cityRequired' : 'provider.business.field.city')}
+          error={errorText(errors.city)}
+        >
           <Input
             {...register('city')}
             {...a11y('city')}
+            aria-required={needsPremises || undefined}
             autoComplete="address-level2"
             maxLength={BUSINESS_FIELD_LIMITS.city}
             placeholder={t('provider.business.placeholder.city')}

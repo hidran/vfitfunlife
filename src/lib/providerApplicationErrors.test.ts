@@ -75,6 +75,8 @@ describe('PROVIDER_APPLICATION_ERRORS', () => {
         'invalid_website',
         'invalid_business_description',
         'invalid_business_city',
+        'invalid_venue_type',
+        'invalid_business_address',
         'invalid_provider_type',
         'invalid_legal_form',
         'invalid_affiliation_number',
@@ -102,6 +104,9 @@ describe('PROVIDER_APPLICATION_ERRORS', () => {
     expect(PROVIDER_APPLICATION_ERRORS.vat_already_registered.field).toBe('vatNumber');
     expect(PROVIDER_APPLICATION_ERRORS.vat_change_not_allowed.field).toBe('vatNumber');
     expect(PROVIDER_APPLICATION_ERRORS.invalid_website.field).toBe('website');
+    // The premises (B12): each server code lands on its own field.
+    expect(PROVIDER_APPLICATION_ERRORS.invalid_venue_type.field).toBe('venueType');
+    expect(PROVIDER_APPLICATION_ERRORS.invalid_business_address.field).toBe('address');
     for (const { field } of Object.values(PROVIDER_APPLICATION_ERRORS)) {
       if (field) expect(Object.keys(EMPTY_BUSINESS_DETAILS)).toContain(field);
     }

@@ -212,6 +212,8 @@ describe("pendingApplicationPatches", () => {
         description: "",
         website: null,
         city: "Milano",
+        venueType: "gym",
+        address: null,
       },
     });
     expect(user).toEqual({ providerStatus: "pending", providerType: "business", updatedAt: NOW });

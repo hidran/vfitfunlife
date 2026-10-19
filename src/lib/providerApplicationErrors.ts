@@ -13,6 +13,8 @@ export const PROVIDER_APPLICATION_ERROR_CODES = [
   'invalid_website',
   'invalid_business_description',
   'invalid_business_city',
+  'invalid_venue_type',
+  'invalid_business_address',
   'invalid_provider_type',
   'invalid_legal_form',
   'invalid_affiliation_number',
@@ -45,6 +47,8 @@ export const PROVIDER_APPLICATION_ERRORS: Record<
     messageKey: 'provider.business.error.affiliationInvalid',
   },
   invalid_business_city: { field: 'city', messageKey: 'provider.business.error.cityInvalid' },
+  invalid_venue_type: { field: 'venueType', messageKey: 'provider.business.error.venueTypeInvalid' },
+  invalid_business_address: { field: 'address', messageKey: 'provider.business.error.addressInvalid' },
   invalid_website: { field: 'website', messageKey: 'provider.business.error.websiteInvalid' },
   invalid_business_description: {
     field: 'description',

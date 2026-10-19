@@ -1,5 +1,6 @@
 import { HttpsError } from "firebase-functions/v2/https";
-import type { BusinessDetails, BusinessLegalForm, ProviderType } from "./businessTypes";
+import { BUSINESS_VENUE_TYPES } from "../types";
+import type { BusinessDetails, BusinessLegalForm, BusinessVenueType, ProviderType } from "./businessTypes";
 import { isValidItalianVat, normalizeVatNumber } from "./vatNumber";
 
 /**
@@ -26,6 +27,8 @@ export const BUSINESS_FIELD_LIMITS = {
   city: 80,
   website: 200,
   affiliationNumber: 40,
+  /** Street address of the premises (B12). */
+  address: 200,
 } as const;
 
 /** The legal forms a business may declare (B3b). The first is the default. */
@@ -107,6 +110,26 @@ export function parseLegalForm(value: unknown): BusinessLegalForm {
   return known;
 }
 
+/**
+ * What the company offers at its premises (B12): absent/null ⇒ 'gym'; "none" means no fixed
+ * premises, so approval creates no venue. Anything outside BUSINESS_VENUE_TYPES is refused
+ * (`invalid_venue_type`).
+ */
+export function parseVenueType(value: unknown): BusinessVenueType {
+  if (value === undefined || value === null) return "gym";
+  const known = BUSINESS_VENUE_TYPES.find((type) => type === value);
+  if (!known) throw invalid("invalid_venue_type");
+  return known;
+}
+
+/**
+ * The optional street address of the premises: absent/null/blank ⇒ null, else at most 200
+ * characters, trimmed (`invalid_business_address`).
+ */
+export function parseBusinessAddress(value: unknown): string | null {
+  return optionalText(value, BUSINESS_FIELD_LIMITS.address, "invalid_business_address") || null;
+}
+
 /** The optional affiliation number: absent/null ⇒ "", else ≤ 40 chars trimmed. */
 export function parseAffiliationNumber(value: unknown): string {
   return optionalText(value, BUSINESS_FIELD_LIMITS.affiliationNumber, "invalid_affiliation_number");
@@ -121,9 +144,13 @@ export function parseAffiliationNumber(value: unknown): string {
  * - `legalForm`: one of BUSINESS_LEGAL_FORMS, 'company' when omitted (`invalid_legal_form`).
  * - `affiliationNumber`: optional CONI / RASD / ente di promozione registration
  *   (`invalid_affiliation_number`); informational, for the admin reviewing the application.
+ * - `venueType` (B12): one of BUSINESS_VENUE_TYPES, 'gym' when omitted (`invalid_venue_type`);
+ *   `address`: optional, ≤ 200 characters (`invalid_business_address`), null when not given.
+ *   Both are reviewed with the rest of the application and frozen for the owner afterwards.
  * - Every text field is trimmed and length-capped (BUSINESS_FIELD_LIMITS).
- * - `legalForm`, `affiliationNumber`, `description` and `city` are always present ("" when not
- *   given, 'company' for the form) and `website` is always present (null when not given). The
+ * - `legalForm`, `affiliationNumber`, `description`, `city` and `venueType` are always present
+ *   ("" when not given, 'company' for the form, 'gym' for the venue type) and `website` and
+ *   `address` are always present (null when not given). The
  *   result is merged into `instructors/{uid}.business` with set(merge), which merges nested
  *   maps field by field — writing every field each time means a re-apply replaces what the
  *   applicant changed instead of keeping a stale value.
@@ -154,6 +181,8 @@ export function validateBusinessInput(raw: unknown): BusinessDetails {
     ),
     website: parseWebsite(input.website),
     city: optionalText(input.city, BUSINESS_FIELD_LIMITS.city, "invalid_business_city"),
+    venueType: parseVenueType(input.venueType),
+    address: parseBusinessAddress(input.address),
   };
 }
 

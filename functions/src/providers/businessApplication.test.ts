@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { HttpsError } from "firebase-functions/v2/https";
+import { BUSINESS_VENUE_TYPES } from "../types";
 import {
   BUSINESS_FIELD_LIMITS,
   BUSINESS_LEGAL_FORMS,
@@ -92,6 +93,8 @@ describe("validateBusinessInput", () => {
         description: " Karate, animazione e sport per bambini ",
         website: " https://karateclub.example.it ",
         city: " Milano ",
+        venueType: "school",
+        address: " Via Roma 1 ",
       }),
     ).toEqual({
       legalName: "Karate Club Milano S.r.l.",
@@ -102,6 +105,8 @@ describe("validateBusinessInput", () => {
       description: "Karate, animazione e sport per bambini",
       website: "https://karateclub.example.it",
       city: "Milano",
+      venueType: "school",
+      address: "Via Roma 1",
     });
   });
 
@@ -113,6 +118,8 @@ describe("validateBusinessInput", () => {
       description: "",
       website: null,
       city: "",
+      venueType: "gym",
+      address: null,
     });
   });
 
@@ -356,7 +363,73 @@ describe("an association's codice fiscale as the tax id (D3)", () => {
       description: "",
       website: null,
       city: "",
+      venueType: "gym",
+      address: null,
     });
+  });
+});
+
+describe("the premises of a company (B12: venueType, address)", () => {
+  it("defaults an absent or null venue type to a gym", () => {
+    expect(validateBusinessInput(VALID).venueType).toBe("gym");
+    expect(validateBusinessInput({ ...VALID, venueType: null }).venueType).toBe("gym");
+  });
+
+  it.each(["gym", "school", "studio", "none"])("accepts the venue type %s as given", (venueType) => {
+    expect(validateBusinessInput({ ...VALID, venueType }).venueType).toBe(venueType);
+  });
+
+  it("offers exactly the course-hosting venue types plus none", () => {
+    expect([...BUSINESS_VENUE_TYPES]).toEqual(["gym", "school", "studio", "none"]);
+  });
+
+  it("refuses an unknown venue type, in any other spelling or type, as invalid_venue_type", () => {
+    for (const venueType of ["", "Gym", " gym", "spa", "wellness_center", "outdoor_space", 1, true, {}, ["gym"]]) {
+      expectHttpsError(
+        () => validateBusinessInput({ ...VALID, venueType }),
+        "invalid-argument",
+        "invalid_venue_type",
+      );
+    }
+  });
+
+  it("trims the address and stores null when it is absent, null or blank", () => {
+    expect(validateBusinessInput({ ...VALID, address: "  Via Roma 1, 20100  " }).address).toBe("Via Roma 1, 20100");
+    for (const address of [undefined, null, "", "   "]) {
+      expect(validateBusinessInput({ ...VALID, address }).address).toBeNull();
+    }
+  });
+
+  it("accepts an address of exactly 200 characters and refuses 201 as invalid_business_address", () => {
+    expect(BUSINESS_FIELD_LIMITS.address).toBe(200);
+    expect(validateBusinessInput({ ...VALID, address: "a".repeat(200) }).address).toBe("a".repeat(200));
+    expectHttpsError(
+      () => validateBusinessInput({ ...VALID, address: "a".repeat(201) }),
+      "invalid-argument",
+      "invalid_business_address",
+    );
+  });
+
+  it("refuses a non-string address", () => {
+    for (const address of [12, true, {}, ["Via Roma"]]) {
+      expectHttpsError(
+        () => validateBusinessInput({ ...VALID, address }),
+        "invalid-argument",
+        "invalid_business_address",
+      );
+    }
+  });
+
+  it("always writes both keys, so a pending re-apply replaces a stale venue instead of keeping it", () => {
+    const first = validateBusinessInput({ ...VALID, venueType: "studio", address: "Via Roma 1" });
+    const again = validateBusinessInput({ ...VALID, venueType: "none" });
+    expect(first).toMatchObject({ venueType: "studio", address: "Via Roma 1" });
+    expect(Object.keys(again)).toEqual(expect.arrayContaining(["venueType", "address"]));
+    expect(again).toMatchObject({ venueType: "none", address: null });
+  });
+
+  it("never writes venueId: the server sets it at approval", () => {
+    expect(validateBusinessInput({ ...VALID, venueType: "gym", address: "Via Roma 1", venueId: "biz_x" })).not.toHaveProperty("venueId");
   });
 });
 
@@ -394,6 +467,8 @@ describe("buildBusinessInstructorPatch", () => {
         description: "",
         website: null,
         city: "Milano",
+        venueType: "gym",
+        address: null,
       },
     });
   });

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { MessageKey } from '@/i18n/messages';
-import type { BusinessDetails, BusinessLegalForm } from '@/types/firebase';
+import type { BusinessDetails, BusinessLegalForm, BusinessVenueType } from '@/types/firebase';
+import { COURSE_VENUE_TYPES } from '@/types/venue';
 import type { BusinessApplicationInput } from '@/lib/firebase/providerApplication';
 import { isValidItalianVat, normalizeVatNumber } from '@/lib/vatNumber';
 
@@ -30,6 +31,24 @@ export const LEGAL_FORM_LABEL: Record<BusinessLegalForm, MessageKey> = {
   other: 'provider.business.legalForm.other',
 };
 
+/**
+ * The premises a company can declare (B12): a venue type that hosts courses, or 'none' (no
+ * fixed premises, so approval creates no venue). The first is the default (as on the server).
+ * Mirrors functions' BUSINESS_VENUE_TYPES.
+ */
+export const BUSINESS_VENUE_TYPES = [
+  ...COURSE_VENUE_TYPES,
+  'none',
+] as const satisfies readonly BusinessVenueType[];
+
+/** The message key of each venue type's label: the one map every screen uses. */
+export const VENUE_TYPE_LABEL: Record<BusinessVenueType, MessageKey> = {
+  gym: 'provider.business.venue.gym',
+  school: 'provider.business.venue.school',
+  studio: 'provider.business.venue.studio',
+  none: 'provider.business.venue.none',
+};
+
 /** Maximum lengths in characters after trimming — the server's BUSINESS_FIELD_LIMITS. */
 export const BUSINESS_FIELD_LIMITS = {
   legalName: 120,
@@ -38,6 +57,7 @@ export const BUSINESS_FIELD_LIMITS = {
   city: 80,
   website: 200,
   affiliationNumber: 40,
+  address: 200,
   /** The Firestore rules' cap on `business.logoUrl` (B4); the logo is never typed. */
   logoUrl: 500,
 } as const;
@@ -55,15 +75,26 @@ export const BUSINESS_FORM_ERRORS = {
   websiteInvalid: 'provider.business.error.websiteInvalid',
   websiteTooLong: 'provider.business.error.websiteTooLong',
   descriptionInvalid: 'provider.business.error.descriptionInvalid',
+  venueTypeInvalid: 'provider.business.error.venueTypeInvalid',
+  addressRequired: 'provider.business.error.addressRequired',
+  addressInvalid: 'provider.business.error.addressInvalid',
+  cityRequired: 'provider.business.error.cityRequired',
 } as const satisfies Record<string, MessageKey>;
 
-/** Raw form values: every field is a string as typed (the legal form is a select). */
+/**
+ * Raw form values: every field is a string as typed (the legal form and the venue type are
+ * selects). `venueType` is '' only in edit mode, for a company stored without one (it signed up
+ * before the venue type existed): the form then shows nothing rather than a default nobody
+ * reviewed.
+ */
 export interface BusinessDetailsFormValues {
   legalName: string;
   vatNumber: string;
   legalForm: BusinessLegalForm;
   affiliationNumber: string;
   displayName: string;
+  venueType: BusinessVenueType | '';
+  address: string;
   city: string;
   website: string;
   description: string;
@@ -77,6 +108,8 @@ export const EMPTY_BUSINESS_DETAILS: BusinessDetailsFormValues = {
   legalForm: 'company',
   affiliationNumber: '',
   displayName: '',
+  venueType: 'gym',
+  address: '',
   city: '',
   website: '',
   description: '',
@@ -120,12 +153,8 @@ export function normalizeWebsite(input: string): string | null {
 const optionalText = (max: number, message: MessageKey) =>
   z.string().refine((v) => v.trim().length <= max, { message });
 
-/**
- * Validation of the form. Messages are i18n keys (BUSINESS_FORM_ERRORS); the form translates
- * them. No transforms: the values stay exactly what was typed, `toBusinessApplication`
- * normalises them.
- */
-export const businessDetailsSchema = z.object({
+/** The per-field checks, without the rules that span fields (see businessDetailsSchema). */
+const businessFieldsSchema = z.object({
   legalName: z
     .string()
     .refine((v) => v.trim().length > 0, { message: BUSINESS_FORM_ERRORS.legalNameRequired })
@@ -141,6 +170,8 @@ export const businessDetailsSchema = z.object({
   legalForm: z.enum(BUSINESS_LEGAL_FORMS, { message: BUSINESS_FORM_ERRORS.legalFormInvalid }),
   affiliationNumber: optionalText(BUSINESS_FIELD_LIMITS.affiliationNumber, BUSINESS_FORM_ERRORS.affiliationInvalid),
   displayName: optionalText(BUSINESS_FIELD_LIMITS.displayName, BUSINESS_FORM_ERRORS.nameInvalid),
+  venueType: z.enum(BUSINESS_VENUE_TYPES, { message: BUSINESS_FORM_ERRORS.venueTypeInvalid }),
+  address: optionalText(BUSINESS_FIELD_LIMITS.address, BUSINESS_FORM_ERRORS.addressInvalid),
   city: optionalText(BUSINESS_FIELD_LIMITS.city, BUSINESS_FORM_ERRORS.cityInvalid),
   // Two checks, at most one fails: a malformed address is "invalid", a well-formed one longer
   // than the cap (counting an added `https://`) is "too long".
@@ -154,22 +185,46 @@ export const businessDetailsSchema = z.object({
 });
 
 /**
+ * Validation of the form. Messages are i18n keys (BUSINESS_FORM_ERRORS); the form translates
+ * them. No transforms: the values stay exactly what was typed, `toBusinessApplication`
+ * normalises them.
+ *
+ * A company with premises (any venue type but 'none') needs an address and a city: they are
+ * what the venue created on approval is built from. The server only caps them (a company
+ * without premises, or a client that omits them, is still accepted there).
+ */
+export const businessDetailsSchema = businessFieldsSchema.superRefine((values, ctx) => {
+  if (values.venueType === 'none') return;
+  if (!values.address.trim()) {
+    ctx.addIssue({ code: 'custom', path: ['address'], message: BUSINESS_FORM_ERRORS.addressRequired });
+  }
+  if (!values.city.trim()) {
+    ctx.addIssue({ code: 'custom', path: ['city'], message: BUSINESS_FORM_ERRORS.cityRequired });
+  }
+});
+
+/**
  * Valid form values → the `business` payload of `applyAsProvider`: trimmed, the tax id as bare
  * digits, the public name defaulting to the legal name, the website with its scheme, and the
  * optional fields left out when blank (the server stores those as "" / null).
  */
 export function toBusinessApplication(values: BusinessDetailsFormValues): BusinessApplicationInput {
   const legalName = values.legalName.trim();
+  const venueType = values.venueType || 'gym';
   const out: BusinessApplicationInput = {
     legalName,
     vatNumber: normalizeVatNumber(values.vatNumber),
     legalForm: values.legalForm,
     displayName: values.displayName.trim() || legalName,
+    venueType,
   };
   const affiliationNumber = values.affiliationNumber.trim();
   if (affiliationNumber) out.affiliationNumber = affiliationNumber;
   const city = values.city.trim();
   if (city) out.city = city;
+  // A company without premises has no address to send, even if one was typed before the switch.
+  const address = values.address.trim();
+  if (address && venueType !== 'none') out.address = address;
   const website = normalizeWebsite(values.website);
   if (website) out.website = website;
   const description = values.description.trim();
@@ -184,7 +239,8 @@ export function toBusinessApplication(values: BusinessDetailsFormValues): Busine
 /**
  * The parts of `instructors/{uid}.business` the owner may change from the client — exactly
  * what the Firestore rules allow (firestore.rules, "BUSINESS ACCOUNTS"; decision D6). The
- * other four (legal name, tax id, legal form, affiliation number) are what an admin reviewed.
+ * others (legal name, tax id, legal form, affiliation number, and since B12 the venue type,
+ * address and venue id) are what an admin reviewed or the server wrote.
  */
 export const BUSINESS_OWNER_EDITABLE_KEYS = [
   'displayName',
@@ -221,10 +277,13 @@ export type BusinessDisplayChanges = Partial<BusinessDisplayFields & { logoUrl: 
  * would refuse). The public name becomes required: it is what every card shows, and the rules
  * refuse a blank one.
  */
-export const businessEditSchema = businessDetailsSchema.extend({
+export const businessEditSchema = businessFieldsSchema.extend({
   legalName: z.string(),
   vatNumber: z.string(),
   affiliationNumber: z.string(),
+  // Shown read-only (reviewed with the application); never sent, so never checked.
+  venueType: z.enum(BUSINESS_VENUE_TYPES).or(z.literal('')),
+  address: z.string(),
   displayName: z
     .string()
     .refine((v) => v.trim().length > 0, { message: BUSINESS_FORM_ERRORS.displayNameRequired })
@@ -233,7 +292,12 @@ export const businessEditSchema = businessDetailsSchema.extend({
     }),
 });
 
-/** Stored business details → form values (every field a string; an unknown legal form ⇒ company). */
+/**
+ * Stored business details → form values (every field a string; an unknown legal form ⇒
+ * company). The venue type is kept as stored, '' when absent or unknown: in edit mode it is
+ * display-only (frozen, never written), so a company saved without one shows nothing rather
+ * than a default the admin never verified.
+ */
 export function businessFormValues(details: BusinessDetails): BusinessDetailsFormValues {
   const legalForm = (BUSINESS_LEGAL_FORMS as readonly string[]).includes(details.legalForm ?? '')
     ? (details.legalForm as BusinessLegalForm)
@@ -244,6 +308,10 @@ export function businessFormValues(details: BusinessDetails): BusinessDetailsFor
     legalForm,
     affiliationNumber: details.affiliationNumber ?? '',
     displayName: details.displayName ?? '',
+    venueType: (BUSINESS_VENUE_TYPES as readonly string[]).includes(details.venueType ?? '')
+      ? (details.venueType as BusinessVenueType)
+      : '',
+    address: details.address ?? '',
     city: details.city ?? '',
     website: details.website ?? '',
     description: details.description ?? '',

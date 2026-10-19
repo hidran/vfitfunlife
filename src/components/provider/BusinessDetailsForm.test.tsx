@@ -1,5 +1,5 @@
 import { createRef } from 'react';
-import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { BusinessDetailsForm, type BusinessDetailsFormHandle } from './BusinessDetailsForm';
 import { isValidItalianVat } from '@/lib/vatNumber';
@@ -23,6 +23,12 @@ function setup() {
 const field = (label: RegExp) => screen.getByLabelText(label) as HTMLInputElement;
 const type = (label: RegExp, value: string) => fireEvent.change(field(label), { target: { value } });
 
+/** A company with premises (the default) must give an address and a city. */
+const fillPremises = () => {
+  type(/^Indirizzo/, 'Via Roma 1');
+  type(/^Città/, 'Roma');
+};
+
 async function validate(ref: React.RefObject<BusinessDetailsFormHandle | null>) {
   let result: BusinessApplicationInput | null | undefined;
   await act(async () => {
@@ -42,6 +48,8 @@ describe('BusinessDetailsForm', () => {
       /^Forma giuridica/,
       /^Numero di affiliazione/,
       /^Nome pubblico/,
+      /^Tipo di sede/,
+      /^Indirizzo/,
       /^Città/,
       /^Sito web/,
       /^Descrizione/,
@@ -53,6 +61,18 @@ describe('BusinessDetailsForm', () => {
     expect(vat).toHaveAttribute('inputmode', 'numeric');
     expect(vat).toHaveAccessibleDescription(/associazioni senza P\.IVA inseriscono il codice fiscale/);
     expect(field(/^Forma giuridica/)).toHaveValue('company');
+    // Premises (B12): a gym by default, so an address and a city are asked for.
+    expect(field(/^Tipo di sede/)).toHaveValue('gym');
+    expect(field(/^Indirizzo/)).toHaveAttribute('aria-required', 'true');
+    expect(field(/^Città/)).toHaveAttribute('aria-required', 'true');
+    expect(
+      Array.from(field(/^Tipo di sede/).querySelectorAll('option')).map((o) => [o.value, o.textContent])
+    ).toEqual([
+      ['gym', 'Palestra'],
+      ['school', 'Scuola'],
+      ['studio', 'Studio'],
+      ['none', 'Nessuna sede fissa'],
+    ]);
   });
 
   it('requires the legal name and the tax id, showing the errors and focusing the first', async () => {
@@ -66,6 +86,9 @@ describe('BusinessDetailsForm', () => {
     expect(legalName).toHaveAttribute('aria-invalid', 'true');
     expect(legalName).toHaveAccessibleDescription('Inserisci la ragione sociale.');
     expect(vat).toHaveAccessibleDescription(/Inserisci la P\.IVA o il codice fiscale\./);
+    // A gym by default: the premises are required too.
+    expect(field(/^Indirizzo/)).toHaveAccessibleDescription("L'indirizzo è obbligatorio per una sede");
+    expect(field(/^Città/)).toHaveAccessibleDescription('La città è obbligatoria per una sede');
     // Errors are announced: each sits in a polite live region.
     expect(screen.getByText('Inserisci la ragione sociale.').closest('[aria-live]')).toHaveAttribute(
       'aria-live',
@@ -89,12 +112,17 @@ describe('BusinessDetailsForm', () => {
     const { ref } = setup();
     type(/^Ragione sociale/, '  Karate Club Roma SRL ');
     type(/^P\.IVA \/ Codice fiscale/, 'IT 007 4311 0157');
+    type(/^Indirizzo/, ' Via Roma 1 ');
+    type(/^Città/, 'Roma');
 
     expect(await validate(ref)).toEqual({
       legalName: 'Karate Club Roma SRL',
       vatNumber: VALID_PIVA,
       legalForm: 'company',
       displayName: 'Karate Club Roma SRL',
+      venueType: 'gym',
+      address: 'Via Roma 1',
+      city: 'Roma',
     });
   });
 
@@ -105,6 +133,7 @@ describe('BusinessDetailsForm', () => {
     type(/^P\.IVA \/ Codice fiscale/, ASSOCIATION_CF);
     fireEvent.change(field(/^Forma giuridica/), { target: { value: 'association' } });
     type(/^Numero di affiliazione/, ' CONI 12345 ');
+    fillPremises();
 
     expect(await validate(ref)).toEqual({
       legalName: 'ASD Karate Roma',
@@ -112,6 +141,9 @@ describe('BusinessDetailsForm', () => {
       legalForm: 'association',
       affiliationNumber: 'CONI 12345',
       displayName: 'ASD Karate Roma',
+      venueType: 'gym',
+      address: 'Via Roma 1',
+      city: 'Roma',
     });
   });
 
@@ -120,6 +152,8 @@ describe('BusinessDetailsForm', () => {
     type(/^Ragione sociale/, 'Fit Lab SRL');
     type(/^P\.IVA \/ Codice fiscale/, VALID_PIVA);
     type(/^Nome pubblico/, ' Fit Lab ');
+    fireEvent.change(field(/^Tipo di sede/), { target: { value: 'school' } });
+    type(/^Indirizzo/, ' Via Torino 5 ');
     type(/^Città/, ' Roma ');
     type(/^Descrizione/, ' Karate e animazione per bambini ');
 
@@ -128,6 +162,8 @@ describe('BusinessDetailsForm', () => {
       vatNumber: VALID_PIVA,
       legalForm: 'company',
       displayName: 'Fit Lab',
+      venueType: 'school',
+      address: 'Via Torino 5',
       city: 'Roma',
       description: 'Karate e animazione per bambini',
     });
@@ -142,6 +178,7 @@ describe('BusinessDetailsForm', () => {
     const { ref } = setup();
     type(/^Ragione sociale/, 'Fit Lab SRL');
     type(/^P\.IVA \/ Codice fiscale/, VALID_PIVA);
+    fillPremises();
     type(/^Sito web/, typed);
 
     expect((await validate(ref))?.website).toBe(sent);
@@ -153,6 +190,7 @@ describe('BusinessDetailsForm', () => {
       const { ref } = setup();
       type(/^Ragione sociale/, 'Fit Lab SRL');
       type(/^P\.IVA \/ Codice fiscale/, VALID_PIVA);
+      fillPremises();
       type(/^Sito web/, typed);
 
       expect(await validate(ref)).toBeNull();
@@ -167,6 +205,7 @@ describe('BusinessDetailsForm', () => {
     const { ref } = setup();
     type(/^Ragione sociale/, 'Fit Lab SRL');
     type(/^P\.IVA \/ Codice fiscale/, VALID_PIVA);
+    fillPremises();
     // 196 characters typed; with `https://` that is 204, over the 200 the server accepts.
     const typed = `www.${'a'.repeat(189)}.it`;
     expect(typed).toHaveLength(196);
@@ -178,6 +217,68 @@ describe('BusinessDetailsForm', () => {
     expect(field(/^Sito web/)).toHaveAccessibleDescription(
       'Indirizzo del sito troppo lungo (massimo 200 caratteri).'
     );
+  });
+
+  describe('premises (B12)', () => {
+    it('drops the address field and the city requirement for a company without premises', async () => {
+      const { ref } = setup();
+      type(/^Ragione sociale/, 'Fit Lab SRL');
+      type(/^P\.IVA \/ Codice fiscale/, VALID_PIVA);
+      fireEvent.change(field(/^Tipo di sede/), { target: { value: 'none' } });
+
+      expect(screen.queryByLabelText(/^Indirizzo/)).toBeNull();
+      expect(screen.getByLabelText(/^Città/)).not.toHaveAttribute('aria-required');
+      expect(screen.getByText('Città (opzionale)')).toBeInTheDocument();
+
+      expect(await validate(ref)).toEqual({
+        legalName: 'Fit Lab SRL',
+        vatNumber: VALID_PIVA,
+        legalForm: 'company',
+        displayName: 'Fit Lab SRL',
+        venueType: 'none',
+      });
+    });
+
+    it('does not send an address typed before switching to no premises', async () => {
+      const { ref } = setup();
+      type(/^Ragione sociale/, 'Fit Lab SRL');
+      type(/^P\.IVA \/ Codice fiscale/, VALID_PIVA);
+      type(/^Indirizzo/, 'Via Roma 1');
+      fireEvent.change(field(/^Tipo di sede/), { target: { value: 'none' } });
+
+      expect(await validate(ref)).not.toHaveProperty('address');
+    });
+
+    it('clears the address and city errors when the company turns out to have no premises', async () => {
+      const { ref } = setup();
+      type(/^Ragione sociale/, 'Fit Lab SRL');
+      type(/^P\.IVA \/ Codice fiscale/, VALID_PIVA);
+      expect(await validate(ref)).toBeNull();
+      expect(await screen.findByText("L'indirizzo è obbligatorio per una sede")).toBeInTheDocument();
+      expect(screen.getByText('La città è obbligatoria per una sede')).toBeInTheDocument();
+
+      fireEvent.change(field(/^Tipo di sede/), { target: { value: 'none' } });
+      await waitFor(() => expect(screen.queryByText('La città è obbligatoria per una sede')).toBeNull());
+      expect(screen.queryByText("L'indirizzo è obbligatorio per una sede")).toBeNull();
+    });
+
+    it('focuses the address (before the city) when both are missing', async () => {
+      const { ref } = setup();
+      type(/^Ragione sociale/, 'Fit Lab SRL');
+      type(/^P\.IVA \/ Codice fiscale/, VALID_PIVA);
+      expect(await validate(ref)).toBeNull();
+      await waitFor(() => expect(field(/^Indirizzo/)).toHaveFocus());
+    });
+
+    it('sends a studio with its address', async () => {
+      const { ref } = setup();
+      type(/^Ragione sociale/, 'Fit Lab SRL');
+      type(/^P\.IVA \/ Codice fiscale/, VALID_PIVA);
+      fireEvent.change(field(/^Tipo di sede/), { target: { value: 'studio' } });
+      fillPremises();
+
+      expect(await validate(ref)).toMatchObject({ venueType: 'studio', address: 'Via Roma 1', city: 'Roma' });
+    });
   });
 
   it('does not take focus while disabled, and focuses the first invalid field once enabled', async () => {
@@ -201,6 +302,8 @@ describe('BusinessDetailsForm', () => {
       legalForm: /^Forma giuridica/,
       affiliationNumber: /^Numero di affiliazione/,
       displayName: /^Nome pubblico/,
+      venueType: /^Tipo di sede/,
+      address: /^Indirizzo/,
       city: /^Città/,
       website: /^Sito web/,
       description: /^Descrizione/,
@@ -239,6 +342,7 @@ describe('BusinessDetailsForm', () => {
       const { ref } = setup();
       type(/^Ragione sociale/, 'Fit Lab SRL');
       type(/^P\.IVA \/ Codice fiscale/, VALID_PIVA);
+      fillPremises();
       expect(await validate(ref)).not.toBeNull();
 
       act(() => {
@@ -268,6 +372,8 @@ describe('BusinessDetailsForm', () => {
       legalForm: 'company' as const,
       affiliationNumber: '',
       displayName: 'Karate Club Roma',
+      venueType: 'school' as const,
+      address: 'Via Roma 1',
       city: 'Roma',
       website: 'https://karateroma.it',
       description: '',
@@ -287,6 +393,41 @@ describe('BusinessDetailsForm', () => {
       expect(screen.getByText('Karate Club Roma SRL')).toBeInTheDocument();
       expect(screen.queryByRole('combobox')).toBeNull();
       expect(field(/^Nome pubblico \*/)).toHaveValue('Karate Club Roma');
+    });
+
+    it('shows the venue type and address with the reviewed fields: read-only text, no control', () => {
+      render(<BusinessDetailsForm mode="edit" defaultValues={STORED} />);
+      const dl = screen.getByText('Karate Club Roma SRL').closest('dl') as HTMLElement;
+      expect(within(dl).getByText('Tipo di sede').nextElementSibling).toHaveTextContent('Scuola');
+      expect(within(dl).getByText('Indirizzo').nextElementSibling).toHaveTextContent('Via Roma 1');
+      expect(screen.queryByLabelText(/^Tipo di sede/)).toBeNull();
+      expect(screen.queryByLabelText(/^Indirizzo/)).toBeNull();
+      // The city is an owner-editable display field, and optional once the venue exists.
+      expect(field(/^Città/)).not.toHaveAttribute('aria-required');
+    });
+
+    it('shows no venue rows for a company stored without a venue type or address', () => {
+      render(<BusinessDetailsForm mode="edit" defaultValues={{ ...STORED, venueType: '', address: '' }} />);
+      const dl = screen.getByText('Karate Club Roma SRL').closest('dl') as HTMLElement;
+      expect(within(dl).queryByText('Tipo di sede')).toBeNull();
+      expect(within(dl).queryByText('Indirizzo')).toBeNull();
+    });
+
+    it('shows a company without premises as such, with no address', () => {
+      render(<BusinessDetailsForm mode="edit" defaultValues={{ ...STORED, venueType: 'none', address: '' }} />);
+      const dl = screen.getByText('Karate Club Roma SRL').closest('dl') as HTMLElement;
+      expect(within(dl).getByText('Tipo di sede').nextElementSibling).toHaveTextContent('Nessuna sede fissa');
+      expect(within(dl).queryByText('Indirizzo')).toBeNull();
+    });
+
+    it('never offers the venue type or address as a change, even when the stored city is empty', async () => {
+      const ref = createRef<BusinessDetailsFormHandle>();
+      render(<BusinessDetailsForm ref={ref} mode="edit" defaultValues={{ ...STORED, city: '' }} />);
+      type(/^Nome pubblico/, 'Karate Roma');
+      const changes = await validateChanges(ref);
+      expect(changes).toEqual({ displayName: 'Karate Roma' });
+      expect(changes).not.toHaveProperty('venueType');
+      expect(changes).not.toHaveProperty('address');
     });
 
     it('returns only the fields that changed, and nothing once they are marked saved', async () => {

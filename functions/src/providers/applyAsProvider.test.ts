@@ -130,6 +130,42 @@ describe("applyAsProvider (handler)", () => {
     expect(dottedKeys(fake.ops)).toEqual([]);
   });
 
+  it("stores the premises (venueType, address) nested in the pending map, defaulting to a gym without an address", async () => {
+    await call({ categoryIds: ["hiit"], providerType: "business", business: COMPANY });
+    expect(fake.read("instructors/u1")).toMatchObject({ business: { venueType: "gym", address: null } });
+    expect(fake.read("instructors/u1")?.business).not.toHaveProperty("venueId");
+  });
+
+  it("stores the chosen venue type and address, trimmed", async () => {
+    await call({
+      categoryIds: ["hiit"],
+      providerType: "business",
+      business: { ...COMPANY, venueType: "school", address: "  Via Roma 1, Milano " },
+    });
+    expect(fake.read("instructors/u1")).toMatchObject({ business: { venueType: "school", address: "Via Roma 1, Milano" } });
+    expect(dottedKeys(fake.ops)).toEqual([]);
+  });
+
+  it("a pending re-apply replaces the venue it sent before, rather than keeping the stale one", async () => {
+    await call({
+      categoryIds: ["hiit"],
+      providerType: "business",
+      business: { ...COMPANY, venueType: "studio", address: "Via Roma 1" },
+    });
+    await call({ categoryIds: ["hiit"], providerType: "business", business: { ...COMPANY, venueType: "none" } });
+    expect(fake.read("instructors/u1")).toMatchObject({ business: { venueType: "none", address: null } });
+  });
+
+  it("refuses an unknown venue type or an over-long address before touching anything", async () => {
+    await expect(
+      call({ categoryIds: ["hiit"], providerType: "business", business: { ...COMPANY, venueType: "spa" } }),
+    ).rejects.toMatchObject({ code: "invalid-argument", message: "invalid_venue_type" });
+    await expect(
+      call({ categoryIds: ["hiit"], providerType: "business", business: { ...COMPANY, address: "a".repeat(201) } }),
+    ).rejects.toMatchObject({ code: "invalid-argument", message: "invalid_business_address" });
+    expect(fake.ops).toEqual([]);
+  });
+
   it("refuses an unknown legal form or an over-long affiliation number before touching anything", async () => {
     await expect(
       call({ categoryIds: ["hiit"], providerType: "business", business: { ...COMPANY, legalForm: "srl" } }),

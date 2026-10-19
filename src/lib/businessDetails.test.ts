@@ -5,21 +5,27 @@ import {
   BUSINESS_FORM_ERRORS,
   BUSINESS_LEGAL_FORMS,
   BUSINESS_OWNER_EDITABLE_KEYS,
+  BUSINESS_VENUE_TYPES,
   EMPTY_BUSINESS_DETAILS,
+  VENUE_TYPE_LABEL,
   businessDetailsSchema,
   businessEditSchema,
   businessFormValues,
   isAcceptableLogoUrl,
   normalizeWebsite,
+  toBusinessApplication,
   toBusinessDisplayFields,
   type BusinessDetailsFormValues,
   type BusinessField,
 } from './businessDetails';
 
+// A company with premises (the default venue type is a gym): address and city are required.
 const VALID: BusinessDetailsFormValues = {
   ...EMPTY_BUSINESS_DETAILS,
   legalName: 'Karate Club Roma SRL',
   vatNumber: '00743110157',
+  address: 'Via Roma 1',
+  city: 'Roma',
 };
 
 /** The messages the schema reports for `field`, given `values` on top of a valid form. */
@@ -90,6 +96,7 @@ describe('businessDetailsSchema limits', () => {
     ['displayName', BUSINESS_FIELD_LIMITS.displayName, BUSINESS_FORM_ERRORS.nameInvalid],
     ['description', BUSINESS_FIELD_LIMITS.description, BUSINESS_FORM_ERRORS.descriptionInvalid],
     ['city', BUSINESS_FIELD_LIMITS.city, BUSINESS_FORM_ERRORS.cityInvalid],
+    ['address', BUSINESS_FIELD_LIMITS.address, BUSINESS_FORM_ERRORS.addressInvalid],
     ['affiliationNumber', BUSINESS_FIELD_LIMITS.affiliationNumber, BUSINESS_FORM_ERRORS.affiliationInvalid],
   ] as const)('%s: %i characters pass, one more fails', (field, max, message) => {
     expect(messagesFor(field, { [field]: 'x'.repeat(max) })).toEqual([]);
@@ -133,6 +140,72 @@ describe('businessDetailsSchema limits', () => {
   });
 });
 
+describe('the premises of a company (B12: venueType, address, city)', () => {
+  it('offers the course-hosting venue types plus none, a gym first (the default)', () => {
+    expect([...BUSINESS_VENUE_TYPES]).toEqual(['gym', 'school', 'studio', 'none']);
+    expect(EMPTY_BUSINESS_DETAILS.venueType).toBe('gym');
+    expect(Object.keys(VENUE_TYPE_LABEL).sort()).toEqual([...BUSINESS_VENUE_TYPES].sort());
+    for (const venueType of BUSINESS_VENUE_TYPES) expect(messagesFor('venueType', { venueType })).toEqual([]);
+  });
+
+  it('refuses an unknown or empty venue type when signing up', () => {
+    for (const venueType of ['', 'spa', 'wellness_center'] as const) {
+      expect(messagesFor('venueType', { venueType: venueType as BusinessDetailsFormValues['venueType'] })).toEqual([
+        BUSINESS_FORM_ERRORS.venueTypeInvalid,
+      ]);
+    }
+  });
+
+  it.each(['gym', 'school', 'studio'] as const)('requires an address and a city for a %s', (venueType) => {
+    expect(messagesFor('address', { venueType, address: '   ' })).toEqual([BUSINESS_FORM_ERRORS.addressRequired]);
+    expect(messagesFor('city', { venueType, city: '' })).toEqual([BUSINESS_FORM_ERRORS.cityRequired]);
+  });
+
+  it('asks for neither when the company has no fixed premises', () => {
+    expect(messagesFor('address', { venueType: 'none', address: '' })).toEqual([]);
+    expect(messagesFor('city', { venueType: 'none', city: '' })).toEqual([]);
+    expect(businessDetailsSchema.safeParse({ ...VALID, venueType: 'none', address: '', city: '' }).success).toBe(true);
+  });
+
+  it('still caps a city and an address typed for a company without premises', () => {
+    expect(messagesFor('city', { venueType: 'none', city: 'x'.repeat(81) })).toEqual([BUSINESS_FORM_ERRORS.cityInvalid]);
+    expect(messagesFor('address', { venueType: 'none', address: 'x'.repeat(201) })).toEqual([
+      BUSINESS_FORM_ERRORS.addressInvalid,
+    ]);
+  });
+
+  it('reports the field errors and the missing premises together', () => {
+    const result = businessDetailsSchema.safeParse({ ...VALID, legalName: '', address: '', city: '' });
+    expect(result.success).toBe(false);
+    const byField = (result.success ? [] : result.error.issues).map((i) => [i.path[0], i.message]);
+    expect(byField).toEqual(
+      expect.arrayContaining([
+        ['legalName', BUSINESS_FORM_ERRORS.legalNameRequired],
+        ['address', BUSINESS_FORM_ERRORS.addressRequired],
+        ['city', BUSINESS_FORM_ERRORS.cityRequired],
+      ])
+    );
+  });
+
+  it('builds the application payload with the venue type, and the address only for premises', () => {
+    expect(toBusinessApplication({ ...VALID, venueType: 'school', address: ' Via Roma 1 ' })).toMatchObject({
+      venueType: 'school',
+      address: 'Via Roma 1',
+      city: 'Roma',
+    });
+    const none = toBusinessApplication({ ...VALID, venueType: 'none', address: 'Via Roma 1', city: '' });
+    expect(none.venueType).toBe('none');
+    expect(none).not.toHaveProperty('address');
+    expect(none).not.toHaveProperty('city');
+    // A city typed for a company without premises is still sent: it is optional there.
+    expect(toBusinessApplication({ ...VALID, venueType: 'none' }).city).toBe('Roma');
+  });
+
+  it('defaults the venue type to a gym in the payload when the form carries none', () => {
+    expect(toBusinessApplication({ ...VALID, venueType: '' }).venueType).toBe('gym');
+  });
+});
+
 describe('company profile editing (B6)', () => {
   const STORED: BusinessDetailsFormValues = {
     ...EMPTY_BUSINESS_DETAILS,
@@ -150,7 +223,9 @@ describe('company profile editing (B6)', () => {
     expect([...BUSINESS_OWNER_EDITABLE_KEYS].sort()).toEqual(
       ['city', 'description', 'displayName', 'logoUrl', 'website'].sort()
     );
-    for (const reviewed of ['legalName', 'vatNumber', 'legalForm', 'affiliationNumber']) {
+    for (const reviewed of [
+      'legalName', 'vatNumber', 'legalForm', 'affiliationNumber', 'venueType', 'address', 'venueId',
+    ]) {
       expect(BUSINESS_OWNER_EDITABLE_KEYS as readonly string[]).not.toContain(reviewed);
       expect(BUSINESS_DISPLAY_FIELDS as readonly string[]).not.toContain(reviewed);
     }
@@ -164,6 +239,11 @@ describe('company profile editing (B6)', () => {
 
   it('does not validate the read-only reviewed fields (an older doc must stay editable)', () => {
     expect(businessEditSchema.safeParse({ ...STORED, legalName: '', vatNumber: '123', affiliationNumber: 'x'.repeat(80) }).success).toBe(true);
+  });
+
+  it('does not ask a stored company for the premises it signed up with (address and city stay optional)', () => {
+    expect(businessEditSchema.safeParse({ ...STORED, venueType: 'gym', address: '', city: '' }).success).toBe(true);
+    expect(businessEditSchema.safeParse({ ...STORED, venueType: '', address: '' }).success).toBe(true);
   });
 
   it('keeps the signup rules for city, website and description', () => {
@@ -182,10 +262,24 @@ describe('company profile editing (B6)', () => {
         website: null,
         logoUrl: 'https://x.it/logo.png',
       })
-    ).toEqual({ ...STORED, legalForm: 'company' });
+    ).toEqual({ ...STORED, legalForm: 'company', venueType: '' });
     expect(
       businessFormValues({ legalName: 'A', vatNumber: '1', legalForm: 'association', displayName: 'A', city: 'Roma' })
     ).toMatchObject({ legalForm: 'association', city: 'Roma' });
+  });
+
+  it('shows the stored venue type and address read-only, and none when the company has no venue type', () => {
+    const base = { legalName: 'A', vatNumber: '1', displayName: 'A' };
+    expect(businessFormValues({ ...base, venueType: 'school', address: 'Via Roma 1' })).toMatchObject({
+      venueType: 'school',
+      address: 'Via Roma 1',
+    });
+    expect(businessFormValues({ ...base, venueType: 'none', address: null })).toMatchObject({
+      venueType: 'none',
+      address: '',
+    });
+    expect(businessFormValues(base)).toMatchObject({ venueType: '', address: '' });
+    expect(businessFormValues({ ...base, venueType: 'spa' as never })).toMatchObject({ venueType: '' });
   });
 
   it('normalises display values the way they are stored', () => {

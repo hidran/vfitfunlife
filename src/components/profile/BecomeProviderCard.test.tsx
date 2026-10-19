@@ -56,6 +56,8 @@ function chooseCompanyAndFill() {
   fireEvent.click(screen.getByRole('radio', { name: 'Azienda o associazione' }));
   fireEvent.change(screen.getByLabelText(/^Ragione sociale/), { target: { value: 'Karate Club Roma SRL' } });
   fireEvent.change(screen.getByLabelText(/^P\.IVA \/ Codice fiscale/), { target: { value: VALID_PIVA } });
+  fireEvent.change(screen.getByLabelText(/^Indirizzo/), { target: { value: 'Via Roma 1' } });
+  fireEvent.change(screen.getByLabelText(/^Città/), { target: { value: 'Roma' } });
   fireEvent.change(screen.getByLabelText(/^Sito web/), { target: { value: 'www.karateroma.it' } });
 }
 
@@ -145,6 +147,9 @@ describe('BecomeProviderCard', () => {
           vatNumber: VALID_PIVA,
           legalForm: 'company',
           displayName: 'Karate Club Roma SRL',
+          venueType: 'gym',
+          address: 'Via Roma 1',
+          city: 'Roma',
           website: 'https://www.karateroma.it',
         },
       })

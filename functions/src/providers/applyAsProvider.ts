@@ -14,7 +14,7 @@ import {
   parseProviderType,
   validateBusinessInput,
 } from "./businessApplication";
-import type { BusinessLegalForm, ProviderType } from "./businessTypes";
+import type { BusinessLegalForm, BusinessVenueType, ProviderType } from "./businessTypes";
 import {
   PROVIDER_ONBOARDING_DOC,
   ProviderOnboardingSettings,
@@ -42,6 +42,10 @@ interface ApplyAsProviderData {
     description?: string;
     website?: string;
     city?: string;
+    /** What the company offers at its premises (B12). Absent ⇒ 'gym'; 'none' ⇒ no venue. */
+    venueType?: BusinessVenueType;
+    /** Street address of the premises (B12), at most 200 characters. */
+    address?: string;
   };
 }
 

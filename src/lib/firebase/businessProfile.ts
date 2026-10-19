@@ -34,6 +34,10 @@ export async function fetchBusinessDetails(uid: string): Promise<BusinessDetails
     website: textOrNull(map.website),
     logoUrl: textOrNull(map.logoUrl),
     city: text(map.city),
+    // The venue the account was approved with (B12); absent on companies that signed up before.
+    ...(typeof map.venueType === 'string' ? { venueType: map.venueType as BusinessDetails['venueType'] } : {}),
+    ...(typeof map.address === 'string' ? { address: map.address } : {}),
+    ...(typeof map.venueId === 'string' ? { venueId: map.venueId } : {}),
   };
 }
 
@@ -42,8 +46,9 @@ export async function fetchBusinessDetails(uid: string): Promise<BusinessDetails
  * dotted field path per changed key (`business.displayName`, …), plus the public name mirrored
  * to `name` and `fullName`, which every card and search token reads.
  *
- * Only BUSINESS_OWNER_EDITABLE_KEYS are copied, so the four reviewed keys (legal name, tax id,
- * legal form, affiliation number) can never be sent from here, and the `business` map is never
+ * Only BUSINESS_OWNER_EDITABLE_KEYS are copied, so the reviewed keys (legal name, tax id, legal
+ * form, affiliation number) and the venue keys (venue type, address, venue id) can never be
+ * sent from here, and the `business` map is never
  * written as a whole (that would replace it, reviewed keys included).
  */
 export function businessDisplayPatch(changes: BusinessDisplayChanges): Record<string, unknown> {

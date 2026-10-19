@@ -21,7 +21,16 @@ vi.mock('firebase/firestore', () => ({
 
 import { businessDisplayPatch, fetchBusinessDetails, updateBusinessDisplayFields } from './businessProfile';
 
-const REVIEWED_KEYS = ['legalName', 'vatNumber', 'legalForm', 'affiliationNumber'];
+const REVIEWED_KEYS = [
+  'legalName',
+  'vatNumber',
+  'legalForm',
+  'affiliationNumber',
+  // B12: the venue the admin reviewed and the server created
+  'venueType',
+  'address',
+  'venueId',
+];
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -67,7 +76,10 @@ describe('businessDisplayPatch', () => {
       vatNumber: '12345678903',
       legalForm: 'other',
       affiliationNumber: 'X',
-      business: { vatNumber: '12345678903' },
+      venueType: 'school',
+      address: 'Via Roma 1',
+      venueId: 'biz_other',
+      business: { vatNumber: '12345678903', venueId: 'biz_other' },
     } as unknown as Parameters<typeof businessDisplayPatch>[0];
 
     const patch = businessDisplayPatch(smuggled);
@@ -142,6 +154,34 @@ describe('fetchBusinessDetails', () => {
       city: '',
     });
     expect(getDoc).toHaveBeenCalledWith({ path: 'instructors/u1' });
+  });
+
+  it('reads the venue the company was approved with (type, address, venue id) when present', async () => {
+    getDoc.mockResolvedValueOnce(
+      snap({
+        business: {
+          legalName: 'Karate Club Roma SRL',
+          vatNumber: '00743110157',
+          displayName: 'Karate Club Roma',
+          venueType: 'school',
+          address: 'Via Roma 1',
+          venueId: 'biz_u1',
+        },
+      })
+    );
+    await expect(fetchBusinessDetails('u1')).resolves.toMatchObject({
+      venueType: 'school',
+      address: 'Via Roma 1',
+      venueId: 'biz_u1',
+    });
+  });
+
+  it('leaves the venue keys out for a company stored without them', async () => {
+    getDoc.mockResolvedValueOnce(snap({ business: { legalName: 'A', vatNumber: '1', displayName: 'A', venueType: 5 } }));
+    const details = await fetchBusinessDetails('u1');
+    expect(details).not.toHaveProperty('venueType');
+    expect(details).not.toHaveProperty('address');
+    expect(details).not.toHaveProperty('venueId');
   });
 
   it('keeps the legal form when present', async () => {
