@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DataTable, FilterBar, StatusBadge } from "@/components/admin";
 import { Button } from "@/components/ui/button";
@@ -33,8 +34,13 @@ interface Venue {
   isPartner: boolean;
   createdAt: Date;
   photoUrls?: string[];
-  /** Reserved for phase 4 (venue owners); absent on every venue today. */
-  ownerUid?: string;
+  /** The owning provider's uid (`venues.ownerId`); set on the venues approval creates for companies. */
+  ownerId?: string;
+}
+
+/** Enough of a uid to tell owners apart in a column, without a 28-character cell. */
+function shortUid(uid: string): string {
+  return uid.length > 10 ? `${uid.slice(0, 8)}…` : uid;
 }
 
 export function VenuesListView() {
@@ -75,7 +81,7 @@ export function VenuesListView() {
       isPartner: v.isPartner,
       createdAt: v.createdAt?.toDate?.() ?? new Date(),
       photoUrls: v.photoUrls ?? [],
-      ownerUid: typeof v.ownerUid === 'string' && v.ownerUid ? v.ownerUid : undefined,
+      ownerId: typeof v.ownerId === 'string' && v.ownerId ? v.ownerId : undefined,
     };
   });
 
@@ -152,16 +158,24 @@ export function VenuesListView() {
       width: "w-24",
     },
     {
-      // Read-only until phase 4 assigns owners. Shown as the uid: resolving names would cost
-      // a users read per row for a column that is empty everywhere today.
       key: "owner",
       header: t('admin.venues.col.owner'),
+      // Read-only: the owner is edited on the venue's page (VenueFormView). The owner of a
+      // venue is a provider, so the uid opens their admin provider page (the row itself
+      // opens the venue, hence the stopPropagation).
       cell: (venue) =>
-        venue.ownerUid ? (
-          <span className="block max-w-[8rem] break-all font-mono text-xs text-content-muted">
-            {venue.ownerUid}
-          </span>
+        venue.ownerId ? (
+          <Link
+            href={`/admin/providers/?id=${encodeURIComponent(venue.ownerId)}`}
+            onClick={(e) => e.stopPropagation()}
+            className="text-sm text-content-muted font-mono hover:text-content hover:underline"
+            title={venue.ownerId}
+          >
+            {shortUid(venue.ownerId)}
+          </Link>
         ) : (
+          // sr-only is position:absolute: the wrapper must be positioned or it escapes the
+          // table's scroll container and widens the page on phones.
           <span className="relative text-sm text-content-faint">
             <span aria-hidden="true">—</span>
             <span className="sr-only">{t('admin.venues.owner.none')}</span>
@@ -245,6 +259,8 @@ export function VenuesListView() {
             options: [
               { value: "all", label: t('admin.venues.filter.allTypes') },
               { value: "gym", label: t('admin.venues.filter.gym') },
+              { value: "school", label: t('admin.venues.filter.school') },
+              { value: "studio", label: t('admin.venues.filter.studio') },
               { value: "wellness_center", label: t('admin.venues.filter.wellnessCenter') },
               { value: "beauty_salon", label: t('admin.venues.filter.beautySalon') },
               { value: "outdoor_space", label: t('admin.venues.filter.outdoorSpace') },

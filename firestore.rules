@@ -386,19 +386,26 @@ service cloud.firestore {
     // use these checks; reviewed-field and verification changes
     // go through audited Admin SDK callables.
 
-    /** Every key a business map may hold (D1, B3b). Anything else is refused. */
+    /**
+     * Every key a business map may hold (D1, B3b, B12). Anything else is refused. venueType,
+     * address and venueId are written by applyAsProvider / the approval; they must be allowed
+     * here or hasOnly would lock the owner out of every edit once a map holds them.
+     */
     function businessKeys() {
       return ['legalName', 'vatNumber', 'legalForm', 'affiliationNumber',
-              'displayName', 'description', 'website', 'logoUrl', 'city'];
+              'displayName', 'description', 'website', 'logoUrl', 'city',
+              'venueType', 'address', 'venueId'];
     }
 
     /**
      * What the admin checks before a company is listed (D2, D6). The owner may never change,
      * add or remove these — not even while pending, or the admin would review a tax id other
      * than the one the businessVat claim was taken for. Changes go through an admin (B8).
+     * venueType, address and venueId (B12) tie the account to the venue the admin checked.
      */
     function businessReviewedKeys() {
-      return ['legalName', 'vatNumber', 'legalForm', 'affiliationNumber'];
+      return ['legalName', 'vatNumber', 'legalForm', 'affiliationNumber',
+              'venueType', 'address', 'venueId'];
     }
 
     /** A string of at most `max` characters (callers read an absent optional field as ''). */
@@ -635,8 +642,10 @@ service cloud.firestore {
         get(/databases/$(database)/documents/venues/$(venueId)).data.get('ownerId', '') == request.auth.uid);
     }
 
+    // The venue types that host a timetable: keep in step with hostsCourses() in
+    // src/types/venue.ts and functions/src/types.ts (a test pins the list).
     function activePartnerGym(venueId) {
-      return get(/databases/$(database)/documents/venues/$(venueId)).data.get('type', '') == 'gym' &&
+      return get(/databases/$(database)/documents/venues/$(venueId)).data.get('type', '') in ['gym', 'school', 'studio'] &&
         get(/databases/$(database)/documents/venues/$(venueId)).data.get('partnerStatus', 'pending') == 'active' &&
         get(/databases/$(database)/documents/venues/$(venueId)).data.get('isActive', true) == true;
     }

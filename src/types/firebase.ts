@@ -1,5 +1,6 @@
 import type { Timestamp, GeoPoint } from "firebase/firestore";
 import type { AppLocale } from "@/types/locale";
+import type { VenueType } from "@/types/venue";
 
 // Section type
 export type Section = "fit" | "fun" | "life";
@@ -265,7 +266,7 @@ export interface Venue {
   id: string;
   name: string;
   slug: string;
-  type: "gym" | "wellness_center" | "beauty_salon" | "outdoor_space" | "event_space";
+  type: VenueType;
   section: Section;
 
   // Contact
@@ -796,6 +797,9 @@ export type ProviderType = 'individual' | 'business';
 /** Legal form of a business provider. Absent on documents written before B3b ⇒ 'company'. */
 export type BusinessLegalForm = 'company' | 'sole_trader' | 'association' | 'other';
 
+/** What a business offers at its premises (B12); 'none' ⇒ no venue is created on approval. */
+export type BusinessVenueType = 'gym' | 'school' | 'studio' | 'none';
+
 /** `instructors/{uid}.business` — company details of a business provider. */
 export interface BusinessDetails {
   /** Ragione sociale. Admin-verified; owner read-only after approval. */
@@ -818,4 +822,10 @@ export interface BusinessDetails {
   website?: string | null;
   logoUrl?: string | null;
   city?: string;
+  /** What the company offers at its premises. Absent ⇒ 'gym'; 'none' ⇒ no venue. Frozen for the owner. */
+  venueType?: BusinessVenueType;
+  /** Street address of the venue created on approval. Frozen for the owner. */
+  address?: string | null;
+  /** `venues/{id}` created at approval. Set by the server only; frozen for the owner. */
+  venueId?: string | null;
 }

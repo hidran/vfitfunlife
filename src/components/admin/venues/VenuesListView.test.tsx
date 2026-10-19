@@ -1,8 +1,8 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { itMessages } from '@/i18n/messages/it';
 
-/** The read-only "Owner" column (business-accounts plan B8; owners arrive in phase 4). */
+/** The read-only "Owner" column (business-accounts plan B8; `venues.ownerId`) and the school/studio type filter. */
 
 const h = vi.hoisted(() => ({ venues: [] as unknown[] }));
 vi.mock('@/hooks/useVenues', () => ({
@@ -41,7 +41,7 @@ function ownerCell(name: string): HTMLElement {
 }
 
 beforeEach(() => {
-  h.venues = [venue('v1', 'Palestra Centrale'), venue('v2', 'Spa Navigli', { ownerUid: '' })];
+  h.venues = [venue('v1', 'Palestra Centrale'), venue('v2', 'Spa Navigli', { ownerId: '' })];
 });
 
 describe('VenuesListView owner column', () => {
@@ -58,9 +58,46 @@ describe('VenuesListView owner column', () => {
     }
   });
 
-  it('shows the owner uid once one is set (phase 4)', () => {
-    h.venues = [venue('v1', 'Palestra Centrale', { ownerUid: 'uid-123' })];
+  it('shows the owner uid once one is set, as a link to the provider', () => {
+    h.venues = [venue('v1', 'Palestra Centrale', { ownerId: 'uid-123' })];
     render(<VenuesListView />);
-    expect(ownerCell('Palestra Centrale')).toHaveTextContent('uid-123');
+    const cell = ownerCell('Palestra Centrale');
+    expect(cell).toHaveTextContent('uid-123');
+    expect(within(cell).getByRole('link').getAttribute('href')).toMatch(/^\/admin\/providers\/?\?id=uid-123$/);
+  });
+
+  it('shortens a long owner uid and keeps the full one as the title', () => {
+    h.venues = [
+      venue('v1', 'Palestra Rossi', { type: 'school', address: { street: 'Via Roma 1', city: 'Torino' }, ownerId: 'abcdefghijklmnopqrstuvwxyz12' }),
+      venue('v2', 'Centro Benessere Blu', { type: 'wellness_center' }),
+    ];
+    render(<VenuesListView />);
+    const owned = ownerCell('Palestra Rossi');
+    expect(owned).toHaveTextContent('abcdefgh…');
+    const link = owned.querySelector('[title="abcdefghijklmnopqrstuvwxyz12"]');
+    expect(link?.getAttribute('href')).toMatch(/^\/admin\/providers\/?\?id=abcdefghijklmnopqrstuvwxyz12$/);
+    expect(ownerCell('Centro Benessere Blu')).toHaveTextContent('—');
+  });
+});
+
+describe('VenuesListView type filter', () => {
+  it('offers school and studio, and filters by them', () => {
+    h.venues = [
+      venue('v1', 'Palestra Rossi', { type: 'school' }),
+      venue('v2', 'Centro Benessere Blu', { type: 'wellness_center' }),
+    ];
+    render(<VenuesListView />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Filtri/i }));
+    const [type] = screen.getAllByRole('combobox') as HTMLSelectElement[];
+    const values = Array.from(type.options).map((o) => o.value);
+    expect(values).toEqual(expect.arrayContaining(['gym', 'school', 'studio']));
+
+    fireEvent.change(type, { target: { value: 'school' } });
+    expect(screen.getByText('Palestra Rossi')).toBeInTheDocument();
+    expect(screen.queryByText('Centro Benessere Blu')).not.toBeInTheDocument();
+
+    fireEvent.change(type, { target: { value: 'studio' } });
+    expect(screen.queryByText('Palestra Rossi')).not.toBeInTheDocument();
   });
 });

@@ -1,7 +1,27 @@
 // src/types/venue.ts
 import type { Timestamp } from 'firebase/firestore';
 
-export type VenueType = 'gym' | 'wellness_center' | 'spa' | 'beauty_salon';
+export type VenueType =
+  | 'gym'
+  | 'wellness_center'
+  | 'spa'
+  | 'beauty_salon'
+  | 'school'
+  | 'studio'
+  | 'outdoor_space'
+  | 'event_space';
+
+/**
+ * Venue types that host group courses (a business's own timetable lives on these). The one
+ * list behind hostsCourses, the /fit/gyms query and the business venue-type choices; the
+ * `activePartnerGym` rule in firestore.rules repeats it and a test pins the two together.
+ * Mirrored in functions/src/types.ts.
+ */
+export const COURSE_VENUE_TYPES = ['gym', 'school', 'studio'] as const satisfies readonly VenueType[];
+
+export function hostsCourses(type: VenueType): boolean {
+  return (COURSE_VENUE_TYPES as readonly VenueType[]).includes(type);
+}
 
 export type AmenityKind =
   | 'weights'
@@ -54,11 +74,6 @@ export interface Venue {
   amenities: AmenityRef[];
   hours: VenueHours[];
   photoUrls?: string[]; // max 10. photoUrls[0] is the cover.
-  /**
-   * users/{uid} of the venue's owner. Reserved for phase 4 of the business-accounts plan
-   * (docs/plans/2026-10-04-business-accounts-plan.md); nothing writes it yet.
-   */
-  ownerUid?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -83,6 +98,11 @@ export interface VenueCourse {
 
 export interface VenueListOptions {
   type?: VenueType;
+  /**
+   * Several types at once (`type in [...]`). Wins over `type` when both are given, and an
+   * empty list matches nothing (it is not "no filter").
+   */
+  types?: readonly VenueType[];
   city?: string;
   limit?: number;
   /** Highest-rated first: the bounded list shown when the user's location is unknown. */

@@ -148,7 +148,7 @@ export function createAiTools() {
     description: "Search gyms / wellness centers / venues by city and type.",
     inputSchema: z.object({
       city: z.string().optional(),
-      type: z.enum(["gym", "wellness_center", "beauty_salon", "outdoor_space"]).optional(),
+      type: z.enum(["gym", "school", "studio", "wellness_center", "beauty_salon", "outdoor_space"]).optional(),
       section: z.enum(["fit", "fun", "life"]).optional(),
       limit: z.number().int().min(1).max(20).optional(),
     }),

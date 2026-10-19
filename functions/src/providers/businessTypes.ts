@@ -1,3 +1,7 @@
+import type { BusinessVenueType } from "../types";
+
+export type { BusinessVenueType };
+
 /**
  * Kind of provider account: a person, or a company or association (holder of a P.IVA /
  * codice fiscale). Absent ⇒ 'individual'.
@@ -30,4 +34,13 @@ export interface BusinessDetails {
   website?: string | null;
   logoUrl?: string | null;
   city?: string;
+  /**
+   * What the company offers at its premises (B12). Absent ⇒ "gym"; "none" ⇒ no venue is
+   * created on approval. Admin-reviewed: the owner cannot change it after signup.
+   */
+  venueType?: BusinessVenueType;
+  /** Street address of the venue created on approval; null/absent when venueType is "none". Frozen for the owner. */
+  address?: string | null;
+  /** `venues/{id}` created at approval (B12). Set by the server only; frozen for the owner. */
+  venueId?: string | null;
 }

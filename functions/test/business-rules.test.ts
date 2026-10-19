@@ -222,6 +222,77 @@ describe('instructors/{uid}.business — reviewed fields are locked for the owne
   });
 });
 
+// B12: applyAsProvider writes venueType/address and the approval writes venueId into the same
+// map. Without these keys in businessKeys() every owner edit would be denied (hasOnly).
+describe('instructors/{uid}.business — venue keys (venueType, address, venueId)', () => {
+  // `undefined` removes a key (Firestore refuses undefined values).
+  const venueMap = (extra: Record<string, unknown> = {}) => {
+    const map: Record<string, unknown> = businessMap({ venueType: 'gym', address: 'Via Roma 1', venueId: 'biz_owner', ...extra });
+    for (const key of Object.keys(map)) if (map[key] === undefined) delete map[key];
+    return map;
+  };
+
+  it('the owner can edit displayName on a map that holds the venue keys', async () => {
+    const f = await fixture({ business: venueMap() });
+    await assertSucceeds(instructorsAs(f.owner).doc(f.owner).update({
+      'business.displayName': 'Karate & Fun',
+      'name': 'Karate & Fun',
+      'fullName': 'Karate & Fun',
+    }));
+  });
+
+  it('the owner can edit the display fields on a pending map with venueType and address but no venueId yet', async () => {
+    const f = await fixture({ applicationStatus: 'pending', business: venueMap({ venueId: undefined }) });
+    await assertSucceeds(instructorsAs(f.owner).doc(f.owner).update({
+      'business.description': 'Nuova descrizione',
+      'business.city': 'Monza',
+    }));
+  });
+
+  it('a venueType of "none" with a null address is a valid stored map', async () => {
+    const f = await fixture({ business: venueMap({ venueType: 'none', address: null, venueId: undefined }) });
+    await assertSucceeds(instructorsAs(f.owner).doc(f.owner).update({ 'business.city': 'Torino' }));
+  });
+
+  it.each(['pending', 'verified'] as const)('the owner cannot change venueType while %s', async (status) => {
+    const f = await fixture({ applicationStatus: status, business: venueMap() });
+    await assertFails(instructorsAs(f.owner).doc(f.owner).update({ 'business.venueType': 'school' }));
+  });
+
+  it('the owner cannot change, remove or add the address', async () => {
+    const f = await fixture({ business: venueMap() });
+    const ref = instructorsAs(f.owner).doc(f.owner);
+    await assertFails(ref.update({ 'business.address': 'Via Milano 2' }));
+    await assertFails(ref.update({ 'business.address': firebase.firestore.FieldValue.delete() }));
+    const g = await fixture({ business: businessMap() });
+    await assertFails(instructorsAs(g.owner).doc(g.owner).update({ 'business.address': 'Via Milano 2' }));
+  });
+
+  it('the owner cannot change, remove or point venueId at another venue', async () => {
+    const f = await fixture({ business: venueMap() });
+    const ref = instructorsAs(f.owner).doc(f.owner);
+    await assertFails(ref.update({ 'business.venueId': 'biz_someone_else' }));
+    await assertFails(ref.update({ 'business.venueId': null }));
+    await assertFails(ref.update({ 'business.venueId': firebase.firestore.FieldValue.delete() }));
+  });
+
+  it('the owner cannot swap the venue keys by rewriting the whole business map', async () => {
+    const f = await fixture({ business: venueMap() });
+    await assertFails(instructorsAs(f.owner).doc(f.owner).update({
+      business: venueMap({ venueType: 'studio', venueId: 'biz_other' }),
+    }));
+  });
+
+  it('an admin browser client cannot change the venue keys either', async () => {
+    const f = await fixture({ business: venueMap() });
+    const ref = instructorsAs(f.admin).doc(f.owner);
+    await assertFails(ref.update({ 'business.venueType': 'school' }));
+    await assertFails(ref.update({ 'business.address': 'Via Milano 2' }));
+    await assertFails(ref.update({ 'business.venueId': 'biz_other' }));
+    await assertSucceeds(ref.update({ 'business.city': 'Milano' }));
+  });
+});
+
 describe('instructors/{uid}.business — presence of the map', () => {
   it('an individual owner cannot add a business map to their instructors doc', async () => {
     const f = await fixture();
