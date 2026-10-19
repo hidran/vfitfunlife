@@ -509,6 +509,7 @@ export const enMessages: Messages = {
   'admin.providerDetail.verifiedSuccess': 'Provider verified successfully.',
   'admin.providerDetail.rejectedSuccess': 'Application rejected.',
   'admin.providerDetail.actionError': 'Action failed. Please try again.',
+  'admin.providerDecision.error.venueExists': 'This company\'s venue already exists, so nothing was approved. Check the venue in Venues, then try again.',
   'admin.providerDetail.cancel': 'Cancel',
   'admin.providerDetail.confirmReject': 'Confirm Reject',
   'admin.providerDetail.rejectionReason': 'Rejection Reason',

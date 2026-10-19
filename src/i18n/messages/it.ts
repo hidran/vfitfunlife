@@ -507,6 +507,7 @@ export const itMessages = {
   'admin.providerDetail.verifiedSuccess': 'Provider verificato con successo.',
   'admin.providerDetail.rejectedSuccess': 'Richiesta rifiutata.',
   'admin.providerDetail.actionError': 'Operazione non riuscita. Riprova.',
+  'admin.providerDecision.error.venueExists': 'La sede di questa azienda esiste già, quindi non è stato approvato nulla. Controlla la sede in Sedi, poi riprova.',
   'admin.providerDetail.cancel': 'Annulla',
   'admin.providerDetail.confirmReject': 'Conferma rifiuto',
   'admin.providerDetail.rejectionReason': 'Motivo del rifiuto',

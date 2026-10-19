@@ -22,6 +22,7 @@ import { Badge } from '@/components/ui/Badge';
 import { useAdminStore } from '@/stores/adminStore';
 import { useShallow } from 'zustand/react/shallow';
 import { notify } from '@/lib/notify';
+import { providerDecisionErrorKey } from '@/lib/admin/providerDecisionError';
 import { useI18n } from '@/hooks/useI18n';
 import { formatDecimal, formatPrice } from '@/lib/utils';
 import type { AdminProvider } from '@/types/admin';
@@ -166,7 +167,7 @@ export function ProviderDetailView({ providerId }: Props) {
       notify.success(t('admin.providerDetail.verifiedSuccess'));
     } catch (error) {
       console.error('Failed to verify provider:', error);
-      notify.error(t('admin.providerDetail.actionError'));
+      notify.error(t(providerDecisionErrorKey(error) ?? 'admin.providerDetail.actionError'));
     }
   };
 

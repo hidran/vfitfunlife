@@ -26,6 +26,7 @@
 /promotions/{promotionId}
 /streamingSchedule/{scheduleId}
 /recipes/{recipeId}
+/businessVat/{vatNumber}
 ```
 
 ## Document Schemas
@@ -166,6 +167,13 @@ interface Venue {
   isPartner: boolean;             // "Anche noi siamo qui" badge
   isFeatured: boolean;
   isActive: boolean;
+
+  // Ownership & partnership (src/types/venue.ts)
+  ownerId?: string;               // uid of the provider that owns/manages the venue (NOT `ownerUid`); read by
+                                  // assertGymManager, the managesGym rule and the admin venues "Owner" column
+  partnerStatus?: 'pending' | 'active' | 'suspended'; // 'active' is required to publish/book a timetable
+  memberDiscountPercent?: number;
+  partnerInstructorExtraPercent?: number;
   
   // Search
   searchKeywords: string[];
@@ -173,6 +181,16 @@ interface Venue {
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
+
+// Business venues. Approving a company (providerType 'business', venueType != 'none') creates
+// /venues/biz_<providerUid> in the approval batch (functions/src/providers/businessVenue.ts):
+// a deterministic id written with `create`, so a racing second approval or a venue already at that
+// id fails `venue_exists` instead of overwriting it. Fields: name = business.displayName,
+// type = business.venueType (gym | school | studio), address, city, ownerId = the provider's uid,
+// partnerStatus 'pending', isPartner false, isActive true, discounts 0. lat/lng are flat numbers
+// (not a GeoPoint) copied from instructors/{uid} when saved and kept in step by
+// syncBusinessVenueLocation; syncVenueGeohash derives `geohash` from them. The link back is
+// instructors/{uid}.business.venueId.
 
 // /venues/{venueId}/services/{serviceId}
 interface VenueService {
@@ -226,9 +244,12 @@ interface Instructor {
     logoUrl?: string | null;
     city?: string;
     venueType?: 'gym' | 'school' | 'studio' | 'none'; // default 'gym'; 'none' ⇒ no venue is created
-    address?: string;             // street address for the venue created on approval
-    venueId?: string | null;      // set by approval when a venue is created
+    address?: string | null;      // street address for the venue created on approval
+    venueId?: string | null;      // set by approval when a venue is created: always 'biz_<uid>' (see Venues)
   };
+  // `business` is always written as a NESTED map (set/merge does not resolve dotted keys).
+  searchTerms?: string[];         // lowercase accent-free prefixes of name, business.displayName/legalName,
+                                  // specialties and category ids; maintained by onInstructorWriteSearchIndex
   // Access: the owner may update only business.displayName / description / website / logoUrl / city
   // (legalName and vatNumber are admin-only once approved; providerType, venueType, address and
   // venueId are set by the signup / approval functions). Everything else follows the usual
@@ -704,6 +725,21 @@ interface StreamingSchedule {
 > - `status` + `completionReminderSentAt` + `scheduledEndAt` — `remindTrainerToComplete`
 > - `status` + `paymentConfirmation.clientResponse` + `paymentConfirmation.confirmedByTrainerAt` — `autoConfirmPayments`
 
+> **Update (business accounts, 2026-10-19):** four more `users` composite indexes back the
+> `/admin/providers` individual/business type filter (`providerTypeConstraint` in
+> `src/lib/firebase/admin.ts`): the four shapes the list already used, each with `providerType`
+> added before `createdAt DESC` -
+> - `adminHidden` + `providerVerification` + `providerType` + `createdAt DESC`
+> - `adminHidden` + `isSuspended` + `providerVerification` + `providerType` + `createdAt DESC`
+> - `searchTokens` (array-contains) + `adminHidden` + `providerVerification` + `providerType` + `createdAt DESC`
+> - `searchTokens` (array-contains) + `adminHidden` + `isSuspended` + `providerVerification` + `providerType` + `createdAt DESC`
+>
+> They must be READY before the filter is used (a missing index makes the list throw into an
+> empty state). `/fit/gyms` lists gym, school and studio venues with the existing `venues`
+> (`type`, `geohash`) and (`type`, `rating`) composite indexes via `type in [...]`. Providers who applied before
+> business accounts have no `providerType`; run `scripts/backfill-provider-type.mjs` so the
+> "Individuals" filter finds them.
+
 Create these composite indexes in `firestore.indexes.json`:
 
 ```json
@@ -762,7 +798,7 @@ Create these composite indexes in `firestore.indexes.json`:
 - **Path:** `/businessVat/{vatNumber}` (doc id == the 11-digit P.IVA)
 - **Purpose:** Uniqueness claim so one P.IVA can belong to only one business provider. Created in a transaction by the business signup callable. Released only through an admin release action (the `releaseBusinessVat` callable); a rejected applicant keeps the claim so they can re-apply.
 - **Key fields:** `uid: string` (owner of the claim, == `instructors/{uid}`), `createdAt: Timestamp`.
-- **Access:** No client rule (default deny) until an explicit deny rule (`allow read, write: if false`) is added to `firestore.rules`; Admin SDK only.
+- **Access:** `allow read, write: if false` in `firestore.rules`; Admin SDK only (`applyAsProvider` creates it, `releaseBusinessVat` deletes it).
 
 ## Additional Collections (Audit Sync 2026-05)
 

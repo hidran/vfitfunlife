@@ -503,6 +503,7 @@ export const esMessages: Messages = {
   'admin.providerDetail.verifiedSuccess': 'Proveedor verificado correctamente.',
   'admin.providerDetail.rejectedSuccess': 'Solicitud rechazada.',
   'admin.providerDetail.actionError': 'La acción falló. Inténtalo de nuevo.',
+  'admin.providerDecision.error.venueExists': 'La sede de esta empresa ya existe, así que no se aprobó nada. Revisa la sede en Sedes e inténtalo de nuevo.',
   'admin.providerDetail.cancel': 'Cancelar',
   'admin.providerDetail.confirmReject': 'Confirmar rechazo',
   'admin.providerDetail.rejectionReason': 'Motivo del rechazo',

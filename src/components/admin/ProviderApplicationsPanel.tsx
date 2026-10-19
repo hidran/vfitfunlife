@@ -11,6 +11,8 @@ import { useI18n } from '@/hooks/useI18n';
 import { useAuthStore } from '@/stores/authStore';
 import { useServiceCategoryMap } from '@/hooks/useServiceCategories';
 import { queryKeys } from '@/lib/queryKeys';
+import type { MessageKey } from '@/i18n/messages';
+import { providerDecisionErrorKey } from '@/lib/admin/providerDecisionError';
 
 export function ProviderApplicationsPanel() {
   const { t } = useI18n();
@@ -28,17 +30,17 @@ export function ProviderApplicationsPanel() {
   const loading = appsQuery.isPending;
 
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [errorId, setErrorId] = useState<string | null>(null);
+  const [failure, setFailure] = useState<{ id: string; key: MessageKey } | null>(null);
 
   const decide = async (id: string, decision: 'verified' | 'rejected') => {
     setBusyId(id);
-    setErrorId(null);
+    setFailure(null);
     try {
       await decideProviderApplication({ providerId: id, decision });
       await queryClient.invalidateQueries({ queryKey: queryKeys.providerApplications() });
     } catch (e) {
       console.error('[ProviderApplicationsPanel] decide failed', id, decision, e);
-      setErrorId(id);
+      setFailure({ id, key: providerDecisionErrorKey(e) ?? 'admin.applications.error' });
     } finally {
       setBusyId(null);
     }
@@ -72,8 +74,8 @@ export function ProviderApplicationsPanel() {
               <div className="min-w-0">
                 <p className="text-content font-medium">{a.fullName}</p>
                 <p className="text-sm text-content-muted">{categoryLabels(a) || '—'}</p>
-                {errorId === a.id && (
-                  <p className="text-sm text-[#EF4444] light:text-red-700">{t('admin.applications.error')}</p>
+                {failure?.id === a.id && (
+                  <p role="alert" className="text-sm text-[#EF4444] light:text-red-700">{t(failure.key)}</p>
                 )}
               </div>
               {isAdmin && (

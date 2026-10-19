@@ -149,7 +149,8 @@ Bottom tabs with section-aware theming:
 
 ## 5. VFit Screens
 
-### 5.1 Gyms List (`/fit/gyms`)
+### 5.1 Gyms & Schools List (`/fit/gyms`)
+- [x] Lists venues of type gym, school and studio (title "Gyms & schools"); see [Business (company) accounts](#business-company-accounts)
 - [x] Toggle: List view / Map view
 - [x] Filter bar UI: Distance, Rating, Amenities, Price range
 - [x] Sort: Nearest, Top rated, Price low-high
@@ -764,6 +765,43 @@ the authority where the two disagree.
 - Background check (for certain categories)
 - Manual admin approval
 - Verified badge on profile
+
+## Business (company) accounts
+
+A company (gym, school, studio or any other business) is a **provider** in the same catalogue as individual trainers, with `providerType: 'business'` and a `business` map on its `instructors/{uid}` document (see [database-schema.md](database-schema.md)). Phase 1 covers one owner per company; teams are a later phase.
+
+### Signup as a company
+- On `/auth/register` (after ticking the professional opt-in) and in the "Become a professional" card on `/profile` for existing customers, a two-option control chooses **Individual / Company** (Italian: *Privato / Azienda*). Company reveals the company form (`src/components/provider/BusinessDetailsForm.tsx`).
+- Fields: **legal name** (ragione sociale), **P.IVA** (11 digits, check digit validated client-side and server-side), **public name** (defaults to the legal name), **venue type** (gym, school, studio, or "no fixed premises"), **street address** and **city** (required unless there are no premises), optional **website** (http/https only).
+- Errors appear under the field that caused them, are announced, and focus moves to the first invalid field. A P.IVA already registered shows an inline "already registered" error.
+
+### Always manually approved
+A company application is **always pending**, even when provider auto-approval is switched on (`systemSettings/providerOnboarding.autoApprove`): the legal name and P.IVA need a human check. The applicant sees the existing "application under review" screen with copy that says the P.IVA is being verified. An individual still auto-approves as before.
+
+An account that is a business stays a business: re-applying as an individual fails with `provider_type_locked`, a rejected company is queued again rather than auto-approved, and an already verified account is left untouched.
+
+### Unique P.IVA
+Each P.IVA can belong to one company. The claim is a `businessVat/{vat}` document created in the same transaction as the application. A second account using the same number gets the inline error. A rejected company **keeps** its claim (so the same person can re-apply); an admin frees a claim with **Release VAT number** (below).
+
+### Public listing and search
+- An approved company appears in the **Book a service** search (`/booking`) and on its own page (`/providers/detail?id=...`) with its public name, **logo** and a **Company** badge (Italian: *Azienda*).
+- Search matches the public name and the legal name (the `searchTerms` index kept by the `onInstructorWriteSearchIndex` trigger).
+- Individuals' cards are unchanged.
+
+### Editing the company profile
+The owner edits **public name, description, website, city and logo** from the **Professional** tab of `/profile/edit` (section "Company details", saved on its own). **Legal name, P.IVA, venue type and address are frozen**: shown read-only in the UI and refused by the Firestore rules, so a verified company cannot change what the admin checked. Changing the public name updates `name`/`fullName` too; the search index follows.
+
+### Admin tools (`/admin/providers`)
+- **Type filter:** All / Individuals / Companies, plus a *Company* badge on each company row. The filter needs the `providerType` composite indexes on `users` and the `scripts/backfill-provider-type.mjs` backfill for providers who applied before business accounts.
+- **Provider detail:** a *Company* block with legal name, P.IVA, public name, venue type, address, city, website and logo, next to the usual verify / reject actions. Admins and superadmins can approve a company.
+- **Release VAT number:** frees the P.IVA claim (audit-logged, optional reason, extra warning when the company is already verified). The company's own details are left in place.
+- Every approval, rejection and release writes an `audit_logs` entry.
+
+### Venue created on approval
+Approving a company whose venue type is not "no fixed premises" creates its venue in the same batch: `venues/biz_<uid>` with `type` gym / school / studio, the company's public name, address and city, `ownerId` = the company, `partnerStatus: 'pending'` and `isPartner: false`. The link is stored as `business.venueId`; approving again creates nothing. The venue's latitude/longitude/city are **mirrored from the owner's saved location** (`/provider/location`) now and whenever they move it again (`syncBusinessVenueLocation`). An admin promotes it to a partner on the venue's detail page; `/admin/venues` shows an **Owner** column.
+
+### Gyms & schools
+`/fit/gyms` (title *Gyms & schools*, Italian *Palestre e scuole*) lists every venue of type gym, school or studio, so an approved company with coordinates is listed there (pending venues with coordinates included). Only venues of these three types host group courses.
 
 ## Group courses and activities
 

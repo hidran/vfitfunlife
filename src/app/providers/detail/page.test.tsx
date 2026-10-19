@@ -121,4 +121,40 @@ describe('/providers/detail?id=', () => {
     expect(screen.getByRole('button')).toBeInTheDocument();
     expect(screen.queryByText('Anna Verdi')).not.toBeInTheDocument();
   });
+
+  it('builds the Instagram link with socialLinkHref and never links an unsafe value', () => {
+    mockSearchParams = new URLSearchParams('id=prov-42');
+    const render1 = (instagram: string) => {
+      mockUseProfile.mockReturnValue({
+        data: {
+          id: 'prov-42',
+          fullName: 'Anna Verdi',
+          avatarUrl: null,
+          bio: null,
+          providerProfile: { isVerified: true, rating: 0, reviewCount: 0, yearsOfExperience: 0, servicePricing: [] },
+          socialLinks: { instagram },
+          isProvider: true,
+          portfolioImages: [],
+        },
+        isLoading: false,
+        error: null,
+      });
+      return render(<ProviderProfilePage />);
+    };
+
+    const handle = render1('@anna');
+    const link = screen.getByRole('link', { name: 'Instagram' });
+    expect(link).toHaveAttribute('href', 'https://instagram.com/anna');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    handle.unmount();
+
+    const full = render1('https://instagram.com/anna.verdi');
+    expect(screen.getByRole('link', { name: 'Instagram' })).toHaveAttribute('href', 'https://instagram.com/anna.verdi');
+    full.unmount();
+
+    render1('javascript:alert(1)');
+    expect(document.querySelector('a[href^="javascript:"]')).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Instagram' })).toBeNull();
+    expect(screen.getByText('javascript:alert(1)').closest('a')).toBeNull();
+  });
 });

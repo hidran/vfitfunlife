@@ -8,6 +8,7 @@ import { useShallow } from "zustand/react/shallow";
 import { VerificationQueue } from "@/components/admin";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/hooks/useI18n";
+import { providerDecisionErrorKey } from "@/lib/admin/providerDecisionError";
 import {
   ArrowLeft,
   CheckCircle,
@@ -42,7 +43,7 @@ export default function ProviderVerificationsPage() {
       });
     } catch (error) {
       console.error("Failed to approve provider:", error);
-      setActionError(t('admin.verificationsPage.actionFailed'));
+      setActionError(t(providerDecisionErrorKey(error) ?? 'admin.verificationsPage.actionFailed'));
     }
   };
 

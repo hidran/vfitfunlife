@@ -309,3 +309,88 @@ Customer course browsing showed all three courses, including category and Torino
 Evidence: `output/playwright/three-demo-courses-verification.json`, `three-courses-karate-participants.png`, `three-courses-fitness-participants.png`, `three-courses-yoga-participants.png`, and `three-courses-customer-browse.png`.
 
 Post-deployment Playwright verification passed: each exact course title returned its course card without the incorrect No results message; the shared `Demo` query showed all three; the yoga result’s Lessons link opened the correct four-lesson course with its live capacity and prices. General search evidence: `three-courses-general-search-karate.png`, `three-courses-general-search-fitness.png`, `three-courses-general-search-yoga.png`, `three-courses-general-search-all.png`, and `three-courses-general-results.png`. All three demonstration courses remain published for review.
+
+## Business accounts release - checklist
+
+Plan: [`docs/plans/2026-10-04-business-accounts-plan.md`](../plans/2026-10-04-business-accounts-plan.md) (task B11). **Nothing below has been deployed yet**; this is the order to follow, for `vfit-app-staging` first and, after the staging smoke, `vfit-funlife`. Every command names its project with `-P`; the commit range is `e308d61..HEAD` (B1 onwards).
+
+Functions changed in that range, from `git diff --name-only e308d61..HEAD -- functions/src` and the exports they reach:
+
+| Function | Why |
+|---|---|
+| `applyAsProvider` | `providerType` / `business` input, `status` in the result, `business_*` and `provider_type_locked` errors, review-bypass rules |
+| `decideProviderApplication` | calls `commitProviderDecision`: venue `biz_<uid>` on approval, `venue_exists`, `business` map left untouched |
+| `releaseBusinessVat` | **new** callable |
+| `syncBusinessVenueLocation` | **new** trigger on `instructors/{instructorId}` |
+| `onInstructorWriteSearchIndex` | `searchTerms` now include `business.displayName` / `legalName` |
+| `saveGymSpace`, `configureGymInstructor`, `saveGymSchedule`, `updateGymSession`, `quoteGymBooking`, `quoteGymTimetable`, `bookGymClass`, `cancelGymBooking`, `recordGymPayment`, `confirmGymRefund` | `partnerGyms/store.ts` and `schedule.ts` use `hostsCourses` (gym, school, studio) instead of `type === 'gym'` |
+| `chatWithAssistant` | `ai/tools/index.ts` venue-search enum gains `school` and `studio` |
+
+(`createAiTools` is only reached through `chatWithAssistant`; `types.ts` is a shared import, not a function.) If `git diff --name-only e308d61..HEAD -- functions/src` shows more files by the time you deploy, recompute this list.
+
+### 1. Indexes first, and wait for READY
+
+```bash
+firebase deploy -P staging --only firestore:indexes
+```
+
+Four new `users` composite indexes back the `/admin/providers` type filter (`adminHidden`, `isSuspended`, `providerVerification`, `searchTokens`, each with `providerType` before `createdAt`; see [database-schema.md](../database-schema.md#firestore-indexes)). Wait until all show **READY** in the console (Firestore > Indexes) before deploying anything that queries them. Then confirm:
+
+```bash
+node scripts/verify-admin-list-indexes.mjs --project vfit-app-staging
+```
+
+It prints OK per query shape, including the `providerType==` ones, and the missing index otherwise. `/fit/gyms` needs no new index (`venues` `type` + `geohash` and `type` + `rating` already exist).
+
+### 2. Rules
+
+```bash
+firebase deploy -P staging --only firestore:rules
+```
+
+Adds the owner allowlist on `instructors.business`, the `providerType` freeze, `businessWebsiteSafe`, the deny-all `businessVat` match and the `activePartnerGym` school/studio types. Rules go before functions so the new callables never run against rules that predate them.
+
+### 3. Functions
+
+```bash
+firebase deploy -P staging --force --only functions:applyAsProvider,functions:decideProviderApplication,functions:releaseBusinessVat,functions:syncBusinessVenueLocation,functions:onInstructorWriteSearchIndex,functions:saveGymSpace,functions:configureGymInstructor,functions:saveGymSchedule,functions:updateGymSession,functions:quoteGymBooking,functions:quoteGymTimetable,functions:bookGymClass,functions:cancelGymBooking,functions:recordGymPayment,functions:confirmGymRefund,functions:chatWithAssistant
+```
+
+- `--force` is needed for the retrying Firestore triggers (`syncBusinessVenueLocation`, `onInstructorWriteSearchIndex`). If a first pass fails on the per-minute mutation quota (see [Gotchas](#gotchas-found-while-building-this)), re-run the same command.
+- A new gen-2 callable (`releaseBusinessVat`) can answer 401 for several minutes after its first deploy. It clears on its own.
+- Run `npm run lint` in `functions/` first (the functions lint is not the web one).
+
+### 4. Hosting
+
+```bash
+npm run deploy:staging
+```
+
+This rebuilds with `build:staging` (the project guard `assert-build-project.mjs` runs as the hosting predeploy) and deploys hosting, rules, indexes and storage. Never deploy a bundle built for the other project. Production uses `npm run deploy:prod` after a `build:prod` build (`.env.local` points at staging).
+
+### 5. Backfills (per environment, dry run first)
+
+Both scripts use Application Default Credentials and default to a dry run. Run them after the functions are live.
+
+```bash
+node scripts/backfill-provider-search.mjs --project vfit-app-staging           # dry run
+node scripts/backfill-provider-search.mjs --project vfit-app-staging --apply
+
+node scripts/backfill-provider-type.mjs --project vfit-app-staging             # dry run
+node scripts/backfill-provider-type.mjs --project vfit-app-staging --apply
+```
+
+- `backfill-provider-search.mjs` gives existing `instructors` documents the new `searchTerms` (company names included). It computes with the same code as the trigger.
+- `backfill-provider-type.mjs` writes `providerType: 'individual'` on providers who applied before business accounts, so the **Individuals** filter finds them. A document edited between the script's read and write is reported as `skipped (changed)` and does not fail the run; re-run to pick it up (the second run reports 0 to update).
+
+### 6. Smoke test (staging, a fresh journey account)
+
+1. Register a company with a valid P.IVA (venue type gym, with address and city): the pending screen appears and the company is **not** in `/booking` search.
+2. Register a second account with the same P.IVA: inline "already registered" error under the P.IVA field.
+3. As admin on `/admin/providers`: filter **Companies**, open the company, check the Company block, **Verify**. Confirm `venues/biz_<uid>` exists (owner = the company, `partnerStatus: pending`) and `instructors/<uid>.business.venueId` is set.
+4. Search the public name and the legal name in `/booking`: the company shows with its logo and **Company** badge.
+5. As the owner: change public name and logo on `/profile/edit` (Professional tab), confirm the P.IVA fields are read-only; save a location on `/provider/location` and confirm the venue gets the coordinates; open `/fit/gyms` and find the venue under **Gyms & schools**.
+6. As admin: **Release VAT number**, confirm the audit entry, then confirm the number can be registered again.
+7. Clean up: remove the test company's `instructors`, `users`, `venues/biz_<uid>` and any remaining `businessVat/<P.IVA>` document. On production, use a throwaway P.IVA and remove the claim afterwards.
+
+Legal copy: the terms and privacy pages do not mention business data; confirm the wording with the owner before the production release (plan section 5).

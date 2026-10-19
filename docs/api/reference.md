@@ -7,6 +7,7 @@
 - [User Functions](#user-functions)
 - [Profile APIs](#profile-apis)
 - [Provider Functions](#provider-functions)
+- [Business Account Functions](#business-account-functions)
 - [Booking Functions](#booking-functions)
 - [Customer Booking APIs](#customer-booking-apis)
 - [Provider Booking APIs](#provider-booking-apis)
@@ -679,6 +680,88 @@ POST /setProviderAvailability
   updatedSlots: number;
 }
 ```
+
+---
+
+## Business Account Functions
+
+Companies (gyms, schools, studios) are providers with `providerType: 'business'`. All callables run in `europe-west1`; error `message` values are stable codes. Full behaviour, validation limits and the complete error list: [`../backend/cloud-functions.md`](../backend/cloud-functions.md#provider-signup-and-business-accounts-functionssrcproviders) and [`../../functions/src/providers/`](../../functions/src/providers/).
+
+### Apply As Provider
+
+Opt in as a professional, as an individual (auto-approved unless the back office switched that off) or as a company (**always** queued for an admin). Source: [`applyAsProvider.ts`](../../functions/src/providers/applyAsProvider.ts).
+
+```typescript
+POST /applyAsProvider
+
+// Request
+{
+  categoryIds: string[];            // 1..30 taxonomy ids
+  fullName?: string;
+  providerType?: 'individual' | 'business';   // absent => 'individual'
+  business?: {                      // required for a company
+    legalName: string;
+    vatNumber: string;              // valid Italian P.IVA
+    displayName: string;
+    description?: string;
+    website?: string | null;        // http(s) only
+    city?: string;
+    venueType?: 'gym' | 'school' | 'studio' | 'none';  // default 'gym'
+    address?: string | null;
+  };
+}
+
+// Response
+{
+  success: true;
+  providerId: string;
+  status: 'verified' | 'pending';
+  autoApproved: boolean;            // true only when this call verified them
+  draftServicesSeeded: number;
+}
+
+// Errors (HttpsError, `message` is the code)
+// invalid-argument:    provider_type_invalid | business_required | business_vat_invalid |
+//                      business_legal_name_required | business_legal_name_too_long |
+//                      business_display_name_required | business_display_name_too_long |
+//                      business_description_invalid | business_description_too_long |
+//                      business_website_invalid | business_website_too_long |
+//                      business_city_invalid | business_city_too_long |
+//                      business_address_invalid | business_address_too_long |
+//                      business_venue_type_invalid
+// already-exists:      business_vat_taken
+// failed-precondition: provider_type_locked
+
+// Requires: authenticated user
+```
+
+### Release Business VAT
+
+Free a company's P.IVA uniqueness claim (`businessVat/{vat}`). The company's own details are not changed. Audit-logged; idempotent. Source: [`releaseBusinessVat.ts`](../../functions/src/providers/releaseBusinessVat.ts).
+
+```typescript
+POST /releaseBusinessVat
+
+// Request
+{
+  providerId: string;
+  reason?: string;                  // max 500 characters
+}
+
+// Response
+{
+  success: true;
+  providerId: string;
+  vatNumber: string;
+  released: boolean;                // false when the claim was already gone or held by another uid
+}
+
+// Errors: permission-denied (Admin required) | not-found | failed-precondition (business_vat_missing)
+
+// Requires: admin or superadmin role
+```
+
+Approving a company through `decideProviderApplication` also creates its venue (`venues/biz_<uid>`) and can fail `already-exists` / `venue_exists`; see the cloud-functions doc.
 
 ---
 

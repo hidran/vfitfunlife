@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { AdminProvider } from '@/types/admin';
@@ -66,7 +67,11 @@ vi.mock('./ProviderTabsContent', () => ({
   ProviderTabContent: () => null,
 }));
 
+const mockNotify = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
+vi.mock('@/lib/notify', () => ({ notify: mockNotify }));
+
 import { ProviderDetailView } from './ProviderDetailView';
+import { itMessages } from '@/i18n/messages/it';
 
 function renderView(id: string) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -107,5 +112,33 @@ describe('ProviderDetailView — company', () => {
 
     expect(screen.queryByText('Azienda')).not.toBeInTheDocument();
     expect(screen.queryByTestId('business-card')).not.toBeInTheDocument();
+  });
+});
+
+describe('ProviderDetailView — approval errors', () => {
+  it('explains a venue_exists refusal instead of the generic failure', async () => {
+    mockAdminState.verifyProviderAction.mockRejectedValueOnce(
+      Object.assign(new Error('venue_exists'), { code: 'functions/already-exists' }),
+    );
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    renderView('biz');
+
+    await userEvent.click(screen.getByRole('button', { name: /Verifica/ }));
+
+    await waitFor(() => expect(mockNotify.error).toHaveBeenCalledWith(
+      itMessages['admin.providerDecision.error.venueExists'],
+    ));
+  });
+
+  it('keeps the generic message for other failures', async () => {
+    mockAdminState.verifyProviderAction.mockRejectedValueOnce(new Error('Admin required'));
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    renderView('biz');
+
+    await userEvent.click(screen.getByRole('button', { name: /Verifica/ }));
+
+    await waitFor(() => expect(mockNotify.error).toHaveBeenCalledWith(
+      itMessages['admin.providerDetail.actionError'],
+    ));
   });
 });

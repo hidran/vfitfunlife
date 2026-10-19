@@ -235,6 +235,71 @@ These functions are exported from `../../functions/src/index.ts` but were missin
 - **Auth:** Anonymous callers see only verified providers; staff see all and may filter by `isVerified`.
 - **Purpose:** Paginated provider directory, filterable by `userType`.
 
+### Provider signup and business accounts (`../../functions/src/providers/`)
+
+Companies (gyms, schools, studios) are providers with `providerType: 'business'`. Product behaviour is in [../features.md](../features.md#business-company-accounts); stored shapes in [../database-schema.md](../database-schema.md). All of these run in `europe-west1`.
+
+#### `applyAsProvider` (`providers/applyAsProvider.ts`)
+- **Type:** Callable (authenticated).
+- **Input:**
+  ```ts
+  {
+    categoryIds: string[];           // 1..30 service-taxonomy ids; only known leaves are kept
+    fullName?: string;
+    providerType?: 'individual' | 'business';   // absent => 'individual' (every pre-existing caller)
+    business?: {                     // required when the account is, or becomes, a business
+      legalName: string;             // ragione sociale, required, <= 120
+      vatNumber: string;             // valid Italian P.IVA; normalised to 11 bare digits
+      displayName: string;           // required, <= 120; copied to name/fullName
+      description?: string;          // <= 2000
+      website?: string | null;       // absolute http(s) URL, <= 300; stored as the parsed href
+      city?: string;                 // <= 120
+      venueType?: 'gym' | 'school' | 'studio' | 'none';  // default 'gym'
+      address?: string | null;       // <= 200
+    };
+  }
+  ```
+  Validated field by field in `providers/businessApplication.ts` (`validateBusinessApplication`); every field is `typeof`-guarded because the payload comes straight from the client.
+- **Result:** `{ success: true, providerId, status: 'verified' | 'pending', autoApproved: boolean, draftServicesSeeded: number }`. `status` is where the account stands after the call; `autoApproved` is true only when THIS call verified them.
+- **Behaviour:**
+  - *Individual:* unchanged. Verified on the spot when `systemSettings/providerOnboarding.autoApprove` is on (default), otherwise stored as pending.
+  - *Business:* **always pending**, whatever `autoApprove` says. One transaction claims `businessVat/{vat}` (`providers/businessVatClaim.ts`) and writes the pending application: `users.providerStatus: 'pending'`, `users.providerType`, and on `instructors/{uid}` the `business` map as a **nested map** (never dotted keys, which `set(..., {merge: true})` would store literally), `providerType`, `name`/`fullName` = `displayName`. Re-applying with the same number by the same uid is idempotent; switching numbers releases the old claim.
+- **Errors** (the HttpsError `message` is a stable code the client maps to a localised inline error, see `providerApplicationErrorFor` in `src/lib/businessDetails.ts`):
+
+  | Code (`error.code`) | `message` |
+  |---|---|
+  | `invalid-argument` | `provider_type_invalid`, `business_required`, `business_vat_invalid`, `business_legal_name_required`, `business_legal_name_too_long`, `business_display_name_required`, `business_display_name_too_long`, `business_description_invalid`, `business_description_too_long`, `business_website_invalid`, `business_website_too_long`, `business_city_invalid`, `business_city_too_long`, `business_address_invalid`, `business_address_too_long`, `business_venue_type_invalid` |
+  | `already-exists` | `business_vat_taken` (another uid holds the P.IVA) |
+  | `failed-precondition` | `provider_type_locked` |
+  | `unauthenticated` / `invalid-argument` | `Sign in required`; `Pick at least one category`, `categoryIds must be strings`, `Too many categories` |
+
+- **Review-bypass rules** (so re-applying can never route around a review):
+  - **Business lock:** an account that already is a business (stored `providerType` / `business`) stays one. Sending `providerType: 'individual'` without a business payload fails `provider_type_locked` instead of being treated as an individual and auto-approved; any other re-application is validated as a business (`business_required` when the payload is missing). A verified individual asking to become a business also fails `provider_type_locked` (conversion is an admin job).
+  - **Rejected never auto-approves:** a rejected applicant is queued again whatever `autoApprove` says; only an admin reverses a rejection.
+  - **Verified is a no-op:** an already verified account returns `{ status: 'verified', autoApproved: false }` and nothing is rewritten (legacy docs verified only through `providerProfile.isVerified` count too).
+- Known and accepted: an unverified account can hold a P.IVA claim it has no right to (bounded to one claim per uid); an admin frees it with `releaseBusinessVat`.
+
+#### `decideProviderApplication` (`providers/decideProviderApplication.ts`, logic in `providers/commitDecision.ts`)
+- **Type:** Callable. **Auth:** admin or superadmin (`requireAdmin`).
+- **Input:** `{ providerId, decision: 'verified' | 'rejected', notes? }`. **Result:** `{ success, providerId, decision, draftServicesSeeded, venueId }` (`venueId` is `null` unless a venue was created by this call).
+- Approval promotes the role, sets default hours, seeds draft services and writes the audit entry in one batch (`commitProviderDecision`, shared with the auto-approval in `applyAsProvider`). For a company it never touches the `business` map and never blanks `name`/`fullName`.
+- **Venue creation:** approving a business whose `venueType` is not `none` also `create`s `venues/biz_<uid>` in the same batch (`providers/businessVenue.ts`, `planBusinessVenue`): `{ name: business.displayName, type: venueType, address, city, ownerId: uid, partnerStatus: 'pending', isPartner: false, isActive: true, memberDiscountPercent: 0, partnerInstructorExtraPercent: 0, ... }`, with the owner's lat/lng copied when already saved, and links it back as the nested `business.venueId`. Approval is re-runnable: once `business.venueId` is set no second venue is planned.
+- **`already-exists` / `venue_exists`:** the venue id is deterministic and written with `create`, so two racing approvals collide on it, as does a venue an admin already created at `biz_<uid>`. The **whole batch is refused** (nothing of the decision is written), so retrying after the clash is resolved is safe. The admin UI shows a localised message (`admin.providerDecision.error.venueExists`).
+- Rejection releases nothing: a rejected company keeps its P.IVA claim.
+
+#### `releaseBusinessVat` (`providers/releaseBusinessVat.ts`)
+- **Type:** Callable. **Auth:** admin or superadmin.
+- **Input:** `{ providerId, reason? }` (reason trimmed, max 500). **Result:** `{ success: true, providerId, vatNumber, released: boolean }`.
+- Deletes `businessVat/{vat}` for the P.IVA on `instructors/{providerId}.business.vatNumber`, only when that claim belongs to `providerId`; the profile's number stays so the back office can still see what the company declared. The audit entry is written in the same transaction and only when something was released. Idempotent: an absent claim, or one held by another uid, returns `released: false` with no write.
+- **Errors:** `unauthenticated`, `permission-denied` (`Admin required`), `invalid-argument` (`providerId is required`), `not-found` (`Provider not found`), `failed-precondition` (`business_vat_missing`).
+
+#### `syncBusinessVenueLocation` (`providers/syncBusinessVenueLocation.ts`)
+- **Type:** Firestore trigger (`onDocumentWritten` on `instructors/{instructorId}`, `retry: true`).
+- Mirrors a business owner's saved location (lat/lng when valid and changed, city when non-empty and changed) onto `venues/{business.venueId}`. Venue writes are admin-only in the rules, hence the trigger. It writes the instructor's *current* location read fresh, so a retried or out-of-order event cannot put an older position over a newer one; an owner move overwrites an admin's hand edit of the venue's lat/lng/city. `update()` (never `set()`), so a deleted venue stays deleted. Writing lat/lng makes `syncVenueGeohash` recompute the geohash so the venue joins radius searches.
+
+#### `onInstructorWriteSearchIndex` (`providers/onInstructorWriteSearchIndex.ts`)
+- **Type:** Firestore trigger on `instructors/{instructorId}` (`retry: true`). Keeps `searchTerms` current (`providers/searchIndex.ts`); for a company the terms include `business.displayName` and `business.legalName`, placed before specialties so the 300-term cap never drops them. Backfill: `scripts/backfill-provider-search.mjs`.
+
 ### Role & User Management (`../../functions/src/users/roles.ts`)
 
 #### `setUserRole`

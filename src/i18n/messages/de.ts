@@ -504,6 +504,7 @@ export const deMessages: Messages = {
   'admin.providerDetail.verifiedSuccess': 'Anbieter erfolgreich verifiziert.',
   'admin.providerDetail.rejectedSuccess': 'Bewerbung abgelehnt.',
   'admin.providerDetail.actionError': 'Aktion fehlgeschlagen. Bitte erneut versuchen.',
+  'admin.providerDecision.error.venueExists': 'Der Standort dieses Unternehmens existiert bereits, daher wurde nichts freigegeben. Prüfen Sie ihn unter Standorte und versuchen Sie es erneut.',
   'admin.providerDetail.cancel': 'Abbrechen',
   'admin.providerDetail.confirmReject': 'Ablehnung bestätigen',
   'admin.providerDetail.rejectionReason': 'Ablehnungsgrund',

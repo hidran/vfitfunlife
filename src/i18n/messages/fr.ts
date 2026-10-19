@@ -506,6 +506,7 @@ export const frMessages: Messages = {
   'admin.providerDetail.verifiedSuccess': 'Prestataire vérifié avec succès.',
   'admin.providerDetail.rejectedSuccess': 'Demande rejetée.',
   'admin.providerDetail.actionError': 'Échec de l\'action. Veuillez réessayer.',
+  'admin.providerDecision.error.venueExists': 'L\'établissement de cette entreprise existe déjà, rien n\'a donc été approuvé. Vérifiez-le dans Établissements, puis réessayez.',
   'admin.providerDetail.cancel': 'Annuler',
   'admin.providerDetail.confirmReject': 'Confirmer le rejet',
   'admin.providerDetail.rejectionReason': 'Motif du rejet',

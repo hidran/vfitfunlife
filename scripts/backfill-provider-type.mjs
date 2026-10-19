@@ -11,7 +11,8 @@
 // already has a value is never touched; an account whose instructors document carries a
 // `business` map is skipped and reported (it should already be 'business' — look at it by hand).
 // Each write is guarded by the document's updateTime, so one changed between read and write is
-// skipped, not clobbered. Idempotent: a second run reports 0 documents to update.
+// skipped (reported as "skipped (changed)", exit code unaffected), not clobbered.
+// Idempotent: a second run reports 0 documents to update.
 //
 //   node scripts/backfill-provider-type.mjs                               # emulator, dry run
 //   node scripts/backfill-provider-type.mjs --project vfit-app-staging    # dry run
@@ -85,13 +86,16 @@ if (!apply) {
   process.exit(0);
 }
 
+const FAILED_PRECONDITION = 9;
 let written = 0;
+let changed = 0;
 let failed = 0;
 const failures = [];
 const writer = db.bulkWriter();
 writer.onWriteError((err) => {
-  // The doc changed after we read it: skip it; re-running picks it up with fresh data.
-  if (err.code === 9 /* FAILED_PRECONDITION */) return false;
+  // The doc changed after we read it (updateTime guard): skip it, do not retry; re-running
+  // picks it up with fresh data.
+  if (err.code === FAILED_PRECONDITION) return false;
   return err.failedAttempts < 5;
 });
 for (const { ref, updateTime } of plan) {
@@ -99,12 +103,20 @@ for (const { ref, updateTime } of plan) {
     .update(ref, { providerType: "individual" }, { lastUpdateTime: updateTime })
     .then(() => written++)
     .catch((err) => {
+      if (err.code === FAILED_PRECONDITION) {
+        changed++;
+        return;
+      }
       failed++;
       failures.push(`${ref.path}: ${err.code ?? ""} ${err.message}`);
     });
 }
 await writer.close();
 
-console.log(`\nSummary: ${written} updated, ${failed} failed (of ${plan.length} planned).`);
+console.log(
+  `\nSummary: ${written} updated, ${changed} skipped (changed, re-run to pick them up), ` +
+    `${failed} failed (of ${plan.length} planned).`,
+);
 for (const f of failures.slice(0, 20)) console.log(`  ! ${f}`);
+// Only real write errors fail the run: a document edited between our read and write is not an error.
 process.exit(failed ? 1 : 0);

@@ -31,18 +31,27 @@ import { Rating } from '@/components/ui/Rating';
 import { Timestamp } from 'firebase/firestore';
 import { ProviderNotFoundError, useProviderPublicProfile } from '@/hooks/useProviderPublicProfile';
 import { providerImageUrl } from '@/lib/bookingProvider';
-import { safeHttpUrl } from '@/lib/businessDetails';
+import { socialLinkHref } from '@/lib/socialLinks';
 
 const SOCIAL_PILL_CLASS =
   'flex items-center gap-2 px-4 py-2 rounded-lg bg-background-secondary/10 text-text-secondary';
 
 /**
  * A social link on the public profile. `socialLinks` are written by the provider straight to
- * Firestore, so the value only becomes an href when it is an http(s) URL; anything else
- * (`javascript:`, `data:`, junk) is shown as plain, unclickable text.
+ * Firestore, so the value only becomes an href through `socialLinkHref` (http(s) URLs, bare
+ * hosts, and @handles on the platforms that have profile URLs); anything else (`javascript:`,
+ * `data:`, junk) is shown as plain, unclickable text.
  */
-function SocialPill({ value, children }: { value: string; children: React.ReactNode }) {
-  const href = safeHttpUrl(value);
+function SocialPill({
+  value,
+  linkKey,
+  children,
+}: {
+  value: string;
+  linkKey: 'website' | 'instagram' | 'linkedin';
+  children: React.ReactNode;
+}) {
+  const href = socialLinkHref(value, linkKey);
   if (!href) {
     return (
       <span className={cn(SOCIAL_PILL_CLASS, 'text-sm break-all')}>{value}</span>
@@ -457,23 +466,18 @@ export default function ProviderProfileClient() {
           <h2 className="font-semibold text-text-inverse mb-3">{t('providerProfile.connect')}</h2>
           <div className="flex flex-wrap gap-3">
             {profile.socialLinks.website && (
-              <SocialPill value={profile.socialLinks.website}>
+              <SocialPill value={profile.socialLinks.website} linkKey="website">
                 <Globe size={16} />
                 <span className="text-sm">{t('providerProfile.website')}</span>
               </SocialPill>
             )}
             {profile.socialLinks.instagram && (
-              <a
-                href={`https://instagram.com/${profile.socialLinks.instagram.replace('@', '')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-background-secondary/10 text-text-secondary hover:bg-background-secondary/20 transition-colors"
-              >
+              <SocialPill value={profile.socialLinks.instagram} linkKey="instagram">
                 <span className="text-sm font-semibold">Instagram</span>
-              </a>
+              </SocialPill>
             )}
             {profile.socialLinks.linkedin && (
-              <SocialPill value={profile.socialLinks.linkedin}>
+              <SocialPill value={profile.socialLinks.linkedin} linkKey="linkedin">
                 <span className="text-sm font-semibold">LinkedIn</span>
               </SocialPill>
             )}

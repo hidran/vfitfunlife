@@ -11,6 +11,7 @@ Index of project documentation. Each file is the canonical source for its topic;
 | [features.md](features.md) | Feature catalog across VFit / VFun / VLife verticals |
 | [user-flows.md](user-flows.md) | End-to-end user journeys (auth, booking, payment, etc.) |
 | [user-journeys/signup-to-booking.md](user-journeys/signup-to-booking.md) · [Italiano](user-journeys/signup-to-booking.it.md) | Screenshot walkthrough (dark theme, mobile): provider and customer from signup to a confirmed booking, in English and Italian (each also as `.docx`) |
+| [user-journeys/business-signup.md](user-journeys/business-signup.md) · [Italiano](user-journeys/business-signup.it.md) | Company signup walkthrough: register as a company, admin approval, search with the Company badge, profile and logo editing, venue under Gyms & schools, releasing a P.IVA (screenshots pending plan task B10) |
 | [database-schema.md](database-schema.md) | Firestore collections, document shapes, indexes |
 | [design-system.md](design-system.md) | Brand identity, color tokens, typography, component inventory, Tailwind v4 patterns |
 | [wireframe/](wireframe/) | Reference wireframes and layout mockups |
