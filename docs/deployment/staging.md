@@ -309,3 +309,137 @@ Customer course browsing showed all three courses, including category and Torino
 Evidence: `output/playwright/three-demo-courses-verification.json`, `three-courses-karate-participants.png`, `three-courses-fitness-participants.png`, `three-courses-yoga-participants.png`, and `three-courses-customer-browse.png`.
 
 Post-deployment Playwright verification passed: each exact course title returned its course card without the incorrect No results message; the shared `Demo` query showed all three; the yoga result’s Lessons link opened the correct four-lesson course with its live capacity and prices. General search evidence: `three-courses-general-search-karate.png`, `three-courses-general-search-fitness.png`, `three-courses-general-search-yoga.png`, `three-courses-general-search-all.png`, and `three-courses-general-results.png`. All three demonstration courses remain published for review.
+
+## Reconciled business release - deployment runbook
+
+Plan: [`docs/plans/2026-10-04-business-accounts-plan.md`](../plans/2026-10-04-business-accounts-plan.md) (task B12 and the Log entry "Reconciliation 2026-10-19"); analysis: [`docs/reports/2026-10-19-business-reconciliation-analysis.md`](../reports/2026-10-19-business-reconciliation-analysis.md).
+
+**Status (2026-10-19): nothing of the reconciled build is deployed anywhere.** Production (`vfit-funlife`) runs the branch tree published on 2026-10-06 (rules, 53 indexes, 11 business functions, hosting; see [the release report](../reports/2026-10-06-business-production-release.md)). Staging (`vfit-app-staging`) runs the build of main@`1fa024b` (main's own business rebuild), which this release replaces. This runbook is for the reconciled commit (the tip of `reconcile/business-accounts` once merged to `main`); every command names its project with `-P` (`staging` or `production`, see [`.firebaserc`](../../.firebaserc)) and runs outside the sandbox with a valid `firebase login`.
+
+### 0. Pre-flight (both environments)
+
+```bash
+git fetch && git log HEAD..origin/main --oneline   # nothing unexpected (Codebuff shares the checkout)
+git branch --show-current                          # the branch you mean to deploy
+git status --short                                 # clean; otherwise deploy from a clean git worktree
+git rev-parse HEAD                                 # note the SHA you deploy
+```
+
+- A functions deploy ships the whole working tree. If anything under `functions/` is dirty, create a clean `git worktree` of the commit and symlink `functions/node_modules` from the main checkout (`npm ci` fails on the root-owned npm cache).
+- Gates on that commit: `npx tsc --noEmit -p .`; `npx vitest run` (compare failures with the known baseline by file list); `cd functions && npm run lint && npm run build` (the functions lint is `npm run lint` there, not the web one); `npx vitest run src/i18n` (the five locales); the emulator suites outside the sandbox: `functions/test/business-rules.test.ts`, `business-venue.test.ts`, `chat-rules.test.ts`, `booking-rules.test.ts`, `partner-gyms-rules.test.ts`, `courses-rules.test.ts`.
+- Production only, read-only: count `businessVat` documents and business users on `vfit-funlife`, confirm `systemSettings/providerOnboarding.autoApprove`, and list what is deployed: `firebase functions:list -P production`. (The Firestore MCP `query_collection` always hits prod and mishandles boolean filters: use a script with `--project`.)
+
+### 1. Indexes first, and wait for READY
+
+`firestore.indexes.json` is the **union file with 62 indexes**: the 53 that production has (it was deployed from the branch at `877b04c`, including the four `users` composite indexes with `providerKind`) plus 9 for courses and partner gyms that production has never had:
+
+| Collection | Fields |
+|---|---|
+| `courses` | `state`, `providerEligible`, `nextStartsAt` |
+| `courses` | `state`, `nextStartsAt` |
+| `courseEnrollments` | `state`, `holdExpiresAt` |
+| `courseRefunds` | `paymentMode`, `status` |
+| `sessions` (collection group) | `state`, `cancellationReconciled` |
+| `sessions` (collection group) | `state`, `startsAt` |
+| `gymSessions` | `venueId`, `status`, `startsAt` |
+| `gymSessions` | `venueId`, `startsAt` |
+| `gymBookings` | `sessionId`, `state` |
+
+Main's old index file (62 entries too, but with four `providerType` indexes instead of the `providerKind` ones) must **never** be deployed. Never run `firebase deploy --only firestore:indexes --force` on production: `--force` deletes live indexes that are not in the file.
+
+```bash
+firebase firestore:indexes -P production > /tmp/indexes-before.json     # expect 53 before
+firebase deploy -P production --only firestore:indexes                  # additive
+# wait until none is CREATING (console: Firestore > Indexes), then:
+firebase firestore:indexes -P production | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).indexes.length))'   # expect 62
+node scripts/verify-admin-list-indexes.mjs --project vfit-funlife       # every query shape OK, 0 missing
+```
+
+For staging use `-P staging` and `--project vfit-app-staging`. Production was last verified with 92 query shapes passing (53 indexes READY, 2026-10-06). The courses queries (`/courses`, partner-gym timetable) are not covered by `verify-admin-list-indexes.mjs`: exercise them in the smoke test. The CLI warns about indexes in the project that are not in the file (staging has four, see below): leave them alone on production.
+
+### 2. Functions (full list, retry triggers need `--force`)
+
+Every export that changed since `877b04c` (`git diff --name-only 877b04c..HEAD -- functions/src`), by area. Shared modules also changed (`utils/roles.ts` `getUserRoleInfo` feeds `requireAdmin`; `types.ts`; `users/deleteUserCascade.ts`), so **deploy the whole codebase** rather than a hand-picked subset:
+
+- Business: `applyAsProvider`, `decideProviderApplication`, `releaseBusinessVat`, `convertBusinessToIndividual`, `updateBusinessTaxId`, `syncBusinessVenueLocation` (retry trigger), and, through `deleteUserCascade` (venues deactivated, claims deleted), `adminDeleteUser`, `adminBulkDeleteUsers`, `onAdminJobCreated`.
+- Courses: `saveCourse`, `previewCourse`, `enrollInCourse`, `enrollCourseParticipant`, `notifyCourseParticipant`, `cancelCourseEnrollment`, `recordCoursePayment`, `manageCourseSession`, `cancelRemainingCourse`, `confirmCourseRefund`, `createCourseCheckout`, `courseStripeWebhook`, `maintainCourseEnrollments`, `remindCourseParticipants`, `onCourseNotification`, `onCourseProviderEligibility`, `setPaymentSettings`.
+- Partner gyms: `saveGymSpace`, `configureGymInstructor`, `saveGymSchedule`, `updateGymSession`, `quoteGymBooking`, `quoteGymTimetable`, `bookGymClass`, `cancelGymBooking`, `recordGymPayment`, `confirmGymRefund`, `onGymNotification`.
+- Bookings, profile and others: `createBooking`, `getBooking`, `listBookings`, `cancelBooking`, `confirmBooking`, `updateBookingStatus`, `createBookingAsTrainer`, `updateBookingPrivateNotes`, `createClientAccount`, `resendClientAccountEmail`, `addClientByEmail`, `syncEmailVerification`, `updateNotificationSettings`, `updatePrivacySettings`, `updateSocialLinks`, `updateAvatar`, `seedServiceCategories`, `chatWithAssistant` (the venue-search tool enum gains `school` and `studio`).
+
+```bash
+cd functions && npm run lint && cd ..
+firebase functions:list -P production            # note what exists; compare after
+firebase deploy -P production --force --only functions
+```
+
+- `--force` is required for the retrying triggers (`syncBusinessVenueLocation` and the other `retry: true` Firestore triggers); it also skips the prompt before deleting functions that exist in the project but are not in the source, so compare `functions:list` with the source first.
+- With roughly 90 functions the per-minute mutation quota can fail a first pass on a few triggers: re-run the same command.
+- New gen-2 callables answer 401 for several minutes after their first deploy. It clears on its own.
+
+### 3. Rules
+
+```bash
+firebase deploy -P production --only firestore:rules
+```
+
+The rules tighten owner writes: the business map keys `venueType`, `address` and `venueId` are frozen for the owner, `name == fullName == business.displayName` on owner updates, `socialLinks.*` must be an http(s) URL or an `@handle` (at most 200 characters), the `activePartnerGym` rule covers gym, school and studio. Deploy them **after** the functions, so the callables that write those fields (approval, `applyAsProvider`) are already the new ones when the rules start refusing client writes.
+
+### 4. Hosting, built for the target project
+
+```bash
+npm run build:staging && firebase deploy -P staging --only hosting       # staging
+npm run build:prod    && firebase deploy -P production --only hosting    # production (.env.local points at staging)
+```
+
+Do not use `npm run deploy:prod` here: it deploys `hosting,firestore,storage` in one go and so ignores the order above. The hosting `predeploy` hook (`scripts/assert-build-project.mjs`) cancels a deploy whose bundle was built for the other project.
+
+**Why this order (version skew).** Hosting is last because a client must never call a callable that has not been deployed. The opposite skew is also real and is why admins must **hard-reload** after the deploy (Hosting caches `/_next/static/**` as immutable): an old cached admin client sends no `venueType`/`address` in `expectedReview`, so approving a company that declared premises answers `stale_review`; an old cached signup client does not send `venueType`, which the server reads as "no fixed premises", so the company is created without a venue. Nothing is corrupted by either, but both look like bugs. An old admin client also calls `releaseBusinessVat` with the wrong input (`providerId`) if it still comes from main's build.
+
+### 5. Staging first
+
+Redeploy staging from the reconciled commit with sections 1 to 4 (`-P staging`). What main's deploys left there, and what this replaces:
+
+| Surface | On staging now (main@`1fa024b`) | Action |
+|---|---|---|
+| Rules | main's | `firestore:rules` from the reconciled commit |
+| Indexes | 62 plus four orphan `providerType` indexes | `firestore:indexes` (additive); afterwards delete the four `providerType` indexes (console, or `--force` **on staging only**) |
+| Functions overwritten by main | `applyAsProvider`, `decideProviderApplication`, `releaseBusinessVat` (input `providerId`), `syncBusinessVenueLocation`, `onInstructorWriteSearchIndex`, the partner-gym callables, `chatWithAssistant` | the full-codebase deploy above replaces them, including `--force` for the triggers |
+| Hosting | main's build | `build:staging` then hosting |
+| Data | companies, `businessVat` claims and `venues/biz_*` created by main's flows; `users.providerType: 'individual'` on providers | usable as is; delete the synthetic companies once verified (Auth user, `users`, `instructors`, `businessVat`, `venues/biz_*`) |
+
+Then `node scripts/backfill-search-tokens.mjs --project vfit-app-staging` (dry run) to confirm there are no `providerKind` gaps.
+
+**B10 journey checklist on staging** (390x844 dark and light; 320 and 390 px in it and de for the narrow checks; fresh private browser context per actor; staging only admits allowlisted emails at `/admin/staging-access`):
+
+1. Company signup with venue type and address (gym), pending screen, the company is not in `/booking` search.
+2. Duplicate tax id from a second account: inline error, fix the number on the same form and resubmit without "email already exists".
+3. Admin on `/admin/providers` (Companies filter): the review card shows venue type and address; approve (the page updates without a reload; a change made by the owner in between gives `stale_review`).
+4. The venue `biz_<uid>` exists and is listed under Gyms & schools on `/fit/gyms` once the owner saved a location (`/provider/location`); it appears in `/admin/venues` with the Owner column.
+5. Owner edits public name and logo (venue name follows, slug does not), tax id and venue fields are read-only; customer finds the company with the Company badge and books it (badge/logo on `/book`, the confirm page and the booking detail).
+6. Admin corrections: release a rejected company's claim (`releaseBusinessVat` with the number), convert to individual, correct the tax id (`updateBusinessTaxId`); each audited.
+7. Reject (or convert) an approved company: the venue becomes inactive and leaves `/fit/gyms`; approve again: it is reactivated, not duplicated.
+8. Admin detail header and tab strip at 320 and 390 px with a long email; the Individual/Company toggle by keyboard.
+9. Courses smoke (`node scripts/smoke-group-courses-staging.mjs`, `smoke-course-participants-staging.mjs`) if the courses stack is part of the release.
+
+Record the result in `docs/user-journeys/business-signup-verification.md` and re-shoot the venue screenshots the guides flag as pending.
+
+### 6. Production
+
+Only after the staging checklist passes and the owner decision below is taken. Sections 0 to 4 with `-P production`, `--project vfit-funlife` and `build:prod`; production data steps:
+
+- `providerKind` backfill is **already done** on production (102 users updated on 2026-10-06, dry run then 0 remaining): re-run `node scripts/backfill-search-tokens.mjs --project vfit-funlife` as a dry run only if a count looks off. No `providerType` backfill exists any more (`scripts/backfill-provider-type.mjs` was dropped); the 2026-10-06 release left no test company behind and no real company is recorded in the reports; confirm with the read-only count in section 0.
+- Smoke without leaving data behind: signed-out checks (`/fit/gyms`, `/courses` load without console errors), then one company signup with a throwaway tax id, left pending, and its Auth user, `users`/`instructors` documents and `businessVat` claim removed afterwards (as on 2026-10-06). Do not approve a test company on production: that would create a public venue.
+- After the deploy, ask admins to hard-reload `/admin`.
+
+### Open decision: ship courses and partner gyms to production with this release?
+
+Production has **never** run the courses / participants / partner-gym stack: 9 indexes, about 40 functions and triggers (the Courses, Partner gyms and Bookings/profile groups in section 2), the matching rules, and the hosting pages. Deploying the reconciled branch ships all of it for the first time. Options for the owner:
+
+1. Ship everything together (simplest; the code and rules are one tree). Stripe/course checkout stays off (`courseCheckoutEnabled` and `stripePaymentsEnabled` default false); staging smoke covers it.
+2. Ship the business changes only. This is not a clean split: `firestore.rules` and `firestore.indexes.json` are single files (the courses rules and indexes ride along; harmless but the 9 indexes still build), and the functions would have to be deployed by explicit `--only functions:<names>` for the business group plus `chatWithAssistant` and the user-deletion functions, leaving prod's current course-less versions of `createBooking` and friends untouched. Hosting contains the courses pages either way.
+
+Until the owner decides, production stays on the 2026-10-06 tree. The unified-courses plan (P2) assumes prod has no gym data (task L8 step 1): if option 1 is taken, that preflight will list gym functions and L8 must take its two-deploy path.
+
+### Staging deploy of main's rebuild, 2026-10-19 (superseded, kept as a record)
+
+Deployed to `vfit-app-staging` only from `main` at `ed9302f`, later rebuilt through `20759f9`/`1fa024b`: `firestore:indexes` (four `users` `providerType` indexes, about 5 minutes; 92 query shapes OK; the CLI warned about four indexes in the project that are not in the file and they were left alone), rules, 16 functions (`applyAsProvider`, `decideProviderApplication`, `releaseBusinessVat` updated with input `providerId`, `syncBusinessVenueLocation` created, `onInstructorWriteSearchIndex`, the ten partner-gym callables, `chatWithAssistant`), hosting from `build:staging`, backfills (`backfill-provider-search.mjs` 0 to update; `backfill-provider-type.mjs` 12 users + 12 instructors, since deleted). The B10 browser verification of that build is in [`business-signup-verification.md`](../user-journeys/business-signup-verification.md) (with the reconciliation banner).
