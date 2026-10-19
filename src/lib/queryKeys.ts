@@ -70,6 +70,9 @@ export const queryKeys = {
   adminUserType: (userTypeId: string) => ['userTypes', userTypeId] as const,
   adminBooking: (bookingId: string) => ['bookings', bookingId] as const,
   adminProvider: (providerId: string) => ['providers', providerId] as const,
+  // The provider's `instructors/{id}.business` map (B8) — under adminProvider, so invalidating
+  // the provider also reloads what the business card and the approval send.
+  adminProviderBusiness: (providerId: string) => ['providers', providerId, 'business'] as const,
   adminServiceCategory: (serviceCategoryId: string) =>
     ['serviceCategories', serviceCategoryId] as const,
   adminVenue: (venueId: string) => ['venues', venueId] as const,

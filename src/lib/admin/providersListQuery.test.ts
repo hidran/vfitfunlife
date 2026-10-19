@@ -24,6 +24,16 @@ describe('providers list query', () => {
     expect(providerFiltersFromParams(new URLSearchParams(qs))).toEqual(filters);
   });
 
+  it('round-trips the account type filter', () => {
+    for (const providerType of ['business', 'individual'] as const) {
+      const filters = { ...DEFAULT_PROVIDER_FILTERS, providerType };
+      const qs = queryFromProviderFilters(filters);
+      expect(qs).toBe(`type=${providerType}`);
+      expect(providerFiltersFromParams(new URLSearchParams(qs))).toEqual(filters);
+    }
+    expect(providerFiltersFromParams(new URLSearchParams('type=gym')).providerType).toBe('all');
+  });
+
   it('round-trips an allowed page size', () => {
     const filters = { ...DEFAULT_PROVIDER_FILTERS, limit: 10 };
     expect(queryFromProviderFilters(filters)).toBe('size=10');

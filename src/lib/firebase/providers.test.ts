@@ -77,6 +77,64 @@ describe('fetchProviders', () => {
   });
 });
 
+describe('company accounts in fetchProviders', () => {
+  const doc = (id: string, extra: Record<string, unknown>) => ({
+    id,
+    data: () => ({ fullName: 'X', isActive: true, providerProfile: { isVerified: true }, ...extra }),
+  });
+
+  it('flags a provider with a valid business map and exposes its logo', async () => {
+    getDocs.mockResolvedValueOnce({
+      docs: [
+        doc('biz', {
+          business: { legalName: 'L Srl', vatNumber: '12345678903', displayName: 'Acme', logoUrl: 'https://x/l.png' },
+        }),
+      ],
+    });
+    const [p] = await fetchProviders({ limit: 5 });
+    expect(p.isBusiness).toBe(true);
+    expect(p.logoUrl).toBe('https://x/l.png');
+    expect(p.business?.displayName).toBe('Acme');
+  });
+
+  it('exposes only the public subset of the business map, never the legal fields', async () => {
+    getDocs.mockResolvedValueOnce({
+      docs: [
+        doc('biz', {
+          business: {
+            legalName: 'L Srl',
+            vatNumber: '12345678903',
+            legalForm: 'company',
+            affiliationNumber: 'AFF-1',
+            displayName: 'Acme',
+            city: 'Milano',
+            website: 'https://acme.example',
+          },
+        }),
+      ],
+    });
+    const [p] = await fetchProviders({ limit: 5 });
+    expect(p.business).toEqual({ displayName: 'Acme', city: 'Milano', website: 'https://acme.example' });
+    expect(JSON.stringify(p)).not.toMatch(/12345678903|L Srl|AFF-1/);
+  });
+
+  it('ignores providerType and malformed business maps; individuals gain no keys', async () => {
+    getDocs.mockResolvedValueOnce({
+      docs: [
+        doc('a', { providerType: 'business' }),
+        doc('b', { business: 'nope' }),
+        doc('c', { business: { displayName: '' } }),
+        doc('d', {}),
+      ],
+    });
+    const out = await fetchProviders({ limit: 5 });
+    for (const p of out) {
+      expect(p.isBusiness).toBeUndefined();
+      expect('isBusiness' in p || 'business' in p || 'logoUrl' in p).toBe(false);
+    }
+  });
+});
+
 describe('createProviderService', () => {
   it('writes to the subcollection the booking flow reads', async () => {
     await createProviderService('trainer-1', {

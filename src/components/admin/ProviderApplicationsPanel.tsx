@@ -11,6 +11,11 @@ import { useI18n } from '@/hooks/useI18n';
 import { useAuthStore } from '@/stores/authStore';
 import { useServiceCategoryMap } from '@/hooks/useServiceCategories';
 import { queryKeys } from '@/lib/queryKeys';
+import { adminBusinessErrorCode, ADMIN_BUSINESS_ERRORS } from '@/lib/providerApplicationErrors';
+import { BusinessBadge } from '@/components/provider/BusinessBadge';
+import { useAdminProviderBusiness } from '@/hooks/useAdminProviderBusiness';
+import { LEGAL_FORM_LABEL } from '@/lib/businessDetails';
+import { businessReviewOf, type AdminBusiness } from '@/lib/admin/providerBusiness';
 
 export function ProviderApplicationsPanel() {
   const { t } = useI18n();
@@ -28,17 +33,34 @@ export function ProviderApplicationsPanel() {
   const loading = appsQuery.isPending;
 
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [errorId, setErrorId] = useState<string | null>(null);
+  const [error, setError] = useState<{ id: string; message: string } | null>(null);
 
-  const decide = async (id: string, decision: 'verified' | 'rejected') => {
-    setBusyId(id);
-    setErrorId(null);
+  const decide = async (a: Provider, decision: 'verified' | 'rejected', business: AdminBusiness | null) => {
+    setBusyId(a.id);
+    setError(null);
     try {
-      await decideProviderApplication({ providerId: id, decision });
+      await decideProviderApplication({
+        providerId: a.id,
+        decision,
+        // Approval checks the four legal fields shown in the row (B8). Read by
+        // the admin reader: a map without a public name is still a company to the server.
+        ...(decision === 'verified' && business ? { expectedReview: businessReviewOf(business) } : {}),
+      });
       await queryClient.invalidateQueries({ queryKey: queryKeys.providerApplications() });
     } catch (e) {
-      console.error('[ProviderApplicationsPanel] decide failed', id, decision, e);
-      setErrorId(id);
+      console.error('[ProviderApplicationsPanel] decide failed', a.id, decision, e);
+      const code = adminBusinessErrorCode(e);
+      setError({
+        id: a.id,
+        message: t(code ? ADMIN_BUSINESS_ERRORS[code] : 'admin.applications.error'),
+      });
+      // The company changed since the list was loaded: show what it is now.
+      if (code === 'stale_review' || code === 'review_required') {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: queryKeys.providerApplications() }),
+          queryClient.invalidateQueries({ queryKey: queryKeys.adminProviderBusiness(a.id) }),
+        ]);
+      }
     } finally {
       setBusyId(null);
     }
@@ -68,28 +90,73 @@ export function ProviderApplicationsPanel() {
       ) : (
         <ul className="space-y-3">
           {apps.map((a) => (
-            <li key={a.id} className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-hairline p-3">
-              <div className="min-w-0">
-                <p className="text-content font-medium">{a.fullName}</p>
-                <p className="text-sm text-content-muted">{categoryLabels(a) || '—'}</p>
-                {errorId === a.id && (
-                  <p className="text-sm text-[#EF4444] light:text-red-700">{t('admin.applications.error')}</p>
-                )}
-              </div>
-              {isAdmin && (
-                <div className="flex gap-2">
-                  <Button size="sm" disabled={busyId === a.id} onClick={() => decide(a.id, 'verified')}>
-                    <CheckCircle className="w-4 h-4 mr-1" /> {t('admin.applications.verify')}
-                  </Button>
-                  <Button size="sm" variant="ghost" disabled={busyId === a.id} onClick={() => decide(a.id, 'rejected')}>
-                    <XCircle className="w-4 h-4 mr-1" /> {t('admin.applications.reject')}
-                  </Button>
-                </div>
-              )}
-            </li>
+            <ApplicationRow
+              key={a.id}
+              app={a}
+              categories={categoryLabels(a)}
+              isAdmin={isAdmin}
+              busy={busyId === a.id}
+              error={error?.id === a.id ? error.message : null}
+              onDecide={decide}
+            />
           ))}
         </ul>
       )}
     </div>
+  );
+}
+
+interface ApplicationRowProps {
+  app: Provider;
+  categories: string;
+  isAdmin: boolean;
+  busy: boolean;
+  error: string | null;
+  onDecide: (a: Provider, decision: 'verified' | 'rejected', business: AdminBusiness | null) => void;
+}
+
+/** One pending application. Its company details come from the admin reader, not the public one. */
+function ApplicationRow({ app: a, categories, isAdmin, busy, error, onDecide }: ApplicationRowProps) {
+  const { t } = useI18n();
+  const businessQuery = useAdminProviderBusiness(a.id);
+  const business = businessQuery.data ?? null;
+  // Approving waits for the company details: without them the server answers review_required.
+  const approveBlocked = busy || businessQuery.isPending;
+  return (
+    <li className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-hairline p-3">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-content font-medium">{a.fullName}</p>
+          {(business || a.isBusiness) && <BusinessBadge />}
+        </div>
+        <p className="text-sm text-content-muted">{categories || '—'}</p>
+        {/* What an approval of a company confirms (and sends back as expectedReview). */}
+        {business && (
+          <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-2 text-sm">
+            <dt className="text-content-faint">{t('provider.business.reviewed.legalName')}</dt>
+            <dd className="text-content break-words">{business.legalName}</dd>
+            <dt className="text-content-faint">{t('provider.business.reviewed.vatNumber')}</dt>
+            <dd className="text-content font-mono tabular-nums">{business.vatNumber}</dd>
+            <dt className="text-content-faint">{t('provider.business.reviewed.legalForm')}</dt>
+            <dd className="text-content break-words">
+              {business.legalForm ? t(LEGAL_FORM_LABEL[business.legalForm]) : t('admin.providerDetail.field.naValue')}
+            </dd>
+            <dt className="text-content-faint">{t('provider.business.reviewed.affiliationNumber')}</dt>
+            <dd className="text-content break-words">{business.affiliationNumber || t('admin.providerDetail.field.naValue')}</dd>
+          </dl>
+        )}
+        {error && <p role="alert" className="text-sm text-[#EF4444] light:text-red-700">{error}</p>}
+      </div>
+      {isAdmin && (
+        <div className="flex gap-2">
+          <Button size="sm" className="min-h-11" disabled={approveBlocked} onClick={() => onDecide(a, 'verified', business)}>
+            <CheckCircle className="w-4 h-4 mr-1" /> {t('admin.applications.verify')}
+          </Button>
+          <Button size="sm" variant="ghost" className="min-h-11" disabled={busy} onClick={() => onDecide(a, 'rejected', business)}>
+            <XCircle className="w-4 h-4 mr-1" /> {t('admin.applications.reject')}
+          </Button>
+        </div>
+      )}
+    </li>
   );
 }

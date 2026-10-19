@@ -1,4 +1,5 @@
 import { Timestamp, GeoPoint } from 'firebase/firestore';
+import type { PublicBusiness } from '@/lib/publicBusiness';
 
 // Re-export types from firebase.ts for convenience
 export type {
@@ -159,6 +160,12 @@ export interface ProviderSearchResult {
   id: string;
   fullName: string;
   avatarUrl?: string;
+  /** True iff the instructors doc has a valid `business` map ("Azienda" badge). */
+  isBusiness?: boolean;
+  /** Public part of the company details only; never the legal name or tax id. */
+  business?: PublicBusiness;
+  /** `business.logoUrl`, preferred over `avatarUrl`. */
+  logoUrl?: string;
   rating: number;
   reviewCount: number;
   isVerified: boolean;

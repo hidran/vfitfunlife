@@ -3,6 +3,7 @@ import {
   DEFAULT_PROVIDER_ONBOARDING,
   ProviderOnboardingValidationError,
   mergeProviderOnboarding,
+  shouldAutoApprove,
   validateProviderOnboardingUpdate,
 } from "./onboardingSettings";
 
@@ -51,5 +52,18 @@ describe("validateProviderOnboardingUpdate", () => {
     expect(() => validateProviderOnboardingUpdate({ autoApprove: "false" } as never)).toThrow(
       /must be a boolean/
     );
+  });
+});
+
+describe("shouldAutoApprove", () => {
+  it("follows the setting for an individual, exactly as before business accounts", () => {
+    expect(shouldAutoApprove({ autoApprove: true }, "individual")).toBe(true);
+    expect(shouldAutoApprove({ autoApprove: false }, "individual")).toBe(false);
+  });
+
+  it("never auto-approves a business, even with auto-approval ON (decision D2)", () => {
+    // Someone has to check the P.IVA before a company is listed publicly.
+    expect(shouldAutoApprove({ autoApprove: true }, "business")).toBe(false);
+    expect(shouldAutoApprove({ autoApprove: false }, "business")).toBe(false);
   });
 });

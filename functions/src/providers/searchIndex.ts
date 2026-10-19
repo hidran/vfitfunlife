@@ -7,7 +7,10 @@
  * The terms are lowercased, accent-free prefixes, whole and per word, of:
  *  - the provider's name,
  *  - their specialties (legacy display labels),
- *  - their category ids, with `_` read as a space (`personal_training` → "personal training").
+ *  - their category ids, with `_` read as a space (`personal_training` → "personal training"),
+ *  - for a company, `business.displayName` and `business.legalName`, so a search for the legal
+ *    name finds it although only the display name is ever shown. The legal name is public data
+ *    anyway (the instructors doc is readable); the tax id and affiliation number are NOT indexed.
  *
  * `/instructors` is publicly readable, so unlike users' `searchTokens` nothing private (email,
  * phone) is ever indexed here.
@@ -43,6 +46,7 @@ export interface ProviderSearchSource {
   fullName?: unknown;
   providerProfile?: { specialties?: unknown } | null;
   categoryIds?: unknown;
+  business?: { displayName?: unknown; legalName?: unknown } | null;
 }
 
 const strings = (value: unknown): string[] =>
@@ -67,6 +71,12 @@ function addPhrase(out: Set<string>, raw: string): void {
 export function computeProviderSearchTerms(record: ProviderSearchSource): string[] {
   const out = new Set<string>();
   if (typeof record.fullName === "string") addPhrase(out, record.fullName);
+  // Same plain-object guard as the client reader: anything else is ignored.
+  const business = record.business;
+  if (business && typeof business === "object" && !Array.isArray(business)) {
+    if (typeof business.displayName === "string") addPhrase(out, business.displayName);
+    if (typeof business.legalName === "string") addPhrase(out, business.legalName);
+  }
   for (const specialty of strings(record.providerProfile?.specialties)) addPhrase(out, specialty);
   for (const id of strings(record.categoryIds)) addPhrase(out, id.replace(/_/g, " "));
   return [...out].slice(0, PROVIDER_SEARCH_TERMS_CAP);

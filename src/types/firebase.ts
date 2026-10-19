@@ -129,6 +129,8 @@ export interface User {
   role: UserRole;
   // Provider application status (absent ⇒ "none")
   providerStatus?: ProviderStatus;
+  // Individual professional or company (absent ⇒ "individual")
+  providerType?: ProviderType;
   // Kind of provider, e.g. "personal_trainer", "psychologist" (providers only)
   userType?: string | null;
 
@@ -783,4 +785,37 @@ export interface Review {
   isVerified: boolean;
   createdAt: Timestamp;
   updatedAt: Timestamp;
+}
+
+/**
+ * Kind of provider account: a person, or a company or association (holder of a P.IVA /
+ * codice fiscale). Absent ⇒ 'individual'.
+ */
+export type ProviderType = 'individual' | 'business';
+
+/** Legal form of a business provider. Absent on documents written before B3b ⇒ 'company'. */
+export type BusinessLegalForm = 'company' | 'sole_trader' | 'association' | 'other';
+
+/** `instructors/{uid}.business` — company details of a business provider. */
+export interface BusinessDetails {
+  /** Ragione sociale. Admin-verified; owner read-only after approval. */
+  legalName: string;
+  /**
+   * Italian tax id, 11 digits: the P.IVA, or an association's codice fiscale.
+   * Admin-verified; owner read-only after approval.
+   */
+  vatNumber: string;
+  /** Admin-verified, like the tax id. Always written since B3b; absent on older docs ⇒ 'company'. */
+  legalForm?: BusinessLegalForm;
+  /**
+   * CONI / RASD / ente di promozione registration, "" when none. Informational, shown in the
+   * admin UI only — not secret: the instructors doc is publicly readable once verified.
+   */
+  affiliationNumber?: string;
+  /** Shown publicly; also copied to the instructor's name/fullName. */
+  displayName: string;
+  description?: string;
+  website?: string | null;
+  logoUrl?: string | null;
+  city?: string;
 }

@@ -27,6 +27,15 @@ const mockProviders: AdminProvider[] = [
     role: 'provider',
     providerProfile: { isVerified: true, rating: 4.8 },
   } as unknown as AdminProvider,
+  {
+    id: 'c1',
+    uid: 'c1',
+    fullName: 'Karate Club Milano',
+    email: 'karate@example.com',
+    role: 'customer',
+    providerStatus: 'pending',
+    providerType: 'business',
+  } as unknown as AdminProvider,
 ];
 
 const mockAdminState = {
@@ -57,6 +66,7 @@ vi.mock('@/components/admin/ProviderApplicationsPanel', () => ({
 }));
 
 import { ProvidersListView } from './ProvidersListView';
+import { itMessages } from '@/i18n/messages/it';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -141,6 +151,45 @@ describe('ProvidersListView', () => {
     const names = Array.from(document.querySelectorAll('tbody tr')).map(
       (tr) => tr.querySelector('p')?.textContent
     );
-    expect(names).toEqual(['Paola Pendente', 'Rita Respinta', 'Vera Verificata']);
+    expect(names).toEqual(['Paola Pendente', 'Karate Club Milano', 'Rita Respinta', 'Vera Verificata']);
+  });
+
+  it('filters by account type through the query and keeps it in the URL', () => {
+    render(<ProvidersListView />);
+    fireEvent.click(screen.getByRole('button', { name: /Filtri/i }));
+    const type = screen.getByLabelText(itMessages['admin.providers.filter.accountType']) as HTMLSelectElement;
+    expect(Array.from(type.options).map((o) => o.textContent)).toEqual([
+      itMessages['admin.providers.filter.allAccounts'],
+      itMessages['admin.providers.filter.individuals'],
+      itMessages['admin.providers.filter.companies'],
+    ]);
+
+    fireEvent.change(type, { target: { value: 'business' } });
+    expect(mockAdminState.fetchProviders).toHaveBeenLastCalledWith(
+      expect.objectContaining({ providerType: 'business', page: 1 })
+    );
+    expect(window.location.search).toBe('?type=business');
+
+    fireEvent.change(type, { target: { value: 'individual' } });
+    expect(mockAdminState.fetchProviders).toHaveBeenLastCalledWith(
+      expect.objectContaining({ providerType: 'individual' })
+    );
+    expect(window.location.search).toBe('?type=individual');
+  });
+
+  it('seeds the account type from the URL', () => {
+    mockSearchParams = new URLSearchParams('type=business');
+    render(<ProvidersListView />);
+    expect(mockAdminState.fetchProviders).toHaveBeenCalledWith(expect.objectContaining({ providerType: 'business' }));
+  });
+
+  it('marks companies with a text badge, individuals with none', () => {
+    render(<ProvidersListView />);
+    const badge = itMessages['provider.badge.business'];
+    const row = (name: string) => screen.getByText(name).closest('tr') as HTMLElement;
+    expect(row('Karate Club Milano')).toHaveTextContent(badge);
+    for (const name of ['Paola Pendente', 'Rita Respinta', 'Vera Verificata']) {
+      expect(row(name)).not.toHaveTextContent(badge);
+    }
   });
 });

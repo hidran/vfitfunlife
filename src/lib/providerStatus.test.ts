@@ -1,5 +1,18 @@
 import { describe, it, expect } from 'vitest';
-import { providerCardState, canAccessProviderArea } from './providerStatus';
+import { providerCardState, canAccessProviderArea, applicationOutcomeStatus } from './providerStatus';
+
+describe('applicationOutcomeStatus', () => {
+  it('maps autoApproved to the approved or the pending state', () => {
+    expect(applicationOutcomeStatus({ autoApproved: true })).toBe('verified');
+    expect(applicationOutcomeStatus({ autoApproved: false })).toBe('pending');
+  });
+
+  it('is undefined when the answer does not say', () => {
+    expect(applicationOutcomeStatus({})).toBeUndefined();
+    expect(applicationOutcomeStatus(undefined)).toBeUndefined();
+    expect(applicationOutcomeStatus(null)).toBeUndefined();
+  });
+});
 
 describe('providerCardState', () => {
   it('maps status to card variant', () => {

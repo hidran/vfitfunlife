@@ -1,11 +1,25 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { getFirestore, FieldValue, type DocumentReference } from "firebase-admin/firestore";
 import { commitProviderDecision } from "./commitDecision";
-import { draftServicesForCategories } from "./applicationDecision";
+import {
+  draftServicesForCategories,
+  pendingApplicationPatches,
+  toConcurrentUpdateError,
+} from "./applicationDecision";
+import {
+  BUSINESS_VAT_COLLECTION,
+  assertNotApprovedBusiness,
+  assertNotExistingBusiness,
+  claimBusinessVat,
+  parseProviderType,
+  validateBusinessInput,
+} from "./businessApplication";
+import type { BusinessLegalForm, ProviderType } from "./businessTypes";
 import {
   PROVIDER_ONBOARDING_DOC,
   ProviderOnboardingSettings,
   mergeProviderOnboarding,
+  shouldAutoApprove,
 } from "./onboardingSettings";
 import { hotCallableOptions } from "../lib/runtimeOptions";
 import { cachedDocRead } from "../lib/cachedDoc";
@@ -13,6 +27,22 @@ import { cachedDocRead } from "../lib/cachedDoc";
 interface ApplyAsProviderData {
   categoryIds: string[];
   fullName?: string;
+  /** Absent ⇒ 'individual', which behaves exactly as before business accounts. */
+  providerType?: ProviderType;
+  /** Required when providerType is 'business'; ignored otherwise. See validateBusinessInput. */
+  business?: {
+    legalName: string;
+    /** P.IVA, or an association's codice fiscale (D3). */
+    vatNumber: string;
+    /** Absent ⇒ 'company'. */
+    legalForm?: BusinessLegalForm;
+    /** Optional CONI / RASD / ente di promozione registration. */
+    affiliationNumber?: string;
+    displayName?: string;
+    description?: string;
+    website?: string;
+    city?: string;
+  };
 }
 
 /**
@@ -45,6 +75,17 @@ async function readOnboardingSettings(): Promise<ProviderOnboardingSettings> {
  * - `autoApprove: false` — the application is stored as pending and waits for an admin to
  *   decide in /admin/providers. Nothing is listed publicly until they do.
  *
+ * A company or association (`providerType: 'business'`) always takes the pending branch,
+ * whatever the setting (decision D2: someone checks the tax id first). Its details are
+ * validated (validateBusinessInput), an account that is already an approved business is
+ * refused (`business_already_approved`), and its tax id (P.IVA / codice fiscale) is claimed in
+ * `businessVat/{vat}` — one business per tax id (D5), and every other claim the account holds
+ * is released — and the claims, the instructors doc and the user doc are written in one
+ * transaction, so a refused application writes nothing. Errors carry stable codes as messages
+ * (`invalid_vat`, `invalid_legal_form`, `vat_already_registered`, `business_already_approved`,
+ * ...) for the client to localise; `aborted` / `concurrent_update` means "lost a race, try
+ * again".
+ *
  * Either way this has to be a callable. firestore.rules lets a user create only an
  * *unverified, pending* instructors document and never lets them write
  * `providerProfile.isVerified` or `applicationStatus` — correct, since that flag is what
@@ -75,16 +116,34 @@ export const applyAsProvider = onCall<ApplyAsProviderData>(
     if (categoryIds.length > 30) {
       throw new HttpsError("invalid-argument", "Too many categories");
     }
+    const providerType = parseProviderType(req.data?.providerType);
+    const business = providerType === "business" ? validateBusinessInput(req.data?.business) : null;
 
     const db = getFirestore();
-    const [settings, callerSnap] = await Promise.all([
+    const userRef = db.collection("users").doc(callerUid);
+    const instructorRef = db.collection("instructors").doc(callerUid);
+    const [settings, callerSnap, instructorSnap] = await Promise.all([
       readOnboardingSettings(),
-      db.collection("users").doc(callerUid).get(),
+      userRef.get(),
+      instructorRef.get(),
     ]);
     const caller = callerSnap.data() ?? {};
     const applicantName = fullName ?? (caller.fullName as string) ?? null;
 
-    if (settings.autoApprove) {
+    // A company re-applying as an individual would otherwise be auto-approved (and listed
+    // without its tax id ever being checked), or have its company name replaced by a person's.
+    // These reads may already be stale; the auto-approval (commitProviderDecision) and the
+    // pending branch below both re-check inside their transactions, which is what actually
+    // closes a concurrent individual/business race. This early check only fails fast.
+    if (providerType !== "business") {
+      assertNotExistingBusiness(caller, instructorSnap.data());
+    }
+
+    if (shouldAutoApprove(settings, providerType)) {
+      // One transaction (commitProviderDecision): a concurrent write — the admin-index trigger
+      // touching users/{uid} right after signup, or a business application — makes Firestore
+      // re-run it with fresh reads, so the first just succeeds and the second is refused
+      // (`business_account_exists`). `concurrent_update` only if contention outlasts its retries.
       const { draftServicesSeeded } = await commitProviderDecision({
         providerId: callerUid,
         decision: "verified",
@@ -111,27 +170,55 @@ export const applyAsProvider = onCall<ApplyAsProviderData>(
     ).map((d) => d.data.categoryId);
 
     const now = FieldValue.serverTimestamp();
-    const batch = db.batch();
-    batch.set(
-      db.collection("instructors").doc(callerUid),
-      {
-        uid: callerUid,
-        name: applicantName,
-        fullName: applicantName,
-        isActive: true,
-        requestedCategoryIds: requestedLeaves,
-        providerProfile: { isVerified: false, bio: "", rating: 0, reviewCount: 0 },
-        applicationStatus: "pending",
-        createdAt: now,
-        updatedAt: now,
-      },
-      { merge: true }
-    );
-    batch.update(db.collection("users").doc(callerUid), {
-      providerStatus: "pending",
-      updatedAt: now,
-    });
-    await batch.commit();
+
+    // One transaction, every read first (Firestore requires it): the user and instructors docs —
+    // fresh, so the checks below cannot act on the stale reads above — then, for a company,
+    // every claim this account holds and the claim it asks for; only then the writes. A refused
+    // application therefore writes nothing, and a concurrent write to either doc (a company
+    // application racing an individual one, or a decision by commitProviderDecision, also one
+    // transaction) makes Firestore re-run it on fresh reads:
+    // - a company: two accounts racing for the same tax id cannot both win, and an approved
+    //   business is refused (`business_already_approved`);
+    // - an individual: re-checked against `business_account_exists`, so a company application
+    //   landing after the reads above keeps its name and data; and the profile defaults (bio,
+    //   rating, reviewCount, createdAt) are written only if the doc is absent in THIS read.
+    const claims = db.collection(BUSINESS_VAT_COLLECTION);
+    try {
+      await db.runTransaction(async (tx) => {
+        const currentUser = await tx.get(userRef);
+        const current = await tx.get(instructorRef);
+        if (!currentUser.exists) {
+          throw new HttpsError("not-found", "User profile not found");
+        }
+        if (business) {
+          assertNotApprovedBusiness(currentUser.data(), current.data());
+          const held = await tx.get(claims.where("uid", "==", callerUid));
+          await claimBusinessVat<DocumentReference>(tx, {
+            uid: callerUid,
+            vatNumber: business.vatNumber,
+            instructor: current.data(),
+            heldVatNumbers: held.docs.map((claim) => claim.id),
+            claimRef: (vat) => claims.doc(vat),
+            now,
+          });
+        } else {
+          assertNotExistingBusiness(currentUser.data(), current.data());
+        }
+        const patches = pendingApplicationPatches({
+          uid: callerUid,
+          applicantName,
+          requestedLeaves,
+          now,
+          business,
+          instructorExists: current.exists,
+        });
+        tx.set(instructorRef, patches.instructor, { merge: true });
+        tx.update(userRef, patches.user);
+      });
+    } catch (err) {
+      // Contention that outlasted the SDK's own retries: retryable, not `internal`.
+      throw toConcurrentUpdateError(err);
+    }
 
     return { success: true, providerId: callerUid, autoApproved: false, draftServicesSeeded: 0 };
   },

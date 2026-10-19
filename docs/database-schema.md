@@ -26,6 +26,7 @@
 /promotions/{promotionId}
 /streamingSchedule/{scheduleId}
 /recipes/{recipeId}
+/businessVat/{vatNumber}
 ```
 
 ## Document Schemas
@@ -48,6 +49,11 @@ interface User {
   providerProfile: ProviderProfile | null; // populated for providers; see ProviderProfile in functions/src/types.ts
   isActive: boolean;                // soft-deactivation flag enforced by admin tooling
   isVerified: boolean;              // top-level verification (mirrors providerProfile.isVerified for providers)
+  providerType?: 'individual' | 'business'; // kind of provider account; absent => 'individual'. 'business' = a company or association (P.IVA / codice fiscale holder), always approved manually; its company data lives in instructors/{uid}.business
+  // Derived admin-index fields, written only by the onUserWriteAdminIndex trigger (and
+  // scripts/backfill-search-tokens.mjs) — see src/lib/admin/adminIndex.ts: searchTokens,
+  // adminHidden, providerVerification ('verified' | 'pending' | 'rejected' | null) and
+  providerKind?: 'individual' | 'business' | null; // providerType for providers/applicants (absent => 'individual'), null for everyone else; the /admin/providers type filter (B8). Existing docs get it on their next write or from the backfill script.
 
   // VIP Status
   isVip: boolean;
@@ -163,6 +169,11 @@ interface Venue {
   isPartner: boolean;             // "Anche noi siamo qui" badge
   isFeatured: boolean;
   isActive: boolean;
+
+  // Ownership — RESERVED for phase 4 of the business-accounts plan (venue owners/managers).
+  // Nothing writes it yet; /admin/venues already shows it read-only in an "Owner" column
+  // ("—" when absent, which is every venue today).
+  ownerUid?: string;              // users/{uid} of the venue's owner
   
   // Search
   searchKeywords: string[];
@@ -258,6 +269,31 @@ interface Instructor {
   isFeatured: boolean;
   isActive: boolean;
   acceptingNewClients: boolean;
+
+  // Business accounts (absent for individual providers; users/{uid}.providerType === 'business')
+  providerType?: 'individual' | 'business'; // denormalized from users/{uid}
+  business?: {
+    legalName: string;              // ragione sociale; admin-verified, NOT owner-editable (rules refuse it, also while pending)
+    vatNumber: string;              // Italian tax id, 11 digits + checksum: the P.IVA, or an association's codice fiscale (ASD/SSD without a P.IVA); admin-verified, NOT owner-editable (rules refuse it, also while pending)
+    legalForm?: 'company' | 'sole_trader' | 'association' | 'other'; // always written since B3b ('company' when the applicant gave none); absent on older docs => 'company'. Admin-verified, NOT owner-editable
+    affiliationNumber?: string;     // optional CONI / RASD / ente di promozione registration, <= 40 chars, "" when none; informational, shown in the admin UI only (not on the public page) — not secret: this doc is publicly readable once verified. NOT owner-editable
+    displayName: string;            // shown publicly; copied to name/fullName, so cards/search/bookings show the company name
+    description?: string;           // public company description
+    website?: string | null;        // public website URL
+    logoUrl?: string | null;        // public logo (Storage URL)
+    city?: string;                  // public city
+  };
+  // For a business, public name/fullName === business.displayName.
+  // Owner client writes (firestore.rules, B4): `business` can't be created with the doc, added or
+  // removed; legalName/vatNumber/legalForm/affiliationNumber never change; no other keys; changed
+  // values must fit displayName 1–120 (non-blank), description ≤ 1000, city ≤ 80, website null or
+  // http(s) ≤ 200, logoUrl null or https ≤ 500. Admins may change anything, but changes to
+  // legalName/vatNumber/legalForm/affiliationNumber should go through the updateBusinessTaxId
+  // callable so the businessVat claim moves too; convertBusinessToIndividual removes the map
+  // (FieldValue.delete(), never null). Approving a business needs the reviewed vatNumber +
+  // legalName (decideProviderApplication's expectedReview) and the businessVat claim on that
+  // vatNumber held by this uid. updateBusinessTaxId queries `business.vatNumber ==` (automatic
+  // single-field index on this nested field — do not exempt it).
 
   // Booking availability (functions/src/availability/slots.ts is the single source of truth
   // for this shape). Missing or empty means every day is switched off deliberately — it does
@@ -758,6 +794,12 @@ The following top-level collections exist in `firestore.rules` and/or `functions
 - **Key fields:** `userId`, `userType`, `providerProfile`, `status: 'pending' | ...`, `submittedAt`, `reviewedAt: Timestamp | null`, `reviewedBy: string | null`, `notes: string | null`. (Written from `functions/src/users/roles.ts`.)
 - **Access:** Read by the owner (`resource.data.userId == auth.uid`) or admin; create by the authenticated owner; update by admin; delete by superadmin.
 
+### businessVat
+- **Path:** `/businessVat/{vatNumber}` (docId == the normalized 11-digit tax id: P.IVA, or an association's codice fiscale)
+- **Purpose:** Uniqueness claim so only one business account can register a given tax id. Written in a transaction together with the application; the same transaction releases every other claim the applicant holds (found by `uid`), so an account holds at most one. A rejection keeps the claim. Admin callables (B8): `releaseBusinessVat` deletes a claim that is no longer in use (refused while the holder's pending, approved or still-listed instructors doc carries the number), `convertBusinessToIndividual` deletes every claim of the uid, `updateBusinessTaxId` moves the claim to the new number (refused if another instructors doc still carries it). Invariant: one tax id, one holder — `decideProviderApplication` approves a company only while it holds the claim on its tax id (`claim_missing` / `vat_already_registered`). Deleting a user (`deleteUserCascade`) deletes the claims it held.
+- **Key fields:** `uid` (owner of the claim; `applyAsProvider`, `convertBusinessToIndividual` and `updateBusinessTaxId` query `uid ==` inside their transactions, and `deleteUserCascade` outside one — automatic single-field index, do not exempt it), `createdAt: Timestamp`.
+- **Access:** No client read or write (rules deny all); Admin SDK (Cloud Functions) only.
+
 ### venueStaff
 - **Path:** `/venueStaff/{staffId}` (staffId == auth uid)
 - **Purpose:** Maps a user to a venue for venue-scoped staff permissions (used by the `isVenueStaff(venueId)` rule helper).
@@ -1035,3 +1077,7 @@ Clients cannot create root join records or change their `providerId`/`userId`. P
 `courseEnrollments.createdBy` records the actor; `userId` remains the participant. Provider-added enrollments use direct payment. `participantInvitationDeliveries` is a server-only audit containing provider/user/channel/status/timestamp, with no Auth setup credentials. Phone composer preparation is not a delivered-message audit. Invitation sending is scoped to a known provider/user pair and limited to 100 attempts per provider/hour.
 
 Invited users keep a reserved Firebase Auth UID and `users.accountStatus: invited`. Verified account claiming activates that UID and the invited status on all related client pairs; existing enrollments keep their participant UID.
+
+### Business account writes
+
+Business account creation, conversion, tax-ID/legal-field changes and verification use server-side, audited callables. Admin and superadmin browser clients may read the legal fields and edit valid display fields, but cannot bypass the tax-ID claim or review checks. `businessVat` remains inaccessible to every browser client.

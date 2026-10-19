@@ -18,6 +18,8 @@ import {
 import { writeAuditLog, toActorRole } from "../lib/audit";
 import { seedProviderServicesFromTemplates } from "../providers/seedProviderServices";
 import { instructorVerificationPatch } from "../providers/applicationDecision";
+import { isExistingBusiness } from "../providers/businessApplication";
+import { parseProviderId } from "../providers/businessAdminRules";
 import { mayHoldSuperadmin, isProtectedSuperadmin } from "../lib/superadmins";
 
 const db = admin.firestore();
@@ -477,6 +479,9 @@ export const updateProviderProfile = onCall<UpdateProviderProfileData>(
 /**
  * Verify or unverify a provider
  * Admin/Superadmin only
+ *
+ * Legacy: the web client decides providers through decideProviderApplication. Kept deployed
+ * for individuals; a company is refused with `use_decide_provider_application` (B8).
  */
 export const verifyProvider = onCall<VerifyProviderData>(
   { region },
@@ -499,37 +504,59 @@ export const verifyProvider = onCall<VerifyProviderData>(
     const caller = callerSnap.data();
     const callerRole = (caller?.role === "superadmin" ? "superadmin" : "admin") as "admin" | "superadmin";
 
-    const { providerId, verified, notes } = request.data;
+    const { verified, notes } = request.data;
+    // A stable code, and never an id that can't name a document ("a/b" → `internal`).
+    const providerId = parseProviderId(request.data?.providerId);
 
-    const providerDoc = await db.collection("users").doc(providerId).get();
-    if (!providerDoc.exists) {
-      throw new HttpsError("not-found", "Provider not found");
-    }
-
-    const providerData = providerDoc.data();
-    if (providerData?.role !== "provider") {
-      throw new HttpsError("invalid-argument", "User is not a provider");
-    }
-
-    const previousVerified = providerData?.providerProfile?.isVerified ?? providerData?.isVerified ?? false;
-
-    // Update verification status
-    await db.collection("users").doc(providerId).update({
-      "providerProfile.isVerified": verified,
-      "isVerified": verified,
-      "updatedAt": FieldValue.serverTimestamp(),
-      "verificationNotes": notes || null,
-      "verifiedBy": callerId,
-      "verifiedAt": FieldValue.serverTimestamp(),
-    });
-
-    // The public /instructors read rule and every search query key on the NESTED flag in the
-    // catalogue document, not on users/{uid}. Only touch a document that exists: this must
-    // not create a stub catalogue entry for a provider who has none.
+    const userRef = db.collection("users").doc(providerId);
     const instructorRef = db.collection("instructors").doc(providerId);
-    if ((await instructorRef.get()).exists) {
-      await instructorRef.set(instructorVerificationPatch(verified), { merge: true });
-    }
+
+    // The company guard and both verification writes are ONE transaction, so a company
+    // application landing after the guard's read can't be verified by the writes: Firestore
+    // re-runs the transaction on fresh reads, and the re-run refuses it.
+    const { providerData, previousVerified } = await db.runTransaction(async (tx) => {
+      const providerDoc = await tx.get(userRef);
+      const instructorSnap = await tx.get(instructorRef);
+      if (!providerDoc.exists) {
+        throw new HttpsError("not-found", "Provider not found");
+      }
+      const providerData = providerDoc.data() ?? {};
+
+      // A company is decided only through decideProviderApplication, which checks that the
+      // admin reviewed the tax id and legal name being approved (expectedReview) and that it
+      // holds its tax-id claim. This callable has no such checks, so it refuses companies
+      // outright — before any write — with the server's business test (isExistingBusiness: any
+      // `business` object on the instructors doc, or users.providerType === 'business').
+      if (isExistingBusiness(providerData, instructorSnap.data())) {
+        throw new HttpsError("failed-precondition", "use_decide_provider_application");
+      }
+
+      if (providerData.role !== "provider") {
+        throw new HttpsError("invalid-argument", "User is not a provider");
+      }
+
+      // update() resolves the dotted path, leaving the rest of providerProfile alone.
+      tx.update(userRef, {
+        "providerProfile.isVerified": verified,
+        "isVerified": verified,
+        "updatedAt": FieldValue.serverTimestamp(),
+        "verificationNotes": notes || null,
+        "verifiedBy": callerId,
+        "verifiedAt": FieldValue.serverTimestamp(),
+      });
+
+      // The public /instructors read rule and every search query key on the NESTED flag in the
+      // catalogue document, not on users/{uid}. Only touch a document that exists: this must
+      // not create a stub catalogue entry for a provider who has none.
+      if (instructorSnap.exists) {
+        tx.set(instructorRef, instructorVerificationPatch(verified), { merge: true });
+      }
+
+      return {
+        providerData,
+        previousVerified: providerData.providerProfile?.isVerified ?? providerData.isVerified ?? false,
+      };
+    });
 
     // Log verification action
     await db.collection("verificationLogs").add({

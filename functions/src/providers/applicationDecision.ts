@@ -1,5 +1,9 @@
+import { HttpsError } from "firebase-functions/v2/https";
 import { SERVICE_CATEGORY_TREE, buildLabelIndex, foldLabel, withAncestors } from "../categories/tree";
 import { normalizeAvailability } from "../ai/search/normalize";
+import { DEFAULT_WEEKLY_HOURS } from "../availability/slots";
+import type { BusinessDetails } from "./businessTypes";
+import { buildBusinessInstructorPatch } from "./businessApplication";
 
 /**
  * Pure pieces of approving a self-registered provider, kept free of firebase-admin so they
@@ -121,4 +125,133 @@ export function instructorVerificationPatch(verified: boolean): {
   providerProfile: { isVerified: boolean };
 } {
   return { providerProfile: { isVerified: verified } };
+}
+
+/**
+ * The two writes that queue an application for review (applyAsProvider's pending branch).
+ *
+ * Same instructors shape an approval produces, minus everything that would make the applicant
+ * visible: unverified, pending, and no default hours or draft services — those are seeded by
+ * the decision, so a rejected applicant never accumulates them.
+ *
+ * A business additionally gets its `business` map (nested — the instructors write is
+ * set(merge)), its public name as `name`/`fullName`, and `providerType: 'business'` on the
+ * user. An individual gets no `providerType` at all: absent already means individual.
+ *
+ * The profile defaults (bio, rating, reviewCount) and createdAt are written only for a new
+ * document: on a re-apply, set(merge) merges `providerProfile` field by field, so writing just
+ * `isVerified` leaves an existing bio, rating and review count — and createdAt — alone.
+ */
+export function pendingApplicationPatches<Now>(opts: {
+  uid: string;
+  applicantName: string | null;
+  requestedLeaves: string[];
+  /** FieldValue.serverTimestamp() in production; only passed through. */
+  now: Now;
+  business?: BusinessDetails | null;
+  /** Whether instructors/{uid} already exists (read by the caller). */
+  instructorExists: boolean;
+}): {
+  instructor: Record<string, unknown>;
+  user: { providerStatus: "pending"; providerType?: "business"; updatedAt: Now };
+} {
+  const { uid, applicantName, requestedLeaves, now, business, instructorExists } = opts;
+  return {
+    instructor: {
+      uid,
+      name: applicantName,
+      fullName: applicantName,
+      isActive: true,
+      requestedCategoryIds: requestedLeaves,
+      providerProfile: instructorExists ?
+        { isVerified: false } :
+        { isVerified: false, bio: "", rating: 0, reviewCount: 0 },
+      applicationStatus: "pending",
+      ...(instructorExists ? {} : { createdAt: now }),
+      updatedAt: now,
+      ...(business ? buildBusinessInstructorPatch(business) : {}),
+    },
+    user: {
+      providerStatus: "pending",
+      ...(business ? { providerType: "business" } : {}),
+      updatedAt: now,
+    },
+  };
+}
+
+/** The company's public name, when the instructors doc belongs to a business. */
+function businessDisplayName(instructor: Record<string, unknown>): string | null {
+  const business = instructor.business;
+  if (!business || typeof business !== "object") return null;
+  const name = (business as Record<string, unknown>).displayName;
+  return typeof name === "string" && name.trim() ? name : null;
+}
+
+/**
+ * The `instructors/{uid}` write of a verification decision (commitProviderDecision), applied
+ * with set(..., { merge: true }) — so nested maps only, never dotted keys.
+ *
+ * - `application` is present only on the self-apply (auto-approve) path: it stores the
+ *   requested leaves and names the provider after the applicant.
+ * - A business keeps its name: when the doc carries `business.displayName`, `name`/`fullName`
+ *   are never replaced by an applicant's or the user's name. `business` itself is never part
+ *   of this patch, so merge leaves it exactly as it is on approval and rejection alike.
+ * - A provider with no instructors doc (admin-created, or predating the catalogue) gets one.
+ * - Approval seeds Mon–Fri 09:00–17:00 hours when they have none (never over existing hours).
+ */
+export function decisionInstructorPatch(opts: {
+  providerId: string;
+  decision: "verified" | "rejected";
+  instructorExists: boolean;
+  /** The instructors doc as read ({} when it does not exist). */
+  instructor: Record<string, unknown>;
+  userFullName: unknown;
+  application?: { requestedCategoryIds: string[]; fullName?: string | null };
+  requestedLeaves: string[];
+  /** FieldValue.serverTimestamp() in production; only passed through. */
+  now: unknown;
+}): Record<string, unknown> {
+  const { providerId, decision, instructorExists, instructor, userFullName, application, requestedLeaves, now } =
+    opts;
+  const verified = decision === "verified";
+
+  const patch: Record<string, unknown> = {
+    applicationStatus: decision,
+    ...instructorVerificationPatch(verified),
+    updatedAt: now,
+  };
+
+  if (application) {
+    patch.requestedCategoryIds = requestedLeaves;
+    if (application.fullName && !businessDisplayName(instructor)) {
+      patch.name = application.fullName;
+      patch.fullName = application.fullName;
+    }
+  }
+
+  if (!instructorExists) {
+    patch.uid = providerId;
+    patch.fullName = application?.fullName ?? userFullName ?? null;
+    patch.isActive = true;
+    patch.createdAt = now;
+  }
+  if (verified && needsDefaultHours(instructor)) {
+    patch.availabilitySchedule = DEFAULT_WEEKLY_HOURS;
+  }
+  return patch;
+}
+
+/** gRPC status code 10: ABORTED — what a transaction ends with once the SDK stops retrying it. */
+const ABORTED = 10;
+
+/**
+ * Map a transaction that lost to contention even after the Admin SDK's own retries (it re-runs
+ * the transaction function with fresh reads up to 5 times) to a clean, retryable
+ * `aborted` / `concurrent_update` instead of letting it surface as `internal`. Any other error
+ * — including every HttpsError a guard throws, which the SDK never retries — is returned
+ * unchanged.
+ */
+export function toConcurrentUpdateError(err: unknown): unknown {
+  const code = err && typeof err === "object" ? (err as { code?: unknown }).code : undefined;
+  return code === ABORTED ? new HttpsError("aborted", "concurrent_update") : err;
 }

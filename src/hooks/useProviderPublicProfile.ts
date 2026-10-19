@@ -6,6 +6,7 @@ import { db } from '@/lib/firebase/config';
 import { getPortfolioImages } from '@/lib/firebase/storage';
 import type { ProviderProfile } from '@/types/firebase';
 import { queryKeys } from '@/lib/queryKeys';
+import { readBusinessDetails, toPublicBusiness, type PublicBusiness } from '@/lib/publicBusiness';
 
 export interface ProviderPublicProfile {
   id: string;
@@ -22,6 +23,8 @@ export interface ProviderPublicProfile {
   } | null;
   isProvider: true;
   portfolioImages: string[];
+  /** Present iff the doc has a valid `business` map: company badge, logo, description, website. */
+  business?: PublicBusiness;
 }
 
 /** Thrown by the query fn so the caller can tell "not a provider" apart from a real failure. */
@@ -68,6 +71,7 @@ export function toProviderPublicProfile(
     servicePricing: arr<PublicService>(p.servicePricing) ?? [],
     availabilitySchedule: null,
   };
+  const business = toPublicBusiness(readBusinessDetails(data.business));
   return {
     id,
     fullName: str(data.fullName) ?? str(data.name) ?? 'Provider',
@@ -77,6 +81,7 @@ export function toProviderPublicProfile(
     socialLinks: (data.socialLinks as ProviderPublicProfile['socialLinks']) ?? null,
     isProvider: true,
     portfolioImages,
+    ...(business ? { business } : {}),
   };
 }
 

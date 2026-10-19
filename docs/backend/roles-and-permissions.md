@@ -704,6 +704,12 @@ Providers update their own profile.
   notes?: string;
 }
 ```
+Legacy (the web client uses `decideProviderApplication`). Refuses a company (business map on
+`instructors/{id}` or `users.providerType === 'business'`) with `failed-precondition` /
+`use_decide_provider_application`: only `decideProviderApplication` checks the admin's
+`expectedReview` and that the company holds its tax-id claim. The guard and the writes are one
+transaction, so a company application landing in between is refused too. Admins (not only superadmins) can also run the business corrections
+`updateBusinessTaxId`, `releaseBusinessVat` and `convertBusinessToIndividual`.
 
 #### `listProviders`
 Public sees verified providers; staff sees all.

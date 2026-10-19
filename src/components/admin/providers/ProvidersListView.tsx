@@ -20,6 +20,7 @@ import {
   queryFromProviderFilters,
 } from "@/lib/admin/providersListQuery";
 import { ProviderOnboardingSettings } from "@/components/admin/settings/ProviderOnboardingSettings";
+import { BusinessBadge } from "@/components/provider/BusinessBadge";
 import { Button } from "@/components/ui/button";
 import { AdminProvider, ProviderFilters } from "@/types/admin";
 import { Column } from "@/components/admin/DataTable";
@@ -111,6 +112,14 @@ export function ProvidersListView() {
     }));
   };
 
+  const handleProviderTypeChange = (providerType: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      providerType: providerType as ProviderFilters["providerType"],
+      page: 1,
+    }));
+  };
+
   const handleStatusChange = (status: string) => {
     setFilters((prev) => ({
       ...prev,
@@ -149,9 +158,12 @@ export function ProvidersListView() {
               <User className="w-5 h-5" />
             </div>
           )}
-          <div>
+          <div className="min-w-0">
             <p className="font-medium text-content">{provider.fullName}</p>
             <p className="text-sm text-content-muted">{provider.email}</p>
+            {/* users.providerType is server-written only (never on an owner allowlist), so
+                it can mark a company here; the badge is text + icon, not colour alone. */}
+            {provider.providerType === "business" && <BusinessBadge className="mt-1" />}
           </div>
         </div>
       ),
@@ -353,6 +365,17 @@ export function ProvidersListView() {
             ],
             value: filters.status || "all",
             onChange: handleStatusChange,
+          },
+          {
+            key: "providerType",
+            label: t("admin.providers.filter.accountType"),
+            options: [
+              { value: "all", label: t("admin.providers.filter.allAccounts") },
+              { value: "individual", label: t("admin.providers.filter.individuals") },
+              { value: "business", label: t("admin.providers.filter.companies") },
+            ],
+            value: filters.providerType || "all",
+            onChange: handleProviderTypeChange,
           },
         ]}
         onClearFilters={handleClearFilters}

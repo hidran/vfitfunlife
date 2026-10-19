@@ -15,8 +15,20 @@ import { cn } from '@/lib/utils';
 import { useI18n } from '@/hooks/useI18n';
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
-import { submitProviderApplication } from '@/lib/firebase/providerApplication';
+import {
+  submitProviderApplication,
+  type BusinessApplicationInput,
+  type ProviderApplicationInput,
+  type ProviderApplicationResult,
+} from '@/lib/firebase/providerApplication';
 import { ProviderOptInField } from '@/components/auth/ProviderOptInField';
+import {
+  BusinessDetailsForm,
+  type BusinessDetailsFormHandle,
+} from '@/components/provider/BusinessDetailsForm';
+import { reportProviderApplicationError } from '@/lib/providerApplicationErrors';
+import { applicationOutcomeStatus, canAccessProviderArea } from '@/lib/providerStatus';
+import type { ProviderType } from '@/types/firebase';
 import { validatePasswordStrength } from '@/lib/auth/passwordPolicy';
 import { PasswordRequirements } from '@/components/auth/PasswordRequirements';
 import { alreadyRegisteredRoute, postAuthRoute } from '@/lib/auth/postAuthRoute';
@@ -75,13 +87,75 @@ export function RegisterClient() {
   const [showPassword, setShowPassword] = useState(false);
   const [wantsProvider, setWantsProvider] = useState(startsAsProvider);
   const [providerCategoryIds, setProviderCategoryIds] = useState<string[]>([]);
+  const [providerType, setProviderType] = useState<ProviderType>('individual');
+  const businessFormRef = useRef<BusinessDetailsFormHandle>(null);
+  // The uid of the account (email flow) or profile (social flow) this form created, when only
+  // the professional application after it failed. The ref is read synchronously by the submit
+  // handler and the redirect guard; the state locks the account fields on screen.
+  const createdAccount = useRef<string | null>(null);
+  const [accountCreated, setAccountCreated] = useState(false);
+  const appliesAsBusiness = wantsProvider && providerType === 'business';
+
+  /**
+   * The company details, validated — errors shown on their fields, focus on the first — and
+   * normalised; null when something is wrong.
+   */
+  const validateBusiness = async (): Promise<BusinessApplicationInput | null> =>
+    (await businessFormRef.current?.validate()) ?? null;
+
+  const providerApplication = (business: BusinessApplicationInput | undefined): ProviderApplicationInput =>
+    business
+      ? { fullName: fullName.trim(), categoryIds: providerCategoryIds, providerType: 'business', business }
+      : { fullName: fullName.trim(), categoryIds: providerCategoryIds };
+
+  /**
+   * A failure `applyAsProvider` can name: shown on its company field when it has one (e.g. a tax
+   * id another account registered), otherwise as the form error. False for any other failure.
+   */
+  const reportApplicationError = (err: unknown): boolean => {
+    const report = reportProviderApplicationError(
+      err,
+      appliesAsBusiness ? businessFormRef.current?.showServerError : undefined
+    );
+    if (report.kind === 'message') setError(t(report.messageKey));
+    return report.kind !== 'unknown';
+  };
+
+  /**
+   * The reloaded profile can lag the callable. Until it shows the application, put the
+   * callable's answer (approved, or pending review — always the case for a company) into the
+   * auth store: the provider layout reads the store, and would otherwise bounce a brand-new
+   * professional back to /profile.
+   */
+  const recordApplicationOutcome = (
+    application: ProviderApplicationResult | undefined,
+    business: BusinessApplicationInput | undefined
+  ) => {
+    const outcome = applicationOutcomeStatus(application);
+    const user = useAuthStore.getState().user;
+    if (!user || !outcome || canAccessProviderArea(user.providerStatus)) return;
+    useAuthStore.setState({
+      user: { ...user, providerStatus: outcome, ...(business ? { providerType: 'business' as const } : {}) },
+    });
+  };
+
+  const businessDetails = (
+    <BusinessDetailsForm ref={businessFormRef} mode="create" disabled={isLoading} />
+  );
+
+  // Once the account exists, its fields are read-only and point at the hint that says why.
+  const lockedAccountField = accountCreated
+    ? { readOnly: true, 'aria-describedby': 'register-account-created' }
+    : {};
 
   // Someone who already has a profile (opened /auth/register by hand, or followed an old
   // link) must not re-run registration over it: send them where a sign-in would. Skipped
-  // while this form is submitting, since registering creates the profile mid-submit.
+  // while this form is submitting, since registering creates the profile mid-submit, and once
+  // this form has created it: a failed professional application leaves the user here to fix
+  // it, and a late profile reload must not carry them off to /profile with what they typed.
   const submitting = useRef(false);
   useEffect(() => {
-    if (submitting.current || !profile?.fullName?.trim()) return;
+    if (submitting.current || createdAccount.current || !profile?.fullName?.trim()) return;
     router.replace(alreadyRegisteredRoute(profile));
   }, [profile, router]);
 
@@ -115,8 +189,22 @@ export function RegisterClient() {
       return;
     }
 
+    // Company details are checked with the rest, before anything is written. The check is
+    // async, so the form is busy meanwhile: no second submit can start.
+    let business: BusinessApplicationInput | null | undefined;
+    if (appliesAsBusiness) {
+      setIsLoading(true);
+      business = await validateBusiness();
+    }
+
     if (wantsProvider && providerCategoryIds.length === 0) {
+      setIsLoading(false);
       setError(t('provider.optIn.errorNoCategory'));
+      return;
+    }
+
+    if (business === null) {
+      setIsLoading(false);
       return;
     }
 
@@ -131,17 +219,21 @@ export function RegisterClient() {
         preferredSection,
         preferredLanguage: locale,
       });
+      createdAccount.current = firebaseUser.uid;
 
+      let application: ProviderApplicationResult | undefined;
       if (wantsProvider) {
-        await submitProviderApplication({ fullName: fullName.trim(), categoryIds: providerCategoryIds });
+        application = await submitProviderApplication(providerApplication(business));
       }
 
       // Refresh user profile in store
       await refreshUserProfile();
+      recordApplicationOutcome(application, business);
 
       router.push(postAuthRoute(useAuthStore.getState().user));
     } catch (err) {
       console.error('Registration error:', err);
+      if (reportApplicationError(err)) return;
       setError(
         (err as { code?: string })?.code === 'functions/permission-denied'
           ? t('auth.register.error.providerNotAllowed')
@@ -185,8 +277,22 @@ export function RegisterClient() {
       return;
     }
 
+    // Company details are checked with the rest, before the account is created. The check is
+    // async, so the form is busy meanwhile: no second submit can start.
+    let business: BusinessApplicationInput | null | undefined;
+    if (appliesAsBusiness) {
+      setIsLoading(true);
+      business = await validateBusiness();
+    }
+
     if (wantsProvider && providerCategoryIds.length === 0) {
+      setIsLoading(false);
       setError(t('provider.optIn.errorNoCategory'));
+      return;
+    }
+
+    if (business === null) {
+      setIsLoading(false);
       return;
     }
 
@@ -194,21 +300,35 @@ export function RegisterClient() {
     submitting.current = true;
 
     try {
-      // Register with email/password
-      await registerWithEmail(email.trim(), password, fullName.trim(), locale, {
-        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
-        preferredSection,
-      });
+      // Register with email/password — unless this form already created the account and only
+      // the professional application after it failed (say, a tax id another account holds):
+      // then the retry re-sends the application, instead of failing on "email already in use".
+      // The account fields are read-only from then on, so nothing typed afterwards is lost.
+      const accountExists =
+        createdAccount.current !== null &&
+        useAuthStore.getState().firebaseUser?.uid === createdAccount.current;
+      if (!accountExists) {
+        await registerWithEmail(email.trim(), password, fullName.trim(), locale, {
+          dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
+          preferredSection,
+        });
+        const createdUid = useAuthStore.getState().firebaseUser?.uid;
+        if (createdUid) {
+          createdAccount.current = createdUid;
+          setAccountCreated(true);
+        }
+      }
 
       if (wantsProvider) {
         const uid = useAuthStore.getState().firebaseUser?.uid;
         if (!uid) {
           throw new Error('Registration user is not available');
         }
-        await submitProviderApplication({ fullName: fullName.trim(), categoryIds: providerCategoryIds });
+        const application = await submitProviderApplication(providerApplication(business));
         // Keep the in-memory profile in sync so the professional state is
         // visible immediately after permissions/home navigation.
         await refreshUserProfile();
+        recordApplicationOutcome(application, business);
       }
 
       // Navigate to permissions or home
@@ -219,6 +339,7 @@ export function RegisterClient() {
         setEmailTaken(true);
         return;
       }
+      if (reportApplicationError(err)) return;
       setError(
         err?.code === 'functions/permission-denied'
           ? t('auth.register.error.providerNotAllowed')
@@ -381,7 +502,7 @@ export function RegisterClient() {
 
             {/* Error Message */}
             {!emailTaken && (error || storeError) && (
-              <div className={cn(
+              <div role="alert" className={cn(
                 "p-4 border rounded-lg",
                 (error || storeError)?.includes('not enabled')
                   ? "bg-yellow-500/10 border-yellow-500/20"
@@ -421,6 +542,17 @@ export function RegisterClient() {
               </div>
             )}
 
+            {/* The account exists (only the professional application after it failed): its
+                fields are locked, so nothing typed now can silently not apply to it. */}
+            {accountCreated && (
+              <p
+                id="register-account-created"
+                className="rounded-lg border border-hairline bg-surface-2 p-3 text-sm text-content break-words"
+              >
+                {t('auth.register.accountCreatedHint')}
+              </p>
+            )}
+
             {/* Full Name */}
             <div className="space-y-2">
               <label htmlFor="register-full-name" className="text-sm font-medium text-text-secondary">
@@ -434,9 +566,10 @@ export function RegisterClient() {
                   placeholder={t('auth.register.placeholder.fullName')}
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="auth-input pl-10"
+                  className={cn('auth-input pl-10', accountCreated && 'opacity-70')}
                   required
                   disabled={isLoading}
+                  {...lockedAccountField}
                 />
               </div>
             </div>
@@ -454,9 +587,10 @@ export function RegisterClient() {
                   placeholder={t('auth.common.emailPlaceholder')}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="auth-input pl-10"
+                  className={cn('auth-input pl-10', accountCreated && 'opacity-70')}
                   required
                   disabled={isLoading}
+                  {...lockedAccountField}
                 />
               </div>
             </div>
@@ -474,10 +608,11 @@ export function RegisterClient() {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="auth-input pl-10 pr-20"
+                  className={cn('auth-input pl-10 pr-20', accountCreated && 'opacity-70')}
                   required
                   minLength={12}
                   disabled={isLoading}
+                  {...lockedAccountField}
                 />
                 <button
                   type="button"
@@ -503,10 +638,11 @@ export function RegisterClient() {
                   placeholder="••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="auth-input pl-10"
+                  className={cn('auth-input pl-10', accountCreated && 'opacity-70')}
                   required
                   minLength={6}
                   disabled={isLoading}
+                  {...lockedAccountField}
                 />
               </div>
             </div>
@@ -523,8 +659,9 @@ export function RegisterClient() {
                   type="date"
                   value={dateOfBirth}
                   onChange={(e) => setDateOfBirth(e.target.value)}
-                  className="auth-input pl-10"
+                  className={cn('auth-input pl-10', accountCreated && 'opacity-70')}
                   disabled={isLoading}
+                  {...lockedAccountField}
                 />
               </div>
             </div>
@@ -540,7 +677,7 @@ export function RegisterClient() {
                     key={section.id}
                     type="button"
                     onClick={() => setPreferredSection(section.id)}
-                    disabled={isLoading}
+                    disabled={isLoading || accountCreated}
                     className={`
                       relative py-4 px-3 rounded-xl font-semibold text-sm transition-all
                       ${
@@ -562,6 +699,10 @@ export function RegisterClient() {
               onToggle={setWantsProvider}
               categoryIds={providerCategoryIds}
               onChangeCategoryIds={setProviderCategoryIds}
+              providerType={providerType}
+              onChangeProviderType={setProviderType}
+              businessDetails={businessDetails}
+              disabled={isLoading}
             />
 
             {/* Terms & Privacy */}
@@ -624,7 +765,7 @@ export function RegisterClient() {
         <form onSubmit={handleSocialSubmit} className="space-y-6 max-w-md mx-auto">
           {/* Error Message */}
           {error && (
-            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+            <div role="alert" className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
               <p className="text-red-400 text-sm text-center">{error}</p>
             </div>
           )}
@@ -722,6 +863,10 @@ export function RegisterClient() {
             onToggle={setWantsProvider}
             categoryIds={providerCategoryIds}
             onChangeCategoryIds={setProviderCategoryIds}
+            providerType={providerType}
+            onChangeProviderType={setProviderType}
+            businessDetails={businessDetails}
+            disabled={isLoading}
           />
 
           {/* Terms & Privacy */}

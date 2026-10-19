@@ -32,6 +32,7 @@ import { CustomerLocationPrompt, CUSTOMER_LOCATION_PROMPT_DISMISSED_KEY } from '
 import { RadiusFilter } from '@/components/map/RadiusFilter';
 import { useQuery } from '@tanstack/react-query';
 import { annotateAndSortByDistance, roundLocation, type LatLng } from '@/lib/geo';
+import { BusinessBadge } from '@/components/provider/BusinessBadge';
 import { applyProviderSearchFilters, searchProvidersNear } from '@/lib/firebookings';
 import { useServiceCategoryGroups } from '@/hooks/useServiceCategories';
 import { useI18n } from '@/hooks/useI18n';
@@ -482,7 +483,7 @@ export default function BookingPage() {
                     )}
                     <div className="flex gap-4 p-4">
                       <Avatar
-                        src={provider.avatarUrl}
+                        src={provider.logoUrl ?? provider.avatarUrl}
                         alt={provider.fullName}
                         size="xl"
                         className="flex-shrink-0"
@@ -511,8 +512,13 @@ export default function BookingPage() {
                               </div>
                             )}
                           </div>
-                          {provider.isVerified && (
-                            <Badge variant="partner" size="sm" className="shrink-0">{t('booking.provider.verified')}</Badge>
+                          {(provider.isBusiness || provider.isVerified) && (
+                            <div className="flex min-w-0 max-w-full flex-wrap gap-1">
+                              {provider.isBusiness && <BusinessBadge />}
+                              {provider.isVerified && (
+                                <Badge variant="partner" size="sm" className="shrink-0">{t('booking.provider.verified')}</Badge>
+                              )}
+                            </div>
                           )}
                         </div>
 

@@ -1,5 +1,6 @@
 import { Timestamp } from "firebase/firestore";
 import { UserRole, User, Booking } from "./firebase";
+import type { BusinessReview } from "@/lib/firebase/functions";
 
 // Admin Dashboard Stats
 export interface AdminDashboardStats {
@@ -45,6 +46,8 @@ export interface UserFilters {
 // Provider Filters
 export interface ProviderFilters {
   type?: string;
+  /** Account type, from the derived `providerKind` admin-index field (src/lib/admin/adminIndex.ts). */
+  providerType?: "individual" | "business" | "all";
   verificationStatus?: "pending" | "verified" | "rejected" | "all";
   status?: "active" | "suspended" | "all";
   search?: string;
@@ -187,6 +190,12 @@ export interface ServiceCategoryData {
 export interface VerificationData {
   status: "verified" | "rejected";
   notes?: string;
+  /**
+   * Approving a company: the tax id and legal name the admin had on screen (from the
+   * instructors doc's `business` map). Required by the server for a company; omit for
+   * individuals. See decideProviderApplication in src/lib/firebase/functions.ts.
+   */
+  expectedReview?: BusinessReview;
   verifiedBy?: string;
   verifiedAt?: Timestamp;
   rejectionReason?: string;

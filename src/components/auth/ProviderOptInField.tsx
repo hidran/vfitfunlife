@@ -1,7 +1,10 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useI18n } from '@/hooks/useI18n';
 import { CategoryLeafPicker } from '@/components/provider/CategoryLeafPicker';
+import { ProviderTypeChoice } from '@/components/provider/ProviderTypeChoice';
+import type { ProviderType } from '@/types/firebase';
 
 interface ProviderOptInFieldProps {
   enabled: boolean;
@@ -9,13 +12,32 @@ interface ProviderOptInFieldProps {
   /** Requested taxonomy leaf ids. */
   categoryIds: string[];
   onChangeCategoryIds: (categoryIds: string[]) => void;
+  /**
+   * Individual or company. The "Individual / Company or association" choice is shown only when
+   * `onChangeProviderType` is given.
+   */
+  providerType?: ProviderType;
+  onChangeProviderType?: (providerType: ProviderType) => void;
+  /** Shown under the choice while 'business' is selected: the company details form. */
+  businessDetails?: ReactNode;
+  /** Disables the individual/company choice (e.g. while submitting). */
+  disabled?: boolean;
 }
 
-export function ProviderOptInField({ enabled, onToggle, categoryIds, onChangeCategoryIds }: ProviderOptInFieldProps) {
+export function ProviderOptInField({
+  enabled,
+  onToggle,
+  categoryIds,
+  onChangeCategoryIds,
+  providerType = 'individual',
+  onChangeProviderType,
+  businessDetails,
+  disabled,
+}: ProviderOptInFieldProps) {
   const { t } = useI18n();
 
   return (
-    <div className="auth-provider-opt-in mt-4 rounded-xl border border-white/10 p-4">
+    <div className="auth-provider-opt-in mt-4 min-w-0 rounded-xl border border-white/10 p-4">
       <label className="flex items-center gap-3 cursor-pointer">
         <input
           type="checkbox"
@@ -27,6 +49,14 @@ export function ProviderOptInField({ enabled, onToggle, categoryIds, onChangeCat
           {t('provider.optIn.toggle')}
         </span>
       </label>
+
+      {enabled && onChangeProviderType && (
+        <div className="mt-4 space-y-4">
+          <ProviderTypeChoice value={providerType} onChange={onChangeProviderType} disabled={disabled} />
+          {/* Hidden, not unmounted: switching back and forth keeps what was typed. */}
+          {businessDetails && <div hidden={providerType !== 'business'}>{businessDetails}</div>}
+        </div>
+      )}
 
       {enabled && (
         <div className="mt-3">

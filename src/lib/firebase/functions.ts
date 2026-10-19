@@ -8,7 +8,12 @@ import type {
   AiProviderId,
   ResultCard,
 } from "@/types/assistant";
-import type { BookingStatus, PaymentConfirmationMethod } from "@/types/firebase";
+import type {
+  BookingStatus,
+  BusinessLegalForm,
+  PaymentConfirmationMethod,
+  ProviderType,
+} from "@/types/firebase";
 
 // Type definitions for function responses
 interface BookingResult {
@@ -683,21 +688,58 @@ export async function updateAiAuthoringSettings(patch: Partial<AiAuthoringSettin
 // --- Provider applications ---
 
 /**
- * A user opts in as a professional and is approved immediately — role 'provider', default
- * Mon-Fri hours and a draft service per chosen category, all in one server-side write
- * (functions/src/providers/applyAsProvider.ts).
+ * A user opts in as a professional (functions/src/providers/applyAsProvider.ts). What happens
+ * next depends on the back office's `systemSettings/providerOnboarding.autoApprove`:
+ *
+ * - ON (the default), for an individual: approved on the spot — role 'provider', default
+ *   Mon-Fri hours and a draft service per chosen category, in one server-side write
+ *   (`autoApproved: true`).
+ * - OFF, or for a company (`providerType: 'business'`, which is never auto-approved): stored as
+ *   a pending application for an admin to decide in /admin/providers (`autoApproved: false`).
  *
  * It cannot be done from the client: firestore.rules lets a user create only an unverified,
  * pending instructors document and never lets them set `providerProfile.isVerified`.
+ *
+ * Failures carry a stable code as the error message for the UI to localise: `invalid_vat`,
+ * `invalid_business`, `invalid_business_name`, `invalid_legal_form`,
+ * `invalid_affiliation_number` (over 40 characters), `invalid_website`,
+ * `invalid_business_description`, `invalid_business_city`, `invalid_provider_type`,
+ * `vat_already_registered` (tax id claimed by another account), `business_already_approved`
+ * (an approved company re-applying — changes go through its profile or an admin),
+ * `vat_change_not_allowed` (backstop for the same case, not expected in practice),
+ * `business_account_exists` (a company re-applying as an individual) and `concurrent_update`
+ * (lost a race — safe to retry).
  */
 export async function applyAsProvider(data: {
   categoryIds: string[];
   fullName?: string;
-}): Promise<{ success: boolean; providerId: string; draftServicesSeeded: number }> {
+  /** Absent ⇒ 'individual'. */
+  providerType?: ProviderType;
+  /** Required when `providerType` is 'business'. `displayName` defaults to `legalName`. */
+  business?: {
+    legalName: string;
+    /** P.IVA / codice fiscale (an association without a P.IVA uses its codice fiscale). */
+    vatNumber: string;
+    /** Absent ⇒ 'company'. */
+    legalForm?: BusinessLegalForm;
+    /** Optional CONI / RASD / ente di promozione registration, at most 40 characters. */
+    affiliationNumber?: string;
+    displayName?: string;
+    description?: string;
+    website?: string;
+    city?: string;
+  };
+}): Promise<{
+  success: boolean;
+  providerId: string;
+  /** True when approved on the spot; false when queued for review. */
+  autoApproved?: boolean;
+  draftServicesSeeded: number;
+}> {
   const functions = await getFunctionsInstance();
   const fn = httpsCallable<
     typeof data,
-    { success: boolean; providerId: string; draftServicesSeeded: number }
+    { success: boolean; providerId: string; autoApproved?: boolean; draftServicesSeeded: number }
   >(functions, "applyAsProvider");
   return (await fn(data)).data;
 }
@@ -747,21 +789,154 @@ export async function setPaymentSettings(
   return (await fn(data)).data;
 }
 
+/** What the admin had on screen when approving a company: its tax id, legal name, legal form and affiliation number. */
+export interface BusinessReview {
+  /** As shown — spaces and an `IT` prefix are ignored when compared. */
+  vatNumber: string;
+  /** As shown — compared trimmed, case-sensitive. */
+  legalName: string;
+  /** Omitted only by older clients reviewing default company data. */
+  legalForm?: BusinessLegalForm | null;
+  affiliationNumber?: string;
+}
+
+export interface DecideProviderApplicationRequest {
+  providerId: string;
+  decision: "verified" | "rejected";
+  notes?: string;
+  /**
+   * Required to approve a company (a provider whose instructors doc has a `business` map);
+   * ignored for rejections and individuals. Send the values the detail view displayed.
+   */
+  expectedReview?: BusinessReview;
+}
+
 /**
  * An admin verifies or un-verifies a provider. With auto-approval on this is mostly the
  * revoking route; with it off it is how a pending application is decided. Verifying also
  * promotes the user to role 'provider' and seeds a draft service per requested category
  * (functions/src/providers/decideProviderApplication.ts).
+ *
+ * Approving a company fails with a stable code as the message: `review_required` (no
+ * `expectedReview` sent) or `stale_review` (the company's reviewed legal fields is no longer what
+ * was shown — it re-applied, or was converted to an individual): reload the detail view and
+ * review it again. A review sent for a provider that is not (any more) a company is also
+ * `stale_review`. The company must also hold the claim on its tax id: `claim_missing` (it was
+ * released, e.g. after a rejection) or `already-exists` / `vat_already_registered` (another
+ * account holds it now). `not-found` / `provider_not_found` when the account was deleted;
+ * `invalid-argument` / `invalid_provider_id` for an id that can't name an account;
+ * `permission-denied` / `protected_account` for a protected superadmin; `aborted` /
+ * `concurrent_update` when contention outlasted the server transaction's retries (try again).
  */
-export async function decideProviderApplication(data: {
-  providerId: string;
-  decision: "verified" | "rejected";
-  notes?: string;
-}): Promise<{ success: boolean; draftServicesSeeded: number }> {
+export async function decideProviderApplication(
+  data: DecideProviderApplicationRequest,
+): Promise<{ success: boolean; draftServicesSeeded: number }> {
   const functions = await getFunctionsInstance();
   const fn = httpsCallable<typeof data, { success: boolean; draftServicesSeeded: number }>(
     functions,
     "decideProviderApplication",
   );
+  return (await fn(data)).data;
+}
+
+// --- Business accounts: admin corrections (functions/src/providers/businessAdmin.ts) ---
+// Admin or superadmin; each call is one transaction with its audit_logs entry. Failures carry a
+// stable code as the message: `invalid_vat`, `invalid_business_name`, `invalid_legal_form`,
+// `invalid_affiliation_number`, `invalid_provider_id`, `invalid_reason`, `claim_not_found`,
+// `claim_in_use`, `not_a_business`, `provider_not_found`, `vat_already_registered`,
+// `vat_carried_by_other`, `protected_account`, `concurrent_update` (contention outlasted the
+// server transaction's retries — try again).
+
+export interface ReleaseBusinessVatRequest {
+  /** P.IVA / codice fiscale whose uniqueness claim to free. */
+  vatNumber: string;
+  reason?: string;
+}
+
+export interface ReleaseBusinessVatResult {
+  success: boolean;
+  /** Normalised (11 digits). */
+  vatNumber: string;
+  /** The uid that held the claim, or null when it named no usable account. */
+  releasedFrom: string | null;
+}
+
+/**
+ * Free a tax-id claim, e.g. a rejected company's or a squatter's. `not-found` /
+ * `claim_not_found` when nobody holds it; `failed-precondition` / `claim_in_use` while the
+ * holder's pending or approved (or still listed) company carries the number (convert it, or
+ * change its tax id, instead). The released company can't be approved afterwards
+ * (`claim_missing`) unless it takes the number again.
+ */
+export async function releaseBusinessVat(data: ReleaseBusinessVatRequest): Promise<ReleaseBusinessVatResult> {
+  const functions = await getFunctionsInstance();
+  const fn = httpsCallable<typeof data, ReleaseBusinessVatResult>(functions, "releaseBusinessVat");
+  return (await fn(data)).data;
+}
+
+export interface ConvertBusinessToIndividualRequest {
+  providerId: string;
+  reason?: string;
+}
+
+export interface ConvertBusinessToIndividualResult {
+  success: boolean;
+  providerId: string;
+  /** The tax-id claims that were released. */
+  releasedClaims: string[];
+}
+
+/**
+ * Turn a company back into an individual: removes `providerType` and the `business` map,
+ * releases its tax-id claims and renames it to the person's own name. Verification is
+ * unchanged. `failed-precondition` / `not_a_business` when it is not a company;
+ * `permission-denied` / `protected_account` for a protected superadmin.
+ */
+export async function convertBusinessToIndividual(
+  data: ConvertBusinessToIndividualRequest,
+): Promise<ConvertBusinessToIndividualResult> {
+  const functions = await getFunctionsInstance();
+  const fn = httpsCallable<typeof data, ConvertBusinessToIndividualResult>(
+    functions,
+    "convertBusinessToIndividual",
+  );
+  return (await fn(data)).data;
+}
+
+export interface UpdateBusinessTaxIdRequest {
+  providerId: string;
+  /** Required: the new (or unchanged) P.IVA / codice fiscale. */
+  vatNumber: string;
+  /** The fields below change only when sent. */
+  legalName?: string;
+  /** `null` resets to 'company'. */
+  legalForm?: BusinessLegalForm | null;
+  /** `null` clears it. At most 40 characters. */
+  affiliationNumber?: string | null;
+  reason?: string;
+}
+
+export interface UpdateBusinessTaxIdResult {
+  success: boolean;
+  providerId: string;
+  /** Normalised (11 digits). */
+  vatNumber: string;
+  /** Claims released by the move (empty when the number did not change). */
+  releasedClaims: string[];
+}
+
+/**
+ * Change a company's admin-owned fields (tax id, legal name, legal form, affiliation number) —
+ * the owner can't, and a plain client write would leave the tax-id claim behind. The claim
+ * moves with the number: `already-exists` / `vat_already_registered` when another account holds
+ * it; `already-exists` / `vat_carried_by_other` when the number changes and another company's
+ * record still carries it (e.g. a rejected one whose claim was released — convert that company
+ * or change its number first). Keeping the number and correcting the legal data is never
+ * blocked by another record. `failed-precondition` / `not_a_business` when the provider is not a
+ * company.
+ */
+export async function updateBusinessTaxId(data: UpdateBusinessTaxIdRequest): Promise<UpdateBusinessTaxIdResult> {
+  const functions = await getFunctionsInstance();
+  const fn = httpsCallable<typeof data, UpdateBusinessTaxIdResult>(functions, "updateBusinessTaxId");
   return (await fn(data)).data;
 }

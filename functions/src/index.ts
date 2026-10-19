@@ -39,6 +39,7 @@ export * from "./providers/onServiceWrite";
 export { onInstructorWriteSearchIndex } from "./providers/onInstructorWriteSearchIndex";
 export * from "./providers/backfillProviderStatus";
 export * from "./providers/decideProviderApplication";
+export * from "./providers/businessAdmin";
 export * from "./providers/applyAsProvider";
 export * from "./providers/onboardingSettingsCallables";
 export * from "./providers/backfillSelfRegisteredProviders";

@@ -605,11 +605,26 @@ the authority where the two disagree.
 #### Provider Directory
 - **All Providers**: Searchable, filterable list
 - **Provider Status**: Active, pending, suspended, rejected
+- **Account type filter**: all / individuals / companies and associations (derived `providerKind`
+  admin-index field); companies carry an "Azienda" text badge
 - **Performance View**: Bookings, ratings, earnings per provider
 - **Actions**:
   - Edit provider profile
   - Suspend/activate provider
   - Remove verification badge
+
+#### Business (company) accounts — admin or superadmin
+- **Business card** on the provider page: legal name, P.IVA / codice fiscale, legal form,
+  affiliation number, public name, website, city, description, logo.
+- **Approve what you saw**: approving a company (provider page, verification queue, pending
+  applications panel) sends the tax id and legal name on screen; if the company changed them in
+  the meantime the server refuses (`stale_review`), the screen says so and reloads the details.
+- **Admin corrections**, each in a confirmation dialog with an optional reason (≤ 200 chars) and
+  audited server-side: change tax id / legal data (`updateBusinessTaxId`), release the tax-id
+  claim of a rejected company (`releaseBusinessVat`), convert to an individual
+  (`convertBusinessToIndividual` — removes the business details and the claim, the public name
+  reverts to the person's name).
+- **Venues** list shows a read-only "Owner" column (`ownerUid`, reserved for phase 4; "—" today).
 
 ### Booking Management
 
@@ -776,3 +791,5 @@ Direct payment remains the default. Stripe-hosted course checkout is implemented
 ### Provider-managed course participants
 
 Providers can search their linked clients and reserve a lesson or full course for them, with direct payment and existing capacity/policy checks. Inline participant creation requires only full name and email; surname and phone are optional. Existing accounts are reused by email. Provider/customer relationships are many-to-many and preserve each provider’s independent roster. Optional email invitations send private setup links; SMS/WhatsApp invitations open the provider’s device composer. Invited participants complete registration on the same UID, preserving reservations and all provider links. Notification failures remain visible and enrollment is retained.
+
+Business signup guides: [English](user-journeys/business-signup.md) · [Italiano](user-journeys/business-signup.it.md). Admin browser clients cannot change reviewed legal fields or business approval directly; audited callables preserve the tax-ID claim and review checks.

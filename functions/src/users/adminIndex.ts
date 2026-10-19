@@ -13,6 +13,9 @@
  *   applicants, null for everyone else — the same answer as providerVerificationState /
  *   needsVerificationDecision, so the providers list's pending filter and the verification
  *   queue count the same people.
+ * - `providerKind`: 'business' | 'individual' for the same people (null for everyone else),
+ *   from `providerType` — the providers list's type filter. It has to be derived: individuals
+ *   carry no `providerType` at all, and no Firestore filter matches an absent field.
  *
  * Written only by the `onUserWriteAdminIndex` trigger (functions/src/users/onUserWriteAdminIndex.ts)
  * and the backfill script (scripts/backfill-search-tokens.mjs): the Firestore rules' allowlists
@@ -33,6 +36,7 @@ export const SEARCH_TOKENS_CAP = 200;
 export const PHONE_TOKEN_MIN_LENGTH = 3;
 
 export type ProviderVerification = "verified" | "pending" | "rejected";
+export type ProviderKind = "individual" | "business";
 
 export interface AdminIndexSource {
   fullName?: unknown;
@@ -40,6 +44,7 @@ export interface AdminIndexSource {
   phone?: unknown;
   role?: unknown;
   providerStatus?: unknown;
+  providerType?: unknown;
   providerProfile?: { isVerified?: unknown } | null;
   isVerified?: unknown;
   isDeleted?: unknown;
@@ -50,6 +55,7 @@ export interface AdminIndexFields {
   searchTokens: string[];
   adminHidden: boolean;
   providerVerification: ProviderVerification | null;
+  providerKind: ProviderKind | null;
 }
 
 const DEMO_EMAIL_DOMAIN = "@demo.vfit";
@@ -152,11 +158,23 @@ export function providerVerificationOf(record: AdminIndexSource): ProviderVerifi
   return verified ? "verified" : "pending";
 }
 
+/**
+ * Company or individual, for providers and applicants only (null whenever providerVerification
+ * is null). `users.providerType` is set by applyAsProvider and removed by
+ * convertBusinessToIndividual; the Firestore rules keep it off every owner allowlist, so the
+ * value can be trusted here. Anything but 'business' (absent included) is an individual.
+ */
+export function providerKindOf(record: AdminIndexSource): ProviderKind | null {
+  if (providerVerificationOf(record) === null) return null;
+  return record.providerType === "business" ? "business" : "individual";
+}
+
 export function computeAdminIndex(id: string, record: AdminIndexSource): AdminIndexFields {
   return {
     searchTokens: computeSearchTokens(record),
     adminHidden: isAdminHidden(id, record),
     providerVerification: providerVerificationOf(record),
+    providerKind: providerKindOf(record),
   };
 }
 
@@ -180,6 +198,10 @@ export function adminIndexPatch(
   if ((record.providerVerification ?? null) !== next.providerVerification ||
     !("providerVerification" in record)) {
     patch.providerVerification = next.providerVerification;
+  }
+  // Same rule; a document indexed before this field existed gets it on its next write.
+  if ((record.providerKind ?? null) !== next.providerKind || !("providerKind" in record)) {
+    patch.providerKind = next.providerKind;
   }
   return Object.keys(patch).length ? patch : null;
 }

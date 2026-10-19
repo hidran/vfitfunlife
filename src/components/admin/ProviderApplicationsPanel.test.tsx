@@ -1,0 +1,162 @@
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { makeQueryClientWrapper } from '@/test-utils/queryClientWrapper';
+import { itMessages } from '@/i18n/messages/it';
+import type { Provider } from '@/types/instructor';
+
+/** The pending-applications panel approves a company for the details in its row (B8b). */
+
+const h = vi.hoisted(() => ({
+  apps: [] as unknown[],
+  /** instructors/{id}.business as stored, by provider id (what the admin reader sees). */
+  businesses: {} as Record<string, unknown>,
+  fetchProviderApplications: vi.fn(),
+  decideProviderApplication: vi.fn(async (_d: unknown) => ({ success: true, draftServicesSeeded: 0 })),
+}));
+vi.mock('firebase/firestore', () => ({
+  doc: (_db: unknown, _col: string, id: string) => ({ id }),
+  getDoc: async (ref: { id: string }) => ({
+    exists: () => true,
+    data: () => ({ business: h.businesses[ref.id] }),
+  }),
+}));
+vi.mock('@/lib/firebase/config', () => ({ db: {} }));
+vi.mock('@/lib/firebase/providers', () => ({
+  fetchProviderApplications: () => h.fetchProviderApplications(),
+}));
+vi.mock('@/lib/firebase/functions', () => ({
+  decideProviderApplication: (d: unknown) => h.decideProviderApplication(d),
+}));
+vi.mock('@/stores/authStore', () => ({
+  useAuthStore: (selector: (s: { user: { role: string } }) => unknown) => selector({ user: { role: 'admin' } }),
+}));
+
+import { ProviderApplicationsPanel } from './ProviderApplicationsPanel';
+
+const it_ = (key: keyof typeof itMessages) => itMessages[key] as string;
+
+const company = {
+  id: 'c1',
+  fullName: 'Karate Club Milano',
+  isBusiness: true,
+  requestedCategoryIds: [],
+} as unknown as Provider;
+const companyBusiness = {
+  legalName: 'Karate Club Milano S.r.l.',
+  vatNumber: '12345678903',
+  displayName: 'Karate Club Milano',
+};
+const person = { id: 'p1', fullName: 'Paola Pendente', requestedCategoryIds: [] } as unknown as Provider;
+
+function renderPanel() {
+  const { wrapper: Wrapper } = makeQueryClientWrapper();
+  return render(
+    <Wrapper>
+      <ProviderApplicationsPanel />
+    </Wrapper>
+  );
+}
+
+/** The approve button, once the company details it depends on are loaded. */
+const enabledVerify = async (r: HTMLElement) => {
+  const btn = within(r).getByRole('button', { name: it_('admin.applications.verify') });
+  await waitFor(() => expect(btn).toBeEnabled());
+  return btn;
+};
+
+const row = (name: string) => screen.getByText(name).closest('li') as HTMLElement;
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  h.apps = [company, person];
+  h.businesses = { c1: companyBusiness };
+  h.fetchProviderApplications.mockImplementation(async () => h.apps);
+});
+
+describe('ProviderApplicationsPanel', () => {
+  it("shows a company's badge, legal name and tax id in its row", async () => {
+    renderPanel();
+    const r = await waitFor(() => row('Karate Club Milano'));
+    expect(within(r).getByText(it_('provider.badge.business'))).toBeInTheDocument();
+    expect(await within(r).findByText('Karate Club Milano S.r.l.')).toBeInTheDocument();
+    expect(within(r).getByText('12345678903')).toBeInTheDocument();
+    expect(within(row('Paola Pendente')).queryByText(it_('provider.badge.business'))).not.toBeInTheDocument();
+  });
+
+  it('shows every reviewed legal field before approval', async () => {
+    h.businesses = { c1: { ...companyBusiness, legalForm: 'association', affiliationNumber: 'QA-RASD' } };
+    renderPanel();
+    const r = await waitFor(() => row('Karate Club Milano'));
+    expect(await within(r).findByText(it_('provider.business.legalForm.association'))).toBeInTheDocument();
+    expect(within(r).getByText('QA-RASD')).toBeInTheDocument();
+    fireEvent.click(await enabledVerify(r));
+    await waitFor(() => expect(h.decideProviderApplication).toHaveBeenCalled());
+    expect(h.decideProviderApplication.mock.calls[0][0]).toMatchObject({ expectedReview: {
+      legalForm: 'association', affiliationNumber: 'QA-RASD',
+    } });
+  });
+
+  it('approves a company with the shown tax id and legal name', async () => {
+    renderPanel();
+    const r = await waitFor(() => row('Karate Club Milano'));
+    await within(r).findByText('12345678903');
+    fireEvent.click(await enabledVerify(r));
+    await waitFor(() => expect(h.decideProviderApplication).toHaveBeenCalledTimes(1));
+    expect(h.decideProviderApplication.mock.calls[0][0]).toEqual({
+      providerId: 'c1',
+      decision: 'verified',
+      expectedReview: { vatNumber: '12345678903', legalName: 'Karate Club Milano S.r.l.', legalForm: 'company', affiliationNumber: '' },
+    });
+  });
+
+  it('a company whose map has no public name is still approved with expectedReview', async () => {
+    h.apps = [{ ...company, isBusiness: undefined }, person];
+    h.businesses = { c1: { legalName: 'Senza Nome S.r.l.', vatNumber: '12345678903' } };
+    renderPanel();
+    const r = await waitFor(() => row('Karate Club Milano'));
+    await within(r).findByText('Senza Nome S.r.l.');
+    fireEvent.click(await enabledVerify(r));
+    await waitFor(() => expect(h.decideProviderApplication).toHaveBeenCalledTimes(1));
+    expect(h.decideProviderApplication.mock.calls[0][0]).toEqual({
+      providerId: 'c1',
+      decision: 'verified',
+      expectedReview: { vatNumber: '12345678903', legalName: 'Senza Nome S.r.l.', legalForm: 'company', affiliationNumber: '' },
+    });
+  });
+
+  it('keeps the individual and rejection payloads unchanged', async () => {
+    renderPanel();
+    const r = await waitFor(() => row('Paola Pendente'));
+    fireEvent.click(await enabledVerify(r));
+    await waitFor(() => expect(h.decideProviderApplication).toHaveBeenCalledTimes(1));
+    expect(h.decideProviderApplication.mock.calls[0][0]).toEqual({ providerId: 'p1', decision: 'verified' });
+
+    fireEvent.click(within(row('Karate Club Milano')).getByRole('button', { name: it_('admin.applications.reject') }));
+    await waitFor(() => expect(h.decideProviderApplication).toHaveBeenCalledTimes(2));
+    expect(h.decideProviderApplication.mock.calls[1][0]).toEqual({ providerId: 'c1', decision: 'rejected' });
+  });
+
+  it('stale_review: explains it in the row and reloads the list with the new details', async () => {
+    renderPanel();
+    const r = await waitFor(() => row('Karate Club Milano'));
+    expect(h.fetchProviderApplications).toHaveBeenCalledTimes(1);
+
+    h.businesses = { c1: { ...companyBusiness, vatNumber: '00743110157' } };
+    h.decideProviderApplication.mockRejectedValueOnce(
+      Object.assign(new Error('stale_review'), { code: 'functions/failed-precondition' })
+    );
+    fireEvent.click(await enabledVerify(r));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(it_('admin.business.error.staleReview'));
+    await waitFor(() => expect(h.fetchProviderApplications).toHaveBeenCalledTimes(2));
+    expect(await within(row('Karate Club Milano')).findByText('00743110157')).toBeInTheDocument();
+  });
+
+  it('keeps the generic message for anything that is not a code', async () => {
+    h.decideProviderApplication.mockRejectedValueOnce(new Error('Admin access required'));
+    renderPanel();
+    const r = await waitFor(() => row('Paola Pendente'));
+    fireEvent.click(await enabledVerify(r));
+    expect(await screen.findByRole('alert')).toHaveTextContent(it_('admin.applications.error'));
+  });
+});

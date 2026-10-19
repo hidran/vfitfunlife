@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/hooks/useI18n";
@@ -55,6 +55,8 @@ export function FilterBar({
 }: FilterBarProps) {
   const { t, locale } = useI18n();
   const [showFilters, setShowFilters] = useState(false);
+  // Ties each filter's visible label to its select, so it is announced with it.
+  const idBase = useId();
 
   const hasActiveFilters =
     searchValue ||
@@ -73,7 +75,7 @@ export function FilterBar({
             placeholder={searchPlaceholder ?? 'Search...'}
             value={searchValue}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-surface border border-hairline rounded-xl text-content placeholder:text-content-faint focus:outline-none focus:border-[#00C9FF]/50"
+            className="w-full min-h-11 pl-10 pr-4 py-2.5 bg-surface border border-hairline rounded-xl text-content placeholder:text-content-faint focus:outline-none focus:border-[#00C9FF]/50"
           />
           {searchValue && (
             <button
@@ -132,13 +134,17 @@ export function FilterBar({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {filters.map((filter) => (
               <div key={filter.key}>
-                <label className="block text-sm text-content-muted mb-1.5">
+                <label
+                  htmlFor={`${idBase}-${filter.key}`}
+                  className="block text-sm text-content-muted mb-1.5"
+                >
                   {filter.label}
                 </label>
                 <select
+                  id={`${idBase}-${filter.key}`}
                   value={filter.value}
                   onChange={(e) => filter.onChange(e.target.value)}
-                  className="w-full px-3 py-2 bg-surface-elevated border border-hairline rounded-lg text-content text-sm focus:outline-none focus:border-[#00C9FF]/50"
+                  className="w-full min-h-11 px-3 py-2 bg-surface-elevated border border-hairline rounded-lg text-content text-sm focus:outline-none focus:border-[#00C9FF]/50"
                 >
                   {filter.options.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -166,7 +172,7 @@ export function FilterBar({
                           dateRange.to
                         )
                       }
-                      className="w-full pl-9 pr-3 py-2 bg-surface-elevated border border-hairline rounded-lg text-content text-sm focus:outline-none focus:border-[#00C9FF]/50"
+                      className="w-full min-h-11 pl-9 pr-3 py-2 bg-surface-elevated border border-hairline rounded-lg text-content text-sm focus:outline-none focus:border-[#00C9FF]/50"
                     />
                   </div>
                   <span className="text-content-faint">{t('admin.filter.dateTo')}</span>
@@ -181,7 +187,7 @@ export function FilterBar({
                           fromDateParam(e.target.value) ?? null
                         )
                       }
-                      className="w-full pl-9 pr-3 py-2 bg-surface-elevated border border-hairline rounded-lg text-content text-sm focus:outline-none focus:border-[#00C9FF]/50"
+                      className="w-full min-h-11 pl-9 pr-3 py-2 bg-surface-elevated border border-hairline rounded-lg text-content text-sm focus:outline-none focus:border-[#00C9FF]/50"
                     />
                   </div>
                 </div>

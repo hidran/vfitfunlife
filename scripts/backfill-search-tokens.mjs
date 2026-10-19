@@ -4,6 +4,8 @@
 //   - searchTokens          prefixes of name / email / phone digits (array-contains search)
 //   - adminHidden           soft-deleted or seeded demo account
 //   - providerVerification  'verified' | 'pending' | 'rejected' | null
+//   - providerKind          'business' | 'individual' | null (added for business accounts, B8:
+//                           re-run with --apply after deploying the trigger that derives it)
 //
 // plus the two fields every list query depends on, only where missing (as the
 // onUserWriteAdminIndex trigger does): createdAt (<- the document's createTime) and
@@ -60,7 +62,14 @@ console.log(`${apply ? "APPLY" : "DRY RUN"} — backfilling users admin-index fi
 
 const snap = await db.collection("users").get();
 
-const counts = { searchTokens: 0, adminHidden: 0, providerVerification: 0, createdAt: 0, isSuspended: 0 };
+const counts = {
+  searchTokens: 0,
+  adminHidden: 0,
+  providerVerification: 0,
+  providerKind: 0,
+  createdAt: 0,
+  isSuspended: 0,
+};
 const toUpdate = [];
 const plan = []; // { ref, updateTime, patch }
 const hidden = [];

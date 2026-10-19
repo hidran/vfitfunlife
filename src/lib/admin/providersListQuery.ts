@@ -2,6 +2,7 @@ import type { ProviderFilters } from '@/types/admin';
 import { DEFAULT_PAGE_SIZE, pageSizeFromParams } from './usersListQuery';
 
 export const DEFAULT_PROVIDER_FILTERS: ProviderFilters = {
+  providerType: 'all',
   verificationStatus: 'all',
   status: 'all',
   search: '',
@@ -11,6 +12,7 @@ export const DEFAULT_PROVIDER_FILTERS: ProviderFilters = {
 
 const VERIFICATIONS = ['all', 'verified', 'pending', 'rejected'] as const;
 const STATUSES = ['all', 'active', 'suspended'] as const;
+const PROVIDER_TYPES = ['all', 'individual', 'business'] as const;
 
 /** sessionStorage key holding the list's last query, so leaving a provider's page returns to it. */
 export const PROVIDERS_LIST_QUERY_KEY = 'admin.providers.listQuery';
@@ -22,10 +24,14 @@ export const PROVIDERS_LIST_QUERY_KEY = 'admin.providers.listQuery';
 export function providerFiltersFromParams(params: URLSearchParams): ProviderFilters {
   const verification = params.get('verification');
   const status = params.get('status');
+  const providerType = params.get('type');
   const page = Number(params.get('page'));
   return {
     ...DEFAULT_PROVIDER_FILTERS,
     search: params.get('q') ?? '',
+    providerType: (PROVIDER_TYPES as readonly string[]).includes(providerType ?? '')
+      ? (providerType as ProviderFilters['providerType'])
+      : 'all',
     verificationStatus: (VERIFICATIONS as readonly string[]).includes(verification ?? '')
       ? (verification as ProviderFilters['verificationStatus'])
       : 'all',
@@ -41,6 +47,7 @@ export function providerFiltersFromParams(params: URLSearchParams): ProviderFilt
 export function queryFromProviderFilters(filters: ProviderFilters): string {
   const params = new URLSearchParams();
   if (filters.search) params.set('q', filters.search);
+  if (filters.providerType && filters.providerType !== 'all') params.set('type', filters.providerType);
   if (filters.verificationStatus && filters.verificationStatus !== 'all') {
     params.set('verification', filters.verificationStatus);
   }

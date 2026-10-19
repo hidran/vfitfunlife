@@ -1,0 +1,11 @@
+{
+  "project": "vfit-app-staging",
+  "checks": [
+    "Business signup remains pending; VAT claim belongs to owner",
+    "Admin mobile detail fits; reviewed approval persists",
+    "Approved business public detail renders"
+  ],
+  "status": "PASS",
+  "cleanup": "VERIFIED",
+  "runtimeErrors": []
+}
