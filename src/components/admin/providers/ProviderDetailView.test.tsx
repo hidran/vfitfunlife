@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -26,12 +26,20 @@ const individual = {
 } as unknown as AdminProvider;
 
 let mockProvider: AdminProvider = company;
+// When set, the next document reads wait for it (a slow refetch).
+let mockReadGate: Promise<void> | null = null;
 // A real query over the mutable fixture, so the view's cache updates and refetches are exercised.
 vi.mock('@/hooks/useFirestoreDocQuery', async () => {
   const { useQuery } = await import('@tanstack/react-query');
   return {
     useFirestoreDocQuery: (queryKey: readonly unknown[]) =>
-      useQuery({ queryKey, queryFn: async () => mockProvider }),
+      useQuery({
+        queryKey,
+        queryFn: async () => {
+          if (mockReadGate) await mockReadGate;
+          return mockProvider;
+        },
+      }),
   };
 });
 
@@ -90,6 +98,7 @@ function renderView(id: string) {
 beforeEach(() => {
   vi.clearAllMocks();
   mockProvider = company;
+  mockReadGate = null;
 });
 
 describe('ProviderDetailView — company', () => {
@@ -170,8 +179,73 @@ describe('ProviderDetailView — after approval', () => {
     await waitFor(() => expect(mockNotify.success).toHaveBeenCalledWith(
       itMessages['admin.providerDetail.verifiedSuccess'],
     ));
+    expect(mockNotify.success).toHaveBeenCalledTimes(1);
     expect(await screen.findByText('Verificato')).toBeInTheDocument();
     expect(screen.queryByText('In attesa')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Verifica/ })).not.toBeInTheDocument();
+  });
+
+  const pendingApplicant = () => ({
+    id: 'biz', uid: 'biz', fullName: 'Palestra Rossi', role: 'customer',
+    providerStatus: 'pending', providerType: 'business',
+  }) as unknown as AdminProvider;
+
+  it('shows the result at once while the document refetch is still slow, and toasts once', async () => {
+    mockProvider = pendingApplicant();
+    renderView('biz');
+    const verify = await screen.findByRole('button', { name: /Verifica/ });
+
+    let release!: () => void;
+    mockReadGate = new Promise<void>((resolve) => { release = resolve; });
+    mockAdminState.verifyProviderAction.mockImplementationOnce(async () => {
+      mockProvider = {
+        ...mockProvider, role: 'provider', providerStatus: 'verified', providerProfile: { isVerified: true },
+      } as unknown as AdminProvider;
+    });
+    await userEvent.click(verify);
+
+    // The refetch has not answered: the screen already shows the decision (cache update).
+    expect(await screen.findByText('Verificato')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Verifica/ })).not.toBeInTheDocument();
+    expect(mockNotify.success).toHaveBeenCalledTimes(1);
+
+    release();
+    await waitFor(() => expect(screen.getByText('Verificato')).toBeInTheDocument());
+    expect(screen.queryByText('In attesa')).not.toBeInTheDocument();
+    expect(mockNotify.success).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores a second click while the decision is in flight, and disables the buttons', async () => {
+    mockProvider = pendingApplicant();
+    let finish!: () => void;
+    mockAdminState.verifyProviderAction.mockImplementationOnce(
+      () => new Promise<void>((resolve) => { finish = resolve; }),
+    );
+    renderView('biz');
+    const verify = await screen.findByRole('button', { name: /Verifica/ });
+
+    fireEvent.click(verify);
+    fireEvent.click(verify);
+
+    expect(mockAdminState.verifyProviderAction).toHaveBeenCalledTimes(1);
+    expect(verify).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Rifiuta/ })).toBeDisabled();
+
+    finish();
+    await waitFor(() => expect(mockNotify.success).toHaveBeenCalledTimes(1));
+    expect(mockAdminState.verifyProviderAction).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-enables the buttons after a failed decision so it can be retried', async () => {
+    mockProvider = pendingApplicant();
+    mockAdminState.verifyProviderAction.mockRejectedValueOnce(new Error('Admin required'));
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    renderView('biz');
+    const verify = await screen.findByRole('button', { name: /Verifica/ });
+
+    await userEvent.click(verify);
+
+    await waitFor(() => expect(mockNotify.error).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(verify).toBeEnabled());
   });
 });

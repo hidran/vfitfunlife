@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { RegisterClient } from './RegisterClient';
+import { itMessages } from '@/i18n/messages/it';
 
 // Mock useRouter
 const mockPush = vi.fn();
@@ -364,18 +365,34 @@ describe('RegisterPage Email Registration', () => {
 
   it('clears the "check the company details" banner once the bad field is corrected', async () => {
     render(<RegisterClient />);
+    const banner = itMessages['provider.business.error.fixFields'];
 
     fillEmailForm();
     fillCompany('01234567898');
     fireEvent.click(screen.getByRole('button', { name: /Crea account/i }));
 
-    expect(await screen.findByText("Controlla i dati dell'azienda evidenziati.", { selector: 'p' })).toBeInTheDocument();
+    expect(await screen.findByText(banner, { selector: 'p' })).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('Partita IVA'), { target: { value: '01234567897' } });
 
     await waitFor(() => {
-      expect(screen.queryByText("Controlla i dati dell'azienda evidenziati.", { selector: 'p' })).not.toBeInTheDocument();
+      expect(screen.queryByText(banner, { selector: 'p' })).not.toBeInTheDocument();
     });
+  });
+
+  it('keeps the banner while another company field is still flagged', async () => {
+    render(<RegisterClient />);
+    const banner = itMessages['provider.business.error.fixFields'];
+
+    fillEmailForm();
+    fillCompany('01234567898');
+    fireEvent.change(screen.getByLabelText('Città'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: /Crea account/i }));
+    expect(await screen.findByText(banner, { selector: 'p' })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Partita IVA'), { target: { value: '01234567897' } });
+
+    expect(screen.getByText(banner, { selector: 'p' })).toBeInTheDocument();
   });
 
   it('maps a duplicate P.IVA from the server to the inline message', async () => {
@@ -412,7 +429,13 @@ describe('RegisterPage Email Registration', () => {
 
     await waitFor(() => expect(screen.getByLabelText('Partita IVA')).toHaveFocus());
     expect(screen.getByLabelText('Partita IVA')).not.toBeDisabled();
-    expect(screen.getByLabelText(/^Email/i)).not.toBeDisabled();
+    // The account exists now: its inputs lock (a retry would ignore edits to them) and a hint says why.
+    expect(screen.getByLabelText(/^Email/i)).toBeDisabled();
+    expect(screen.getByLabelText(/^Password/i)).toBeDisabled();
+    expect(screen.getByLabelText(/Conferma Password/i)).toBeDisabled();
+    expect(screen.getByLabelText(/Data di nascita/i)).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'VLife' })).toBeDisabled();
+    expect(screen.getByTestId('register-account-created')).toHaveTextContent(itMessages['auth.register.accountCreatedHint']);
     expect(mockRegisterWithEmail).toHaveBeenCalledTimes(1);
 
     fireEvent.change(screen.getByLabelText('Partita IVA'), { target: { value: '12345678903' } });
@@ -428,6 +451,53 @@ describe('RegisterPage Email Registration', () => {
         business: expect.objectContaining({ vatNumber: '12345678903' }),
       })
     );
+  });
+
+  it('leaves the form unlocked when creating the account itself fails', async () => {
+    mockRegisterWithEmail.mockRejectedValueOnce(new Error('boom'));
+    render(<RegisterClient />);
+
+    fillEmailForm();
+    fillCompany();
+    fireEvent.click(screen.getByRole('button', { name: /Crea account/i }));
+
+    await waitFor(() => expect(mockRegisterWithEmail).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByLabelText(/^Email/i)).not.toBeDisabled());
+    expect(screen.getByLabelText(/^Password/i)).not.toBeDisabled();
+    expect(screen.queryByTestId('register-account-created')).not.toBeInTheDocument();
+    expect(mockSubmitProviderApplication).not.toHaveBeenCalled();
+
+    // The retry creates the account (the first attempt never did).
+    mockRegisterWithEmail.mockResolvedValueOnce(undefined);
+    mockSubmitProviderApplication.mockResolvedValueOnce({ success: true, status: 'pending' });
+    fireEvent.click(screen.getByRole('button', { name: /Crea account/i }));
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/auth/permissions'));
+    expect(mockRegisterWithEmail).toHaveBeenCalledTimes(2);
+  });
+
+  it('social path: a retry after a failed provider step skips completeRegistration', async () => {
+    mockAuthState.firebaseUser = { uid: 'social-uid', email: null };
+    mockCompleteRegistration.mockResolvedValue(undefined);
+    mockSubmitProviderApplication
+      .mockRejectedValueOnce(new Error('network'))
+      .mockResolvedValueOnce({ success: true, status: 'verified' });
+    mockRefreshUserProfile.mockResolvedValue(undefined);
+    render(<RegisterClient />);
+
+    fireEvent.change(screen.getByPlaceholderText('Mario Rossi'), { target: { value: 'Provider User' } });
+    fireEvent.click(screen.getByRole('checkbox', { name: /professionista/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Personal Training/i }));
+    fireEvent.click(screen.getByLabelText(/Termini/i));
+    fireEvent.click(screen.getByRole('button', { name: /Completa registrazione/i }));
+
+    await waitFor(() => expect(screen.getByTestId('register-account-created')).toBeInTheDocument());
+    expect(mockCompleteRegistration).toHaveBeenCalledTimes(1);
+    expect(document.querySelector('input[type="date"]')).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: /Completa registrazione/i }));
+
+    await waitFor(() => expect(mockSubmitProviderApplication).toHaveBeenCalledTimes(2));
+    expect(mockCompleteRegistration).toHaveBeenCalledTimes(1);
   });
 
   it('lets an authenticated phone or social user opt in as a provider during profile completion', async () => {

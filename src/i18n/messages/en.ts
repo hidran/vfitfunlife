@@ -1013,6 +1013,7 @@ export const enMessages: Messages = {
   'auth.register.error.userNotAuthenticated': 'User not authenticated',
   'auth.register.error.generic': 'Registration failed. Please try again.',
   'auth.register.emailTaken.message': "An account with this email already exists.",
+  'auth.register.accountCreatedHint': "Account created. Fix the professional details and try again.",
   'auth.register.emailTaken.cta': "Log in",
   'auth.register.error.providerNotAllowed': "This account can't become a professional (protected admin account).",
   'auth.register.error.emailRequired': 'Email is required',

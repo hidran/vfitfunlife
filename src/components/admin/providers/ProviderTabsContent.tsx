@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import type { User } from '@/types/firebase';
 import type { AdminProvider, VerificationDocument } from '@/types/admin';
 import { useI18n } from '@/hooks/useI18n';
@@ -23,6 +24,19 @@ interface TabBarProps {
 
 export function ProviderTabBar({ active, onChange }: TabBarProps) {
   const { t } = useI18n();
+  const tabRefs = useRef<Partial<Record<ProviderTab, HTMLButtonElement | null>>>({});
+  const mounted = useRef(false);
+  // Keep the active tab visible inside the scrolling strip when it changes. Not on mount: the
+  // strip starts at the first tab, and 'nearest' would also scroll the PAGE to a strip that
+  // is below the fold.
+  useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    // scrollIntoView is missing in jsdom.
+    tabRefs.current[active]?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+  }, [active]);
   const tabs: { id: ProviderTab; label: string; icon: typeof Briefcase }[] = [
     { id: 'overview', label: t('admin.providerDetail.tab.overview'), icon: Briefcase },
     { id: 'documents', label: t('admin.providerDetail.tab.documents'), icon: FileText },
@@ -31,12 +45,14 @@ export function ProviderTabBar({ active, onChange }: TabBarProps) {
   ];
   return (
     // The strip scrolls inside itself on narrow screens (390px made the whole page scroll
-    // sideways); min-w-0 lets a flex/grid parent shrink it below its content width.
+    // sideways); min-w-0 lets a flex/grid parent shrink it below its content width, and the
+    // row's top/side padding keeps a focus ring from being clipped by the scroll container.
     <div className="min-w-0 max-w-full overflow-x-auto border-b border-hairline">
-      <div className="flex w-max min-w-full gap-6">
+      <div className="flex w-max min-w-full gap-6 px-1 pt-1">
         {tabs.map((tab) => (
           <button
             key={tab.id}
+            ref={(el) => { tabRefs.current[tab.id] = el; }}
             onClick={() => onChange(tab.id)}
             className={`flex shrink-0 items-center gap-2 whitespace-nowrap px-1 py-3 text-sm font-medium border-b-2 transition-colors ${
               active === tab.id

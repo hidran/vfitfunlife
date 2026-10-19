@@ -1012,6 +1012,7 @@ export const itMessages = {
   'auth.register.error.userNotAuthenticated': 'Utente non autenticato',
   'auth.register.error.generic': 'Errore durante la registrazione. Riprova.',
   'auth.register.emailTaken.message': "Esiste già un account con questa email.",
+  'auth.register.accountCreatedHint': "Account creato. Correggi i dati professionali e riprova.",
   'auth.register.emailTaken.cta': "Accedi",
   'auth.register.error.providerNotAllowed': "Questo account non può diventare professionista (account amministratore protetto).",
   'auth.register.error.emailRequired': "L'email è obbligatoria",

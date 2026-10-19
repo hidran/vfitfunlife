@@ -988,6 +988,7 @@ export const deMessages: Messages = {
   'auth.register.error.userNotAuthenticated': 'Benutzer nicht authentifiziert',
   'auth.register.error.generic': 'Fehler bei der Registrierung. Bitte erneut versuchen.',
   'auth.register.emailTaken.message': "Mit dieser E-Mail gibt es bereits ein Konto.",
+  'auth.register.accountCreatedHint': "Konto erstellt. Korrigieren Sie die beruflichen Angaben und versuchen Sie es erneut.",
   'auth.register.emailTaken.cta': "Anmelden",
   'auth.register.error.providerNotAllowed': "Dieses Konto kann kein Profi werden (geschütztes Administratorkonto).",
   'auth.register.error.emailRequired': 'E-Mail ist erforderlich',

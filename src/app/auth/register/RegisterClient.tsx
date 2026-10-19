@@ -79,6 +79,12 @@ export function RegisterClient() {
   const [wantsProvider, setWantsProvider] = useState(startsAsProvider);
   const [providerCategoryIds, setProviderCategoryIds] = useState<string[]>([]);
   const [providerType, setProviderType] = useState<ProviderType>('individual');
+  // Which banner the last submit left: the "check the company details" one is a flag, not a
+  // string, so it can follow the fields it points at (see formError) in any language.
+  const [fixFieldsBanner, setFixFieldsBanner] = useState(false);
+  // Mirrors accountCreated once a provider-step failure leaves the user signed in: the
+  // account inputs lock so edits to them are not silently ignored by the retry.
+  const [accountLocked, setAccountLocked] = useState(false);
   // Focus on a bad company field waits until the inputs are enabled again (isLoading).
   const business = useBusinessDetails(undefined, { disabled: isLoading });
 
@@ -95,7 +101,7 @@ export function RegisterClient() {
     if (providerType === 'business') {
       const payload = business.validate();
       if (!payload) {
-        setError(fixFieldsMessage);
+        setFixFieldsBanner(true);
         return null;
       }
       return { fullName: fullName.trim(), categoryIds: providerCategoryIds, providerType: 'business', business: payload };
@@ -106,8 +112,7 @@ export function RegisterClient() {
   // The "check the company details" banner belongs to the fields it points at: once none of
   // them is flagged any more (the user fixed them) it must go, not wait for the next submit.
   const hasBusinessErrors = Object.keys(business.errors).length > 0;
-  const fixFieldsMessage = t('provider.business.error.fixFields');
-  const formError = error === fixFieldsMessage && !hasBusinessErrors ? '' : error;
+  const formError = error || (fixFieldsBanner && hasBusinessErrors ? t('provider.business.error.fixFields') : '');
 
   /** The provider step failed after the account was created: say why, under the field when there is one. */
   const showProviderError = (err: unknown) => setError(t(business.applyServerError(err)));
@@ -139,6 +144,7 @@ export function RegisterClient() {
   const handleSocialSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setFixFieldsBanner(false);
 
     if (!fullName.trim()) {
       setError(t('auth.register.error.fullNameRequired'));
@@ -185,8 +191,10 @@ export function RegisterClient() {
       router.push(postAuthRoute(useAuthStore.getState().user));
     } catch (err) {
       console.error('Registration error:', err);
-      if (stage === 'provider') showProviderError(err);
-      else setError(t('auth.register.error.generic'));
+      if (stage === 'provider') {
+        showProviderError(err);
+        setAccountLocked(true);
+      } else setError(t('auth.register.error.generic'));
     } finally {
       submitting.current = false;
       setIsLoading(false);
@@ -196,6 +204,7 @@ export function RegisterClient() {
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setFixFieldsBanner(false);
     setEmailTaken(false);
     clearError();
 
@@ -262,8 +271,10 @@ export function RegisterClient() {
         setEmailTaken(true);
         return;
       }
-      if (stage === 'provider') showProviderError(err);
-      else setError(useAuthStore.getState().error || t('auth.register.error.generic'));
+      if (stage === 'provider') {
+        showProviderError(err);
+        setAccountLocked(true);
+      } else setError(useAuthStore.getState().error || t('auth.register.error.generic'));
     } finally {
       submitting.current = false;
       setIsLoading(false);
@@ -419,6 +430,12 @@ export function RegisterClient() {
               </div>
             )}
 
+            {accountLocked && (
+              <p className="text-sm text-center text-text-secondary" data-testid="register-account-created">
+                {t('auth.register.accountCreatedHint')}
+              </p>
+            )}
+
             {/* Error Message: a permanent screen-reader announcer, then the visual box. */}
             <div aria-live="polite" className="sr-only">{!emailTaken ? formError || storeError : null}</div>
             {!emailTaken && (formError || storeError) && (
@@ -497,7 +514,7 @@ export function RegisterClient() {
                   onChange={(e) => setEmail(e.target.value)}
                   className="auth-input pl-10"
                   required
-                  disabled={isLoading}
+                  disabled={isLoading || accountLocked}
                 />
               </div>
             </div>
@@ -518,7 +535,7 @@ export function RegisterClient() {
                   className="auth-input pl-10 pr-20"
                   required
                   minLength={12}
-                  disabled={isLoading}
+                  disabled={isLoading || accountLocked}
                 />
                 <button
                   type="button"
@@ -547,7 +564,7 @@ export function RegisterClient() {
                   className="auth-input pl-10"
                   required
                   minLength={6}
-                  disabled={isLoading}
+                  disabled={isLoading || accountLocked}
                 />
               </div>
             </div>
@@ -565,7 +582,7 @@ export function RegisterClient() {
                   value={dateOfBirth}
                   onChange={(e) => setDateOfBirth(e.target.value)}
                   className="auth-input pl-10"
-                  disabled={isLoading}
+                  disabled={isLoading || accountLocked}
                 />
               </div>
             </div>
@@ -581,7 +598,7 @@ export function RegisterClient() {
                     key={section.id}
                     type="button"
                     onClick={() => setPreferredSection(section.id)}
-                    disabled={isLoading}
+                    disabled={isLoading || accountLocked}
                     className={`
                       relative py-4 px-3 rounded-xl font-semibold text-sm transition-all
                       ${
@@ -670,6 +687,12 @@ export function RegisterClient() {
       {/* Form */}
       <div className="flex-1 px-6 pb-8">
         <form onSubmit={handleSocialSubmit} className="space-y-6 max-w-md mx-auto">
+          {accountLocked && (
+            <p className="text-sm text-center text-text-secondary" data-testid="register-account-created">
+              {t('auth.register.accountCreatedHint')}
+            </p>
+          )}
+
           {/* Error Message: a permanent screen-reader announcer, then the visual box. */}
           <div aria-live="polite" className="sr-only">{formError}</div>
           {formError && (
@@ -717,7 +740,7 @@ export function RegisterClient() {
               placeholder={t('auth.common.emailPlaceholder')}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              disabled={isLoading}
+              disabled={isLoading || accountLocked}
             />
           </div>
 
@@ -733,7 +756,7 @@ export function RegisterClient() {
                 value={dateOfBirth}
                 onChange={(e) => setDateOfBirth(e.target.value)}
               className="auth-input pl-10"
-                disabled={isLoading}
+                disabled={isLoading || accountLocked}
               />
             </div>
           </div>
@@ -749,7 +772,7 @@ export function RegisterClient() {
                   key={section.id}
                   type="button"
                   onClick={() => setPreferredSection(section.id)}
-                  disabled={isLoading}
+                  disabled={isLoading || accountLocked}
                   className={`
                     relative py-4 px-3 rounded-xl font-semibold text-sm transition-all
                     ${

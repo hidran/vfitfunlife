@@ -990,6 +990,7 @@ export const frMessages: Messages = {
   'auth.register.error.userNotAuthenticated': 'Utilisateur non authentifié',
   'auth.register.error.generic': "Erreur pendant l'inscription. Réessayez.",
   'auth.register.emailTaken.message': "Un compte existe déjà avec cet e-mail.",
+  'auth.register.accountCreatedHint': "Compte créé. Corrigez les informations professionnelles et réessayez.",
   'auth.register.emailTaken.cta': "Se connecter",
   'auth.register.error.providerNotAllowed': "Ce compte ne peut pas devenir professionnel (compte administrateur protégé).",
   'auth.register.error.emailRequired': "L'email est obligatoire",

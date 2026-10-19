@@ -19,7 +19,7 @@ const OPTIONS: readonly ProviderType[] = ['individual', 'business'];
  * and whether the application auto-approves (individual) or waits for an admin (company).
  *
  * Follows the WAI-ARIA radio group pattern: only the checked radio is a tab stop, and the
- * arrow keys (left/up = previous, right/down = next, wrapping) move the selection and focus.
+ * arrow keys (left/up = previous, right/down = next, wrapping) and Home/End move the selection and focus.
  */
 export function ProviderTypeToggle({ value, onChange, disabled }: ProviderTypeToggleProps) {
   const { t } = useI18n();
@@ -28,13 +28,30 @@ export function ProviderTypeToggle({ value, onChange, disabled }: ProviderTypeTo
 
   const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     if (disabled) return;
-    const step =
-      event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1
-      : event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1
-      : 0;
-    if (!step) return;
+    // Alt/Cmd+Left is the browser's Back, Shift/Ctrl combos belong to the browser or the OS:
+    // leave them alone (and unprevented).
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    let target: number;
+    switch (event.key) {
+      case 'ArrowRight':
+      case 'ArrowDown':
+        target = (index + 1) % OPTIONS.length;
+        break;
+      case 'ArrowLeft':
+      case 'ArrowUp':
+        target = (index - 1 + OPTIONS.length) % OPTIONS.length;
+        break;
+      case 'Home':
+        target = 0;
+        break;
+      case 'End':
+        target = OPTIONS.length - 1;
+        break;
+      default:
+        return;
+    }
     event.preventDefault();
-    const next = OPTIONS[(index + step + OPTIONS.length) % OPTIONS.length];
+    const next = OPTIONS[target];
     onChange(next);
     refs.current[next]?.focus();
   };

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
@@ -72,6 +72,10 @@ export function ProviderDetailView({ providerId }: Props) {
   const [activeTab, setActiveTab] = useState<ProviderTab>('overview');
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  // One decision at a time: the ref refuses a re-entrant click in the same tick (state would
+  // not have updated yet), the state disables the buttons while the callable runs.
+  const decisionInFlight = useRef(false);
+  const [deciding, setDeciding] = useState(false);
 
   const updateMut = useEntityMutation<ProviderFormData, void>({
     mutate: async (patch) => {
@@ -144,7 +148,9 @@ export function ProviderDetailView({ providerId }: Props) {
   });
 
   const handleVerify = async () => {
-    if (!provider) return;
+    if (!provider || decisionInFlight.current) return;
+    decisionInFlight.current = true;
+    setDeciding(true);
     try {
       await verifyProviderAction(provider.id, {
         status: 'verified',
@@ -171,11 +177,16 @@ export function ProviderDetailView({ providerId }: Props) {
     } catch (error) {
       console.error('Failed to verify provider:', error);
       notify.error(t(providerDecisionErrorKey(error) ?? 'admin.providerDetail.actionError'));
+    } finally {
+      decisionInFlight.current = false;
+      setDeciding(false);
     }
   };
 
   const handleReject = async () => {
-    if (!provider || !rejectReason.trim()) return;
+    if (!provider || !rejectReason.trim() || decisionInFlight.current) return;
+    decisionInFlight.current = true;
+    setDeciding(true);
     try {
       await rejectProviderAction(provider.id, rejectReason);
       setShowRejectForm(false);
@@ -185,6 +196,9 @@ export function ProviderDetailView({ providerId }: Props) {
     } catch (error) {
       console.error('Failed to reject provider:', error);
       notify.error(t('admin.providerDetail.actionError'));
+    } finally {
+      decisionInFlight.current = false;
+      setDeciding(false);
     }
   };
 
@@ -272,6 +286,7 @@ export function ProviderDetailView({ providerId }: Props) {
                           <Button
                             variant="secondary"
                             onClick={() => setShowRejectForm(true)}
+                            disabled={deciding}
                             className="flex items-center gap-2 text-[#EF4444] light:text-red-700 hover:text-[#EF4444] light:hover:text-red-700"
                           >
                             <XCircle className="w-4 h-4" />
@@ -280,6 +295,7 @@ export function ProviderDetailView({ providerId }: Props) {
                           <Button
                             variant="primary"
                             onClick={handleVerify}
+                            disabled={deciding}
                             className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800"
                           >
                             <CheckCircle className="w-4 h-4" />
@@ -288,13 +304,13 @@ export function ProviderDetailView({ providerId }: Props) {
                         </>
                       ) : (
                         <div className="flex gap-2">
-                          <Button variant="ghost" onClick={() => setShowRejectForm(false)}>
+                          <Button variant="ghost" onClick={() => setShowRejectForm(false)} disabled={deciding}>
                             {t('admin.providerDetail.cancel')}
                           </Button>
                           <Button
                             variant="primary"
                             onClick={handleReject}
-                            disabled={!rejectReason.trim()}
+                            disabled={!rejectReason.trim() || deciding}
                             className="bg-[#EF4444] hover:bg-[#DC2626]"
                           >
                             {t('admin.providerDetail.confirmReject')}

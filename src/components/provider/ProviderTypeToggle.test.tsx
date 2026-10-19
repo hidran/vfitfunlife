@@ -52,4 +52,39 @@ describe('ProviderTypeToggle keyboard model', () => {
     fireEvent.keyDown(screen.getByRole('radio', { name: 'Privato' }), { key: 'ArrowRight' });
     expect(onChange).not.toHaveBeenCalled();
   });
+
+  it('Home selects the first option and End the last', () => {
+    const onChange = vi.fn();
+    const { rerender } = render(<ProviderTypeToggle value="business" onChange={onChange} />);
+    fireEvent.keyDown(screen.getByRole('radio', { name: 'Azienda' }), { key: 'Home' });
+    expect(onChange).toHaveBeenLastCalledWith('individual');
+    expect(screen.getByRole('radio', { name: 'Privato' })).toHaveFocus();
+
+    rerender(<ProviderTypeToggle value="individual" onChange={onChange} />);
+    fireEvent.keyDown(screen.getByRole('radio', { name: 'Privato' }), { key: 'End' });
+    expect(onChange).toHaveBeenLastCalledWith('business');
+    expect(screen.getByRole('radio', { name: 'Azienda' })).toHaveFocus();
+  });
+
+  it.each(['altKey', 'metaKey', 'ctrlKey', 'shiftKey'])(
+    'leaves arrow keys with %s held to the browser (no selection, not prevented)',
+    (modifier) => {
+      const onChange = vi.fn();
+      render(<ProviderTypeToggle value="individual" onChange={onChange} />);
+
+      const notPrevented = fireEvent.keyDown(screen.getByRole('radio', { name: 'Privato' }), {
+        key: 'ArrowLeft',
+        [modifier]: true,
+      });
+
+      expect(notPrevented).toBe(true);
+      expect(onChange).not.toHaveBeenCalled();
+    },
+  );
+
+  it('prevents the default of a handled arrow key (no page scroll)', () => {
+    render(<ProviderTypeToggle value="individual" onChange={() => {}} />);
+    const notPrevented = fireEvent.keyDown(screen.getByRole('radio', { name: 'Privato' }), { key: 'ArrowDown' });
+    expect(notPrevented).toBe(false);
+  });
 });

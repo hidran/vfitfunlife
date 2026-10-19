@@ -248,3 +248,4 @@ Added 2026-10-19 from `docs/superpowers/specs/2026-10-19-unified-group-courses-d
   - D13: auth screens have touch targets under 44 px (*Back* 61x20, *Show* 32x16), pre-existing and shared.
   - D15: `/provider/location` builds input ids from the translated label (`indirizzo-o-città`), so ids change per language (fragile for tests).
   - D16: staging only, a non-allowlisted email shows the raw `staging-access-denied` Cloud Function error text on the signup form.
+- 2026-10-19 — Follow-up (review of the B10 fixes, not done): the booking detail reads the provider through `useProvider`, so the Company badge and logo disappear for a provider whose `instructors` profile is not publicly readable (or deleted); consider denormalizing `providerType` and the logo onto the booking at creation.
