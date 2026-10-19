@@ -157,4 +157,26 @@ describe('/providers/detail?id=', () => {
     expect(screen.queryByRole('link', { name: 'Instagram' })).toBeNull();
     expect(screen.getByText('javascript:alert(1)').closest('a')).toBeNull();
   });
+
+  it('does not link the Instagram pill to a foreign host', () => {
+    mockSearchParams = new URLSearchParams('id=prov-42');
+    mockUseProfile.mockReturnValue({
+      data: {
+        id: 'prov-42',
+        fullName: 'Anna Verdi',
+        avatarUrl: null,
+        bio: null,
+        providerProfile: { isVerified: true, rating: 0, reviewCount: 0, yearsOfExperience: 0, servicePricing: [] },
+        socialLinks: { instagram: 'https://instagram.com.evil.example/anna' },
+        isProvider: true,
+        portfolioImages: [],
+      },
+      isLoading: false,
+      error: null,
+    });
+    render(<ProviderProfilePage />);
+
+    expect(screen.queryByRole('link', { name: 'Instagram' })).toBeNull();
+    expect(screen.getByText('https://instagram.com.evil.example/anna').closest('a')).toBeNull();
+  });
 });

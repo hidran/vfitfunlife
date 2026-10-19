@@ -20,4 +20,16 @@ describe('SocialLinksEditor (read-only view)', () => {
     expect(link).toHaveAttribute('href', 'https://linkedin.com/in/anna');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
   });
+
+  it('does not link a platform pill to a foreign host', () => {
+    render(
+      <SocialLinksEditor
+        userId="u1"
+        socialLinks={{ instagram: 'https://evil.example/anna', linkedin: 'https://linkedin.com.evil.example/in/a' } as never}
+      />,
+    );
+
+    expect(screen.getByText('evil.example/anna').closest('a')).toBeNull();
+    expect(screen.getByText('linkedin.com.evil.example/in/a').closest('a')).toBeNull();
+  });
 });
