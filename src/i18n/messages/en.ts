@@ -2221,6 +2221,7 @@ export const enMessages: Messages = {
   'provider.applyError.invalidType': 'Invalid account type. Reload the page and try again.',
   'provider.applyError.accountIsBusiness': "This account is already registered as a company or association, so it can't apply as an individual. Contact support to change the account type.",
   'provider.applyError.alreadyApproved': 'Your business is already approved. To change its details, go to your profile or contact support.',
+  'provider.applyError.typeLocked': 'The professional account type can no longer be changed. Contact support.',
   'provider.applyError.concurrentUpdate': 'Something changed while saving, please try again.',
 
   'provider.banner.pending': 'Profile under review — you will be visible after approval.',

@@ -123,6 +123,83 @@ describe("commitProviderDecision (one transaction)", () => {
       expect(listed()).toBe(false);
     });
 
+    describe("selfApproval guard (S-1): an admin's earlier decision wins over auto-approval", () => {
+      const self = () =>
+        commitProviderDecision({
+          providerId: "u1", decision: "verified", actor: SELF, application: SELF_APPLY, selfApproval: true,
+        });
+
+      it("refuses a rejected applicant (either signal) with application_rejected and writes nothing", async () => {
+        for (const setup of [
+          () => h.put("users/u1", { ...USER, providerStatus: "rejected" }),
+          () => h.put("instructors/u1", { applicationStatus: "rejected", providerProfile: { isVerified: false } }),
+        ]) {
+          h.reset();
+          h.put("users/u1", USER);
+          setup();
+          await expect(self()).rejects.toMatchObject({ code: "failed-precondition", message: "application_rejected" });
+          expect(h.ops).toEqual([]);
+          expect(listed()).toBe(false);
+        }
+      });
+
+      it("a rejection committing between its reads and its commit is seen on the re-run: still refused", async () => {
+        h.state.beforeCommit = () => {
+          h.put("users/u1", { ...USER, providerStatus: "rejected" });
+          h.put("instructors/u1", { applicationStatus: "rejected", providerProfile: { isVerified: false } });
+        };
+        await expect(self()).rejects.toMatchObject({ message: "application_rejected" });
+        expect(h.state.attempts).toBe(2);
+        expect(h.ops).toEqual([]);
+        expect(h.read("users/u1")).toMatchObject({ providerStatus: "rejected" });
+      });
+
+      it("an already verified account (any signal) is a no-op: alreadyVerified, nothing rewritten", async () => {
+        for (const setup of [
+          () => h.put("users/u1", { ...USER, providerStatus: "verified" }),
+          () => h.put("instructors/u1", { applicationStatus: "verified", providerProfile: { isVerified: true } }),
+          () => h.put("instructors/u1", { providerProfile: { isVerified: true } }),
+        ]) {
+          h.reset();
+          h.put("users/u1", USER);
+          setup();
+          const users = h.read("users/u1");
+          const instructors = h.read("instructors/u1");
+          await expect(self()).resolves.toEqual({ draftServicesSeeded: 0, venueId: null, alreadyVerified: true });
+          expect(h.ops).toEqual([]);
+          expect(h.read("users/u1")).toEqual(users);
+          expect(h.read("instructors/u1")).toEqual(instructors);
+        }
+      });
+
+      it("a verification committing between its reads and its commit is never rewritten", async () => {
+        h.state.beforeCommit = () => {
+          h.put("users/u1", { ...USER, role: "provider", providerStatus: "verified" });
+          h.put("instructors/u1", { applicationStatus: "verified", providerProfile: { isVerified: true, bio: "Dal 1990" } });
+        };
+        await expect(self()).resolves.toMatchObject({ alreadyVerified: true });
+        expect(h.state.attempts).toBe(2);
+        expect(h.ops).toEqual([]);
+        expect(h.read("instructors/u1")).toMatchObject({ providerProfile: { bio: "Dal 1990" } });
+      });
+
+      it("without the flag the guard is off: an admin may verify a rejected provider (decideProviderApplication unaffected)", async () => {
+        h.put("users/u1", { ...USER, providerStatus: "rejected" });
+        h.put("instructors/u1", { ...PENDING_COMPANY, business: undefined, applicationStatus: "rejected" });
+        await expect(
+          commitProviderDecision({ providerId: "u1", decision: "verified", actor: ADMIN }),
+        ).resolves.toMatchObject({ draftServicesSeeded: expect.any(Number) });
+        expect(h.read("users/u1")).toMatchObject({ providerStatus: "verified" });
+        expect(listed()).toBe(true);
+      });
+
+      it("does not touch the business path: a business is still refused with business_account_exists", async () => {
+        h.put("users/u1", { ...USER, providerType: "business" });
+        await expect(self()).rejects.toMatchObject({ message: "business_account_exists" });
+        expect(h.ops).toEqual([]);
+      });
+    });
+
     it("a benign concurrent write (the admin-index trigger on users/{uid}) just re-runs it — no retry code needed", async () => {
       h.state.beforeCommit = () => h.put("users/u1", { ...USER, searchTokens: ["mario"] });
       await expect(

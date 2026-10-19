@@ -298,6 +298,7 @@ describe('Register as a company or association', () => {
   it.each([
     ['concurrent_update', 'Qualcosa è cambiato durante il salvataggio. Riprova.'],
     ['business_already_approved', /La tua attività è già approvata/],
+    ['provider_type_locked', /non può più essere cambiato/],
     ['invalid_business', /Dati dell'attività mancanti o non validi/],
   ])('shows %s as a localised form error, never the raw code', async (code, text) => {
     mockRegisterWithEmail.mockResolvedValueOnce(undefined);

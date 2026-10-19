@@ -2193,6 +2193,7 @@ export const esMessages: Messages = {
   'provider.applyError.invalidType': 'Tipo de cuenta no válido. Recarga la página e inténtalo de nuevo.',
   'provider.applyError.accountIsBusiness': 'Esta cuenta ya está registrada como empresa o asociación, así que no puede solicitarlo como profesional individual. Contacta con soporte para cambiar el tipo de cuenta.',
   'provider.applyError.alreadyApproved': 'Tu entidad ya está aprobada. Para cambiar sus datos, ve a tu perfil o contacta con soporte.',
+  'provider.applyError.typeLocked': 'El tipo de cuenta profesional ya no se puede cambiar. Contacta con soporte.',
   'provider.applyError.concurrentUpdate': 'Algo cambió mientras se guardaba. Inténtalo de nuevo.',
 
   // ─── Provider dashboard ──────────────────────────────────────────────

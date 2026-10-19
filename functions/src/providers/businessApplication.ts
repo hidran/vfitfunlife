@@ -227,6 +227,43 @@ export function isExistingBusiness(
 }
 
 /**
+ * An admin (or auto-approval) said yes, by any of the three signals: `users.providerStatus`,
+ * the instructors doc's `applicationStatus`, or the `providerProfile.isVerified` flag legacy docs
+ * carry alone. Providers from before `users.providerStatus` existed are verified only on the
+ * instructors side, so the user doc alone is not enough.
+ */
+export function isVerifiedAccount(
+  user: Record<string, unknown> | undefined,
+  instructor: Record<string, unknown> | undefined,
+): boolean {
+  return user?.providerStatus === "verified" || isApproved(instructor);
+}
+
+/** An admin turned this applicant down; only an admin may reverse that (never auto-approval). */
+export function isRejectedAccount(
+  user: Record<string, unknown> | undefined,
+  instructor: Record<string, unknown> | undefined,
+): boolean {
+  return user?.providerStatus === "rejected" || instructor?.applicationStatus === "rejected";
+}
+
+/**
+ * Refuse a company application from a verified INDIVIDUAL (`failed-precondition` /
+ * `provider_type_locked`). Becoming a company would drop a listed professional back to pending,
+ * so it is not a self-service move; the other direction is the admin's convertBusinessToIndividual.
+ * A verified COMPANY is not this guard's business: assertNotApprovedBusiness refuses it with
+ * `business_already_approved`.
+ */
+export function assertNotVerifiedIndividual(
+  user: Record<string, unknown> | undefined,
+  instructor: Record<string, unknown> | undefined,
+): void {
+  if (!isExistingBusiness(user, instructor) && isVerifiedAccount(user, instructor)) {
+    throw new HttpsError("failed-precondition", "provider_type_locked");
+  }
+}
+
+/**
  * Refuse an individual (re-)application from an account that is already a business: it would
  * otherwise be auto-approved and listed without its tax id (P.IVA / codice fiscale) being
  * checked (D2), or have its company name replaced by a person's. applyAsProvider checks this up
@@ -259,8 +296,8 @@ export function isApproved(instructor: Record<string, unknown> | undefined): boo
  *
  * `user` and `instructor` must be read inside the business transaction. "Approved" is the
  * instructors doc's applicationStatus or legacy isVerified flag, neither of which the owner can
- * write. A first-time applicant, a pending or rejected business, and a verified INDIVIDUAL
- * applying as a business (plan §5: allowed, drops to pending) all pass.
+ * write. A first-time applicant, a pending or rejected business all pass (a verified INDIVIDUAL
+ * applying as a business is refused separately: assertNotVerifiedIndividual).
  */
 export function assertNotApprovedBusiness(
   user: Record<string, unknown> | undefined,

@@ -709,7 +709,8 @@ export async function updateAiAuthoringSettings(patch: Partial<AiAuthoringSettin
  * `vat_already_registered` (tax id claimed by another account), `business_already_approved`
  * (an approved company re-applying — changes go through its profile or an admin),
  * `vat_change_not_allowed` (backstop for the same case, not expected in practice),
- * `business_account_exists` (a company re-applying as an individual) and `concurrent_update`
+ * `business_account_exists` (a company re-applying as an individual), `provider_type_locked`
+ * (a verified individual applying as a company — an admin converts) and `concurrent_update`
  * (lost a race — safe to retry).
  */
 export async function applyAsProvider(data: {

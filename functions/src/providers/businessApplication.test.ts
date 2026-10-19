@@ -6,9 +6,12 @@ import {
   BUSINESS_LEGAL_FORMS,
   assertNotApprovedBusiness,
   assertNotExistingBusiness,
+  assertNotVerifiedIndividual,
   buildBusinessInstructorPatch,
   claimBusinessVat,
   isExistingBusiness,
+  isRejectedAccount,
+  isVerifiedAccount,
   parseAffiliationNumber,
   parseLegalForm,
   parseLegalName,
@@ -615,12 +618,59 @@ describe("assertNotApprovedBusiness", () => {
     }
   });
 
-  it("lets a verified individual apply as a business (plan §5: allowed, drops to pending)", () => {
+  it("leaves a verified individual to assertNotVerifiedIndividual (it is not an approved business)", () => {
     expect(() =>
       assertNotApprovedBusiness(
         { providerStatus: "verified" },
         { applicationStatus: "verified", providerProfile: { isVerified: true }, name: "Mario Rossi" },
       ),
+    ).not.toThrow();
+  });
+});
+
+describe("isVerifiedAccount / isRejectedAccount", () => {
+  it("is verified by any of the three signals, including a legacy doc verified only on the instructors side", () => {
+    expect(isVerifiedAccount({ providerStatus: "verified" }, undefined)).toBe(true);
+    expect(isVerifiedAccount({}, { applicationStatus: "verified" })).toBe(true);
+    expect(isVerifiedAccount({}, { providerProfile: { isVerified: true } })).toBe(true);
+  });
+
+  it("is not verified when pending, rejected or unknown", () => {
+    expect(isVerifiedAccount(undefined, undefined)).toBe(false);
+    expect(isVerifiedAccount({ providerStatus: "pending" }, { applicationStatus: "pending", providerProfile: { isVerified: false } })).toBe(false);
+    expect(isVerifiedAccount({ providerStatus: "rejected" }, { applicationStatus: "rejected" })).toBe(false);
+  });
+
+  it("is rejected on either side", () => {
+    expect(isRejectedAccount({ providerStatus: "rejected" }, undefined)).toBe(true);
+    expect(isRejectedAccount({}, { applicationStatus: "rejected" })).toBe(true);
+    expect(isRejectedAccount({ providerStatus: "pending" }, { applicationStatus: "pending" })).toBe(false);
+    expect(isRejectedAccount(undefined, undefined)).toBe(false);
+  });
+});
+
+describe("assertNotVerifiedIndividual", () => {
+  const company = { legalName: "Karate Club Milano S.r.l.", vatNumber: "12345678903" };
+
+  it("refuses a verified individual (provider_type_locked), however the verification is recorded", () => {
+    for (const [user, instructor] of [
+      [{ providerStatus: "verified" }, { applicationStatus: "verified", name: "Mario Rossi" }],
+      [{}, { providerProfile: { isVerified: true }, name: "Legacy" }],
+      [{ providerStatus: "verified" }, undefined],
+    ] as const) {
+      expectHttpsError(() => assertNotVerifiedIndividual(user, instructor), "failed-precondition", "provider_type_locked");
+    }
+  });
+
+  it("lets first-time, pending and rejected applicants through", () => {
+    expect(() => assertNotVerifiedIndividual(undefined, undefined)).not.toThrow();
+    expect(() => assertNotVerifiedIndividual({ providerStatus: "pending" }, { applicationStatus: "pending" })).not.toThrow();
+    expect(() => assertNotVerifiedIndividual({ providerStatus: "rejected" }, { applicationStatus: "rejected" })).not.toThrow();
+  });
+
+  it("leaves a verified business to assertNotApprovedBusiness", () => {
+    expect(() =>
+      assertNotVerifiedIndividual({ providerType: "business" }, { applicationStatus: "verified", business: company }),
     ).not.toThrow();
   });
 });

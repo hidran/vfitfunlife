@@ -66,4 +66,10 @@ describe("shouldAutoApprove", () => {
     expect(shouldAutoApprove({ autoApprove: true }, "business")).toBe(false);
     expect(shouldAutoApprove({ autoApprove: false }, "business")).toBe(false);
   });
+
+  it("never auto-approves a rejected applicant or an already verified account, even with auto-approval ON", () => {
+    expect(shouldAutoApprove({ autoApprove: true }, "individual", { rejected: true })).toBe(false);
+    expect(shouldAutoApprove({ autoApprove: true }, "individual", { verified: true })).toBe(false);
+    expect(shouldAutoApprove({ autoApprove: true }, "individual", { rejected: false, verified: false })).toBe(true);
+  });
 });

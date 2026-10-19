@@ -2219,6 +2219,7 @@ export const itMessages = {
   'provider.applyError.invalidType': 'Tipo di account non valido. Ricarica la pagina e riprova.',
   'provider.applyError.accountIsBusiness': 'Questo account è già registrato come azienda o associazione: non puoi candidarti come singolo professionista. Contatta il supporto per cambiare tipo di account.',
   'provider.applyError.alreadyApproved': 'La tua attività è già approvata. Per modificarne i dati vai al profilo o contatta il supporto.',
+  'provider.applyError.typeLocked': 'Il tipo di account professionale non può più essere cambiato. Contatta il supporto.',
   'provider.applyError.concurrentUpdate': 'Qualcosa è cambiato durante il salvataggio. Riprova.',
 
   // ─── Provider dashboard ──────────────────────────────────────────────

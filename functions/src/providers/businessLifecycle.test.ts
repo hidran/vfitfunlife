@@ -309,7 +309,7 @@ describe("business lifecycle (multi-call sequences)", () => {
       expect(instructor("b")).toMatchObject({ business: { venueId: "biz_b" } });
     });
 
-    it("convert → re-apply as a company → approve reactivates the same venue instead of failing venue_exists", async () => {
+    it("convert → (an admin lifts the verification) → re-apply as a company → approve reactivates the same venue instead of failing venue_exists", async () => {
       await applyAsCompany("b", GYM);
       await approveVenue("b");
       fake.put("venues/biz_b", { ...venue("b"), name: "Palestra Rossi Centro", amenities: ["Sauna"] });
@@ -320,6 +320,11 @@ describe("business lifecycle (multi-call sequences)", () => {
       const audit = [...fake.docs.entries()].filter(([path]) => path.startsWith("audit_logs/")).map(([, d]) => d).at(-1) as { after: Data };
       expect(audit.after).toMatchObject({ venueId: "biz_b", venueDeactivated: true });
 
+      // S-1: the converted account is a verified individual, and a verified individual cannot
+      // become a company by applying — only after an admin rejects it is the way open again.
+      await expect(applyAsCompany("b", GYM)).rejects.toMatchObject({ code: "failed-precondition", message: "provider_type_locked" });
+      expect(instructor("b")).not.toHaveProperty("business");
+      await reject("b");
       await applyAsCompany("b", GYM);
       await expect(approveVenue("b")).resolves.toMatchObject({ success: true, venueId: "biz_b" });
       expect(venueDocs()).toEqual(["venues/biz_b"]);
@@ -409,19 +414,21 @@ describe("business lifecycle (multi-call sequences)", () => {
       expect(claimHolder(X)).toBeUndefined();
     });
 
-    it("reverse S2: the individual's approval commits first, then the company application re-runs — pending, claim held", async () => {
+    it("reverse S2: the individual's approval commits first, then the company application re-runs — locked, nothing written", async () => {
       h.settings.autoApprove = false;
       await as("b", applyAsProvider, { categoryIds: ["hiit"], fullName: "Bruno Titolare" });
       // B's company application is between its reads and its commit when the admin's approval
-      // of the individual commits; the company transaction is re-run on the approved doc.
+      // of the individual commits; the company transaction is re-run on the approved doc, which
+      // is now a verified individual (S-1): provider_type_locked, and no claim is taken.
       fake.state.beforeCommit = () => approve("b").then(() => undefined);
-      await expect(applyAsCompany("b", OWNER)).resolves.toMatchObject({ autoApproved: false });
+      await expect(applyAsCompany("b", OWNER)).rejects.toMatchObject({ code: "failed-precondition", message: "provider_type_locked" });
 
-      expect(isListed("b")).toBe(false);
-      expect(instructor("b")).toMatchObject({ applicationStatus: "pending", business: { vatNumber: X } });
-      expect(fake.read("users/b")).toMatchObject({ providerType: "business", providerStatus: "pending" });
-      expect(claimHolder(X)).toBe("b");
-      await expect(approve("b", OWNER)).resolves.toMatchObject({ success: true });
+      expect(isListed("b")).toBe(true);
+      expect(instructor("b")).toMatchObject({ applicationStatus: "verified" });
+      expect(instructor("b")).not.toHaveProperty("business");
+      expect(fake.read("users/b")).toMatchObject({ providerStatus: "verified" });
+      expect(fake.read("users/b")).not.toHaveProperty("providerType", "business");
+      expect(claimHolder(X)).toBeUndefined();
       expectOneHolderPerTaxId();
     });
   });

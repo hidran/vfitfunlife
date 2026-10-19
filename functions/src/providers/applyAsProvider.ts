@@ -1,6 +1,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue, type DocumentReference } from "firebase-admin/firestore";
-import { commitProviderDecision } from "./commitDecision";
+import { APPLICATION_REJECTED, commitProviderDecision } from "./commitDecision";
 import {
   draftServicesForCategories,
   pendingApplicationPatches,
@@ -10,7 +10,10 @@ import {
   BUSINESS_VAT_COLLECTION,
   assertNotApprovedBusiness,
   assertNotExistingBusiness,
+  assertNotVerifiedIndividual,
   claimBusinessVat,
+  isRejectedAccount,
+  isVerifiedAccount,
   parseProviderType,
   validateBusinessInput,
 } from "./businessApplication";
@@ -98,7 +101,16 @@ async function readOnboardingSettings(): Promise<ProviderOnboardingSettings> {
  * flag is set.
  *
  * Idempotent: re-applying merges rather than duplicating, and draft services are seeded only
- * when the provider has none.
+ * when the provider has none. Re-applying can never route around a review:
+ *
+ * - a REJECTED applicant is queued as pending again whatever `autoApprove` says — an admin
+ *   turned them down and only an admin may reverse that;
+ * - an already VERIFIED account (`users.providerStatus`, `instructors.applicationStatus` or the
+ *   legacy `providerProfile.isVerified`) re-applying as an individual is a no-op: nothing is
+ *   rewritten, and the answer carries no `autoApproved` so the client reads the account's own
+ *   status instead of guessing "pending";
+ * - a verified individual cannot turn itself into a company (`failed-precondition` /
+ *   `provider_type_locked`): the way back and forth is an admin's conversion.
  */
 export const applyAsProvider = onCall<ApplyAsProviderData>(
   hotCallableOptions<ApplyAsProviderData>(),
@@ -139,30 +151,57 @@ export const applyAsProvider = onCall<ApplyAsProviderData>(
     // These reads may already be stale; the auto-approval (commitProviderDecision) and the
     // pending branch below both re-check inside their transactions, which is what actually
     // closes a concurrent individual/business race. This early check only fails fast.
+    const storedInstructor = instructorSnap.data();
     if (providerType !== "business") {
-      assertNotExistingBusiness(caller, instructorSnap.data());
+      assertNotExistingBusiness(caller, storedInstructor);
+      if (isVerifiedAccount(caller, storedInstructor)) {
+        return alreadyVerified(callerUid);
+      }
+    } else {
+      assertNotVerifiedIndividual(caller, storedInstructor);
     }
 
-    if (shouldAutoApprove(settings, providerType)) {
+    const autoApprove = shouldAutoApprove(settings, providerType, {
+      rejected: isRejectedAccount(caller, storedInstructor),
+      verified: isVerifiedAccount(caller, storedInstructor),
+    });
+    if (autoApprove) {
       // One transaction (commitProviderDecision): a concurrent write — the admin-index trigger
       // touching users/{uid} right after signup, or a business application — makes Firestore
       // re-run it with fresh reads, so the first just succeeds and the second is refused
       // (`business_account_exists`). `concurrent_update` only if contention outlasts its retries.
-      const { draftServicesSeeded } = await commitProviderDecision({
-        providerId: callerUid,
-        decision: "verified",
-        actor: {
-          uid: callerUid,
-          email: (caller.email as string) ?? req.auth?.token?.email ?? "",
-          // Their own role, which at signup is `customer` and maps to the audit
-          // vocabulary's 'client'. The audit entry therefore never claims an admin acted;
-          // the reason below is what marks the row as an auto-approval.
-          role: (caller.role as string) ?? "customer",
-        },
-        notes: "Auto-approved at signup",
-        application: { requestedCategoryIds: categoryIds, fullName: applicantName },
-      });
-      return { success: true, providerId: callerUid, autoApproved: true, draftServicesSeeded };
+      // `selfApproval` makes that same transaction judge rejected/verified on ITS reads, not on
+      // the early ones above: an admin who rejected the applicant in between wins (the
+      // application is queued below instead), and an account verified in between is untouched.
+      try {
+        const approved = await commitProviderDecision({
+          providerId: callerUid,
+          decision: "verified",
+          actor: {
+            uid: callerUid,
+            email: (caller.email as string) ?? req.auth?.token?.email ?? "",
+            // Their own role, which at signup is `customer` and maps to the audit
+            // vocabulary's 'client'. The audit entry therefore never claims an admin acted;
+            // the reason below is what marks the row as an auto-approval.
+            role: (caller.role as string) ?? "customer",
+          },
+          notes: "Auto-approved at signup",
+          application: { requestedCategoryIds: categoryIds, fullName: applicantName },
+          selfApproval: true,
+        });
+        if (approved.alreadyVerified) {
+          return alreadyVerified(callerUid);
+        }
+        return {
+          success: true,
+          providerId: callerUid,
+          autoApproved: true,
+          draftServicesSeeded: approved.draftServicesSeeded,
+        };
+      } catch (err) {
+        if (!(err instanceof HttpsError && err.message === APPLICATION_REJECTED)) throw err;
+        // Rejected after the early reads: fall through to the pending queue below.
+      }
     }
 
     // Queued for review. Same document shape as an approval produces, minus everything that
@@ -187,8 +226,10 @@ export const applyAsProvider = onCall<ApplyAsProviderData>(
     //   landing after the reads above keeps its name and data; and the profile defaults (bio,
     //   rating, reviewCount, createdAt) are written only if the doc is absent in THIS read.
     const claims = db.collection(BUSINESS_VAT_COLLECTION);
+    let verifiedMeanwhile = false;
     try {
       await db.runTransaction(async (tx) => {
+        verifiedMeanwhile = false; // the body re-runs on contention; judge each run afresh
         const currentUser = await tx.get(userRef);
         const current = await tx.get(instructorRef);
         if (!currentUser.exists) {
@@ -196,6 +237,7 @@ export const applyAsProvider = onCall<ApplyAsProviderData>(
         }
         if (business) {
           assertNotApprovedBusiness(currentUser.data(), current.data());
+          assertNotVerifiedIndividual(currentUser.data(), current.data());
           const held = await tx.get(claims.where("uid", "==", callerUid));
           await claimBusinessVat<DocumentReference>(tx, {
             uid: callerUid,
@@ -207,6 +249,11 @@ export const applyAsProvider = onCall<ApplyAsProviderData>(
           });
         } else {
           assertNotExistingBusiness(currentUser.data(), current.data());
+          if (isVerifiedAccount(currentUser.data(), current.data())) {
+            // Approved since the early reads: re-queueing would de-list a live provider.
+            verifiedMeanwhile = true;
+            return;
+          }
         }
         const patches = pendingApplicationPatches({
           uid: callerUid,
@@ -224,6 +271,14 @@ export const applyAsProvider = onCall<ApplyAsProviderData>(
       throw toConcurrentUpdateError(err);
     }
 
+    if (verifiedMeanwhile) {
+      return alreadyVerified(callerUid);
+    }
     return { success: true, providerId: callerUid, autoApproved: false, draftServicesSeeded: 0 };
   },
 );
+
+/** Nothing written: the account is already verified. No `autoApproved` — see applyAsProvider. */
+function alreadyVerified(providerId: string) {
+  return { success: true, providerId, draftServicesSeeded: 0 };
+}

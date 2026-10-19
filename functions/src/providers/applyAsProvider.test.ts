@@ -281,13 +281,176 @@ describe("applyAsProvider (handler)", () => {
     expect(paths()).toEqual([["set", "instructors/u1"], ["update", "users/u1"]]);
   });
 
-  it("a verified individual may still apply as a business (plan §5 default) and is queued", async () => {
+  it("a verified individual cannot turn itself into a company: provider_type_locked, nothing written", async () => {
     fake.put("users/u1", { ...USER, role: "provider", providerStatus: "verified", isVerified: true });
     fake.put("instructors/u1", { ...APPROVED, name: "Mario Rossi" });
-    await expect(call({ categoryIds: ["hiit"], providerType: "business", business: COMPANY })).resolves.toMatchObject({
-      autoApproved: false,
+    await expect(call({ categoryIds: ["hiit"], providerType: "business", business: COMPANY })).rejects.toMatchObject({
+      code: "failed-precondition",
+      message: "provider_type_locked",
     });
-    expect(paths()).toEqual([["create", `businessVat/${VAT}`], ["set", "instructors/u1"], ["update", "users/u1"]]);
+    expect(fake.ops).toEqual([]);
+    expect(fake.read(`businessVat/${VAT}`)).toBeUndefined();
+  });
+
+  it("a legacy individual verified only by providerProfile.isVerified is locked too", async () => {
+    fake.put("instructors/u1", { providerProfile: { isVerified: true }, name: "Legacy" });
+    await expect(call({ categoryIds: ["hiit"], providerType: "business", business: COMPANY })).rejects.toMatchObject({
+      message: "provider_type_locked",
+    });
+    expect(fake.ops).toEqual([]);
+  });
+
+  it("the lock is judged on the transaction's reads: verified after the early reads is still refused", async () => {
+    fake.stale.set("users/u1", USER);
+    fake.stale.set("instructors/u1", null);
+    fake.put("users/u1", { ...USER, providerStatus: "verified" });
+    fake.put("instructors/u1", { ...APPROVED, name: "Mario Rossi" });
+    await expect(call({ categoryIds: ["hiit"], providerType: "business", business: COMPANY })).rejects.toMatchObject({
+      message: "provider_type_locked",
+    });
+    expect(fake.ops).toEqual([]);
+  });
+
+  describe("an individual re-applying", () => {
+    it("is queued again when rejected, even with auto-approval ON (users side)", async () => {
+      fake.put("users/u1", { ...USER, providerStatus: "rejected" });
+      fake.put("instructors/u1", { ...PENDING, applicationStatus: "rejected", name: "Mario Rossi" });
+      await expect(call({ categoryIds: ["hiit"], fullName: "Mario Rossi" })).resolves.toEqual({
+        success: true,
+        providerId: "u1",
+        autoApproved: false,
+        draftServicesSeeded: 0,
+      });
+      expect(h.commitProviderDecision).not.toHaveBeenCalled();
+      expect(fake.read("users/u1")).toMatchObject({ providerStatus: "pending", role: "customer" });
+      expect(fake.read("instructors/u1")).toMatchObject({
+        applicationStatus: "pending",
+        providerProfile: { isVerified: false },
+      });
+    });
+
+    it("is queued again when only the instructors doc says rejected", async () => {
+      fake.put("instructors/u1", { ...PENDING, applicationStatus: "rejected" });
+      await expect(call({ categoryIds: ["hiit"] })).resolves.toMatchObject({ autoApproved: false });
+      expect(h.commitProviderDecision).not.toHaveBeenCalled();
+      expect(fake.read("users/u1")).toMatchObject({ providerStatus: "pending" });
+    });
+
+    it("is a no-op when already verified: nothing rewritten, no autoApproved claim, commitProviderDecision untouched", async () => {
+      fake.put("users/u1", { ...USER, role: "provider", providerStatus: "verified" });
+      fake.put("instructors/u1", { ...APPROVED, name: "Mario Rossi" });
+      const users = fake.read("users/u1");
+      const instructors = fake.read("instructors/u1");
+      for (const autoApprove of [true, false]) {
+        h.settings.autoApprove = autoApprove;
+        await expect(call({ categoryIds: ["yoga"], fullName: "Someone Else" })).resolves.toEqual({
+          success: true,
+          providerId: "u1",
+          draftServicesSeeded: 0,
+        });
+      }
+      expect(h.commitProviderDecision).not.toHaveBeenCalled();
+      expect(fake.ops).toEqual([]);
+      expect(fake.read("users/u1")).toEqual(users);
+      expect(fake.read("instructors/u1")).toEqual(instructors);
+    });
+
+    it("treats a legacy instructor verified only by its flag as verified", async () => {
+      fake.put("instructors/u1", { providerProfile: { isVerified: true }, name: "Legacy" });
+      await expect(call({ categoryIds: ["hiit"] })).resolves.toMatchObject({ success: true, draftServicesSeeded: 0 });
+      expect(h.commitProviderDecision).not.toHaveBeenCalled();
+      expect(fake.ops).toEqual([]);
+    });
+
+    describe("TOCTOU: the status flips between the handler's early reads and the auto-approval transaction", () => {
+      beforeEach(() => {
+        h.realCommit.on = true;
+        // The handler's plain reads see a clean customer; only the transactions see the truth.
+        fake.stale.set("users/u1", USER);
+        fake.stale.set("instructors/u1", null);
+      });
+
+      it("rejected meanwhile: the rejection wins — queued as pending, never verified, no drafts", async () => {
+        fake.put("users/u1", { ...USER, providerStatus: "rejected", verifiedBy: "admin-1" });
+        fake.put("instructors/u1", { ...PENDING, applicationStatus: "rejected", name: "Mario Rossi" });
+        await expect(call({ categoryIds: ["hiit"], fullName: "Mario Rossi" })).resolves.toEqual({
+          success: true,
+          providerId: "u1",
+          autoApproved: false,
+          draftServicesSeeded: 0,
+        });
+        expect(fake.read("users/u1")).toMatchObject({ providerStatus: "pending", role: "customer" });
+        expect(fake.read("users/u1")).not.toMatchObject({ isVerified: true });
+        expect(fake.read("instructors/u1")).toMatchObject({
+          applicationStatus: "pending",
+          providerProfile: { isVerified: false },
+        });
+        expect(fake.read("instructors/u1/services/requested-hiit")).toBeUndefined();
+        expect(fake.ops.some(([, path]) => path.startsWith("audit_logs/"))).toBe(false);
+      });
+
+      it("rejected after the auto-approval transaction read but before it commits: same outcome", async () => {
+        fake.state.beforeCommit = () => {
+          fake.put("users/u1", { ...USER, providerStatus: "rejected" });
+          fake.put("instructors/u1", { ...PENDING, applicationStatus: "rejected" });
+        };
+        await expect(call({ categoryIds: ["hiit"], fullName: "Mario Rossi" })).resolves.toMatchObject({ autoApproved: false });
+        expect(fake.read("users/u1")).toMatchObject({ providerStatus: "pending" });
+        expect(fake.read("instructors/u1")).toMatchObject({ applicationStatus: "pending", providerProfile: { isVerified: false } });
+      });
+
+      it("verified meanwhile: never rewritten, and the answer makes no autoApproved claim", async () => {
+        const verifiedUser = { ...USER, role: "provider", providerStatus: "verified", isVerified: true };
+        const verifiedInstructor = { ...APPROVED, name: "Mario Rossi", providerProfile: { isVerified: true, bio: "Dal 1990" } };
+        fake.put("users/u1", verifiedUser);
+        fake.put("instructors/u1", verifiedInstructor);
+        await expect(call({ categoryIds: ["yoga"], fullName: "Someone Else" })).resolves.toEqual({
+          success: true,
+          providerId: "u1",
+          draftServicesSeeded: 0,
+        });
+        expect(fake.ops).toEqual([]);
+        expect(fake.read("users/u1")).toEqual(verifiedUser);
+        expect(fake.read("instructors/u1")).toEqual(verifiedInstructor);
+      });
+
+      it("a business account is untouched by this path: still business_account_exists, nothing written", async () => {
+        fake.put("users/u1", { ...USER, providerStatus: "pending", providerType: "business" });
+        fake.put("instructors/u1", { ...PENDING, business: { legalName: COMPANY.legalName, vatNumber: VAT } });
+        await expect(call({ categoryIds: ["hiit"], fullName: "Mario Rossi" })).rejects.toMatchObject({
+          message: "business_account_exists",
+        });
+        expect(fake.ops).toEqual([]);
+      });
+    });
+
+    it("handler wiring: a mocked commit refusing application_rejected falls back to the pending queue; alreadyVerified is a no-op answer", async () => {
+      h.commitProviderDecision.mockRejectedValueOnce(new HttpsError("failed-precondition", "application_rejected"));
+      await expect(call({ categoryIds: ["hiit"], fullName: "Mario Rossi" })).resolves.toMatchObject({ autoApproved: false });
+      expect(fake.read("users/u1")).toMatchObject({ providerStatus: "pending" });
+
+      fake.ops.length = 0;
+      h.commitProviderDecision.mockResolvedValueOnce({ draftServicesSeeded: 0, venueId: null, alreadyVerified: true });
+      await expect(call({ categoryIds: ["hiit"] })).resolves.toEqual({ success: true, providerId: "u1", draftServicesSeeded: 0 });
+      expect(h.commitProviderDecision).toHaveBeenLastCalledWith(expect.objectContaining({ selfApproval: true }));
+    });
+
+    it("pending queue: re-checks verified inside the transaction and writes nothing if approved meanwhile", async () => {
+      h.settings.autoApprove = false;
+      fake.state.beforeCommit = () => {
+        fake.put("users/u1", { ...USER, role: "provider", providerStatus: "verified" });
+        fake.put("instructors/u1", { ...APPROVED, name: "Mario Rossi" });
+      };
+      await expect(call({ categoryIds: ["hiit"], fullName: "Mario Rossi" })).resolves.toEqual({
+        success: true,
+        providerId: "u1",
+        draftServicesSeeded: 0,
+      });
+      expect(fake.state.attempts).toBe(2);
+      expect(fake.ops).toEqual([]);
+      expect(fake.read("users/u1")).toMatchObject({ providerStatus: "verified" });
+      expect(fake.read("instructors/u1")).toMatchObject({ applicationStatus: "verified" });
+    });
   });
 
   it("a pending business moving to a new tax id releases the old claim and keeps its profile", async () => {

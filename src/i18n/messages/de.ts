@@ -2200,6 +2200,7 @@ export const deMessages: Messages = {
   'provider.applyError.invalidType': 'Ungültiger Kontotyp. Lade die Seite neu und versuche es erneut.',
   'provider.applyError.accountIsBusiness': 'Dieses Konto ist bereits als Unternehmen oder Verein registriert und kann sich nicht als Einzelperson bewerben. Kontaktiere den Support, um den Kontotyp zu ändern.',
   'provider.applyError.alreadyApproved': 'Deine Organisation ist bereits genehmigt. Um ihre Angaben zu ändern, gehe zu deinem Profil oder kontaktiere den Support.',
+  'provider.applyError.typeLocked': 'Die Art des Anbieterkontos kann nicht mehr geändert werden. Kontaktieren Sie den Support.',
   'provider.applyError.concurrentUpdate': 'Beim Speichern hat sich etwas geändert. Bitte versuche es erneut.',
 
   // ─── Provider dashboard ──────────────────────────────────────────────

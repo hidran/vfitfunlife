@@ -2202,6 +2202,7 @@ export const frMessages: Messages = {
   'provider.applyError.invalidType': 'Type de compte non valide. Rechargez la page et réessayez.',
   'provider.applyError.accountIsBusiness': 'Ce compte est déjà enregistré comme entreprise ou association : il ne peut pas postuler en tant que professionnel individuel. Contactez le support pour changer le type de compte.',
   'provider.applyError.alreadyApproved': 'Votre structure est déjà approuvée. Pour modifier ses informations, allez dans votre profil ou contactez le support.',
+  'provider.applyError.typeLocked': 'Le type de compte professionnel ne peut plus être modifié. Contactez le support.',
   'provider.applyError.concurrentUpdate': "Quelque chose a changé pendant l'enregistrement. Veuillez réessayer.",
 
   // ─── Provider dashboard ──────────────────────────────────────────────

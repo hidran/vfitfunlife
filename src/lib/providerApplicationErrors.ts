@@ -24,6 +24,7 @@ export const PROVIDER_APPLICATION_ERROR_CODES = [
   'vat_change_not_allowed',
   'business_account_exists',
   'business_already_approved',
+  'provider_type_locked',
   'concurrent_update',
 ] as const;
 
@@ -63,6 +64,8 @@ export const PROVIDER_APPLICATION_ERRORS: Record<
   invalid_provider_type: { messageKey: 'provider.applyError.invalidType' },
   business_account_exists: { messageKey: 'provider.applyError.accountIsBusiness' },
   business_already_approved: { messageKey: 'provider.applyError.alreadyApproved' },
+  // A verified individual cannot become a company by applying again (S-1); an admin converts.
+  provider_type_locked: { messageKey: 'provider.applyError.typeLocked' },
   // Firestore already re-ran the server's transaction several times (contention outlasted its
   // retries); another attempt from the user is the right move.
   concurrent_update: { messageKey: 'provider.applyError.concurrentUpdate' },

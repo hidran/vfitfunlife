@@ -8,10 +8,18 @@ import {
   providerRolePatch,
   toConcurrentUpdateError,
 } from "./applicationDecision";
-import { BUSINESS_VAT_COLLECTION, assertNotExistingBusiness } from "./businessApplication";
+import {
+  BUSINESS_VAT_COLLECTION,
+  assertNotExistingBusiness,
+  isRejectedAccount,
+  isVerifiedAccount,
+} from "./businessApplication";
 import { assertApprovalHoldsClaim, checkBusinessReview } from "./businessAdminRules";
 import { isProtectedSuperadmin } from "../lib/superadmins";
 import { businessVenueId, planBusinessVenue } from "./businessVenue";
+
+/** The stable message of the refusal a rejected applicant's auto-approval ends in. */
+export const APPLICATION_REJECTED = "application_rejected";
 
 /** gRPC status code: a `create` hit a document that already exists. */
 const ALREADY_EXISTS = 6;
@@ -37,6 +45,17 @@ export interface CommitDecisionOptions {
    * (in-transaction) reads show to be a business.
    */
   application?: { requestedCategoryIds: string[]; fullName?: string | null };
+  /**
+   * Set by applyAsProvider's auto-approval ONLY (never by an admin decision). Guards the
+   * self-approval against what the transaction's own reads show, which the handler's earlier
+   * reads cannot promise (an admin may have decided in between):
+   * - `users.providerStatus` / `instructors.applicationStatus` is 'rejected' ⇒ nothing is
+   *   written and `application_rejected` is thrown (`failed-precondition`); applyAsProvider
+   *   answers by queueing the application as pending instead — only an admin reverses a no;
+   * - the account is already verified (any of the three signals) ⇒ nothing is written and the
+   *   result says `alreadyVerified`.
+   */
+  selfApproval?: boolean;
   /**
    * What the admin had on screen: the company's four reviewed legal fields (BusinessReview, B8).
    * Required to verify a business (`review_required`); when sent it must describe the doc as it
@@ -86,8 +105,8 @@ export interface CommitDecisionOptions {
  */
 export async function commitProviderDecision(
   opts: CommitDecisionOptions
-): Promise<{ draftServicesSeeded: number; venueId: string | null }> {
-  const { providerId, decision, actor, notes, application, expectedReview } = opts;
+): Promise<{ draftServicesSeeded: number; venueId: string | null; alreadyVerified?: true }> {
+  const { providerId, decision, actor, notes, application, expectedReview, selfApproval } = opts;
 
   const db = getFirestore();
   const userRef = db.collection("users").doc(providerId);
@@ -119,6 +138,18 @@ export async function commitProviderDecision(
       // Self-apply only: applyAsProvider checked this too, but on its own (possibly stale) reads.
       if (application) {
         assertNotExistingBusiness(user, instructor);
+      }
+
+      // Auto-approval only: a decision an admin took since applyAsProvider's early reads wins.
+      // Judged on THIS transaction's reads, so a write landing before the commit makes
+      // Firestore re-run it and the re-run sees it. Admin decisions never come through here.
+      if (selfApproval && verified) {
+        if (isVerifiedAccount(user, instructor)) {
+          return { draftServicesSeeded: 0, venueId: null, alreadyVerified: true };
+        }
+        if (isRejectedAccount(user, instructor)) {
+          throw new HttpsError("failed-precondition", APPLICATION_REJECTED);
+        }
       }
 
       // B8: approve what was reviewed; a company being verified must hold its tax-id claim.

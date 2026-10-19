@@ -47,19 +47,31 @@ export function mergeProviderOnboarding(
   };
 }
 
+/** What the account already is, read from its stored documents (never from the request). */
+export interface AutoApprovalContext {
+  /** An admin turned this applicant down: only an admin may reverse that. */
+  rejected?: boolean;
+  /** Already approved: there is nothing left to approve. */
+  verified?: boolean;
+}
+
 /**
  * Whether this application is approved on the spot.
  *
  * A business never is, whatever the setting (decision D2 of the business-accounts plan):
  * someone has to check the tax id (P.IVA / codice fiscale) before a company or association is
- * listed publicly. For an individual the setting decides, exactly as before business accounts
- * existed.
+ * listed publicly. Neither is a previously REJECTED applicant: an admin said no, and re-applying
+ * must queue them again rather than route around that decision. For anyone else the setting
+ * decides, exactly as before business accounts existed.
  */
 export function shouldAutoApprove(
   settings: ProviderOnboardingSettings,
-  providerType: ProviderType
+  providerType: ProviderType,
+  context: AutoApprovalContext = {}
 ): boolean {
-  return providerType !== "business" && settings.autoApprove;
+  return (
+    providerType !== "business" && settings.autoApprove && !context.rejected && !context.verified
+  );
 }
 
 /** Thrown for a payload the caller could fix by sending something else. */

@@ -86,6 +86,7 @@ describe('PROVIDER_APPLICATION_ERRORS', () => {
         'vat_change_not_allowed',
         'business_account_exists',
         'business_already_approved',
+        'provider_type_locked',
         'concurrent_update',
       ].sort()
     );
