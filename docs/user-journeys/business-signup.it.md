@@ -4,13 +4,13 @@ Come un'**azienda** (palestra, scuola o studio) si registra come provider, viene
 
 *English version: [business-signup.md](business-signup.md).*
 
-> **Screenshot in attesa di B10.** I passaggi qui sotto descrivono il codice così com'è. Gli screenshot non sono ancora stati catturati: il task B10 del [piano account aziendali](../plans/2026-10-04-business-accounts-plan.md) li registra su staging e li salva in `screenshots-it/` (questa guida) e `screenshots/` (la guida inglese). Fino ad allora ogni passaggio elenca i nomi dei file attesi in una tabella `Schermata | File`.
+> **Registrata su staging il 19 ottobre 2026** (task B10 del [piano account aziendali](../plans/2026-10-04-business-accounts-plan.md); risultati in [business-signup-verification.md](business-signup-verification.md)). Gli screenshot sono in `screenshots-it/` (questa guida) e `screenshots/` (la guida inglese). I file `-light` sono in tema chiaro; i nomi `business-NN` senza lettera corrispondono alle tabelle `Schermata | File`, quelli con lettera (`01b`, `02b`, `03b`, `06b`, `07b`-`07d`, `09b`) sono stati aggiuntivi.
 
 | | |
 |--------|----------------------------|
-| **Stato** | Scritta dal codice su `main`; non ancora percorsa su staging |
+| **Stato** | Percorsa su staging il 19 ottobre 2026: backend `vfit-app-staging`, app commit `cf505de`, tema scuro |
 | **Dispositivo** | Viewport mobile 390 × 844, come in [signup-to-booking.it.md](signup-to-booking.it.md) |
-| **Account** | Un account aziendale nuovo (nessun dato aziendale reale), l'account admin demo e un cliente per cercare |
+| **Account** | Account aziendali nuovi `journey.biz.en.202610191930@vitfitdemo.dev` e `journey.biz.it.202610191930@vitfitdemo.dev` (nessun dato aziendale reale, partite IVA di prova `01234567897` e `12345678903`), l'admin demo `demo.admin@vitfitdemo.dev` e il cliente demo `demo.customer@vitfitdemo.dev` |
 | **Riferimenti** | [Account aziendali](../features.md#business-company-accounts), [`applyAsProvider` e funzioni collegate](../backend/cloud-functions.md#provider-signup-and-business-accounts-functionssrcproviders) |
 
 ---
@@ -55,13 +55,23 @@ Un cliente già registrato può fare lo stesso da **Diventa un professionista** 
 | Modulo di registrazione con **Azienda** selezionata e i campi compilati | `business-01-signup-company.png` |
 | Errore sotto la partita IVA (non valida o già registrata) | `business-02-signup-vat-error.png` |
 
+![Modulo di registrazione con Azienda selezionata e i campi compilati](screenshots-it/business-01-signup-company.png)
+
+![Errore sotto la partita IVA (non valida o già registrata)](screenshots-it/business-02-signup-vat-error.png)
+
+![partita IVA già registrata (il focus va sul campo)](screenshots-it/business-02b-signup-vat-taken.png)
+
 > **Dietro le quinte.** `applyAsProvider` valida i dati e, in un'unica transazione, registra il claim `businessVat/<P.IVA>` e salva la domanda come *in attesa*: `users.providerStatus: 'pending'`, `providerType: 'business'` e la mappa `business` in `instructors/<uid>`. Nulla è ancora pubblico. Vedi il [riferimento delle funzioni](../backend/cloud-functions.md#provider-signup-and-business-accounts-functionssrcproviders).
 
-Dopo l'invio il titolare arriva sulla schermata esistente **Richiesta in revisione**. Per un'azienda il testo dice che stiamo verificando la partita IVA e i dati aziendali.
+Dopo l'invio il titolare supera la schermata dei permessi (**Salta per ora**) e arriva nel portale provider, dove un banner ambra dice che stiamo verificando la partita IVA e i dati aziendali. In `/profile` la scheda **Richiesta in revisione** riporta lo stesso testo per le aziende.
 
 | Schermata | File |
 |--------|------|
 | Schermata di attesa per un'azienda | `business-03-pending.png` |
+
+![Schermata di attesa per un'azienda](screenshots-it/business-03-pending.png)
+
+![portale provider subito dopo la registrazione, con il banner di verifica](screenshots-it/business-03b-pending-dashboard.png)
 
 ---
 
@@ -84,16 +94,34 @@ Approvare due volte non crea mai una seconda sede. Se esiste già una sede con q
 | `/admin/providers` filtrato su **Aziende** | `business-04-admin-list-companies.png` |
 | Dettaglio azienda con il blocco **Azienda** e le azioni Verifica / Rifiuta | `business-05-admin-company-detail.png` |
 
+![`/admin/providers` filtrato su Aziende](screenshots-it/business-04-admin-list-companies.png)
+
+![Dettaglio azienda con il blocco Azienda e le azioni Verifica / Rifiuta](screenshots-it/business-05-admin-company-detail.png)
+
 ---
 
 ## 3. L'azienda compare nella ricerca con il badge
 
-Un cliente apre **Prenota un servizio** (`/booking`) e digita il nome pubblico dell'azienda, oppure la ragione sociale: sono indicizzati entrambi. La riga del risultato mostra il **logo** (dopo il caricamento) e il badge **Azienda** accanto al nome. Toccandola si apre la pagina dell'azienda (`/providers/detail?id=...`), con lo stesso badge, e da lì la prenotazione funziona come per i provider privati. Le schede dei provider privati non cambiano.
+Un cliente apre **Prenota un servizio** (`/booking`) e digita il nome pubblico dell'azienda, oppure la ragione sociale: sono indicizzati entrambi. La riga del risultato mostra il **logo** (dopo il caricamento) e il badge **Azienda** accanto al nome. Toccandola si apre la pagina di prenotazione (`/book?providerId=...`), dove il cliente sceglie servizio, giorno e orario; la conferma della prenotazione mostra il nome pubblico dell'azienda. La pagina dell'azienda (`/providers/detail?id=...`) ha logo e lo stesso badge; l'intestazione della pagina di prenotazione non mostra il badge. Le schede dei provider privati non cambiano.
 
 | Schermata | File |
 |--------|------|
 | Risultato di ricerca dell'azienda, con logo e badge | `business-06-search-badge.png` |
 | La pagina provider dell'azienda | `business-07-provider-page.png` |
+
+![Risultato di ricerca dell'azienda, con logo e badge](screenshots-it/business-06-search-badge.png)
+
+![risultato di ricerca a 320 px, in italiano](screenshots-it/business-06b-search-badge-320-it.png)
+
+![risultato di ricerca a 320 px, in tedesco](screenshots-it/business-06b-search-badge-320-de.png)
+
+![La pagina provider dell'azienda](screenshots-it/business-07-provider-page.png)
+
+![pagina di prenotazione aperta dal risultato](screenshots-it/business-07b-book-page.png)
+
+![la conferma della prenotazione mostra il nome dell'azienda](screenshots-it/business-07c-booking-confirm.png)
+
+![dettaglio prenotazione](screenshots-it/business-07d-booking-detail.png)
 
 ---
 
@@ -113,17 +141,23 @@ Dopo il salvataggio il modulo conferma *Dati aziendali salvati*.
 |--------|------|
 | **Dati aziendali** nella scheda Professionale, campi bloccati in sola lettura | `business-08-edit-profile.png` |
 
+![Dati aziendali nella scheda Professionale, campi bloccati in sola lettura](screenshots-it/business-08-edit-profile.png)
+
 ---
 
 ## 5. La sede compare in Palestre e scuole
 
-`/fit/gyms` (**Palestre e scuole**) elenca ogni sede di tipo palestra, scuola o studio. La sede dell'azienda compare quando ha una posizione: il titolare salva la posizione dalla schermata **La tua posizione** (`/provider/location`), la sede ne copia coordinate e città e le segue quando il titolare la sposta (`syncBusinessVenueLocation`). Compaiono anche le sedi in attesa che hanno coordinate.
+`/fit/gyms` (**Palestre e scuole**) elenca ogni sede di tipo palestra, scuola o studio. La sede dell'azienda compare quando ha una posizione (finché il cliente non condivide la sua posizione l'elenco mostra solo le 50 sedi con la valutazione migliore, quindi una sede nuova e senza voti compare dopo aver toccato **Vicino a me** con un raggio che la includa): il titolare salva la posizione dalla schermata **La tua posizione** (`/provider/location`), la sede ne copia coordinate e città e le segue quando il titolare la sposta (`syncBusinessVenueLocation`). Compaiono anche le sedi in attesa che hanno coordinate.
 
 La sede nasce con stato partner *in attesa*. Un admin può aprirla in **Sedi** (`/admin/venues`, che ha una colonna **Proprietario** con l'azienda) e impostarne lo stato partner e gli sconti. Solo una sede partner *attiva* può pubblicare e vendere un calendario di lezioni.
 
 | Schermata | File |
 |--------|------|
 | Elenco **Palestre e scuole** con la sede dell'azienda | `business-09-gyms-and-schools.png` |
+
+![Elenco Palestre e scuole con la sede dell'azienda](screenshots-it/business-09-gyms-and-schools.png)
+
+![la pagina della sede dell'azienda](screenshots-it/business-09b-venue-page.png)
 
 ---
 
@@ -138,3 +172,5 @@ Da quel momento un'altra azienda può registrare quella partita IVA.
 | Schermata | File |
 |--------|------|
 | Finestra **Libera P.IVA** con il campo motivo | `business-10-admin-release-vat.png` |
+
+![Finestra Libera P.IVA con il campo motivo](screenshots-it/business-10-admin-release-vat.png)

@@ -4,13 +4,13 @@ How a **company** (a gym, school or studio) registers as a provider, gets approv
 
 *Italian version: [business-signup.it.md](business-signup.it.md).*
 
-> **Screenshots pending B10.** The steps below describe the code as built. The screenshots have not been captured yet: task B10 of the [business-accounts plan](../plans/2026-10-04-business-accounts-plan.md) records them on staging and saves them to `screenshots/` (this guide) and `screenshots-it/` (the Italian guide). Until then each step lists the file names to expect in a `Screen | File` table.
+> **Recorded on staging, 19 October 2026** (task B10 of the [business-accounts plan](../plans/2026-10-04-business-accounts-plan.md); results in [business-signup-verification.md](business-signup-verification.md)). Screenshots are in `screenshots/` (this guide) and `screenshots-it/` (the Italian guide). Files ending `-light` are the light theme; `business-NN` names without a letter match the `Screen | File` tables, letters (`01b`, `02b`, `03b`, `06b`, `07b`-`07d`, `09b`) are extra states.
 
 | | |
 |--------|----------------------------|
-| **Status** | Written from the code on `main`; not yet walked through on staging |
+| **Status** | Walked through on staging on 19 October 2026: backend `vfit-app-staging`, app commit `cf505de`, dark theme (light where marked) |
 | **Device** | Mobile viewport 390 × 844, as for [signup-to-booking.md](signup-to-booking.md) |
-| **Accounts** | A fresh company account (no real company data), the demo admin account, and a customer to search with |
+| **Accounts** | Fresh company accounts `journey.biz.en.202610191930@vitfitdemo.dev` and `journey.biz.it.202610191930@vitfitdemo.dev` (no real company data, test VAT numbers `01234567897` and `12345678903`), the demo admin `demo.admin@vitfitdemo.dev` and the demo customer `demo.customer@vitfitdemo.dev` |
 | **Related** | [Business (company) accounts](../features.md#business-company-accounts), [`applyAsProvider` and friends](../backend/cloud-functions.md#provider-signup-and-business-accounts-functionssrcproviders) |
 
 ---
@@ -55,13 +55,25 @@ An existing customer can do the same from **Become a professional** on `/profile
 | Signup form with **Company** selected and the company fields filled in | `business-01-signup-company.png` |
 | Inline error under the VAT number (invalid or already registered) | `business-02-signup-vat-error.png` |
 
+![Signup form with Company selected and the company fields filled in](screenshots/business-01-signup-company.png)
+
+![light theme](screenshots/business-01b-signup-company-light.png)
+
+![Inline error under the VAT number (invalid or already registered)](screenshots/business-02-signup-vat-error.png)
+
+![VAT number already registered (focus on the field)](screenshots/business-02b-signup-vat-taken.png)
+
 > **Behind the scenes.** `applyAsProvider` validates the payload and, in one transaction, claims `businessVat/<P.IVA>` and writes the application as *pending*: `users.providerStatus: 'pending'`, `providerType: 'business'` and the `business` map on `instructors/<uid>`. Nothing is public yet. See the [function reference](../backend/cloud-functions.md#provider-signup-and-business-accounts-functionssrcproviders).
 
-After submitting, the owner lands on the existing **Request under review** screen. For a company the text says the VAT number and company details are being verified.
+After submitting, the owner passes the permissions screen (**Skip for now**) and lands on the provider portal, where an amber banner says *We are verifying the VAT number and company details: you will be visible after approval*. On `/profile` the **Request under review** card carries the same company-specific text.
 
 | Screen | File |
 |--------|------|
 | Pending screen for a company | `business-03-pending.png` |
+
+![Pending screen for a company](screenshots/business-03-pending.png)
+
+![provider portal right after signup, with the verification banner](screenshots/business-03b-pending-dashboard.png)
 
 ---
 
@@ -84,16 +96,38 @@ Approving twice never creates a second venue. If a venue already exists at that 
 | `/admin/providers` filtered to **Companies** | `business-04-admin-list-companies.png` |
 | Company detail with the **Company** block and the Verify / Reject actions | `business-05-admin-company-detail.png` |
 
+![`/admin/providers` filtered to Companies](screenshots/business-04-admin-list-companies.png)
+
+![Company detail with the Company block and the Verify / Reject actions](screenshots/business-05-admin-company-detail.png)
+
 ---
 
 ## 3. The company appears in search with the badge
 
-A customer opens **Book a service** (`/booking`) and types the company's public name, or its legal name: both are indexed. The result row shows the company **logo** (once uploaded) and the **Company** badge next to the name. Tapping it opens the company page (`/providers/detail?id=...`), which carries the same badge, and from there the booking flow is the one individual providers use. Individual providers' cards are unchanged.
+A customer opens **Book a service** (`/booking`) and types the company's public name, or its legal name: both are indexed. The result row shows the company **logo** (once uploaded) and the **Company** badge next to the name. Tapping it opens the booking page (`/book?providerId=...`), where the customer picks a service, a day and a time; the booking confirmation shows the company's public name. The company's own page (`/providers/detail?id=...`) carries the logo and the same badge; the booking page header does not show the badge. Individual providers' cards are unchanged.
 
 | Screen | File |
 |--------|------|
 | Search result for the company, with logo and badge | `business-06-search-badge.png` |
 | The company's provider page | `business-07-provider-page.png` |
+
+![Search result for the company, with logo and badge](screenshots/business-06-search-badge.png)
+
+![light theme](screenshots/business-06-search-badge-light.png)
+
+![search result at 320 px, English](screenshots/business-06b-search-badge-320-en.png)
+
+![search result at 320 px, German](screenshots/business-06b-search-badge-320-de.png)
+
+![The company's provider page](screenshots/business-07-provider-page.png)
+
+![light theme](screenshots/business-07-provider-page-light.png)
+
+![booking page opened from the result](screenshots/business-07b-book-page.png)
+
+![booking confirmation shows the company name](screenshots/business-07c-booking-confirm.png)
+
+![booking detail](screenshots/business-07d-booking-detail.png)
 
 ---
 
@@ -113,17 +147,23 @@ After saving, the form confirms *Company details saved*.
 |--------|------|
 | **Company details** on the Professional tab, frozen fields read-only | `business-08-edit-profile.png` |
 
+![Company details on the Professional tab, frozen fields read-only](screenshots/business-08-edit-profile.png)
+
 ---
 
 ## 5. The venue appears under Gyms & schools
 
-`/fit/gyms` (**Gyms & schools**) lists every venue of type gym, school or studio. The company's venue is listed once it has a position: the owner saves a location from the **Your location** screen (`/provider/location`), and the venue copies the coordinates and city from it, and follows when the owner moves it (`syncBusinessVenueLocation`). Pending venues with coordinates are listed too.
+`/fit/gyms` (**Gyms & schools**) lists every venue of type gym, school or studio. The company's venue is listed once it has a position (until the customer shares a location the list shows only the 50 best-rated venues, so a new unrated venue appears after tapping **Near me** with a radius that covers it): the owner saves a location from the **Your location** screen (`/provider/location`), and the venue copies the coordinates and city from it, and follows when the owner moves it (`syncBusinessVenueLocation`). Pending venues with coordinates are listed too.
 
 The venue starts with partner status *pending*. An admin can open it under **Venues** (`/admin/venues`, which has an **Owner** column showing the company) and set its partner status and discounts. Only an *active* partner venue can publish and sell a class timetable.
 
 | Screen | File |
 |--------|------|
 | **Gyms & schools** list with the company's venue | `business-09-gyms-and-schools.png` |
+
+![Gyms & schools list with the company's venue](screenshots/business-09-gyms-and-schools.png)
+
+![the company venue page](screenshots/business-09b-venue-page.png)
 
 ---
 
@@ -138,3 +178,5 @@ Afterwards another company can register that VAT number.
 | Screen | File |
 |--------|------|
 | **Release VAT number** dialog with the reason field | `business-10-admin-release-vat.png` |
+
+![Release VAT number dialog with the reason field](screenshots/business-10-admin-release-vat.png)
