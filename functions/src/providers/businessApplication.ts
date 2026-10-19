@@ -6,7 +6,9 @@ import { isValidItalianVat, normalizeVatNumber } from "./vatNumber";
  * can be unit-tested directly (same split as applicationDecision.ts). applyAsProvider
  * turns a BusinessApplicationError into an `invalid-argument` HttpsError whose message is
  * the `code`, which the signup form maps to a localised inline error — so the codes here
- * are a contract with the client and must stay stable.
+ * are a contract with the client and must stay stable. The full set the callable can
+ * return, including the codes raised by its own Firestore checks, is
+ * `ApplyAsProviderErrorCode` next to the handler.
  */
 
 /** Field length caps; the client form enforces the same numbers. */
@@ -23,7 +25,6 @@ export type BusinessApplicationErrorCode =
   | "provider_type_invalid"
   | "business_required"
   | "business_vat_invalid"
-  | "business_vat_taken"
   | "business_legal_name_required"
   | "business_legal_name_too_long"
   | "business_display_name_required"

@@ -698,7 +698,9 @@ export type BusinessApplicationInput = Pick<BusinessDetails, 'legalName' | 'vatN
 export interface ApplyAsProviderResult {
   success: boolean;
   providerId: string;
-  /** False when queued for an admin: auto-approval off, or always for a business. */
+  /** Where the account stands after the call; an already verified account re-applying is a no-op. */
+  status: 'verified' | 'pending';
+  /** True only when this call verified them: false when queued, and for a verified no-op. */
   autoApproved: boolean;
   draftServicesSeeded: number;
 }
@@ -710,9 +712,12 @@ export interface ApplyAsProviderResult {
  * category; otherwise, and always for a business (`providerType: 'business'` + `business`),
  * the application is queued for an admin and `autoApproved` comes back false.
  *
- * A rejected business payload fails with code `invalid-argument` (or `already-exists` for a
- * P.IVA someone else holds) and a stable message such as `business_vat_invalid` or
- * `business_vat_taken` to map to an inline error.
+ * Failures carry a stable message to map to an inline error (the server's
+ * `ApplyAsProviderErrorCode`): an invalid business payload fails `invalid-argument`
+ * (`business_vat_invalid`, `business_required`, …), a P.IVA someone else holds
+ * `already-exists` / `business_vat_taken`, and a request that would change an existing
+ * account's type (a business re-applying as an individual, a verified individual turning
+ * into a business) `failed-precondition` / `provider_type_locked`.
  *
  * It cannot be done from the client: firestore.rules lets a user create only an unverified,
  * pending instructors document and never lets them set `providerProfile.isVerified`.

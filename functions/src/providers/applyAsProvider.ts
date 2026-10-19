@@ -11,6 +11,7 @@ import { hotCallableOptions } from "../lib/runtimeOptions";
 import { cachedDocRead } from "../lib/cachedDoc";
 import {
   BusinessApplicationError,
+  BusinessApplicationErrorCode,
   ValidatedBusiness,
   parseProviderType,
   validateBusinessApplication,
@@ -26,8 +27,28 @@ interface ApplyAsProviderData {
   business?: Partial<BusinessDetails>;
 }
 
+export interface ApplyAsProviderResult {
+  success: boolean;
+  providerId: string;
+  /** Where the account stands after this call. */
+  status: "verified" | "pending";
+  /** True only when THIS call verified them; a verified account re-applying gets false. */
+  autoApproved: boolean;
+  draftServicesSeeded: number;
+}
+
+/**
+ * Every stable message code this callable can fail with. The validator's codes come back
+ * as `invalid-argument`; `business_vat_taken` as `already-exists`; `provider_type_locked`
+ * as `failed-precondition`. Mirror any change in the client's error mapping.
+ */
+export type ApplyAsProviderErrorCode =
+  | BusinessApplicationErrorCode
+  | "provider_type_locked"
+  | "business_vat_taken";
+
 /** Uniqueness claims on a partita IVA: `businessVat/{digits}` = { uid, createdAt }. Admin SDK only. */
-const BUSINESS_VAT_COLLECTION = "businessVat";
+export const BUSINESS_VAT_COLLECTION = "businessVat";
 
 /**
  * The stored onboarding settings, or the defaults when nothing is configured.
@@ -73,10 +94,12 @@ async function readOnboardingSettings(): Promise<ProviderOnboardingSettings> {
  *
  * Re-applying can never route around a review (see applyAsProvider.test.ts):
  *
- * - An account that is a business (stored `providerType`/`business`) stays a business. A
- *   re-application without a business payload fails `failed-precondition` /
- *   `provider_type_locked` rather than being treated as an individual and auto-approved
- *   with the company map still on the document.
+ * - An account that is a business (stored `providerType`/`business`) stays a business. An
+ *   explicit `providerType: "individual"` without a business payload fails
+ *   `failed-precondition` / `provider_type_locked` rather than being treated as an
+ *   individual and auto-approved with the company map still on the document; any other
+ *   re-application is validated as a business (`business_required` when the payload is
+ *   missing).
  * - A rejected applicant is always queued again, whatever `autoApprove` says: an admin
  *   turned them down and only an admin may reverse that.
  * - An already verified account is a no-op (nothing rewritten); a verified individual
@@ -127,23 +150,40 @@ export const applyAsProvider = onCall<ApplyAsProviderData>(
       caller.providerType === "business" ||
       existing.providerType === "business" ||
       (typeof existing.business === "object" && existing.business !== null);
-    const noop = { success: true, providerId: callerUid, autoApproved: false, draftServicesSeeded: 0 };
+    // Providers from before users.providerStatus existed are verified only on the
+    // instructors side; any of the three flags means an admin (or auto-approval) said yes.
+    const isVerified =
+      caller.providerStatus === "verified" ||
+      existing.applicationStatus === "verified" ||
+      (existing.providerProfile as { isVerified?: unknown } | undefined)?.isVerified === true;
+    // Only an explicit attempt to change type is locked: an omitted providerType is the
+    // default, not a request to become an individual, and a business account that sends a
+    // business payload is re-applying as a business whatever the field says. A business
+    // account with no payload and no type change gets the validator's business_required.
+    const hasBusinessPayload = req.data?.business !== undefined && req.data?.business !== null;
+    const asksToChangeType =
+      (isBusinessAccount && req.data?.providerType === "individual" && !hasBusinessPayload) ||
+      (!isBusinessAccount && requestedType === "business" && isVerified);
+    if (asksToChangeType) {
+      throw new HttpsError("failed-precondition", "provider_type_locked");
+    }
 
-    if (caller.providerStatus === "verified") {
-      if (requestedType === "business" && !isBusinessAccount) {
-        throw new HttpsError("failed-precondition", "provider_type_locked");
-      }
-      return noop;
+    const alreadyVerified: ApplyAsProviderResult = {
+      success: true, providerId: callerUid, status: "verified", autoApproved: false, draftServicesSeeded: 0,
+    };
+    const queued: ApplyAsProviderResult = {
+      success: true, providerId: callerUid, status: "pending", autoApproved: false, draftServicesSeeded: 0,
+    };
+
+    if (isVerified) {
+      return alreadyVerified;
     }
 
     const providerType: ProviderType = isBusinessAccount ? "business" : requestedType;
     if (providerType === "business") {
-      if (isBusinessAccount && (req.data?.business === undefined || req.data?.business === null)) {
-        throw new HttpsError("failed-precondition", "provider_type_locked");
-      }
       const business = withApplicationErrors(() => validateBusinessApplication(req.data?.business));
       await queueBusinessApplication(db, callerUid, categoryIds, caller, business);
-      return noop;
+      return queued;
     }
 
     const wasRejected =
@@ -164,42 +204,66 @@ export const applyAsProvider = onCall<ApplyAsProviderData>(
         notes: "Auto-approved at signup",
         application: { requestedCategoryIds: categoryIds, fullName: applicantName, providerType },
       });
-      return { success: true, providerId: callerUid, autoApproved: true, draftServicesSeeded };
+      return {
+        success: true, providerId: callerUid, status: "verified", autoApproved: true, draftServicesSeeded,
+      } satisfies ApplyAsProviderResult;
     }
 
-    // Queued for review. Same document shape as an approval produces, minus everything that
-    // would make them visible: unverified, pending, and no default hours or draft services —
-    // those are seeded by the decision, so a rejected applicant never accumulates them.
-    const requestedLeaves = requestedLeafIds(categoryIds, caller);
-
-    const now = FieldValue.serverTimestamp();
+    // Queued for review (auto-approval off, or an admin rejected them before).
+    const writes = pendingApplicationWrites({
+      uid: callerUid, name: applicantName, providerType, categoryIds, caller,
+    });
     const batch = db.batch();
-    batch.set(
-      db.collection("instructors").doc(callerUid),
-      {
-        uid: callerUid,
-        name: applicantName,
-        fullName: applicantName,
-        providerType,
-        isActive: true,
-        requestedCategoryIds: requestedLeaves,
-        providerProfile: { isVerified: false, bio: "", rating: 0, reviewCount: 0 },
-        applicationStatus: "pending",
-        createdAt: now,
-        updatedAt: now,
-      },
-      { merge: true }
-    );
-    batch.update(db.collection("users").doc(callerUid), {
+    batch.set(db.collection("instructors").doc(callerUid), writes.instructor, { merge: true });
+    batch.update(db.collection("users").doc(callerUid), writes.user);
+    await batch.commit();
+
+    return queued;
+  },
+);
+
+/**
+ * The two documents a queued application writes — the same shape an approval produces,
+ * minus everything that would make them visible: unverified, pending, and no default hours
+ * or draft services (those are seeded by the decision, so a rejected applicant never
+ * accumulates them). Shared by the individual batch and the business transaction so the
+ * two can never drift. Nested maps only: both callers apply `instructor` with set/merge,
+ * which does not resolve dotted keys (see instructorVerificationPatch).
+ */
+function pendingApplicationWrites(args: {
+  uid: string;
+  name: string | null;
+  providerType: ProviderType;
+  categoryIds: string[];
+  caller: Record<string, unknown>;
+  business?: ValidatedBusiness;
+}): {
+  instructor: Record<string, unknown>;
+  user: { providerStatus: "pending"; providerType: ProviderType; updatedAt: FieldValue };
+} {
+  const { uid, name, providerType, categoryIds, caller, business } = args;
+  const now = FieldValue.serverTimestamp();
+  return {
+    instructor: {
+      uid,
+      name,
+      fullName: name,
+      providerType,
+      ...(business ? { business } : {}),
+      isActive: true,
+      requestedCategoryIds: requestedLeafIds(categoryIds, caller),
+      providerProfile: { isVerified: false, bio: "", rating: 0, reviewCount: 0 },
+      applicationStatus: "pending",
+      createdAt: now,
+      updatedAt: now,
+    },
+    user: {
       providerStatus: "pending",
       providerType,
       updatedAt: now,
-    });
-    await batch.commit();
-
-    return { success: true, providerId: callerUid, autoApproved: false, draftServicesSeeded: 0 };
-  },
-);
+    },
+  };
+}
 
 /**
  * Runs a pure validator, turning its BusinessApplicationError into an `invalid-argument`
@@ -250,7 +314,9 @@ async function queueBusinessApplication(
   const claimRef = db.collection(BUSINESS_VAT_COLLECTION).doc(business.vatNumber);
   const instructorRef = db.collection("instructors").doc(uid);
   const userRef = db.collection("users").doc(uid);
-  const requestedLeaves = requestedLeafIds(categoryIds, caller);
+  const writes = pendingApplicationWrites({
+    uid, name: business.displayName, providerType: "business", categoryIds, caller, business,
+  });
 
   await db.runTransaction(async (tx) => {
     const [claimSnap, instructorSnap] = await Promise.all([tx.get(claimRef), tx.get(instructorRef)]);
@@ -266,31 +332,10 @@ async function queueBusinessApplication(
       if (previous.data()?.uid === uid) tx.delete(previousRef);
     }
 
-    const now = FieldValue.serverTimestamp();
     if (!claimSnap.exists) {
-      tx.create(claimRef, { uid, createdAt: now });
+      tx.create(claimRef, { uid, createdAt: FieldValue.serverTimestamp() });
     }
-    tx.set(
-      instructorRef,
-      {
-        uid,
-        name: business.displayName,
-        fullName: business.displayName,
-        providerType: "business" as ProviderType,
-        business,
-        isActive: true,
-        requestedCategoryIds: requestedLeaves,
-        providerProfile: { isVerified: false, bio: "", rating: 0, reviewCount: 0 },
-        applicationStatus: "pending",
-        createdAt: now,
-        updatedAt: now,
-      },
-      { merge: true }
-    );
-    tx.update(userRef, {
-      providerStatus: "pending",
-      providerType: "business" as ProviderType,
-      updatedAt: now,
-    });
+    tx.set(instructorRef, writes.instructor, { merge: true });
+    tx.update(userRef, writes.user);
   });
 }
