@@ -35,6 +35,8 @@ import { toLocaleTag } from '@/types/locale';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/Modal';
 import { Badge, type BadgeProps } from '@/components/ui/Badge';
+import { BusinessBadge } from '@/components/provider/BusinessBadge';
+import { useProvider } from '@/hooks/useProviders';
 import { Avatar } from '@/components/ui/Avatar';
 import { MapPlaceholder } from '@/components/map/MapPlaceholder';
 import {
@@ -179,6 +181,12 @@ export default function BookingDetailPage() {
   // never writes providerName, which only venue bookings carry), so reading providerName
   // alone left the booking card with a "?" avatar and no name.
   const providerDisplayName = booking?.instructorName || booking?.providerName || '';
+  // Bookings do not store the provider's picture, so read the live profile: a company shows its
+  // logo and the Company badge, anyone else their avatar. Venue bookings have no instructorId and
+  // keep the initials; an unreadable profile (fetchProvider answers null) leaves the stored avatar.
+  const { data: instructor } = useProvider(booking?.instructorId || undefined);
+  const providerPicture = instructor?.logoUrl ?? instructor?.avatarUrl ?? booking?.providerAvatar ?? undefined;
+  const isCompany = instructor?.isBusiness === true;
 
   const handleCancel = async () => {
     if (isCancelling) return;
@@ -257,7 +265,7 @@ export default function BookingDetailPage() {
     router.push(
       chatHref(chatWith, {
         name: providerDisplayName,
-        photoUrl: booking.providerAvatar ?? null,
+        photoUrl: providerPicture ?? null,
         bookingId: booking.id,
       }),
     );
@@ -383,13 +391,16 @@ export default function BookingDetailPage() {
         <div className="bg-surface-elevated/50 rounded-2xl p-4">
           <div className="flex items-center gap-4">
             <Avatar
-              src={booking.providerAvatar}
+              src={providerPicture}
               alt={providerDisplayName}
               size="xl"
               className="shrink-0"
             />
             <div className="flex-1 min-w-0">
-              <h2 className="font-semibold text-content break-words">{providerDisplayName}</h2>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="font-semibold text-content break-words">{providerDisplayName}</h2>
+                {isCompany && <BusinessBadge />}
+              </div>
               <p className="text-text-secondary">{booking.serviceName}</p>
             </div>
             {chatWith && (

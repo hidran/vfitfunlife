@@ -27,6 +27,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/Spinner';
 import { Avatar } from '@/components/ui/Avatar';
+import { BusinessBadge } from '@/components/provider/BusinessBadge';
 import { PriceBreakdown } from '@/components/booking';
 import type { PaymentMethod } from '@/types/booking';
 import { computeBookingPrice } from '@/lib/bookingPrice';
@@ -187,12 +188,15 @@ export default function BookingConfirmPage() {
         <div className="bg-surface-elevated/50 rounded-2xl p-4">
           <div className="flex gap-3">
             <Avatar
-              src={selectedProvider.avatarUrl}
+              src={selectedProvider.logoUrl ?? selectedProvider.avatarUrl}
               alt={selectedProvider.fullName}
               size="lg"
             />
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-content">{selectedProvider.fullName}</h3>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-semibold text-content">{selectedProvider.fullName}</h3>
+                {selectedProvider.isBusiness && <BusinessBadge />}
+              </div>
               <p className="text-text-secondary text-sm truncate">
                 {selectedService.name}
               </p>

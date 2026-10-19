@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/Spinner';
 import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
+import { BusinessBadge } from '@/components/provider/BusinessBadge';
 import { ServiceCard, AvailabilityPicker } from '@/components/booking';
 import type { Service } from '@/types/booking';
 import { useProvider, useProviderServices } from '@/hooks/useProviders';
@@ -166,7 +167,7 @@ export default function ProviderBookingPage() {
       <div className="p-4">
         <div className="flex gap-4">
           <Avatar
-            src={provider.avatarUrl}
+            src={provider.logoUrl ?? provider.avatarUrl}
             alt={provider.fullName}
             size="xl"
             className="flex-shrink-0"
@@ -175,6 +176,7 @@ export default function ProviderBookingPage() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-2xl font-bold text-content">{provider.fullName}</h2>
+              {provider.isBusiness && <BusinessBadge />}
               {provider.isVerified && (
                 <Badge variant="partner" size="sm">
                   <Shield className="w-3 h-3 mr-1" />

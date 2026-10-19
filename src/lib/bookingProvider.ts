@@ -12,6 +12,10 @@ export function providerSearchResultFromProvider(provider: Provider): ProviderSe
     id: provider.id,
     fullName: provider.fullName,
     avatarUrl: provider.avatarUrl ?? undefined,
+    // A company keeps its badge and logo on the confirm page when /book hands over the profile.
+    ...(provider.isBusiness
+      ? { isBusiness: true, business: provider.business, ...(provider.logoUrl ? { logoUrl: provider.logoUrl } : {}) }
+      : {}),
     rating: provider.rating,
     reviewCount: provider.reviewCount,
     isVerified: provider.isVerified,
