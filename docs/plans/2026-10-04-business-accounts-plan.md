@@ -86,7 +86,7 @@ token and booking screen shows the company name with no further change.
 - **Done when:** unit tests cover valid numbers, wrong length, non-digits, bad check digit, `IT` prefix,
   surrounding whitespace, all zeros.
 
-### B2 `[ ]` Types and schema docs (Small)
+### B2 `[x]` (c21d652, 2986e70, 63d0680) Types and schema docs (Small)
 - Files: `src/types/firebase.ts` (`ProviderType`, `BusinessDetails`, `User.providerType`),
   `src/types/instructor.ts` (`Provider.providerType`, `Provider.business`), `functions/src/types`,
   `docs/database-schema.md` (users, instructors, new `businessVat`).
@@ -225,4 +225,5 @@ Added 2026-10-19 from `docs/superpowers/specs/2026-10-19-unified-group-courses-d
 
 - 2026-10-04 — Plan written after the design was approved ("go for C"). No tasks started.
 - 2026-10-19 — B8 owner field corrected to `ownerId`; B12 added (venue on approval, school/studio types) per the unified-courses spec. Execution started (subagent-driven, on main).
+- 2026-10-19 — B2 done (63d0680): canonical 8-value `VenueType` (adds school/studio; keeps outdoor_space/event_space), `hostsCourses` in both trees with Record-table tests; B12 must also add school/studio to VenueFormView/VenuesListView options and functions/src/ai/tools/index.ts enum.
 - 2026-10-19 — B1 done (e308d61): validator in both trees, 19+19 tests; follow-up for B3: add a check-digit-0 fixture (e.g. 50500000000) and `typeof === 'string'` guard before calling from callables.
