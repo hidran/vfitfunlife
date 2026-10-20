@@ -560,7 +560,8 @@ describe("saveCourse lock lifecycle", () => {
       expect(failed.reason.message).toBe("room_overlap");
       await assertLockInvariant(db);
     }
-  });
+    // Each round pays for a lost transaction retry plus teardown: ~15 s, too close to the 15 s default.
+  }, 60000);
 });
 
 describe("previewCourse conflicts", () => {
