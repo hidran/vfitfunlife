@@ -41,7 +41,6 @@ const retryQuote = (count: number, err: unknown) => count < 2 &&
 export const useCourseQuote = (courseId?: string, sessionIds?: string[], includeSeries = true, enabled = true) => useQuery({
   queryKey: ['courses', 'quote', courseId, sessionIds ?? null, includeSeries],
   queryFn: () => quoteCourse(courseId!, sessionIds, includeSeries), enabled: !!courseId && enabled, staleTime: 15000, retry: retryQuote });
-/** Not `useVenueCourses` (src/hooks/useVenues.ts is the legacy gym classes list, removed with the gym flow). */
 export const useManagedVenueCourses = (venueId?: string) => useQuery({ queryKey: ['courses', 'venue', venueId],
   queryFn: () => fetchVenueCourses(venueId!), enabled: !!venueId, ...MANAGER_POLL });
 /**

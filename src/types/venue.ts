@@ -87,15 +87,6 @@ export interface VenueService {
   isActive: boolean;
 }
 
-export interface VenueCourse {
-  id: string;
-  name: string;
-  time: string;
-  coach: string;
-  spots: number;
-  dayOfWeek?: number;
-}
-
 export interface VenueListOptions {
   type?: VenueType;
   /**

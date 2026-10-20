@@ -3,7 +3,6 @@ import {
   fetchVenue,
   fetchVenues,
   fetchVenueServices,
-  fetchVenueCourses,
   fetchManagedVenues,
   fetchVenuesNear,
   typeFilter,
@@ -148,16 +147,6 @@ describe('fetchVenueServices', () => {
     } as never);
     const result = await fetchVenueServices('carosello');
     expect(result).toEqual([{ id: 'svc-1', name: 'Daily pass', price: 18, isActive: true }]);
-  });
-});
-
-describe('fetchVenueCourses', () => {
-  it('returns courses from subcollection', async () => {
-    mockGetDocs.mockResolvedValueOnce({
-      docs: [{ id: 'c-1', data: () => ({ name: 'HIIT', time: '07:30', coach: 'Marco', spots: 3 }) }],
-    } as never);
-    const result = await fetchVenueCourses('carosello');
-    expect(result).toEqual([{ id: 'c-1', name: 'HIIT', time: '07:30', coach: 'Marco', spots: 3 }]);
   });
 });
 

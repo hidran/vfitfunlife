@@ -633,7 +633,6 @@ interface SampleVenueData {
   amenities: { kind: string }[];
   hours: { day: string; time: string }[];
   services: { id: string; name: string; price: number; durationMinutes?: number; isActive: boolean }[];
-  courses: { id: string; name: string; time: string; coach: string; spots: number }[];
 }
 
 const SAMPLE_VENUES: SampleVenueData[] = [
@@ -670,11 +669,6 @@ const SAMPLE_VENUES: SampleVenueData[] = [
       { id: "svc-2", name: "Abbonamento mensile", price: 59, isActive: true },
       { id: "svc-3", name: "Personal training", price: 45, durationMinutes: 60, isActive: true },
     ],
-    courses: [
-      { id: "course-1", name: "HIIT Power", time: "07:30", coach: "Marco R.", spots: 3 },
-      { id: "course-2", name: "Pilates Flow", time: "12:15", coach: "Elena B.", spots: 6 },
-      { id: "course-3", name: "Functional 360", time: "19:00", coach: "Luca S.", spots: 2 },
-    ],
   },
   {
     id: "urban-core",
@@ -705,10 +699,6 @@ const SAMPLE_VENUES: SampleVenueData[] = [
       { id: "svc-1", name: "Accesso giornaliero", price: 22, isActive: true },
       { id: "svc-2", name: "Mensile All-in", price: 75, isActive: true },
     ],
-    courses: [
-      { id: "course-1", name: "CrossFit AM", time: "07:00", coach: "Anna T.", spots: 4 },
-      { id: "course-2", name: "Boxe Tecnica", time: "20:00", coach: "Davide M.", spots: 5 },
-    ],
   },
   {
     id: "village-fit",
@@ -728,7 +718,6 @@ const SAMPLE_VENUES: SampleVenueData[] = [
     amenities: [{ kind: "yoga" }, { kind: "spa" }],
     hours: [{ day: "Lun - Dom", time: "07:00 - 22:00" }],
     services: [{ id: "svc-1", name: "Drop-in", price: 20, isActive: true }],
-    courses: [],
   },
   {
     id: "pulse-studio",
@@ -748,7 +737,6 @@ const SAMPLE_VENUES: SampleVenueData[] = [
     amenities: [{ kind: "pilates" }, { kind: "cardio" }],
     hours: [{ day: "Lun - Sab", time: "08:00 - 21:00" }],
     services: [{ id: "svc-1", name: "Lezione Pilates", price: 25, durationMinutes: 55, isActive: true }],
-    courses: [],
   },
   {
     id: "elite-fitness",
@@ -768,7 +756,6 @@ const SAMPLE_VENUES: SampleVenueData[] = [
     amenities: [{ kind: "pool" }, { kind: "tennis" }, { kind: "spa" }],
     hours: [{ day: "Lun - Dom", time: "06:00 - 23:00" }],
     services: [{ id: "svc-1", name: "Day pass", price: 35, isActive: true }],
-    courses: [],
   },
   {
     id: "power-gym",
@@ -788,7 +775,6 @@ const SAMPLE_VENUES: SampleVenueData[] = [
     amenities: [{ kind: "weights" }, { kind: "cardio" }],
     hours: [{ day: "Lun - Dom", time: "06:00 - 22:00" }],
     services: [{ id: "svc-1", name: "Mensile", price: 39, isActive: true }],
-    courses: [],
   },
 ];
 
@@ -803,7 +789,7 @@ export async function seedSampleVenues(): Promise<SeedingResult> {
 
     for (const v of SAMPLE_VENUES) {
       const venueRef = db.collection("venues").doc(v.id);
-      const { services, courses, ...venueDoc } = v;
+      const { services, ...venueDoc } = v;
       batch.set(
         venueRef,
         { ...venueDoc, createdAt: now, updatedAt: now },
@@ -811,9 +797,6 @@ export async function seedSampleVenues(): Promise<SeedingResult> {
       );
       for (const s of services) {
         batch.set(venueRef.collection("services").doc(s.id), s, { merge: true });
-      }
-      for (const c of courses) {
-        batch.set(venueRef.collection("courses").doc(c.id), c, { merge: true });
       }
     }
 
@@ -1208,9 +1191,6 @@ export async function generateDemoData(): Promise<SeedingResult[]> {
     { name: `${specialty} online`, description: "Sessione live via video con coaching in tempo reale." },
   ];
 
-  // Course times to pick from
-  const COURSE_TIMES = ["07:30", "09:00", "10:30", "12:15", "14:00", "17:00", "18:30", "19:30", "20:00", "20:30"];
-
   // Hours variants
   const HOURS_VARIANTS = [
     [
@@ -1401,7 +1381,6 @@ export async function generateDemoData(): Promise<SeedingResult[]> {
   try {
     let venueCount = 0;
     let venueSvcCount = 0;
-    let venueCourseCount = 0;
     const now = Timestamp.now();
 
     type VenueType = "gym" | "wellness_center" | "spa" | "beauty_salon";
@@ -1516,24 +1495,6 @@ export async function generateDemoData(): Promise<SeedingResult[]> {
           await queueWrite(venueRef.collection("services").doc(svcId), { ...svc } as Record<string, unknown>);
           venueSvcCount++;
         }
-
-        // Courses subcollection: only gyms and wellness_centers, 2–4 courses
-        if (type === "gym" || type === "wellness_center") {
-          const courseCount = randomInt(2, 4);
-          for (let ci = 0; ci < courseCount; ci++) {
-            const cId = `course-${ci + 1}`;
-            const coachFirst = randomItem(FIRST_NAMES);
-            const coachLastInit = randomItem(LAST_NAMES)[0];
-            const courseDoc: Record<string, unknown> = {
-              name: randomItem(CLASS_NAMES),
-              time: randomItem(COURSE_TIMES),
-              coach: `${coachFirst} ${coachLastInit}.`,
-              spots: randomInt(2, 10),
-            };
-            await queueWrite(venueRef.collection("courses").doc(cId), courseDoc);
-            venueCourseCount++;
-          }
-        }
       }
     }
 
@@ -1544,7 +1505,7 @@ export async function generateDemoData(): Promise<SeedingResult[]> {
     }
 
     results.push({ success: true, collection: "venues (demo)", count: venueCount });
-    results.push({ success: true, collection: "services + courses (demo)", count: venueSvcCount + venueCourseCount });
+    results.push({ success: true, collection: "services (demo)", count: venueSvcCount });
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Unknown error";
     results.push({ success: false, collection: "venues (demo)", count: 0, error: msg });
@@ -2865,7 +2826,7 @@ const DEMO_SEED_RUNNERS: Record<DemoSeedPart, () => Promise<SeedingResult[]>> = 
  * POST /seedDemoData
  * Body: { parts?: ("core"|"content"|"clients"|"photos"|"avatars"|"prices"|"coords")[] }
  * With no body, every part runs. `core` generates 320 trainers (20 per specialty) + 120
- * venues across 12 Italian cities, each with services and courses subcollections.
+ * venues across 12 Italian cities, each with a services subcollection.
  * Idempotent (merge: true with deterministic IDs).
  * Requires: Authentication + Admin role
  */

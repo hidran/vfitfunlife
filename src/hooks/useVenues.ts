@@ -5,7 +5,6 @@ import {
   fetchVenues,
   fetchVenuesNear,
   fetchVenueServices,
-  fetchVenueCourses,
 } from '@/lib/firebase/venues';
 import type { Venue, VenueListOptions, VenueType } from '@/types/venue';
 import { annotateAndSortByDistance, coordsOf, roundLocation, type LatLng } from '@/lib/geo';
@@ -91,11 +90,3 @@ export function useVenueServices(venueId: string | undefined) {
   });
 }
 
-export function useVenueCourses(venueId: string | undefined) {
-  return useQuery({
-    queryKey: ['venue-courses', venueId],
-    queryFn: () => fetchVenueCourses(venueId as string),
-    enabled: !!venueId && venueId !== 'placeholder',
-    staleTime: STALE_5_MIN,
-  });
-}

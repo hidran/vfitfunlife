@@ -12,7 +12,6 @@ vi.mock('@/lib/firebase/venues', () => ({
   fetchVenues: mocks.fetchVenues,
   fetchVenuesNear: mocks.fetchVenuesNear,
   fetchVenueServices: vi.fn(),
-  fetchVenueCourses: vi.fn(),
 }));
 
 import { useNearbyVenues, NEARBY_FALLBACK_LIMIT } from './useVenues';

@@ -19,7 +19,6 @@ import type {
   Venue,
   VenueListOptions,
   VenueService,
-  VenueCourse,
   VenueType,
 } from '@/types/venue';
 
@@ -111,16 +110,6 @@ export async function fetchVenueServices(venueId: string): Promise<VenueService[
     return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<VenueService, 'id'>) }));
   } catch (error) {
     console.error('[fetchVenueServices]', venueId, error);
-    return [];
-  }
-}
-
-export async function fetchVenueCourses(venueId: string): Promise<VenueCourse[]> {
-  try {
-    const snap = await getDocs(collection(db, 'venues', venueId, 'courses'));
-    return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<VenueCourse, 'id'>) }));
-  } catch (error) {
-    console.error('[fetchVenueCourses]', venueId, error);
     return [];
   }
 }
