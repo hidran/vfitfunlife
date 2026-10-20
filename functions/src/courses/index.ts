@@ -161,9 +161,12 @@ export const saveCourse = onCall({ region }, async (req) => {
         const locationId = previous && roomKept ? previous.locationId ?? input.locationId : input.locationId;
         const instructorId = previous && instructorKept ? previous.instructorId ?? input.instructorId :
           input.instructorId;
-        const instructor = previous && instructorKept ? previous.instructor ?? input.instructor : input.instructor;
-        const instructorName = previous && instructorKept ?
+        // Text follows the course unless the lesson was moved to its own room or given a substitute.
+        const ownInstructor = !!previous && instructorKept && (previous.instructorId ?? null) !== input.instructorId;
+        const instructor = ownInstructor ? previous.instructor ?? input.instructor : input.instructor;
+        const instructorName = ownInstructor ?
           previous.instructorName ?? previous.instructor ?? input.instructor : input.instructor;
+        const ownRoom = !!previous && roomKept && !!previous.roomId && previous.roomId !== input.roomId;
         const state = previous?.state ?? "scheduled";
         const bumped = !!previous && state === "scheduled" && (priceOrCapacity || sessionRevisionBumped(
           { startsAt: previous.startsAt.toMillis(), endsAt: previous.endsAt.toMillis(),
@@ -171,7 +174,8 @@ export const saveCourse = onCall({ region }, async (req) => {
           { startsAt: startsAt.toMillis(), endsAt: endsAt.toMillis(), roomId, instructorId }));
         return { id: session.id, data: {
           startsAt, endsAt, capacity: capacityOf(previous), occupied: previous?.occupied ?? 0,
-          held: previous?.held ?? 0, state, location: previous?.location ?? input.location, instructor,
+          held: previous?.held ?? 0, state, instructor,
+          location: ownRoom ? previous.location ?? input.location : input.location,
           courseId: id, venueId: input.venueId, locationId, roomId, instructorId,
           instructorName, listed: input.state === "published", waitlisted: previous?.waitlisted ?? 0,
           revision: (previous?.revision ?? 1) + (bumped ? 1 : 0),

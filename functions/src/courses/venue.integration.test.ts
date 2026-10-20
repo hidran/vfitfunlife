@@ -461,6 +461,32 @@ describe("saveCourse session snapshots and revisions", () => {
     await expect(save("biz", { ...venueInput, roomId: "r2", instructorId: "p2", locationId: "l2" }, courseId))
       .rejects.toThrow("booked_schedule_locked");
   });
+  it("moves the place text of unbooked sessions with the room", async () => {
+    await db.doc("venues/v/locations/l1/rooms/r2").set({ name: "Sala 2", isActive: true });
+    const { courseId } = await save("biz", venueInput);
+    expect((await sessions(courseId)).map((s) => s.location)).toEqual(["Sala 1 · Sede", "Sala 1 · Sede"]);
+    await save("biz", { ...venueInput, roomId: "r2" }, courseId);
+    expect((await sessions(courseId)).map((s) => s.location)).toEqual(["Sala 2 · Sede", "Sala 2 · Sede"]);
+    await save("biz", { ...venueInput, roomId: "r2", locationId: "l2" }, courseId);
+    expect((await sessions(courseId)).map((s) => s.location)).toEqual(["Sala 2 · Altra", "Sala 2 · Altra"]);
+  });
+  it("shows the renamed room on every session of a booked course, but keeps a lesson's own room text", async () => {
+    const { courseId } = await save("biz", venueInput);
+    await db.doc(`courses/${courseId}/sessions/2099-10-13`).update({ roomId: "r3", location: "Sala 3 · Sede" });
+    await book(courseId);
+    await db.doc("venues/v/locations/l1/rooms/r1").update({ name: "Sala Grande" });
+    await save("biz", { ...venueInput, name: "Karate 2" }, courseId);
+    expect((await sessions(courseId)).map((s) => s.location)).toEqual(["Sala Grande · Sede", "Sala 3 · Sede"]);
+  });
+  it("updates the instructor text of a lesson without a substitute, and keeps the substitute's", async () => {
+    const { courseId } = await save("biz", venueInput);
+    await db.doc(`courses/${courseId}/sessions/2099-10-13`).update({ instructorId: "p2", instructor: "Paola",
+      instructorName: "Paola" });
+    await db.doc("instructors/p").update({ fullName: "Anna Rossi" });
+    await save("biz", { ...venueInput, name: "Karate 2" }, courseId);
+    expect((await sessions(courseId)).map((s) => [s.instructor, s.instructorName])).toEqual(
+      [["Anna Rossi", "Anna Rossi"], ["Paola", "Paola"]]);
+  });
   it("lets a booked venue course be edited after its room was renamed", async () => {
     const { courseId } = await save("biz", venueInput);
     await book(courseId);
