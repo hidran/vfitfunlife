@@ -24,7 +24,7 @@ export function ParticipantInvitation({ courseId, userId }: { courseId: string; 
       <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => notify('phone')}>{t('courses.invitePhone')}</Button>
     </div>
     {status && <p role="status" className="text-sm">{status}</p>}
-    {links && <div className="flex flex-wrap gap-3 text-sm font-semibold text-section-primary">
+    {links && <div className="flex flex-wrap gap-3 text-sm font-semibold text-section-ink">
       <a href={links.smsUrl}>{t('courses.openSms')}</a>
       {links.whatsAppUrl && <a href={links.whatsAppUrl} target="_blank" rel="noopener noreferrer">WhatsApp</a>}
     </div>}

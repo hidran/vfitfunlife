@@ -51,7 +51,7 @@ export function MyWaitlist({ uid, showEmpty = false }: { uid?: string; /** Say s
       return <li key={key(entry)} className="space-y-2 rounded-2xl border border-hairline bg-surface p-5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <Link className="text-lg font-semibold underline-offset-4 hover:underline" href={`/courses?id=${encodeURIComponent(entry.courseId)}`}>{entry.courseName}</Link>
-          <span className="text-sm font-medium text-section-primary">{t('courses.position', { position: entry.position })}</span></div>
+          <span className="text-sm font-medium text-section-ink">{t('courses.position', { position: entry.position })}</span></div>
         {startsAt && timezone && <p className="text-sm text-content-muted">{new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short', timeZone: timezone }).format(startsAt)}</p>}
         {confirming === key(entry) ? <div className="flex flex-wrap gap-2"><p className="w-full">{t('courses.leaveWaitlistConfirm')}</p>
           <Button size="sm" className="min-h-11" disabled={busy} onClick={() => leave(entry)}>{t('courses.confirm')}</Button>

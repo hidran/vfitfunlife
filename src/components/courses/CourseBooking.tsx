@@ -196,7 +196,7 @@ export function CourseBooking({ course, sessions, checkoutEnabled, uid, initialS
           <p className="text-sm">{s.state === 'cancelled' ? t('courses.cancelled') :
             `${t('courses.spots')}: ${Math.max(0, s.capacity - s.occupied - s.held)} / ${s.capacity}`}</p>
           {enrollmentOf(s.id) && <p className="text-sm font-medium text-success" data-testid="enrolled">{t(`courses.${enrollmentOf(s.id)!.state as 'held' | 'confirmed'}`)}</p>}
-          {entry && <p className="text-sm font-medium text-section-primary" data-testid="on-waitlist">{t('courses.onWaitlist', { position: entry.position })}</p>}</div>
+          {entry && <p className="text-sm font-medium text-section-ink" data-testid="on-waitlist">{t('courses.onWaitlist', { position: entry.position })}</p>}</div>
         <div className="flex flex-wrap items-center gap-2">
           {entry ? <Button size="sm" variant="outline" className="min-h-11" disabled={busy} onClick={() => leave(s.id)}>{t('courses.leaveWaitlist')}</Button> :
             full(s) && canWaitlist(s) ? ((s.waitlisted ?? 0) >= WAITLIST_MAX ?

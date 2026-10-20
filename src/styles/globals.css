@@ -4,6 +4,19 @@
    (gold/orange text is unreadable on white). */
 @custom-variant light (&:where([data-theme='light'], [data-theme='light'] *));
 
+/* Section-coloured TEXT (links, outline-button labels): the section hue as is on dark, and the
+   same hue darkened to AA on the light theme. The `.text-section-primary` light override further
+   down sits in `@layer components`, where the `text-section-primary` utility beats it, so it never
+   applies; use this utility for text that must stay readable on light surfaces. */
+@utility text-section-ink {
+  color: var(--section-primary);
+  @supports (color: color-mix(in lab, red, red)) {
+    [data-theme='light'] & {
+      color: color-mix(in oklab, var(--section-primary) 55%, black);
+    }
+  }
+}
+
 @layer components {
 /* The public landing keeps its bright editorial palette in light mode and
    becomes a quiet ink-on-surface layout when the system or user selects dark. */

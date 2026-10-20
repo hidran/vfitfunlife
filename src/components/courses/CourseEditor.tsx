@@ -161,7 +161,7 @@ export function CourseEditor({ course, onSaved, onClose, storageKey, initialVenu
           <label className="space-y-1 text-sm">{t('courses.room')}<select className={inputClass} required value={draft.roomId ?? ''} disabled={!draft.locationId} onChange={e => chooseRoom(e.target.value)}>
             <option value="">{t('common.select')}</option>
             {roomOptions.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select></label>
-          {noSpaces && <p className="sm:col-span-3 text-sm"><Link className="font-semibold text-section-primary underline-offset-4 hover:underline"
+          {noSpaces && <p className="sm:col-span-3 text-sm"><Link className="font-semibold text-section-ink underline-offset-4 hover:underline"
             href={`/provider/courses?venue=${encodeURIComponent(venueId)}#spaces`}>{t('courses.addSpaces')}</Link></p>}
         </>}
       </fieldset>}

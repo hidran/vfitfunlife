@@ -115,7 +115,7 @@ export function VenueTimetable() {
   const loading = venue.isLoading || (open && (sessions.isLoading || courses.isLoading));
   return <div className="mx-auto max-w-6xl space-y-5 px-4 py-6 pb-28 md:px-8">
     <header className="space-y-2">
-      <Link href={`/venue?id=${encodeURIComponent(venueId)}`} className="inline-flex min-h-11 items-center text-sm text-section-primary">← {venue.data?.name}</Link>
+      <Link href={`/venue?id=${encodeURIComponent(venueId)}`} className="inline-flex min-h-11 items-center text-sm text-section-ink">← {venue.data?.name}</Link>
       <h1 className="font-display text-3xl font-bold text-content">{t('timetable.title')}</h1>
       {canManage && <Link href={`/provider/courses?venue=${encodeURIComponent(venueId)}`}
         className="inline-flex min-h-11 items-center rounded-xl border border-hairline px-4 text-sm font-semibold text-content">{t('timetable.manage')}</Link>}
@@ -151,7 +151,7 @@ export function VenueTimetable() {
         <div ref={tabsRef} className="flex gap-1 overflow-x-auto pb-1" data-testid="day-tabs">{days.map(value => <button key={value} type="button" data-testid={`tab-${value}`}
           aria-pressed={value === day} onClick={() => setSelectedDay(value)}
           className={cn('min-h-14 min-w-12 flex-1 shrink-0 rounded-xl border p-1 text-center text-xs', value === day ?
-            'border-section-primary bg-section-primary/15 text-section-primary' : 'border-hairline bg-surface text-content')}>
+            'border-section-primary bg-section-primary/15 text-section-ink' : 'border-hairline bg-surface text-content')}>
           <span className="block capitalize">{dayLabel(value, locale, { weekday: 'short' })}</span>
           <span className="block text-lg font-semibold">{dayLabel(value, locale, { day: 'numeric' })}</span>
         </button>)}</div>
@@ -163,7 +163,7 @@ export function VenueTimetable() {
         <div className="grid gap-2" style={{ gridTemplateColumns: '4rem repeat(7, minmax(0, 1fr))' }}>
           <div />
           {days.map(value => <div key={value} className={cn('rounded-xl border p-2 text-center text-sm', value === day ?
-            'border-section-primary text-section-primary' : 'border-hairline text-content')}>
+            'border-section-primary text-section-ink' : 'border-hairline text-content')}>
             <span className="block capitalize">{dayLabel(value, locale, { weekday: 'short' })}</span>
             <span className="block text-lg font-semibold">{dayLabel(value, locale, { day: 'numeric' })}</span></div>)}
           {times.map(time => <Fragment key={time}>

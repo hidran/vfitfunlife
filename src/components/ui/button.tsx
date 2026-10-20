@@ -36,7 +36,9 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       // Tinted with the `content` token: white-alpha on dark (identical to the
       // old bg-white/10 etc.), ink-alpha on light.
       secondary: 'bg-content/10 text-content hover:bg-content/20 border border-content/20',
-      outline: 'border-2 border-section-primary text-section-primary hover:bg-section-primary/10',
+      // Light theme: the section hue is ~1.9:1 on white, so the label is darkened (AA) while the border keeps the hue.
+      // `text-section-ink` is the section hue on dark and its AA-darkened shade on light (globals.css).
+      outline: 'border-2 border-section-primary text-section-ink hover:bg-section-primary/10',
       ghost: 'text-text-inverse hover:bg-content/10',
       social:
         'bg-content/20 text-content border border-content/10 hover:bg-content/35 hover:border-content/20 light:bg-surface light:hover:bg-background-dark light:border-hairline',

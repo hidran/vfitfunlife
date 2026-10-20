@@ -35,7 +35,7 @@ export function CourseSearchResults({ courses }: { courses: Course[] }) {
         {course.seriesPriceCents !== null && <span>{t('courses.series')}: {coursePrice(course.seriesPriceCents, locale, t('courses.free'))}</span>}
       </div>
       <Link href={`/courses?id=${encodeURIComponent(course.id)}`}
-        className="inline-flex rounded-xl border border-hairline px-4 py-2 font-semibold text-section-primary">{t('courses.sessions')}</Link>
+        className="inline-flex rounded-xl border border-hairline px-4 py-2 font-semibold text-section-ink">{t('courses.sessions')}</Link>
     </article>)}</div>
   </section>;
 }
