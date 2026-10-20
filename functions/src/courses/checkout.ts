@@ -27,7 +27,9 @@ export const createCourseCheckout = onCall(
     const e = await db.runTransaction(async (tx) => {
       const stored = (await tx.get(ref)).data() as Enrollment | undefined;
       if (!stored || stored.userId !== uid) throw new HttpsError("permission-denied", "enrollment_owner_required");
-      if (stored.paymentMode !== "stripe" || stored.state !== "held" || stored.holdExpiresAt.toMillis() <= Date.now()) {
+      // Stripe rejects zero-amount sessions; free bookings are never held, so a zero total is a corrupt hold.
+      if (stored.paymentMode !== "stripe" || stored.state !== "held" || stored.totalCents <= 0 ||
+        stored.holdExpiresAt.toMillis() <= Date.now()) {
         throw new HttpsError("failed-precondition", "checkout_hold_unavailable");
       }
       if (!stored.checkoutExpiresAt && !stored.checkoutUrl) {

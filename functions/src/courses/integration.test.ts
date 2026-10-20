@@ -278,6 +278,54 @@ describe("transactional course enrollment", () => {
   });
 });
 
+describe("checkout and release rules", () => {
+  const first = "2099-10-12";
+  const sessionRef = (courseId: string) => db.doc(`courses/${courseId}/sessions/${first}`);
+  const startingIn = (hours: number) => admin.firestore.Timestamp.fromMillis(Date.now() + hours * 3600000);
+  it("never sends a zero-amount session to Stripe", async () => {
+    const id = await create();
+    await db.doc("systemSettings/payments").set({ stripePaymentsEnabled: true, courseCheckoutEnabled: true });
+    (await import("../lib/cachedDoc")).invalidateCachedDoc("systemSettings/payments");
+    await db.doc("courseEnrollments/zero").set({ userId: "u", courseId: id, courseName: "Karate", paymentMode: "stripe",
+      state: "held", totalCents: 0, holdExpiresAt: startingIn(1) });
+    await expect(api.createCourseCheckout.run(request("u", { enrollmentId: "zero" })))
+      .rejects.toThrow("checkout_hold_unavailable");
+    expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
+  });
+  it("books a free lesson as paid direct without any checkout, whatever mode was requested", async () => {
+    const id = (await api.saveCourse.run(request("p", { course: { ...input, lessonPriceCents: 0, seriesPriceCents: 0 } }))).courseId;
+    await db.doc("systemSettings/payments").set({ stripePaymentsEnabled: true, courseCheckoutEnabled: true });
+    (await import("../lib/cachedDoc")).invalidateCachedDoc("systemSettings/payments");
+    const booking = await api.enrollInCourse.run(request("u", { courseId: id, scope: "lesson", sessionId: first,
+      requestId: "free", paymentMode: "stripe" }));
+    expect(booking).toMatchObject({ state: "confirmed", totalCents: 0 });
+    expect((await db.doc(`courseEnrollments/${booking.enrollmentId}`).get()).data())
+      .toMatchObject({ paymentMode: "direct", paymentStatus: "paid" });
+    expect((await sessionRef(id).get()).data()).toMatchObject({ occupied: 1, held: 0 });
+  });
+  it("refuses a manager releasing a lesson that has already started", async () => {
+    const id = await create(); const e = await enroll(id, "u", "lesson");
+    await sessionRef(id).update({ startsAt: startingIn(-1) });
+    await expect(api.cancelCourseEnrollment.run(request("p", { enrollmentId: e.enrollmentId })))
+      .rejects.toThrow("cannot_cancel_past_lesson");
+    expect((await sessionRef(id).get()).data()?.occupied).toBe(1);
+    expect((await db.doc(`courseEnrollments/${e.enrollmentId}`).get()).data()?.state).toBe("confirmed");
+  });
+  it("refuses a customer cancelling inside the cancellation deadline", async () => {
+    const id = await create(); const e = await enroll(id, "u", "lesson");
+    await sessionRef(id).update({ startsAt: startingIn(23) });
+    await expect(api.cancelCourseEnrollment.run(request("u", { enrollmentId: e.enrollmentId })))
+      .rejects.toThrow("cancellation_deadline");
+    expect((await sessionRef(id).get()).data()?.occupied).toBe(1);
+  });
+  it("lets a customer cancel outside the cancellation deadline", async () => {
+    const id = await create(); const e = await enroll(id, "u", "lesson");
+    await sessionRef(id).update({ startsAt: startingIn(25) });
+    await api.cancelCourseEnrollment.run(request("u", { enrollmentId: e.enrollmentId }));
+    expect((await sessionRef(id).get()).data()?.occupied).toBe(0);
+    expect((await db.doc(`courseEnrollments/${e.enrollmentId}`).get()).data()?.state).toBe("cancelled");
+  });
+});
 describe("participant invitations and account activation", () => {
   async function linked() {
     await db.doc("users/u").update({ email: "recipient@example.com", fullName: "Anna User", accountStatus: "invited" });

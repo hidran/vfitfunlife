@@ -89,4 +89,39 @@ describe("enrollInTx", () => {
     // The offset is only a capacity allowance: the releasing writer owns the matching decrement.
     expect(await session()).toMatchObject({ occupied: 2 });
   });
+  it("creates the customer counter doc only when absent and never resets existing counters", async () => {
+    const old = Timestamp.fromMillis(1000);
+    await db.doc("courses/c1/customers/u").set({ userId: "u", createdAt: old, lateCancels: 2, noShows: 1 });
+    await book(input("u"));
+    expect((await db.doc("courses/c1/customers/u").get()).data())
+      .toEqual({ userId: "u", createdAt: old, lateCancels: 2, noShows: 1 });
+    await db.doc("courses/c1").update({ capacity: 2 });
+    await db.doc(`courses/c1/sessions/${day}`).update({ capacity: 2 });
+    await book(input("v"));
+    expect((await db.doc("courses/c1/customers/v").get()).data()).toMatchObject({ userId: "v" });
+  });
+
+  it("refuses a stripe booking while course checkout is off, writing nothing", async () => {
+    await expect(book(input("u", { paymentMode: "stripe", checkoutOn: false }))).rejects.toThrow("not enabled");
+    expect(await session()).toMatchObject({ occupied: 0, held: 0 });
+  });
+
+  it("books a free lesson as direct, confirmed and paid even when stripe was requested", async () => {
+    await db.doc("courses/c1").update({ lessonPriceCents: 0 });
+    const first = await book(input("u", { paymentMode: "stripe", checkoutOn: true }));
+    expect(first).toMatchObject({ state: "confirmed", totalCents: 0, replay: false });
+    expect(await session()).toMatchObject({ occupied: 1, held: 0 });
+    expect((await db.doc(`courseEnrollments/${first.enrollmentId}`).get()).data()).toMatchObject({
+      paymentMode: "direct", state: "confirmed", paymentStatus: "paid", paidCents: 0, paymentMethod: "free", totalCents: 0 });
+    expect((await db.doc(`courses/c1/sessions/${day}/participants/u`).get()).data()).toMatchObject({ state: "confirmed" });
+    // The same request replays whichever mode it asks for.
+    expect(await book(input("u", { paymentMode: "stripe", checkoutOn: true }))).toMatchObject({ replay: true });
+  });
+
+  it("books a free series as direct and paid", async () => {
+    await db.doc("courses/c1").update({ seriesPriceCents: 0 });
+    const booking = await book(input("u", { scope: "series", paymentMode: "stripe", checkoutOn: true }));
+    expect((await db.doc(`courseEnrollments/${booking.enrollmentId}`).get()).data())
+      .toMatchObject({ paymentMode: "direct", paymentStatus: "paid", totalCents: 0, allocations: { [day]: 0 } });
+  });
 });

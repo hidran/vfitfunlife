@@ -16,12 +16,13 @@ async function enroll(req: CallableRequest, byProvider = false) {
   if (!["lesson", "series"].includes(scope) || !["direct", "stripe"].includes(paymentMode)) {
     throw new HttpsError("invalid-argument", "invalid_booking_option");
   }
-  if (paymentMode === "stripe" && !checkoutActive(await readPaymentSettings())) {
+  const checkoutOn = checkoutActive(await readPaymentSettings());
+  if (paymentMode === "stripe" && !checkoutOn) {
     throw new HttpsError("failed-precondition", "Online course payments are not enabled");
   }
   const input: EnrollInput = {
     actor, uid, courseId, scope, paymentMode, requestId, byProvider, sessionId: req.data.sessionId,
-    checkoutOn: paymentMode === "stripe",
+    checkoutOn,
   };
   try {
     return await db.runTransaction(async (tx) => {

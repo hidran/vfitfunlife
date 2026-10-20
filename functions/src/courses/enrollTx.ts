@@ -31,7 +31,9 @@ export async function enrollInTx(tx: Transaction, input: EnrollInput):
   }
   const prior = (await tx.get(enrollmentRef)).data() as Enrollment | undefined;
   if (prior) {
-    if (prior.courseId !== courseId || prior.scope !== scope || prior.paymentMode !== paymentMode ||
+    // A free booking is stored as direct whatever mode was requested, so its replay must not compare modes.
+    if (prior.courseId !== courseId || prior.scope !== scope ||
+      (prior.totalCents !== 0 && prior.paymentMode !== paymentMode) ||
       (scope === "lesson" && prior.sessionIds[0] !== input.sessionId)) {
       throw new HttpsError("invalid-argument", "request_id_reused");
     }
@@ -58,8 +60,9 @@ export async function enrollInTx(tx: Transaction, input: EnrollInput):
   const sessionRefs = selected.map((id: string) => db.doc(`courses/${courseId}/sessions/${id}`));
   const participantRefs = selected.map((id: string) =>
     db.doc(`courses/${courseId}/sessions/${id}/participants/${uid}`));
-  const [sessionDocs, memberships] = await Promise.all([
-    tx.getAll(...sessionRefs), tx.getAll(...participantRefs),
+  const customerRef = db.doc(`courses/${courseId}/customers/${uid}`);
+  const [sessionDocs, memberships, customer] = await Promise.all([
+    tx.getAll(...sessionRefs), tx.getAll(...participantRefs), tx.get(customerRef),
   ]);
   const now = new Date();
   if (scope === "series" && course.firstStartsAt.toDate() <= now) throw new Error("series_already_started");
@@ -75,15 +78,23 @@ export async function enrollInTx(tx: Transaction, input: EnrollInput):
   if (totalCents === null) throw new Error("pricing_option_unavailable");
   const prices = allocatePrice(totalCents, selected.length);
   const allocations = Object.fromEntries(selected.map((id: string, i: number) => [id, prices[i]]));
-  const state = paymentMode === "stripe" ? "held" : "confirmed";
+  // Free bookings never hold a seat for checkout: there is nothing to pay.
+  const free = totalCents === 0;
+  const mode = free ? "direct" : paymentMode;
+  if (mode === "stripe" && !input.checkoutOn) {
+    throw new HttpsError("failed-precondition", "Online course payments are not enabled");
+  }
+  const state = mode === "stripe" ? "held" : "confirmed";
   const commit = () => {
     tx.create(enrollmentRef, {
       createdBy: actor,
       userId: uid, customerName: user.fullName ?? user.displayName ?? "", providerId: course.providerId,
       courseId, courseName: course.name, sessionIds: selected, activeSessionIds: selected, cancelledSessionIds: [],
       timezone: course.timezone, allocations, scope, totalCents,
-      cancellationHours: course.cancellationHours, paymentMode, state,
-      paymentStatus: "pending", refundCents: 0, holdExpiresAt: Timestamp.fromMillis(now.getTime() + 1800000),
+      cancellationHours: course.cancellationHours, paymentMode: mode, state,
+      ...(free ? { paymentStatus: "paid", paidCents: 0, paymentMethod: "free", paidAt: nowStamp() } :
+        { paymentStatus: "pending" }),
+      refundCents: 0, holdExpiresAt: Timestamp.fromMillis(now.getTime() + 1800000),
       createdAt: nowStamp(), updatedAt: nowStamp(),
     });
     if (relation.empty) {
@@ -95,12 +106,13 @@ export async function enrollInTx(tx: Transaction, input: EnrollInput):
         ...(user.accountStatus ? { accountStatus: user.accountStatus } : {}),
       });
     }
-    tx.set(db.doc(`courses/${courseId}/customers/${uid}`), { userId: uid, createdAt: nowStamp() });
+    // Later groups keep lateCancels/noShows counters on this doc: only ever create it.
+    if (!customer.exists) tx.set(customerRef, { userId: uid, createdAt: nowStamp() });
     if (selected.includes(course.nextSessionId)) {
       tx.update(db.doc(`courses/${courseId}`), { nextAvailableSeats: FieldValue.increment(-1) });
     }
     sessionRefs.forEach((ref, i) => {
-      tx.update(ref, paymentMode === "stripe" ?
+      tx.update(ref, mode === "stripe" ?
         { held: FieldValue.increment(1) } : { occupied: FieldValue.increment(1) });
       tx.create(participantRefs[i], { enrollmentId, userId: uid, customerName: user.fullName ?? "",
         providerId: course.providerId, state, attendance: "unmarked" });
