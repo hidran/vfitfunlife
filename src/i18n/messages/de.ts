@@ -3488,4 +3488,9 @@ export const deMessages: Messages = {
   'courses.addSpaces': "Standorte und Räume hinzufügen",
   'courses.timezoneFromLocation': "Die Zeitzone stammt vom Standort.",
   'courses.conflict': "Überschneidet sich mit „{{name}}“ ({{time}})",
+  'courses.venueScope': "Kurse bei {{name}}",
+  'courses.noShow': "Nicht erschienen",
+  'courses.noShows': "{{count}} Nichterscheinen",
+  'courses.lateCancels': "Späte Stornierungen",
+  'courses.rescheduleRoom': "Raum für den neuen Termin",
 };

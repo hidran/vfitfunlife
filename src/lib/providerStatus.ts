@@ -33,3 +33,14 @@ export function applicationOutcomeStatus(
 export function canAccessProviderArea(status: ProviderStatus | undefined): boolean {
   return status === 'pending' || status === 'verified';
 }
+
+/**
+ * Whether the user is a provider (or staff) as far as the provider area goes, as opposed to someone who only owns or
+ * staffs a venue. A legacy provider with no status yet counts.
+ */
+export function isProviderAreaUser(user: { role?: string; providerStatus?: ProviderStatus } | null | undefined): boolean {
+  if (!user) return false;
+  const status = user.providerStatus ?? 'none';
+  return user.role === 'admin' || user.role === 'superadmin' || canAccessProviderArea(status) ||
+    (user.role === 'provider' && status === 'none');
+}

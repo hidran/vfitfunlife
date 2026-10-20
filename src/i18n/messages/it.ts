@@ -3506,6 +3506,11 @@ export const itMessages = {
   'courses.addSpaces': "Aggiungi sedi e sale",
   'courses.timezoneFromLocation': "Il fuso orario è quello della sede.",
   'courses.conflict': "In conflitto con «{{name}}» ({{time}})",
+  'courses.venueScope': "Corsi di {{name}}",
+  'courses.noShow': "Assente",
+  'courses.noShows': "{{count}} assenze non giustificate",
+  'courses.lateCancels': "Cancellazioni tardive",
+  'courses.rescheduleRoom': "Sala della nuova lezione",
 } as const;
 
 export type MessageKey = keyof typeof itMessages;

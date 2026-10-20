@@ -3490,4 +3490,9 @@ export const frMessages: Messages = {
   'courses.addSpaces': "Ajouter des sites et des salles",
   'courses.timezoneFromLocation': "Le fuseau horaire est celui du site.",
   'courses.conflict': "En conflit avec « {{name}} » ({{time}})",
+  'courses.venueScope': "Cours de {{name}}",
+  'courses.noShow': "Absent",
+  'courses.noShows': "{{count}} absences non excusées",
+  'courses.lateCancels': "Annulations tardives",
+  'courses.rescheduleRoom': "Salle du nouvel horaire",
 };

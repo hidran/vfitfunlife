@@ -3481,4 +3481,9 @@ export const esMessages: Messages = {
   'courses.addSpaces': "Añadir sedes y salas",
   'courses.timezoneFromLocation': "La zona horaria es la de la sede.",
   'courses.conflict': "En conflicto con «{{name}}» ({{time}})",
+  'courses.venueScope': "Cursos de {{name}}",
+  'courses.noShow': "No se presentó",
+  'courses.noShows': "{{count}} ausencias sin aviso",
+  'courses.lateCancels': "Cancelaciones tardías",
+  'courses.rescheduleRoom': "Sala de la nueva hora",
 };

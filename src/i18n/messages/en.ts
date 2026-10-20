@@ -3508,4 +3508,9 @@ export const enMessages: Messages = {
   'courses.addSpaces': "Add locations and rooms",
   'courses.timezoneFromLocation': "The time zone comes from the location.",
   'courses.conflict': "Conflicts with “{{name}}” ({{time}})",
+  'courses.venueScope': "Courses at {{name}}",
+  'courses.noShow': "No-show",
+  'courses.noShows': "{{count}} no-shows",
+  'courses.lateCancels': "Late cancellations",
+  'courses.rescheduleRoom': "Room for the new time",
 };

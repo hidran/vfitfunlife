@@ -24,7 +24,7 @@ import { useState } from 'react';
 import { useI18n } from '@/hooks/useI18n';
 import { useManagedVenues } from '@/hooks/useManagedVenues';
 import { useAuthStore } from '@/stores/authStore';
-import { canAccessProviderArea } from '@/lib/providerStatus';
+import { isProviderAreaUser } from '@/lib/providerStatus';
 import type { MessageKey } from '@/i18n/messages';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
@@ -59,12 +59,8 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
   const user = useAuthStore((s) => s.user);
   const isInitialized = useAuthStore((s) => s.isInitialized);
   const status = user?.providerStatus ?? 'none';
-  const isStaff = user?.role === 'admin' || user?.role === 'superadmin';
   const { venues, isLoading: venuesLoading } = useManagedVenues();
-  const isProvider =
-    isStaff ||
-    canAccessProviderArea(status) ||
-    (user?.role === 'provider' && status === 'none');
+  const isProvider = isProviderAreaUser(user);
   // Someone who only owns or staffs a venue manages its courses and nothing else here.
   const venueOnly = !isProvider && venues.length > 0;
   const coursesHref = venues.length > 0 ? `/provider/courses?venue=${venues[0].id}` : '/provider/courses';

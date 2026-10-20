@@ -4,8 +4,9 @@ import {
   fetchVenueCourses, fetchVenueEnrollments, fetchVenueRefunds, fetchWaitlist, fetchMyWaitlist, fetchVenueWeek,
   fetchVenueNextLessons, fetchCustomerCounters,
 } from '@/lib/firebase/courses';
-export function useCourses(providerId?: string) {
-  return useInfiniteQuery({ queryKey: ['courses', providerId ?? 'public'],
+/** `providerId` undefined lists the public catalogue; `enabled: false` switches the query off (venue-scoped screens). */
+export function useCourses(providerId?: string, enabled = true) {
+  return useInfiniteQuery({ queryKey: ['courses', providerId ?? 'public'], enabled,
     queryFn: ({ pageParam }) => fetchCourses(providerId, pageParam),
     initialPageParam: undefined as Awaited<ReturnType<typeof fetchCourses>>['cursor'],
     refetchInterval: 30000, getNextPageParam: page => page.cursor });

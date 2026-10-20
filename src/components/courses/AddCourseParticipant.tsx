@@ -6,6 +6,7 @@ import { useI18n } from '@/hooks/useI18n';
 import { getProviderClients } from '@/lib/firebase/provider';
 import { createClientAccount } from '@/lib/firebase/functions';
 import { courseCall } from '@/lib/firebase/courses';
+import { courseErrorMessage } from '@/lib/courseErrors';
 import { Button } from '@/components/ui/button';
 import { CourseCategoryCombobox } from './CourseCategoryCombobox';
 import { ParticipantInvitation } from './ParticipantInvitation';
@@ -50,7 +51,7 @@ export function AddCourseParticipant({ course, session, onAdded }: { course: Cou
       const errors: Record<string, Parameters<typeof t>[0]> = { lesson_full: 'courses.full', already_enrolled: 'courses.alreadyParticipant',
         invalid_name: 'provider.addClient.error.invalidName', invalid_phone: 'provider.addClient.error.invalidPhone',
         invalid_email: 'provider.addClient.error.invalidEmail', rate_limited: 'provider.addClient.error.rateLimited' };
-      setError(t(errors[message ?? ''] ?? 'courses.error'));
+      setError(errors[message ?? ''] ? t(errors[message ?? '']) : courseErrorMessage(err, t, locale));
     } finally { setBusy(false); }
   }
   return <section className="rounded-xl border border-hairline p-4 space-y-4">
