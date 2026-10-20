@@ -394,11 +394,6 @@ service cloud.firestore {
         allow write: if false;
       }
 
-      match /staff/{staffId} {
-        allow read: if isAdmin() || isVenueStaff(venueId);
-        allow write: if isAdmin() || isVenueStaff(venueId);
-      }
-
       match /locations/{locationId} {
         allow read: if true;
         allow write: if false; // saveGymSpace validates staff and timezone
@@ -652,9 +647,15 @@ service cloud.firestore {
     // enforcement layer. See docs/superpowers/specs/2026-08-08-booking-manual-payment-design.md §10
     // Shared-capacity services: all mutations go through the course callables.
     match /courses/{courseId} {
+      function courseVenue() {
+        return get(/databases/$(database)/documents/courses/$(courseId)).data.get('venueId', null);
+      }
+      // The provider, an admin, or (venue-linked courses only) the venue's owner or active staff. A legacy course
+      // without venueId stays with its provider.
       function managesCourse() {
         return isAuthenticated() &&
-          (request.auth.uid == get(/databases/$(database)/documents/courses/$(courseId)).data.providerId || isAdmin());
+          (request.auth.uid == get(/databases/$(database)/documents/courses/$(courseId)).data.providerId || isAdmin() ||
+          (courseVenue() != null && managesVenue(courseVenue())));
       }
       function canReadCourse() {
         return (get(/databases/$(database)/documents/courses/$(courseId)).data.state == 'published' &&
@@ -662,8 +663,11 @@ service cloud.firestore {
           managesCourse() || (isAuthenticated() &&
           exists(/databases/$(database)/documents/courses/$(courseId)/customers/$(request.auth.uid)));
       }
+      // The venue clause precedes the customers exists(): a list query has no concrete courseId, and that lookup
+      // would abort evaluation before the venueId constraint of a manager's query is considered.
       allow read: if (resource.data.state == 'published' && resource.data.providerEligible == true) ||
         (isAuthenticated() && (resource.data.providerId == request.auth.uid || isAdmin() ||
+         (resource.data.get('venueId', null) != null && managesVenue(resource.data.venueId)) ||
          exists(/databases/$(database)/documents/courses/$(courseId)/customers/$(request.auth.uid))));
       allow write: if false;
       match /sessions/{sessionId} {
@@ -681,19 +685,28 @@ service cloud.firestore {
     }
     match /courseEnrollments/{enrollmentId} {
       allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid ||
-        resource.data.providerId == request.auth.uid || isAdmin());
+        resource.data.providerId == request.auth.uid || isAdmin() ||
+        (resource.data.get('venueId', null) != null && managesVenue(resource.data.venueId)));
       allow write: if false;
     }
     match /courseRefunds/{refundId} {
       allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid ||
-        resource.data.providerId == request.auth.uid || isAdmin());
+        resource.data.providerId == request.auth.uid || isAdmin() ||
+        (resource.data.get('venueId', null) != null && managesVenue(resource.data.venueId)));
       allow write: if false;
     }
     match /courseNotifications/{notificationId} {
       allow read, write: if false;
     }
+    // Room and instructor day locks (Admin SDK only) and the waitlist sweep cursor: closed to every client.
+    match /courseScheduleLocks/{lockId} {
+      allow read, write: if false;
+    }
+    match /courseSweepState/{stateId} {
+      allow read, write: if false;
+    }
 
-    function managesGym(venueId) {
+    function managesVenue(venueId) {
       return isAuthenticated() && (isAdmin() || (
         exists(/databases/$(database)/documents/venueStaff/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/venueStaff/$(request.auth.uid)).data.venueId == venueId &&
@@ -711,18 +724,18 @@ service cloud.firestore {
 
     match /gymSessions/{sessionId} {
       allow read: if (resource.data.status == 'published' && activePartnerGym(resource.data.venueId)) ||
-        managesGym(resource.data.venueId);
+        managesVenue(resource.data.venueId);
       allow write: if false;
     }
 
     match /gymBookings/{bookingId} {
       allow read: if isAuthenticated() &&
-        (resource.data.userId == request.auth.uid || managesGym(resource.data.venueId));
+        (resource.data.userId == request.auth.uid || managesVenue(resource.data.venueId));
       allow write: if false;
     }
 
     match /gymSeries/{seriesId} {
-      allow read: if managesGym(resource.data.venueId);
+      allow read: if managesVenue(resource.data.venueId);
       allow write: if false;
     }
 
