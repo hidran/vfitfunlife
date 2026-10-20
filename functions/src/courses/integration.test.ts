@@ -42,9 +42,10 @@ async function create() { return (await api.saveCourse.run(request("p", { course
 // What a customer's confirm sends: the final price and revisions of the quote they reviewed.
 async function quoted(courseId: string, scope: string, sessionId = "2099-10-12") {
   const quote = await api.quoteCourse.run(request("u", { courseId }));
-  const lines = scope === "series" ? quote.sessions : quote.sessions.filter(l => l.sessionId === sessionId);
+  const lines = quote.sessions.filter(l => l.sessionId === sessionId);
   return { expectedFinalCents: scope === "series" ? quote.series!.finalCents : lines[0].finalCents,
-    expectedRevisions: Object.fromEntries(lines.map(l => [l.sessionId, l.revision])) };
+    expectedRevisions: scope === "series" ? quote.series!.revisions :
+      Object.fromEntries(lines.map(l => [l.sessionId, l.revision])) };
 }
 async function enroll(courseId: string, uid = "u", scope = "series", requestId = "r1") {
   return api.enrollInCourse.run(request(uid, { courseId, scope, sessionId: "2099-10-12", requestId,

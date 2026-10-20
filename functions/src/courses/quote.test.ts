@@ -15,7 +15,7 @@ const base = { name: "Karate", categoryId: "karate", location: "Torino", instruc
   recurrence: "daily", endDate: "2099-10-14", lessonPriceCents: 1500, seriesPriceCents: 4000, state: "published" };
 const venueCourse = { ...base, venueId: "v", locationId: "l1", roomId: "r1" };
 const COLLECTIONS = ["courses", "users", "instructors", "serviceCategories", "venues", "venueStaff",
-  "courseScheduleLocks", "courseEnrollments"];
+  "courseScheduleLocks", "courseEnrollments", "rateLimits"];
 
 beforeAll(async () => {
   for (const app of admin.apps) if (app) await app.delete();
@@ -78,7 +78,8 @@ describe("quoteCourse", () => {
     const { series } = await quote("u", id, ["2099-10-12"]);
     expect(series).toEqual({ regularCents: 4000, discountPercent: 15, gymPercent: 10, instructorPercent: 5,
       discountCents: 598, finalCents: 3402,
-      allocations: { "2099-10-12": 1134, "2099-10-13": 1134, "2099-10-14": 1134 } });
+      allocations: { "2099-10-12": 1134, "2099-10-13": 1134, "2099-10-14": 1134 },
+      revisions: { "2099-10-12": 1, "2099-10-13": 1, "2099-10-14": 1 } });
     expect(Object.values(series!.allocations).reduce((a, b) => a + b, 0)).toBe(series!.finalCents);
   });
 
@@ -127,6 +128,77 @@ describe("quoteCourse", () => {
     await expect(quote("u", id, ["2099-11-01"])).rejects.toThrow("session_not_in_course");
     await expect(quote("u", id, Array.from({ length: 101 }, (_, i) => `s${i}`))).rejects.toThrow("too_many_sessions");
     await expect(quote("u", id, ["bad id"])).rejects.toThrow("invalid_id");
+  });
+
+  it("caps the lesson lines at 100 when the ids are omitted, while the series still covers every lesson", async () => {
+    const id = await save("p", { ...base, endDate: "2100-02-10" });
+    const total = (await db.doc(`courses/${id}`).get()).data()?.sessionIds.length;
+    expect(total).toBeGreaterThan(100);
+    const result = await quote("u", id);
+    expect(result.sessions).toHaveLength(100);
+    expect(Object.keys(result.series!.allocations)).toHaveLength(total);
+    expect(Object.keys(result.series!.revisions)).toHaveLength(total);
+    expect((await quote("u", id, ["2099-10-12"])).sessions).toHaveLength(1);
+  });
+
+  describe("reads", () => {
+    const paths = (spy: { mock: { calls: unknown[][] } }) =>
+      spy.mock.calls.flatMap((call) => (call as { path: string }[]).map((ref) => ref.path));
+    const lessonsRead = (spy: { mock: { calls: unknown[][] } }) =>
+      paths(spy).filter((path) => path.includes("/sessions/")).sort();
+    const days = ["2099-10-12", "2099-10-13", "2099-10-14"];
+    it("reads only the requested lessons of a lesson-only quote, and no instructor of an unlinked course", async () => {
+      const id = await save("p", { ...base, instructorId: "p2" });
+      const spy = vi.spyOn(db, "getAll");
+      const result = await api.quoteCourse.run(request("u", { courseId: id, sessionIds: ["2099-10-13"],
+        includeSeries: false }));
+      expect(lessonsRead(spy)).toEqual([`courses/${id}/sessions/2099-10-13`]);
+      expect(paths(spy).filter((path) => path.startsWith("instructors/"))).toEqual([]);
+      expect(result.series).toBeNull();
+      spy.mockRestore();
+    });
+    it("reads every lesson for a series quote, with the revisions, but still no instructor when unlinked", async () => {
+      const id = await save("p", { ...base, instructorId: "p2" });
+      await db.doc(`courses/${id}/sessions/2099-10-13`).update({ revision: 3 });
+      const spy = vi.spyOn(db, "getAll");
+      const result = await quote("u", id, ["2099-10-13"]);
+      expect(lessonsRead(spy)).toEqual(days.map((day) => `courses/${id}/sessions/${day}`));
+      expect(paths(spy).filter((path) => path.startsWith("instructors/"))).toEqual([]);
+      expect(result.series!.revisions).toEqual({ "2099-10-12": 1, "2099-10-13": 3, "2099-10-14": 1 });
+      expect(Object.values(result.series!.allocations).reduce((a, b) => a + b, 0)).toBe(4000);
+      spy.mockRestore();
+    });
+    it("reads only the requested lessons of a linked lesson-only quote", async () => {
+      const id = await save("biz", { ...venueCourse, instructorId: "p" });
+      const spy = vi.spyOn(db, "getAll");
+      const lesson = await api.quoteCourse.run(request("u", { courseId: id, sessionIds: ["2099-10-13"],
+        includeSeries: false }));
+      expect(lessonsRead(spy)).toEqual([`courses/${id}/sessions/2099-10-13`]);
+      expect(lesson.series).toBeNull();
+      expect(lesson.sessions[0]).toMatchObject({ discountPercent: 15, finalCents: 1275 });
+      spy.mockRestore();
+    });
+  });
+
+  describe("rate limit", () => {
+    const limit = (uid: string) => db.doc(`rateLimits/quoteCourse_${uid}`);
+    it("refuses the 61st call within ten minutes with rate_limited, per caller", async () => {
+      const id = await save("p", base);
+      await limit("u").set({ windowStartedAt: Date.now() - 1000, count: 60 });
+      await expect(quote("u", id, ["2099-10-12"])).rejects.toMatchObject(
+        { code: "resource-exhausted", message: "rate_limited" });
+      expect((await quote("x", id, ["2099-10-12"])).sessions).toHaveLength(1);
+      expect((await limit("u").get()).data()?.count).toBe(60);
+    });
+    it("counts calls and starts a new window after ten minutes", async () => {
+      const id = await save("p", base);
+      await quote("u", id, ["2099-10-12"]);
+      await quote("u", id, ["2099-10-12"]);
+      expect((await limit("u").get()).data()?.count).toBe(2);
+      await limit("u").set({ windowStartedAt: Date.now() - 11 * 60 * 1000, count: 60 });
+      await quote("u", id, ["2099-10-12"]);
+      expect((await limit("u").get()).data()?.count).toBe(1);
+    });
   });
 
   it("requires a signed-in caller", async () => {

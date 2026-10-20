@@ -14,6 +14,8 @@ export type CourseQuote = {
   series: null | {
     regularCents: number; discountPercent: number; gymPercent: number; instructorPercent: number;
     discountCents: number; finalCents: number; allocations: Record<string, number>;
+    // Revision of every lesson: a series booking confirms them all, however many lessons the course has.
+    revisions: Record<string, number>;
   };
 };
 export type QuoteOptions = {
@@ -26,6 +28,20 @@ export type QuoteOptions = {
 };
 
 const MAX_QUOTE_SESSIONS = 100;
+const QUOTE_LIMIT = 60;
+const QUOTE_WINDOW_MS = 10 * 60 * 1000;
+
+/** Per-caller limit: a quote reads up to MAX_QUOTE_SESSIONS lessons (and every lesson of a linked series). */
+async function enforceQuoteRateLimit(uid: string): Promise<void> {
+  await db.runTransaction(async (tx) => {
+    const ref = db.doc(`rateLimits/quoteCourse_${uid}`);
+    const data = (await tx.get(ref)).data();
+    const recent = data?.windowStartedAt > Date.now() - QUOTE_WINDOW_MS;
+    const count = recent ? data?.count ?? 0 : 0;
+    if (count >= QUOTE_LIMIT) throw new HttpsError("resource-exhausted", "rate_limited");
+    tx.set(ref, { windowStartedAt: recent ? data?.windowStartedAt : Date.now(), count: count + 1 });
+  });
+}
 
 async function readAll(tx: Transaction | null, refs: DocumentReference[]): Promise<(DocumentData | undefined)[]> {
   if (!refs.length) return [];
@@ -38,6 +54,9 @@ export async function buildQuote(
   tx: Transaction | null, course: Course & { id: string }, sessionIds: string[], options: QuoteOptions = {}
 ): Promise<CourseQuote> {
   const wantSeries = course.seriesPriceCents !== null && options.includeSeries !== false;
+  // Lesson-only quotes read the requested lessons alone. A series quote reads every lesson, for the revisions
+  // and (when linked) each lesson's substitute. Unlinked courses have no discounts, so they never read instructors.
+  const linked = !!course.venueId;
   const needed = [...new Set([...sessionIds, ...(wantSeries ? course.sessionIds : [])])];
   const loaded = new Map<string, Session>(options.sessions ?? []);
   const missing = needed.filter((id) => !loaded.has(id));
@@ -51,7 +70,7 @@ export async function buildQuote(
     loaded.set(missing[i], data as Session);
   });
   const instructorOf = (id: string) => loaded.get(id)!.instructorId ?? course.instructorId ?? null;
-  const instructorIds = [...new Set([...needed.map(instructorOf), course.instructorId].filter(
+  const instructorIds = !linked ? [] : [...new Set([...needed.map(instructorOf), course.instructorId].filter(
     (id): id is string => !!id))];
   const partners = new Map<string, boolean>();
   (await readAll(tx, instructorIds.map((id) => db.doc(`instructors/${id}`)))).forEach((data, i) => {
@@ -61,7 +80,7 @@ export async function buildQuote(
   // Unlinked courses have no venue, so every percent is 0 whatever the instructor's partner status.
   const pricing = venue ? { memberDiscountPercent: venue.memberDiscountPercent,
     partnerInstructorExtraPercent: venue.partnerInstructorExtraPercent } : null;
-  const percentsOf = (id: string) => discountPercents(pricing, partnerOf(instructorOf(id)));
+  const percentsOf = (id: string) => discountPercents(pricing, linked && partnerOf(instructorOf(id)));
 
   const sessions: SessionQuote[] = course.lessonPriceCents === null ? [] : sessionIds.map((sessionId) => {
     const session = loaded.get(sessionId)!;
@@ -84,6 +103,7 @@ export async function buildQuote(
       instructorPercent: courseLevel.instructorPercent, discountCents: priced.discountCents,
       finalCents: priced.finalCents,
       allocations: Object.fromEntries(course.sessionIds.map((id, i) => [id, priced.allocations[i]])),
+      revisions: Object.fromEntries(course.sessionIds.map((id) => [id, loaded.get(id)!.revision ?? 1])),
     };
   }
   return { sessions, series };
@@ -97,6 +117,7 @@ export const quoteCourse = onCall({ region }, async (req) => {
     if (requested !== undefined && (!Array.isArray(requested) || requested.length > MAX_QUOTE_SESSIONS)) {
       throw new HttpsError("invalid-argument", "too_many_sessions");
     }
+    await enforceQuoteRateLimit(uid);
     const stored = (await db.doc(`courses/${courseId}`).get()).data() as Course | undefined;
     if (!stored) throw new HttpsError("not-found", "course_not_found");
     const course = { ...stored, id: courseId };
@@ -110,11 +131,15 @@ export const quoteCourse = onCall({ region }, async (req) => {
         throw new HttpsError("failed-precondition", "venue_not_active");
       }
     }
-    const sessionIds = requested === undefined ? course.sessionIds : [...new Set((requested as unknown[]).map(safeId))];
+    // Omitting the ids means "the first lessons": never more than the cap, whatever the course length. The series
+    // block still covers every lesson.
+    const sessionIds = requested === undefined ? course.sessionIds.slice(0, MAX_QUOTE_SESSIONS) :
+      [...new Set((requested as unknown[]).map(safeId))];
     if (sessionIds.some((id) => !course.sessionIds.includes(id))) {
       throw new HttpsError("invalid-argument", "session_not_in_course");
     }
-    return await buildQuote(null, course, sessionIds);
+    // Callers that only sell one lesson say so, and skip reading the whole series.
+    return await buildQuote(null, course, sessionIds, { includeSeries: req.data.includeSeries !== false });
   } catch (error) {
     return domainError(error);
   }
