@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Course, CourseSession } from '@/types/course';
 
@@ -237,9 +237,29 @@ describe('CourseBooking', () => {
     expect(mocks.quote).toHaveBeenCalledWith('c', ['s2'], false);
   });
 
-  it('does not open the review of a full ?lesson=', () => {
+  it('opens a full ?lesson= with the waitlist offer instead of a confirm', async () => {
+    mocks.quote.mockResolvedValue(quoteOf([lessonQuote('s1')]));
+    mocks.join.mockResolvedValue({ success: true, position: 1, replay: false });
     renderBooking({ initialSessionId: 's1', sessions: lessons({ occupied: 2 }) });
-    expect(screen.queryByRole('region', { name: 'courses.review' })).not.toBeInTheDocument();
+    const review = await screen.findByRole('region', { name: 'courses.review' });
+    expect(mocks.quote).toHaveBeenCalledWith('c', ['s1'], false);
+    expect(within(review).getByRole('alert')).toHaveTextContent('courses.err.lesson_full');
+    expect(within(review).getByRole('button', { name: 'courses.confirm' })).toBeDisabled();
+    fireEvent.click(within(review).getByRole('button', { name: 'courses.joinWaitlist' }));
+    await waitFor(() => expect(mocks.join).toHaveBeenCalledWith('c', 's1', 'direct', expect.any(String)));
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'courses.review' })).not.toBeInTheDocument());
+  });
+
+  it('leaves a full ?lesson= alone when the course has no waitlist, or the user is already queued or booked', () => {
+    renderBooking({ initialSessionId: 's1', sessions: lessons({ occupied: 2 }), course: course({ waitlistEnabled: false }) });
+    expect(mocks.quote).not.toHaveBeenCalled();
+    cleanup();
+    mocks.mine = [{ courseId: 'c', sessionId: 's1', position: 1 }];
+    renderBooking({ initialSessionId: 's1', sessions: lessons({ occupied: 2 }) });
+    expect(mocks.quote).not.toHaveBeenCalled();
+    cleanup();
+    mocks.mine = []; mocks.enrollments = [{ courseId: 'c', state: 'confirmed', activeSessionIds: ['s2'] }];
+    renderBooking({ initialSessionId: 's2' });
     expect(mocks.quote).not.toHaveBeenCalled();
   });
 
@@ -256,9 +276,81 @@ describe('CourseBooking', () => {
     vi.stubGlobal('location', { ...window.location, assign });
     renderBooking({ uid: undefined });
     fireEvent.click(screen.getAllByRole('button', { name: /courses.bookLesson/ })[0]);
-    expect(assign).toHaveBeenCalledWith('/auth/login');
+    expect(assign).toHaveBeenCalledWith(`/auth/login?next=${encodeURIComponent('/courses?id=c&lesson=s1')}`);
     expect(mocks.quote).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
+  });
+
+  it('keeps the lesson through sign-in for a visitor joining a waitlist', () => {
+    const assign = vi.fn();
+    vi.stubGlobal('location', { ...window.location, assign });
+    renderBooking({ uid: undefined, sessions: lessons({ occupied: 1, held: 1 }, { occupied: 1, held: 1 }) });
+    fireEvent.click(screen.getAllByRole('button', { name: 'courses.joinWaitlist' })[1]);
+    expect(assign).toHaveBeenLastCalledWith(`/auth/login?next=${encodeURIComponent('/courses?id=c&lesson=s2')}`);
+    vi.unstubAllGlobals();
+  });
+
+  it('reports a busy request to the host while the booking is in flight', async () => {
+    let finish: (value: unknown) => void = () => undefined;
+    mocks.call.mockReturnValue(new Promise(resolve => { finish = resolve; }));
+    const onBusyChange = vi.fn();
+    renderBooking({ onBusyChange });
+    fireEvent.click(screen.getAllByRole('button', { name: /courses.bookLesson/ })[1]);
+    fireEvent.click(within(await screen.findByRole('region', { name: 'courses.review' })).getByRole('button', { name: 'courses.confirm' }));
+    await waitFor(() => expect(onBusyChange).toHaveBeenLastCalledWith(true));
+    finish({ enrollmentId: 'e1' });
+    await waitFor(() => expect(onBusyChange).toHaveBeenLastCalledWith(false));
+  });
+
+  it('locks the payment choice while a review is open, so the request id stays tied to its mode', async () => {
+    renderBooking({ checkoutEnabled: true });
+    expect(screen.getByRole('radio', { name: 'courses.online' })).toBeEnabled();
+    fireEvent.click(screen.getAllByRole('button', { name: /courses.bookLesson/ })[1]);
+    await screen.findByRole('region', { name: 'courses.review' });
+    expect(screen.getByRole('radio', { name: 'courses.online' })).toBeDisabled();
+    expect(screen.getByRole('radio', { name: 'courses.direct' })).toBeDisabled();
+    fireEvent.click(within(reviewOf()).getByRole('button', { name: 'common.cancel' }));
+    expect(screen.getByRole('radio', { name: 'courses.online' })).toBeEnabled();
+  });
+
+  it('moves focus to the review heading when it opens', async () => {
+    renderBooking();
+    fireEvent.click(screen.getAllByRole('button', { name: /courses.bookLesson/ })[1]);
+    const review = await screen.findByRole('region', { name: 'courses.review' });
+    expect(within(review).getByRole('heading', { name: 'courses.review' })).toHaveFocus();
+  });
+
+  it('gives a screen reader the words around a struck-through price', () => {
+    renderBooking();
+    const row = screen.getAllByRole('button', { name: /courses.bookLesson/ })[0];
+    expect(within(row).getByText('courses.regularPrice', { exact: false })).toHaveClass('sr-only');
+    expect(within(row).getByText('courses.finalPrice', { exact: false })).toHaveClass('sr-only');
+  });
+
+  it('refreshes the lists when joining or leaving a waitlist fails, so the screen shows the truth', async () => {
+    mocks.join.mockRejectedValue(rejection('already_waitlisted'));
+    renderBooking({ sessions: lessons({ occupied: 1, held: 1 }) });
+    fireEvent.click(screen.getAllByRole('button', { name: 'courses.joinWaitlist' })[0]);
+    expect(await screen.findByRole('alert')).toHaveTextContent('courses.err.already_waitlisted');
+    expect(mocks.refresh).toHaveBeenCalledTimes(1);
+    cleanup();
+    mocks.refresh.mockClear();
+    mocks.mine = [{ courseId: 'c', sessionId: 's1', position: 2 }];
+    mocks.leave.mockRejectedValue(rejection('waitlist_not_open'));
+    renderBooking({ sessions: lessons({ occupied: 1, held: 1 }) });
+    fireEvent.click(screen.getByRole('button', { name: 'courses.leaveWaitlist' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('courses.err.waitlist_not_open');
+    expect(mocks.refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not re-quote the list after price_changed: the review already holds the fresh numbers', async () => {
+    mocks.call.mockRejectedValueOnce(rejection('price_changed', { reason: 'price' }));
+    mocks.quote.mockResolvedValue(quoteOf([lessonQuote('s2')]));
+    renderBooking();
+    fireEvent.click(screen.getAllByRole('button', { name: /courses.bookLesson/ })[1]);
+    fireEvent.click(within(await screen.findByRole('region', { name: 'courses.review' })).getByRole('button', { name: 'courses.confirm' }));
+    await screen.findByText('courses.priceChanged');
+    expect(mocks.refetch).not.toHaveBeenCalled();
   });
 
   it('disables the series when any lesson is full', () => {

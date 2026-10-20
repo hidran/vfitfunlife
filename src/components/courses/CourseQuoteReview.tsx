@@ -19,6 +19,8 @@ export interface QuoteReviewProps {
   notice?: 'price' | 'availability';
   error?: string;
   busy: boolean;
+  /** False while the only way forward is the extra action (a full lesson offers the waitlist, not a booking). */
+  canConfirm?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
   /** Extra actions under the error, e.g. "Join waitlist" after `lesson_full`. */
@@ -26,14 +28,17 @@ export interface QuoteReviewProps {
 }
 
 /** Body of the booking review: regular price, benefit lines, discount, final price, cancellation terms. */
-export function CourseQuoteReview({ course, scope, lessons, quote, payment, notice, error, busy, onConfirm, onCancel, extra }: QuoteReviewProps) {
+export function CourseQuoteReview({ course, scope, lessons, quote, payment, notice, error, busy, canConfirm = true, onConfirm, onCancel, extra }: QuoteReviewProps) {
   const { t, locale } = useI18n();
   const free = quote.finalCents === 0;
   const ref = useRef<HTMLElement>(null);
+  const heading = useRef<HTMLHeadingElement>(null);
   // The review sits under a long lesson list: bring it (and any new notice) into view.
   useEffect(() => { ref.current?.scrollIntoView?.({ block: 'center', behavior: 'smooth' }); }, [notice, error, quote.finalCents]);
+  // Keyboard and screen-reader users land on the review when it opens; later notices are announced as alerts.
+  useEffect(() => { heading.current?.focus({ preventScroll: true }); }, []);
   return <section ref={ref} className="space-y-3 border-t border-hairline pt-4" aria-label={t('courses.review')}>
-    <h3 className="font-semibold">{t('courses.review')}</h3>
+    <h3 ref={heading} tabIndex={-1} className="font-semibold outline-none">{t('courses.review')}</h3>
     {notice && <p role="alert" className="rounded-xl border border-warning/40 bg-warning/10 p-3 text-sm">
       {t(notice === 'price' ? 'courses.priceChanged' : 'courses.availabilityChanged')}</p>}
     <p className="font-medium">{t(`courses.${scope}`)}</p>
@@ -53,7 +58,7 @@ export function CourseQuoteReview({ course, scope, lessons, quote, payment, noti
     {error && <p role="alert" className="text-sm text-error">{error}</p>}
     {extra}
     <div className="flex flex-wrap gap-2">
-      <Button className="min-h-11" onClick={onConfirm} disabled={busy}>{t('courses.confirm')}</Button>
+      <Button className="min-h-11" onClick={onConfirm} disabled={busy || !canConfirm}>{t('courses.confirm')}</Button>
       <Button className="min-h-11" variant="ghost" disabled={busy} onClick={onCancel}>{t('common.cancel')}</Button>
     </div>
   </section>;

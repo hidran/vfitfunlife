@@ -37,6 +37,8 @@ function CoursesContent() {
   const [date, setDate] = useState('');
   const [price, setPrice] = useState('');
   const [success, setSuccess] = useState('');
+  // A booking request in flight keeps the sheet open: closing it would hide the outcome (and any error).
+  const [bookingBusy, setBookingBusy] = useState(false);
   const linked = useQuery({ queryKey: ['courses', 'detail', linkedId], queryFn: () => fetchCourse(linkedId), enabled: !!linkedId });
   // The course opened from a link (?id=) until the user picks or closes one.
   const selected = picked ?? (linkedId ? linked.data ?? null : null);
@@ -47,14 +49,15 @@ function CoursesContent() {
       (!date || c.nextStartsAt.toDate() >= new Date(date)) && (!price || Math.min(...enabledPrices) <= Number(price) * 100) &&
       c.nextStartsAt.toMillis() > nowMs;
   }) ?? [];
-  function closeSheet() { setPicked(null); setLinkedId(''); setLinkedLesson(''); }
+  function closeSheet() { setPicked(null); setLinkedId(''); setLinkedLesson(''); setBookingBusy(false); }
+  function dismissSheet() { if (!bookingBusy) closeSheet(); }
   function booked() { setSuccess(t('courses.booked')); closeSheet(); setTab('bookings'); }
   const field = 'w-full rounded-xl border border-hairline bg-surface px-3 py-2 text-content';
   return <div className="mx-auto max-w-5xl p-4 md:p-8 space-y-6 pb-24">
     <header className="space-y-2"><h1 className="text-3xl font-display font-bold">{t('courses.title')}</h1>
       <div className="flex gap-2"><Button variant={tab === 'browse' ? 'primary' : 'outline'} onClick={() => setTab('browse')}>{t('courses.browse')}</Button>
         <Button variant={tab === 'bookings' ? 'primary' : 'outline'} onClick={() => setTab('bookings')}>{t('courses.myBookings')}</Button></div></header>
-    {success && <p role="status" className="text-emerald-500">{success}</p>}
+    {success && <p role="status" className="text-success">{success}</p>}
     {tab === 'bookings' ? <CourseEnrollments uid={uid} /> : <>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <label className="text-sm space-y-1">{t('courses.category')}<select className={field} value={category} onChange={e => setCategory(e.target.value)}>
@@ -77,13 +80,13 @@ function CoursesContent() {
       </article>)}</div>
       {query.hasNextPage && <Button disabled={query.isFetchingNextPage} onClick={() => query.fetchNextPage()}>{t('courses.more')}</Button>}
     </>}
-    {selected && <Modal onClose={closeSheet} className="w-full max-w-2xl" ariaLabel={selected.name}>
+    {selected && <Modal onClose={dismissSheet} closeOnBackdrop={!bookingBusy} className="w-full max-w-2xl" ariaLabel={selected.name}>
       <div className="p-5 space-y-4 text-content"><div className="flex justify-between gap-3"><h2 className="font-display text-2xl font-bold">{selected.name}</h2>
-        <Button variant="ghost" className="min-h-11" onClick={closeSheet}>{t('common.close')}</Button></div>
+        <Button variant="ghost" className="min-h-11" disabled={bookingBusy} onClick={dismissSheet}>{t('common.close')}</Button></div>
         <p>{selected.description}</p><p className="text-sm">{selected.equipment}</p>
         {sessions.isLoading ? <p>{t('common.loading')}</p> : sessions.isError ? <p role="alert">{t('courses.loadError')}</p> :
           <CourseBooking course={selected} sessions={sessions.data ?? []} checkoutEnabled={payments.courseCheckoutEnabled && !payments.isLoading}
-            uid={uid} initialSessionId={linkedLesson || undefined} onBooked={booked} />}
+            uid={uid} initialSessionId={linkedLesson || undefined} onBooked={booked} onBusyChange={setBookingBusy} />}
       </div>
     </Modal>}
   </div>;

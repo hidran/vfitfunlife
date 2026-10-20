@@ -19,6 +19,7 @@ import { useI18n } from '@/hooks/useI18n';
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { postAuthRoute } from '@/lib/auth/postAuthRoute';
+import { returnToFromLocation } from '@/lib/auth/returnTo';
 import type { MessageKey } from '@/i18n/messages';
 
 type LoginMethod = 'phone' | 'email' | null;
@@ -143,7 +144,8 @@ export default function LoginPage() {
     if (!isInitialized) return;
 
     if (user) {
-      router.replace(postAuthRoute(user));
+      // `?next=` (a same-origin path, e.g. the course lesson a visitor wanted to book) wins over the role's home.
+      router.replace(returnToFromLocation() ?? postAuthRoute(user));
     } else if (firebaseUser && !user && !isLoading) {
       // Only treat as "needs registration" once the profile load has finished.
       // While isLoading is true the profile may still be fetching (post sign-in),

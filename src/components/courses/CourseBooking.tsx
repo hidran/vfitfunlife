@@ -5,11 +5,10 @@ import { useCourseEnrollments, useCourseQuote, useMyWaitlist, useRefreshCourses 
 import { courseCall, joinCourseWaitlist, leaveCourseWaitlist, quoteCourse } from '@/lib/firebase/courses';
 import { courseErrorMessage } from '@/lib/courseErrors';
 import { courseDate, courseMoney } from '@/lib/courseFormat';
+import { loginHref } from '@/lib/auth/returnTo';
 import { Button } from '@/components/ui/button';
 import { CourseQuoteReview, type ReviewQuote } from './CourseQuoteReview';
 import type { Course, CourseQuote, CourseSession } from '@/types/course';
-
-export { courseMoney, courseDate };
 
 /** Server cap of a waitlist (functions/src/courses/waitlist.ts WAITLIST_MAX). */
 const WAITLIST_MAX = 100;
@@ -30,11 +29,13 @@ function reviewOf(quote: CourseQuote, scope: 'lesson' | 'series', sessionId?: st
   return { quote: lesson, revisions: { [lesson.sessionId]: lesson.revision } };
 }
 
-export function CourseBooking({ course, sessions, checkoutEnabled, uid, initialSessionId, onBooked }: {
+export function CourseBooking({ course, sessions, checkoutEnabled, uid, initialSessionId, onBooked, onBusyChange }: {
   course: Course; sessions: CourseSession[]; checkoutEnabled: boolean; uid?: string;
-  /** `?lesson=` of the timetable: open the review of that lesson once. */
+  /** `?lesson=` of the timetable: open the review of that lesson once (a full lesson opens with the waitlist offer). */
   initialSessionId?: string;
   onBooked: () => void;
+  /** True while a request is in flight, so the host can keep the sheet open until it settles. */
+  onBusyChange?: (busy: boolean) => void;
 }) {
   const { t, locale } = useI18n();
   const [now, setNow] = useState(() => Date.now());
@@ -43,6 +44,8 @@ export function CourseBooking({ course, sessions, checkoutEnabled, uid, initialS
   const [review, setReview] = useState<Review | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  useEffect(() => { onBusyChange?.(busy); }, [busy, onBusyChange]);
+  useEffect(() => () => onBusyChange?.(false), [onBusyChange]);
   const quote = useCourseQuote(course.id, undefined, true, !!uid);
   const mine = useMyWaitlist(uid);
   const enrollments = useCourseEnrollments(uid);
@@ -69,25 +72,38 @@ export function CourseBooking({ course, sessions, checkoutEnabled, uid, initialS
     return q ? modeFor(q) : checkoutEnabled && (course.lessonPriceCents ?? 0) > 0 ? payment : 'direct';
   };
 
-  async function openReview(scope: 'lesson' | 'series', sessionId?: string) {
-    if (!uid) { window.location.assign('/auth/login'); return; }
+  /** A visitor signs in first and comes back to this lesson (or the course) through `?next=`. */
+  function goToLogin(sessionId?: string) {
+    const lesson = sessionId ? `&lesson=${encodeURIComponent(sessionId)}` : '';
+    window.location.assign(loginHref(`/courses?id=${encodeURIComponent(course.id)}${lesson}`));
+  }
+
+  /** `full`: the lesson has no seat left, so the review opens with the waitlist offer instead of a confirm. */
+  async function openReview(scope: 'lesson' | 'series', sessionId?: string, full = false) {
+    if (!uid) { goToLogin(scope === 'lesson' ? sessionId : undefined); return; }
     setBusy(true); setError('');
     try {
       // A fresh quote of exactly what is reviewed: its numbers and revisions are what the confirm compares.
       const fresh = await quoteCourse(course.id, scope === 'lesson' ? [sessionId!] : [], scope === 'series');
-      setReview({ scope, sessionId, ...reviewOf(fresh, scope, sessionId), requestId: crypto.randomUUID() });
+      setReview({ scope, sessionId, ...reviewOf(fresh, scope, sessionId), requestId: crypto.randomUUID(),
+        ...(full ? { error: courseErrorMessage(new Error('lesson_full'), t, locale), waitlistOffer: sessionId } : {}) });
     } catch (err) { setError(courseErrorMessage(err, t, locale)); }
     finally { setBusy(false); }
   }
 
+  // The lesson of a `?lesson=` link: reviewed when bookable, offered the waitlist when full, left alone when the
+  // customer already has a seat or a place in the queue (their own list shows it).
   const opened = useRef(false);
-  const initialReady = !!initialSessionId && !!uid && sessions.some(s => s.id === initialSessionId && available(s));
+  const linked = initialSessionId ? sessions.find(s => s.id === initialSessionId) : undefined;
+  const linkedMode: 'book' | 'waitlist' | null = !linked || !uid || enrollments.isLoading || mine.isLoading ||
+    enrolledIn(linked.id) || entryOf(linked.id) ? null : available(linked) ? 'book' :
+      canWaitlist(linked) && (linked.waitlisted ?? 0) < WAITLIST_MAX ? 'waitlist' : null;
   useEffect(() => {
-    if (opened.current || !initialReady) return;
+    if (opened.current || !linkedMode) return;
     opened.current = true;
-    void openReview('lesson', initialSessionId);
+    void openReview('lesson', initialSessionId, linkedMode === 'waitlist');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialReady, initialSessionId]);
+  }, [linkedMode, initialSessionId]);
 
   async function confirm() {
     if (!review) return;
@@ -113,7 +129,6 @@ export function CourseBooking({ course, sessions, checkoutEnabled, uid, initialS
           const fresh = await quoteCourse(course.id, review.scope === 'lesson' ? [review.sessionId!] : [], review.scope === 'series');
           setReview({ ...review, ...reviewOf(fresh, review.scope, review.sessionId),
             notice: details?.reason === 'availability' ? 'availability' : 'price', error: undefined, waitlistOffer: undefined });
-          void quote.refetch();
         } catch (refetchError) { setReview({ ...review, error: courseErrorMessage(refetchError, t, locale) }); }
       } else {
         setReview({ ...review, notice: undefined, error: courseErrorMessage(err, t, locale),
@@ -124,7 +139,7 @@ export function CourseBooking({ course, sessions, checkoutEnabled, uid, initialS
   }
 
   async function join(sessionId: string, fromReview = false) {
-    if (!uid) { window.location.assign('/auth/login'); return; }
+    if (!uid) { goToLogin(sessionId); return; }
     setBusy(true); setError('');
     try {
       // Fresh request id per join: a leave followed by a join is a new request, not a replay.
@@ -134,13 +149,15 @@ export function CourseBooking({ course, sessions, checkoutEnabled, uid, initialS
     } catch (err) {
       const message = courseErrorMessage(err, t, locale);
       if (fromReview) setReview(r => r && { ...r, error: message }); else setError(message);
+      // The queue or the seat count changed under us (already_waitlisted, waitlist_full, ...): show the truth.
+      await refresh().catch(() => undefined);
     } finally { setBusy(false); }
   }
 
   async function leave(sessionId: string) {
     setBusy(true); setError('');
     try { await leaveCourseWaitlist(course.id, sessionId); await refresh(); }
-    catch (err) { setError(courseErrorMessage(err, t, locale)); }
+    catch (err) { setError(courseErrorMessage(err, t, locale)); await refresh().catch(() => undefined); }
     finally { setBusy(false); }
   }
 
@@ -148,7 +165,9 @@ export function CourseBooking({ course, sessions, checkoutEnabled, uid, initialS
     const q = lessonQuotes.get(s.id);
     const finalCents = q?.finalCents ?? course.lessonPriceCents ?? undefined;
     if (finalCents === undefined) return null;
-    return <>{q && q.discountCents > 0 && <s className="mr-1 text-content-muted" data-testid="regular-price">{courseMoney(q.regularCents, locale)}</s>}
+    return <>{q && q.discountCents > 0 && <><span className="sr-only">{t('courses.regularPrice')} </span>
+        <s className="mr-1 text-content-muted" data-testid="regular-price">{courseMoney(q.regularCents, locale)}</s>
+        <span className="sr-only">{t('courses.finalPrice')} </span></>}
       <span data-testid="lesson-price">{finalCents === 0 ? t('courses.free') : courseMoney(finalCents, locale)}</span></>;
   };
   const reviewLessons = review ? sessions.filter(s => review.scope === 'series' || s.id === review.sessionId) : [];
@@ -157,12 +176,14 @@ export function CourseBooking({ course, sessions, checkoutEnabled, uid, initialS
   return <div className="space-y-4">
     <p className="text-sm text-content-muted">{t('courses.terms', { hours: course.cancellationHours })}</p>
     {checkoutEnabled && anyPriced ? <fieldset className="flex flex-wrap gap-4"><legend className="sr-only">{t('courses.pay')}</legend>
-      <label className="flex min-h-11 items-center gap-2"><input type="radio" name="course-payment" checked={payment === 'direct'} onChange={() => setPayment('direct')} />{t('courses.direct')}</label>
-      <label className="flex min-h-11 items-center gap-2"><input type="radio" name="course-payment" checked={payment === 'stripe'} onChange={() => setPayment('stripe')} />{t('courses.online')}</label>
+      <label className="flex min-h-11 items-center gap-2"><input type="radio" name="course-payment" disabled={busy || !!review} checked={payment === 'direct'} onChange={() => setPayment('direct')} />{t('courses.direct')}</label>
+      <label className="flex min-h-11 items-center gap-2"><input type="radio" name="course-payment" disabled={busy || !!review} checked={payment === 'stripe'} onChange={() => setPayment('stripe')} />{t('courses.online')}</label>
     </fieldset> : anyPriced && <p className="text-sm">{t('courses.direct')}</p>}
     {seriesFinal !== undefined && <div className="rounded-xl border border-hairline p-4 space-y-2">
       <Button className="min-h-11 w-full" disabled={busy || !!review || !seriesAvailable} onClick={() => openReview('series')}>
-        <span>{t('courses.series')} · {seriesQuote && seriesQuote.discountCents > 0 && <s className="mr-1 opacity-70" data-testid="regular-series">{courseMoney(seriesQuote.regularCents, locale)}</s>}
+        <span>{t('courses.series')} · {seriesQuote && seriesQuote.discountCents > 0 && <><span className="sr-only">{t('courses.regularPrice')} </span>
+            <s className="mr-1 opacity-70" data-testid="regular-series">{courseMoney(seriesQuote.regularCents, locale)}</s>
+            <span className="sr-only">{t('courses.finalPrice')} </span></>}
           <span data-testid="series-price">{seriesFinal === 0 ? t('courses.free') : courseMoney(seriesFinal, locale)}</span></span>
       </Button><p className="text-sm text-content-muted">{t('courses.seriesHint')}</p>
     </div>}
@@ -187,7 +208,7 @@ export function CourseBooking({ course, sessions, checkoutEnabled, uid, initialS
       </li>;
     })}</ul>
     {review && <CourseQuoteReview course={course} scope={review.scope} lessons={reviewLessons} quote={review.quote}
-      payment={modeFor(review.quote)} notice={review.notice} error={review.error} busy={busy}
+      payment={modeFor(review.quote)} notice={review.notice} error={review.error} busy={busy} canConfirm={!review.waitlistOffer}
       onConfirm={confirm} onCancel={() => setReview(null)}
       extra={review.waitlistOffer ? <Button className="min-h-11" variant="outline" disabled={busy}
         onClick={() => join(review.waitlistOffer!, true)}>{t('courses.joinWaitlist')}</Button> : null} />}
