@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useVenue } from '@/hooks/useVenues';
-import { useVenueWeek, usePublishedVenueCourses } from '@/hooks/useCourses';
+import { useVenueWeek, useCoursesById } from '@/hooks/useCourses';
 import { useManagedVenues } from '@/hooks/useManagedVenues';
 import { useAuthStore } from '@/stores/authStore';
 import { useI18n } from '@/hooks/useI18n';
@@ -56,9 +56,10 @@ export function VenueTimetable() {
   const [filters, setFilters] = useState<TimetableFilters>(NO_FILTERS);
 
   const sessions = useVenueWeek(open ? venueId : undefined, week);
-  const courses = usePublishedVenueCourses(open ? venueId : undefined);
-  const courseMap = useMemo(() => new Map((courses.data ?? []).map(c => [c.id, c])), [courses.data]);
-  const all = useMemo(() => weekLessons(sessions.data ?? [], courseMap, week), [sessions.data, courseMap, week]);
+  // The lessons say which courses they belong to: read exactly those (one cached document each), not the whole catalogue.
+  const courseIds = useMemo(() => [...new Set((sessions.data ?? []).flatMap(s => s.courseId ? [s.courseId] : []))].sort(), [sessions.data]);
+  const courses = useCoursesById(courseIds, open);
+  const all = useMemo(() => weekLessons(sessions.data ?? [], courses.map, week), [sessions.data, courses.map, week]);
   const lessons = useMemo(() => filterLessons(all, filters), [all, filters]);
   const now = useNow(30000);
   const wide = useMediaQuery('(min-width: 1024px)');

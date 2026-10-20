@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
   search: 'id=v1', uid: undefined as string | undefined, role: 'customer',
   venue: { id: 'v1', name: 'Smoke Gym', partnerStatus: 'active', isActive: true } as Record<string, unknown> | undefined,
   sessions: [] as unknown[], courses: [] as unknown[], managed: [] as { id: string }[],
-  quote: vi.fn(), wide: false,
+  quote: vi.fn(), wide: false, courseReads: [] as string[][],
   /** Per-week sessions for the paging tests; falls back to `sessions`. */
   sessionsOf: undefined as undefined | ((week: string) => unknown[]),
 }));
@@ -26,7 +26,8 @@ vi.mock('@/hooks/useManagedVenues', () => ({ useManagedVenues: () => ({ venues: 
 vi.mock('@/hooks/useCourses', () => ({
   useVenueWeek: (venueId?: string, week?: string) => ({ data: venueId ? (mocks.sessionsOf ? mocks.sessionsOf(week!) : mocks.sessions) : undefined,
     isLoading: false, isError: false }),
-  usePublishedVenueCourses: (venueId?: string) => ({ data: venueId ? mocks.courses : undefined, isLoading: false, isError: false }),
+  useCoursesById: (ids: string[], enabled = true) => { mocks.courseReads.push(ids);
+    return { map: new Map(enabled ? (mocks.courses as { id: string }[]).filter(c => ids.includes(c.id)).map(c => [c.id, c]) : []), isLoading: false, isError: false }; },
 }));
 vi.mock('@/lib/firebase/courses', () => ({ quoteCourse: (...args: unknown[]) => mocks.quote(...args) }));
 vi.mock('@/lib/firebase/venueSpaces', () => ({
@@ -55,7 +56,7 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-10-14T09:00:00Z') });
   mocks.search = 'id=v1'; mocks.uid = undefined; mocks.role = 'customer'; mocks.managed = [];
   mocks.venue = { id: 'v1', name: 'Smoke Gym', partnerStatus: 'active', isActive: true };
-  mocks.courses = [course()]; mocks.sessions = []; mocks.sessionsOf = undefined; mocks.wide = false;
+  mocks.courses = [course()]; mocks.sessions = []; mocks.sessionsOf = undefined; mocks.wide = false; mocks.courseReads = [];
   mocks.quote.mockReset();
   window.matchMedia = ((query: string) => ({ matches: mocks.wide, media: query, addEventListener: () => {}, removeEventListener: () => {} })) as unknown as typeof window.matchMedia;
 });
@@ -213,6 +214,14 @@ describe('VenueTimetable', () => {
     await waitFor(() => expect(within(grid()).getByTestId('final-price')).toHaveTextContent('€10.00'));
     expect(within(grid()).queryByTestId('regular-price')).not.toBeInTheDocument();
     expect(mocks.quote).not.toHaveBeenCalled();
+  });
+
+  it('reads only the courses of the lessons it shows, never the catalogue', async () => {
+    mocks.courses = [course(), course({ id: 'c2', name: 'Pilates' }), course({ id: 'c3', name: 'Judo' })];
+    mocks.sessions = [lesson('a', '2026-10-15T17:00:00Z'), lesson('b', '2026-10-16T17:00:00Z', { courseId: 'c2' }), lesson('c', '2026-10-16T18:00:00Z', { courseId: 'c2' })];
+    renderTimetable();
+    await waitFor(() => expect(grid().querySelectorAll('a')).toHaveLength(3));
+    expect(mocks.courseReads.at(-1)).toEqual(['c1', 'c2']);
   });
 
   it('says so when the week is empty', async () => {

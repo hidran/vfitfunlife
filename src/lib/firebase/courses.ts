@@ -40,12 +40,6 @@ export async function fetchVenueCourses(venueId: string): Promise<Course[]> {
   const snap = await getDocs(query(collection(db, 'courses'), where('venueId', '==', venueId), limit(200)));
   return snap.docs.map(d => ({ id: d.id, ...d.data() }) as Course);
 }
-/** Published courses of a venue that customers may read (rule: state == published && providerEligible == true). */
-export async function fetchPublishedVenueCourses(venueId: string): Promise<Course[]> {
-  const snap = await getDocs(query(collection(db, 'courses'), where('venueId', '==', venueId),
-    where('state', '==', 'published'), where('providerEligible', '==', true), limit(100)));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }) as Course);
-}
 export async function fetchVenueEnrollments(venueId: string): Promise<CourseEnrollment[]> {
   const snap = await getDocs(query(collection(db, 'courseEnrollments'), where('venueId', '==', venueId), limit(500)));
   return snap.docs.map(d => ({ id: d.id, ...d.data() }) as CourseEnrollment)

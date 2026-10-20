@@ -13,7 +13,8 @@ vi.mock('@/hooks/useVenues', () => ({
 }));
 vi.mock('@/hooks/useCourses', () => ({
   useVenueNextLessons: (...args: unknown[]) => { seen.lessons.push(args); return { data: args[0] ? mockLessons : undefined, isLoading: false }; },
-  usePublishedVenueCourses: (...args: unknown[]) => { seen.courses.push(args); return { data: args[0] ? mockCourses : undefined, isLoading: false }; },
+  useCoursesById: (ids: string[], enabled: boolean) => { seen.courses.push([ids, enabled]);
+    return { map: new Map(enabled ? (mockCourses as { id: string }[]).filter(c => ids.includes(c.id)).map(c => [c.id, c]) : []), isLoading: false, isError: false }; },
 }));
 vi.mock('@/components/gallery/PhotoGallery', () => ({ PhotoGallery: () => null }));
 
@@ -91,38 +92,56 @@ const stamp = (iso: string) => ({ toDate: () => new Date(iso), toMillis: () => n
 const lesson = (id: string, courseId: string, iso: string, instructor: string) => ({ id, courseId, startsAt: stamp(iso), endsAt: stamp(iso),
   instructorName: instructor, state: 'scheduled', listed: true });
 
+const labelled = (id: string, courseId: string, iso: string, instructor: string, name: string) =>
+  ({ ...lesson(id, courseId, iso, instructor), courseName: name, timezone: 'Europe/Rome' });
+
 describe('VenueDetailClient next lessons', () => {
   it('lists up to three upcoming lessons with the course name and instructor, and links to the full timetable', () => {
-    mockCourses = [{ id: 'c1', name: 'Yoga', timezone: 'Europe/Rome' }, { id: 'c2', name: 'Pilates', timezone: 'Europe/Rome' }];
-    mockLessons = [lesson('2099-01-05', 'c1', '2099-01-05T18:00:00Z', 'Anna'), lesson('2099-01-06', 'c2', '2099-01-06T09:00:00Z', 'Bruno'),
-      lesson('2099-01-07', 'c1', '2099-01-07T18:00:00Z', 'Anna')];
+    mockLessons = [labelled('2099-01-05', 'c1', '2099-01-05T18:00:00Z', 'Anna', 'Yoga'), labelled('2099-01-06', 'c2', '2099-01-06T09:00:00Z', 'Bruno', 'Pilates'),
+      labelled('2099-01-07', 'c1', '2099-01-07T18:00:00Z', 'Anna', 'Yoga')];
     render(<VenueDetailClient />);
     expect(seen.lessons.at(-1)).toEqual(['v1', 3]);
     const section = screen.getByRole('region', { name: 'Prossime lezioni' });
     expect(within(section).getAllByRole('link').filter(l => l.getAttribute('href')?.startsWith('/courses'))).toHaveLength(3);
     expect(within(section).getByText('Pilates')).toBeInTheDocument();
     expect(within(section).getByText(/Bruno/)).toBeInTheDocument();
+    expect(within(section).getAllByText(/19:00/)).toHaveLength(2);
     expect(within(section).getAllByRole('link')[0]).toHaveAttribute('href', '/courses?id=c1&lesson=2099-01-05');
     expect(within(section).getByRole('link', { name: 'Orario completo' })).toHaveAttribute('href', '/fit/gyms/timetable?id=v1');
   });
 
-  it('shows nothing when there are no lessons and no published courses', () => {
+  it('reads no course document when every lesson carries its name and time zone', () => {
+    mockLessons = [labelled('2099-01-05', 'c1', '2099-01-05T18:00:00Z', 'Anna', 'Yoga')];
     render(<VenueDetailClient />);
-    expect(screen.queryByRole('region', { name: 'Prossime lezioni' })).toBeNull();
+    expect(seen.courses.at(-1)).toEqual([[], true]);
   });
 
-  it('keeps the section, with the timetable link, when courses exist but no lesson is upcoming', () => {
+  it('falls back to one course read per distinct course for older lessons without a name', () => {
     mockCourses = [{ id: 'c1', name: 'Yoga', timezone: 'Europe/Rome' }];
+    mockLessons = [lesson('2099-01-05', 'c1', '2099-01-05T18:00:00Z', 'Anna'), lesson('2099-01-07', 'c1', '2099-01-07T18:00:00Z', 'Anna')];
     render(<VenueDetailClient />);
-    const section = screen.getByRole('region', { name: 'Prossime lezioni' });
-    expect(within(section).getByRole('link', { name: 'Orario completo' })).toBeInTheDocument();
+    expect(seen.courses.at(-1)).toEqual([['c1'], true]);
+    expect(screen.getAllByText('Yoga')).toHaveLength(2);
+    expect(screen.getAllByText(/19:00/)).toHaveLength(2);
+  });
+
+  it('shows no time rather than a guessed one when the time zone is unknown', () => {
+    mockLessons = [{ ...labelled('2099-01-05', 'c1', '2099-01-05T18:00:00Z', 'Anna', 'Yoga'), timezone: undefined }];
+    render(<VenueDetailClient />);
+    expect(screen.getByText('Yoga')).toBeInTheDocument();
+    expect(screen.getByText('Anna')).toBeInTheDocument();
+  });
+
+  it('shows nothing when there are no lessons', () => {
+    render(<VenueDetailClient />);
+    expect(screen.queryByRole('region', { name: 'Prossime lezioni' })).toBeNull();
   });
 
   it('does not query lessons for venues that do not host courses or are not active partners', () => {
     mockVenue = venue({ type: 'spa' });
     render(<VenueDetailClient />);
     expect(seen.lessons.every(args => args[0] === undefined)).toBe(true);
-    expect(seen.courses.every(args => args[0] === undefined)).toBe(true);
+    expect(seen.courses.every(args => args[1] === false)).toBe(true);
     expect(screen.queryByRole('region', { name: 'Prossime lezioni' })).toBeNull();
   });
 

@@ -20,6 +20,8 @@ export interface CourseSession {
   // Absent on lessons written before venue-linked courses.
   revision?: number; instructorId?: string | null; instructorName?: string; roomId?: string | null;
   locationId?: string | null; venueId?: string | null; courseId?: string; listed?: boolean; waitlisted?: number;
+  // Copied from the course when the lesson is written; absent on lessons older than the `--names` backfill.
+  courseName?: string; timezone?: string;
 }
 export interface CourseEnrollment {
   id: string; courseId: string; courseName: string; providerId: string; userId: string; customerName: string;

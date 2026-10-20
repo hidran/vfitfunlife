@@ -1,12 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ChevronLeft, Clock, MapPin, Star } from 'lucide-react';
 import { cn, formatDecimal, formatPrice } from '@/lib/utils';
 import { useVenue, useVenueServices } from '@/hooks/useVenues';
-import { usePublishedVenueCourses, useVenueNextLessons } from '@/hooks/useCourses';
+import { useCoursesById, useVenueNextLessons } from '@/hooks/useCourses';
 import { amenityIcon } from '@/lib/icons/amenityIcons';
 import { VenueNotFound } from '@/components/venue/VenueNotFound';
 import { Spinner } from '@/components/ui/Spinner';
@@ -25,7 +25,10 @@ export default function VenueDetailClient() {
   const listsCourses = !!venueQuery.data && hostsCourses(venueQuery.data.type) &&
     venueQuery.data.partnerStatus === 'active' && venueQuery.data.isActive !== false;
   const nextLessons = useVenueNextLessons(listsCourses ? id : undefined, 3);
-  const publishedCourses = usePublishedVenueCourses(listsCourses ? id : undefined);
+  // Lessons carry their course name and time zone; only older ones (before the backfill) need their course read, once.
+  const unlabelled = useMemo(() => [...new Set((nextLessons.data ?? []).flatMap((l) =>
+    l.courseId && (!l.courseName || !l.timezone) ? [l.courseId] : []))].sort(), [nextLessons.data]);
+  const fallbackCourses = useCoursesById(unlabelled, listsCourses);
 
   const [activeSlide, setActiveSlide] = useState(0);
   const [showAllHours, setShowAllHours] = useState(false);
@@ -50,8 +53,11 @@ export default function VenueDetailClient() {
 
   const slides = venue.heroGradients ?? [];
   const services = servicesQuery.data ?? [];
-  const courseNames = new Map((publishedCourses.data ?? []).map((c) => [c.id, c]));
-  const lessons = (nextLessons.data ?? []).filter((l) => l.courseId && courseNames.has(l.courseId));
+  const lessons = (nextLessons.data ?? []).flatMap((l) => {
+    const older = l.courseId ? fallbackCourses.map.get(l.courseId) : undefined;
+    const name = l.courseName || older?.name;
+    return l.courseId && name ? [{ lesson: l, courseId: l.courseId, name, timezone: l.timezone || older?.timezone }] : [];
+  });
   const hours = venue.hours ?? [];
   const visibleHours = showAllHours ? hours : hours.slice(0, 1);
 
@@ -183,28 +189,26 @@ export default function VenueDetailClient() {
           </ul>
         </section>
 
-        {listsCourses && (lessons.length > 0 || (publishedCourses.data ?? []).length > 0) && (
+        {listsCourses && lessons.length > 0 && (
           <section className="mt-6 space-y-3" aria-label={t('venue.nextLessons')}>
             <h2 className="border-b border-hairline pb-2 text-sm font-semibold text-vfit-accent light:text-violet-700">
               {t('venue.nextLessons')}
             </h2>
             <ul className="space-y-2">
-              {lessons.map((l) => {
-                const course = courseNames.get(l.courseId!)!;
+              {lessons.map(({ lesson: l, courseId, name, timezone }) => {
+                // No time zone known (older lesson whose course could not be read): say who, not a guessed time.
+                const when = timezone ? new Intl.DateTimeFormat(locale, {
+                  weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: timezone,
+                }).format(l.startsAt.toDate()) : '';
+                const who = l.instructorName || l.instructor;
                 return (
-                  <li key={`${l.courseId}_${l.id}`}>
+                  <li key={`${courseId}_${l.id}`}>
                     <Link
-                      href={`/courses?id=${encodeURIComponent(course.id)}&lesson=${encodeURIComponent(l.id)}`}
+                      href={`/courses?id=${encodeURIComponent(courseId)}&lesson=${encodeURIComponent(l.id)}`}
                       className="flex min-h-11 flex-col rounded-xl border border-hairline bg-surface p-3"
                     >
-                      <span className="text-sm font-semibold text-content">{course.name}</span>
-                      <span className="text-xs text-content-muted">
-                        {new Intl.DateTimeFormat(locale, {
-                          weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
-                          timeZone: course.timezone,
-                        }).format(l.startsAt.toDate())}
-                        {(l.instructorName || l.instructor) ? ` · ${l.instructorName || l.instructor}` : ''}
-                      </span>
+                      <span className="text-sm font-semibold text-content">{name}</span>
+                      <span className="text-xs text-content-muted">{[when, who].filter(Boolean).join(' · ')}</span>
                     </Link>
                   </li>
                 );
