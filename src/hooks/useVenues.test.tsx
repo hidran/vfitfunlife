@@ -30,6 +30,10 @@ beforeEach(() => {
 });
 
 describe('useNearbyVenues with several types', () => {
+  it('reads up to 200 venues, ordered by rating only, so unreviewed venues are not cut off', () => {
+    expect(NEARBY_FALLBACK_LIMIT).toBe(200);
+  });
+
   it('without a location, reads the bounded top-rated list for all the types', async () => {
     const { result } = renderHook(
       () => useNearbyVenues({ types: [...TYPES], userLocation: null, radiusKm: 25 }),

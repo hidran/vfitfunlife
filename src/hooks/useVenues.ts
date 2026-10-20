@@ -30,8 +30,13 @@ export function useVenues(opts: VenueListOptions = {}) {
   });
 }
 
-/** Size of the location-less list: the top-rated venues, never the whole collection. */
-export const NEARBY_FALLBACK_LIMIT = 50;
+/**
+ * Size of the location-less list: the top-rated venues, never the whole collection. 200 so that
+ * venues with no reviews yet (rating 0, which sort last) are still listed; ordering stays on
+ * `rating` alone because adding `name` would need a new composite index. The real fix for a
+ * catalogue that keeps growing is cursor pagination of this list.
+ */
+export const NEARBY_FALLBACK_LIMIT = 200;
 
 export type VenueWithDistance = Venue & { distanceKm?: number };
 
