@@ -288,7 +288,7 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
     waitlist_cleared: (c) => ({
       title: "Waitlist closed",
       body: `The waitlist for ${svc(c, "the class")} was closed: ` +
-        "the class was cancelled, moved or is too close to start.",
+        "the class was cancelled, moved or starts too soon.",
     }),
     waitlist_removed: (c) => ({
       title: "Removed from the waitlist",
@@ -576,8 +576,8 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
       }),
     }),
     instructor_changed: (c) => ({
-      title: "Trainer geändert",
-      body: `Der Trainer für ${svc(c, "den Kurs")}${when(c, "de")} hat gewechselt.${reason(c, "Grund:")} ` +
+      title: "Trainerwechsel",
+      body: `Der Trainer für ${svc(c, "den Kurs")}${when(c, "de")} hat sich geändert.${reason(c, "Grund:")} ` +
         "Die Details findest du in der App.",
     }),
   },
