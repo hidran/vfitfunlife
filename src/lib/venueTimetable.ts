@@ -1,4 +1,4 @@
-import { addDays, localDay } from '@/lib/gymTime';
+import { addDays, localDay, sessionTime } from '@/lib/gymTime';
 import type { Course, CourseSession } from '@/types/course';
 
 /** A listed lesson placed on a local day of the venue's week. */
@@ -7,7 +7,7 @@ export interface TimetableLesson {
   course: Course;
   /** `YYYY-MM-DD` in the lesson's own (course) time zone. */
   day: string;
-  /** `HH:mm` in the same zone, sortable as text. */
+  /** `HH:mm` (24 h) in the same zone: the key lessons are grouped and sorted by. Show it with `lessonTime`. */
   time: string;
 }
 
@@ -34,9 +34,15 @@ export function instructorLabel(session: CourseSession): string {
   return session.instructorName || session.instructor || '';
 }
 
+/** Grouping key of a start time: `HH:mm`, 24 h, locale independent so equal times always share a row. */
 function localTime(date: Date, timezone: string): string {
   return new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: timezone })
     .format(date);
+}
+
+/** A lesson's start time as the viewer's locale writes it (the one formatter the cards use as well). */
+export function lessonTime({ session, course }: Pick<TimetableLesson, 'session' | 'course'>, locale: string): string {
+  return sessionTime(session.startsAt.toDate(), locale, course.timezone);
 }
 
 /**

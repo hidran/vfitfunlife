@@ -1,4 +1,5 @@
-export function localDay(date: Date, timezone: string): string {
+/** `YYYY-MM-DD` of `date` in `timezone`; without one, in the browser's own zone (never a guessed country). */
+export function localDay(date: Date, timezone?: string): string {
   const parts = new Intl.DateTimeFormat('en', { timeZone: timezone, year: 'numeric',
     month: '2-digit', day: '2-digit' }).formatToParts(date);
   const value = (type: string) => parts.find(part => part.type === type)?.value ?? '';

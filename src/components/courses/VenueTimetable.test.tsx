@@ -50,6 +50,7 @@ function renderTimetable() {
 }
 const grid = () => screen.getByTestId('week-grid');
 const cellLinks = (day: string) => Array.from(grid().querySelectorAll(`[data-day="${day}"] a`));
+const cellCards = (day: string) => Array.from(grid().querySelectorAll(`[data-day="${day}"] [data-testid="timetable-card"]`));
 
 beforeEach(() => {
   // Wednesday 2026-10-14 in Rome. Only Date is faked: timers must keep running for the query client.
@@ -66,10 +67,40 @@ describe('VenueTimetable', () => {
   it('puts a Monday and a Sunday lesson in their columns', async () => {
     mocks.sessions = [lesson('mon', '2026-10-12T17:00:00Z'), lesson('sun', '2026-10-18T08:00:00Z')];
     renderTimetable();
-    await waitFor(() => expect(cellLinks('2026-10-12')).toHaveLength(1));
-    expect(cellLinks('2026-10-12')[0].getAttribute('href')).toBe('/courses?id=c1&lesson=mon');
-    expect(cellLinks('2026-10-18')).toHaveLength(1);
-    expect(cellLinks('2026-10-14')).toHaveLength(0);
+    await waitFor(() => expect(cellCards('2026-10-12')).toHaveLength(1));
+    expect(cellCards('2026-10-18')).toHaveLength(1);
+    expect(cellCards('2026-10-18')[0].getAttribute('href')).toBe('/courses?id=c1&lesson=sun');
+    expect(cellCards('2026-10-14')).toHaveLength(0);
+  });
+
+  it('shows a lesson that already started as information only: no link, no opacity', async () => {
+    mocks.sessions = [lesson('mon', '2026-10-12T17:00:00Z')];
+    renderTimetable();
+    await waitFor(() => expect(cellCards('2026-10-12')).toHaveLength(1));
+    const [card] = cellCards('2026-10-12');
+    expect(card.tagName).toBe('DIV');
+    expect(card).toHaveAttribute('data-past', 'true');
+    expect(card.className).not.toMatch(/opacity/);
+    expect(card.querySelector('a')).toBeNull();
+  });
+
+  it('labels the grid rows with the viewer\'s own time format', async () => {
+    mocks.sessions = [lesson('thu', '2026-10-15T17:00:00Z')];
+    renderTimetable();
+    await waitFor(() => expect(grid().querySelectorAll('a')).toHaveLength(1));
+    // en: 7:00 PM in Rome, the same text as the card, not the 24 h grouping key.
+    expect(within(grid()).getAllByText(/7:00\s?PM/).length).toBeGreaterThanOrEqual(2);
+    expect(within(grid()).queryByText('19:00')).not.toBeInTheDocument();
+  });
+
+  it('keeps all seven day tabs reachable at 320 px: a scrolling strip of tabs at least 44 px wide', async () => {
+    renderTimetable();
+    const strip = await screen.findByTestId('day-tabs');
+    expect(strip.className).toMatch(/overflow-x-auto/);
+    const tab = screen.getByTestId('tab-2026-10-14');
+    expect(tab.className).toMatch(/min-w-12/);
+    expect(tab.className).toMatch(/shrink-0/);
+    expect(strip.querySelectorAll('button')).toHaveLength(7);
   });
 
   it('keeps the DST-change week right: a late Sunday lesson stays Sunday, 00:30 Monday leaves the week', async () => {
@@ -102,11 +133,12 @@ describe('VenueTimetable', () => {
     mocks.sessions = [lesson('a', '2026-10-12T17:00:00Z', { roomId: 'r1' }),
       lesson('b', '2026-10-13T17:00:00Z', { roomId: 'r2', instructorId: 'i2', instructorName: 'Bruno' })];
     renderTimetable();
-    await waitFor(() => expect(grid().querySelectorAll('a')).toHaveLength(2));
+    const cards = () => grid().querySelectorAll('[data-testid="timetable-card"]');
+    await waitFor(() => expect(cards()).toHaveLength(2));
     fireEvent.change(await screen.findByRole('option', { name: 'Sala Due' }).then(o => o.closest('select')!), { target: { value: 'r2' } });
-    expect(grid().querySelectorAll('a')).toHaveLength(1);
+    expect(cards()).toHaveLength(1);
     fireEvent.change(screen.getByLabelText('courses.instructor'), { target: { value: 'i1' } });
-    expect(grid().querySelectorAll('a')).toHaveLength(0);
+    expect(cards()).toHaveLength(0);
     expect(screen.getByTestId('timetable-empty')).toBeInTheDocument();
   });
 
@@ -130,6 +162,9 @@ describe('VenueTimetable', () => {
     await waitFor(() => expect(within(grid()).getByTestId('final-price')).toHaveTextContent('€8.00'));
     expect(within(grid()).getByTestId('regular-price')).toHaveTextContent('€10.00');
     expect(mocks.quote).toHaveBeenCalledWith('c1', ['a'], false);
+    // A struck-through price is read as "regular price … final price …", not as two bare numbers.
+    expect(within(grid()).getByText('courses.regularPrice')).toHaveClass('sr-only');
+    expect(within(grid()).getByText('courses.finalPrice')).toHaveClass('sr-only');
   });
 
   it('keeps two courses with the same lesson date apart (lesson ids are dates)', async () => {

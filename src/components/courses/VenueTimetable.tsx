@@ -1,5 +1,5 @@
 'use client';
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useQueries, useQuery } from '@tanstack/react-query';
@@ -15,7 +15,7 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { quoteCourse } from '@/lib/firebase/courses';
 import { fetchVenueLocations, fetchVenueRooms } from '@/lib/firebase/venueSpaces';
 import { addDays, dayLabel, localDay, weekStart } from '@/lib/gymTime';
-import { filterLessons, instructorKey, instructorLabel, NO_FILTERS, weekLessons, type TimetableFilters, type TimetableLesson } from '@/lib/venueTimetable';
+import { filterLessons, instructorKey, instructorLabel, lessonTime, NO_FILTERS, weekLessons, type TimetableFilters, type TimetableLesson } from '@/lib/venueTimetable';
 import { cn } from '@/lib/utils';
 import { TimetableCard } from './TimetableCard';
 import type { Course, SessionQuote } from '@/types/course';
@@ -48,12 +48,18 @@ export function VenueTimetable() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   [activeLocations, roomQueries.map(q => q.data).join('|'), roomQueries.length]);
 
-  const timezone = activeLocations[0]?.timezone || 'Europe/Rome';
+  // The venue's own zone once known; until then the browser's (a guessed country would pick the wrong "today").
+  const timezone = activeLocations[0]?.timezone;
   const [selectedDay, setSelectedDay] = useState('');
   const day = selectedDay || localDay(new Date(), timezone);
   const week = weekStart(day);
   const days = Array.from({ length: 7 }, (_, index) => addDays(week, index));
   const [filters, setFilters] = useState<TimetableFilters>(NO_FILTERS);
+  // Seven 48 px tabs do not fit at 320 px: the strip scrolls and keeps the selected day in view.
+  const tabsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    tabsRef.current?.querySelector<HTMLElement>('[aria-pressed="true"]')?.scrollIntoView?.({ inline: 'center', block: 'nearest' });
+  }, [day]);
 
   const sessions = useVenueWeek(open ? venueId : undefined, week);
   // The lessons say which courses they belong to: read exactly those (one cached document each), not the whole catalogue.
@@ -102,6 +108,7 @@ export function VenueTimetable() {
   }, [all]);
   const roomOptions = rooms.filter(r => !filters.locationId || r.locationId === filters.locationId);
   const times = [...new Set(lessons.map(l => l.time))].sort();
+  const timeLabel = (time: string) => { const first = lessons.find(l => l.time === time); return first ? lessonTime(first, locale) : time; };
 
   if (!venueId) return <div className="p-6"><Link className="underline" href="/fit/gyms">{t('gym.selectGym')}</Link></div>;
   const weekText = t('timetable.week', { date: dayLabel(week, locale, { day: 'numeric', month: 'long' }) });
@@ -141,9 +148,9 @@ export function VenueTimetable() {
         <p className="text-content-muted" data-testid="timetable-empty">{t('timetable.empty')}</p>}
       {/* Phone: one day at a time. */}
       <section className="space-y-3 lg:hidden" aria-label={weekText} data-testid="day-list">
-        <div className="grid grid-cols-7 gap-1">{days.map(value => <button key={value} type="button" data-testid={`tab-${value}`}
+        <div ref={tabsRef} className="flex gap-1 overflow-x-auto pb-1" data-testid="day-tabs">{days.map(value => <button key={value} type="button" data-testid={`tab-${value}`}
           aria-pressed={value === day} onClick={() => setSelectedDay(value)}
-          className={cn('min-h-14 rounded-xl border p-1 text-center text-xs', value === day ?
+          className={cn('min-h-14 min-w-12 flex-1 shrink-0 rounded-xl border p-1 text-center text-xs', value === day ?
             'border-section-primary bg-section-primary/15 text-section-primary' : 'border-hairline bg-surface text-content')}>
           <span className="block capitalize">{dayLabel(value, locale, { weekday: 'short' })}</span>
           <span className="block text-lg font-semibold">{dayLabel(value, locale, { day: 'numeric' })}</span>
@@ -160,7 +167,7 @@ export function VenueTimetable() {
             <span className="block capitalize">{dayLabel(value, locale, { weekday: 'short' })}</span>
             <span className="block text-lg font-semibold">{dayLabel(value, locale, { day: 'numeric' })}</span></div>)}
           {times.map(time => <Fragment key={time}>
-            <div className="pt-3 text-sm font-semibold text-content-muted">{time}</div>
+            <div className="pt-3 text-sm font-semibold text-content-muted">{timeLabel(time)}</div>
             {days.map(value => <div key={value} data-day={value} data-time={time} className="min-w-0 space-y-2">
               {lessons.filter(l => l.day === value && l.time === time).map(card)}</div>)}
           </Fragment>)}
