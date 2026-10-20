@@ -32,7 +32,7 @@ describe('useManagedVenues', () => {
   it('does not fetch and is not loading without a signed-in user', () => {
     state.uid = undefined;
     const { result } = renderHook(() => useManagedVenues(), { wrapper });
-    expect(result.current).toEqual({ venues: [], isLoading: false });
+    expect(result.current).toEqual({ venues: [], isLoading: false, isError: false });
     expect(state.fetch).not.toHaveBeenCalled();
   });
 
@@ -41,5 +41,16 @@ describe('useManagedVenues', () => {
     const { result } = renderHook(() => useManagedVenues(), { wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.venues).toEqual([]);
+    expect(result.current.isError).toBe(true);
+  });
+
+  it('does not retry a failed lookup: callers need the answer now, not after the backoff', async () => {
+    state.fetch.mockRejectedValue(new Error('denied'));
+    const retrying = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: 3, retryDelay: 10000 } } })}>{children}</QueryClientProvider>
+    );
+    const { result } = renderHook(() => useManagedVenues(), { wrapper: retrying });
+    await waitFor(() => expect(result.current.isError).toBe(true), { timeout: 1500 });
+    expect(state.fetch).toHaveBeenCalledTimes(1);
   });
 });

@@ -30,6 +30,7 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import { AssistantMenuButton } from '@/components/assistant/AssistantMenuButton';
 import { DashboardModeSwitch } from '@/components/layout/DashboardModeSwitch';
+import { Spinner } from '@/components/ui/Spinner';
 
 interface ProviderLayoutProps {
   children: ReactNode;
@@ -79,6 +80,10 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
 
   if (blocked) {
     return null; // redirecting
+  }
+  // A plain customer must not see provider pages while the lookup decides whether they manage a venue.
+  if (isInitialized && !!user && !isProvider && venuesLoading) {
+    return <div className="flex min-h-[calc(100vh-64px)] items-center justify-center"><Spinner size="md" /></div>;
   }
 
   return (

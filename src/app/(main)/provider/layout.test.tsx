@@ -5,6 +5,7 @@ const state = vi.hoisted(() => ({
   user: null as { role: string; providerStatus?: string } | null,
   venues: [] as { id: string }[],
   loading: false,
+  failed: false,
   pathname: '/provider/courses',
   replace: vi.fn(),
 }));
@@ -19,7 +20,7 @@ vi.mock('@/stores/authStore', () => ({
 }));
 vi.mock('@/hooks/useI18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }));
 vi.mock('@/hooks/useManagedVenues', () => ({
-  useManagedVenues: () => ({ venues: state.venues, isLoading: state.loading }),
+  useManagedVenues: () => ({ venues: state.venues, isLoading: state.loading, isError: state.failed }),
 }));
 vi.mock('@/components/ui/ThemeToggle', () => ({ ThemeToggle: () => null }));
 vi.mock('@/components/i18n/LanguageSwitcher', () => ({ LanguageSwitcher: () => null }));
@@ -33,6 +34,7 @@ describe('ProviderLayout', () => {
     state.user = null;
     state.venues = [];
     state.loading = false;
+    state.failed = false;
     state.pathname = '/provider/courses';
     state.replace.mockReset();
   });
@@ -60,6 +62,26 @@ describe('ProviderLayout', () => {
     render(<ProviderLayout><p>page</p></ProviderLayout>);
 
     expect(state.replace).not.toHaveBeenCalled();
+    // The provider pages are never shown to someone who may turn out not to be allowed in.
+    expect(screen.queryByText('page')).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('keeps showing a provider their page while venues load', () => {
+    state.user = { role: 'provider', providerStatus: 'verified' };
+    state.loading = true;
+    render(<ProviderLayout><p>page</p></ProviderLayout>);
+
+    expect(screen.getByText('page')).toBeInTheDocument();
+  });
+
+  it('treats a failed venue lookup as "not a manager" at once', () => {
+    state.user = { role: 'customer', providerStatus: 'none' };
+    state.failed = true;
+    const { container } = render(<ProviderLayout><p>page</p></ProviderLayout>);
+
+    expect(state.replace).toHaveBeenCalledWith('/profile');
+    expect(container).toBeEmptyDOMElement();
   });
 
   it('lets a venue manager in and reduces the navigation to the venue courses entry', () => {
