@@ -27,7 +27,13 @@ export type BookingMessageEvent =
   | "reminder_24h"
   | "reminder_2h"
   /** The trainer put a session in the client's calendar (createBookingAsTrainer). */
-  | "scheduled_by_trainer";
+  | "scheduled_by_trainer"
+  /** A seat freed up and the first waitlisted customer was enrolled (courses). */
+  | "waitlist_promoted"
+  /** The lesson's waitlist was closed: cancelled, moved, archived or inside the notice window (courses). */
+  | "waitlist_cleared"
+  /** The instructor of one lesson was substituted (courses). */
+  | "instructor_changed";
 
 export interface MessageContext {
   serviceName?: string;
@@ -164,6 +170,20 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
       body: `${c.trainerName?.trim() || "Il tuo trainer"} ha fissato ${svc(c, "una sessione")}${when(c, "it")}.` +
         " La trovi tra le tue prenotazioni.",
     }),
+    waitlist_promoted: (c) => ({
+      title: "Posto liberato",
+      body: `Si è liberato un posto per ${svc(c, "la lezione")}${when(c, "it")}. ` +
+        "Apri le tue prenotazioni per confermarlo; con pagamento online hai 30 minuti.",
+    }),
+    waitlist_cleared: (c) => ({
+      title: "Lista d'attesa chiusa",
+      body: `La lista d'attesa per ${svc(c, "la lezione")} è stata chiusa: ` +
+        "la lezione è stata annullata, spostata o è troppo vicina.",
+    }),
+    instructor_changed: (c) => ({
+      title: "Istruttore cambiato",
+      body: `L'istruttore di ${svc(c, "la lezione")}${when(c, "it")} è cambiato. Trovi i dettagli nell'app.`,
+    }),
   },
 
   en: {
@@ -226,6 +246,21 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
       title: "New session booked",
       body: `${c.trainerName?.trim() || "Your trainer"} booked ${svc(c, "a session")}${when(c, "en")} for you.` +
         " You'll find it in your bookings.",
+    }),
+    waitlist_promoted: (c) => ({
+      title: "A spot opened up",
+      body: `A spot opened up for ${svc(c, "the class")}${when(c, "en")}. ` +
+        "Open your bookings to confirm it; with online payment you have 30 minutes.",
+    }),
+    waitlist_cleared: (c) => ({
+      title: "Waitlist closed",
+      body: `The waitlist for ${svc(c, "the class")} was closed: ` +
+        "the class was cancelled, moved or is too close to start.",
+    }),
+    instructor_changed: (c) => ({
+      title: "Instructor changed",
+      body: `The instructor for ${svc(c, "the class")}${when(c, "en")} has changed. ` +
+        "You'll find the details in the app.",
     }),
   },
 
@@ -290,6 +325,20 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
       body: `${c.trainerName?.trim() || "Tu entrenador"} ha programado ${svc(c, "una sesión")}${when(c, "es")}.` +
         " La encontrarás en tus reservas.",
     }),
+    waitlist_promoted: (c) => ({
+      title: "Plaza disponible",
+      body: `Se ha liberado una plaza para ${svc(c, "la clase")}${when(c, "es")}. ` +
+        "Abre tus reservas para confirmarla; con pago online tienes 30 minutos.",
+    }),
+    waitlist_cleared: (c) => ({
+      title: "Lista de espera cerrada",
+      body: `La lista de espera de ${svc(c, "la clase")} se ha cerrado: ` +
+        "la clase se ha cancelado, cambiado de horario o está demasiado cerca.",
+    }),
+    instructor_changed: (c) => ({
+      title: "Instructor cambiado",
+      body: `El instructor de ${svc(c, "la clase")}${when(c, "es")} ha cambiado. Encontrarás los detalles en la app.`,
+    }),
   },
 
   fr: {
@@ -353,6 +402,20 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
       body: `${c.trainerName?.trim() || "Votre coach"} a planifié ${svc(c, "une séance")}${when(c, "fr")}.` +
         " Vous la trouverez dans vos réservations.",
     }),
+    waitlist_promoted: (c) => ({
+      title: "Une place s'est libérée",
+      body: `Une place s'est libérée pour ${svc(c, "le cours")}${when(c, "fr")}. ` +
+        "Ouvrez vos réservations pour la confirmer ; avec le paiement en ligne, vous avez 30 minutes.",
+    }),
+    waitlist_cleared: (c) => ({
+      title: "Liste d'attente fermée",
+      body: `La liste d'attente de ${svc(c, "le cours")} a été fermée : ` +
+        "le cours a été annulé, déplacé ou commence trop tôt.",
+    }),
+    instructor_changed: (c) => ({
+      title: "Instructeur modifié",
+      body: `L'instructeur de ${svc(c, "le cours")}${when(c, "fr")} a changé. Retrouvez les détails dans l'app.`,
+    }),
   },
 
   de: {
@@ -415,6 +478,20 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
       title: "Neue Einheit im Kalender",
       body: `${c.trainerName?.trim() || "Dein Trainer"} hat ${svc(c, "eine Einheit")}${when(c, "de")}` +
         " für dich eingetragen. Du findest sie in deinen Buchungen.",
+    }),
+    waitlist_promoted: (c) => ({
+      title: "Platz frei geworden",
+      body: `Für ${svc(c, "den Kurs")}${when(c, "de")} ist ein Platz frei geworden. ` +
+        "Öffne deine Buchungen, um ihn zu bestätigen; bei Online-Zahlung hast du 30 Minuten.",
+    }),
+    waitlist_cleared: (c) => ({
+      title: "Warteliste geschlossen",
+      body: `Die Warteliste für ${svc(c, "den Kurs")} wurde geschlossen: ` +
+        "Die Einheit wurde abgesagt, verschoben oder beginnt zu bald.",
+    }),
+    instructor_changed: (c) => ({
+      title: "Trainer geändert",
+      body: `Der Trainer für ${svc(c, "den Kurs")}${when(c, "de")} hat gewechselt. Die Details findest du in der App.`,
     }),
   },
 };

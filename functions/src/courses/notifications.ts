@@ -10,12 +10,15 @@ import { createHash } from "crypto";
 export function queueCourseNotification(
   tx: { set: (ref: DocumentReference, data: DocumentData) => unknown },
   id: string, event: BookingMessageEvent, uid: string,
-  course: { name: string; providerName?: string; providerId?: string }, startsAt?: Date, reason?: string, email = true
+  course: { name: string; providerName?: string; providerId?: string; venueId?: string | null },
+  startsAt?: Date, reason?: string, email = true
 ): void {
   const key = `${id}_${event}_${uid}`;
   const documentId = Buffer.byteLength(key, "utf8") > 1400 ? createHash("sha256").update(key).digest("hex") : key;
+  // Venue staff manage the course from the venue-scoped page; a customer always lands on their bookings.
+  const providerLink = course.venueId ? `/provider/courses?venue=${course.venueId}` : "/provider/courses";
   tx.set(db.doc(`courseNotifications/${documentId}`), {
-    uid, event, sendEmail: email, link: uid === course.providerId ? "/provider/courses" : "/courses?tab=bookings",
+    uid, event, sendEmail: email, link: uid === course.providerId ? providerLink : "/courses?tab=bookings",
     name: course.name, providerName: course.providerName ?? "", startsAt: startsAt ?? null,
     reason: reason ?? "", createdAt: nowStamp(),
   });
