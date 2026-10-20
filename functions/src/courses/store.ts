@@ -7,6 +7,8 @@ export interface Course extends CourseInput {
   providerEligible: boolean; providerId: string; providerName: string; serviceId: string; sessionIds: string[];
   nextSessionId: string; nextAvailableSeats: number;
   firstStartsAt: Timestamp; nextStartsAt: Timestamp; categoryIds: string[];
+  // Set by onCourseProviderEligibility while a multi-chunk listing pass is unfinished; absent otherwise.
+  listingSyncPending?: boolean;
 }
 export interface Session {
   startsAt: Timestamp; endsAt: Timestamp; capacity: number; occupied: number; held: number;
