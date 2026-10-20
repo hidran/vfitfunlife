@@ -11,6 +11,19 @@ export interface Course extends CourseInput {
 export interface Session {
   startsAt: Timestamp; endsAt: Timestamp; capacity: number; occupied: number; held: number;
   state: "scheduled" | "cancelled" | "completed"; location: string; instructor: string;
+  // Absent on sessions written before venue-linked courses.
+  revision?: number; instructorId?: string | null; instructorName?: string; roomId?: string | null;
+  locationId?: string | null; venueId?: string | null; courseId?: string; listed?: boolean; waitlisted?: number;
+}
+export interface WaitlistEntry {
+  userId: string; customerName: string; scope: "lesson"; requestId: string; paymentMode: "direct" | "stripe";
+  position: number; createdAt: Timestamp; courseId: string; sessionId: string; courseName: string;
+  providerId: string; venueId: string | null;
+}
+export interface Participant {
+  enrollmentId: string; userId: string; customerName: string; providerId: string;
+  state: "held" | "confirmed"; attendance: "present" | "absent" | "unmarked";
+  markedAt?: Timestamp; markedBy?: string; lateCancel?: boolean; noShow?: boolean;
 }
 export interface Enrollment {
   userId: string; providerId: string; courseId: string; courseName: string; customerName: string;
@@ -24,6 +37,10 @@ export interface Enrollment {
   checkoutSettled?: boolean;
   checkoutSessionId?: string; checkoutUrl?: string; stripePaymentIntentId?: string;
   refundCents: number; createdAt: Timestamp;
+  // Quote snapshot; absent on enrollments made before venue-linked courses.
+  venueId?: string | null; regularCents?: number; discountCents?: number; discountPercent?: number;
+  gymPercent?: number; instructorPercent?: number; sessionRevisions?: Record<string, number>;
+  promotedFromWaitlist?: boolean; lateCancelledSessionIds?: string[];
 }
 export const nowStamp = () => FieldValue.serverTimestamp();
 export function safeId(value: unknown): string {
