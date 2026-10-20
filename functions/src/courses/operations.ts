@@ -3,7 +3,9 @@ import { FieldValue, Timestamp, type Transaction } from "firebase-admin/firestor
 import { region } from "../lib/runtimeOptions";
 import { readPaymentSettings } from "../payments/paymentSettingsCallables";
 import { checkoutActive } from "./core";
-import { db, safeId, uidOf, nowStamp, domainError, Enrollment, Course, Session } from "./store";
+import {
+  db, safeId, uidOf, nowStamp, domainError, providerUsable, Enrollment, Course, Session,
+} from "./store";
 import { canManageCourse, type Authority } from "./authority";
 import { queueCourseNotification } from "./notifications";
 import { planPromotions, clearWaitlistInTx } from "./waitlist";
@@ -227,6 +229,51 @@ async function cancelOrReschedule(a: SessionAction, action: "cancel" | "reschedu
   return requested;
 }
 
+/**
+ * Gives one lesson to another instructor. Existing enrollments keep the price they were booked at; the lesson's
+ * revision moves so a customer who reviewed the old quote sees the change. The instructor's day lock moves in the
+ * same transaction (instructor_overlap before any write); the room slot is rewritten unchanged.
+ */
+async function substituteInstructor(a: SessionAction): Promise<void> {
+  const { courseId, sessionId, data } = a;
+  const instructorId = safeId(data.instructorId);
+  const reason = text(data.reason);
+  const courseRef = db.doc(`courses/${courseId}`);
+  const ref = db.doc(sessionPath(courseId, sessionId));
+  await db.runTransaction(async (tx) => {
+    const [courseDoc, sessionDoc] = await tx.getAll(courseRef, ref);
+    const course = courseDoc.data() as Course | undefined;
+    if (!course) throw new HttpsError("not-found", "course_not_found");
+    const s = sessionDoc.data() as Session | undefined;
+    if (!s) throw new Error("session_not_found");
+    if (s.state !== "scheduled") throw new Error("session_unavailable");
+    if (s.startsAt.toMillis() <= Date.now()) throw new Error("cannot_change_past_lesson");
+    if (instructorId === (s.instructorId ?? course.instructorId ?? null)) {
+      throw new HttpsError("invalid-argument", "invalid_instructor");
+    }
+    // As when a course is saved: an unlinked course may only name its own provider (an admin may name anyone).
+    if (!course.venueId && instructorId !== course.providerId && a.manager.authority.via !== "admin") {
+      throw new HttpsError("permission-denied", "course_instructor_not_allowed");
+    }
+    const [instructor, link] = await tx.getAll(db.doc(`instructors/${instructorId}`),
+      db.doc(`venues/${course.venueId ?? "none"}/instructors/${instructorId}`));
+    if (!providerUsable(instructor.data()) || (course.venueId && link.data()?.isActive !== true)) {
+      throw new HttpsError("invalid-argument", "invalid_instructor");
+    }
+    const name = instructor.data()!.fullName || instructor.data()!.name || link.data()?.name || s.instructor;
+    const participants = await tx.get(ref.collection("participants"));
+    const stored = [{ id: sessionId, data: s }];
+    await relock(tx, courseId, { course, sessions: stored }, { course, sessions: [{ id: sessionId,
+      data: { ...s, instructorId, instructorName: name, instructor: name } }] });
+    const revision = (s.revision ?? 1) + 1;
+    tx.update(ref, { instructorId, instructorName: name, instructor: name, revision: FieldValue.increment(1) });
+    for (const p of participants.docs) {
+      queueCourseNotification(tx, `${p.data().enrollmentId}_${sessionId}_r${revision}`, "instructor_changed", p.id,
+        course, s.startsAt.toDate(), reason);
+    }
+  });
+}
+
 export const manageCourseSession = onCall({ region }, async (req) => {
   const uid = uidOf(req.auth);
   const courseId = safeId(req.data.courseId);
@@ -268,6 +315,8 @@ export const manageCourseSession = onCall({ region }, async (req) => {
         }
       }
       if (action === "cancel") await ref.update({ cancellationReconciled: true });
+    } else if (action === "substitute") {
+      await substituteInstructor(a);
     } else throw new Error("invalid_session_action");
     return { success: true };
   } catch (error) {

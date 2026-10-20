@@ -1158,3 +1158,119 @@ describe("manageCourseSession reschedule", () => {
       .rejects.toMatchObject({ message: "course_owner_required" });
   });
 });
+
+describe("manageCourseSession substitute", () => {
+  const venueInput = { ...input, venueId: "v", locationId: "l1", roomId: "r1", instructorId: "p" };
+  const save = (uid: string, course: Record<string, unknown>, courseId?: string) =>
+    api.saveCourse.run(request(uid, { course, ...(courseId ? { courseId } : {}) }));
+  const substitute = (uid: string, courseId: string, instructorId: string, extra: Record<string, unknown> = {}) =>
+    api.manageCourseSession.run(request(uid, { courseId, sessionId: SESSION, action: "substitute", instructorId, ...extra }));
+  const sessionOf = async (courseId: string, id = SESSION) =>
+    (await db.doc(`courses/${courseId}/sessions/${id}`).get()).data()!;
+  const slotsIn = async (path: string) => Object.keys((await db.doc(path).get()).data()?.slots ?? {});
+  const notices = async () => (await db.collection("courseNotifications").where("event", "==", "instructor_changed").get())
+    .docs.map((d) => d.data().uid as string).sort();
+  beforeEach(async () => {
+    await db.doc("venues/v").update({ memberDiscountPercent: 10, partnerInstructorExtraPercent: 5 });
+    await db.doc("venues/v/instructors/p").set({ isActive: true, name: "Anna" });
+    await db.doc("venues/v/instructors/p2").set({ isActive: true, name: "Paola" });
+    await db.doc("instructors/p2").set({ fullName: "Paola", isActive: true, applicationStatus: "approved",
+      providerProfile: { isVerified: true }, partnerStatus: "active" });
+    await db.doc("instructors/q").set({ fullName: "Quinn", isActive: true, applicationStatus: "approved",
+      providerProfile: { isVerified: true } });
+    await db.doc("venues/v/locations/l1/rooms/r3").set({ name: "Sala 3", isActive: true });
+  });
+  afterEach(async () => assertLockInvariant(db));
+
+  it("changes the lesson's instructor, moves the instructor lock, keeps the room, bumps the revision", async () => {
+    const { courseId } = await save("biz", venueInput);
+    await substitute("s", courseId, "p2", { reason: "Sick" });
+    expect(await sessionOf(courseId)).toMatchObject({ instructorId: "p2", instructorName: "Paola",
+      instructor: "Paola", revision: 2, roomId: "r1" });
+    expect(await sessionOf(courseId, "2099-10-13")).toMatchObject({ instructorId: "p", revision: 1 });
+    expect(await slotsIn("courseScheduleLocks/instructor:p|2099-10-12")).toEqual([]);
+    expect(await slotsIn("courseScheduleLocks/instructor:p2|2099-10-12")).toEqual([`${courseId}_${SESSION}`]);
+    expect(await slotsIn("courseScheduleLocks/room:v:l1:r1|2099-10-12")).toEqual([`${courseId}_${SESSION}`]);
+  });
+  it("refuses an instructor busy with another class, and writes nothing", async () => {
+    const { courseId } = await save("biz", venueInput);
+    const other = await save("biz", { ...venueInput, name: "Judo", roomId: "r3", instructorId: "p2" });
+    const before = await sessionOf(courseId);
+    await expect(substitute("s", courseId, "p2")).rejects.toMatchObject(
+      { message: "instructor_overlap", details: { courseName: "Judo" } });
+    expect(await sessionOf(courseId)).toEqual(before);
+    expect(await notices()).toEqual([]);
+    expect(other.courseId).toBeTruthy();
+  });
+  it.each([
+    ["an instructor with no link to the venue", "q"], ["the current instructor", "p"], ["a stranger id", "nope"],
+  ])("rejects %s with invalid_instructor", async (_name, instructorId) => {
+    const { courseId } = await save("biz", venueInput);
+    await expect(substitute("s", courseId, instructorId)).rejects.toMatchObject(
+      { code: "invalid-argument", message: "invalid_instructor" });
+    expect(await sessionOf(courseId)).toMatchObject({ instructorId: "p", revision: 1 });
+  });
+  it("rejects a switched-off link and an unverified provider", async () => {
+    const { courseId } = await save("biz", venueInput);
+    await db.doc("venues/v/instructors/p2").update({ isActive: false });
+    await expect(substitute("s", courseId, "p2")).rejects.toThrow("invalid_instructor");
+    await db.doc("venues/v/instructors/p2").update({ isActive: true });
+    await db.doc("instructors/p2").update({ providerProfile: { isVerified: false } });
+    await expect(substitute("s", courseId, "p2")).rejects.toThrow("invalid_instructor");
+  });
+  it("rejects a lesson that already started or was cancelled", async () => {
+    const { courseId } = await save("biz", venueInput);
+    await db.doc(`courses/${courseId}/sessions/2099-10-13`).update({ state: "cancelled" });
+    await expect(api.manageCourseSession.run(request("s", { courseId, sessionId: "2099-10-13", action: "substitute",
+      instructorId: "p2" }))).rejects.toThrow("session_unavailable");
+    await db.doc(`courses/${courseId}/sessions/${SESSION}`).update({
+      startsAt: admin.firestore.Timestamp.fromMillis(Date.now() - 7200000),
+      endsAt: admin.firestore.Timestamp.fromMillis(Date.now() - 3600000) });
+    // The lessons were edited by hand, so their slots go with them (the invariant would otherwise see drift).
+    await db.recursiveDelete(db.collection("courseScheduleLocks"));
+    await expect(substitute("s", courseId, "p2")).rejects.toThrow("cannot_change_past_lesson");
+  });
+  it("notifies every participant once, keeps their price, and prices a new quote with the substitute's status", async () => {
+    const { courseId } = await save("biz", venueInput);
+    const enrollmentId = await book(courseId, "u1");
+    await book(courseId, "u2");
+    const quoteBefore = (await api.quoteCourse.run(request("u3", { courseId }))).sessions.find((l) => l.sessionId === SESSION)!;
+    const priceBefore = (await db.doc(`courseEnrollments/${enrollmentId}`).get()).data()!;
+    await substitute("s", courseId, "p2", { reason: "Sick" });
+    expect(await notices()).toEqual(["u1", "u2"]);
+    const docs = (await db.collection("courseNotifications").where("event", "==", "instructor_changed").get()).docs;
+    expect(docs[0].data()).toMatchObject({ reason: "Sick", name: "Karate" });
+    expect((await db.doc(`courseEnrollments/${enrollmentId}`).get()).data()).toMatchObject(
+      { totalCents: priceBefore.totalCents, discountPercent: priceBefore.discountPercent });
+    const quoteAfter = (await api.quoteCourse.run(request("u3", { courseId }))).sessions.find((l) => l.sessionId === SESSION)!;
+    expect(quoteBefore).toMatchObject({ gymPercent: 10, instructorPercent: 0 });
+    expect(quoteAfter).toMatchObject({ gymPercent: 10, instructorPercent: 5, revision: quoteBefore.revision + 1 });
+    expect(quoteAfter.finalCents).toBeLessThan(quoteBefore.finalCents);
+  });
+  it("is preserved by a later name-only saveCourse", async () => {
+    const { courseId } = await save("biz", venueInput);
+    await book(courseId, "u1");
+    await substitute("s", courseId, "p2");
+    await save("biz", { ...venueInput, name: "Karate Kids" }, courseId);
+    expect(await sessionOf(courseId)).toMatchObject({ instructorId: "p2", instructorName: "Paola", revision: 2 });
+    expect(await slotsIn("courseScheduleLocks/instructor:p2|2099-10-12")).toEqual([`${courseId}_${SESSION}`]);
+  });
+  it("takes no lock for a draft course", async () => {
+    const { courseId } = await save("biz", { ...venueInput, state: "draft" });
+    await substitute("s", courseId, "p2");
+    expect(await sessionOf(courseId)).toMatchObject({ instructorId: "p2" });
+    expect((await db.collection("courseScheduleLocks").get()).size).toBe(0);
+  });
+  it("lets an unlinked course name only its own provider, but lets an admin name another verified one", async () => {
+    const { courseId } = await save("p", { ...input, name: "Yoga" });
+    await expect(substitute("p", courseId, "p2")).rejects.toMatchObject(
+      { code: "permission-denied", message: "course_instructor_not_allowed" });
+    await substitute("a", courseId, "p2");
+    expect(await sessionOf(courseId)).toMatchObject({ instructorId: "p2", instructorName: "Paola", revision: 2 });
+    expect(await slotsIn("courseScheduleLocks/instructor:p2|2099-10-12")).toEqual([`${courseId}_${SESSION}`]);
+  });
+  it("keeps the authority checks", async () => {
+    const { courseId } = await save("biz", venueInput);
+    await expect(substitute("x", courseId, "p2")).rejects.toMatchObject({ message: "course_owner_required" });
+  });
+});
