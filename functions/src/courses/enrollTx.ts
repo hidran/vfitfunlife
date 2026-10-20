@@ -160,7 +160,10 @@ export async function enrollInTx(tx: Transaction, input: EnrollInput):
         providerId: course.providerId, state, attendance: "unmarked" });
     });
     if (state === "confirmed") {
-      queueCourseNotification(tx, enrollmentId, "accepted", uid, course, undefined, undefined, !byProvider);
+      // A promoted customer gets the waitlist_promoted notice from the planner instead of a second "accepted".
+      if (!input.promotedFromWaitlist) {
+        queueCourseNotification(tx, enrollmentId, "accepted", uid, course, undefined, undefined, !byProvider);
+      }
       queueCourseNotification(tx, enrollmentId, "new_request", course.providerId, course);
     }
   };

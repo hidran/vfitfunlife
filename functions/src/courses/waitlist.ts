@@ -131,19 +131,27 @@ export const joinCourseWaitlist = onCall({ region }, async (req) => {
  * Removes one entry and closes the gap behind it. Used by the customer (leave) and, with authority resolved by the
  * caller, by staff removing another customer's entry. Returns false when there was nothing to remove.
  */
-export async function removeFromWaitlist(courseId: string, sessionId: string, uid: string): Promise<boolean> {
+export async function removeFromWaitlist(courseId: string, sessionId: string, uid: string,
+  opts: { notifyRemoved?: boolean } = {}): Promise<boolean> {
   return db.runTransaction(async (tx) => {
     const sessionRef = db.doc(`courses/${courseId}/sessions/${sessionId}`);
     const list = db.collection(`courses/${courseId}/sessions/${sessionId}/waitlist`);
     // The session is read so that a concurrent join (which writes it) cannot slip a duplicate position in.
-    const [sessionDoc, entries] = await Promise.all([
-      tx.get(sessionRef), tx.get(list.orderBy("position").limit(WAITLIST_MAX))]);
-    if (!sessionDoc.exists || !entries.docs.some((doc) => doc.id === uid)) return false;
+    const [sessionDoc, entries, courseDoc] = await Promise.all([
+      tx.get(sessionRef), tx.get(list.orderBy("position").limit(WAITLIST_MAX)),
+      opts.notifyRemoved ? tx.get(db.doc(`courses/${courseId}`)) : Promise.resolve(undefined)]);
+    const entry = entries.docs.find((doc) => doc.id === uid);
+    if (!sessionDoc.exists || !entry) return false;
     const kept = renumber(entries.docs.map((doc) => ({ id: doc.id, position: doc.data().position as number })), [uid]);
     const current = new Map(entries.docs.map((doc) => [doc.id, doc.data().position as number]));
     tx.delete(list.doc(uid));
     for (const { id, position } of kept) if (current.get(id) !== position) tx.update(list.doc(id), { position });
     tx.update(sessionRef, { waitlisted: FieldValue.increment(-1) });
+    const course = courseDoc?.data() as Course | undefined;
+    if (course) {
+      // The same customer may be removed twice over time (joined again with the same request id): one notice each.
+      queueRemoved(tx, { ...course, id: courseId }, entry.data() as WaitlistEntry, "staff", `_${Date.now()}`);
+    }
     return true;
   });
 }
@@ -180,24 +188,41 @@ export type PromotionPlan = {
 type Candidate = { id: string; ref: DocumentReference; data: WaitlistEntry };
 type CourseRef = Pick<Course, "name" | "providerName" | "providerId" | "venueId"> & { id: string };
 
+// Why an entry leaves on its own. `waitlist_removed` words payment_unavailable / amount_too_low specifically ("online
+// payment is unavailable, join again") and everything else with the generic sentence.
+export type RemovalReason = "payment_unavailable" | "amount_too_low" | "account_inactive" | "request_reused" |
+  "own_course" | "already_enrolled" | "staff";
+
 // Refusals that belong to the entry: it can never be promoted as it stands, so it leaves the list and the next one
 // is tried. Anything else concerns the lesson (full, venue off, deadline, closed...): the entry stays for later.
-const ENTRY_REFUSALS = new Set(["account_inactive", "cannot_book_yourself", "already_enrolled", "request_id_reused",
-  "checkout_amount_too_low", "Online course payments are not enabled"]);
+const ENTRY_REFUSALS: Record<string, RemovalReason> = {
+  "account_inactive": "account_inactive", "cannot_book_yourself": "own_course", "already_enrolled": "already_enrolled",
+  "request_id_reused": "request_reused", "checkout_amount_too_low": "amount_too_low",
+  "Online course payments are not enabled": "payment_unavailable",
+};
 
 /** Contention and transport errors (numeric gRPC codes) must abort so the surrounding transaction retries. */
-function classifyRefusal(error: unknown): "drop" | "stop" {
+function classifyRefusal(error: unknown): RemovalReason | "stop" {
   if (typeof (error as { code?: unknown } | null)?.code === "number") throw error;
   const message = error instanceof Error ? error.message : "";
-  if (!ENTRY_REFUSALS.has(message)) logger.warn("waitlist promotion stopped", { message });
-  return ENTRY_REFUSALS.has(message) ? "drop" : "stop";
+  const reason = ENTRY_REFUSALS[message];
+  if (!reason) logger.warn("waitlist promotion stopped", { message });
+  return reason ?? "stop";
 }
 
 const listOf = (courseId: string, sessionId: string) =>
   db.collection(`courses/${courseId}/sessions/${sessionId}/waitlist`);
 
+/** The lesson's whole list was closed (cancelled, moved, archived, inside the notice window). */
 function queueCleared(tx: Transaction, course: CourseRef, entry: WaitlistEntry, reason: string): void {
   queueCourseNotification(tx, `${course.id}_${entry.sessionId}_${entry.requestId}`, "waitlist_cleared",
+    entry.userId, course, undefined, reason);
+}
+
+/** One entry left the list on its own (or by staff): the customer is told why. */
+function queueRemoved(tx: Transaction, course: CourseRef, entry: WaitlistEntry, reason: RemovalReason,
+  suffix = ""): void {
+  queueCourseNotification(tx, `${course.id}_${entry.sessionId}_${entry.requestId}${suffix}`, "waitlist_removed",
     entry.userId, course, undefined, reason);
 }
 
@@ -263,9 +288,12 @@ async function planSession(tx: Transaction, args: {
       const uid = entry.data.userId;
       const enrollmentId = waitlistEnrollmentId(uid, entry.data.requestId);
       let outcome: "promoted" | "drop" | "drop_silently" | "stop";
-      if (entry.data.paymentMode === "stripe" && !checkoutOn) outcome = "drop";
+      let dropReason: RemovalReason = "request_reused";
+      if (entry.data.paymentMode === "stripe" && !checkoutOn) {
+        outcome = "drop";
+        dropReason = "payment_unavailable";
       // One request id can sit on several lessons; the first promotion consumes it (the enrollment id derives from it).
-      else if (args.taken.has(enrollmentId) || plan.enrollmentIds.includes(enrollmentId)) outcome = "drop";
+      } else if (args.taken.has(enrollmentId) || plan.enrollmentIds.includes(enrollmentId)) outcome = "drop";
       else {
         try {
           const { result, commit } = await enrollInTx(tx, {
@@ -280,10 +308,15 @@ async function planSession(tx: Transaction, args: {
             plan.enrollmentIds.push(enrollmentId);
             plan.promoted.push({ sessionId, uid, enrollmentId });
             plan.cost += 10;
-            notify.push(() => queueCourseNotification(tx, enrollmentId, "waitlist_promoted", uid, course, startsAt));
+            // The customer hears once: a confirmed seat (the booking's own "accepted" is skipped for promotions)
+            // or a 30 minute hold to pay.
+            const event = result.state === "confirmed" ? "waitlist_promoted" : "waitlist_promoted_hold";
+            notify.push(() => queueCourseNotification(tx, enrollmentId, event, uid, course, startsAt));
           }
         } catch (error) {
-          outcome = classifyRefusal(error);
+          const refusal = classifyRefusal(error);
+          outcome = refusal === "stop" ? "stop" : "drop";
+          if (refusal !== "stop") dropReason = refusal;
         }
       }
       if (outcome === "stop") {
@@ -295,7 +328,7 @@ async function planSession(tx: Transaction, args: {
       plan.cost += 1;
       if (outcome === "drop") {
         plan.dropped.push({ sessionId, uid });
-        notify.push(() => queueCleared(tx, course, entry.data, "entry_dropped"));
+        notify.push(() => queueRemoved(tx, course, entry.data, dropReason));
         plan.cost += 1;
       }
     }

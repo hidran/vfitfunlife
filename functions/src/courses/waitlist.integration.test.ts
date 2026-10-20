@@ -262,6 +262,8 @@ describe("leaveCourseWaitlist", () => {
     expect(await leave("u2", courseId)).toEqual({ success: true });
     expect((await waitlist(courseId)).map((e) => [e.id, e.position])).toEqual([["u1", 1], ["u3", 2]]);
     expect((await sessionOf(courseId)).waitlisted).toBe(2);
+    // Leaving is the customer's own act: no notice.
+    expect(await notices("waitlist_removed")).toEqual([]);
     await assertCounters(courseId);
   });
   it("leaving from the front promotes everyone one place", async () => {
@@ -319,6 +321,14 @@ const notices = async (event: string) =>
     .map((d) => d.data().uid as string).sort();
 const waitlistView = async (courseId: string, id = SESSION) =>
   (await waitlist(courseId, id)).map((e) => [e.id, e.position]);
+// Every notification queued so far as "event:uid", sorted: a duplicate or a wrong notice shows up as a diff.
+const queued = async () => (await db.collection("courseNotifications").get()).docs
+  .map((d) => `${d.data().event}:${d.data().uid}`).sort();
+const forgetNotices = () => db.recursiveDelete(db.collection("courseNotifications"));
+// uid -> reason code of the notices of one event.
+const reasonsOf = async (event: string) => Object.fromEntries(
+  (await db.collection("courseNotifications").where("event", "==", event).get()).docs
+    .map((d) => [d.data().uid, d.data().reason]));
 
 /**
  * Runs the planner the way a release does: one transaction that reads, frees the seat of `holders` (the customer
@@ -393,7 +403,9 @@ describe("planPromotions", () => {
     expect(result.promoted.map((p) => p.uid)).toEqual(["u2"]);
     expect(result.dropped).toEqual([{ sessionId: SESSION, uid: "u1" }]);
     expect(await waitlistView(courseId)).toEqual([["u3", 1]]);
-    expect(await notices("waitlist_cleared")).toEqual(["u1"]);
+    expect(await notices("waitlist_removed")).toEqual(["u1"]);
+    expect(await reasonsOf("waitlist_removed")).toEqual({ u1: "account_inactive" });
+    expect(await notices("waitlist_cleared")).toEqual([]);
     expect(await notices("waitlist_promoted")).toEqual(["u2"]);
     expect(await enrollmentOf("u1", "w-u1")).toBeUndefined();
     await assertCounters(courseId);
@@ -404,7 +416,7 @@ describe("planPromotions", () => {
     await sessionRef(courseId).collection("participants").doc("u1").set({ enrollmentId: "x", userId: "u1" });
     const result = await plan(courseId, [seat]);
     expect(result.promoted.map((p) => p.uid)).toEqual(["u2"]);
-    expect(await notices("waitlist_cleared")).toEqual(["u1"]);
+    expect(await notices("waitlist_removed")).toEqual(["u1"]);
   });
   it("drops a Stripe entry when checkout was switched off, and promotes the next", async () => {
     const courseId = await fullCourse();
@@ -412,7 +424,8 @@ describe("planPromotions", () => {
     await db.doc(`courses/${courseId}/sessions/${SESSION}/waitlist/u1`).update({ paymentMode: "stripe" });
     const result = await plan(courseId, [seat], { checkoutOn: false });
     expect(result.promoted.map((p) => p.uid)).toEqual(["u2"]);
-    expect(await notices("waitlist_cleared")).toEqual(["u1"]);
+    expect(await notices("waitlist_removed")).toEqual(["u1"]);
+    expect(await reasonsOf("waitlist_removed")).toEqual({ u1: "payment_unavailable" });
     expect(await waitlistView(courseId)).toEqual([]);
     await assertCounters(courseId);
   });
@@ -425,6 +438,7 @@ describe("planPromotions", () => {
     const result = await plan(courseId, [seat], { checkoutOn: true });
     expect(result.promoted.map((p) => p.uid)).toEqual(["u2"]);
     expect(result.dropped).toEqual([{ sessionId: SESSION, uid: "u1" }]);
+    expect(await reasonsOf("waitlist_removed")).toEqual({ u1: "amount_too_low" });
     expect(await enrollmentOf("u1", "w-u1")).toBeUndefined();
     expect(await enrollmentOf("u2", "w-u2")).toMatchObject({ state: "confirmed", totalCents: 40 });
     expect(await sessionOf(courseId)).toMatchObject({ occupied: 1, held: 0 });
@@ -439,7 +453,8 @@ describe("planPromotions", () => {
     const result = await plan(courseId, [seat]);
     expect(result.promoted.map((p) => p.uid)).toEqual(["u2"]);
     expect(result.dropped).toEqual([{ sessionId: SESSION, uid: "u1" }]);
-    expect(await notices("waitlist_cleared")).toEqual(["u1"]);
+    expect(await notices("waitlist_removed")).toEqual(["u1"]);
+    expect(await reasonsOf("waitlist_removed")).toEqual({ u1: "request_reused" });
     expect(await waitlistView(courseId)).toEqual([]);
   });
   it("stops, keeping every entry, when the refusal concerns the lesson (venue switched off)", async () => {
@@ -464,7 +479,7 @@ describe("planPromotions", () => {
     // u6 was never examined: still waiting, now first.
     expect(await waitlistView(courseId)).toEqual([["u6", 1]]);
     expect(await sessionOf(courseId)).toMatchObject({ occupied: 0, waitlisted: 1 });
-    expect(await notices("waitlist_cleared")).toEqual(["u1", "u2", "u3", "u4", "u5"]);
+    expect(await notices("waitlist_removed")).toEqual(["u1", "u2", "u3", "u4", "u5"]);
     await assertCounters(courseId);
   });
   it("clears the whole list when the lesson is inside the notice window, enrolling nobody", async () => {
@@ -505,7 +520,8 @@ describe("planPromotions", () => {
     expect(result.promoted.map((p) => [p.sessionId, p.uid])).toEqual([[SESSION, "u1"], [OTHER, "u2"]]);
     expect(result.dropped).toEqual([{ sessionId: OTHER, uid: "u1" }]);
     expect(await enrollmentOf("u1", "shared")).toMatchObject({ sessionIds: [SESSION] });
-    expect(await notices("waitlist_cleared")).toEqual(["u1"]);
+    expect(await notices("waitlist_removed")).toEqual(["u1"]);
+    expect(await reasonsOf("waitlist_removed")).toEqual({ u1: "request_reused" });
     expect(await waitlist(courseId, OTHER)).toEqual([]);
   });
   it("does nothing, keeping the entries, for an unpublished or closed course", async () => {
@@ -628,6 +644,47 @@ describe("promotion when a seat is released", () => {
     expect(await notices("waitlist_promoted")).toEqual(["u1"]);
     await assertCounters(courseId);
   });
+  it("tells a promoted direct customer exactly once: waitlist_promoted, no second 'accepted'; the provider hears new_request", async () => {
+    const courseId = await fullCourse();
+    await join("u1", courseId);
+    await forgetNotices();
+    await cancel("h", holderEnrollment());
+    expect(await queued()).toEqual(["cancelled_by_client:h", "new_request:p", "waitlist_promoted:u1"]);
+    const promoted = (await db.collection("courseNotifications").where("event", "==", "waitlist_promoted").get())
+      .docs[0].data();
+    expect(promoted).toMatchObject({ uid: "u1", sendEmail: true, link: "/courses?tab=bookings" });
+    await assertCounters(courseId);
+  });
+  it("tells a promoted Stripe customer once with the 30 minute hold copy, and nobody else", async () => {
+    await stripeSwitch(true);
+    try {
+      const courseId = await course();
+      await stripeHold(courseId);
+      await join("u1", courseId, { paymentMode: "stripe" });
+      await forgetNotices();
+      await cancel("h", holderEnrollment());
+      expect(await enrollmentOf("u1", "w-u1")).toMatchObject({ state: "held", paymentMode: "stripe" });
+      expect(await queued()).toEqual(["cancelled_by_client:h", "waitlist_promoted_hold:u1"]);
+      await assertCounters(courseId);
+    } finally {
+      await stripeSwitch(false);
+    }
+  });
+  it("a Stripe entry whose lesson turned out free is confirmed, so it gets the confirmed notice", async () => {
+    await stripeSwitch(true);
+    try {
+      const courseId = await course();
+      await holdSeat(courseId, "h");
+      await join("u1", courseId, { paymentMode: "stripe" });
+      await db.doc(`courses/${courseId}`).update({ lessonPriceCents: 0 });
+      await forgetNotices();
+      await cancel("h", holderEnrollment());
+      expect(await enrollmentOf("u1", "w-u1")).toMatchObject({ state: "confirmed", totalCents: 0 });
+      expect(await queued()).toEqual(["cancelled_by_client:h", "new_request:p", "waitlist_promoted:u1"]);
+    } finally {
+      await stripeSwitch(false);
+    }
+  });
   it("does the same when the provider cancels the customer's booking", async () => {
     const courseId = await fullCourse();
     await join("u1", courseId);
@@ -666,7 +723,8 @@ describe("promotion when a seat is released", () => {
       await maintain();
       expect(await enrollmentOf("u2", "w-u2")).toMatchObject({ state: "confirmed", paymentMode: "direct" });
       expect(await sessionOf(courseId)).toMatchObject({ occupied: 1, held: 0, waitlisted: 0 });
-      expect(await notices("waitlist_promoted")).toEqual(["u1", "u2"]);
+      expect(await notices("waitlist_promoted_hold")).toEqual(["u1"]);
+      expect(await notices("waitlist_promoted")).toEqual(["u2"]);
       await assertCounters(courseId);
     } finally {
       await stripeSwitch(false);
@@ -701,7 +759,7 @@ describe("promotion when a seat is released", () => {
       await db.doc(`courseEnrollments/${holderEnrollment()}`).update({ holdExpiresAt: past() });
       await maintain();
       expect(await enrollmentOf("u1", "w-u1")).toBeUndefined();
-      expect(await notices("waitlist_cleared")).toEqual(["u1"]);
+      expect(await notices("waitlist_removed")).toEqual(["u1"]);
       expect(await enrollmentOf("u2", "w-u2")).toMatchObject({ state: "confirmed" });
       await assertCounters(courseId);
     } finally {
@@ -848,7 +906,7 @@ describe("promoteWaitlist", () => {
     expect(await promoteStandalone(courseId)).toBe(1);
     expect(await enrollmentOf("u6", "w-u6")).toMatchObject({ state: "confirmed" });
     expect(await waitlist(courseId)).toEqual([]);
-    expect(await notices("waitlist_cleared")).toEqual(ids.slice(0, 5));
+    expect(await notices("waitlist_removed")).toEqual(ids.slice(0, 5));
     await assertCounters(courseId);
   });
   it("keeps every entry when the refusal concerns the lesson (venue switched off)", async () => {
@@ -1232,7 +1290,8 @@ describe("waitlist concurrency", () => {
       expect(await sessionOf(courseId)).toMatchObject({ occupied: 1, held: 0, waitlisted: 0 });
       expect(await enrollmentOf("u1", "w-u1")).toMatchObject({ state: "expired" });
       expect(await enrollmentOf("u2", "w-u2")).toMatchObject({ state: "expired" });
-      expect(await notices("waitlist_promoted")).toEqual(["u1", "u2", "u3"]);
+      expect(await notices("waitlist_promoted_hold")).toEqual(["u1", "u2"]);
+      expect(await notices("waitlist_promoted")).toEqual(["u3"]);
       await assertRace(courseId);
     } finally {
       await stripeSwitch(false);
@@ -1371,8 +1430,12 @@ describe("manageCourseSession removeParticipant, removeWaitlistEntry and no-show
     await manage("p", { courseId, action: "removeWaitlistEntry", userId: "u2" });
     expect(await waitlistView(courseId)).toEqual([["u1", 1], ["u3", 2]]);
     expect((await sessionOf(courseId)).waitlisted).toBe(2);
+    // The removed customer is told it was the staff; nobody else is.
+    expect(await notices("waitlist_removed")).toEqual(["u2"]);
+    expect(await reasonsOf("waitlist_removed")).toEqual({ u2: "staff" });
     await manage("p", { courseId, action: "removeWaitlistEntry", userId: "u2" });
     expect(await waitlistView(courseId)).toEqual([["u1", 1], ["u3", 2]]);
+    expect(await notices("waitlist_removed")).toEqual(["u2"]);
     await expect(manage("p", { courseId, action: "removeWaitlistEntry" })).rejects.toMatchObject({ message: "invalid_id" });
     await assertCounters(courseId);
   });

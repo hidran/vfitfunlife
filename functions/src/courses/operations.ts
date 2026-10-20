@@ -379,7 +379,7 @@ export const manageCourseSession = onCall({ region }, async (req) => {
       await releaseEnrollment(participant.enrollmentId, manager, [sessionId], text(req.data.reason), false,
         { markLate: true });
     } else if (action === "removeWaitlistEntry") {
-      await removeFromWaitlist(courseId, sessionId, safeId(req.data.userId));
+      await removeFromWaitlist(courseId, sessionId, safeId(req.data.userId), { notifyRemoved: true });
     } else if (action === "capacity") {
       await changeCapacity(a);
     } else if (action === "substitute") {

@@ -1,7 +1,8 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { BOOKING_MESSAGES, SUPPORTED_LOCALES, buildMessage, type BookingMessageEvent } from "./bookingMessages";
 
-const COURSE_EVENTS: BookingMessageEvent[] = ["waitlist_promoted", "waitlist_cleared", "instructor_changed"];
+const COURSE_EVENTS: BookingMessageEvent[] = ["waitlist_promoted", "waitlist_promoted_hold", "waitlist_cleared",
+  "waitlist_removed", "instructor_changed"];
 const startsAt = new Date("2099-10-12T16:00:00Z");
 
 describe("course notification events", () => {
@@ -19,7 +20,7 @@ describe("course notification events", () => {
     const titles = SUPPORTED_LOCALES.map((locale) => buildMessage(event, locale, { serviceName: "Yoga" }).title);
     expect(new Set(titles).size).toBe(SUPPORTED_LOCALES.length);
   });
-  it.each(["waitlist_promoted", "instructor_changed"] as const)("%s shows the lesson time, the others do not need it",
+  it.each(["waitlist_promoted", "waitlist_promoted_hold", "instructor_changed"] as const)("%s shows the lesson time, the others do not need it",
     (event) => {
       for (const locale of SUPPORTED_LOCALES) {
         expect(buildMessage(event, locale, { serviceName: "Yoga", startsAt }).body).toMatch(/\(.+\d{2}.+\)/);
@@ -36,10 +37,51 @@ describe("course notification events", () => {
   it("uses the agreed Italian copy", () => {
     expect(buildMessage("waitlist_promoted", "it", { serviceName: "Yoga" })).toEqual({
       title: "Posto liberato",
-      body: "Si è liberato un posto per Yoga. Apri le tue prenotazioni per confermarlo; con pagamento online hai 30 minuti.",
+      body: "Si è liberato un posto per Yoga e la tua prenotazione è confermata. La trovi tra le tue prenotazioni.",
+    });
+    expect(buildMessage("waitlist_promoted_hold", "it", { serviceName: "Yoga" })).toEqual({
+      title: "Posto liberato: paga entro 30 minuti",
+      body: "Si è liberato un posto per Yoga ed è riservato a te per 30 minuti. " +
+        "Apri le tue prenotazioni e completa il pagamento online per confermarlo.",
     });
     expect(buildMessage("waitlist_cleared", "it", { serviceName: "Yoga" }).title).toBe("Lista d'attesa chiusa");
     expect(buildMessage("instructor_changed", "it", { serviceName: "Yoga" }).title).toBe("Istruttore cambiato");
+  });
+  it("promotion copy says what actually happened: confirmed for a direct booking, a 30 minute hold for Stripe", () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      const confirmed = buildMessage("waitlist_promoted", locale, { serviceName: "Yoga" });
+      const hold = buildMessage("waitlist_promoted_hold", locale, { serviceName: "Yoga" });
+      expect(hold.body, locale).toContain("30");
+      expect(confirmed.body, locale).not.toContain("30");
+      expect(confirmed.body, locale).not.toBe(hold.body);
+    }
+  });
+  it("tells the removed customer why, in every locale: online payment off or price, staff, or a generic fallback", () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      const render = (reason?: string) => buildMessage("waitlist_removed", locale, { serviceName: "Yoga", reason }).body;
+      const payment = render("payment_unavailable");
+      expect(render("amount_too_low"), locale).toBe(payment);
+      const staff = render("staff");
+      const generic = render();
+      // Unknown codes and the lesson-level reasons share the fallback and never print the raw code.
+      expect(render("account_inactive"), locale).toBe(generic);
+      expect(render("something_new"), locale).not.toContain("something_new");
+      expect(new Set([payment, staff, generic]).size, locale).toBe(3);
+      for (const body of [payment, staff, generic]) expect(body, locale).toContain("Yoga");
+    }
+    expect(buildMessage("waitlist_removed", "it", { serviceName: "Yoga", reason: "payment_unavailable" }).body)
+      .toBe("Sei stato rimosso dalla lista d'attesa per Yoga: il pagamento online non è disponibile. " +
+        "Iscriviti di nuovo alla lista.");
+    expect(buildMessage("waitlist_removed", "en", { serviceName: "Yoga", reason: "payment_unavailable" }).body)
+      .toContain("online payment is unavailable. Join the waitlist again");
+  });
+  it("shows the substitution reason in instructor_changed when there is one", () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      expect(buildMessage("instructor_changed", locale, { serviceName: "Yoga", reason: "Anna is ill" }).body, locale)
+        .toContain("Anna is ill");
+      expect(buildMessage("instructor_changed", locale, { serviceName: "Yoga" }).body, locale)
+        .not.toMatch(/(Motivo|Reason|Motif|Grund)/);
+    }
   });
   it("renders the booking events that existed before unchanged", () => {
     expect(buildMessage("accepted", "it", { serviceName: "Yoga" }).title).toBe("Prenotazione accettata");

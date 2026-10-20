@@ -28,10 +28,17 @@ export type BookingMessageEvent =
   | "reminder_2h"
   /** The trainer put a session in the client's calendar (createBookingAsTrainer). */
   | "scheduled_by_trainer"
-  /** A seat freed up and the first waitlisted customer was enrolled (courses). */
+  /** A seat freed up and the first waitlisted customer was enrolled and confirmed (courses, direct payment). */
   | "waitlist_promoted"
+  /** Same, but the seat is only held for 30 minutes until the online payment is made (courses, Stripe). */
+  | "waitlist_promoted_hold"
   /** The lesson's waitlist was closed: cancelled, moved, archived or inside the notice window (courses). */
   | "waitlist_cleared"
+  /**
+   * One entry left the waitlist on its own: it could not be promoted (account, online payment, price, request id)
+   * or staff removed it (courses). `reason` is a code, never printed: payment_unavailable | amount_too_low | staff.
+   */
+  | "waitlist_removed"
   /** The instructor of one lesson was substituted (courses). */
   | "instructor_changed";
 
@@ -103,6 +110,12 @@ function xpLine(ctx: MessageContext, render: (xp: number) => string): string {
   return typeof ctx.xp === "number" && ctx.xp > 0 ? ` ${render(ctx.xp)}` : "";
 }
 
+/** Picks the sentence for a waitlist_removed notice from the reason code (unknown codes get the generic one). */
+function removal<T>(ctx: MessageContext, text: { payment: T; staff: T; generic: T }): T {
+  if (ctx.reason === "payment_unavailable" || ctx.reason === "amount_too_low") return text.payment;
+  return ctx.reason === "staff" ? text.staff : text.generic;
+}
+
 function money(amount: number | undefined): string {
   if (typeof amount !== "number" || !Number.isFinite(amount)) return "—";
   return `${amount.toFixed(2).replace(/\.00$/, "")} €`;
@@ -172,17 +185,32 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
     }),
     waitlist_promoted: (c) => ({
       title: "Posto liberato",
-      body: `Si è liberato un posto per ${svc(c, "la lezione")}${when(c, "it")}. ` +
-        "Apri le tue prenotazioni per confermarlo; con pagamento online hai 30 minuti.",
+      body: `Si è liberato un posto per ${svc(c, "la lezione")}${when(c, "it")} e la tua prenotazione è confermata. ` +
+        "La trovi tra le tue prenotazioni.",
+    }),
+    waitlist_promoted_hold: (c) => ({
+      title: "Posto liberato: paga entro 30 minuti",
+      body: `Si è liberato un posto per ${svc(c, "la lezione")}${when(c, "it")} ed è riservato a te per 30 minuti. ` +
+        "Apri le tue prenotazioni e completa il pagamento online per confermarlo.",
     }),
     waitlist_cleared: (c) => ({
       title: "Lista d'attesa chiusa",
       body: `La lista d'attesa per ${svc(c, "la lezione")} è stata chiusa: ` +
         "la lezione è stata annullata, spostata o è troppo vicina.",
     }),
+    waitlist_removed: (c) => ({
+      title: "Rimosso dalla lista d'attesa",
+      body: removal(c, {
+        payment: `Sei stato rimosso dalla lista d'attesa per ${svc(c, "la lezione")}: il pagamento online non è ` +
+          "disponibile. Iscriviti di nuovo alla lista.",
+        staff: `Lo staff ti ha rimosso dalla lista d'attesa per ${svc(c, "la lezione")}.`,
+        generic: `La tua iscrizione alla lista d'attesa per ${svc(c, "la lezione")} è stata rimossa.`,
+      }),
+    }),
     instructor_changed: (c) => ({
       title: "Istruttore cambiato",
-      body: `L'istruttore di ${svc(c, "la lezione")}${when(c, "it")} è cambiato. Trovi i dettagli nell'app.`,
+      body: `L'istruttore di ${svc(c, "la lezione")}${when(c, "it")} è cambiato.${reason(c, "Motivo:")} ` +
+        "Trovi i dettagli nell'app.",
     }),
   },
 
@@ -249,17 +277,31 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
     }),
     waitlist_promoted: (c) => ({
       title: "A spot opened up",
-      body: `A spot opened up for ${svc(c, "the class")}${when(c, "en")}. ` +
-        "Open your bookings to confirm it; with online payment you have 30 minutes.",
+      body: `A spot opened up for ${svc(c, "the class")}${when(c, "en")} and your booking is confirmed. ` +
+        "You'll find it in your bookings.",
+    }),
+    waitlist_promoted_hold: (c) => ({
+      title: "A spot opened up: pay within 30 minutes",
+      body: `A spot opened up for ${svc(c, "the class")}${when(c, "en")} and is held for you for 30 minutes. ` +
+        "Open your bookings and complete the online payment to confirm it.",
     }),
     waitlist_cleared: (c) => ({
       title: "Waitlist closed",
       body: `The waitlist for ${svc(c, "the class")} was closed: ` +
         "the class was cancelled, moved or is too close to start.",
     }),
+    waitlist_removed: (c) => ({
+      title: "Removed from the waitlist",
+      body: removal(c, {
+        payment: `You were removed from the waitlist for ${svc(c, "the class")}: online payment is unavailable. ` +
+          "Join the waitlist again.",
+        staff: `Staff removed you from the waitlist for ${svc(c, "the class")}.`,
+        generic: `Your place on the waitlist for ${svc(c, "the class")} was removed.`,
+      }),
+    }),
     instructor_changed: (c) => ({
       title: "Instructor changed",
-      body: `The instructor for ${svc(c, "the class")}${when(c, "en")} has changed. ` +
+      body: `The instructor for ${svc(c, "the class")}${when(c, "en")} has changed.${reason(c, "Reason:")} ` +
         "You'll find the details in the app.",
     }),
   },
@@ -327,17 +369,32 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
     }),
     waitlist_promoted: (c) => ({
       title: "Plaza disponible",
-      body: `Se ha liberado una plaza para ${svc(c, "la clase")}${when(c, "es")}. ` +
-        "Abre tus reservas para confirmarla; con pago online tienes 30 minutos.",
+      body: `Se ha liberado una plaza para ${svc(c, "la clase")}${when(c, "es")} y tu reserva está confirmada. ` +
+        "La encontrarás en tus reservas.",
+    }),
+    waitlist_promoted_hold: (c) => ({
+      title: "Plaza disponible: paga en 30 minutos",
+      body: `Se ha liberado una plaza para ${svc(c, "la clase")}${when(c, "es")} y la tienes reservada 30 minutos. ` +
+        "Abre tus reservas y completa el pago online para confirmarla.",
     }),
     waitlist_cleared: (c) => ({
       title: "Lista de espera cerrada",
       body: `La lista de espera de ${svc(c, "la clase")} se ha cerrado: ` +
         "la clase se ha cancelado, cambiado de horario o está demasiado cerca.",
     }),
+    waitlist_removed: (c) => ({
+      title: "Quitado de la lista de espera",
+      body: removal(c, {
+        payment: `Te hemos quitado de la lista de espera de ${svc(c, "la clase")}: el pago online no está ` +
+          "disponible. Apúntate de nuevo a la lista.",
+        staff: `El personal te ha quitado de la lista de espera de ${svc(c, "la clase")}.`,
+        generic: `Tu plaza en la lista de espera de ${svc(c, "la clase")} se ha eliminado.`,
+      }),
+    }),
     instructor_changed: (c) => ({
       title: "Instructor cambiado",
-      body: `El instructor de ${svc(c, "la clase")}${when(c, "es")} ha cambiado. Encontrarás los detalles en la app.`,
+      body: `El instructor de ${svc(c, "la clase")}${when(c, "es")} ha cambiado.${reason(c, "Motivo:")} ` +
+        "Encontrarás los detalles en la app.",
     }),
   },
 
@@ -404,17 +461,32 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
     }),
     waitlist_promoted: (c) => ({
       title: "Une place s'est libérée",
-      body: `Une place s'est libérée pour ${svc(c, "le cours")}${when(c, "fr")}. ` +
-        "Ouvrez vos réservations pour la confirmer ; avec le paiement en ligne, vous avez 30 minutes.",
+      body: `Une place s'est libérée pour ${svc(c, "le cours")}${when(c, "fr")} et votre réservation est confirmée. ` +
+        "Retrouvez-la dans vos réservations.",
+    }),
+    waitlist_promoted_hold: (c) => ({
+      title: "Une place s'est libérée : payez sous 30 minutes",
+      body: `Une place s'est libérée pour ${svc(c, "le cours")}${when(c, "fr")} et elle est réservée pour vous ` +
+        "pendant 30 minutes. Ouvrez vos réservations et réglez en ligne pour la confirmer.",
     }),
     waitlist_cleared: (c) => ({
       title: "Liste d'attente fermée",
       body: `La liste d'attente de ${svc(c, "le cours")} a été fermée : ` +
         "le cours a été annulé, déplacé ou commence trop tôt.",
     }),
+    waitlist_removed: (c) => ({
+      title: "Retiré de la liste d'attente",
+      body: removal(c, {
+        payment: `Vous avez été retiré de la liste d'attente de ${svc(c, "le cours")} : le paiement en ligne n'est ` +
+          "pas disponible. Inscrivez-vous de nouveau à la liste.",
+        staff: `L'équipe vous a retiré de la liste d'attente de ${svc(c, "le cours")}.`,
+        generic: `Votre inscription à la liste d'attente de ${svc(c, "le cours")} a été supprimée.`,
+      }),
+    }),
     instructor_changed: (c) => ({
       title: "Instructeur modifié",
-      body: `L'instructeur de ${svc(c, "le cours")}${when(c, "fr")} a changé. Retrouvez les détails dans l'app.`,
+      body: `L'instructeur de ${svc(c, "le cours")}${when(c, "fr")} a changé.${reason(c, "Motif :")} ` +
+        "Retrouvez les détails dans l'app.",
     }),
   },
 
@@ -481,17 +553,32 @@ export const BOOKING_MESSAGES: Record<AppLocale, Record<BookingMessageEvent, Tem
     }),
     waitlist_promoted: (c) => ({
       title: "Platz frei geworden",
-      body: `Für ${svc(c, "den Kurs")}${when(c, "de")} ist ein Platz frei geworden. ` +
-        "Öffne deine Buchungen, um ihn zu bestätigen; bei Online-Zahlung hast du 30 Minuten.",
+      body: `Für ${svc(c, "den Kurs")}${when(c, "de")} ist ein Platz frei geworden und deine Buchung ist bestätigt. ` +
+        "Du findest sie in deinen Buchungen.",
+    }),
+    waitlist_promoted_hold: (c) => ({
+      title: "Platz frei: zahle innerhalb von 30 Minuten",
+      body: `Für ${svc(c, "den Kurs")}${when(c, "de")} ist ein Platz frei geworden und 30 Minuten für dich ` +
+        "reserviert. Öffne deine Buchungen und schließe die Online-Zahlung ab, um ihn zu bestätigen.",
     }),
     waitlist_cleared: (c) => ({
       title: "Warteliste geschlossen",
       body: `Die Warteliste für ${svc(c, "den Kurs")} wurde geschlossen: ` +
         "Die Einheit wurde abgesagt, verschoben oder beginnt zu bald.",
     }),
+    waitlist_removed: (c) => ({
+      title: "Von der Warteliste entfernt",
+      body: removal(c, {
+        payment: `Du wurdest von der Warteliste für ${svc(c, "den Kurs")} entfernt: Online-Zahlung ist nicht ` +
+          "verfügbar. Trag dich erneut in die Warteliste ein.",
+        staff: `Das Team hat dich von der Warteliste für ${svc(c, "den Kurs")} entfernt.`,
+        generic: `Dein Eintrag auf der Warteliste für ${svc(c, "den Kurs")} wurde entfernt.`,
+      }),
+    }),
     instructor_changed: (c) => ({
       title: "Trainer geändert",
-      body: `Der Trainer für ${svc(c, "den Kurs")}${when(c, "de")} hat gewechselt. Die Details findest du in der App.`,
+      body: `Der Trainer für ${svc(c, "den Kurs")}${when(c, "de")} hat gewechselt.${reason(c, "Grund:")} ` +
+        "Die Details findest du in der App.",
     }),
   },
 };
