@@ -48,6 +48,24 @@ beforeEach(async () => {
 });
 
 describe("enrollInTx", () => {
+  it("refuses an online payment below Stripe's minimum before writing anything", async () => {
+    await db.doc("courses/c1").update({ lessonPriceCents: 45, seriesPriceCents: 45 });
+    await expect(book(input("u", { paymentMode: "stripe", checkoutOn: true }))).rejects.toMatchObject(
+      { code: "failed-precondition", message: "checkout_amount_too_low" });
+    await expect(book(input("u", { scope: "series", paymentMode: "stripe", checkoutOn: true }))).rejects.toThrow(
+      "checkout_amount_too_low");
+    expect(await session()).toMatchObject({ occupied: 0, held: 0 });
+    expect((await db.collection("courseEnrollments").get()).empty).toBe(true);
+    expect((await db.collection(`courses/c1/sessions/${day}/participants`).get()).empty).toBe(true);
+    expect((await db.doc("courses/c1").get()).data()!.nextAvailableSeats).toBe(1);
+  });
+  it("still takes the same low price directly, and 50 cents online", async () => {
+    await db.doc("courses/c1").update({ lessonPriceCents: 45, capacity: 2 });
+    await db.doc(`courses/c1/sessions/${day}`).update({ capacity: 2 });
+    expect(await book(input("u"))).toMatchObject({ state: "confirmed", totalCents: 45 });
+    await db.doc("courses/c1").update({ lessonPriceCents: 50 });
+    expect(await book(input("v", { paymentMode: "stripe", checkoutOn: true }))).toMatchObject({ state: "held", totalCents: 50 });
+  });
   it("seats the first customer on commit and refuses the second with lesson_full", async () => {
     const first = await book(input("u"));
     expect(first).toMatchObject({ state: "confirmed", totalCents: 1500, replay: false });

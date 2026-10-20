@@ -51,7 +51,8 @@ describe("quoteCourse", () => {
     const id = await save("p", { ...base, instructorId: "p" });
     const result = await quote("u", id, ["2099-10-12"]);
     expect(result.sessions).toEqual([{ sessionId: "2099-10-12", revision: 1, regularCents: 1500, discountPercent: 0,
-      gymPercent: 0, instructorPercent: 0, discountCents: 0, finalCents: 1500, availableSeats: 5, waitlisted: 0 }]);
+      gymPercent: 0, instructorPercent: 0, discountCents: 0, finalCents: 1500, availableSeats: 5, waitlisted: 0,
+      stripeEligible: true }]);
     expect(result.series).toMatchObject({ regularCents: 4000, discountPercent: 0, discountCents: 0, finalCents: 4000 });
   });
 
@@ -77,10 +78,23 @@ describe("quoteCourse", () => {
     const id = await save("biz", { ...venueCourse, instructorId: "p" });
     const { series } = await quote("u", id, ["2099-10-12"]);
     expect(series).toEqual({ regularCents: 4000, discountPercent: 15, gymPercent: 10, instructorPercent: 5,
-      discountCents: 598, finalCents: 3402,
+      discountCents: 598, finalCents: 3402, stripeEligible: true,
       allocations: { "2099-10-12": 1134, "2099-10-13": 1134, "2099-10-14": 1134 },
       revisions: { "2099-10-12": 1, "2099-10-13": 1, "2099-10-14": 1 } });
     expect(Object.values(series!.allocations).reduce((a, b) => a + b, 0)).toBe(series!.finalCents);
+  });
+
+  it("marks a lesson or series below Stripe's 50 cent minimum as not eligible for online payment", async () => {
+    await db.doc("venues/v").update({ memberDiscountPercent: 97, partnerInstructorExtraPercent: 0 });
+    const id = await save("biz", { ...venueCourse, seriesPriceCents: 100 });
+    const result = await quote("u", id, ["2099-10-12"]);
+    expect(result.sessions[0]).toMatchObject({ finalCents: 45, stripeEligible: false });
+    expect(result.series!.finalCents).toBeLessThan(50);
+    expect(result.series!.stripeEligible).toBe(false);
+    await db.doc("venues/v").update({ memberDiscountPercent: 96 });
+    expect((await quote("u", id, ["2099-10-12"])).sessions[0]).toMatchObject({ finalCents: 60, stripeEligible: true });
+    await db.doc("venues/v").update({ memberDiscountPercent: 100 });
+    expect((await quote("u", id, ["2099-10-12"])).sessions[0]).toMatchObject({ finalCents: 0, stripeEligible: false });
   });
 
   it("prices a substituted lesson by the substitute's partner status", async () => {

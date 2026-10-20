@@ -38,12 +38,13 @@ export interface CourseRefund {
 export interface SessionQuote {
   sessionId: string; revision: number; regularCents: number; discountPercent: number; gymPercent: number;
   instructorPercent: number; discountCents: number; finalCents: number; availableSeats: number; waitlisted: number;
+  stripeEligible: boolean;
 }
 export interface CourseQuote {
   sessions: SessionQuote[];
   series: null | {
     regularCents: number; discountPercent: number; gymPercent: number; instructorPercent: number;
-    discountCents: number; finalCents: number; allocations: Record<string, number>;
+    discountCents: number; finalCents: number; stripeEligible: boolean; allocations: Record<string, number>;
     revisions: Record<string, number>;
   };
 }

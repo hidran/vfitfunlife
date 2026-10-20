@@ -9,6 +9,7 @@ import { checkoutActive, paymentDecision } from "./core";
 import { db, safeId, uidOf, nowStamp, Enrollment, Session } from "./store";
 import { queueCourseNotification } from "./notifications";
 import { releaseEnrollment } from "./operations";
+import { assertStripeAmount } from "./pricing";
 
 function returnOrigin(): string {
   const project = process.env.GCLOUD_PROJECT;
@@ -32,6 +33,7 @@ export const createCourseCheckout = onCall(
         stored.holdExpiresAt.toMillis() <= Date.now()) {
         throw new HttpsError("failed-precondition", "checkout_hold_unavailable");
       }
+      assertStripeAmount(stored.totalCents);
       if (!stored.checkoutExpiresAt && !stored.checkoutUrl) {
         // Immutable creation deadline with one minute of network slack beyond Stripe's 30-minute minimum.
         const expiry = Timestamp.fromMillis((Math.ceil(Date.now() / 1000) + 1860) * 1000);

@@ -3,17 +3,19 @@ import type { DocumentData, DocumentReference, Transaction } from "firebase-admi
 import { region } from "../lib/runtimeOptions";
 import { db, safeId, uidOf, domainError, Course, Session } from "./store";
 import { canManageCourse } from "./authority";
-import { discountPercents, applyDiscount, quoteSeries } from "./pricing";
+import { discountPercents, applyDiscount, quoteSeries, STRIPE_MIN_CENTS } from "./pricing";
 
 export type SessionQuote = {
   sessionId: string; revision: number; regularCents: number; discountPercent: number; gymPercent: number;
   instructorPercent: number; discountCents: number; finalCents: number; availableSeats: number; waitlisted: number;
+  // Online payment is possible: the final price reaches Stripe's minimum charge.
+  stripeEligible: boolean;
 };
 export type CourseQuote = {
   sessions: SessionQuote[];
   series: null | {
     regularCents: number; discountPercent: number; gymPercent: number; instructorPercent: number;
-    discountCents: number; finalCents: number; allocations: Record<string, number>;
+    discountCents: number; finalCents: number; stripeEligible: boolean; allocations: Record<string, number>;
     // Revision of every lesson: a series booking confirms them all, however many lessons the course has.
     revisions: Record<string, number>;
   };
@@ -90,6 +92,7 @@ export async function buildQuote(
       sessionId, revision: session.revision ?? 1, regularCents: price.regularCents,
       discountPercent: percents.percent, gymPercent: percents.gymPercent, instructorPercent: percents.instructorPercent,
       discountCents: price.discountCents, finalCents: price.finalCents,
+      stripeEligible: price.finalCents >= STRIPE_MIN_CENTS,
       availableSeats: Math.max(0, (session.capacity ?? course.capacity) - session.occupied - session.held),
       waitlisted: session.waitlisted ?? 0,
     };
@@ -101,7 +104,7 @@ export async function buildQuote(
     series = {
       regularCents: priced.regularCents, discountPercent: courseLevel.percent, gymPercent: courseLevel.gymPercent,
       instructorPercent: courseLevel.instructorPercent, discountCents: priced.discountCents,
-      finalCents: priced.finalCents,
+      finalCents: priced.finalCents, stripeEligible: priced.finalCents >= STRIPE_MIN_CENTS,
       allocations: Object.fromEntries(course.sessionIds.map((id, i) => [id, priced.allocations[i]])),
       revisions: Object.fromEntries(course.sessionIds.map((id) => [id, loaded.get(id)!.revision ?? 1])),
     };

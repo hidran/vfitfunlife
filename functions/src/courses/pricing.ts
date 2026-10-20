@@ -1,4 +1,13 @@
+import { HttpsError } from "firebase-functions/v2/https";
 import { allocatePrice } from "./core";
+
+// Stripe refuses charges below 50 cents (EUR). Free bookings never reach Stripe, so only 0 < total < 50 is an error.
+export const STRIPE_MIN_CENTS = 50;
+export function assertStripeAmount(totalCents: number): void {
+  if (totalCents > 0 && totalCents < STRIPE_MIN_CENTS) {
+    throw new HttpsError("failed-precondition", "checkout_amount_too_low", { minCents: STRIPE_MIN_CENTS });
+  }
+}
 
 export type VenuePricing = { memberDiscountPercent?: number; partnerInstructorExtraPercent?: number };
 

@@ -200,6 +200,17 @@ describe("transactional course enrollment", () => {
     await api.createCourseCheckout.run(request("u", { enrollmentId: e.enrollmentId }));
     expect(stripe.checkout.sessions.create.mock.calls[0][0]).toEqual(stripe.checkout.sessions.create.mock.calls[1][0]);
   });
+  it("refuses a checkout for a hold below Stripe's minimum", async () => {
+    const id = await create();
+    await db.doc("systemSettings/payments").set({ stripePaymentsEnabled: true, courseCheckoutEnabled: true });
+    (await import("../lib/cachedDoc")).invalidateCachedDoc("systemSettings/payments");
+    const e = await api.enrollInCourse.run(request("u", { courseId: id, scope: "series", requestId: "low", paymentMode: "stripe",
+      ...await quoted(id, "series") }));
+    await db.doc(`courseEnrollments/${e.enrollmentId}`).update({ totalCents: 45 });
+    await expect(api.createCourseCheckout.run(request("u", { enrollmentId: e.enrollmentId }))).rejects.toMatchObject(
+      { code: "failed-precondition", message: "checkout_amount_too_low" });
+    expect(stripe.checkout.sessions.create).not.toHaveBeenCalled();
+  });
   it("reduces provider liability once when paid Stripe lessons are cancelled", async () => {
     const id = await create(); const result = await enroll(id);
     const ref = db.doc(`courseEnrollments/${result.enrollmentId}`);

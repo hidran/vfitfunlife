@@ -7,6 +7,7 @@ import { canManageCourse } from "./authority";
 import { rosterClientId } from "../bookings/clientRosterCore";
 import { queueCourseNotification } from "./notifications";
 import { buildQuote } from "./quote";
+import { assertStripeAmount } from "./pricing";
 
 export type EnrollInput = {
   actor: string; uid: string; courseId: string; scope: "lesson" | "series"; sessionId?: string;
@@ -120,6 +121,8 @@ export async function enrollInTx(tx: Transaction, input: EnrollInput):
   if (mode === "stripe" && !input.checkoutOn) {
     throw new HttpsError("failed-precondition", "Online course payments are not enabled");
   }
+  // Before any write: a hold Stripe could never charge would only block a seat.
+  if (mode === "stripe") assertStripeAmount(totalCents);
   const state = mode === "stripe" ? "held" : "confirmed";
   const commit = () => {
     tx.create(enrollmentRef, {

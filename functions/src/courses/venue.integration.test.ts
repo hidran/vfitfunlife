@@ -18,7 +18,7 @@ const input = { name: "Karate", categoryId: "karate", location: "Torino", instru
   recurrence: "daily", endDate: "2099-10-13", lessonPriceCents: 1500, seriesPriceCents: 2500, state: "published" };
 const SESSION = "2099-10-12";
 const COLLECTIONS = ["courses", "courseEnrollments", "courseRefunds", "courseNotifications", "clients",
-  "users", "instructors", "serviceCategories", "venues", "venueStaff", "rateLimits", "courseScheduleLocks"];
+  "users", "instructors", "serviceCategories", "venues", "venueStaff", "rateLimits", "courseScheduleLocks", "systemSettings"];
 
 beforeAll(async () => {
   for (const app of admin.apps) if (app) await app.delete();
@@ -840,6 +840,25 @@ describe("priced enrollment on venue courses", () => {
       { code: "failed-precondition", message: "price_changed", details: { reason: "price" } });
     expect((await db.collection("courseEnrollments").get()).empty).toBe(true);
     expect((await db.doc(`courses/${courseId}/sessions/${SESSION}`).get()).data()?.occupied).toBe(0);
+  });
+
+  it("refuses an online payment that a discount pushed below 50 cents, and holds no seat", async () => {
+    await db.doc("systemSettings/payments").set({ stripePaymentsEnabled: true, courseCheckoutEnabled: true });
+    (await import("../lib/cachedDoc")).invalidateCachedDoc("systemSettings/payments");
+    await db.doc("venues/v").update({ memberDiscountPercent: 97, partnerInstructorExtraPercent: 0 });
+    const courseId = await create();
+    const expected = await quoted(courseId);
+    expect(expected.expectedFinalCents).toBe(45);
+    await expect(api.enrollInCourse.run(request("u1", { courseId, scope: "lesson", sessionId: SESSION,
+      requestId: "cheap", paymentMode: "stripe", ...expected }))).rejects.toMatchObject(
+      { code: "failed-precondition", message: "checkout_amount_too_low" });
+    expect((await db.collection("courseEnrollments").get()).empty).toBe(true);
+    expect((await db.doc(`courses/${courseId}/sessions/${SESSION}`).get()).data()).toMatchObject({ held: 0, occupied: 0 });
+    // The same lesson is bookable directly at that price.
+    await api.enrollInCourse.run(request("u1", { courseId, scope: "lesson", sessionId: SESSION, requestId: "cheap-direct",
+      ...expected }));
+    await db.doc("systemSettings/payments").set({ stripePaymentsEnabled: false, courseCheckoutEnabled: false });
+    (await import("../lib/cachedDoc")).invalidateCachedDoc("systemSettings/payments");
   });
 
   it("books a 100 percent discount as a free direct booking", async () => {

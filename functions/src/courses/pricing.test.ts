@@ -1,5 +1,26 @@
 import { describe, expect, it } from "vitest";
-import { applyDiscount, discountPercents, quoteSeries } from "./pricing";
+import { applyDiscount, assertStripeAmount, discountPercents, quoteSeries, STRIPE_MIN_CENTS } from "./pricing";
+
+describe("assertStripeAmount", () => {
+  it("exports Stripe's 50 cent minimum", () => {
+    expect(STRIPE_MIN_CENTS).toBe(50);
+  });
+  it.each([1, 45, 49])("refuses %i cents", (cents) => {
+    expect(() => assertStripeAmount(cents)).toThrow("checkout_amount_too_low");
+  });
+  it.each([0, 50, 51, 1500])("accepts %i cents (free bookings never reach Stripe)", (cents) => {
+    expect(() => assertStripeAmount(cents)).not.toThrow();
+  });
+  it("is a failed-precondition carrying the minimum", () => {
+    expect.assertions(2);
+    try {
+      assertStripeAmount(10);
+    } catch (error) {
+      expect(error).toMatchObject({ code: "failed-precondition", details: { minCents: 50 } });
+      expect((error as Error).message).toBe("checkout_amount_too_low");
+    }
+  });
+});
 
 describe("discountPercents", () => {
   it("adds the venue and active partner instructor percents", () => {
