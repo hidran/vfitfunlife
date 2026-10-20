@@ -91,3 +91,35 @@ export function socialLinkForStorage(value: string | null | undefined, key: stri
   const href = socialLinkHref(text, key);
   return href && href.length <= SOCIAL_LINK_MAX_LENGTH ? href : null;
 }
+
+/** The platforms the profile editor has a field for, in display order. */
+export const SOCIAL_LINK_KEYS = ['instagram', 'linkedin', 'website', 'facebook', 'twitter', 'tiktok'] as const;
+export type SocialLinkKey = (typeof SOCIAL_LINK_KEYS)[number];
+
+/**
+ * The whole social-links form, checked in one go: every field through `socialLinkForStorage`.
+ *
+ * - `links`: what to store — normalised values of the filled fields, plus every key in `current`
+ *   that the form has no field for (carried over untouched);
+ * - `invalid`: the field keys that cannot be stored, in field order (empty ⇒ safe to save). The
+ *   caller shows an error per key, focuses the first and writes nothing.
+ */
+export function normalizeSocialLinks(
+  current: Record<string, string | null | undefined>
+): { links: Record<string, string>; invalid: SocialLinkKey[] } {
+  const known = new Set<string>(SOCIAL_LINK_KEYS);
+  const links: Record<string, string> = {};
+  for (const [key, value] of Object.entries(current)) {
+    if (!known.has(key) && value) links[key] = value;
+  }
+  const invalid: SocialLinkKey[] = [];
+  for (const key of SOCIAL_LINK_KEYS) {
+    const stored = socialLinkForStorage(current[key], key);
+    if (stored === null) invalid.push(key);
+    else if (stored) links[key] = stored;
+  }
+  return { links, invalid };
+}
+
+/** The id of a social field's input, so a caller can move focus to the first invalid one. */
+export const socialFieldId = (key: string) => `social-${key}`;

@@ -11,7 +11,6 @@ import {
   EntityDetailLayout,
   ConfirmDeleteDialog,
   useEntityMutation,
-  VerificationBadge,
   StatusBadge,
   ProviderTypeBadge,
 } from '@/components/admin';
@@ -282,7 +281,7 @@ export function ProviderDetailView({ providerId }: Props) {
                   <div className="flex items-center gap-2 flex-wrap">
                     <ProviderTypeBadge userType={provider.userType} />
                     {(business || provider.providerType === 'business') && <BusinessBadge />}
-                    <VerificationBadge isVerified={verificationState === 'verified'} />
+                    <StatusBadge status={verificationState} />
                     <StatusBadge status={isSuspended ? 'suspended' : 'active'} />
                     {profile?.specialties?.map((specialty) => (
                       <span
@@ -299,19 +298,24 @@ export function ProviderDetailView({ providerId }: Props) {
                     office's job here is reviewing who got listed. The whole /admin area
                     already requires admin or superadmin, and decideProviderApplication
                     enforces the same on the server. */}
+                {/* pending: reject or verify. rejected: the decision is already taken, so no Reject
+                    (the list and the queue say "rejected" too); an admin may still reverse it with
+                    Verify. verified: nothing to decide. */}
                 {verificationState !== 'verified' && (
                   <>
                     <div className="flex gap-2">
                       {!showRejectForm ? (
                         <>
-                          <Button
-                            variant="secondary"
-                            onClick={() => setShowRejectForm(true)}
-                            className="flex items-center gap-2 text-[#EF4444] light:text-red-700 hover:text-[#EF4444] light:hover:text-red-700"
-                          >
-                            <XCircle className="w-4 h-4" />
-                            {t('admin.providerDetail.reject')}
-                          </Button>
+                          {verificationState === 'pending' && (
+                            <Button
+                              variant="secondary"
+                              onClick={() => setShowRejectForm(true)}
+                              className="flex items-center gap-2 text-[#EF4444] light:text-red-700 hover:text-[#EF4444] light:hover:text-red-700"
+                            >
+                              <XCircle className="w-4 h-4" />
+                              {t('admin.providerDetail.reject')}
+                            </Button>
+                          )}
                           <Button
                             variant="primary"
                             onClick={handleVerify}

@@ -53,7 +53,6 @@ vi.mock('@/components/provider/MissingLocationBanner', () => ({ MissingLocationB
 vi.mock('@/components/provider/CategoryLeafPicker', () => ({ CategoryLeafPicker: () => null }));
 vi.mock('@/components/profile', () => ({ ProfilePhotoUploader: () => null }));
 vi.mock('@/components/profile/AvatarUploader', () => ({ AvatarUploader: () => null }));
-vi.mock('@/components/profile/SocialLinksForm', () => ({ SocialLinksForm: () => null }));
 vi.mock('@/components/profile/NotificationSettingsForm', () => ({ NotificationSettingsForm: () => null }));
 vi.mock('@/components/profile/PrivacySettingsForm', () => ({ PrivacySettingsForm: () => null }));
 
@@ -108,6 +107,43 @@ describe('profile editor — social links', () => {
 
     expect(await screen.findByText('Formato sito web non valido')).toBeInTheDocument();
     expect(updateUserProfile).not.toHaveBeenCalled();
+  });
+
+  it('marks the invalid fields (aria-invalid + aria-describedby) and focuses the first one', async () => {
+    render(<EditProfilePage />);
+    type('tuosito.com', 'javascript:alert(1)');
+    type('linkedin.com/in/username', 'rossi');
+    fireEvent.click(pageSave());
+
+    const linkedin = await screen.findByPlaceholderText('linkedin.com/in/username');
+    const website = screen.getByPlaceholderText('tuosito.com');
+    // Field order is instagram, linkedin, website, …: LinkedIn is the first invalid one.
+    await waitFor(() => expect(linkedin).toHaveFocus());
+    for (const input of [linkedin, website]) {
+      expect(input).toHaveAttribute('aria-invalid', 'true');
+      const errorId = input.getAttribute('aria-describedby');
+      expect(errorId).toBeTruthy();
+      expect(document.getElementById(errorId as string)).toHaveTextContent(/non valido/);
+    }
+    expect(document.getElementById('social-instagram')).not.toHaveAttribute('aria-invalid');
+    expect(updateUserProfile).not.toHaveBeenCalled();
+  });
+
+  it('is the ONLY social-links form: the same fields on the Professional tab, no second Save', async () => {
+    mockUser = { ...mockUser, role: 'provider', providerStatus: 'verified' };
+    render(<EditProfilePage />);
+    await screen.findByRole('button', { name: 'Professionale' });
+    expect(screen.getAllByPlaceholderText('tuosito.com')).toHaveLength(1);
+    expect(document.querySelector('section#social')).toBeNull();
+    expect(screen.getAllByRole('button', { name: /Salva/ })).toHaveLength(1);
+  });
+
+  it('has a TikTok field, stored normalised like the others', async () => {
+    render(<EditProfilePage />);
+    type('tiktok.com/@username', 'tiktok.com/@mia');
+    fireEvent.click(pageSave());
+    await waitFor(() => expect(updateUserProfile).toHaveBeenCalledTimes(1));
+    expect((updateUserProfile.mock.calls[0][1] as { socialLinks: unknown }).socialLinks).toEqual({ tiktok: 'https://tiktok.com/@mia' });
   });
 
   it('refuses a bare word and a foreign host on a platform field, again with no write', async () => {

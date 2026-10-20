@@ -12,7 +12,11 @@ import {
   releaseBusinessVat,
   updateBusinessTaxId,
 } from '@/lib/firebase/functions';
-import { adminBusinessErrorMessageKey } from '@/lib/providerApplicationErrors';
+import {
+  adminBusinessErrorCode,
+  adminBusinessErrorMessageKey,
+  type AdminBusinessErrorCode,
+} from '@/lib/providerApplicationErrors';
 import { BUSINESS_FIELD_LIMITS, BUSINESS_LEGAL_FORMS, LEGAL_FORM_LABEL } from '@/lib/businessDetails';
 import { isValidItalianVat, normalizeVatNumber } from '@/lib/vatNumber';
 import type { AdminBusiness } from '@/lib/admin/providerBusiness';
@@ -130,6 +134,11 @@ interface ActionDialogProps {
   children?: ReactNode;
   /** Runs before onConfirm; false stops the confirmation (the fields show their own errors). */
   validate?: () => boolean;
+  /**
+   * Called once the server's refusal is on screen and the dialog is interactive again, with its
+   * code (null when it was not a coded one): the place to move focus to the field it is about.
+   */
+  onServerError?: (code: AdminBusinessErrorCode | null) => void;
 }
 
 /**
@@ -146,6 +155,7 @@ function ActionDialog({
   onConfirm,
   children,
   validate,
+  onServerError,
 }: ActionDialogProps) {
   const { t } = useI18n();
   const titleId = useId();
@@ -173,6 +183,9 @@ function ActionDialog({
       const key = adminBusinessErrorMessageKey(err);
       setError(t(key ?? 'admin.business.dialog.genericError'));
       setBusy(false);
+      // After the re-render: the fields are still disabled while the call runs, and a disabled
+      // field cannot take focus.
+      setTimeout(() => onServerError?.(adminBusinessErrorCode(err)), 0);
     }
   };
 
@@ -283,6 +296,8 @@ function ChangeTaxIdDialog({ providerId, business, onClose, onDone }: ChangeTaxI
   const [legalForm, setLegalForm] = useState<BusinessLegalForm | ''>(business.legalForm ?? '');
   const [affiliationNumber, setAffiliationNumber] = useState(business.affiliationNumber);
   const [errors, setErrors] = useState<Partial<Record<ChangeField, MessageKey>>>({});
+  // The server refused the tax id itself (taken, or carried by another company's record).
+  const [vatRefused, setVatRefused] = useState(false);
   const vatRef = useRef<HTMLInputElement>(null);
   const legalNameRef = useRef<HTMLInputElement>(null);
   const affiliationRef = useRef<HTMLInputElement>(null);
@@ -332,6 +347,12 @@ function ChangeTaxIdDialog({ providerId, business, onClose, onDone }: ChangeTaxI
       confirmLabel={t('admin.business.change.confirm')}
       onClose={onClose}
       validate={validate}
+      onServerError={(code) => {
+        if (code === 'vat_already_registered' || code === 'vat_carried_by_other' || code === 'invalid_vat') {
+          setVatRefused(true);
+          vatRef.current?.focus();
+        }
+      }}
       onConfirm={async (reason) => {
         const affiliation = affiliationNumber.trim();
         await updateBusinessTaxId({
@@ -355,10 +376,13 @@ function ChangeTaxIdDialog({ providerId, business, onClose, onDone }: ChangeTaxI
             ref={vatRef}
             id={ids.vatNumber}
             value={vatNumber}
-            onChange={(e) => setVatNumber(e.target.value)}
+            onChange={(e) => {
+              setVatNumber(e.target.value);
+              setVatRefused(false);
+            }}
             inputMode="numeric"
             autoComplete="off"
-            aria-invalid={errors.vatNumber ? true : undefined}
+            aria-invalid={errors.vatNumber || vatRefused ? true : undefined}
             aria-describedby={describedBy('vatNumber', ids.vatHint)}
             className={`${inputClass} font-mono`}
           />

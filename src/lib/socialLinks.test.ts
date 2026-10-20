@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { socialLinkForStorage, socialLinkHref } from './socialLinks';
+import { normalizeSocialLinks, socialLinkForStorage, socialLinkHref } from './socialLinks';
 
 describe('socialLinkHref', () => {
   it('links http(s) URLs and adds https:// to a bare host', () => {
@@ -149,5 +149,22 @@ describe('socialLinkForStorage', () => {
     expect(socialLinkForStorage('anna', 'instagram')).toBeNull();
     expect(socialLinkForStorage('https://evil.example/instagram.com', 'instagram')).toBeNull();
     expect(socialLinkForStorage(`https://example.com/${'a'.repeat(200)}`, 'website')).toBeNull();
+  });
+});
+
+describe('normalizeSocialLinks', () => {
+  it('normalises the filled fields, drops blanks and carries over keys without a field', () => {
+    expect(
+      normalizeSocialLinks({ website: 'yourwebsite.com', linkedin: ' ', instagram: '@mia', other: 'https://x.example/' })
+    ).toEqual({
+      links: { website: 'https://yourwebsite.com/', instagram: '@mia', other: 'https://x.example/' },
+      invalid: [],
+    });
+  });
+
+  it('lists every invalid field in field order and still returns what is valid', () => {
+    const result = normalizeSocialLinks({ website: 'javascript:alert(1)', tiktok: 'x', linkedin: 'rossi', instagram: '@ok' });
+    expect(result.invalid).toEqual(['linkedin', 'website', 'tiktok']);
+    expect(result.links).toEqual({ instagram: '@ok' });
   });
 });

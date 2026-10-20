@@ -274,6 +274,37 @@ describe('ProviderDetailView — a company', () => {
     });
   });
 
+  it('D3: a rejected company shows "Rifiutato", no Reject button, and may still be verified', async () => {
+    seedCompany('rejected');
+    renderView();
+    await waitFor(businessCard);
+    expect(screen.getAllByText(it_('admin.status.rejected')).length).toBeGreaterThan(0);
+    expect(screen.queryByText(it_('admin.badge.pending'))).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: it_('admin.providerDetail.reject') })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: it_('admin.providerDetail.verify') })).toBeInTheDocument();
+  });
+
+  it('D3: a pending company shows "In attesa" with both Reject and Verify, a verified one neither', async () => {
+    seedCompany('pending');
+    const { unmount } = renderView();
+    await waitFor(businessCard);
+    expect(screen.getAllByText(it_('admin.status.pending')).length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: it_('admin.providerDetail.reject') })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: it_('admin.providerDetail.verify') })).toBeInTheDocument();
+    unmount();
+
+    h.docs.set('users/c1', {
+      fullName: 'Karate Club Milano', role: 'provider', providerStatus: 'verified', providerType: 'business',
+      providerProfile: { isVerified: true },
+    });
+    h.docs.set('instructors/c1', { applicationStatus: 'verified', providerProfile: { isVerified: true }, business: { ...COMPANY } });
+    renderView();
+    await waitFor(businessCard);
+    expect(screen.getAllByText(it_('admin.status.verified')).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: it_('admin.providerDetail.reject') })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: it_('admin.providerDetail.verify') })).not.toBeInTheDocument();
+  });
+
   it('offers "release tax-id claim" only for a rejected company', async () => {
     seedCompany('pending');
     const { unmount } = renderView();
@@ -345,7 +376,7 @@ describe('ProviderDetailView — admin actions', () => {
     expect(fns.updateBusinessTaxId).not.toHaveBeenCalled();
   });
 
-  it('change tax id: vat_already_registered shows its text in the dialog, which stays open', async () => {
+  it('change tax id: vat_already_registered shows its text in the dialog, which stays open, and refocuses the tax-id field', async () => {
     fns.updateBusinessTaxId.mockRejectedValueOnce(
       Object.assign(new Error('vat_already_registered'), { code: 'functions/already-exists' })
     );
@@ -358,6 +389,13 @@ describe('ProviderDetailView — admin actions', () => {
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(it_('admin.business.error.vatTaken'));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(notify.success).not.toHaveBeenCalled();
+    const vat = within(dialog).getByLabelText(it_('provider.business.field.vatNumber'));
+    // Focus was on the confirm button; the refusal is about the tax id, so it goes back there.
+    await waitFor(() => expect(vat).toHaveFocus());
+    expect(vat).toHaveAttribute('aria-invalid', 'true');
+    // Typing a new number clears the mark.
+    fireEvent.change(vat, { target: { value: '00743110158' } });
+    expect(vat).not.toHaveAttribute('aria-invalid');
   });
 
   it('release: sends the tax id with the reason and refreshes', async () => {

@@ -54,7 +54,6 @@ vi.mock('@/components/provider/MissingLocationBanner', () => ({ MissingLocationB
 vi.mock('@/components/provider/CategoryLeafPicker', () => ({ CategoryLeafPicker: () => null }));
 vi.mock('@/components/profile', () => ({ ProfilePhotoUploader: () => null }));
 vi.mock('@/components/profile/AvatarUploader', () => ({ AvatarUploader: () => null }));
-vi.mock('@/components/profile/SocialLinksForm', () => ({ SocialLinksForm: () => null }));
 vi.mock('@/components/profile/NotificationSettingsForm', () => ({ NotificationSettingsForm: () => null }));
 vi.mock('@/components/profile/PrivacySettingsForm', () => ({ PrivacySettingsForm: () => null }));
 

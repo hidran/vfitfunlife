@@ -34,7 +34,7 @@ test.describe('Profile settings', () => {
 
   test('saves social links', async ({ page }) => {
     await page.getByLabel(/instagram/i).fill('https://instagram.com/playwright_test');
-    await page.locator('section#social').getByRole('button', { name: /save/i }).click();
+    await page.getByRole('button', { name: /save changes|salva modifiche/i }).click();
     await page.reload();
     await expect(page.getByLabel(/instagram/i)).toHaveValue('https://instagram.com/playwright_test');
   });

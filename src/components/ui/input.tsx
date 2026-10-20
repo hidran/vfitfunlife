@@ -13,6 +13,9 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ className, label, error, leftIcon, rightIcon, id, ...props }, ref) => {
     const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
+    // An error is announced with the field: aria-invalid plus a description pointing at its text.
+    const errorId = error && inputId ? `${inputId}-error` : undefined;
+    const describedBy = [errorId, props['aria-describedby']].filter(Boolean).join(' ') || undefined;
 
     return (
       <div className="w-full">
@@ -43,6 +46,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
               className
             )}
             {...props}
+            aria-invalid={error ? true : props['aria-invalid']}
+            aria-describedby={describedBy}
           />
           {rightIcon && (
             <div className="absolute right-4 top-1/2 -translate-y-1/2 text-text-tertiary">
@@ -51,7 +56,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           )}
         </div>
         {error && (
-          <p className="mt-1.5 text-sm text-error-DEFAULT animate-fade-in">{error}</p>
+          <p id={errorId} className="mt-1.5 text-sm text-error-DEFAULT animate-fade-in">{error}</p>
         )}
       </div>
     );

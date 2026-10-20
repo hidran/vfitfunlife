@@ -38,7 +38,12 @@ import { SocialLinks } from '@/types/firebase';
 import { useI18n } from '@/hooks/useI18n';
 import type { MessageKey } from '@/i18n/messages';
 import { AvatarUploader } from '@/components/profile/AvatarUploader';
-import { SocialLinksForm } from '@/components/profile/SocialLinksForm';
+import {
+  SocialLinksFields,
+  focusFirstInvalidSocialField,
+  socialLinkErrorMessageKey,
+  type SocialLinkErrors,
+} from '@/components/profile/SocialLinksFields';
 import { NotificationSettingsForm } from '@/components/profile/NotificationSettingsForm';
 import { PrivacySettingsForm } from '@/components/profile/PrivacySettingsForm';
 import { defaultNotificationSettings, defaultPrivacySettings } from '@/types/profile';
@@ -47,7 +52,7 @@ import { useProviderStatus } from '@/hooks/useProviderApplication';
 import { useProvider, useProviderServices } from '@/hooks/useProviders';
 import { updateRequestedCategories } from '@/lib/firebase/providerApplication';
 import { canAccessProviderArea } from '@/lib/providerStatus';
-import { socialLinkForStorage } from '@/lib/socialLinks';
+import { normalizeSocialLinks, type SocialLinkKey } from '@/lib/socialLinks';
 import { CategoryLeafPicker } from '@/components/provider/CategoryLeafPicker';
 import { MissingLocationBanner } from '@/components/provider/MissingLocationBanner';
 import {
@@ -58,8 +63,6 @@ import { useMyLocation } from '@/hooks/useMyLocation';
 import Link from 'next/link';
 
 // Form validation
-type SocialLinkErrors = Partial<Record<keyof SocialLinks, string>>;
-
 interface FormErrors {
   fullName?: string;
   phone?: string;
@@ -81,38 +84,6 @@ const AVAILABLE_LANGUAGES: { code: string; labelKey: MessageKey; flag: string }[
   { code: 'ru', labelKey: 'profile.languages.option.ru', flag: '🇷🇺' },
   { code: 'zh', labelKey: 'profile.languages.option.zh', flag: '🇨🇳' },
   { code: 'ar', labelKey: 'profile.languages.option.ar', flag: '🇸🇦' },
-];
-
-const SOCIAL_PLATFORMS: {
-  key: keyof SocialLinks;
-  labelKey: MessageKey;
-  placeholderKey: MessageKey;
-}[] = [
-  {
-    key: 'instagram',
-    labelKey: 'profile.social.platform.instagram',
-    placeholderKey: 'profile.social.placeholder.instagram',
-  },
-  {
-    key: 'linkedin',
-    labelKey: 'profile.social.platform.linkedin',
-    placeholderKey: 'profile.social.placeholder.linkedin',
-  },
-  {
-    key: 'website',
-    labelKey: 'profile.social.platform.website',
-    placeholderKey: 'profile.social.placeholder.website',
-  },
-  {
-    key: 'facebook',
-    labelKey: 'profile.social.platform.facebook',
-    placeholderKey: 'profile.social.placeholder.facebook',
-  },
-  {
-    key: 'twitter',
-    labelKey: 'profile.social.platform.twitter',
-    placeholderKey: 'profile.social.placeholder.twitter',
-  },
 ];
 
 type TabType = 'personal' | 'professional';
@@ -167,7 +138,7 @@ export default function EditProfilePage() {
   });
 
   // Social Links State
-  const [socialLinks, setSocialLinks] = useState<SocialLinks>({
+  const [socialLinks, setSocialLinks] = useState<Record<string, string>>({
     instagram: '',
     linkedin: '',
     website: '',
@@ -198,7 +169,7 @@ export default function EditProfilePage() {
       });
 
       if (user.socialLinks) {
-        setSocialLinks(user.socialLinks);
+        setSocialLinks({ ...(user.socialLinks as Record<string, string>) });
       }
 
       if (user.providerProfile) {
@@ -281,25 +252,19 @@ export default function EditProfilePage() {
   /**
    * Every social field, normalised for storage (https URL or @handle: what firestore.rules
    * accepts). Runs BEFORE anything is written, so one bad link cannot leave a half-saved
-   * profile. Blank fields are left out. Returns null (and shows the errors) when any is invalid.
+   * profile. Blank fields are left out; keys the form has no field for are carried over.
+   * Returns null when any is invalid: errors are shown, the first bad field takes focus.
    */
   const validateSocialLinks = (): SocialLinks | null => {
-    // Keys this form has no field for (a tiktok link saved elsewhere) are carried over untouched.
-    const known = new Set<string>(SOCIAL_PLATFORMS.map((platform) => platform.key));
-    const normalised: SocialLinks = Object.fromEntries(
-      Object.entries(socialLinks).filter(([key, value]) => !known.has(key) && value)
-    );
+    const { links, invalid } = normalizeSocialLinks(socialLinks);
     const nextErrors: SocialLinkErrors = {};
-    for (const platform of SOCIAL_PLATFORMS) {
-      const stored = socialLinkForStorage(socialLinks[platform.key], platform.key);
-      if (stored === null) {
-        nextErrors[platform.key] = t(`profile.social.validation.${platform.key}` as MessageKey);
-      } else if (stored) {
-        normalised[platform.key] = stored;
-      }
-    }
+    for (const key of invalid) nextErrors[key] = t(socialLinkErrorMessageKey(key));
     setSocialErrors(nextErrors);
-    return Object.keys(nextErrors).length === 0 ? normalised : null;
+    if (invalid.length > 0) {
+      focusFirstInvalidSocialField(invalid);
+      return null;
+    }
+    return links as SocialLinks;
   };
 
   const validateUrl = (url: string): boolean => {
@@ -341,7 +306,7 @@ export default function EditProfilePage() {
         // One write with the personal fields: validated and normalised above.
         socialLinks: normalisedSocialLinks,
       });
-      setSocialLinks(normalisedSocialLinks);
+      setSocialLinks({ ...(normalisedSocialLinks as Record<string, string>) });
 
       // Update professional info for verified providers. Pending applicants can
       // edit categories too, but cannot edit provider-only profile fields yet.
@@ -418,7 +383,7 @@ export default function EditProfilePage() {
     }
   };
 
-  const updateSocialLink = (platform: keyof SocialLinks, value: string) => {
+  const updateSocialLink = (platform: SocialLinkKey, value: string) => {
     setSocialLinks((prev) => ({ ...prev, [platform]: value }));
     setSocialErrors((prev) => ({ ...prev, [platform]: undefined }));
     setHasUnsavedChanges(true);
@@ -678,18 +643,7 @@ export default function EditProfilePage() {
                 <Globe size={16} />
                 {t('profile.social.title')}
               </h3>
-              <div className="space-y-3">
-                {SOCIAL_PLATFORMS.map((platform) => (
-                  <Input
-                    key={platform.key}
-                    label={t(platform.labelKey)}
-                    placeholder={t(platform.placeholderKey)}
-                    value={socialLinks[platform.key] || ''}
-                    onChange={(e) => updateSocialLink(platform.key, e.target.value)}
-                    error={socialErrors[platform.key]}
-                  />
-                ))}
-              </div>
+              <SocialLinksFields values={socialLinks} errors={socialErrors} onChange={updateSocialLink} />
             </div>
 
             {/* Email Verification Status */}
@@ -943,11 +897,6 @@ export default function EditProfilePage() {
             <section id="avatar" className="mt-8 space-y-3">
               <h2 className="text-lg font-semibold">{t('profile.settings.avatar.sectionTitle')}</h2>
               <AvatarUploader currentUrl={user.avatarUrl ?? null} uid={user.uid} />
-            </section>
-
-            <section id="social" className="mt-8 space-y-3">
-              <h2 className="text-lg font-semibold">{t('profile.settings.social.sectionTitle')}</h2>
-              <SocialLinksForm initial={(user as any).socialLinks ?? {}} />
             </section>
 
             <section id="notifications" className="mt-8 space-y-3">
