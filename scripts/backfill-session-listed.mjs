@@ -13,6 +13,11 @@
 //   node scripts/backfill-session-listed.mjs --project vfit-app-staging    # dry run
 //   node scripts/backfill-session-listed.mjs --project vfit-app-staging --apply
 //
+// Optional `--names` also copies the course name onto each lesson (`courseName`, what saveCourse now writes), so the
+// venue page and timetable label lessons without reading course documents:
+//
+//   node scripts/backfill-session-listed.mjs --project vfit-app-staging --names --apply
+//
 // Against a real project it uses Application Default Credentials, like backfill-search-tokens.mjs.
 
 import admin from "firebase-admin";
@@ -21,6 +26,7 @@ const args = process.argv.slice(2);
 const projectFlag = args.indexOf("--project");
 const project = projectFlag === -1 ? null : args[projectFlag + 1];
 const apply = args.includes("--apply");
+const names = args.includes("--names");
 const useEmulator = !project;
 const SAMPLE = 10;
 
@@ -36,10 +42,10 @@ admin.initializeApp({ projectId });
 const db = admin.firestore();
 
 const target = useEmulator ? `the emulator (${projectId})` : projectId;
-console.log(`${apply ? "APPLY" : "DRY RUN"} - backfilling sessions.listed of venue-linked courses on ${target}\n`);
+console.log(`${apply ? "APPLY" : "DRY RUN"} - backfilling sessions.listed${names ? " and courseName" : ""} of venue-linked courses on ${target}\n`);
 
 const courses = await db.collection("courses").where("venueId", "!=", null).get();
-const plan = []; // { ref, updateTime, listed }
+const plan = []; // { ref, updateTime, patch }
 const touchedCourses = new Set();
 let sessionsScanned = 0;
 
@@ -49,8 +55,11 @@ for (const course of courses.docs) {
   const sessions = await course.ref.collection("sessions").get();
   for (const session of sessions.docs) {
     sessionsScanned++;
-    if (session.get("listed") !== listed) {
-      plan.push({ ref: session.ref, updateTime: session.updateTime, listed });
+    const patch = {};
+    if (session.get("listed") !== listed) patch.listed = listed;
+    if (names && typeof data.name === "string" && session.get("courseName") !== data.name) patch.courseName = data.name;
+    if (Object.keys(patch).length) {
+      plan.push({ ref: session.ref, updateTime: session.updateTime, patch });
       touchedCourses.add(course.id);
     }
   }
@@ -77,9 +86,9 @@ writer.onWriteError((err) => {
   return err.failedAttempts < 5;
 });
 
-for (const { ref, updateTime, listed } of plan) {
+for (const { ref, updateTime, patch } of plan) {
   writer
-    .update(ref, { listed }, { lastUpdateTime: updateTime })
+    .update(ref, patch, { lastUpdateTime: updateTime })
     .then(() => written++)
     .catch((err) => {
       failed++;

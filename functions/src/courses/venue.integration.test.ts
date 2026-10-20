@@ -398,8 +398,14 @@ describe("saveCourse session snapshots and revisions", () => {
     expect(all).toHaveLength(2);
     for (const session of all) {
       expect(session).toMatchObject({ revision: 1, courseId, venueId: "v", locationId: "l1", roomId: "r1",
-        instructorId: "p", instructorName: "Anna", listed: true, waitlisted: 0, capacity: 5, state: "scheduled" });
+        instructorId: "p", instructorName: "Anna", listed: true, waitlisted: 0, capacity: 5, state: "scheduled",
+        courseName: venueInput.name });
     }
+  });
+  it("carries the course name on every session and follows a rename", async () => {
+    const { courseId } = await save("biz", venueInput);
+    await save("biz", { ...venueInput, name: "Karate Pro" }, courseId);
+    expect((await sessions(courseId)).map((s) => s.courseName)).toEqual(["Karate Pro", "Karate Pro"]);
   });
   it("does not list sessions of a draft, and lists them once published", async () => {
     const { courseId } = await save("biz", { ...venueInput, state: "draft" });
@@ -412,7 +418,7 @@ describe("saveCourse session snapshots and revisions", () => {
   it("snapshots null space fields on an unlinked course", async () => {
     const { courseId } = await save("p", input);
     expect((await sessions(courseId))[0]).toMatchObject({ venueId: null, locationId: null, roomId: null,
-      instructorId: null, revision: 1, listed: true, courseId });
+      instructorId: null, revision: 1, listed: true, courseId, courseName: input.name });
   });
   it("bumps every scheduled session when capacity or price change, and only then", async () => {
     const { courseId } = await save("biz", venueInput);
