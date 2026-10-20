@@ -1243,6 +1243,125 @@ describe("manageCourseSession reschedule and the waitlist", () => {
   });
 });
 
+describe("manageCourseSession removeParticipant, removeWaitlistEntry and no-shows", () => {
+  const remove = (uid: string, courseId: string, userId: unknown, extra: Record<string, unknown> = {}) =>
+    manage(uid, { courseId, action: "removeParticipant", userId, ...extra });
+  const customerOf = async (courseId: string, uid = "h") =>
+    (await db.doc(`courses/${courseId}/customers/${uid}`).get()).data();
+  // 5 hours out: past the customer's 24 h cancellation deadline, still outside the 2 h booking notice.
+  const withinDeadline = (courseId: string, id = SESSION) => sessionRef(courseId, id).update({
+    startsAt: admin.firestore.Timestamp.fromMillis(Date.now() + 5 * 3600000),
+    endsAt: admin.firestore.Timestamp.fromMillis(Date.now() + 6 * 3600000) });
+  const started = (courseId: string, id = SESSION) => sessionRef(courseId, id).update({
+    startsAt: admin.firestore.Timestamp.fromMillis(Date.now() - 7200000),
+    endsAt: admin.firestore.Timestamp.fromMillis(Date.now() - 3600000) });
+
+  it("frees the seat, promotes the first waitlisted customer and tells the removed one; no late marks before the deadline", async () => {
+    const courseId = await fullCourse();
+    for (const uid of ["u1", "u2"]) await join(uid, courseId);
+    await remove("p", courseId, "h", { reason: "Injured" });
+    expect(await enrollmentOf("h", `hold-h-${SESSION}`)).toMatchObject({ state: "cancelled", cancellationReason: "Injured" });
+    expect((await enrollmentOf("h", `hold-h-${SESSION}`))?.lateCancelledSessionIds).toBeUndefined();
+    expect((await customerOf(courseId))?.lateCancels).toBeUndefined();
+    expect(await enrollmentOf("u1", "w-u1")).toMatchObject({ state: "confirmed", promotedFromWaitlist: true });
+    expect(await waitlistView(courseId)).toEqual([["u2", 1]]);
+    expect(await notices("cancelled_by_trainer")).toEqual(["h"]);
+    expect(await notices("waitlist_promoted")).toEqual(["u1"]);
+    expect(await sessionOf(courseId)).toMatchObject({ occupied: 1, waitlisted: 1 });
+    // The lesson itself is untouched.
+    expect(await sessionOf(courseId)).toMatchObject({ state: "scheduled" });
+    await assertCounters(courseId);
+  });
+  it("records a late removal on the enrollment and the customer's counter, once, and charges nothing", async () => {
+    const courseId = await fullCourse();
+    await withinDeadline(courseId);
+    await remove("p", courseId, "h");
+    expect(await enrollmentOf("h", `hold-h-${SESSION}`)).toMatchObject(
+      { state: "cancelled", lateCancelledSessionIds: [SESSION], refundCents: 0 });
+    expect(await customerOf(courseId)).toMatchObject({ userId: "h", lateCancels: 1 });
+    expect(await db.collection("courseRefunds").get().then((r) => r.size)).toBe(0);
+    // A replay finds no participant and changes nothing.
+    await expect(remove("p", courseId, "h")).rejects.toMatchObject({ code: "not-found", message: "participant_not_found" });
+    expect(await customerOf(courseId)).toMatchObject({ lateCancels: 1 });
+    await assertCounters(courseId);
+  });
+  it("counts a late removal per customer across lessons, and only removes the chosen lesson of a series", async () => {
+    const courseId = await course({ capacity: 3 });
+    const quote = await api.quoteCourse.run(request("u1", { courseId }));
+    await api.enrollInCourse.run(request("u1", { courseId, scope: "series", requestId: "series-u1",
+      expectedFinalCents: quote.series!.finalCents,
+      expectedRevisions: Object.fromEntries(quote.sessions.map((l) => [l.sessionId, l.revision])) }));
+    await withinDeadline(courseId);
+    await remove("p", courseId, "u1");
+    const enrollment = await enrollmentOf("u1", "series-u1");
+    expect(enrollment).toMatchObject({ state: "confirmed", activeSessionIds: [OTHER], cancelledSessionIds: [SESSION],
+      lateCancelledSessionIds: [SESSION] });
+    expect(await customerOf(courseId, "u1")).toMatchObject({ lateCancels: 1 });
+    expect(await sessionOf(courseId, OTHER)).toMatchObject({ occupied: 1 });
+    expect(await sessionOf(courseId)).toMatchObject({ occupied: 0 });
+    await assertCounters(courseId);
+  });
+  it("refuses a past lesson, an unknown customer, and a dropped customer id without touching the lesson", async () => {
+    const courseId = await fullCourse();
+    await expect(remove("p", courseId, "u1")).rejects.toMatchObject({ message: "participant_not_found" });
+    await expect(remove("p", courseId, undefined)).rejects.toMatchObject({ message: "invalid_id" });
+    expect(await sessionOf(courseId)).toMatchObject({ state: "scheduled", occupied: 1 });
+    await started(courseId);
+    await expect(remove("p", courseId, "h")).rejects.toThrow("cannot_cancel_past_lesson");
+    expect(await sessionOf(courseId)).toMatchObject({ occupied: 1 });
+  });
+  it("marks absent as a no-show once, and clears it when the mark changes", async () => {
+    const courseId = await fullCourse();
+    await started(courseId);
+    const mark = (attendance: string) => manage("p", { courseId, action: "attendance", userId: "h", attendance });
+    const participant = async () => (await sessionRef(courseId).collection("participants").doc("h").get()).data();
+    await mark("absent");
+    expect(await participant()).toMatchObject({ attendance: "absent", noShow: true });
+    expect(await customerOf(courseId)).toMatchObject({ noShows: 1 });
+    await mark("absent");
+    expect(await customerOf(courseId)).toMatchObject({ noShows: 1 });
+    await mark("present");
+    expect(await participant()).toMatchObject({ attendance: "present", noShow: false });
+    expect(await customerOf(courseId)).toMatchObject({ noShows: 0 });
+    await mark("present");
+    await mark("unmarked");
+    expect(await customerOf(courseId)).toMatchObject({ noShows: 0 });
+    await mark("absent");
+    expect(await customerOf(courseId)).toMatchObject({ noShows: 1 });
+  });
+  it("adds the no-show counter to the customer record the enrollment created", async () => {
+    const courseId = await fullCourse();
+    expect(await customerOf(courseId)).toMatchObject({ userId: "h" });
+    await started(courseId);
+    await manage("p", { courseId, action: "attendance", userId: "h", attendance: "absent" });
+    expect(await customerOf(courseId)).toMatchObject({ userId: "h", noShows: 1 });
+    expect((await customerOf(courseId))?.createdAt).toBeDefined();
+  });
+  it("removes another customer's waitlist entry, renumbers the rest and keeps the counter", async () => {
+    const courseId = await fullCourse();
+    for (const uid of ["u1", "u2", "u3"]) await join(uid, courseId);
+    await manage("p", { courseId, action: "removeWaitlistEntry", userId: "u2" });
+    expect(await waitlistView(courseId)).toEqual([["u1", 1], ["u3", 2]]);
+    expect((await sessionOf(courseId)).waitlisted).toBe(2);
+    await manage("p", { courseId, action: "removeWaitlistEntry", userId: "u2" });
+    expect(await waitlistView(courseId)).toEqual([["u1", 1], ["u3", 2]]);
+    await expect(manage("p", { courseId, action: "removeWaitlistEntry" })).rejects.toMatchObject({ message: "invalid_id" });
+    await assertCounters(courseId);
+  });
+  it("denies a stranger all three", async () => {
+    const courseId = await fullCourse();
+    await join("u1", courseId);
+    await expect(remove("u6", courseId, "h")).rejects.toMatchObject({ message: "course_owner_required" });
+    await expect(manage("u6", { courseId, action: "removeWaitlistEntry", userId: "u1" }))
+      .rejects.toMatchObject({ message: "course_owner_required" });
+    await started(courseId);
+    await expect(manage("u6", { courseId, action: "attendance", userId: "h", attendance: "absent" }))
+      .rejects.toMatchObject({ message: "course_owner_required" });
+    expect(await waitlistView(courseId)).toEqual([["u1", 1]]);
+    expect(await sessionOf(courseId)).toMatchObject({ occupied: 1 });
+  });
+});
+
 afterAll(() => {
   // Reported with the run so a flaky emulator abort rate is visible next to the pass count.
   console.info(`emulator aborts retried: ${emulatorAborts()}`);

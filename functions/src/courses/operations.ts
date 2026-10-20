@@ -8,7 +8,7 @@ import {
 } from "./store";
 import { canManageCourse, type Authority } from "./authority";
 import { queueCourseNotification } from "./notifications";
-import { planPromotions, clearWaitlistInTx } from "./waitlist";
+import { planPromotions, clearWaitlistInTx, removeFromWaitlist } from "./waitlist";
 import { slotsOf, diffSlots, updateScheduleLocks } from "./locks";
 
 // Authority is resolved once by the caller (R13); release never looks it up again.
@@ -24,7 +24,8 @@ export async function releaseActorFor(uid: string, enrollment: Pick<Enrollment, 
 }
 
 export async function releaseEnrollment(
-  enrollmentId: string, actor: ReleaseActor, selected?: string[], reason = "", expired = false
+  enrollmentId: string, actor: ReleaseActor, selected?: string[], reason = "", expired = false,
+  opts: { markLate?: boolean } = {}
 ): Promise<void> {
   // Read once, outside the transaction: promoted Stripe entries are only held while checkout is on.
   const checkoutOn = checkoutActive(await readPaymentSettings());
@@ -52,6 +53,11 @@ export async function releaseEnrollment(
     }
     const courseRef = db.doc(`courses/${enrollment.courseId}`);
     const course = (await tx.get(courseRef)).data() as Course;
+    // A staff removal after the customer's own deadline is recorded against the customer (no fee, R20). Only a paid-up
+    // seat counts: an unpaid Stripe hold was never the customer's commitment.
+    const late = opts.markLate && !expired && enrollment.state === "confirmed" ?
+      sessions.filter((doc) => (doc.data() as Session).startsAt.toMillis() <=
+        Date.now() + enrollment.cancellationHours * 3600000).map((doc) => doc.id) : [];
     // The freed seats go to the waitlist inside this transaction. The planner only reads, so it runs before the first
     // write; its writes follow ours and compose with them (every seat counter below is an increment).
     const promotion = await planPromotions(tx, { course: { ...course, id: enrollment.courseId },
@@ -68,6 +74,7 @@ export async function releaseEnrollment(
       cancelledSessionIds: [...enrollment.cancelledSessionIds, ...active],
       state: remaining.length ? enrollment.state : expired ? "expired" : "cancelled",
       refundCents: enrollment.refundCents + refund,
+      ...(late.length ? { lateCancelledSessionIds: FieldValue.arrayUnion(...late) } : {}),
       ...(enrollment.paymentMode === "stripe" ? {
         providerAmountOwedCents: Math.max(0, (enrollment.providerAmountOwedCents ?? 0) - refund),
       } : {}), updatedAt: nowStamp(), cancellationReason: reason });
@@ -86,6 +93,10 @@ export async function releaseEnrollment(
         });
       }
     });
+    if (late.length) {
+      tx.set(db.doc(`courses/${enrollment.courseId}/customers/${enrollment.userId}`),
+        { userId: enrollment.userId, lateCancels: FieldValue.increment(late.length) }, { merge: true });
+    }
     if (!expired) {
       queueCourseNotification(tx, `${enrollmentId}_${active.join("_")}`,
         isCustomer ? "cancelled_by_client" : "cancelled_by_trainer", enrollment.userId,
@@ -296,7 +307,15 @@ export const manageCourseSession = onCall({ region }, async (req) => {
           s.data()?.state === "cancelled" || s.data()?.startsAt.toMillis() > Date.now()) {
           throw new Error("attendance_unavailable");
         }
-        tx.update(participant, { attendance: req.data.attendance, markedAt: nowStamp(), markedBy: uid });
+        // "absent" is the no-show; the per-customer counter follows the transitions, so marking twice counts once.
+        const absent = req.data.attendance === "absent";
+        const wasAbsent = p.data()?.noShow === true;
+        tx.update(participant, { attendance: req.data.attendance, noShow: absent, markedAt: nowStamp(),
+          markedBy: uid });
+        if (absent !== wasAbsent) {
+          tx.set(db.doc(`courses/${courseId}/customers/${userId}`),
+            { userId, noShows: FieldValue.increment(absent ? 1 : -1) }, { merge: true });
+        }
       });
     } else if (action === "cancel" || action === "reschedule") {
       const startsAt = await cancelOrReschedule(a, action);
@@ -315,6 +334,15 @@ export const manageCourseSession = onCall({ region }, async (req) => {
         }
       }
       if (action === "cancel") await ref.update({ cancellationReconciled: true });
+    } else if (action === "removeParticipant") {
+      const userId = safeId(req.data.userId);
+      const participant = (await ref.collection("participants").doc(userId).get()).data();
+      if (!participant) throw new HttpsError("not-found", "participant_not_found");
+      // The seat is released through the same path as a customer cancellation: refund, notice and waitlist promotion.
+      await releaseEnrollment(participant.enrollmentId, manager, [sessionId], text(req.data.reason), false,
+        { markLate: true });
+    } else if (action === "removeWaitlistEntry") {
+      await removeFromWaitlist(courseId, sessionId, safeId(req.data.userId));
     } else if (action === "substitute") {
       await substituteInstructor(a);
     } else throw new Error("invalid_session_action");
