@@ -496,6 +496,48 @@ describe("saveCourse session snapshots and revisions", () => {
     expect((await db.doc(`courses/${courseId}`).get()).data()).toMatchObject({ name: "Karate 2",
       location: "Sala Grande · Sede", instructor: "Anna Rossi" });
   });
+  it("keeps a booked course's timezone when its location changes timezone later", async () => {
+    const { courseId } = await save("biz", venueInput);
+    await book(courseId);
+    await db.doc("venues/v/locations/l1").update({ timezone: "Asia/Tokyo", name: "Sede Nuova" });
+    await save("biz", { ...venueInput, name: "Karate 2" }, courseId);
+    expect((await db.doc(`courses/${courseId}`).get()).data()).toMatchObject({ name: "Karate 2",
+      timezone: "Europe/Rome", location: "Sala 1 · Sede Nuova" });
+    expect((await sessions(courseId)).map((s) => s.startsAt.toDate().toISOString())).toEqual(
+      ["2099-10-12T16:00:00.000Z", "2099-10-13T16:00:00.000Z"]);
+    await expect(save("biz", { ...venueInput, startTime: "19:00" }, courseId)).rejects.toThrow("booked_schedule_locked");
+  });
+  it("lets a booked course that predates the venue fields be edited (missing equals null)", async () => {
+    const { courseId } = await save("p", input);
+    await book(courseId);
+    await db.doc(`courses/${courseId}`).update({ venueId: admin.firestore.FieldValue.delete(),
+      locationId: admin.firestore.FieldValue.delete(), roomId: admin.firestore.FieldValue.delete(),
+      instructorId: admin.firestore.FieldValue.delete(), waitlistEnabled: admin.firestore.FieldValue.delete() });
+    await save("p", { ...input, name: "Karate 2" }, courseId);
+    expect((await db.doc(`courses/${courseId}`).get()).data()).toMatchObject({ name: "Karate 2", venueId: null });
+    await expect(save("p", { ...input, startTime: "19:00" }, courseId)).rejects.toThrow("booked_schedule_locked");
+  });
+  it("only compares lessons still to come with the new capacity", async () => {
+    const { courseId } = await save("biz", venueInput);
+    await db.doc(`courses/${courseId}/sessions/${SESSION}`).update({ occupied: 5, state: "cancelled" });
+    await db.doc(`courses/${courseId}/sessions/2099-10-13`).update({ occupied: 3 });
+    await expect(save("biz", { ...venueInput, capacity: 2 }, courseId)).rejects.toThrow("capacity_below_bookings");
+    await save("biz", { ...venueInput, capacity: 3 }, courseId);
+    await db.doc(`courses/${courseId}/sessions/2099-10-13`).update({ occupied: 5,
+      startsAt: admin.firestore.Timestamp.fromDate(new Date("2020-01-01T10:00:00Z")),
+      endsAt: admin.firestore.Timestamp.fromDate(new Date("2020-01-01T11:00:00Z")) });
+    await save("biz", { ...venueInput, capacity: 1 }, courseId);
+    expect((await db.doc(`courses/${courseId}`).get()).data()?.capacity).toBe(1);
+  });
+  it("bumps every scheduled session's revision when the cancellation window or booking notice change", async () => {
+    const { courseId } = await save("biz", venueInput);
+    await save("biz", { ...venueInput, cancellationHours: 12 }, courseId);
+    expect((await sessions(courseId)).map((s) => s.revision)).toEqual([2, 2]);
+    await save("biz", { ...venueInput, cancellationHours: 12, bookingNoticeHours: 5 }, courseId);
+    expect((await sessions(courseId)).map((s) => s.revision)).toEqual([3, 3]);
+    await save("biz", { ...venueInput, cancellationHours: 12, bookingNoticeHours: 5, name: "Renamed" }, courseId);
+    expect((await sessions(courseId)).map((s) => s.revision)).toEqual([3, 3]);
+  });
   it("keeps a lesson-level room and substitute across a name-only edit while the course values are unchanged", async () => {
     const { courseId } = await save("biz", venueInput);
     await db.doc(`courses/${courseId}/sessions/${SESSION}`).update({ roomId: "r3", instructorId: "p2", instructorName: "Paola", revision: 4 });
@@ -790,6 +832,25 @@ describe("previewCourse conflicts", () => {
       await expect(preview(uid, one)).rejects.toMatchObject(
         { code: "permission-denied", message: "venue_authorization_required" });
     });
+  it("withholds the instructor conflicts of an unlinked course from a caller who is not a usable provider", async () => {
+    await expect(preview("x", { ...input, instructorId: "x" })).rejects.toMatchObject(
+      { code: "permission-denied", message: "provider_unavailable" });
+    await db.doc("instructors/p").update({ isActive: false });
+    await expect(preview("p", { ...input, instructorId: "p" })).rejects.toThrow("provider_unavailable");
+    expect((await preview("a", { ...input, instructorId: "p2" })).sessions).toHaveLength(2);
+  });
+  it("shows another provider's course only to someone who can manage it", async () => {
+    const { courseId } = await save("p", { ...input, instructorId: "p" });
+    await expect(preview("x", { ...input, instructorId: "p", name: "Spy" }, courseId)).rejects.toMatchObject(
+      { code: "permission-denied", message: "course_owner_required" });
+    await expect(preview("x", { ...input, instructorId: "p", name: "Spy" }, "missing")).rejects.toThrow("course_not_found");
+    expect((await preview("p", { ...input, instructorId: "p" }, courseId)).conflicts).toEqual([]);
+  });
+  it("applies the 400 locked lesson cap to the preview", async () => {
+    await expect(preview("biz", { ...one, recurrence: "daily", endDate: "2101-10-12" })).rejects.toMatchObject(
+      { message: "locked_schedule_too_long", details: { fields: ["startDate", "endDate"] } });
+    expect((await preview("p", { ...input, endDate: "2101-10-12" })).sessions.length).toBeGreaterThan(400);
+  });
   it("keeps the unlinked preview unchanged", async () => {
     const result = await preview("x", input);
     expect(result.sessions).toHaveLength(2);

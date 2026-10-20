@@ -116,14 +116,19 @@ export const saveCourse = onCall({ region }, async (req) => {
       const input = revalidate(spacesChanged) ?
         await withSpaces(submitted, async (path) => (await tx.get(db.doc(path))).data()) :
         keepDerived(submitted, old!);
-      const generated = generateSessions(input);
-      if (input.state === "published" && generated[0].startsAt <= new Date() && (!old || old.state !== "published")) {
-        throw new HttpsError("invalid-argument", "start_must_be_future");
-      }
       const existing = await tx.get(ref.collection("sessions"));
       const historical = await tx.get(db.collection("courseEnrollments").where("courseId", "==", id).limit(1));
       const hasBookings = !historical.empty || existing.docs.some((d) =>
         (d.data().occupied ?? 0) + (d.data().held ?? 0) > 0);
+      // A booked course keeps the timezone its lessons were generated in: the location may change its own later,
+      // and a name-only edit must not then trip booked_schedule_locked.
+      if (hasBookings && old && input.venueId && (old.locationId ?? null) === input.locationId) {
+        input.timezone = old.timezone;
+      }
+      const generated = generateSessions(input);
+      if (input.state === "published" && generated[0].startsAt <= new Date() && (!old || old.state !== "published")) {
+        throw new HttpsError("invalid-argument", "start_must_be_future");
+      }
       if (hasBookings && old) {
         const frozen: (keyof CourseInput)[] = ["startDate", "startTime", "endDate", "recurrence", "interval",
           "weekdays", "timezone", "durationMinutes", "lessonPriceCents", "seriesPriceCents", "venueId",
@@ -139,7 +144,10 @@ export const saveCourse = onCall({ region }, async (req) => {
       // A lesson's own capacity (set per lesson) survives edits that do not touch the course capacity.
       const capacityOf = (prior?: Session) => capacityChanged || prior?.capacity === undefined ?
         input.capacity : prior.capacity;
-      if (existing.docs.some((d) => d.data().occupied + d.data().held > capacityOf(d.data() as Session))) {
+      // Only lessons still to come matter: past and cancelled ones keep the numbers they ended with.
+      const upcoming = existing.docs.filter((d) => d.data().state === "scheduled" &&
+        d.data().startsAt.toMillis() > Date.now());
+      if (upcoming.some((d) => d.data().occupied + d.data().held > capacityOf(d.data() as Session))) {
         throw new HttpsError("failed-precondition", "capacity_below_bookings");
       }
       const serviceId = old?.serviceId ?? `course_${id}`;
@@ -272,13 +280,24 @@ export const previewCourse = onCall({ region }, async (req) => {
       }
     }
     if (!submitted.venueId && submitted.instructorId) {
-      const [stored, caller] = await Promise.all([courseId ? db.doc(`courses/${courseId}`).get() : undefined,
-        db.doc(`users/${uid}`).get()]);
-      assertInstructorAllowed(submitted, stored?.data()?.providerId ?? uid,
-        ["admin", "superadmin"].includes(caller.data()?.role));
+      const stored = courseId ? (await db.doc(`courses/${courseId}`).get()).data() as Course | undefined : undefined;
+      if (courseId && !stored) throw new HttpsError("not-found", "course_not_found");
+      const caller = (await db.doc(`users/${uid}`).get()).data();
+      const isAdmin = ["admin", "superadmin"].includes(caller?.role);
+      assertInstructorAllowed(submitted, stored?.providerId ?? uid, isAdmin);
+      // The conflicts name other courses of this instructor: only someone who could save this course may read them.
+      if (stored) await canManageCourse(uid, stored);
+      else if (!isAdmin && !providerUsable((await db.doc(`instructors/${uid}`).get()).data())) {
+        throw new HttpsError("permission-denied", "provider_unavailable");
+      }
     }
     const input = await withSpaces(submitted, async (path) => (await db.doc(path).get()).data());
     const sessions = generateSessions(input);
+    // Same bound as saveCourse: the conflict check reads up to four lock documents per lesson.
+    if (sessions.filter((s) => s.endsAt.getTime() > Date.now()).length > MAX_LOCKED_SESSIONS &&
+      (input.venueId || input.instructorId)) {
+      throw new HttpsError("failed-precondition", "locked_schedule_too_long", { fields: ["startDate", "endDate"] });
+    }
     return { sessions: sessions.map((s) => ({ id: s.id, startsAt: s.startsAt.toISOString(),
       endsAt: s.endsAt.toISOString() })), conflicts: await lockConflicts(courseId, input, sessions) };
   } catch (error) {

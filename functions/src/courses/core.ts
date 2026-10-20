@@ -89,13 +89,16 @@ export function generateSessions(input: CourseInput): { id: string; startsAt: Da
   if (!result.length) throw new Error("empty_schedule");
   return result;
 }
-/** What a customer reviews in a quote: price or seat count. Editing text fields never invalidates a quote. */
-export function courseRevisionBumped(
-  prev: Pick<CourseInput, "lessonPriceCents" | "seriesPriceCents" | "capacity">,
-  next: Pick<CourseInput, "lessonPriceCents" | "seriesPriceCents" | "capacity">
-): boolean {
+type Reviewed = Pick<CourseInput,
+  "lessonPriceCents" | "seriesPriceCents" | "capacity" | "cancellationHours" | "bookingNoticeHours">;
+/**
+ * What a customer reviews in a quote: price, seat count and the cancellation / booking-notice terms.
+ * Editing text fields never invalidates a quote.
+ */
+export function courseRevisionBumped(prev: Reviewed, next: Reviewed): boolean {
   return prev.lessonPriceCents !== next.lessonPriceCents || prev.seriesPriceCents !== next.seriesPriceCents ||
-    prev.capacity !== next.capacity;
+    prev.capacity !== next.capacity || prev.cancellationHours !== next.cancellationHours ||
+    prev.bookingNoticeHours !== next.bookingNoticeHours;
 }
 export interface SessionPlace { startsAt: number; endsAt: number; roomId: string | null; instructorId: string | null }
 export function sessionRevisionBumped(prev: SessionPlace, next: SessionPlace): boolean {

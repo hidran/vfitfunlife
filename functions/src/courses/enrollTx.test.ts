@@ -49,6 +49,14 @@ beforeEach(async () => {
 });
 
 describe("enrollInTx", () => {
+  it("reports lesson_full, not booking_deadline, for a full lesson inside the notice window", async () => {
+    await db.doc("courses/c1").update({ bookingNoticeHours: 1000000 });
+    await db.doc(`courses/c1/sessions/${day}`).update({ occupied: 1 });
+    await expect(book(input("u"))).rejects.toMatchObject(
+      { message: "lesson_full", details: { waitlistAvailable: false } });
+    await db.doc(`courses/c1/sessions/${day}`).update({ occupied: 0 });
+    await expect(book(input("u"))).rejects.toThrow("booking_deadline");
+  });
   it("refuses an online payment below Stripe's minimum before writing anything", async () => {
     await db.doc("courses/c1").update({ lessonPriceCents: 45, seriesPriceCents: 45 });
     await expect(book(input("u", { paymentMode: "stripe", checkoutOn: true }))).rejects.toMatchObject(

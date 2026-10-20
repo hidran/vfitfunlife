@@ -88,16 +88,19 @@ describe("course rules", () => {
 });
 
 describe("revision matrix", () => {
-  const course = { lessonPriceCents: 1500 as number | null, seriesPriceCents: 6500 as number | null, capacity: 8 };
+  const course = { lessonPriceCents: 1500 as number | null, seriesPriceCents: 6500 as number | null, capacity: 8,
+    cancellationHours: 24, bookingNoticeHours: 2 };
   it.each([
     ["lesson price", { lessonPriceCents: 1600 }, true], ["series price", { seriesPriceCents: 6000 }, true],
     ["capacity", { capacity: 10 }, true], ["free lesson", { lessonPriceCents: 0 }, true],
     ["a price going to null", { seriesPriceCents: null }, true], ["nothing", {}, false],
+    ["the cancellation window", { cancellationHours: 12 }, true], ["the booking notice", { bookingNoticeHours: 0 }, true],
   ])("course: %s", (_name, patch, expected) => {
     expect(courseRevisionBumped(course, { ...course, ...patch })).toBe(expected);
   });
   it("course: both prices null stay unchanged", () => {
-    const none = { lessonPriceCents: null, seriesPriceCents: null, capacity: 8 };
+    const none = { lessonPriceCents: null, seriesPriceCents: null, capacity: 8, cancellationHours: 24,
+      bookingNoticeHours: 2 };
     expect(courseRevisionBumped(none, { ...none })).toBe(false);
   });
   const session = { startsAt: 1000, endsAt: 4600, roomId: "r1" as string | null, instructorId: "i1" as string | null };
