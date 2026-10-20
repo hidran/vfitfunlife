@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateCourse, generateSessions, assertReservable, allocatePrice, checkoutActive, paymentDecision, localInstant } from "./core";
+import { validateCourse, generateSessions, assertReservable, allocatePrice, checkoutActive, paymentDecision, localInstant, courseRevisionBumped, sessionRevisionBumped } from "./core";
 const input = { name: "Karate", categoryId: "martial_arts", description: "Beginners", location: "Torino", instructor: "Anna", capacity: 8, durationMinutes: 60, startDate: "2026-10-12", startTime: "18:00", timezone: "Europe/Rome", recurrence: "weekly", interval: 1, weekdays: [1, 3], endDate: "2026-10-26", lessonPriceCents: 1500, seriesPriceCents: 6500, bookingNoticeHours: 2, cancellationHours: 24, level: "Beginner", equipment: "", state: "published" };
 describe("course rules", () => {
   it("accepts annual courses with one, two or all selected weekdays", () => {
@@ -79,5 +79,32 @@ describe("course rules", () => {
     expect(paymentDecision(enrollment, event, new Date("2026-10-01T11:00Z"))).toBe("refund");
     expect(() => paymentDecision(enrollment, { ...event, amount_total: 1 }, new Date())).toThrow("mismatch");
     expect(paymentDecision({ ...enrollment, state: "confirmed" }, event, new Date())).toBe("ignore");
+  });
+});
+
+describe("revision matrix", () => {
+  const course = { lessonPriceCents: 1500 as number | null, seriesPriceCents: 6500 as number | null, capacity: 8 };
+  it.each([
+    ["lesson price", { lessonPriceCents: 1600 }, true], ["series price", { seriesPriceCents: 6000 }, true],
+    ["capacity", { capacity: 10 }, true], ["free lesson", { lessonPriceCents: 0 }, true],
+    ["a price going to null", { seriesPriceCents: null }, true], ["nothing", {}, false],
+  ])("course: %s", (_name, patch, expected) => {
+    expect(courseRevisionBumped(course, { ...course, ...patch })).toBe(expected);
+  });
+  it("course: both prices null stay unchanged", () => {
+    const none = { lessonPriceCents: null, seriesPriceCents: null, capacity: 8 };
+    expect(courseRevisionBumped(none, { ...none })).toBe(false);
+  });
+  const session = { startsAt: 1000, endsAt: 4600, roomId: "r1" as string | null, instructorId: "i1" as string | null };
+  it.each([
+    ["a time shift", { startsAt: 2000, endsAt: 5600 }, true], ["a longer lesson", { endsAt: 9000 }, true],
+    ["a room change", { roomId: "r2" }, true], ["a room removed", { roomId: null }, true],
+    ["an instructor change", { instructorId: "i2" }, true], ["an instructor removed", { instructorId: null }, true],
+    ["nothing", {}, false],
+  ])("session: %s", (_name, patch, expected) => {
+    expect(sessionRevisionBumped(session, { ...session, ...patch })).toBe(expected);
+  });
+  it("session: an instructor added to an instructor-less lesson bumps", () => {
+    expect(sessionRevisionBumped({ ...session, instructorId: null }, session)).toBe(true);
   });
 });

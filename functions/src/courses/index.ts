@@ -1,7 +1,9 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { Timestamp } from "firebase-admin/firestore";
 import { region } from "../lib/runtimeOptions";
-import { validateCourse, generateSessions, type CourseInput } from "./core";
+import {
+  validateCourse, generateSessions, courseRevisionBumped, sessionRevisionBumped, type CourseInput,
+} from "./core";
 import { db, safeId, uidOf, eligibleProvider, providerUsable, nowStamp, domainError, Course, Session } from "./store";
 import { canManageCourse, managesVenue } from "./authority";
 import { hostsCourses, type VenueType } from "../types";
@@ -91,13 +93,21 @@ export const saveCourse = onCall({ region }, async (req) => {
       const hasBookings = !historical.empty || existing.docs.some((d) =>
         (d.data().occupied ?? 0) + (d.data().held ?? 0) > 0);
       if (hasBookings && old) {
-        const frozen = ["startDate", "startTime", "endDate", "recurrence", "interval", "weekdays", "timezone",
-          "durationMinutes", "lessonPriceCents", "seriesPriceCents", "location", "instructor"] as const;
-        if (frozen.some((key) => JSON.stringify(old[key]) !== JSON.stringify(input[key]))) {
+        const frozen: (keyof CourseInput)[] = ["startDate", "startTime", "endDate", "recurrence", "interval",
+          "weekdays", "timezone", "durationMinutes", "lessonPriceCents", "seriesPriceCents", "venueId",
+          "locationId", "roomId", "instructorId", ...(input.venueId ? [] : ["location" as const]),
+          ...(input.instructorId ? [] : ["instructor" as const])];
+        // Place text and instructor name of a linked course follow the venue's records, so they may drift.
+        if (frozen.some((key) => JSON.stringify(old[key] ?? null) !== JSON.stringify(input[key] ?? null))) {
           throw new HttpsError("failed-precondition", "booked_schedule_locked");
         }
       }
-      if (existing.docs.some((d) => d.data().occupied + d.data().held > input.capacity)) {
+      const capacityChanged = !!old && old.capacity !== input.capacity;
+      const priceOrCapacity = !!old && courseRevisionBumped(old, input);
+      // A lesson's own capacity (set per lesson) survives edits that do not touch the course capacity.
+      const capacityOf = (prior?: Session) => capacityChanged || prior?.capacity === undefined ?
+        input.capacity : prior.capacity;
+      if (existing.docs.some((d) => d.data().occupied + d.data().held > capacityOf(d.data() as Session))) {
         throw new HttpsError("failed-precondition", "capacity_below_bookings");
       }
       const serviceId = old?.serviceId ?? `course_${id}`;
@@ -107,24 +117,41 @@ export const saveCourse = onCall({ region }, async (req) => {
           { ...s, state: "scheduled" };
       }).sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
       const next = actual.find((s) => s.startsAt > new Date() && s.state === "scheduled") ?? actual[actual.length - 1];
+      const nextPrior = existing.docs.find((d) => d.id === next.id)?.data() as Session | undefined;
       tx.set(ref, { ...input, providerEligible: true, providerId,
         providerName: provider.fullName ?? provider.name ?? input.instructor,
         serviceId, sessionIds: generated.map((s) => s.id), categoryIds: [input.categoryId, category.parentId],
-        nextSessionId: next.id, nextAvailableSeats: input.capacity -
-          (existing.docs.find((d) => d.id === next.id)?.data().occupied ?? 0) -
-          (existing.docs.find((d) => d.id === next.id)?.data().held ?? 0),
+        nextSessionId: next.id, nextAvailableSeats: capacityOf(nextPrior) - (nextPrior?.occupied ?? 0) -
+          (nextPrior?.held ?? 0),
         firstStartsAt: Timestamp.fromDate(actual[0].startsAt), nextStartsAt: Timestamp.fromDate(next.startsAt),
         updatedAt: nowStamp(), ...(!old ? { createdAt: nowStamp() } : {}) });
       const newIds = new Set(generated.map((s) => s.id));
       for (const doc of existing.docs) if (!newIds.has(doc.id)) tx.delete(doc.ref);
+      // A lesson-level room or substitute (from manageCourseSession) survives while the course value is unchanged.
+      const roomKept = !!old && (old.roomId ?? null) === input.roomId;
+      const instructorKept = !!old && (old.instructorId ?? null) === input.instructorId;
       for (const session of generated) {
         const previous = existing.docs.find((d) => d.id === session.id)?.data() as Session | undefined;
+        const startsAt = previous && hasBookings ? previous.startsAt : Timestamp.fromDate(session.startsAt);
+        const endsAt = previous && hasBookings ? previous.endsAt : Timestamp.fromDate(session.endsAt);
+        const roomId = previous && roomKept ? previous.roomId ?? input.roomId : input.roomId;
+        const locationId = previous && roomKept ? previous.locationId ?? input.locationId : input.locationId;
+        const instructorId = previous && instructorKept ? previous.instructorId ?? input.instructorId :
+          input.instructorId;
+        const instructor = previous && instructorKept ? previous.instructor ?? input.instructor : input.instructor;
+        const instructorName = previous && instructorKept ?
+          previous.instructorName ?? previous.instructor ?? input.instructor : input.instructor;
+        const state = previous?.state ?? "scheduled";
+        const bumped = !!previous && state === "scheduled" && (priceOrCapacity || sessionRevisionBumped(
+          { startsAt: previous.startsAt.toMillis(), endsAt: previous.endsAt.toMillis(),
+            roomId: previous.roomId ?? null, instructorId: previous.instructorId ?? null },
+          { startsAt: startsAt.toMillis(), endsAt: endsAt.toMillis(), roomId, instructorId }));
         tx.set(ref.collection("sessions").doc(session.id), {
-          startsAt: previous && hasBookings ? previous.startsAt : Timestamp.fromDate(session.startsAt),
-          endsAt: previous && hasBookings ? previous.endsAt : Timestamp.fromDate(session.endsAt),
-          capacity: input.capacity, occupied: previous?.occupied ?? 0, held: previous?.held ?? 0,
-          state: previous?.state ?? "scheduled", location: previous?.location ?? input.location,
-          instructor: previous?.instructor ?? input.instructor,
+          startsAt, endsAt, capacity: capacityOf(previous), occupied: previous?.occupied ?? 0,
+          held: previous?.held ?? 0, state, location: previous?.location ?? input.location, instructor,
+          courseId: id, venueId: input.venueId, locationId, roomId, instructorId,
+          instructorName, listed: input.state === "published", waitlisted: previous?.waitlisted ?? 0,
+          revision: (previous?.revision ?? 1) + (bumped ? 1 : 0),
         });
       }
       tx.set(db.doc(`instructors/${providerId}/services/${serviceId}`), {

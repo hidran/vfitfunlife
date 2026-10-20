@@ -341,3 +341,104 @@ describe("saveCourse venue space, instructor and timezone", () => {
     expect((await stored((await save("biz", venueInput)).courseId)).instructor).toBe("Anna");
   });
 });
+
+describe("saveCourse session snapshots and revisions", () => {
+  const venueInput = { ...input, venueId: "v", locationId: "l1", roomId: "r1", instructorId: "p" };
+  const save = (uid: string, course: Record<string, unknown>, courseId?: string) =>
+    api.saveCourse.run(request(uid, { course, ...(courseId ? { courseId } : {}) }));
+  const sessions = async (courseId: string) =>
+    (await db.collection(`courses/${courseId}/sessions`).get()).docs.map((d) => ({ id: d.id, ...d.data() }) as Record<string, any>);
+  beforeEach(async () => {
+    await db.doc("venues/v/instructors/p").set({ isActive: true, name: "Anna" });
+    await db.doc("venues/v/instructors/p2").set({ isActive: true, name: "Paola" });
+    await db.doc("instructors/p2").set({ fullName: "Paola", isActive: true, applicationStatus: "approved",
+      providerProfile: { isVerified: true } });
+    await db.doc("venues/v/locations/l1/rooms/r3").set({ name: "Sala 3", isActive: true });
+    await db.doc("venues/v/locations/l2").set({ name: "Altra", city: "Milano", timezone: "Europe/Rome", isActive: true });
+    await db.doc("venues/v/locations/l2/rooms/r2").set({ name: "Sala 2", isActive: true });
+  });
+  it("snapshots the venue, space, instructor, owner course and listing onto every new session", async () => {
+    const { courseId } = await save("biz", venueInput);
+    const all = await sessions(courseId);
+    expect(all).toHaveLength(2);
+    for (const session of all) {
+      expect(session).toMatchObject({ revision: 1, courseId, venueId: "v", locationId: "l1", roomId: "r1",
+        instructorId: "p", instructorName: "Anna", listed: true, waitlisted: 0, capacity: 5, state: "scheduled" });
+    }
+  });
+  it("does not list sessions of a draft, and lists them once published", async () => {
+    const { courseId } = await save("biz", { ...venueInput, state: "draft" });
+    expect((await sessions(courseId)).every((s) => s.listed === false)).toBe(true);
+    await save("biz", venueInput, courseId);
+    expect((await sessions(courseId)).every((s) => s.listed === true)).toBe(true);
+    await save("biz", { ...venueInput, state: "archived" }, courseId);
+    expect((await sessions(courseId)).every((s) => s.listed === false)).toBe(true);
+  });
+  it("snapshots null space fields on an unlinked course", async () => {
+    const { courseId } = await save("p", input);
+    expect((await sessions(courseId))[0]).toMatchObject({ venueId: null, locationId: null, roomId: null,
+      instructorId: null, revision: 1, listed: true, courseId });
+  });
+  it("bumps every scheduled session when capacity or price change, and only then", async () => {
+    const { courseId } = await save("biz", venueInput);
+    await save("biz", { ...venueInput, name: "Karate Pro", description: "x", level: "Beginner" }, courseId);
+    expect((await sessions(courseId)).map((s) => s.revision)).toEqual([1, 1]);
+    await save("biz", { ...venueInput, capacity: 10 }, courseId);
+    expect((await sessions(courseId)).map((s) => s.revision)).toEqual([2, 2]);
+    await save("biz", { ...venueInput, capacity: 10, lessonPriceCents: 1800 }, courseId);
+    expect((await sessions(courseId)).map((s) => s.revision)).toEqual([3, 3]);
+    await save("biz", { ...venueInput, capacity: 10, lessonPriceCents: 1800, seriesPriceCents: 0 }, courseId);
+    expect((await sessions(courseId)).map((s) => s.revision)).toEqual([4, 4]);
+  });
+  it("leaves cancelled sessions' revision alone on a price change", async () => {
+    const { courseId } = await save("biz", venueInput);
+    await db.doc(`courses/${courseId}/sessions/${SESSION}`).update({ state: "cancelled" });
+    await save("biz", { ...venueInput, lessonPriceCents: 1800 }, courseId);
+    expect((await sessions(courseId)).map((s) => [s.id, s.revision])).toEqual([[SESSION, 1], ["2099-10-13", 2]]);
+  });
+  it("keeps a lesson's own capacity unless the course capacity changes (R12)", async () => {
+    const { courseId } = await save("biz", venueInput);
+    await db.doc(`courses/${courseId}/sessions/${SESSION}`).update({ capacity: 9 });
+    await save("biz", { ...venueInput, name: "Karate 2" }, courseId);
+    expect((await sessions(courseId)).map((s) => s.capacity)).toEqual([9, 5]);
+    await save("biz", { ...venueInput, name: "Karate 2", capacity: 7 }, courseId);
+    expect((await sessions(courseId)).map((s) => s.capacity)).toEqual([7, 7]);
+    expect((await db.doc(`courses/${courseId}`).get()).data()?.nextAvailableSeats).toBe(7);
+  });
+  it("does not trip capacity_below_bookings on a lesson whose own capacity is above the course's", async () => {
+    const { courseId } = await save("biz", venueInput);
+    await db.doc(`courses/${courseId}/sessions/${SESSION}`).update({ capacity: 10, occupied: 6 });
+    await save("biz", { ...venueInput, name: "Karate 2" }, courseId);
+    await expect(save("biz", { ...venueInput, capacity: 4 }, courseId)).rejects.toThrow("capacity_below_bookings");
+    await save("biz", { ...venueInput, capacity: 6 }, courseId);
+  });
+  it("freezes room, location, venue and instructor once booked, but not unbooked", async () => {
+    const { courseId } = await save("biz", venueInput);
+    await save("biz", { ...venueInput, roomId: "r3" }, courseId);
+    await save("biz", { ...venueInput, roomId: "r3", instructorId: "p2" }, courseId);
+    const moved = await sessions(courseId);
+    expect(moved[0]).toMatchObject({ roomId: "r3", instructorId: "p2", instructorName: "Paola", revision: 3 });
+    await book(courseId);
+    await expect(save("biz", { ...venueInput, roomId: "r1", instructorId: "p2" }, courseId))
+      .rejects.toThrow("booked_schedule_locked");
+    await expect(save("biz", { ...venueInput, roomId: "r3", instructorId: "p" }, courseId))
+      .rejects.toThrow("booked_schedule_locked");
+    await expect(save("biz", { ...venueInput, roomId: "r2", instructorId: "p2", locationId: "l2" }, courseId))
+      .rejects.toThrow("booked_schedule_locked");
+  });
+  it("lets a booked venue course be edited after its room was renamed", async () => {
+    const { courseId } = await save("biz", venueInput);
+    await book(courseId);
+    await db.doc("venues/v/locations/l1/rooms/r1").update({ name: "Sala Grande" });
+    await db.doc("instructors/p").update({ fullName: "Anna Rossi" });
+    await save("biz", { ...venueInput, name: "Karate 2" }, courseId);
+    expect((await db.doc(`courses/${courseId}`).get()).data()).toMatchObject({ name: "Karate 2",
+      location: "Sala Grande · Sede", instructor: "Anna Rossi" });
+  });
+  it("keeps a lesson-level room and substitute across a name-only edit while the course values are unchanged", async () => {
+    const { courseId } = await save("biz", venueInput);
+    await db.doc(`courses/${courseId}/sessions/${SESSION}`).update({ roomId: "r3", instructorId: "p2", instructorName: "Paola", revision: 4 });
+    await save("biz", { ...venueInput, name: "Karate 2" }, courseId);
+    expect((await sessions(courseId))[0]).toMatchObject({ roomId: "r3", instructorId: "p2", instructorName: "Paola", revision: 4 });
+  });
+});
