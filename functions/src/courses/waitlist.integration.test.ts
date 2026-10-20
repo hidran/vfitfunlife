@@ -1362,6 +1362,122 @@ describe("manageCourseSession removeParticipant, removeWaitlistEntry and no-show
   });
 });
 
+describe("manageCourseSession capacity and saveCourse capacity increases", () => {
+  const setCapacity = (uid: string, courseId: string, capacity: unknown, id = SESSION) =>
+    manage(uid, { courseId, sessionId: id, action: "capacity", capacity });
+  const save = (courseId: string, extra: Record<string, unknown>) =>
+    api.saveCourse.run(request("p", { courseId, course: { ...input, ...extra } }));
+  const seated = async (courseId: string, id = SESSION) =>
+    (await sessionRef(courseId, id).collection("participants").get()).docs.map((d) => d.id).sort();
+
+  it("promotes as many waiting customers as the new seats allow, bumps the revision and keeps the counters", async () => {
+    const courseId = await fullCourse();
+    for (const uid of ["u1", "u2", "u3"]) await join(uid, courseId);
+    await setCapacity("p", courseId, 3);
+    expect(await sessionOf(courseId)).toMatchObject({ capacity: 3, occupied: 3, held: 0, waitlisted: 1, revision: 2 });
+    expect(await seated(courseId)).toEqual(["h", "u1", "u2"]);
+    expect(await waitlistView(courseId)).toEqual([["u3", 1]]);
+    expect((await db.doc(`courses/${courseId}`).get()).data()?.nextAvailableSeats).toBe(0);
+    expect(await notices("waitlist_promoted")).toEqual(["u1", "u2"]);
+    await assertCounters(courseId);
+  });
+  it("keeps the course's seat counter in step for the next lesson only, and lowers it again", async () => {
+    const courseId = await course({ capacity: 4 });
+    await setCapacity("p", courseId, 6, OTHER);
+    expect((await db.doc(`courses/${courseId}`).get()).data()?.nextAvailableSeats).toBe(4);
+    await setCapacity("p", courseId, 2);
+    expect((await db.doc(`courses/${courseId}`).get()).data()?.nextAvailableSeats).toBe(2);
+    expect(await sessionOf(courseId)).toMatchObject({ capacity: 2, revision: 2 });
+    expect(await sessionOf(courseId, OTHER)).toMatchObject({ capacity: 6, revision: 2 });
+    await assertCounters(courseId);
+  });
+  it("refuses a capacity below the bookings, an invalid one, and does nothing for the same number", async () => {
+    const courseId = await course({ capacity: 3 });
+    await holdSeat(courseId, "h");
+    await holdSeat(courseId, "u1");
+    await refusal(setCapacity("p", courseId, 1), "capacity_below_bookings");
+    for (const bad of [0, 501, 1.5, "3", null, undefined]) await refusal(setCapacity("p", courseId, bad), "invalid_capacity");
+    await setCapacity("p", courseId, 3);
+    expect(await sessionOf(courseId)).toMatchObject({ capacity: 3, revision: 1, occupied: 2 });
+    await setCapacity("p", courseId, 2);
+    expect(await sessionOf(courseId)).toMatchObject({ capacity: 2, revision: 2 });
+    await assertCounters(courseId);
+  });
+  it("refuses a cancelled or started lesson and a stranger", async () => {
+    const courseId = await course({ capacity: 3 });
+    await refusal(setCapacity("u6", courseId, 5), "course_owner_required");
+    await sessionRef(courseId, OTHER).update({ state: "cancelled" });
+    await refusal(setCapacity("p", courseId, 5, OTHER), "session_unavailable");
+    await sessionRef(courseId).update({ startsAt: admin.firestore.Timestamp.fromMillis(Date.now() - 3600000),
+      endsAt: admin.firestore.Timestamp.fromMillis(Date.now() - 60000) });
+    await refusal(setCapacity("p", courseId, 5), "cannot_change_past_lesson");
+    expect(await sessionOf(courseId)).toMatchObject({ capacity: 3 });
+  });
+  it("saves the capacity even when the promotion that follows fails", async () => {
+    const courseId = await fullCourse();
+    await join("u1", courseId);
+    const waitlistModule = await import("./waitlist");
+    const spy = vi.spyOn(waitlistModule, "promoteWaitlist").mockRejectedValue(new Error("boom"));
+    await expect(setCapacity("p", courseId, 2)).resolves.toEqual({ success: true });
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(await sessionOf(courseId)).toMatchObject({ capacity: 2, occupied: 1, waitlisted: 1 });
+    spy.mockRestore();
+    // The sweep is the backstop.
+    expect(await sweep()).toMatchObject({ promoted: 1 });
+    await assertCounters(courseId);
+  });
+
+  it("saveCourse 1 -> 3 promotes on every waitlisted lesson, only after the course is committed", async () => {
+    const courseId = await fullCourse();
+    await holdSeat(courseId, "h", OTHER);
+    for (const uid of ["u1", "u2"]) await join(uid, courseId);
+    await join("u3", courseId, { sessionId: OTHER });
+    const waitlistModule = await import("./waitlist");
+    const real = waitlistModule.promoteWaitlist;
+    const seenCapacity: [string, number][] = [];
+    const spy = vi.spyOn(waitlistModule, "promoteWaitlist").mockImplementation(async (c, s) => {
+      seenCapacity.push([s, (await sessionOf(c, s)).capacity]);
+      return real(c, s);
+    });
+    await save(courseId, { capacity: 3 });
+    expect(spy).toHaveBeenCalledTimes(2);
+    expect(seenCapacity.sort()).toEqual([[SESSION, 3], [OTHER, 3]].sort());
+    expect(await sessionOf(courseId)).toMatchObject({ capacity: 3, occupied: 3, waitlisted: 0, revision: 2 });
+    expect(await sessionOf(courseId, OTHER)).toMatchObject({ capacity: 3, occupied: 2, waitlisted: 0, revision: 2 });
+    expect(await seated(courseId)).toEqual(["h", "u1", "u2"]);
+    expect(await seated(courseId, OTHER)).toEqual(["h", "u3"]);
+    await assertCounters(courseId);
+  });
+  it("saveCourse does not look at lessons without a waitlist, or when the capacity does not grow", async () => {
+    const courseId = await fullCourse();
+    const waitlistModule = await import("./waitlist");
+    const spy = vi.spyOn(waitlistModule, "promoteWaitlist");
+    await save(courseId, { capacity: 3 });
+    await join("u1", courseId).catch(() => undefined);
+    await save(courseId, { capacity: 3, name: "Karate 2" });
+    await save(courseId, { capacity: 3, name: "Karate 3", description: "x" });
+    expect(spy).not.toHaveBeenCalled();
+  });
+  it("saveCourse swallows a failed promotion and returns the course id", async () => {
+    const courseId = await fullCourse();
+    await join("u1", courseId);
+    const waitlistModule = await import("./waitlist");
+    const spy = vi.spyOn(waitlistModule, "promoteWaitlist").mockRejectedValue(new Error("boom"));
+    await expect(save(courseId, { capacity: 2 })).resolves.toEqual({ courseId });
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect((await sessionOf(courseId)).capacity).toBe(2);
+    spy.mockRestore();
+    expect(await promoteStandalone(courseId)).toBe(1);
+    await assertCounters(courseId);
+  });
+  it("saveCourse leaves a lesson-level capacity alone when the course capacity is unchanged (R12)", async () => {
+    const courseId = await fullCourse();
+    await setCapacity("p", courseId, 4);
+    await save(courseId, { name: "Karate 2" });
+    expect(await sessionOf(courseId)).toMatchObject({ capacity: 4, revision: 2 });
+  });
+});
+
 afterAll(() => {
   // Reported with the run so a flaky emulator abort rate is visible next to the pass count.
   console.info(`emulator aborts retried: ${emulatorAborts()}`);

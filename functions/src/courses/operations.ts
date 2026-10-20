@@ -1,4 +1,5 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { logger } from "firebase-functions";
 import { FieldValue, Timestamp, type Transaction } from "firebase-admin/firestore";
 import { region } from "../lib/runtimeOptions";
 import { readPaymentSettings } from "../payments/paymentSettingsCallables";
@@ -8,7 +9,7 @@ import {
 } from "./store";
 import { canManageCourse, type Authority } from "./authority";
 import { queueCourseNotification } from "./notifications";
-import { planPromotions, clearWaitlistInTx, removeFromWaitlist } from "./waitlist";
+import { planPromotions, clearWaitlistInTx, removeFromWaitlist, promoteWaitlist } from "./waitlist";
 import { slotsOf, diffSlots, updateScheduleLocks } from "./locks";
 
 // Authority is resolved once by the caller (R13); release never looks it up again.
@@ -285,6 +286,41 @@ async function substituteInstructor(a: SessionAction): Promise<void> {
   });
 }
 
+/**
+ * Sets one lesson's capacity. The lesson's revision moves so a quote reviewed against the old number is re-reviewed.
+ * Seats that opened up are offered to the waitlist after the commit (promotion runs its own transactions); a failure
+ * there is logged, never thrown: the capacity is already saved and the maintenance sweep serves the waitlist later.
+ */
+async function changeCapacity(a: SessionAction): Promise<void> {
+  const { courseId, sessionId, data } = a;
+  const capacity = data.capacity;
+  if (typeof capacity !== "number" || !Number.isInteger(capacity) || capacity < 1 || capacity > 500) {
+    throw new Error("invalid_capacity");
+  }
+  const courseRef = db.doc(`courses/${courseId}`);
+  const ref = db.doc(sessionPath(courseId, sessionId));
+  await db.runTransaction(async (tx) => {
+    const [courseDoc, sessionDoc] = await tx.getAll(courseRef, ref);
+    const course = courseDoc.data() as Course | undefined;
+    if (!course) throw new HttpsError("not-found", "course_not_found");
+    const s = sessionDoc.data() as Session | undefined;
+    if (!s) throw new Error("session_not_found");
+    if (s.state !== "scheduled") throw new Error("session_unavailable");
+    if (s.startsAt.toMillis() <= Date.now()) throw new Error("cannot_change_past_lesson");
+    if (capacity < s.occupied + s.held) throw new Error("capacity_below_bookings");
+    if (capacity === (s.capacity ?? course.capacity)) return;
+    tx.update(ref, { capacity, revision: FieldValue.increment(1) });
+    if (course.nextSessionId === sessionId) {
+      tx.update(courseRef, { nextAvailableSeats: capacity - s.occupied - s.held });
+    }
+  });
+  try {
+    await promoteWaitlist(courseId, sessionId);
+  } catch (error) {
+    logger.error("waitlist promotion after a capacity change failed", { courseId, sessionId, error: String(error) });
+  }
+}
+
 export const manageCourseSession = onCall({ region }, async (req) => {
   const uid = uidOf(req.auth);
   const courseId = safeId(req.data.courseId);
@@ -343,6 +379,8 @@ export const manageCourseSession = onCall({ region }, async (req) => {
         { markLate: true });
     } else if (action === "removeWaitlistEntry") {
       await removeFromWaitlist(courseId, sessionId, safeId(req.data.userId));
+    } else if (action === "capacity") {
+      await changeCapacity(a);
     } else if (action === "substitute") {
       await substituteInstructor(a);
     } else throw new Error("invalid_session_action");

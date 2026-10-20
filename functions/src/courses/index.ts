@@ -1,4 +1,5 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { logger } from "firebase-functions";
 import { Timestamp } from "firebase-admin/firestore";
 import { region } from "../lib/runtimeOptions";
 import {
@@ -6,6 +7,7 @@ import {
 } from "./core";
 import { db, safeId, uidOf, eligibleProvider, providerUsable, nowStamp, domainError, Course, Session } from "./store";
 import { canManageCourse, managesVenue } from "./authority";
+import { promoteWaitlist } from "./waitlist";
 import { slotsOf, lockPaths, diffSlots, updateScheduleLocks, MAX_LOCKED_SESSIONS } from "./locks";
 import { hostsCourses, type VenueType } from "../types";
 
@@ -67,9 +69,12 @@ export const saveCourse = onCall({ region }, async (req) => {
   const requestedProvider = req.data.providerId ? safeId(req.data.providerId) : null;
   const id = req.data.courseId ? safeId(req.data.courseId) : db.collection("courses").doc().id;
   const ref = db.doc(`courses/${id}`);
+  // Lessons whose capacity grew while customers were waiting: served after the commit, never inside it.
+  let promoteSessionIds: string[] = [];
   try {
     const submitted = validateCourse(req.data.course);
     await db.runTransaction(async (tx) => {
+      promoteSessionIds = [];
       const old = (await tx.get(ref)).data() as Course | undefined;
       const caller = (await tx.get(db.doc(`users/${uid}`))).data();
       const isAdmin = ["admin", "superadmin"].includes(caller?.role);
@@ -150,6 +155,8 @@ export const saveCourse = onCall({ region }, async (req) => {
       if (upcoming.some((d) => d.data().occupied + d.data().held > capacityOf(d.data() as Session))) {
         throw new HttpsError("failed-precondition", "capacity_below_bookings");
       }
+      promoteSessionIds = upcoming.filter((d) => (d.data().waitlisted ?? 0) > 0 &&
+        capacityOf(d.data() as Session) > d.data().capacity).map((d) => d.id);
       const serviceId = old?.serviceId ?? `course_${id}`;
       const actual = generated.map((s) => {
         const prior = existing.docs.find((d) => d.id === s.id)?.data() as Session | undefined;
@@ -215,6 +222,14 @@ export const saveCourse = onCall({ region }, async (req) => {
         kind: "group", courseId: id,
       }, { merge: true });
     });
+    // The course is saved; a failed promotion is not the caller's problem (the maintenance sweep is the backstop).
+    for (const sessionId of promoteSessionIds) {
+      try {
+        await promoteWaitlist(id, sessionId);
+      } catch (error) {
+        logger.error("waitlist promotion after saveCourse failed", { courseId: id, sessionId, error: String(error) });
+      }
+    }
     return { courseId: id };
   } catch (error) {
     return domainError(error);
