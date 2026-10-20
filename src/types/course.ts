@@ -42,7 +42,7 @@ export interface CourseParticipant {
 export interface CourseRefund {
   id: string; amountCents: number; userId: string; enrollmentId: string;
   paymentMode: 'direct' | 'stripe'; status: 'pending' | 'processing' | 'completed';
-  providerId?: string; courseId?: string; venueId?: string | null;
+  providerId?: string; courseId?: string; venueId?: string | null; createdAt?: Timestamp;
 }
 /** courses/{c}/sessions/{s}/waitlist/{uid}: written by the callables only; positions are contiguous from 1. */
 export interface CourseWaitlistEntry {

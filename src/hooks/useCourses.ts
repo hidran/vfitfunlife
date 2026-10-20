@@ -3,7 +3,7 @@ import { useInfiniteQuery, useQueries, useQuery, useQueryClient } from '@tanstac
 import {
   fetchCourses, fetchCourseSessions, fetchCourseEnrollments, fetchCourseParticipants, fetchCourseRefunds, quoteCourse,
   fetchVenueCourses, fetchVenueEnrollments, fetchVenueRefunds, fetchWaitlist, fetchMyWaitlist, fetchVenueWeek,
-  fetchVenueNextLessons, fetchCustomerCounters, fetchCourse,
+  fetchVenueNextLessons, fetchCustomerCounters, fetchCourse, fetchCourseRoster,
 } from '@/lib/firebase/courses';
 /**
  * Reads cost money. Public and customer screens do not poll: their data is fresh for a minute, refetched when the tab
@@ -25,6 +25,10 @@ export const useCourseSessions = (id?: string) => useQuery({ queryKey: ['courses
 export const useCourseEnrollments = (uid?: string, provider = false) => useQuery({
   queryKey: ['courses', 'enrollments', uid, provider], queryFn: () => fetchCourseEnrollments(uid!, provider),
   enabled: !!uid, ...(provider ? MANAGER_POLL : PUBLIC_READ) });
+/** Bookings of the selected course (a roster shows one course at a time). */
+export const useCourseRoster = (courseId?: string, scope?: { venueId: string } | { providerId: string }) => useQuery({
+  queryKey: ['courses', 'roster', courseId, scope], queryFn: () => fetchCourseRoster(courseId!, scope!),
+  enabled: !!courseId && !!scope, ...MANAGER_POLL });
 export const useCourseParticipants = (courseId?: string, sessionId?: string) => useQuery({
   queryKey: ['courses', 'participants', courseId, sessionId],
   queryFn: () => fetchCourseParticipants(courseId!, sessionId!), enabled: !!courseId && !!sessionId });

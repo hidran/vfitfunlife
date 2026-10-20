@@ -6,7 +6,7 @@ vi.mock('firebase/firestore', () => ({
   collectionGroup: (_db: unknown, id: string) => ({ kind: 'group', id }),
   doc: vi.fn(), getDoc: vi.fn(), startAfter: vi.fn(),
   where: (field: string, op: string, value: unknown) => ({ t: 'where', field, op, value }),
-  orderBy: (field: string) => ({ t: 'orderBy', field }),
+  orderBy: (field: string, dir?: string) => ({ t: 'orderBy', field, ...(dir ? { dir } : {}) }),
   limit: (n: number) => ({ t: 'limit', n }),
   query: (source: unknown, ...constraints: unknown[]) => { calls.constraints.push([source, ...constraints]); return { source }; },
   getDocs: vi.fn(async () => ({ docs: [] })),
@@ -16,7 +16,10 @@ vi.mock('firebase/functions', () => ({ httpsCallable: () => calls.callable }));
 vi.mock('./config', () => ({ db: {} }));
 vi.mock('./app', () => ({ getFunctionsInstance: async () => ({}) }));
 
-import { fetchVenueWeek, fetchMyWaitlist, fetchVenueCourses, fetchWaitlist, saveCourse, quoteCourse, joinCourseWaitlist } from './courses';
+import {
+  fetchVenueWeek, fetchMyWaitlist, fetchVenueCourses, fetchWaitlist, saveCourse, quoteCourse, joinCourseWaitlist,
+  fetchCourseEnrollments, fetchVenueEnrollments, fetchCourseRoster, fetchCourseRefunds, fetchVenueRefunds,
+} from './courses';
 
 beforeEach(() => { calls.constraints.length = 0; calls.callable.mockReset(); calls.callable.mockResolvedValue({ data: { ok: true } }); });
 
@@ -59,5 +62,24 @@ describe('course client wrappers', () => {
   it('joins a waitlist with the payment mode and request id', async () => {
     await joinCourseWaitlist('c1', 's1', 'direct', 'r1');
     expect(calls.callable).toHaveBeenLastCalledWith({ courseId: 'c1', sessionId: 's1', paymentMode: 'direct', requestId: 'r1' });
+  });
+  describe('capped lists are newest first, so the cap drops the oldest', () => {
+    const newest = [{ t: 'orderBy', field: 'createdAt', dir: 'desc' }, { t: 'limit', n: 500 }];
+    const constraintsOf = () => (calls.constraints.at(-1) as unknown[]).slice(1);
+    it.each([
+      ['customer bookings', () => fetchCourseEnrollments('u1'), 'courseEnrollments', [{ t: 'where', field: 'userId', op: '==', value: 'u1' }]],
+      ['provider bookings', () => fetchCourseEnrollments('p1', true), 'courseEnrollments', [{ t: 'where', field: 'providerId', op: '==', value: 'p1' }]],
+      ['venue bookings', () => fetchVenueEnrollments('v1'), 'courseEnrollments', [{ t: 'where', field: 'venueId', op: '==', value: 'v1' }]],
+      ['provider refunds', () => fetchCourseRefunds('p1'), 'courseRefunds', [{ t: 'where', field: 'providerId', op: '==', value: 'p1' }]],
+      ['venue refunds', () => fetchVenueRefunds('v1'), 'courseRefunds', [{ t: 'where', field: 'venueId', op: '==', value: 'v1' }]],
+      ['venue course roster', () => fetchCourseRoster('c1', { venueId: 'v1' }), 'courseEnrollments',
+        [{ t: 'where', field: 'venueId', op: '==', value: 'v1' }, { t: 'where', field: 'courseId', op: '==', value: 'c1' }]],
+      ['provider course roster', () => fetchCourseRoster('c1', { providerId: 'p1' }), 'courseEnrollments',
+        [{ t: 'where', field: 'providerId', op: '==', value: 'p1' }, { t: 'where', field: 'courseId', op: '==', value: 'c1' }]],
+    ])('%s', async (_name, run, path, equalities) => {
+      await run();
+      expect((calls.constraints.at(-1) as unknown[])[0]).toEqual({ kind: 'collection', path });
+      expect(constraintsOf()).toEqual([...equalities, ...newest]);
+    });
   });
 });

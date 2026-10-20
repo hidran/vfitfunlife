@@ -22,17 +22,19 @@ export async function fetchCourseSessions(courseId: string): Promise<CourseSessi
   const snap = await getDocs(query(collection(db, 'courses', courseId, 'sessions'), orderBy('startsAt')));
   return snap.docs.map(d => ({ id: d.id, ...d.data() }) as CourseSession);
 }
+/** Newest first: a capped list keeps the recent documents instead of an arbitrary 500. Indexes: (userId|providerId, createdAt desc). */
+const NEWEST = 500;
 export async function fetchCourseEnrollments(uid: string, provider = false): Promise<CourseEnrollment[]> {
-  const snap = await getDocs(query(collection(db, 'courseEnrollments'), where(provider ? 'providerId' : 'userId', '==', uid), limit(500)));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }) as CourseEnrollment)
-    .sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+  const snap = await getDocs(query(collection(db, 'courseEnrollments'), where(provider ? 'providerId' : 'userId', '==', uid),
+    orderBy('createdAt', 'desc'), limit(NEWEST)));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }) as CourseEnrollment);
 }
 export async function fetchCourseParticipants(courseId: string, sessionId: string): Promise<CourseParticipant[]> {
   const snap = await getDocs(collection(db, 'courses', courseId, 'sessions', sessionId, 'participants'));
   return snap.docs.map(d => ({ id: d.id, ...d.data() }) as CourseParticipant);
 }
 export async function fetchCourseRefunds(uid: string): Promise<CourseRefund[]> {
-  const snap = await getDocs(query(collection(db, 'courseRefunds'), where('providerId', '==', uid), limit(500)));
+  const snap = await getDocs(query(collection(db, 'courseRefunds'), where('providerId', '==', uid), orderBy('createdAt', 'desc'), limit(NEWEST)));
   return snap.docs.map(d => ({ id: d.id, ...d.data() }) as CourseRefund);
 }
 /** Courses of one venue. Readable by the venue's owner, active staff and admins (rule: managesVenue on the queried venueId). */
@@ -41,12 +43,22 @@ export async function fetchVenueCourses(venueId: string): Promise<Course[]> {
   return snap.docs.map(d => ({ id: d.id, ...d.data() }) as Course);
 }
 export async function fetchVenueEnrollments(venueId: string): Promise<CourseEnrollment[]> {
-  const snap = await getDocs(query(collection(db, 'courseEnrollments'), where('venueId', '==', venueId), limit(500)));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }) as CourseEnrollment)
-    .sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+  const snap = await getDocs(query(collection(db, 'courseEnrollments'), where('venueId', '==', venueId),
+    orderBy('createdAt', 'desc'), limit(NEWEST)));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }) as CourseEnrollment);
+}
+/**
+ * Every booking of one course, for its roster (who paid, late cancellations). The equality on the provider or the venue
+ * is what the rules prove; the course narrows it. Indexes: (venueId|providerId, courseId, createdAt desc).
+ */
+export async function fetchCourseRoster(courseId: string, scope: { venueId: string } | { providerId: string }): Promise<CourseEnrollment[]> {
+  const owner = 'venueId' in scope ? where('venueId', '==', scope.venueId) : where('providerId', '==', scope.providerId);
+  const snap = await getDocs(query(collection(db, 'courseEnrollments'), owner, where('courseId', '==', courseId),
+    orderBy('createdAt', 'desc'), limit(NEWEST)));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }) as CourseEnrollment);
 }
 export async function fetchVenueRefunds(venueId: string): Promise<CourseRefund[]> {
-  const snap = await getDocs(query(collection(db, 'courseRefunds'), where('venueId', '==', venueId), limit(500)));
+  const snap = await getDocs(query(collection(db, 'courseRefunds'), where('venueId', '==', venueId), orderBy('createdAt', 'desc'), limit(NEWEST)));
   return snap.docs.map(d => ({ id: d.id, ...d.data() }) as CourseRefund);
 }
 /** A lesson's waitlist in position order (managers only; the customer reads their own entry through fetchMyWaitlist). */

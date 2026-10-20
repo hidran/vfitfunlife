@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -11,7 +11,8 @@ const mocks = vi.hoisted(() => ({
   role: 'provider', providerStatus: 'verified', venues: [] as { id: string; name: string }[], venuesLoading: false,
   providerCourses: [] as unknown[], venueCourses: [] as unknown[], enrollments: [] as unknown[], sessions: [] as unknown[],
   participants: [] as unknown[], counters: [] as unknown[], rooms: [] as unknown[], waitlist: [] as unknown[],
-  seen: { courses: [] as unknown[][], venueCourses: [] as unknown[][], enrollments: [] as unknown[][], venueEnrollments: [] as unknown[][] },
+  refunds: [] as unknown[],
+  seen: { courses: [] as unknown[][], venueCourses: [] as unknown[][], enrollments: [] as unknown[][], venueEnrollments: [] as unknown[][], roster: [] as unknown[][] },
 }));
 
 vi.mock('next/navigation', () => ({
@@ -37,8 +38,9 @@ vi.mock('@/hooks/useCourses', () => ({
   },
   useCourseEnrollments: (...args: unknown[]) => { mocks.seen.enrollments.push(args); return { data: args[0] ? mocks.enrollments : undefined }; },
   useVenueEnrollments: (...args: unknown[]) => { mocks.seen.venueEnrollments.push(args); return { data: args[0] ? mocks.enrollments : undefined }; },
-  useCourseRefunds: () => ({ data: [] }),
-  useVenueRefunds: () => ({ data: [] }),
+  useCourseRoster: (...args: unknown[]) => { mocks.seen.roster.push(args); return { data: args[0] ? mocks.enrollments : undefined }; },
+  useCourseRefunds: (uid?: string) => ({ data: uid ? mocks.refunds : undefined }),
+  useVenueRefunds: (venueId?: string) => ({ data: venueId ? mocks.refunds : undefined }),
   useCourseSessions: (id?: string) => ({ data: id ? mocks.sessions : undefined }),
   useCourseParticipants: (c?: string, s?: string) => ({ data: c && s ? mocks.participants : undefined, isError: false }),
   useCustomerCounters: () => ({ data: mocks.counters }),
@@ -73,7 +75,7 @@ beforeEach(() => {
   Object.assign(mocks, { search: '', role: 'provider', providerStatus: 'verified', venues: [], venuesLoading: false,
     providerCourses: [course({ venueId: null, locationId: null, roomId: null })], venueCourses: [course()], enrollments: [],
     sessions: [{ id: 's1', startsAt: ts(FUTURE), endsAt: ts(FUTURE + 3600000), capacity: 8, occupied: 1, held: 0, state: 'scheduled', roomId: 'r1' }],
-    participants: [], counters: [], rooms: [], waitlist: [] });
+    participants: [], counters: [], rooms: [], waitlist: [], refunds: [] });
   for (const list of Object.values(mocks.seen)) list.length = 0;
 });
 
@@ -84,7 +86,9 @@ describe('scope', () => {
     expect(await screen.findByText('Karate')).toBeInTheDocument();
     expect(mocks.seen.courses.at(-1)).toEqual(['me', true]);
     expect(mocks.seen.venueCourses.at(-1)).toEqual([undefined]);
-    expect(mocks.seen.enrollments.at(-1)).toEqual(['me', true]);
+    // No refund is due and no course is open: neither booking list is read.
+    expect(mocks.seen.enrollments.at(-1)).toEqual([undefined, true]);
+    expect(mocks.seen.roster.at(-1)).toEqual([undefined, { providerId: 'me' }]);
     expect(screen.getByRole('link', { name: 'courses.create' })).toHaveAttribute('href', '/provider/courses/create');
     expect(screen.queryByTestId('spaces')).toBeNull();
   });
@@ -94,13 +98,28 @@ describe('scope', () => {
     renderPage();
     expect(await screen.findByText('Karate')).toBeInTheDocument();
     expect(mocks.seen.venueCourses.at(-1)).toEqual(['v1']);
-    expect(mocks.seen.venueEnrollments.at(-1)).toEqual(['v1']);
+    expect(mocks.seen.venueEnrollments.at(-1)).toEqual([undefined]);
+    expect(mocks.seen.roster.at(-1)).toEqual([undefined, { venueId: 'v1' }]);
     expect(mocks.seen.courses.at(-1)).toEqual([undefined, false]);
     expect(mocks.seen.enrollments.at(-1)).toEqual([undefined, true]);
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Smoke Gym');
     expect(screen.getByRole('link', { name: 'courses.create' })).toHaveAttribute('href', '/provider/courses/create?venue=v1');
     expect(screen.getByRole('link', { name: 'courses.edit' })).toHaveAttribute('href', '/provider/courses/edit?id=c1&venue=v1');
     expect(screen.getByTestId('spaces')).toHaveTextContent('v1');
+  });
+
+  it('reads the bookings of the selected course only, and the whole list only while a refund is due', async () => {
+    mocks.search = 'venue=v1'; mocks.venues = [{ id: 'v1', name: 'Smoke Gym' }];
+    renderPage();
+    await openLesson();
+    expect(mocks.seen.roster.at(-1)).toEqual(['c1', { venueId: 'v1' }]);
+    expect(mocks.seen.venueEnrollments.every(args => args[0] === undefined)).toBe(true);
+    for (const list of Object.values(mocks.seen)) list.length = 0;
+    mocks.refunds = [{ id: 'r1', status: 'pending', amountCents: 500, enrollmentId: 'e1', paymentMode: 'direct' }];
+    cleanup();
+    renderPage();
+    await screen.findByText('Karate');
+    expect(mocks.seen.venueEnrollments.at(-1)).toEqual(['v1']);
   });
 
   it('offers a switcher when the user manages several venues', async () => {

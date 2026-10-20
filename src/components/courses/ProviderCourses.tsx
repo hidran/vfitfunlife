@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import {
-  useCourses, useManagedVenueCourses, useCourseSessions, useCourseEnrollments, useVenueEnrollments, useCourseParticipants,
+  useCourses, useManagedVenueCourses, useCourseSessions, useCourseEnrollments, useVenueEnrollments, useCourseRoster, useCourseParticipants,
   useCourseRefunds, useVenueRefunds, useCustomerCounters, useRefreshCourses,
 } from '@/hooks/useCourses';
 import { useManagedVenues } from '@/hooks/useManagedVenues';
@@ -66,8 +66,6 @@ export function ProviderCourses() {
   // Venue scope reads by venueId (owner and staff are allowed by the rules); otherwise the provider's own courses.
   const own = useCourses(venueId ? undefined : uid, !venueId && !!uid);
   const atVenue = useManagedVenueCourses(venueId);
-  const ownEnrollments = useCourseEnrollments(venueId ? undefined : uid, true);
-  const venueEnrollments = useVenueEnrollments(venueId);
   const ownRefunds = useCourseRefunds(venueId ? undefined : uid);
   const venueRefunds = useVenueRefunds(venueId);
   const refresh = useRefreshCourses();
@@ -84,8 +82,14 @@ export function ProviderCourses() {
   const query = venueId ? atVenue : own;
   const courses = venueId ? [...(atVenue.data ?? [])].sort((a, b) => a.name.localeCompare(b.name, locale)) :
     own.data?.pages.flatMap(p => p.courses) ?? [];
-  const enrollments = venueId ? venueEnrollments : ownEnrollments;
   const refunds = venueId ? venueRefunds : ownRefunds;
+  const pendingRefunds = (refunds.data ?? []).filter(r => r.status !== 'completed');
+  // The selected course's bookings feed the roster; the whole (newest 500) list is read only to name the customers of
+  // refunds that are still due, and not at all when there are none.
+  const roster = useCourseRoster(courseId || undefined, venueId ? { venueId } : uid ? { providerId: uid } : undefined);
+  const ownRefundBookings = useCourseEnrollments(!venueId && pendingRefunds.length ? uid : undefined, true);
+  const venueRefundBookings = useVenueEnrollments(pendingRefunds.length ? venueId : undefined);
+  const refundBookings = venueId ? venueRefundBookings : ownRefundBookings;
   const course = courses.find(c => c.id === courseId);
   const sessions = useCourseSessions(courseId || undefined);
   const participants = useCourseParticipants(courseId || undefined, sessionId || undefined);
@@ -99,7 +103,7 @@ export function ProviderCourses() {
   const field = 'rounded-xl border border-hairline bg-surface text-content p-3 w-full min-h-11';
   const createHref = `/provider/courses/create${venueId ? `?venue=${venueId}` : ''}`;
   const repeat = new Map((counters.data ?? []).map(c => [c.userId, c]));
-  const lateCancelled = (enrollments.data ?? []).filter(e => e.courseId === courseId && sessionId &&
+  const lateCancelled = (roster.data ?? []).filter(e => e.courseId === courseId && sessionId &&
     e.lateCancelledSessionIds?.includes(sessionId));
 
   // Someone who only manages a venue has no courses of their own: land on the venue.
@@ -174,7 +178,7 @@ export function ProviderCourses() {
         {participants.isError && <p role="alert">{t('courses.loadError')}</p>}
         <h3 className="font-semibold">{t('courses.roster')}</h3>
         <ul className="divide-y divide-hairline">{participants.data?.map(p => {
-          const enrollment = enrollments.data?.find(e => e.id === p.enrollmentId);
+          const enrollment = roster.data?.find(e => e.id === p.enrollmentId);
           const noShows = repeat.get(p.userId)?.noShows ?? 0;
           return <li key={p.id} className="py-4 space-y-2"><div className="flex justify-between flex-wrap gap-2"><span className="font-medium">{p.customerName}
             {p.noShow && <span className="ml-2 rounded-full bg-red-500/15 px-2 py-0.5 text-xs font-semibold text-red-500">{t('courses.noShow')}</span>}
@@ -197,9 +201,9 @@ export function ProviderCourses() {
           })}</ul></div>}
       </>}
     </section>}
-    {refunds.data?.some(r => r.status !== 'completed') && <section className="space-y-3"><h2 className="font-semibold text-xl">{t('courses.refunds')}</h2>
-      {refunds.data.filter(r => r.status !== 'completed').map(r => <div key={r.id} className="rounded-xl border border-hairline p-4 flex flex-wrap gap-3 justify-between">
-        <span>{t('courses.refundDue')} · {courseMoney(r.amountCents, locale)} · {enrollments.data?.find(e => e.id === r.enrollmentId)?.customerName}</span>
+    {pendingRefunds.length > 0 && <section className="space-y-3"><h2 className="font-semibold text-xl">{t('courses.refunds')}</h2>
+      {pendingRefunds.map(r => <div key={r.id} className="rounded-xl border border-hairline p-4 flex flex-wrap gap-3 justify-between">
+        <span>{t('courses.refundDue')} · {courseMoney(r.amountCents, locale)} · {[...(refundBookings.data ?? []), ...(roster.data ?? [])].find(e => e.id === r.enrollmentId)?.customerName}</span>
         {r.paymentMode === 'direct' && <Button size="sm" className="min-h-11" disabled={busy} onClick={() => run('confirmCourseRefund', { refundId: r.id })}>{t('courses.confirmRefund')}</Button>}</div>)}
     </section>}
     {venueId && <VenueSpacesPanel venueId={venueId} />}
