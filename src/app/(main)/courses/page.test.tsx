@@ -33,6 +33,12 @@ describe('course sheet', () => {
     expect(screen.getByTestId('lesson')).toHaveTextContent('s1');
   });
 
+  it('sits on its own surface, so the text never rests on the dimmed page (light theme)', async () => {
+    renderPage();
+    const dialog = await screen.findByRole('dialog', { name: 'Karate' });
+    expect(dialog).toHaveClass('bg-surface', 'border', 'border-hairline', 'rounded-2xl');
+  });
+
   it('cannot be closed while a booking request is in flight, and can afterwards', async () => {
     renderPage();
     await screen.findByRole('dialog');

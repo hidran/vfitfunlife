@@ -80,8 +80,8 @@ function CoursesContent() {
       </article>)}</div>
       {query.hasNextPage && <Button disabled={query.isFetchingNextPage} onClick={() => query.fetchNextPage()}>{t('courses.more')}</Button>}
     </>}
-    {selected && <Modal onClose={dismissSheet} closeOnBackdrop={!bookingBusy} className="w-full max-w-2xl" ariaLabel={selected.name}>
-      <div className="p-5 space-y-4 text-content"><div className="flex justify-between gap-3"><h2 className="font-display text-2xl font-bold">{selected.name}</h2>
+    {selected && <Modal onClose={dismissSheet} closeOnBackdrop={!bookingBusy} className="w-full max-w-2xl rounded-2xl border border-hairline bg-surface shadow-xl" ariaLabel={selected.name}>
+      <div className="space-y-4 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] text-content"><div className="flex justify-between gap-3"><h2 className="font-display text-2xl font-bold">{selected.name}</h2>
         <Button variant="ghost" className="min-h-11" disabled={bookingBusy} onClick={dismissSheet}>{t('common.close')}</Button></div>
         <p>{selected.description}</p><p className="text-sm">{selected.equipment}</p>
         {sessions.isLoading ? <p>{t('common.loading')}</p> : sessions.isError ? <p role="alert">{t('courses.loadError')}</p> :

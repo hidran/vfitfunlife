@@ -215,8 +215,8 @@ export function ProviderCourses() {
         {r.paymentMode === 'direct' && <Button size="sm" className="min-h-11" disabled={busy} onClick={() => run('confirmCourseRefund', { refundId: r.id })}>{t('courses.confirmRefund')}</Button>}</div>)}
     </section>}
     {venueId && <VenueSpacesPanel venueId={venueId} />}
-    {payment && <Modal onClose={() => setPayment(null)} className="w-full max-w-md" ariaLabel={t('courses.recordPayment')}>
-      {payment && <div className="p-5 space-y-4"><h2 className="font-semibold">{t('courses.recordPayment')}</h2>
+    {payment && <Modal onClose={() => setPayment(null)} className="w-full max-w-md rounded-2xl border border-hairline bg-surface shadow-xl" ariaLabel={t('courses.recordPayment')}>
+      {payment && <div className="space-y-4 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] text-content"><h2 className="font-semibold">{t('courses.recordPayment')}</h2>
         <label className="block">{t('courses.direct')}<select className={field} value={payment.method} onChange={e => setPayment({ ...payment, method: e.target.value })}>
           {(['cash', 'bank_transfer', 'satispay', 'other'] as const).map(v => <option key={v} value={v}>{t(`courses.${v}`)}</option>)}</select></label>
         <Button disabled={busy} onClick={async () => { if (await run('recordCoursePayment', payment)) setPayment(null); }}>{t('courses.confirm')}</Button>
