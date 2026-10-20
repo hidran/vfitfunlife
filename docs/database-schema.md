@@ -175,7 +175,7 @@ interface Venue {
 
   // Ownership & partnership (src/types/venue.ts). The field is `ownerId`, never `ownerUid`.
   ownerId?: string;               // uid of the provider that owns/manages the venue; written by the company approval
-                                  // (biz_<uid>) or an admin; read by the managesGym rule and by /admin/venues
+                                  // (biz_<uid>) or an admin; read by the managesVenue rule and by /admin/venues
                                   // (read-only Owner column linking to the provider)
   partnerStatus?: 'pending' | 'active' | 'suspended'; // 'active' is required to publish/book a timetable
   memberDiscountPercent?: number;
@@ -746,10 +746,11 @@ interface StreamingSchedule {
 > - `status` + `completionReminderSentAt` + `scheduledEndAt` — `remindTrainerToComplete`
 > - `status` + `paymentConfirmation.clientResponse` + `paymentConfirmation.confirmedByTrainerAt` — `autoConfirmPayments`
 
-> **Update (business accounts and courses, reconciliation 2026-10-19):** `firestore.indexes.json` holds **62** indexes: the 53
-> deployed to production on 2026-10-06 plus 9 for courses and partner gyms that production has never had (`courses` x2,
+> **Update (business accounts and courses, reconciliation 2026-10-19):** `firestore.indexes.json` holds **68** indexes: the 53
+> deployed to production on 2026-10-06, 9 for courses and partner gyms that production has never had (`courses` x2,
 > `courseEnrollments`, `courseRefunds`, `sessions` collection-group x2, `gymSessions` x2, `gymBookings`; list in
-> [deployment/staging.md](deployment/staging.md#1-indexes-first-and-wait-for-ready)). Four of the 53 are `users` composites for
+> [deployment/staging.md](deployment/staging.md#1-indexes-first-and-wait-for-ready)) and 6 for the unified courses model
+> (see "Indexes for courses" below). Four of the 53 are `users` composites for
 > the `/admin/providers` account-type filter: the four shapes the list already used, each with `providerKind` (derived by the
 > admin-index trigger, `functions/src/users/adminIndex.ts`) before `providerVerification`/`createdAt DESC`. They must be READY
 > before the filter is used (a missing index makes the list throw into an empty state); `scripts/verify-admin-list-indexes.mjs`
@@ -1093,21 +1094,88 @@ See `firestore.rules` file for complete security rules implementation.
 
 ## Group course collections
 
+One model for individual providers and venues (gym, school, studio). Every write below is made by a Cloud Function (Admin SDK); clients only read, as the last column says. Field types are in `functions/src/courses/store.ts` and `src/types/course.ts`. Behaviour: [features.md](features.md#group-courses-and-activities), [api/reference.md](api/reference.md#group-course-api).
+
 | Collection | Responsibility | Client access |
 |---|---|---|
-| `courses/{id}` | Provider/service/category links, publication/eligibility, recurrence/timezone, prices in cents, policies, next-session availability | Published eligible courses public; owner/admin/customer history read; no client writes |
-| `courses/{id}/sessions/{dateId}` | Concrete UTC start/end, capacity, occupied/held counts, state, instructor/location | Course audience read; no client writes |
-| `courses/{id}/sessions/{dateId}/participants/{uid}` | Unique enrollment membership, private name, attendance | Customer/owner/admin read; no client writes |
-| `courses/{id}/customers/{uid}` | Persistent enrollment-history access to archived courses | Customer/owner/admin read; no client writes |
-| `courseEnrollments/{id}` | Request-id-derived identity, lesson/series selection, immutable price allocations and cancellation policy, active/cancelled session IDs, direct/Stripe payment, hold expiry, settlement/liability | Customer/provider/admin read; no client writes |
-| `courseRefunds/{enrollment_session}` | Eligible per-lesson refund amount, direct refund confirmation or Stripe refund identity/status | Customer/provider/admin read; no client writes |
+| `courses/{id}` | Provider/service/category links, publication/eligibility, recurrence/timezone, prices in cents (0 = free), policies, next-session availability; venue fields below | Published eligible courses public; provider, admin and (venue courses) the venue's owner/active staff read, as do customers with history; no client writes |
+| `courses/{id}/sessions/{dateId}` | One lesson (`dateId` = `YYYY-MM-DD`): UTC start/end, capacity, occupied/held/waitlisted counts, state, instructor/location text, and the snapshots below | Course audience read; the public timetable reads `listed` lessons through a collection-group query; no client writes |
+| `courses/{id}/sessions/{dateId}/participants/{uid}` | Unique enrollment membership, private name, attendance, `noShow` | Customer/owner/staff/admin read; no client writes |
+| `courses/{id}/sessions/{dateId}/waitlist/{uid}` | A customer waiting for the full lesson (below) | The entry's own customer, course managers; no client writes |
+| `courses/{id}/customers/{uid}` | Persistent enrollment-history access to archived courses, and the customer's reliability counters `noShows` and `lateCancels` | Customer/owner/staff/admin read; no client writes |
+| `courseEnrollments/{id}` | Request-id-derived identity, lesson/series selection, price allocations and quote snapshot, cancellation policy, active/cancelled session IDs, direct/Stripe payment, hold expiry, settlement/liability | Customer, provider, admin and (venue courses) venue managers read; no client writes |
+| `courseRefunds/{enrollment_session}` | Eligible per-lesson refund amount, `courseId` and `venueId`, direct refund confirmation or Stripe refund identity/status | Customer, provider, admin and venue managers read; no client writes |
 | `courseNotifications/{id_event_uid}` | Durable idempotent notification outbox | Server only |
+| `courseScheduleLocks/{key}` | Room and instructor day locks (below) | Server only |
+| `courseSweepState/waitlist` | Cursors of the waitlist sweep (below) | Server only |
+| `venues/{v}/locations/{l}` | `name`, `address`, `city`, `timezone` (IANA), `isActive` | Public read; client writes denied, `saveGymSpace` (venue owner, active staff, admin) validates timezone and writes |
+| `venues/{v}/locations/{l}/rooms/{r}` | `name`, `isActive` | As above |
+| `venues/{v}/instructors/{i}` | An instructor linked to the venue: `isActive`, `name`, `photoUrl`; the partner status lives on `instructors/{i}.partnerStatus` | Public read; admin write (the callable `configureGymInstructor`, admin only, writes it together with the partner status) |
+| `venueStaff/{uid}` | `{venueId, isActive}`: active staff of one venue | See [venueStaff](#venuestaff) |
 
 Instructor services gain `kind: group` and `courseId` when linked to a course. Only server callables can create/edit/delete that linkage. Legacy services without `kind` remain individual. Public participant records are never embedded in course/session documents.
 
-Course publication denormalizes `providerEligible`; an instructor-write trigger keeps it synchronized with verification/active/application status. Enrollment independently rechecks eligibility inside its transaction. A transaction reads all selected sessions and unique participant IDs before changing capacity. Cancellation uses unique session IDs and records history; historical sessions cannot be removed through schedule editing.
+### Course fields added by the unified model
 
-`systemSettings/payments.courseCheckoutEnabled` defaults false and is effective only alongside `stripePaymentsEnabled`. Enrollment defaults to direct payment. Escrow cannot be submitted. Course/session discovery, held-enrollment expiry, refund reconciliation and session reminder/recovery indexes are in `firestore.indexes.json`; deploy them before expecting production query behavior.
+`courses/{id}` gains: `venueId` (null for an individual course), `locationId`, `roomId`, `instructorId` (all `string | null`), `waitlistEnabled` (default `true`) and, transiently, `listingSyncPending` (set by `onCourseProviderEligibility` while a multi-chunk pass is unfinished). For a venue-linked course the server owns `timezone` (the location's), `location` (`"<room> · <location>"`), `city` and `instructor` (the instructor's name); `providerId` is the venue owner unless an admin names another provider, and on edit it never changes. Prices may be `0` (free). `providerEligible` is denormalized as before.
+
+`courses/{id}/sessions/{dateId}` gains (all absent on lessons written before the unified model, so readers default them):
+
+| Field | Meaning |
+|---|---|
+| `courseId`, `venueId` | Denormalized so the collection-group timetable query and rules need no course read |
+| `locationId`, `roomId` | The lesson's own place (a rescheduled lesson may use another room than the course) |
+| `instructorId`, `instructorName` | The lesson's instructor (a substituted lesson differs from the course) |
+| `revision` | Starts at 1. Rises when the lesson's start/end/room/instructor changes, when its capacity changes, and for every scheduled lesson when the course's lesson price, series price, capacity, `cancellationHours` or `bookingNoticeHours` changes. A quote records it and `enrollInCourse` refuses a different one (`price_changed`, reason `availability`) |
+| `listed` | `true` while the course is published and its provider eligible and the lesson is not cancelled; it is what the public timetable rule checks. `onCourseProviderEligibility` and the lifecycle (cancel, archive) keep it in step; `scripts/backfill-session-listed.mjs` repairs it |
+| `waitlisted` | Number of waitlist entries; kept equal to the entries by join/leave/promotion/clear, and repaired by the sweep if it drifts |
+| `capacity` | Per lesson. A course capacity change overwrites it; a lesson-level `capacity` action survives edits that leave the course capacity alone |
+| `cancellationReconciled`, `cancellationReason`, `rescheduleReason` | Lesson cancellation/reschedule bookkeeping (cancellation reconciliation is retried by the maintenance job) |
+
+`courses/{id}/sessions/{dateId}/waitlist/{uid}` (the document id is the customer's uid): `userId`, `customerName`, `scope: 'lesson'`, `requestId`, `paymentMode: 'direct' | 'stripe'`, `position` (contiguous from 1; later entries are renumbered when one leaves), `createdAt`, and `courseId`, `sessionId`, `courseName`, `providerId`, `venueId` so a customer's list needs no joins. Promotion books the entry with the same enrollment id a direct booking with that `requestId` would have, so a retried promotion replays instead of double-booking.
+
+`courseEnrollments/{id}` gains the quote snapshot, all absent on older enrollments:
+
+| Field | Meaning |
+|---|---|
+| `venueId` | The course's venue at booking time |
+| `regularCents`, `discountCents` | Before and after-discount difference; `totalCents` is the amount due (sum of `allocations`) |
+| `discountPercent`, `gymPercent`, `instructorPercent` | Informational (course-level instructor); the money fields are authoritative |
+| `sessionRevisions` | `{ [sessionId]: revision }` of every booked lesson at booking time |
+| `promotedFromWaitlist` | `true` when the booking came from the waitlist |
+| `lateCancelledSessionIds` | Lessons staff removed this customer from after the customer's own cancellation deadline (no fee) |
+| `allocations` | Per-lesson amounts **after** discount; refunds read them directly |
+
+A zero `totalCents` is stored as `paymentMode: 'direct'`, `state: 'confirmed'`, `paymentStatus: 'paid'`, `paidCents: 0`, `paymentMethod: 'free'`. `courseRefunds` documents carry `courseId` and `venueId` (older ones lack `courseId`; `confirmCourseRefund` then reads it from the enrollment).
+
+`participants/{uid}` gains `noShow` (set when attendance is marked `absent`). A removed participant's document is deleted, so late removals and no-shows are counted on `courses/{id}/customers/{uid}` (`noShows`, `lateCancels`, both `FieldValue.increment`) and, for late removals, on the enrollment.
+
+### `courseScheduleLocks`
+
+Server-only day locks that make room and instructor overlaps impossible, written in the same transaction as the course. Document ids are `room:<venueId>:<locationId>:<roomId>|<UTC day>` and `instructor:<instructorId>|<UTC day>` (ids contain only `[a-zA-Z0-9_-]`, so `:` and `|` cannot collide; a lesson that crosses UTC midnight takes two days per key). Shape: `{ day: 'YYYY-MM-DD', slots: { [`${courseId}_${sessionId}`]: { start: ms, end: ms, courseName } } }`. A course holds slots only while it is published, for lessons still scheduled that have not ended; unpublishing, archiving, cancelling a lesson or moving it releases them. Ended slots never block and are pruned when their document is rewritten, and by `sweepElapsedLocks` (every five minutes, queries `day <= today`). `courseName` is for the error message only.
+
+### `courseSweepState/waitlist`
+
+`{ cursor: path | null, entryCursor: path | null, updatedAt }`: where the previous waitlist sweep stopped, so lessons that legitimately keep a waitlist (full ones) do not starve the stranded ones behind them.
+
+### Rules summary (`firestore.rules`)
+
+- Course documents are readable when published and eligible, or by the provider, an admin, a venue manager (`managesVenue(venueId)`: admin, the venue's `ownerId`, or active `venueStaff`) for a venue-linked course, or a customer with history. Legacy courses without `venueId` stay with their provider. Enrollments and refunds add the same venue-manager clause on their `venueId` field, so venue queries (`where('venueId','==',v)`) are provable from their constraints.
+- Public timetable: `match /{path=**}/sessions/{sessionId}` allows a read when `listed == true` and (`venueId == null` or the venue is an active partner of a hosting type, `activePartnerGym`). The client query must therefore constrain `venueId`, `listed`, `state`, `startsAt`. It reads the field directly, not with a default.
+- Waitlist: a customer reads `collectionGroup('waitlist').where('userId','==',uid)`; managers and the entry's own customer read `courses/{c}/sessions/{s}/waitlist/{uid}`.
+- `courseScheduleLocks`, `courseSweepState` and `courseNotifications` deny every client read and write. All course collections deny client writes.
+
+### Indexes for courses
+
+Added with the unified model (`firestore.indexes.json` holds 68; see the update note under Indexes): `courses` (`venueId`, `state`, `nextStartsAt`) and (`venueId`, `state`, `providerEligible`, `nextStartsAt`); `sessions` collection group (`venueId`, `listed`, `state`, `startsAt`), (`instructorId`, `listed`, `state`, `startsAt`) and (`state`, `waitlisted`); `waitlist` collection group (`userId`, `createdAt`). The existing ones stay: `courses` (`state`, `providerEligible`, `nextStartsAt`) and (`state`, `nextStartsAt`), `courseEnrollments` (`state`, `holdExpiresAt`), `courseRefunds` (`paymentMode`, `status`), `sessions` group (`state`, `cancellationReconciled`) and (`state`, `startsAt`). The waitlist sweep falls back to scanning scheduled lessons through (`state`, `startsAt`) while the (`state`, `waitlisted`) index is not READY.
+
+### Superseded: the partner-gym collections
+
+`gymSessions`, `gymBookings`, `gymSeries`, `gymScheduleLocks`, `gymSessionMembers` and `gymNotifications` belong to the separate partner-gym timetable flow that the unified model replaces. They are not read by any of the above and are removed in the final task of the unified-courses plan (code, rules, indexes, and, on staging, the data); until then they remain deployed. Do not build on them.
+
+Course publication denormalizes `providerEligible`; an instructor-write trigger (`onCourseProviderEligibility`) keeps it, and every lesson's `listed`, synchronized with verification/active/application status. Enrollment independently rechecks eligibility inside its transaction. A transaction reads all selected sessions and unique participant IDs before changing capacity. Cancellation uses unique session IDs and records history; historical sessions cannot be removed through schedule editing.
+
+`systemSettings/payments.courseCheckoutEnabled` defaults false and is effective only alongside `stripePaymentsEnabled`. Enrollment defaults to direct payment. Escrow cannot be submitted. Course/session discovery, held-enrollment expiry, refund reconciliation, the venue timetable and the waitlist sweep depend on the indexes in `firestore.indexes.json`; deploy them (and wait for READY) before expecting production query behavior.
 
 ### Provider–participant relationships
 
