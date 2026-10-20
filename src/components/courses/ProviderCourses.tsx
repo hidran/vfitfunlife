@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
@@ -95,6 +95,15 @@ export function ProviderCourses() {
   const venueRefundBookings = useVenueEnrollments(pendingRefunds.length ? venueId : undefined);
   const refundBookings = venueId ? venueRefundBookings : ownRefundBookings;
   const course = courses.find(c => c.id === courseId);
+  // The roster opens below the course list: bring it into view and move focus to its heading, so the click is not inert.
+  const panel = useRef<HTMLElement>(null);
+  const panelHeading = useRef<HTMLHeadingElement>(null);
+  const panelOpen = !!course;
+  useEffect(() => {
+    if (!panelOpen) return;
+    panel.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
+    panelHeading.current?.focus({ preventScroll: true });
+  }, [courseId, panelOpen]);
   const sessions = useCourseSessions(courseId || undefined);
   const participants = useCourseParticipants(courseId || undefined, sessionId || undefined);
   const counters = useCustomerCounters(courseId || undefined);
@@ -161,8 +170,8 @@ export function ProviderCourses() {
         <Button size="sm" className="min-h-11" onClick={() => { setCourseId(c.id); setSessionId(''); setOperation(null); }}>{t('courses.roster')}</Button></div>
     </article>)}</div>
     {!venueId && own.hasNextPage && <Button onClick={() => own.fetchNextPage()}>{t('courses.more')}</Button>}
-    {course && <section className="rounded-2xl border border-hairline bg-surface p-5 space-y-4">
-      <h2 className="font-semibold text-xl">{course.name} · {t('courses.sessions')}</h2>
+    {course && <section ref={panel} className="scroll-mt-4 rounded-2xl border border-hairline bg-surface p-5 space-y-4">
+      <h2 ref={panelHeading} tabIndex={-1} className="font-semibold text-xl outline-none">{course.name} · {t('courses.sessions')}</h2>
       <Button variant="outline" size="sm" className="min-h-11" disabled={busy} onClick={() => setOperation('cancelRemaining')}>{t('courses.cancelRemaining')}</Button>
       <label className="block space-y-1">{t('courses.lesson')}<select className={field} value={sessionId} onChange={e => { setSessionId(e.target.value); setOperation(null); }}>
         <option value="">{t('common.select')}</option>{sessions.data?.map(s => <option key={s.id} value={s.id}>{courseDate(s, locale, course.timezone)} · {s.occupied + s.held}/{s.capacity} {s.state === 'cancelled' ? t('courses.cancelled') : ''}</option>)}</select></label>

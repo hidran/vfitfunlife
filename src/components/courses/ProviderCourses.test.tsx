@@ -216,6 +216,19 @@ describe('roster', () => {
   });
 });
 
+describe('roster panel', () => {
+  it('scrolls into view and takes focus when opened, so the click is not inert', async () => {
+    mocks.search = 'venue=v1'; mocks.venues = [{ id: 'v1', name: 'Smoke Gym' }];
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'courses.roster' }));
+    const heading = await screen.findByRole('heading', { level: 2, name: /Karate · courses.sessions/ });
+    await waitFor(() => expect(scroll).toHaveBeenCalledWith({ block: 'start', behavior: 'smooth' }));
+    expect(heading).toHaveFocus();
+  });
+});
+
 describe('confirm buttons', () => {
   beforeEach(() => { mocks.search = 'venue=v1'; mocks.venues = [{ id: 'v1', name: 'Smoke Gym' }]; });
 
