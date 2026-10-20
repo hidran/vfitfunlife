@@ -1,7 +1,9 @@
 import { onSchedule } from "firebase-functions/v2/scheduler";
-import { Timestamp } from "firebase-admin/firestore";
+import { FieldPath, Timestamp } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
 import { region } from "../lib/runtimeOptions";
+import { readPaymentSettings } from "../payments/paymentSettingsCallables";
+import { checkoutActive } from "./core";
 import { db, Enrollment, Session, Course } from "./store";
 import { releaseEnrollment } from "./operations";
 import { processCourseRefund } from "./checkout";
@@ -63,21 +65,72 @@ async function waitlistPage(scan: SweepScan, cursor: FirebaseFirestore.DocumentS
   return (await query.limit(limit).get()).docs;
 }
 
+const hasFreeSeat = (session: Pick<Session, "capacity" | "occupied" | "held">) =>
+  session.capacity - session.occupied - session.held >= 1;
+
+type SweepResult = { examined: number; promoted: number; cleared: number };
+
+type Ref = FirebaseFirestore.DocumentReference;
+type Settings = { checkoutOn: () => Promise<boolean> };
+
+/**
+ * Serves one lesson: closes its list when the notice window is over, otherwise promotes into free seats.
+ * `underCounted` = reached through an entry whose lesson counter says zero; such a lesson is served whatever its
+ * counter says (promoteWaitlist recounts), a counter-driven one only while the counter says there is a list.
+ */
+async function serveLesson(courseRef: Ref, sessionRef: Ref, now: Date, settings: Settings,
+  underCounted: boolean): Promise<"cleared" | number> {
+  const next = await db.runTransaction(async (tx): Promise<"cleared" | "promote" | "skip"> => {
+    const [courseDoc, sessionDoc] = await tx.getAll(courseRef, sessionRef);
+    const course = courseDoc.data() as Course | undefined;
+    const session = sessionDoc.data() as Session | undefined;
+    if (!course || session?.state !== "scheduled" || (!underCounted && (session.waitlisted ?? 0) < 1)) return "skip";
+    if (!promotionWindowOpen(session, course, now)) {
+      (await clearWaitlistInTx(tx, { ...course, id: courseRef.id }, sessionRef.id, "window_closed"))();
+      return "cleared";
+    }
+    // A full lesson with an open window has nothing to promote: a legitimate waitlist costs one read, not a second
+    // transaction. (A ghost counter on such a lesson is recounted by the next release or capacity change.)
+    return underCounted || hasFreeSeat(session) ? "promote" : "skip";
+  });
+  if (next === "cleared") return "cleared";
+  if (next === "skip") return 0;
+  return promoteWaitlist(courseRef.id, sessionRef.id, { checkoutOn: await settings.checkoutOn() });
+}
+
 /**
  * Serves waitlists nobody is looking at: promotes into free seats (promoteWaitlist) and closes the lists of lessons
  * inside the notice window or already started (`window_closed`). Bounded to `pageSize * maxPages` lessons per run.
  * Idempotent: a served list is empty, and every step re-checks its lesson inside its own transaction.
+ *
+ * Two scans find work. The counter scan visits lessons whose `waitlisted` counter is above zero (a full lesson inside
+ * its notice window is skipped after one read: nothing can be promoted). The entry scan
+ * pages through the waitlist entries themselves and serves any lesson whose counter says zero although an entry
+ * exists, so a counter that fell behind is repaired and its customers are not stranded.
  */
 export async function sweepWaitlists(
   options: { now?: Date; pageSize?: number; maxPages?: number; scan?: SweepScan } = {}
-): Promise<{ examined: number; promoted: number; cleared: number }> {
+): Promise<SweepResult> {
   const { pageSize = 50, maxPages = 4 } = options;
+  const now = options.now ?? new Date();
   let scan: SweepScan = options.scan ?? "indexed";
   const stateRef = db.doc(WAITLIST_SWEEP_STATE);
-  const cursorPath = (await stateRef.get()).data()?.cursor as string | undefined;
+  const state = (await stateRef.get()).data();
+  const cursorPath = state?.cursor as string | undefined;
   let cursor = cursorPath ? await db.doc(cursorPath).get() : undefined;
   if (cursor && !cursor.exists) cursor = undefined;
-  const result = { examined: 0, promoted: 0, cleared: 0 };
+  const result: SweepResult = { examined: 0, promoted: 0, cleared: 0 };
+  // The payment settings are read once per run, and only when a lesson actually needs a promotion.
+  let checkoutOn: Promise<boolean> | undefined;
+  const settings = { checkoutOn: () => (checkoutOn ??= readPaymentSettings().then(checkoutActive)) };
+  const served = new Set<string>();
+  const serve = async (courseRef: Ref, sessionRef: Ref, underCounted: boolean) => {
+    served.add(sessionRef.path);
+    result.examined++;
+    const outcome = await serveLesson(courseRef, sessionRef, now, settings, underCounted);
+    if (outcome === "cleared") result.cleared++;
+    else result.promoted += outcome;
+  };
   for (let page = 0; page < maxPages; page++) {
     let docs: FirebaseFirestore.QueryDocumentSnapshot[];
     try {
@@ -93,18 +146,7 @@ export async function sweepWaitlists(
       if (!courseRef || courseRef.parent.id !== "courses" || ((doc.data().waitlisted as number | undefined) ?? 0) < 1) {
         continue;
       }
-      result.examined++;
-      const closed = await db.runTransaction(async (tx) => {
-        const [courseDoc, sessionDoc] = await tx.getAll(courseRef, doc.ref);
-        const course = courseDoc.data() as Course | undefined;
-        const session = sessionDoc.data() as Session | undefined;
-        if (!course || session?.state !== "scheduled" || (session.waitlisted ?? 0) < 1 ||
-          promotionWindowOpen(session, course, options.now ?? new Date())) return false;
-        (await clearWaitlistInTx(tx, { ...course, id: courseRef.id }, doc.id, "window_closed"))();
-        return true;
-      });
-      if (closed) result.cleared++;
-      else result.promoted += await promoteWaitlist(courseRef.id, doc.id);
+      await serve(courseRef, doc.ref, false);
     }
     // A short page means the end of the query: start from the top next time.
     if (docs.length < pageSize) {
@@ -113,7 +155,24 @@ export async function sweepWaitlists(
     }
     cursor = docs[docs.length - 1];
   }
-  await stateRef.set({ cursor: cursor?.ref.path ?? null, updatedAt: Timestamp.now() });
+  // Entry scan: one page per run, continuing where the previous run stopped (document-name order, no index needed).
+  let entryCursor = state?.entryCursor as string | undefined;
+  let entries = db.collectionGroup("waitlist").orderBy(FieldPath.documentId()).limit(pageSize);
+  if (entryCursor) entries = entries.startAfter(db.doc(entryCursor));
+  const page = (await entries.get()).docs;
+  for (const entry of page) {
+    const sessionRef = entry.ref.parent.parent;
+    const courseRef = sessionRef?.parent.parent;
+    if (!sessionRef || !courseRef || courseRef.parent.id !== "courses" || sessionRef.parent.id !== "sessions" ||
+      served.has(sessionRef.path)) continue;
+    served.add(sessionRef.path);
+    const session = (await sessionRef.get()).data() as Session | undefined;
+    if (session?.state !== "scheduled" || (session.waitlisted ?? 0) > 0) continue;
+    await serve(courseRef, sessionRef, true);
+  }
+  entryCursor = page.length < pageSize ? undefined : page[page.length - 1].ref.path;
+  await stateRef.set({ cursor: cursor?.ref.path ?? null, entryCursor: entryCursor ?? null,
+    updatedAt: Timestamp.now() });
   return result;
 }
 

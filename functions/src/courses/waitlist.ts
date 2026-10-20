@@ -228,18 +228,25 @@ function queueRemoved(tx: Transaction, course: CourseRef, entry: WaitlistEntry, 
 
 /**
  * Closes the whole waitlist of one lesson (cancelled, rescheduled, archived, window closed). Reads now; the returned
- * writer deletes every entry, zeroes the counter and tells each customer. An empty list writes nothing.
+ * writer deletes every entry, zeroes the counter and tells each customer. An empty list under a zero counter writes
+ * nothing; an empty list under a stale non-zero counter (a ghost) only zeroes it.
  */
 export async function clearWaitlistInTx(tx: Transaction, course: CourseRef, sessionId: string,
   reason: "lesson_cancelled" | "rescheduled" | "archived" | "window_closed"): Promise<() => void> {
-  const entries = (await tx.get(listOf(course.id, sessionId).orderBy("position").limit(WAITLIST_MAX))).docs;
-  if (!entries.length) return () => undefined;
+  const sessionRef = db.doc(`courses/${course.id}/sessions/${sessionId}`);
+  const [sessionDoc, list] = await Promise.all([
+    tx.get(sessionRef), tx.get(listOf(course.id, sessionId).orderBy("position").limit(WAITLIST_MAX))]);
+  const entries = list.docs;
+  if (!entries.length) {
+    const ghost = sessionDoc.exists && ((sessionDoc.data() as Session).waitlisted ?? 0) !== 0;
+    return ghost ? () => tx.update(sessionRef, { waitlisted: 0 }) : () => undefined;
+  }
   return () => {
     for (const doc of entries) {
       tx.delete(doc.ref);
       queueCleared(tx, course, doc.data() as WaitlistEntry, reason);
     }
-    tx.update(db.doc(`courses/${course.id}/sessions/${sessionId}`), { waitlisted: 0 });
+    tx.update(sessionRef, { waitlisted: 0 });
   };
 }
 
@@ -255,8 +262,17 @@ async function planSession(tx: Transaction, args: {
   const { course, sessionId, session, seats, checkoutOn, now } = args;
   const entries: Candidate[] = (await tx.get(listOf(course.id, sessionId).orderBy("position").limit(WAITLIST_MAX)))
     .docs.map((doc) => ({ id: doc.id, ref: doc.ref, data: doc.data() as WaitlistEntry }));
-  if (!entries.length) return null;
   const sessionRef = db.doc(`courses/${course.id}/sessions/${sessionId}`);
+  // The session was read by the caller in this transaction, so a recount written as an absolute value cannot lose a
+  // concurrent join or leave (those write the session and would have conflicted). A full page is not a recount: the
+  // list may hold more than the page.
+  const exact = entries.length < WAITLIST_MAX;
+  const drifted = exact && (session.waitlisted ?? 0) !== entries.length;
+  if (!entries.length) {
+    // A ghost counter (> 0, nothing behind it) is repaired here: nothing else would ever look at it again.
+    return drifted ? { writers: [() => tx.update(sessionRef, { waitlisted: 0 })], promoted: [], dropped: [],
+      cleared: false, cost: 1, enrollmentIds: [] } : null;
+  }
   const plan: SessionPlan = { writers: [], promoted: [], dropped: [], cleared: false, cost: 1, enrollmentIds: [] };
   const startsAt = session.startsAt.toDate();
 
@@ -333,7 +349,9 @@ async function planSession(tx: Transaction, args: {
       }
     }
   }
-  if (!removed.size) return null;
+  if (!removed.size) {
+    return drifted ? { ...plan, writers: [() => tx.update(sessionRef, { waitlisted: entries.length })] } : null;
+  }
   const kept = renumber(entries.map((e) => ({ id: e.id, position: e.data.position })), [...removed]);
   const current = new Map(entries.map((e) => [e.id, e.data.position]));
   const moves = kept.filter(({ id, position }) => current.get(id) !== position);
@@ -341,7 +359,9 @@ async function planSession(tx: Transaction, args: {
   plan.writers.push(...writers, () => {
     for (const id of removed) tx.delete(listOf(course.id, sessionId).doc(id));
     for (const { id, position } of moves) tx.update(listOf(course.id, sessionId).doc(id), { position });
-    tx.update(sessionRef, { waitlisted: FieldValue.increment(-removed.size) });
+    tx.update(sessionRef, {
+      waitlisted: drifted ? entries.length - removed.size : FieldValue.increment(-removed.size),
+    });
     notify.forEach((send) => send());
   });
   return plan;
@@ -359,6 +379,9 @@ async function planSession(tx: Transaction, args: {
  */
 export async function planPromotions(tx: Transaction, args: {
   course: Course & { id: string }; sessions: Map<string, Session>; freed: FreedSeat[]; checkoutOn: boolean; now: Date;
+  // Also read the list of every given lesson that has no freed seat or a zero counter, and fix a counter that
+  // disagrees with its entries. The sweep and promoteWaitlist set it; a release trusts the stored counter instead.
+  reconcile?: boolean;
 }): Promise<PromotionPlan> {
   const { course, sessions, freed } = args;
   const plan: PromotionPlan = { apply: () => undefined, promoted: [], cleared: [], dropped: [] };
@@ -368,8 +391,13 @@ export async function planPromotions(tx: Transaction, args: {
     const session = sessions.get(seat.sessionId);
     // The stored counter decides whether there is anything to read; joins write the session, so a racing join
     // conflicts with the caller's transaction.
-    if (session?.state !== "scheduled" || (session.waitlisted ?? 0) < 1) continue;
+    if (session?.state !== "scheduled" || (!args.reconcile && (session.waitlisted ?? 0) < 1)) continue;
     seatsOf.set(seat.sessionId, [...(seatsOf.get(seat.sessionId) ?? []), seat]);
+  }
+  if (args.reconcile) {
+    for (const [sessionId, session] of sessions) {
+      if (session.state === "scheduled" && !seatsOf.has(sessionId)) seatsOf.set(sessionId, []);
+    }
   }
   const writers: (() => void)[] = [];
   const taken = new Set<string>();
@@ -401,9 +429,14 @@ const MAX_PROMOTION_ROUNDS = 50;
  * customers were seated. Replays are inert: a seated customer leaves the list, so a second call finds nothing to do.
  * A round that dropped unpromotable entries counts as progress (the next entries have not been examined yet); a
  * round that only meets a lesson-level refusal (venue off, deadline) ends the loop and keeps the entries.
+ *
+ * The stored counter is not trusted: the list is read every round, so a ghost counter (> 0, no entries) is zeroed and
+ * an under-count (entries behind a zero counter) is served and recounted. `opts.checkoutOn` lets a caller that serves
+ * many lessons read the payment settings once.
  */
-export async function promoteWaitlist(courseId: string, sessionId: string): Promise<number> {
-  const checkoutOn = checkoutActive(await readPaymentSettings());
+export async function promoteWaitlist(courseId: string, sessionId: string,
+  opts: { checkoutOn?: boolean } = {}): Promise<number> {
+  const checkoutOn = opts.checkoutOn ?? checkoutActive(await readPaymentSettings());
   const courseRef = db.doc(`courses/${courseId}`);
   const sessionRef = courseRef.collection("sessions").doc(sessionId);
   let promoted = 0;
@@ -412,10 +445,11 @@ export async function promoteWaitlist(courseId: string, sessionId: string): Prom
       const [courseDoc, sessionDoc] = await tx.getAll(courseRef, sessionRef);
       const course = courseDoc.data() as Course | undefined;
       const session = sessionDoc.data() as Session | undefined;
-      if (!course || !session || session.state !== "scheduled" || (session.waitlisted ?? 0) < 1 ||
-        session.capacity - session.occupied - session.held < 1) return { seated: 0, progress: false };
+      if (!course || !session || session.state !== "scheduled") return { seated: 0, progress: false };
+      const free = session.capacity - session.occupied - session.held >= 1;
       const plan = await planPromotions(tx, { course: { ...course, id: courseId },
-        sessions: new Map([[sessionId, session]]), freed: [{ sessionId, kind: "free" }], checkoutOn, now: new Date() });
+        sessions: new Map([[sessionId, session]]), freed: free ? [{ sessionId, kind: "free" }] : [], checkoutOn,
+        now: new Date(), reconcile: true });
       plan.apply();
       return { seated: plan.promoted.length,
         progress: plan.promoted.length + plan.dropped.length + plan.cleared.length > 0 };
