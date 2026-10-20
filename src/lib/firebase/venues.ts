@@ -125,6 +125,24 @@ export async function fetchVenueCourses(venueId: string): Promise<VenueCourse[]>
   }
 }
 
+/**
+ * Venues a user can run courses for: the ones they own (`ownerId`) plus the one of an active `venueStaff` link, each
+ * once, deactivated venues left out. Owner and staff are the two ways the `managesVenue` rule grants access.
+ */
+export async function fetchManagedVenues(uid: string): Promise<Venue[]> {
+  const [owned, staff] = await Promise.all([
+    getDocs(query(collection(db, 'venues'), where('ownerId', '==', uid))),
+    getDoc(doc(db, 'venueStaff', uid)),
+  ]);
+  const venues = owned.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Venue, 'id'>) }));
+  const link = staff.exists() ? (staff.data() as { venueId?: string; isActive?: boolean }) : null;
+  if (link?.venueId && link.isActive !== false && !venues.some((v) => v.id === link.venueId)) {
+    const staffed = await fetchVenue(link.venueId);
+    if (staffed) venues.push(staffed);
+  }
+  return venues.filter((v) => v.isActive !== false);
+}
+
 export async function updateVenuePhotos(venueId: string, photoUrls: string[]): Promise<void> {
   await updateDoc(doc(db, 'venues', venueId), { photoUrls });
 }

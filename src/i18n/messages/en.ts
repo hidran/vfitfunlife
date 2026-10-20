@@ -3488,4 +3488,5 @@ export const enMessages: Messages = {
   'courses.err.gym_not_found': "Venue not found.",
   'courses.err.gym_location_not_found': "Location not found.",
   'courses.err.active_leaf_required': "Choose an active category.",
+  'courses.venueCourses': "Venue courses",
 };

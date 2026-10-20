@@ -3470,4 +3470,5 @@ export const frMessages: Messages = {
   'courses.err.gym_not_found': "Lieu introuvable.",
   'courses.err.gym_location_not_found': "Site introuvable.",
   'courses.err.active_leaf_required': "Choisissez une catégorie active.",
+  'courses.venueCourses': "Cours du lieu",
 };

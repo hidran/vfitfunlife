@@ -22,6 +22,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { useI18n } from '@/hooks/useI18n';
+import { useManagedVenues } from '@/hooks/useManagedVenues';
 import { useAuthStore } from '@/stores/authStore';
 import { canAccessProviderArea } from '@/lib/providerStatus';
 import type { MessageKey } from '@/i18n/messages';
@@ -59,18 +60,28 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
   const isInitialized = useAuthStore((s) => s.isInitialized);
   const status = user?.providerStatus ?? 'none';
   const isStaff = user?.role === 'admin' || user?.role === 'superadmin';
-  const canAccess =
+  const { venues, isLoading: venuesLoading } = useManagedVenues();
+  const isProvider =
     isStaff ||
     canAccessProviderArea(status) ||
     (user?.role === 'provider' && status === 'none');
+  // Someone who only owns or staffs a venue manages its courses and nothing else here.
+  const venueOnly = !isProvider && venues.length > 0;
+  const coursesHref = venues.length > 0 ? `/provider/courses?venue=${venues[0].id}` : '/provider/courses';
+  const navItems = venueOnly
+    ? [{ icon: Users, labelKey: 'courses.manage' as MessageKey, href: coursesHref }]
+    : NAV_ITEMS;
+  const outsideCourses = venueOnly && !pathname.startsWith('/provider/courses');
+  // Never redirect while the venue lookup runs: a manager would be bounced before it answers.
+  const canAccess = isProvider || venueOnly;
+  const blocked = isInitialized && !!user && !canAccess && !venuesLoading;
 
   useEffect(() => {
-    if (isInitialized && user && !canAccess) {
-      router.replace('/profile');
-    }
-  }, [isInitialized, user, canAccess, router]);
+    if (blocked) router.replace('/profile');
+    else if (isInitialized && user && outsideCourses) router.replace(coursesHref);
+  }, [blocked, isInitialized, user, outsideCourses, coursesHref, router]);
 
-  if (isInitialized && user && !canAccess) {
+  if (blocked) {
     return null; // redirecting
   }
 
@@ -85,9 +96,10 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
         </div>
 
         <nav className="px-3 pb-6">
-          {NAV_ITEMS.map((item) => {
+          {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const base = item.href.split('?')[0];
+            const isActive = pathname === base || pathname.startsWith(`${base}/`);
 
             return (
               <Link
@@ -138,9 +150,10 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
         {/* Mobile Menu */}
         {mobileMenuOpen && (
           <nav className="px-3 pb-4 border-t border-hairline">
-            {NAV_ITEMS.map((item) => {
+            {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+              const base = item.href.split('?')[0];
+              const isActive = pathname === base || pathname.startsWith(`${base}/`);
 
               return (
                 <Link

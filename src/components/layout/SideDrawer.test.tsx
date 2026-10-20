@@ -19,6 +19,7 @@ vi.mock('next/link', () => ({
   ),
 }));
 vi.mock('@/hooks/useI18n', () => ({ useI18n: () => ({ t: (key: string) => key, locale: 'it' }) }));
+vi.mock('@/hooks/useManagedVenues', () => ({ useManagedVenues: () => ({ venues: [], isLoading: false }) }));
 vi.mock('@/hooks/useVisibleSections', () => ({ useVisibleSections: () => ['fit', 'fun', 'life'] }));
 vi.mock('@/hooks/usePilotFlags', () => ({ useVisibleSections: () => ['fit', 'fun', 'life'] }));
 vi.mock('@/hooks/usePaymentSettings', () => ({ usePaymentSettings: () => ({ stripePaymentsEnabled: false }) }));

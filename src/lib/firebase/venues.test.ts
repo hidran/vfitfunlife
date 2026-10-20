@@ -4,6 +4,7 @@ import {
   fetchVenues,
   fetchVenueServices,
   fetchVenueCourses,
+  fetchManagedVenues,
   fetchVenuesNear,
   typeFilter,
 } from './venues';
@@ -157,5 +158,46 @@ describe('fetchVenueCourses', () => {
     } as never);
     const result = await fetchVenueCourses('carosello');
     expect(result).toEqual([{ id: 'c-1', name: 'HIIT', time: '07:30', coach: 'Marco', spots: 3 }]);
+  });
+});
+
+describe('fetchManagedVenues', () => {
+  const owned = { id: 'biz_u1', data: () => ({ name: 'Own', type: 'studio', isActive: true, ownerId: 'u1' }) };
+
+  it('returns the owned venues plus the venue of an active staff link, once each', async () => {
+    mockGetDocs.mockResolvedValueOnce({ docs: [owned] } as never);
+    mockGetDoc
+      .mockResolvedValueOnce({ exists: () => true, data: () => ({ venueId: 'v2', isActive: true }) } as never)
+      .mockResolvedValueOnce({ exists: () => true, id: 'v2', data: () => ({ name: 'Staffed', type: 'gym', isActive: true }) } as never);
+    const venues = await fetchManagedVenues('u1');
+    expect(venues.map(v => v.id)).toEqual(['biz_u1', 'v2']);
+  });
+
+  it('does not list the same venue twice when the owner is also its staff', async () => {
+    mockGetDocs.mockResolvedValueOnce({ docs: [owned] } as never);
+    mockGetDoc.mockResolvedValueOnce({ exists: () => true, data: () => ({ venueId: 'biz_u1' }) } as never);
+    expect((await fetchManagedVenues('u1')).map(v => v.id)).toEqual(['biz_u1']);
+    expect(mockGetDoc).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores an inactive staff link and deactivated venues', async () => {
+    mockGetDocs.mockResolvedValueOnce({
+      docs: [{ id: 'off', data: () => ({ name: 'Off', type: 'gym', isActive: false }) }, owned],
+    } as never);
+    mockGetDoc.mockResolvedValueOnce({ exists: () => true, data: () => ({ venueId: 'v2', isActive: false }) } as never);
+    expect((await fetchManagedVenues('u1')).map(v => v.id)).toEqual(['biz_u1']);
+  });
+
+  it('returns an empty list for a user with neither', async () => {
+    mockGetDocs.mockResolvedValueOnce({ docs: [] } as never);
+    mockGetDoc.mockResolvedValueOnce({ exists: () => false } as never);
+    expect(await fetchManagedVenues('u1')).toEqual([]);
+  });
+
+  it('queries owned venues by ownerId', async () => {
+    mockGetDocs.mockResolvedValueOnce({ docs: [] } as never);
+    mockGetDoc.mockResolvedValueOnce({ exists: () => false } as never);
+    await fetchManagedVenues('u1');
+    expect(vi.mocked(where)).toHaveBeenCalledWith('ownerId', '==', 'u1');
   });
 });

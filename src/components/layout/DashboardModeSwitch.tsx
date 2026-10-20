@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
 import { useI18n } from '@/hooks/useI18n';
+import { useManagedVenues } from '@/hooks/useManagedVenues';
 import { canAccessProviderArea } from '@/lib/providerStatus';
 import type { MessageKey } from '@/i18n/messages';
 import { cn } from '@/lib/utils';
@@ -25,6 +26,7 @@ export function DashboardModeSwitch({
 }: DashboardModeSwitchProps) {
   const user = useAuthStore((state) => state.user);
   const { t } = useI18n();
+  const { venues } = useManagedVenues();
   const isStaff = user?.role === 'admin' || user?.role === 'superadmin';
   // Legacy provider accounts may have stale or missing application status. Their explicit
   // provider role remains authoritative, just as it is in the provider data layer.
@@ -34,9 +36,12 @@ export function DashboardModeSwitch({
 
   if (!user) return null;
 
-  const canSwitchMode = isStaff || canAccessProvider;
-  const professionalHref = isStaff ? '/admin' : '/provider/dashboard';
-  const professionalLabel = isStaff ? t('dashboard.mode.management') : t(professionalLabelKey);
+  // A customer who owns or staffs a venue reaches only its course management, never the provider dashboard.
+  const managesVenueOnly = !isStaff && !canAccessProvider && venues.length > 0;
+  const canSwitchMode = isStaff || canAccessProvider || managesVenueOnly;
+  const professionalHref = isStaff ? '/admin' : managesVenueOnly ? `/provider/courses?venue=${venues[0].id}` : '/provider/dashboard';
+  const professionalLabel = isStaff ? t('dashboard.mode.management') :
+    managesVenueOnly ? t('courses.venueCourses') : t(professionalLabelKey);
 
   return (
     <nav

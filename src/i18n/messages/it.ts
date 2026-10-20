@@ -3486,6 +3486,7 @@ export const itMessages = {
   'courses.err.gym_not_found': "Struttura non trovata.",
   'courses.err.gym_location_not_found': "Sede non trovata.",
   'courses.err.active_leaf_required': "Scegli una categoria attiva.",
+  'courses.venueCourses': "Corsi della struttura",
 } as const;
 
 export type MessageKey = keyof typeof itMessages;

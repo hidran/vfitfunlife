@@ -3461,4 +3461,5 @@ export const esMessages: Messages = {
   'courses.err.gym_not_found': "Centro no encontrado.",
   'courses.err.gym_location_not_found': "Sede no encontrada.",
   'courses.err.active_leaf_required': "Elige una categoría activa.",
+  'courses.venueCourses': "Cursos del centro",
 };

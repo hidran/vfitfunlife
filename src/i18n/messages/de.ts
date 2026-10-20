@@ -3468,4 +3468,5 @@ export const deMessages: Messages = {
   'courses.err.gym_not_found': "Venue nicht gefunden.",
   'courses.err.gym_location_not_found': "Standort nicht gefunden.",
   'courses.err.active_leaf_required': "Wählen Sie eine aktive Kategorie.",
+  'courses.venueCourses': "Venue-Kurse",
 };
