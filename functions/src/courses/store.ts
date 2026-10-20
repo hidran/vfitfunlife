@@ -53,13 +53,14 @@ export function uidOf(auth: { uid: string } | undefined): string {
   if (!auth) throw new HttpsError("unauthenticated", "Sign in required");
   return auth.uid;
 }
+export function providerUsable(provider: Record<string, unknown> | undefined): boolean {
+  return !!provider && provider.isActive !== false &&
+    (provider.providerProfile as { isVerified?: boolean } | undefined)?.isVerified === true &&
+    !["pending", "rejected", "suspended"].includes(provider.applicationStatus as string);
+}
 export async function eligibleProvider(providerId: string, tx: Transaction): Promise<Record<string, unknown>> {
-  const doc = await tx.get(db.doc(`instructors/${providerId}`));
-  const provider = doc.data();
-  if (!provider || provider.isActive === false || provider.providerProfile?.isVerified !== true ||
-    ["pending", "rejected", "suspended"].includes(provider.applicationStatus)) {
-    throw new HttpsError("failed-precondition", "provider_unavailable");
-  }
+  const provider = (await tx.get(db.doc(`instructors/${providerId}`))).data();
+  if (!provider || !providerUsable(provider)) throw new HttpsError("failed-precondition", "provider_unavailable");
   return provider;
 }
 export function domainError(error: unknown): never {

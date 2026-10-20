@@ -41,6 +41,8 @@ beforeEach(async () => {
   await db.doc("instructors/biz").set({ fullName: "Biz", isActive: true, applicationStatus: "approved",
     providerProfile: { isVerified: true } });
   await db.doc("venues/v").set({ ownerId: "biz", type: "gym", partnerStatus: "active", isActive: true });
+  await db.doc("venues/v/locations/l1").set({ name: "Sede", city: "Torino", timezone: "Europe/Rome", isActive: true });
+  await db.doc("venues/v/locations/l1/rooms/r1").set({ name: "Sala 1", isActive: true });
   await db.doc("venueStaff/s").set({ venueId: "v", isActive: true });
   await db.doc("venueStaff/si").set({ venueId: "v", isActive: false });
   await db.doc("venueStaff/os").set({ venueId: "w", isActive: true });
@@ -204,7 +206,7 @@ describe("participant callables by course authority", () => {
 });
 
 describe("saveCourse provider and venue authority", () => {
-  const venueInput = { ...input, venueId: "v" };
+  const venueInput = { ...input, venueId: "v", locationId: "l1", roomId: "r1" };
   const save = (uid: string, course: Record<string, unknown>, extra: Record<string, unknown> = {}) =>
     api.saveCourse.run(request(uid, { course, ...extra }));
   const providerOf = async (courseId: string) => (await db.doc(`courses/${courseId}`).get()).data()?.providerId;
@@ -265,5 +267,77 @@ describe("saveCourse provider and venue authority", () => {
   it("applies provider eligibility to the resolved provider", async () => {
     await db.doc("instructors/biz").update({ isActive: false });
     await expect(save("s", venueInput)).rejects.toThrow("provider_unavailable");
+  });
+});
+
+describe("saveCourse venue space, instructor and timezone", () => {
+  const venueInput = { ...input, venueId: "v", locationId: "l1", roomId: "r1" };
+  const save = (uid: string, course: Record<string, unknown>) => api.saveCourse.run(request(uid, { course }));
+  const stored = async (courseId: string) => (await db.doc(`courses/${courseId}`).get()).data()!;
+  beforeEach(async () => {
+    await db.doc("venues/v/locations/l2").set({ name: "Altra", city: "Milano", timezone: "Europe/Rome", isActive: true });
+    await db.doc("venues/v/locations/l2/rooms/r2").set({ name: "Sala 2", isActive: true });
+    await db.doc("venues/v/locations/off").set({ name: "Chiusa", city: "Roma", timezone: "Europe/Rome", isActive: false });
+    await db.doc("venues/v/locations/off/rooms/r1").set({ name: "Sala", isActive: true });
+    await db.doc("venues/v/locations/l1/rooms/rOff").set({ name: "Spenta", isActive: false });
+    await db.doc("venues/w/locations/lw").set({ name: "Estranea", city: "Bari", timezone: "Europe/Rome", isActive: true });
+    await db.doc("venues/w/locations/lw/rooms/rw").set({ name: "Sala W", isActive: true });
+    await db.doc("instructors/q").set({ fullName: "Quinn", isActive: true, applicationStatus: "approved",
+      providerProfile: { isVerified: false } });
+    await db.doc("instructors/p2").set({ fullName: "Paola", isActive: true, applicationStatus: "approved",
+      providerProfile: { isVerified: true } });
+    await db.doc("venues/v/instructors/p").set({ isActive: true, name: "Anna" });
+    await db.doc("venues/v/instructors/q").set({ isActive: true, name: "Quinn" });
+    await db.doc("venues/v/instructors/off").set({ isActive: false, name: "Off" });
+    await db.doc("instructors/off").set({ fullName: "Off", isActive: true, applicationStatus: "approved",
+      providerProfile: { isVerified: true } });
+  });
+  it.each([
+    ["an inactive room", { roomId: "rOff" }], ["a room of another location", { roomId: "r2" }],
+    ["a missing room", { roomId: "nope" }], ["a missing room id", { roomId: null }],
+    ["a missing location id", { locationId: null }], ["an inactive location", { locationId: "off" }],
+    ["a location of another venue", { locationId: "lw", roomId: "rw" }],
+  ])("rejects %s with invalid_space", async (_name, patch) => {
+    await expect(save("biz", { ...venueInput, ...patch })).rejects.toMatchObject(
+      { code: "invalid-argument", message: "invalid_space" });
+  });
+  it("stores the location's timezone whatever the client sends, and shows room and place", async () => {
+    const course = await stored((await save("biz", { ...venueInput, timezone: "America/New_York" })).courseId);
+    expect(course).toMatchObject({ timezone: "Europe/Rome", location: "Sala 1 · Sede", city: "Torino",
+      locationId: "l1", roomId: "r1" });
+  });
+  it("generates the session instants in the location's timezone", async () => {
+    await db.doc("venues/v/locations/l1").update({ timezone: "Asia/Tokyo" });
+    const { courseId } = await save("biz", venueInput);
+    expect(await stored(courseId)).toMatchObject({ timezone: "Asia/Tokyo" });
+    const session = (await db.doc(`courses/${courseId}/sessions/${SESSION}`).get()).data()!;
+    expect(session.startsAt.toDate().toISOString()).toBe("2099-10-12T09:00:00.000Z");
+  });
+  it("validates wall times in the location's timezone", async () => {
+    await expect(save("biz", { ...venueInput, startDate: "2099-10-25", endDate: "2099-10-25",
+      recurrence: "none", startTime: "02:30" })).rejects.toThrow("ambiguous_local_time");
+  });
+  it("ignores space ids on an unlinked course", async () => {
+    const course = await stored((await save("p", { ...input, locationId: "l1", roomId: "r1" })).courseId);
+    expect(course).toMatchObject({ locationId: null, roomId: null, location: "Torino", timezone: "Europe/Rome" });
+  });
+  it("accepts an instructor linked to the venue and overwrites the typed name", async () => {
+    const course = await stored((await save("biz", { ...venueInput, instructorId: "p", instructor: "Free text" })).courseId);
+    expect(course).toMatchObject({ instructorId: "p", instructor: "Anna" });
+  });
+  it.each([
+    ["not linked to the venue", "p2"], ["linked but not verified", "q"], ["linked but switched off", "off"],
+    ["unknown", "ghost"],
+  ])("rejects a venue course instructor that is %s", async (_name, instructorId) => {
+    await expect(save("biz", { ...venueInput, instructorId })).rejects.toMatchObject(
+      { code: "invalid-argument", message: "invalid_instructor" });
+  });
+  it("accepts any verified provider as instructor of an unlinked course", async () => {
+    const course = await stored((await save("p", { ...input, instructorId: "p2" })).courseId);
+    expect(course).toMatchObject({ instructorId: "p2", instructor: "Paola" });
+    await expect(save("p", { ...input, instructorId: "q" })).rejects.toThrow("invalid_instructor");
+  });
+  it("keeps the typed instructor name when no instructor is linked", async () => {
+    expect((await stored((await save("biz", venueInput)).courseId)).instructor).toBe("Anna");
   });
 });

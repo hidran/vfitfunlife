@@ -1,10 +1,46 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { Timestamp } from "firebase-admin/firestore";
 import { region } from "../lib/runtimeOptions";
-import { validateCourse, generateSessions } from "./core";
-import { db, safeId, uidOf, eligibleProvider, nowStamp, domainError, Course, Session } from "./store";
+import { validateCourse, generateSessions, type CourseInput } from "./core";
+import { db, safeId, uidOf, eligibleProvider, providerUsable, nowStamp, domainError, Course, Session } from "./store";
 import { canManageCourse, managesVenue } from "./authority";
 import { hostsCourses, type VenueType } from "../types";
+
+type Reader = (path: string) => Promise<FirebaseFirestore.DocumentData | undefined>;
+
+/**
+ * The server owns everything derived from the venue: timezone, place text, city and the instructor's name.
+ * Reads go through `read` so the same checks serve the transaction in saveCourse and the advisory previewCourse.
+ */
+async function withSpaces(submitted: CourseInput, read: Reader): Promise<CourseInput> {
+  const input = { ...submitted, locationId: null as string | null, roomId: null as string | null };
+  if (input.venueId) {
+    const venueId = input.venueId;
+    const { locationId, roomId } = submitted;
+    if (!locationId || !roomId) throw new HttpsError("invalid-argument", "invalid_space");
+    const [location, room] = await Promise.all([
+      read(`venues/${venueId}/locations/${safeId(locationId)}`),
+      read(`venues/${venueId}/locations/${locationId}/rooms/${safeId(roomId)}`),
+    ]);
+    if (location?.isActive !== true || room?.isActive !== true) {
+      throw new HttpsError("invalid-argument", "invalid_space");
+    }
+    Object.assign(input, { locationId, roomId, timezone: location.timezone || "Europe/Rome",
+      location: `${room.name} · ${location.name}`, city: location.city ?? "" });
+  }
+  if (input.instructorId) {
+    const instructorId = safeId(input.instructorId);
+    const [instructor, link] = await Promise.all([
+      read(`instructors/${instructorId}`),
+      input.venueId ? read(`venues/${input.venueId}/instructors/${instructorId}`) : undefined,
+    ]);
+    if (!providerUsable(instructor) || (input.venueId && link?.isActive !== true)) {
+      throw new HttpsError("invalid-argument", "invalid_instructor");
+    }
+    input.instructor = instructor!.fullName || instructor!.name || link?.name || input.instructor;
+  }
+  return input;
+}
 
 export const saveCourse = onCall({ region }, async (req) => {
   const uid = uidOf(req.auth);
@@ -12,8 +48,7 @@ export const saveCourse = onCall({ region }, async (req) => {
   const id = req.data.courseId ? safeId(req.data.courseId) : db.collection("courses").doc().id;
   const ref = db.doc(`courses/${id}`);
   try {
-    const input = validateCourse(req.data.course);
-    const generated = generateSessions(input);
+    const submitted = validateCourse(req.data.course);
     await db.runTransaction(async (tx) => {
       const old = (await tx.get(ref)).data() as Course | undefined;
       const caller = old ? undefined : (await tx.get(db.doc(`users/${uid}`))).data();
@@ -23,29 +58,31 @@ export const saveCourse = onCall({ region }, async (req) => {
         throw new HttpsError("permission-denied", "account_inactive");
       }
       let venue: FirebaseFirestore.DocumentData | undefined;
-      if (input.venueId) {
-        safeId(input.venueId);
-        venue = (await tx.get(db.doc(`venues/${input.venueId}`))).data();
+      if (submitted.venueId) {
+        safeId(submitted.venueId);
+        venue = (await tx.get(db.doc(`venues/${submitted.venueId}`))).data();
         // An existing link is not re-validated, so a venue whose type later changes does not trap its courses.
-        if (!old || (old.venueId ?? null) !== input.venueId) {
-          if (!venue || !hostsCourses(venue.type as VenueType) || !(await managesVenue(uid, input.venueId, tx))) {
+        if (!old || (old.venueId ?? null) !== submitted.venueId) {
+          if (!venue || !hostsCourses(venue.type as VenueType) || !(await managesVenue(uid, submitted.venueId, tx))) {
             throw new HttpsError("permission-denied", "venue_authorization_required");
           }
         }
       }
       // On edit the stored provider stays and the client value is ignored. Staff of a venue create on the
       // business's behalf: the owner stays the provider and payee.
-      const providerId = old ? old.providerId : input.venueId ?
+      const providerId = old ? old.providerId : submitted.venueId ?
         (isAdmin && requestedProvider ? requestedProvider : venue?.ownerId) : requestedProvider ?? uid;
       if (!providerId) throw new HttpsError("permission-denied", "venue_owner_required");
-      if (!old && !input.venueId) await canManageCourse(uid, { providerId, venueId: null }, tx);
+      if (!old && !submitted.venueId) await canManageCourse(uid, { providerId, venueId: null }, tx);
       const provider = await eligibleProvider(providerId, tx);
-      const category = (await tx.get(db.doc(`serviceCategories/${safeId(input.categoryId)}`))).data();
+      const category = (await tx.get(db.doc(`serviceCategories/${safeId(submitted.categoryId)}`))).data();
       if (!category?.isActive || !category.parentId) throw new HttpsError("invalid-argument", "active_leaf_required");
-      if (input.venueId && input.state === "published" &&
+      if (submitted.venueId && submitted.state === "published" &&
         (venue?.isActive === false || venue?.partnerStatus !== "active")) {
         throw new HttpsError("failed-precondition", "venue_not_active");
       }
+      const input = await withSpaces(submitted, async (path) => (await tx.get(db.doc(path))).data());
+      const generated = generateSessions(input);
       if (input.state === "published" && generated[0].startsAt <= new Date() && (!old || old.state !== "published")) {
         throw new HttpsError("invalid-argument", "start_must_be_future");
       }
