@@ -3520,6 +3520,19 @@ export const itMessages = {
   'courses.removeParticipant': "Rimuovi partecipante",
   'courses.removeLateWarning': "Il termine di cancellazione del cliente è passato: la rimozione verrà registrata come cancellazione tardiva (nessuna penale).",
   'courses.confirmRemove': "Conferma rimozione",
+  'timetable.title': "Orario settimanale",
+  'timetable.week': "Settimana dal {{date}}",
+  'timetable.previous': "Settimana precedente",
+  'timetable.next': "Settimana successiva",
+  'timetable.allRooms': "Tutte le sale",
+  'timetable.allLocations': "Tutte le sedi",
+  'timetable.allInstructors': "Tutti gli istruttori",
+  'timetable.seatsLeft': "Posti liberi: {{count}}",
+  'timetable.full': "Completo",
+  'timetable.waitlistOpen': "Lista d'attesa aperta",
+  'timetable.empty': "Nessuna lezione in programma.",
+  'timetable.manage': "Gestisci i corsi",
+  'timetable.suspended': "L'orario non è disponibile: la sede non è al momento un partner attivo.",
 } as const;
 
 export type MessageKey = keyof typeof itMessages;

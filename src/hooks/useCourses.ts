@@ -2,7 +2,7 @@ import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-quer
 import {
   fetchCourses, fetchCourseSessions, fetchCourseEnrollments, fetchCourseParticipants, fetchCourseRefunds, quoteCourse,
   fetchVenueCourses, fetchVenueEnrollments, fetchVenueRefunds, fetchWaitlist, fetchMyWaitlist, fetchVenueWeek,
-  fetchVenueNextLessons, fetchCustomerCounters,
+  fetchVenueNextLessons, fetchCustomerCounters, fetchPublishedVenueCourses,
 } from '@/lib/firebase/courses';
 /** `providerId` undefined lists the public catalogue; `enabled: false` switches the query off (venue-scoped screens). */
 export function useCourses(providerId?: string, enabled = true) {
@@ -28,6 +28,9 @@ export const useCourseQuote = (courseId?: string, sessionIds?: string[], include
 /** Not `useVenueCourses` (src/hooks/useVenues.ts is the legacy gym classes list, removed with the gym flow). */
 export const useManagedVenueCourses = (venueId?: string) => useQuery({ queryKey: ['courses', 'venue', venueId],
   queryFn: () => fetchVenueCourses(venueId!), enabled: !!venueId, refetchInterval: 30000 });
+/** What a customer sees of a venue's courses (name, price, waitlist flag): published and eligible only. */
+export const usePublishedVenueCourses = (venueId?: string) => useQuery({ queryKey: ['courses', 'venuePublished', venueId],
+  queryFn: () => fetchPublishedVenueCourses(venueId!), enabled: !!venueId, refetchInterval: 60000 });
 export const useVenueEnrollments = (venueId?: string) => useQuery({ queryKey: ['courses', 'venueEnrollments', venueId],
   queryFn: () => fetchVenueEnrollments(venueId!), enabled: !!venueId, refetchInterval: 15000 });
 export const useVenueRefunds = (venueId?: string) => useQuery({ queryKey: ['courses', 'venueRefunds', venueId],

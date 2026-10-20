@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
-import { GymTimetableClient } from '@/components/gym/GymTimetableClient';
+import { VenueTimetable } from '@/components/courses/VenueTimetable';
 
 export default function GymTimetablePage() {
-  return <Suspense><GymTimetableClient /></Suspense>;
+  return <Suspense><VenueTimetable /></Suspense>;
 }
