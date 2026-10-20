@@ -3533,6 +3533,17 @@ export const itMessages = {
   'timetable.empty': "Nessuna lezione in programma.",
   'timetable.manage': "Gestisci i corsi",
   'timetable.suspended': "L'orario non è disponibile: la sede non è al momento un partner attivo.",
+  'courses.regularPrice': "Prezzo di listino",
+  'courses.partnerBenefit': "Vantaggio sede partner ({{percent}}%)",
+  'courses.instructorBenefit': "Vantaggio istruttore partner ({{percent}}%)",
+  'courses.discount': "Risparmio totale",
+  'courses.finalPrice': "Il tuo prezzo",
+  'courses.priceChanged': "Il prezzo è cambiato. Controlla il nuovo totale e conferma di nuovo.",
+  'courses.availabilityChanged': "La lezione è stata modificata (ad esempio posti o orario). Controlla i dettagli e conferma di nuovo.",
+  'courses.joinWaitlist': "Iscriviti alla lista d'attesa",
+  'courses.onWaitlist': "In lista d'attesa · posizione {{position}}",
+  'courses.waitlistFull': "Lista d'attesa piena",
+  'courses.leaveWaitlist': "Esci dalla lista d'attesa",
 } as const;
 
 export type MessageKey = keyof typeof itMessages;

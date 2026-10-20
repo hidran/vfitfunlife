@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useI18n } from '@/hooks/useI18n';
-import { courseMoney } from './CourseBooking';
+import { coursePrice } from '@/lib/courseFormat';
 import type { Course } from '@/types/course';
 import type { SearchParams } from '@/types/booking';
 
@@ -31,8 +31,8 @@ export function CourseSearchResults({ courses }: { courses: Course[] }) {
       <p className="text-sm text-content-muted">{course.providerName} · {course.location}</p>
       <p className="text-sm">{t('courses.lesson')} · {t('courses.spots')}: {Math.max(0, course.nextAvailableSeats ?? course.capacity)} / {course.capacity}</p>
       <div className="flex flex-wrap gap-3 text-sm">
-        {course.lessonPriceCents !== null && <span>{t('courses.lesson')}: {courseMoney(course.lessonPriceCents, locale)}</span>}
-        {course.seriesPriceCents !== null && <span>{t('courses.series')}: {courseMoney(course.seriesPriceCents, locale)}</span>}
+        {course.lessonPriceCents !== null && <span>{t('courses.lesson')}: {coursePrice(course.lessonPriceCents, locale, t('courses.free'))}</span>}
+        {course.seriesPriceCents !== null && <span>{t('courses.series')}: {coursePrice(course.seriesPriceCents, locale, t('courses.free'))}</span>}
       </div>
       <Link href={`/courses?id=${encodeURIComponent(course.id)}`}
         className="inline-flex rounded-xl border border-hairline px-4 py-2 font-semibold text-section-primary">{t('courses.sessions')}</Link>
