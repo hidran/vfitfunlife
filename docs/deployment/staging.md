@@ -575,3 +575,21 @@ Production has no gym functions, no gym indexes and no gym collections (the flow
 2. **Delete `updateSocialLinks`** after the new hosting is live and users have had time to reload: `firebase functions:delete updateSocialLinks -P production --region europe-west1 --force` (a `--force` full functions deploy also deletes it, see section 2).
 3. **Backfills.** `node scripts/backfill-session-listed.mjs --project vfit-funlife --names` (dry run), and with `--apply` only if it reports work (lessons get `listed`, `courseName` and `timezone`).
 4. **No gym function or index deletions on production.** Before deploying run `firebase functions:list -P production | grep -i gym` (expect empty before the release; after it only `saveGymSpace` and `configureGymInstructor` appear) and `firebase firestore:indexes -P production` (no `gymSessions` / `gymBookings` entries); if anything else shows up, stop and compare with the plan's L8 step 1.
+
+### Professional categories, premises types and routed course pages — staging + production, 2026-10-20 (main@af68ca0)
+
+Released `677e1e5` (course and roster pages, month paging) and `af68ca0` (every platform venue type as premises) to **both** projects, production included because it had not yet received the unified-courses release either.
+
+| Step | Staging (`vfit-app-staging`) | Production (`vfit-funlife`) |
+|---|---|---|
+| Gates | root `tsc --noEmit -p .`; functions `tsc --noEmit`, lint, build — all exit 0 | same, exit 0 |
+| Indexes | unchanged, not deployed | `firebase deploy -P production --only firestore:indexes` (additive, no `--force`); 0 left CREATING |
+| Rules | unchanged | `--only firestore:rules` released |
+| Functions | `--force --only functions` (whole codebase), postdeploy `fix-staging-blocking-uris.mjs` OK | `--only functions` refused until `--force` (two functions newly retried); `--force`: 148 updated/created, `updateSocialLinks` deleted, no other deletion. `quoteCourse`, `enrollInCourse`, `saveCourse`, `saveGymSpace` and `configureGymInstructor` now listed |
+| Data | — | `migrate-venue-address.mjs --project vfit-funlife --apply`: 8 of 8 venues updated, second dry run 0. `backfill-session-listed.mjs --project vfit-funlife --names`: 0 venue-linked courses, nothing to write |
+| Hosting | `build:staging` + `--only hosting` | `build:prod` + `--only hosting` |
+| Smoke | `scripts/smoke-route-pages-staging.mjs`: 7 PASS, 1 SKIP (no multi-month booking). Categories/premises: 6 PASS — every requested trade at signup, premises list with Spa/Salone di bellezza/Spazio eventi, Fotografo, Wedding Planner and Estetista from search → `/booking?category=…`, admin catalog with Add category. Evidence: `output/playwright/route-pages-staging-smoke.json`, `professional-categories-staging-smoke.json` | routes `/`, `/auth/login`, `/auth/register`, `/terms`, `/courses`, `/courses/detail`, `/booking`, `/fit/gyms/timetable`, `/venue` answer 2xx, missing asset 404; signup offers the same 16 groups, every requested trade and the 9 premises types. 83 active categories already in the prod catalog. Evidence: `output/playwright/prod-release-smoke.json` |
+
+**Notes.** The first staging course smoke run failed on the provider roster link 30 s after the deploy and passed unchanged on the next run — a cold start, not a code change. `--force` deleted `updateSocialLinks` a few minutes before hosting, not after: the client's `updateSocialLinks` is a direct Firestore write (`src/lib/firebase/auth.ts`), not a callable, so nothing called the deleted function. `updateSocialLinks` remains as a string in two bundle chunks only because of that local function name.
+
+**Not covered.** No authenticated pass on production (no prod test account exists, and the demo accounts are staging-only), so the signed-in course, roster and search screens were exercised on staging only. Chromium at 390×844, Italian locale.
