@@ -26,7 +26,7 @@ describe('general activity course results', () => {
   it('opens the selected course booking page rather than an individual service booking', () => {
     render(<CourseSearchResults courses={[course]} />);
     expect(screen.getByRole('heading', { name: course.name })).toBeVisible();
-    expect(screen.getByRole('link', { name: 'courses.sessions' })).toHaveAttribute('href', '/courses?id=karate');
+    expect(screen.getByRole('link', { name: 'courses.sessions' })).toHaveAttribute('href', '/courses/detail?id=karate');
     expect(screen.getByText(/€25.00/)).toBeVisible();
   });
 });

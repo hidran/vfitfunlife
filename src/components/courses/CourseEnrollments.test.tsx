@@ -116,3 +116,38 @@ describe('CourseEnrollments', () => {
     expect(mocks.coursesAsked.at(-1)).toEqual([]);
   });
 });
+
+describe('long series', () => {
+  const lesson = (id: string, iso: string) => ({ id, startsAt: stamp(Date.parse(iso)), state: 'scheduled' });
+  const series = (lessons: { id: string }[]) => enrollment({
+    sessionIds: lessons.map(l => l.id), activeSessionIds: lessons.map(l => l.id) });
+
+  it('opens on the next lesson\'s month and filters the series by month', () => {
+    const lessons = [lesson('f1', '2099-02-03T18:00Z'), lesson('f2', '2099-02-10T18:00Z'),
+      lesson('m1', '2099-03-03T18:00Z'), lesson('m2', '2099-03-10T18:00Z')];
+    mocks.sessions = lessons; mocks.enrollments = [series(lessons)];
+    render(<CourseEnrollments uid="me" />);
+    const month = screen.getByLabelText('courses.month') as HTMLSelectElement;
+    expect(month.value).toBe('2099-02');
+    expect(screen.getByText(/Feb 3, 2099/)).toBeInTheDocument();
+    expect(screen.queryByText(/Mar 3, 2099/)).toBeNull();
+    const march = [...month.options].find(option => /March 2099/.test(option.textContent ?? ''))!;
+    fireEvent.change(month, { target: { value: march.value } });
+    expect(screen.getByText(/Mar 3, 2099/)).toBeInTheDocument();
+    expect(screen.queryByText(/Feb 3, 2099/)).toBeNull();
+    fireEvent.change(month, { target: { value: '' } });
+    expect(screen.getAllByRole('button', { name: 'courses.cancelBooking' })).toHaveLength(4);
+  });
+
+  it('pages through the lessons of a month instead of one endless card', () => {
+    const lessons = Array.from({ length: 12 }, (_, index) =>
+      lesson(`d${index}`, `2099-02-${String(index + 1).padStart(2, '0')}T18:00Z`));
+    mocks.sessions = lessons; mocks.enrollments = [series(lessons)];
+    render(<CourseEnrollments uid="me" />);
+    expect(screen.getAllByRole('button', { name: 'courses.cancelBooking' })).toHaveLength(10);
+    expect(screen.getByTestId('lessons-shown')).toHaveTextContent('courses.lessonsShown:{"from":1,"to":10,"total":12}');
+    fireEvent.click(screen.getByRole('button', { name: 'courses.nextPage' }));
+    expect(screen.getAllByRole('button', { name: 'courses.cancelBooking' })).toHaveLength(2);
+    expect(screen.getByTestId('lessons-shown')).toHaveTextContent('courses.lessonsShown:{"from":11,"to":12,"total":12}');
+  });
+});

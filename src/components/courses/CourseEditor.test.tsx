@@ -100,6 +100,42 @@ describe('course editor', () => {
     expect(providerId).toBeUndefined();
   });
 
+  it.each([false, true])('saves a published course without requiring a current preview (previewed: %s)', async (previewed) => {
+    const onSaved = vi.fn();
+    mocks.preview.mockResolvedValue({ sessions: [{ id: 's1', startsAt: '2030-01-01T10:00:00Z', endsAt: '2030-01-01T11:00:00Z' }], conflicts: [] });
+    render(<CourseEditor onSaved={onSaved} onClose={vi.fn()} storageKey="published-course-draft" />, { wrapper });
+    for (const [field, value] of [['name', 'Karate'], ['instructor', 'Anna'], ['location', 'Torino']])
+      fireEvent.change(screen.getByLabelText(label(`courses.${field}` as keyof typeof itMessages)), { target: { value } });
+    await pickCategory();
+    fireEvent.change(screen.getByLabelText(label('courses.state')), { target: { value: 'published' } });
+    if (previewed) {
+      fireEvent.click(screen.getByRole('button', { name: label('courses.preview') }));
+      await screen.findByRole('listitem');
+      await waitFor(() => expect(screen.getByRole('button', { name: label('courses.save') })).toBeEnabled());
+      fireEvent.change(screen.getByLabelText(label('courses.name')), { target: { value: 'Karate beginners' } });
+      expect(screen.queryByRole('listitem')).not.toBeInTheDocument();
+    }
+    const save = screen.getByRole('button', { name: label('courses.save') });
+    expect(save).toBeEnabled();
+    fireEvent.click(save);
+    await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
+    expect(mocks.save).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      state: 'published', name: previewed ? 'Karate beginners' : 'Karate',
+    }), undefined, undefined);
+    expect(mocks.preview).toHaveBeenCalledTimes(previewed ? 1 : 0);
+    expect(sessionStorage.getItem('published-course-draft')).toBeNull();
+  });
+
+  it('still validates required fields when saving a published course without preview', () => {
+    render(<CourseEditor onSaved={vi.fn()} onClose={vi.fn()} />, { wrapper });
+    fireEvent.change(screen.getByLabelText(label('courses.state')), { target: { value: 'published' } });
+    const save = screen.getByRole('button', { name: label('courses.save') });
+    expect(save).toBeEnabled();
+    fireEvent.click(save);
+    expect(mocks.save).not.toHaveBeenCalled();
+    expect(mocks.preview).not.toHaveBeenCalled();
+  });
+
   it('accepts a price of 0 and says it is free', async () => {
     render(<CourseEditor onSaved={vi.fn()} onClose={vi.fn()} />, { wrapper });
     const price = screen.getByLabelText(label('courses.lessonPrice'), { exact: false });
@@ -216,10 +252,11 @@ describe('venue cascade', () => {
     expect(mocks.preview).toHaveBeenCalledWith(expect.objectContaining({ venueId: 'v1', roomId: 'r1' }), undefined);
   });
 
-  it('maps a save error to its translated message', async () => {
+  it('maps a published save conflict to its translated message without preview', async () => {
     venueFixture();
     mocks.save.mockRejectedValue({ message: 'room_overlap', details: { courseName: 'Yoga Mattina', startsAt: '2030-01-14T17:30:00.000Z', fields: ['startDate'] } });
     render(<CourseEditor initialVenueId="v1" onSaved={vi.fn()} onClose={vi.fn()} />, { wrapper });
+    fireEvent.change(screen.getByLabelText(label('courses.state')), { target: { value: 'published' } });
     await waitFor(() => expect(screen.getByLabelText(label('courses.locationSelect'))).toHaveValue('l1'));
     fireEvent.change(await screen.findByLabelText(label('courses.room')), { target: { value: 'r1' } });
     fireEvent.change(screen.getByLabelText(label('courses.name')), { target: { value: 'Karate' } });

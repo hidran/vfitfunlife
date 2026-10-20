@@ -1,5 +1,5 @@
 /**
- * Where the login page sends someone back to after signing in (`/auth/login?next=/courses?id=…&lesson=…`).
+ * Where the login page sends someone back to after signing in (`/auth/login?next=/courses/detail?id=…&lesson=…`).
  * Only same-origin paths are accepted: anything else (another host, `//host`, a backslash trick, the auth pages
  * themselves) is ignored, so the parameter cannot be used as an open redirect.
  */

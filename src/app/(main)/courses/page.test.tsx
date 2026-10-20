@@ -1,54 +1,59 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ search: 'id=c1&lesson=s1' }));
-vi.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams(mocks.search) }));
+const ts = (ms: number) => ({ toMillis: () => ms, toDate: () => new Date(ms) });
+const mocks = vi.hoisted(() => ({ search: '' as string, replace: vi.fn(), push: vi.fn(), courses: [] as unknown[] }));
+
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(mocks.search),
+  useRouter: () => ({ replace: mocks.replace, push: mocks.push }),
+}));
 vi.mock('@/hooks/useI18n', () => ({ useI18n: () => ({ t: (key: string) => key, locale: 'en' }) }));
 vi.mock('@/stores/authStore', () => ({ useAuthStore: (select: (s: unknown) => unknown) => select({ firebaseUser: { uid: 'u1' } }) }));
-vi.mock('@/hooks/usePaymentSettings', () => ({ usePaymentSettings: () => ({ courseCheckoutEnabled: false, isLoading: false }) }));
 vi.mock('@/hooks/useServiceCategories', () => ({ useServiceCategoryLeaves: () => [] }));
 vi.mock('@/hooks/useCourses', () => ({
-  useCourses: () => ({ data: { pages: [{ courses: [] }] }, isLoading: false, isError: false, hasNextPage: false }),
-  useCourseSessions: () => ({ data: [], isLoading: false, isError: false }),
+  useCourses: () => ({ data: { pages: [{ courses: mocks.courses }] }, isLoading: false, isError: false, hasNextPage: false }),
 }));
-vi.mock('@/lib/firebase/courses', () => ({ fetchCourse: async () => ({ id: 'c1', name: 'Karate', description: '', equipment: '' }) }));
-vi.mock('@/components/courses/CourseEnrollments', () => ({ CourseEnrollments: () => null }));
-vi.mock('@/components/courses/CourseBooking', () => ({
-  CourseBooking: ({ initialSessionId, onBusyChange }: { initialSessionId?: string; onBusyChange?: (busy: boolean) => void }) => <div>
-    <p data-testid="lesson">{initialSessionId}</p>
-    <button onClick={() => onBusyChange?.(true)}>start</button><button onClick={() => onBusyChange?.(false)}>stop</button></div>,
-}));
+vi.mock('@/components/courses/CourseEnrollments', () => ({ CourseEnrollments: () => <div data-testid="enrollments" /> }));
 
 import CoursesPage from './page';
 
-const renderPage = () => render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><CoursesPage /></QueryClientProvider>);
+const course = (over: Record<string, unknown> = {}) => ({ id: 'c1', name: 'Karate', providerName: 'Anna', level: 'beginner',
+  location: 'Dojo', city: 'Torino', categoryIds: ['martial-arts'], lessonPriceCents: 2500, seriesPriceCents: null,
+  capacity: 8, nextAvailableSeats: 3, state: 'published', providerEligible: true, nextStartsAt: ts(Date.now() + 86400000),
+  timezone: 'Europe/Rome', ...over });
 
-describe('course sheet', () => {
-  beforeEach(() => { mocks.search = 'id=c1&lesson=s1'; });
+const renderPage = () => render(
+  <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><CoursesPage /></QueryClientProvider>);
 
-  it('opens the linked course and hands the linked lesson to the booking', async () => {
+beforeEach(() => {
+  mocks.replace.mockReset(); mocks.push.mockReset();
+  mocks.search = ''; mocks.courses = [course()];
+});
+
+describe('course list', () => {
+  it('links each course to its routed detail page instead of opening a sheet', async () => {
     renderPage();
-    expect(await screen.findByRole('dialog', { name: 'Karate' })).toBeInTheDocument();
-    expect(screen.getByTestId('lesson')).toHaveTextContent('s1');
+    expect(await screen.findByRole('link', { name: 'courses.sessions' })).toHaveAttribute('href', '/courses/detail?id=c1');
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('sits on its own surface, so the text never rests on the dimmed page (light theme)', async () => {
+  it('sends an older /courses?id= link to the detail page, keeping the lesson', () => {
+    mocks.search = 'id=c1&lesson=s1';
     renderPage();
-    const dialog = await screen.findByRole('dialog', { name: 'Karate' });
-    expect(dialog).toHaveClass('bg-surface', 'border', 'border-hairline', 'rounded-2xl');
+    expect(mocks.replace).toHaveBeenCalledWith('/courses/detail?id=c1&lesson=s1');
   });
 
-  it('cannot be closed while a booking request is in flight, and can afterwards', async () => {
+  it('does not redirect without a linked course', () => {
     renderPage();
-    await screen.findByRole('dialog');
-    fireEvent.click(screen.getByText('start'));
-    expect(screen.getByRole('button', { name: 'common.close' })).toBeDisabled();
-    fireEvent.keyDown(document, { key: 'Escape' });
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-    fireEvent.click(screen.getByText('stop'));
-    expect(screen.getByRole('button', { name: 'common.close' })).toBeEnabled();
-    fireEvent.click(screen.getByRole('button', { name: 'common.close' }));
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(mocks.replace).not.toHaveBeenCalled();
+  });
+
+  it('names a completed booking on the bookings tab', async () => {
+    mocks.search = 'tab=bookings&booked=1';
+    renderPage();
+    expect(await screen.findByRole('status')).toHaveTextContent('courses.booked');
+    expect(screen.getByTestId('enrollments')).toBeInTheDocument();
   });
 });

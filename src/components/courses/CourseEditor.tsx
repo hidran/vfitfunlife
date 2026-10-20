@@ -204,6 +204,6 @@ export function CourseEditor({ course, onSaved, onClose, storageKey, initialVenu
       {conflicts.filter(c => c.sessionId === s.id).map(c => <p key={`${c.kind}-${c.startsAt}`} role="alert" className="text-error">
         {t(c.kind === 'room' ? 'courses.room' : 'courses.instructor')}: {t('courses.conflict', { name: c.courseName, time: when(c.startsAt, c.endsAt) })}</p>)}</li>)}</ol>}
     {error && <p className="text-error" role="alert">{error}</p>}
-    <div><Button type="submit" disabled={busy || (draft.state === 'published' && previewSignature !== signature)}>{busy ? t('common.loading') : t('courses.save')}</Button></div>
+    <div><Button type="submit" disabled={busy}>{busy ? t('common.loading') : t('courses.save')}</Button></div>
   </form>;
 }

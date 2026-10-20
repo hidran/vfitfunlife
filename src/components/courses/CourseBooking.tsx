@@ -2,12 +2,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { useI18n } from '@/hooks/useI18n';
 import { useCourseEnrollments, useCourseQuote, useMyWaitlist, useRefreshCourses } from '@/hooks/useCourses';
+import { useLessonWindow } from '@/hooks/useLessonWindow';
 import { courseCall, joinCourseWaitlist, leaveCourseWaitlist, quoteCourse } from '@/lib/firebase/courses';
 import { courseErrorMessage } from '@/lib/courseErrors';
-import { courseDate, courseMoney } from '@/lib/courseFormat';
+import { courseDate, courseHref, courseMoney } from '@/lib/courseFormat';
 import { loginHref } from '@/lib/auth/returnTo';
 import { Button } from '@/components/ui/button';
 import { CourseQuoteReview, type ReviewQuote } from './CourseQuoteReview';
+import { LessonMonthNav } from './LessonMonthNav';
 import type { Course, CourseQuote, CourseSession } from '@/types/course';
 
 /** Server cap of a waitlist (functions/src/courses/waitlist.ts WAITLIST_MAX). */
@@ -50,6 +52,9 @@ export function CourseBooking({ course, sessions, checkoutEnabled, uid, initialS
   const mine = useMyWaitlist(uid);
   const enrollments = useCourseEnrollments(uid);
   const refresh = useRefreshCourses();
+  // A course can run for a year: its lessons are read one month and one page at a time, opening on the linked or next
+  // lesson so the list does not start with lessons that already happened.
+  const lessonList = useLessonWindow(sessions, course.timezone, now, initialSessionId);
   const lessonQuotes = new Map((quote.data?.sessions ?? []).map(s => [s.sessionId, s]));
   const seriesQuote = quote.data?.series ?? null;
 
@@ -74,8 +79,7 @@ export function CourseBooking({ course, sessions, checkoutEnabled, uid, initialS
 
   /** A visitor signs in first and comes back to this lesson (or the course) through `?next=`. */
   function goToLogin(sessionId?: string) {
-    const lesson = sessionId ? `&lesson=${encodeURIComponent(sessionId)}` : '';
-    window.location.assign(loginHref(`/courses?id=${encodeURIComponent(course.id)}${lesson}`));
+    window.location.assign(loginHref(courseHref(course.id, sessionId)));
   }
 
   /** `full`: the lesson has no seat left, so the review opens with the waitlist offer instead of a confirm. */
@@ -190,7 +194,9 @@ export function CourseBooking({ course, sessions, checkoutEnabled, uid, initialS
       </Button><p className="text-sm text-content-muted">{t('courses.seriesHint')}</p>
     </div>}
     <h3 className="font-semibold">{t('courses.sessions')}</h3>
-    <ul className="divide-y divide-hairline">{sessions.map(s => {
+    <LessonMonthNav months={lessonList.months} month={lessonList.month} onMonth={lessonList.setMonth}
+      page={lessonList.page} onPage={lessonList.setPage} canFilterByMonth={lessonList.canFilterByMonth} />
+    <ul className="divide-y divide-hairline">{lessonList.page.items.map(s => {
       const entry = entryOf(s.id);
       return <li key={s.id} className="py-4 flex flex-wrap items-center justify-between gap-3">
         <div><p className="font-medium">{courseDate(s, locale, course.timezone)}</p>

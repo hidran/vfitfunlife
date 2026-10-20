@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { chatHref, readIdParam } from '@/lib/routes';
 import { useI18n } from '@/hooks/useI18n';
@@ -32,6 +33,7 @@ import { BusinessBadge, BusinessWebsiteLink } from '@/components/provider/Busine
 import { Timestamp } from 'firebase/firestore';
 import { ProviderNotFoundError, useProviderPublicProfile } from '@/hooks/useProviderPublicProfile';
 import { socialLinkHref } from '@/lib/socialLinks';
+import { courseHref } from '@/lib/courseFormat';
 
 const SOCIAL_PILL_CLASS =
   'flex items-center gap-2 px-4 py-2 rounded-lg bg-background-secondary/10 text-text-secondary';
@@ -306,7 +308,7 @@ export default function ProviderProfileClient() {
                 <div className="flex items-start justify-between">
                   <div>
                     <h3 className="font-medium text-text-inverse">{service.serviceName}</h3>
-                    {service.courseId && <a href={`/courses?id=${encodeURIComponent(service.courseId)}`} className="block mt-2 underline text-section-primary">{t('courses.sessions')}</a>}
+                    {service.courseId && <Link href={courseHref(service.courseId)} className="block mt-2 underline text-section-primary">{t('courses.sessions')}</Link>}
                     {service.description && (
                       <p className="text-sm text-text-secondary mt-1">{service.description}</p>
                     )}

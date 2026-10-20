@@ -120,7 +120,7 @@ describe('VenueDetailClient next lessons', () => {
     expect(within(section).getByText('Pilates')).toBeInTheDocument();
     expect(within(section).getByText(/Bruno/)).toBeInTheDocument();
     expect(within(section).getAllByText(/19:00/)).toHaveLength(2);
-    expect(within(section).getAllByRole('link')[0]).toHaveAttribute('href', '/courses?id=c1&lesson=2099-01-05');
+    expect(within(section).getAllByRole('link')[0]).toHaveAttribute('href', '/courses/detail?id=c1&lesson=2099-01-05');
     expect(within(section).getByRole('link', { name: 'Orario completo' })).toHaveAttribute('href', '/fit/gyms/timetable?id=v1');
   });
 

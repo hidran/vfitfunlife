@@ -91,6 +91,6 @@ it('shows matching group courses in general search even without provider results
   render(<BookingPage />);
   expect(screen.getByRole('heading', { name: 'Demo Karate' })).toBeVisible();
   expect(screen.queryByText('booking.noResults.title')).not.toBeInTheDocument();
-  expect(screen.getByRole('link', { name: 'courses.sessions' })).toHaveAttribute('href', '/courses?id=karate');
+  expect(screen.getByRole('link', { name: 'courses.sessions' })).toHaveAttribute('href', '/courses/detail?id=karate');
   mocks.courses = [];
 });

@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Clock, DoorOpen, UserRound } from 'lucide-react';
 import { useI18n } from '@/hooks/useI18n';
 import { sessionTime } from '@/lib/gymTime';
-import { coursePrice } from '@/lib/courseFormat';
+import { courseHref, coursePrice } from '@/lib/courseFormat';
 import { instructorLabel, roomTone, seatState, type TimetableLesson } from '@/lib/venueTimetable';
 import { cn } from '@/lib/utils';
 import type { SessionQuote } from '@/types/course';
@@ -54,6 +54,6 @@ export function TimetableCard({ lesson, roomName, quote, now }: {
     </p>}
   </>;
   return past ? <div className={className} data-testid="timetable-card" data-past="true">{body}</div> :
-    <Link href={`/courses?id=${encodeURIComponent(course.id)}&lesson=${encodeURIComponent(session.id)}`}
+    <Link href={courseHref(course.id, session.id)}
       data-testid="timetable-card" className={className}>{body}</Link>;
 }

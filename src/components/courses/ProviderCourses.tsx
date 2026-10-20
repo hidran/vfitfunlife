@@ -1,58 +1,25 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
 import {
-  useCourses, useManagedVenueCourses, useCourseSessions, useCourseEnrollments, useVenueEnrollments, useCourseRoster, useCourseParticipants,
-  useCourseRefunds, useVenueRefunds, useCustomerCounters, useRefreshCourses,
+  useCourses, useManagedVenueCourses, useCourseEnrollments, useVenueEnrollments,
+  useCourseRefunds, useVenueRefunds, useRefreshCourses,
 } from '@/hooks/useCourses';
 import { useManagedVenues } from '@/hooks/useManagedVenues';
 import { courseCall } from '@/lib/firebase/courses';
-import { fetchVenueRooms } from '@/lib/firebase/venueSpaces';
 import { courseErrorMessage } from '@/lib/courseErrors';
 import { isProviderAreaUser } from '@/lib/providerStatus';
 import { useAuthStore } from '@/stores/authStore';
 import { useI18n } from '@/hooks/useI18n';
 import { Button } from '@/components/ui/button';
-import { Modal } from '@/components/ui/Modal';
 import { VenueSpacesPanel } from '@/components/venues/VenueSpacesPanel';
-import { AddCourseParticipant } from '@/components/courses/AddCourseParticipant';
-import { ParticipantInvitation } from '@/components/courses/ParticipantInvitation';
-import { LessonWaitlist } from '@/components/courses/LessonWaitlist';
-import { SubstituteInstructor } from '@/components/courses/SubstituteInstructor';
-import { LessonCapacity } from '@/components/courses/LessonCapacity';
-import { courseDate, courseMoney } from '@/lib/courseFormat';
+import { courseMoney } from '@/lib/courseFormat';
 
-const HOUR_MS = 3600000;
-
-/**
- * Staff removal of one participant from one lesson (seat freed, refund and waitlist promotion follow on the server).
- * Past the customer's own cancellation deadline the removal is recorded as a late cancellation, which the warning says.
- */
-function RemoveParticipant({ courseId, sessionId, userId, name, late, busy, onRun }: {
-  courseId: string; sessionId: string; userId: string; name: string; late: boolean; busy: boolean;
-  onRun: (name: string, data: Record<string, unknown>) => Promise<boolean>;
-}) {
-  const { t } = useI18n();
-  const [open, setOpen] = useState(false);
-  const [reason, setReason] = useState('');
-  if (!open) return <Button size="sm" variant="outline" className="min-h-11" disabled={busy} aria-label={`${t('courses.removeParticipant')} ${name}`}
-    onClick={() => setOpen(true)}>{t('courses.removeParticipant')}</Button>;
-  return <div className="w-full space-y-2 rounded-xl border border-hairline p-3">
-    {late && <p className="text-sm text-warning" role="note">{t('courses.removeLateWarning')}</p>}
-    <label className="block space-y-1 text-sm">{t('courses.reason')}
-      <input className="w-full min-h-11 rounded-xl border border-hairline bg-surface p-3 text-content" maxLength={500} value={reason} onChange={e => setReason(e.target.value)} /></label>
-    <div className="flex flex-wrap gap-2">
-      <Button size="sm" className="min-h-11" disabled={busy} onClick={async () => {
-        if (await onRun('manageCourseSession', { courseId, sessionId, action: 'removeParticipant', userId, ...(reason.trim() ? { reason: reason.trim() } : {}) })) setOpen(false);
-      }}>{t('courses.confirmRemove')}</Button>
-      <Button size="sm" variant="ghost" className="min-h-11" disabled={busy} onClick={() => setOpen(false)}>{t('common.cancel')}</Button></div>
-  </div>;
-}
-
-/** No-shows from this count on are called out next to the customer's name. */
-const REPEAT_NO_SHOWS = 2;
+/** Where a course's participants open: a routed page, not the panel this list used to expand. */
+export const rosterHref = (courseId: string, venueId?: string, sessionId?: string) =>
+  `/provider/courses/detail?id=${encodeURIComponent(courseId)}${venueId ? `&venue=${encodeURIComponent(venueId)}` : ''}` +
+  `${sessionId ? `&lesson=${encodeURIComponent(sessionId)}` : ''}`;
 
 export function ProviderCourses() {
   const { t, locale } = useI18n();
@@ -73,51 +40,21 @@ export function ProviderCourses() {
   const ownRefunds = useCourseRefunds(requestedVenue ? undefined : uid);
   const venueRefunds = useVenueRefunds(venueId);
   const refresh = useRefreshCourses();
-  const [courseId, setCourseId] = useState('');
-  const [sessionId, setSessionId] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
-  const [payment, setPayment] = useState<{ enrollmentId: string; method: string } | null>(null);
-  const [operation, setOperation] = useState<'cancel' | 'reschedule' | 'cancelRemaining' | null>(null);
-  const [reason, setReason] = useState('');
-  const [newDate, setNewDate] = useState('');
-  const [newRoom, setNewRoom] = useState('');
   const query = venueId ? atVenue : own;
   const courses = venueId ? [...(atVenue.data ?? [])].sort((a, b) => a.name.localeCompare(b.name, locale)) :
     own.data?.pages.flatMap(p => p.courses) ?? [];
   const refunds = venueId ? venueRefunds : ownRefunds;
   const pendingRefunds = (refunds.data ?? []).filter(r => r.status !== 'completed');
-  // The selected course's bookings feed the roster; the whole (newest 500) list is read only to name the customers of
-  // refunds that are still due, and not at all when there are none.
-  const roster = useCourseRoster(courseId || undefined, venueId ? { venueId } : uid ? { providerId: uid } : undefined);
+  // The whole (newest 500) list names the customers of refunds that are still due, and is not read when there are none.
   const ownRefundBookings = useCourseEnrollments(!venueId && pendingRefunds.length ? uid : undefined, true);
   const venueRefundBookings = useVenueEnrollments(pendingRefunds.length ? venueId : undefined);
   const refundBookings = venueId ? venueRefundBookings : ownRefundBookings;
-  const course = courses.find(c => c.id === courseId);
-  // The roster opens below the course list: bring it into view and move focus to its heading, so the click is not inert.
-  const panel = useRef<HTMLElement>(null);
-  const panelHeading = useRef<HTMLHeadingElement>(null);
-  const panelOpen = !!course;
-  useEffect(() => {
-    if (!panelOpen) return;
-    panel.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
-    panelHeading.current?.focus({ preventScroll: true });
-  }, [courseId, panelOpen]);
-  const sessions = useCourseSessions(courseId || undefined);
-  const participants = useCourseParticipants(courseId || undefined, sessionId || undefined);
-  const counters = useCustomerCounters(courseId || undefined);
-  const selectedSession = sessions.data?.find(s => s.id === sessionId);
   const venue = venues.find(v => v.id === venueId);
-  const rooms = useQuery({ queryKey: ['venueSpaces', course?.venueId, 'rooms', course?.locationId],
-    enabled: operation === 'reschedule' && !!course?.venueId && !!course.locationId,
-    queryFn: () => fetchVenueRooms(course!.venueId!, course!.locationId!) });
-  const upcoming = selectedSession?.state === 'scheduled' && selectedSession.startsAt.toMillis() > Date.now();
   const field = 'rounded-xl border border-hairline bg-surface text-content p-3 w-full min-h-11';
   const createHref = `/provider/courses/create${venueId ? `?venue=${encodeURIComponent(venueId)}` : ''}`;
-  const repeat = new Map((counters.data ?? []).map(c => [c.userId, c]));
-  const lateCancelled = (roster.data ?? []).filter(e => e.courseId === courseId && sessionId &&
-    e.lateCancelledSessionIds?.includes(sessionId));
 
   // Someone who only manages a venue has no courses of their own: land on the venue.
   useEffect(() => {
@@ -129,21 +66,6 @@ export function ProviderCourses() {
     try { await courseCall(name, data); await refresh(); setStatus(t('common.save')); return true; }
     catch (err) { setError(courseErrorMessage(err, t, locale)); return false; }
     finally { setBusy(false); }
-  }
-  async function sessionAction() {
-    let startsAt: string | undefined;
-    if (operation === 'reschedule' && course) {
-      try {
-        const result = await courseCall<{ sessions: { startsAt: string }[] }>('previewCourse', { course: {
-          ...course, recurrence: 'none', startDate: newDate.slice(0, 10), startTime: newDate.slice(11, 16) } });
-        startsAt = result.sessions[0].startsAt;
-      } catch (err) { setError(courseErrorMessage(err, t, locale)); return; }
-    }
-    const roomId = operation === 'reschedule' && course?.venueId ? newRoom || selectedSession?.roomId || course.roomId : null;
-    if (await run(operation === 'cancelRemaining' ? 'cancelRemainingCourse' : 'manageCourseSession', { courseId, sessionId, action: operation, reason,
-      ...(startsAt ? { startsAt } : {}), ...(roomId ? { roomId } : {}) })) {
-      setOperation(null); setReason(''); setNewRoom('');
-    }
   }
   if (requestedVenue && venuesLoading && !staff) return <p>{t('common.loading')}</p>;
   if (venueUnavailable) return <div className="space-y-3 text-content">
@@ -167,69 +89,14 @@ export function ProviderCourses() {
       <div className="flex justify-between flex-wrap gap-2"><h2 className="text-lg font-semibold">{c.name}</h2><span className="text-sm">{t(`courses.${c.state}`)}</span></div>
       <p className="text-sm text-content-muted">{c.location} · {t('courses.sessions')}: {c.sessionIds.length} · {t('courses.capacity')}: {c.capacity}</p>
       <div className="flex flex-wrap gap-2"><Link href={`/provider/courses/edit?id=${encodeURIComponent(c.id)}${venueId ? `&venue=${encodeURIComponent(venueId)}` : ''}`} className="inline-flex min-h-11 items-center rounded-xl border border-hairline px-3 py-2 text-sm">{t('courses.edit')}</Link>
-        <Button size="sm" className="min-h-11" onClick={() => { setCourseId(c.id); setSessionId(''); setOperation(null); }}>{t('courses.roster')}</Button></div>
+        <Link href={rosterHref(c.id, venueId)} className="inline-flex min-h-11 items-center rounded-xl bg-section-primary px-3 py-2 text-sm font-semibold text-white">{t('courses.roster')}</Link></div>
     </article>)}</div>
     {!venueId && own.hasNextPage && <Button onClick={() => own.fetchNextPage()}>{t('courses.more')}</Button>}
-    {course && <section ref={panel} className="scroll-mt-4 rounded-2xl border border-hairline bg-surface p-5 space-y-4">
-      <h2 ref={panelHeading} tabIndex={-1} className="font-semibold text-xl outline-none">{course.name} · {t('courses.sessions')}</h2>
-      <Button variant="outline" size="sm" className="min-h-11" disabled={busy} onClick={() => setOperation('cancelRemaining')}>{t('courses.cancelRemaining')}</Button>
-      <label className="block space-y-1">{t('courses.lesson')}<select className={field} value={sessionId} onChange={e => { setSessionId(e.target.value); setOperation(null); }}>
-        <option value="">{t('common.select')}</option>{sessions.data?.map(s => <option key={s.id} value={s.id}>{courseDate(s, locale, course.timezone)} · {s.occupied + s.held}/{s.capacity} {s.state === 'cancelled' ? t('courses.cancelled') : ''}</option>)}</select></label>
-      {operation === 'cancelRemaining' && <div className="space-y-3"><label className="block">{t('courses.reason')}<input required className={field} value={reason} onChange={e => setReason(e.target.value)} /></label>
-        <Button disabled={busy || !reason.trim()} onClick={() => sessionAction()}>{t('courses.confirmCancelLesson')}</Button></div>}
-      {selectedSession && <>
-        {selectedSession.state === 'scheduled' && selectedSession.startsAt.toMillis() > Date.now() &&
-          <AddCourseParticipant key={selectedSession.id} course={course} session={selectedSession} onAdded={() => { void refresh(); }} />}
-        <div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" className="min-h-11" disabled={busy || selectedSession.state !== 'scheduled' || selectedSession.startsAt.toMillis() <= Date.now()}
-          onClick={() => setOperation('cancel')}>{t('courses.cancelLesson')}</Button>
-          <Button variant="outline" size="sm" className="min-h-11" disabled={busy || selectedSession.state !== 'scheduled' || selectedSession.startsAt.toMillis() <= Date.now()}
-            onClick={() => setOperation('reschedule')}>{t('courses.reschedule')}</Button>
-          {upcoming && <SubstituteInstructor key={`sub-${selectedSession.id}`} course={course} session={selectedSession} />}
-          {upcoming && <LessonCapacity key={`cap-${selectedSession.id}`} courseId={courseId} session={selectedSession} />}</div>
-        {operation && operation !== 'cancelRemaining' && <div className="space-y-3"><label className="block">{t('courses.reason')}<input required className={field} value={reason} onChange={e => setReason(e.target.value)} /></label>
-          {operation === 'reschedule' && <label className="block">{t('courses.startDate')} · {course.timezone}<input type="datetime-local" className={field} value={newDate} onChange={e => setNewDate(e.target.value)} /></label>}
-          {operation === 'reschedule' && course.venueId && <label className="block">{t('courses.rescheduleRoom')}
-            <select className={field} value={newRoom || selectedSession.roomId || course.roomId || ''} onChange={e => setNewRoom(e.target.value)}>
-              {(rooms.data ?? []).filter(r => r.isActive || r.id === (selectedSession.roomId ?? course.roomId)).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select></label>}
-          <Button disabled={busy || !reason.trim() || (operation === 'reschedule' && !newDate)} onClick={() => sessionAction()}>{t(operation === 'reschedule' ? 'courses.confirmReschedule' : 'courses.confirmCancelLesson')}</Button></div>}
-        {participants.isError && <p role="alert">{t('courses.loadError')}</p>}
-        <h3 className="font-semibold">{t('courses.roster')}</h3>
-        <ul className="divide-y divide-hairline">{participants.data?.map(p => {
-          const enrollment = roster.data?.find(e => e.id === p.enrollmentId);
-          const noShows = repeat.get(p.userId)?.noShows ?? 0;
-          return <li key={p.id} className="py-4 space-y-2"><div className="flex justify-between flex-wrap gap-2"><span className="font-medium">{p.customerName}
-            {p.noShow && <span className="ml-2 rounded-full bg-error/15 px-2 py-0.5 text-xs font-semibold text-error">{t('courses.noShow')}</span>}
-            {noShows >= REPEAT_NO_SHOWS && <span className="ml-2 text-xs text-content-muted">{t('courses.noShows', { count: noShows })}</span>}</span>
-            <span>{enrollment && courseMoney(enrollment.totalCents, locale)} · {t(enrollment?.paymentStatus === 'paid' ? 'courses.paid' : 'courses.pending')}</span></div>
-            <div className="flex flex-wrap gap-3 items-center"><label className="text-sm">{t('courses.attendance')}<select className={field} value={p.attendance}
-              disabled={busy || p.state !== 'confirmed' || selectedSession.startsAt.toMillis() > Date.now()}
-              onChange={e => run('manageCourseSession', { courseId, sessionId, action: 'attendance', userId: p.userId, attendance: e.target.value })}>
-              {(['unmarked', 'present', 'absent'] as const).map(v => <option key={v} value={v}>{t(`courses.${v}`)}</option>)}</select></label>
-              {enrollment?.paymentMode === 'direct' && enrollment.paymentStatus !== 'paid' && <Button size="sm" className="min-h-11" disabled={busy} onClick={() => setPayment({ enrollmentId: p.enrollmentId, method: 'cash' })}>{t('courses.recordPayment')}</Button>}
-              {upcoming && <RemoveParticipant key={`${sessionId}-${p.userId}`} courseId={courseId} sessionId={sessionId} userId={p.userId} name={p.customerName} busy={busy} onRun={run}
-                late={!!enrollment && selectedSession.startsAt.toMillis() <= Date.now() + enrollment.cancellationHours * HOUR_MS} />}
-            </div><ParticipantInvitation courseId={courseId} userId={p.userId} /></li>;
-        })}</ul>
-        <LessonWaitlist key={`wl-${sessionId}`} courseId={courseId} sessionId={sessionId} />
-        {lateCancelled.length > 0 && <div className="space-y-1"><h3 className="font-semibold">{t('courses.lateCancels')}</h3>
-          <ul className="text-sm text-content-muted">{lateCancelled.map(e => {
-            const count = repeat.get(e.userId)?.lateCancels ?? 0;
-            return <li key={e.id}>{e.customerName}{count >= REPEAT_NO_SHOWS && ` · ${count}`}</li>;
-          })}</ul></div>}
-      </>}
-    </section>}
     {pendingRefunds.length > 0 && <section className="space-y-3"><h2 className="font-semibold text-xl">{t('courses.refunds')}</h2>
       {pendingRefunds.map(r => <div key={r.id} className="rounded-xl border border-hairline p-4 flex flex-wrap gap-3 justify-between">
-        <span>{t('courses.refundDue')} · {courseMoney(r.amountCents, locale)} · {[...(refundBookings.data ?? []), ...(roster.data ?? [])].find(e => e.id === r.enrollmentId)?.customerName}</span>
+        <span>{t('courses.refundDue')} · {courseMoney(r.amountCents, locale)} · {(refundBookings.data ?? []).find(e => e.id === r.enrollmentId)?.customerName}</span>
         {r.paymentMode === 'direct' && <Button size="sm" className="min-h-11" disabled={busy} onClick={() => run('confirmCourseRefund', { refundId: r.id })}>{t('courses.confirmRefund')}</Button>}</div>)}
     </section>}
     {venueId && <VenueSpacesPanel venueId={venueId} />}
-    {payment && <Modal onClose={() => setPayment(null)} className="w-full max-w-md rounded-2xl border border-hairline bg-surface shadow-xl" ariaLabel={t('courses.recordPayment')}>
-      {payment && <div className="space-y-4 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] text-content"><h2 className="font-semibold">{t('courses.recordPayment')}</h2>
-        <label className="block">{t('courses.paymentMethod')}<select className={field} value={payment.method} onChange={e => setPayment({ ...payment, method: e.target.value })}>
-          {(['cash', 'bank_transfer', 'satispay', 'other'] as const).map(v => <option key={v} value={v}>{t(`courses.${v}`)}</option>)}</select></label>
-        <Button disabled={busy} onClick={async () => { if (await run('recordCoursePayment', payment)) setPayment(null); }}>{t('common.confirm')}</Button>
-        <Button variant="ghost" onClick={() => setPayment(null)}>{t('common.close')}</Button></div>}
-    </Modal>}
   </div>;
 }

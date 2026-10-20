@@ -69,7 +69,7 @@ describe('VenueTimetable', () => {
     renderTimetable();
     await waitFor(() => expect(cellCards('2026-10-12')).toHaveLength(1));
     expect(cellCards('2026-10-18')).toHaveLength(1);
-    expect(cellCards('2026-10-18')[0].getAttribute('href')).toBe('/courses?id=c1&lesson=sun');
+    expect(cellCards('2026-10-18')[0].getAttribute('href')).toBe('/courses/detail?id=c1&lesson=sun');
     expect(cellCards('2026-10-14')).toHaveLength(0);
   });
 

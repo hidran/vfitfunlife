@@ -6,6 +6,7 @@ import { useMyWaitlist, useRefreshCourses } from '@/hooks/useCourses';
 import { useNow } from '@/hooks/useNow';
 import { fetchCourse, fetchCourseSessions, leaveCourseWaitlist } from '@/lib/firebase/courses';
 import { courseErrorMessage } from '@/lib/courseErrors';
+import { courseHref } from '@/lib/courseFormat';
 import { useI18n } from '@/hooks/useI18n';
 import { Button } from '@/components/ui/button';
 import type { CourseWaitlistEntry } from '@/types/course';
@@ -50,7 +51,7 @@ export function MyWaitlist({ uid, showEmpty = false }: { uid?: string; /** Say s
       const timezone = details[courseIds.indexOf(entry.courseId)]?.data?.timezone;
       return <li key={key(entry)} className="space-y-2 rounded-2xl border border-hairline bg-surface p-5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <Link className="inline-flex min-h-11 items-center text-lg font-semibold underline-offset-4 hover:underline" href={`/courses?id=${encodeURIComponent(entry.courseId)}`}>{entry.courseName}</Link>
+          <Link className="inline-flex min-h-11 items-center text-lg font-semibold underline-offset-4 hover:underline" href={courseHref(entry.courseId)}>{entry.courseName}</Link>
           <span className="text-sm font-medium text-section-ink">{t('courses.position', { position: entry.position })}</span></div>
         {startsAt && timezone && <p className="text-sm text-content-muted">{new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short', timeZone: timezone }).format(startsAt)}</p>}
         {confirming === key(entry) ? <div className="flex flex-wrap gap-2"><p className="w-full">{t('courses.leaveWaitlistConfirm')}</p>

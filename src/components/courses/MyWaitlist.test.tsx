@@ -36,7 +36,7 @@ describe('MyWaitlist', () => {
     mocks.sessions = { c1: [{ id: 's1', startsAt: stamp(FUTURE) }] };
     renderIt();
     const row = await screen.findByRole('listitem');
-    expect(within(row).getByRole('link', { name: 'Course c1' })).toHaveAttribute('href', '/courses?id=c1');
+    expect(within(row).getByRole('link', { name: 'Course c1' })).toHaveAttribute('href', '/courses/detail?id=c1');
     await waitFor(() => expect(within(row).getByText(/Oct 12, 2099/)).toBeInTheDocument());
     expect(within(row).getByText(/7:00 PM/)).toBeInTheDocument();
     expect(within(row).getByText('courses.position:{"position":2}')).toBeInTheDocument();

@@ -44,7 +44,7 @@ export const useCourseQuote = (courseId?: string, sessionIds?: string[], include
 export const useManagedVenueCourses = (venueId?: string) => useQuery({ queryKey: ['courses', 'venue', venueId],
   queryFn: () => fetchVenueCourses(venueId!), enabled: !!venueId, ...MANAGER_POLL });
 /**
- * Course documents by id, one `getDoc` each (shared with the `/courses?id=` page through the `detail` key and kept for
+ * Course documents by id, one `getDoc` each (shared with the `/courses/detail?id=` page through the `detail` key and kept for
  * ten minutes). A course the caller may not read, or that is gone, is simply absent from `map`.
  */
 export function useCoursesById(ids: string[], enabled = true) {

@@ -276,7 +276,7 @@ describe('CourseBooking', () => {
     vi.stubGlobal('location', { ...window.location, assign });
     renderBooking({ uid: undefined });
     fireEvent.click(screen.getAllByRole('button', { name: /courses.bookLesson/ })[0]);
-    expect(assign).toHaveBeenCalledWith(`/auth/login?next=${encodeURIComponent('/courses?id=c&lesson=s1')}`);
+    expect(assign).toHaveBeenCalledWith(`/auth/login?next=${encodeURIComponent('/courses/detail?id=c&lesson=s1')}`);
     expect(mocks.quote).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
   });
@@ -286,7 +286,7 @@ describe('CourseBooking', () => {
     vi.stubGlobal('location', { ...window.location, assign });
     renderBooking({ uid: undefined, sessions: lessons({ occupied: 1, held: 1 }, { occupied: 1, held: 1 }) });
     fireEvent.click(screen.getAllByRole('button', { name: 'courses.joinWaitlist' })[1]);
-    expect(assign).toHaveBeenLastCalledWith(`/auth/login?next=${encodeURIComponent('/courses?id=c&lesson=s2')}`);
+    expect(assign).toHaveBeenLastCalledWith(`/auth/login?next=${encodeURIComponent('/courses/detail?id=c&lesson=s2')}`);
     vi.unstubAllGlobals();
   });
 
@@ -356,5 +356,44 @@ describe('CourseBooking', () => {
   it('disables the series when any lesson is full', () => {
     renderBooking({ sessions: lessons({ occupied: 1, held: 1 }) });
     expect(screen.getByRole('button', { name: /courses.series/ })).toBeDisabled();
+  });
+});
+
+describe('long courses', () => {
+  const scheduled = (id: string, iso: string) => ({ id, startsAt: stamp(iso), state: 'scheduled', capacity: 2, occupied: 0, held: 0,
+    location: 'Sala', instructor: 'Anna' }) as CourseSession;
+
+  it('opens on the first lesson still ahead and filters the rest by month', () => {
+    renderBooking({ sessions: [
+      scheduled('old', '2020-09-10T17:00Z'), scheduled('oct', '2099-10-12T18:00Z'),
+      scheduled('nov1', '2099-11-02T18:00Z'), scheduled('nov2', '2099-11-09T18:00Z')] });
+    const month = screen.getByLabelText('courses.month') as HTMLSelectElement;
+    expect(month.value).toBe('2099-10');
+    expect(screen.getAllByRole('button', { name: /courses.bookLesson/ })).toHaveLength(1);
+    const november = [...month.options].find(option => /November 2099/.test(option.textContent ?? ''))!;
+    fireEvent.change(month, { target: { value: november.value } });
+    expect(screen.getAllByRole('button', { name: /courses.bookLesson/ })).toHaveLength(2);
+    fireEvent.change(month, { target: { value: '' } });
+    expect(screen.getAllByRole('button', { name: /courses.bookLesson/ })).toHaveLength(4);
+    expect(screen.getByRole('option', { name: 'courses.allMonths' })).toBeInTheDocument();
+  });
+
+  it('opens the month of the linked lesson, so a timetable link is visible', () => {
+    renderBooking({ initialSessionId: 'nov1', sessions: [
+      scheduled('oct', '2099-10-12T18:00Z'), scheduled('nov1', '2099-11-02T18:00Z')] });
+    expect((screen.getByLabelText('courses.month') as HTMLSelectElement).value).toBe('2099-11');
+    expect(screen.getAllByRole('button', { name: /courses.bookLesson/ })).toHaveLength(1);
+  });
+
+  it('pages through a long month instead of listing every lesson at once', () => {
+    const sessions = Array.from({ length: 12 }, (_, index) =>
+      scheduled(`m${index}`, `2099-10-${String(index + 1).padStart(2, '0')}T18:00Z`));
+    renderBooking({ sessions });
+    expect(screen.getAllByRole('button', { name: /courses.bookLesson/ })).toHaveLength(10);
+    expect(screen.getByTestId('lessons-shown')).toHaveTextContent('courses.lessonsShown:{"from":1,"to":10,"total":12}');
+    expect(screen.getByTestId('lesson-page')).toHaveTextContent('courses.pageOf:{"page":1,"pages":2}');
+    fireEvent.click(screen.getByRole('button', { name: 'courses.nextPage' }));
+    expect(screen.getAllByRole('button', { name: /courses.bookLesson/ })).toHaveLength(2);
+    expect(screen.getByTestId('lessons-shown')).toHaveTextContent('courses.lessonsShown:{"from":11,"to":12,"total":12}');
   });
 });

@@ -1,14 +1,16 @@
 'use client';
 import { useState } from 'react';
 import { useCourseEnrollments, useCourseSessions, useCoursesById, useRefreshCourses } from '@/hooks/useCourses';
+import { useLessonWindow } from '@/hooks/useLessonWindow';
 import { useNow } from '@/hooks/useNow';
 import { courseErrorMessage } from '@/lib/courseErrors';
-import { coursePrice } from '@/lib/courseFormat';
+import { courseHref, coursePrice } from '@/lib/courseFormat';
 import { MyWaitlist } from './MyWaitlist';
 import { courseCall } from '@/lib/firebase/courses';
 import { useI18n } from '@/hooks/useI18n';
 import { Button } from '@/components/ui/button';
 import { courseMoney, courseDate } from '@/lib/courseFormat';
+import { LessonMonthNav } from './LessonMonthNav';
 import type { CourseEnrollment } from '@/types/course';
 import Link from 'next/link';
 export function CourseEnrollments({ uid }: { uid?: string }) {
@@ -27,6 +29,9 @@ function EnrollmentCard({ enrollment: e }: { enrollment: CourseEnrollment }) {
   // Bookings made before the time zone was stored on them take the course's.
   const course = useCoursesById(e.timezone ? [] : [e.courseId]);
   const timezone = e.timezone || course.map.get(e.courseId)?.timezone;
+  // A series can hold a lesson per week for a year: filter by month and page through them instead of one long card.
+  const lessons = (sessions.data ?? []).filter(s => e.sessionIds.includes(s.id));
+  const list = useLessonWindow(lessons, timezone, now);
   const refresh = useRefreshCourses();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -44,7 +49,7 @@ function EnrollmentCard({ enrollment: e }: { enrollment: CourseEnrollment }) {
   const holdOpen = e.state === 'held' && e.holdExpiresAt.toMillis() > now;
   const minutesLeft = Math.max(1, Math.ceil((e.holdExpiresAt.toMillis() - now) / 60000));
   return <article className="rounded-2xl border border-hairline bg-surface p-5 space-y-3">
-    <div className="flex flex-wrap justify-between gap-2"><Link className="inline-flex min-h-11 items-center font-semibold text-lg underline-offset-4 hover:underline" href={`/courses?id=${encodeURIComponent(e.courseId)}`}>{e.courseName}</Link>
+    <div className="flex flex-wrap justify-between gap-2"><Link className="inline-flex min-h-11 items-center font-semibold text-lg underline-offset-4 hover:underline" href={courseHref(e.courseId)}>{e.courseName}</Link>
       <span className="text-sm">{t(`courses.${e.state}`)}</span></div>
     <p>{t(`courses.${e.scope}`)} · {coursePrice(e.totalCents, locale, t('courses.free'))} · {t(e.paymentStatus === 'paid' ? 'courses.paid' : 'courses.pending')}</p>
     <p className="text-sm text-content-muted">{t(e.paymentMode === 'direct' ? 'courses.direct' : 'courses.online')}</p>
@@ -52,7 +57,9 @@ function EnrollmentCard({ enrollment: e }: { enrollment: CourseEnrollment }) {
     {holdOpen && e.promotedFromWaitlist && <p className="text-sm font-medium text-warning" data-testid="pay-within">
       {minutesLeft === 1 ? t('courses.payWithinOne') : t('courses.payWithin', { minutes: minutesLeft })}</p>}
     {holdOpen && <Button className="min-h-11" onClick={checkout} disabled={busy}>{t('courses.pay')}</Button>}
-    {sessions.data?.filter(s => e.sessionIds.includes(s.id)).map(s => {
+    <LessonMonthNav months={list.months} month={list.month} onMonth={list.setMonth}
+      page={list.page} onPage={list.setPage} canFilterByMonth={list.canFilterByMonth} />
+    {list.page.items.map(s => {
       const active = e.activeSessionIds.includes(s.id);
       const cancellable = active && (e.state === 'held' || s.startsAt.toMillis() > now + e.cancellationHours * 3600000);
       return <div key={s.id} className="border-t border-hairline pt-3 flex flex-wrap justify-between items-center gap-2">

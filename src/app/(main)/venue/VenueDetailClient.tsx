@@ -14,6 +14,7 @@ import { PhotoGallery } from '@/components/gallery/PhotoGallery';
 import { useI18n } from '@/hooks/useI18n';
 import { hostsCourses } from '@/types/venue';
 import { venueAddressText } from '@/lib/venueAddress';
+import { courseHref } from '@/lib/courseFormat';
 
 export default function VenueDetailClient() {
   const searchParams = useSearchParams();
@@ -205,7 +206,7 @@ export default function VenueDetailClient() {
                 return (
                   <li key={`${courseId}_${l.id}`}>
                     <Link
-                      href={`/courses?id=${encodeURIComponent(courseId)}&lesson=${encodeURIComponent(l.id)}`}
+                      href={courseHref(courseId, l.id)}
                       className="flex min-h-11 flex-col rounded-xl border border-hairline bg-surface p-3"
                     >
                       <span className="text-sm font-semibold text-content">{name}</span>
