@@ -2,7 +2,7 @@ import { collection, getDocs, query, where, orderBy, limit, doc, getDoc, startAf
 import { httpsCallable } from 'firebase/functions';
 import { db } from './config';
 import { getFunctionsInstance } from './app';
-import type { Course, CourseDraft, CourseSession, CourseEnrollment, CourseParticipant, CourseRefund } from '@/types/course';
+import type { Course, CourseDraft, CourseSession, CourseEnrollment, CourseParticipant, CourseRefund, CourseQuote } from '@/types/course';
 export async function courseCall<T = { success: boolean }>(name: string, data: Record<string, unknown>): Promise<T> {
   const result = await httpsCallable<Record<string, unknown>, T>(await getFunctionsInstance(), name)(data);
   return result.data;
@@ -37,3 +37,5 @@ export async function fetchCourseRefunds(uid: string): Promise<CourseRefund[]> {
 }
 export const saveCourse = (course: CourseDraft, courseId?: string) =>
   courseCall<{ courseId: string }>('saveCourse', { course, ...(courseId ? { courseId } : {}) });
+export const quoteCourse = (courseId: string, sessionIds?: string[]) =>
+  courseCall<CourseQuote>('quoteCourse', { courseId, ...(sessionIds ? { sessionIds } : {}) });

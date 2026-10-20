@@ -34,3 +34,15 @@ export interface CourseRefund {
   id: string; amountCents: number; userId: string; enrollmentId: string;
   paymentMode: 'direct' | 'stripe'; status: 'pending' | 'processing' | 'completed';
 }
+/** Server quote (functions/src/courses/quote.ts); amounts are integer cents, `finalCents` is what the customer pays. */
+export interface SessionQuote {
+  sessionId: string; revision: number; regularCents: number; discountPercent: number; gymPercent: number;
+  instructorPercent: number; discountCents: number; finalCents: number; availableSeats: number; waitlisted: number;
+}
+export interface CourseQuote {
+  sessions: SessionQuote[];
+  series: null | {
+    regularCents: number; discountPercent: number; gymPercent: number; instructorPercent: number;
+    discountCents: number; finalCents: number; allocations: Record<string, number>;
+  };
+}
