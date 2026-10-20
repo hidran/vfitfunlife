@@ -47,7 +47,7 @@ describe('provider adds course participants', () => {
   });
   it('retains the created identity after a full-class failure and retries without creating it again', async () => {
     mount();
-    mocks.call.mockRejectedValueOnce(new Error('session_full'));
+    mocks.call.mockRejectedValueOnce(new Error('lesson_full'));
     fireEvent.click(screen.getByRole('button', { name: 'courses.newParticipant' }));
     fireEvent.change(screen.getByLabelText('courses.participantName'), { target: { value: 'Anna Smith' } });
     fireEvent.change(screen.getByLabelText('courses.participantEmail'), { target: { value: 'anna@example.com' } });
@@ -59,7 +59,7 @@ describe('provider adds course participants', () => {
     expect(mocks.call.mock.calls[1][1].requestId).toBe(mocks.call.mock.calls[0][1].requestId);
   });
   it('discards a cached identity when new-participant details change after a failed reservation', async () => {
-    mount(); mocks.call.mockRejectedValueOnce(new Error('session_full'));
+    mount(); mocks.call.mockRejectedValueOnce(new Error('lesson_full'));
     fireEvent.click(screen.getByRole('button', { name: 'courses.newParticipant' }));
     fireEvent.change(screen.getByLabelText('courses.participantName'), { target: { value: 'Anna Smith' } });
     fireEvent.change(screen.getByLabelText('courses.participantEmail'), { target: { value: 'anna@example.com' } });

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { fromZonedTime, formatInTimeZone } from "date-fns-tz";
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
-const money = z.number().int().min(100).max(10000000).nullable();
+const money = z.number().int().min(0).max(10000000).nullable();
 export const courseSchema = z.object({
   name: z.string().trim().min(2).max(120),
   description: z.string().trim().max(3000).default(""),
@@ -11,6 +11,9 @@ export const courseSchema = z.object({
   city: z.string().trim().max(120).default(""),
   instructor: z.string().trim().min(2).max(120),
   venueId: z.string().max(120).nullable().default(null),
+  locationId: z.string().max(120).nullable().default(null),
+  roomId: z.string().max(120).nullable().default(null),
+  instructorId: z.string().max(120).nullable().default(null),
   capacity: z.number().int().min(1).max(500),
   durationMinutes: z.number().int().min(10).max(480),
   startDate: date,
@@ -28,6 +31,7 @@ export const courseSchema = z.object({
   equipment: z.string().trim().max(500).default(""),
   state: z.enum(["draft", "published", "archived"]),
   enrollmentClosed: z.boolean().default(false),
+  waitlistEnabled: z.boolean().default(true),
 });
 export type CourseInput = z.infer<typeof courseSchema>;
 export function validateCourse(raw: unknown): CourseInput {
@@ -53,6 +57,17 @@ function calendarDate(value: string): Date {
   }
   return parsed;
 }
+export function localInstant(day: string, hhmm: string, timezone: string): Date {
+  const local = day + "T" + hhmm;
+  const instant = fromZonedTime(local, timezone);
+  const render = (d: Date) => formatInTimeZone(d, timezone, "yyyy-MM-dd'T'HH:mm");
+  if (!Number.isFinite(instant.getTime()) || render(instant) !== local) throw new Error("invalid_local_time");
+  // Reject duplicated wall times at the autumn timezone transition.
+  for (const delta of [-7200000, -3600000, -1800000, 1800000, 3600000, 7200000]) {
+    if (render(new Date(instant.getTime() + delta)) === local) throw new Error("ambiguous_local_time");
+  }
+  return instant;
+}
 export function generateSessions(input: CourseInput): { id: string; startsAt: Date; endsAt: Date }[] {
   const start = calendarDate(input.startDate);
   const end = calendarDate(input.recurrence === "none" ? input.startDate : input.endDate);
@@ -67,14 +82,7 @@ export function generateSessions(input: CourseInput): { id: string; startsAt: Da
     if (input.recurrence === "daily" && offset % input.interval !== 0) continue;
     if (input.recurrence === "weekly" &&
       (!input.weekdays.includes(current.getUTCDay()) || weeks % input.interval !== 0)) continue;
-    const local = current.toISOString().slice(0, 10) + "T" + input.startTime;
-    const instant = fromZonedTime(local, input.timezone);
-    const render = (d: Date) => formatInTimeZone(d, input.timezone, "yyyy-MM-dd'T'HH:mm");
-    if (!Number.isFinite(instant.getTime()) || render(instant) !== local) throw new Error("invalid_local_time");
-    // Reject duplicated wall times at the autumn timezone transition.
-    for (const delta of [-7200000, -3600000, -1800000, 1800000, 3600000, 7200000]) {
-      if (render(new Date(instant.getTime() + delta)) === local) throw new Error("ambiguous_local_time");
-    }
+    const instant = localInstant(current.toISOString().slice(0, 10), input.startTime, input.timezone);
     result.push({ id: current.toISOString().slice(0, 10), startsAt: instant,
       endsAt: new Date(instant.getTime() + input.durationMinutes * 60000) });
   }
@@ -96,7 +104,7 @@ export function assertReservable(
     if (session.startsAt.getTime() <= now.getTime() + course.bookingNoticeHours * 3600000) {
       throw new Error("booking_deadline");
     }
-    if (session.occupied + session.held >= (session.capacity ?? course.capacity)) throw new Error("session_full");
+    if (session.occupied + session.held >= (session.capacity ?? course.capacity)) throw new Error("lesson_full");
   }
 }
 export function allocatePrice(total: number, count: number): number[] {

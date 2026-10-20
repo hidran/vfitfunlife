@@ -1,7 +1,8 @@
 import type { Timestamp } from 'firebase/firestore';
 export interface CourseDraft {
   name: string; description: string; categoryId: string; location: string; city: string; instructor: string;
-  venueId: string | null; capacity: number; durationMinutes: number;
+  venueId: string | null; locationId: string | null; roomId: string | null; instructorId: string | null;
+  waitlistEnabled: boolean; capacity: number; durationMinutes: number;
   startDate: string; startTime: string; timezone: string; recurrence: 'none' | 'daily' | 'weekly';
   interval: number; weekdays: number[]; endDate: string;
   lessonPriceCents: number | null; seriesPriceCents: number | null;

@@ -47,7 +47,7 @@ export function AddCourseParticipant({ course, session, onAdded }: { course: Cou
       setFullName(''); setLastName(''); setEmail(''); setPhone(''); onAdded();
     } catch (err) {
       const message = (err as { message?: string })?.message;
-      const errors: Record<string, Parameters<typeof t>[0]> = { session_full: 'courses.full', already_enrolled: 'courses.alreadyParticipant',
+      const errors: Record<string, Parameters<typeof t>[0]> = { lesson_full: 'courses.full', already_enrolled: 'courses.alreadyParticipant',
         invalid_name: 'provider.addClient.error.invalidName', invalid_phone: 'provider.addClient.error.invalidPhone',
         invalid_email: 'provider.addClient.error.invalidEmail', rate_limited: 'provider.addClient.error.rateLimited' };
       setError(t(errors[message ?? ''] ?? 'courses.error'));

@@ -723,3 +723,5 @@ Execution order is the order of the headings: `0, A1-A7, B1-B5, C1-C4, D1-D7, E1
 **Log** (the controller appends one line per finished task: commit hash, test counts, deviations):
 
 - 2026-10-19 - Plan written (spec approved 2026-10-19). No task started.
+- 2026-10-20 - Task 0 baseline: functions emulator suites (`src/courses src/partnerGyms test/courses-rules test/partner-gyms-rules`) 64 pass / 0 fail; web `src/components/courses src/types` 33 pass / 0 fail. `session_full` hits before A1: core.ts, integration.test.ts, AddCourseParticipant.tsx + .test.tsx, scripts/smoke-group-courses-staging.mjs (smoke-annual and smoke-course-participants had none).
+- 2026-10-20 - Task A1 done: core.test.ts 14 pass (4 new); emulator `src/courses` + courses-rules 50 pass, integration.test.ts 30 pass; full A1 emulator set 68 pass (64 + 4 new); functions tsc + lint clean; root tsc clean; web 33 pass. Deviation: the `lesson_full` rename also covers `AddCourseParticipant.tsx` and its test (client error map), not listed in the task's file list.

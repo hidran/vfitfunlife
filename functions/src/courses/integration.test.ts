@@ -150,7 +150,7 @@ describe("transactional course enrollment", () => {
   });
   it("creates no partial series if one lesson is full", async () => {
     const id = await create(); await enroll(id, "u", "lesson");
-    await expect(enroll(id, "v")).rejects.toThrow("session_full");
+    await expect(enroll(id, "v")).rejects.toThrow("lesson_full");
     expect((await db.doc(`courses/${id}/sessions/2099-10-13`).get()).data()?.occupied).toBe(0);
   });
   it("records advance direct payment and releases/refunds once", async () => {

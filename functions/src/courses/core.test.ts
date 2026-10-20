@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateCourse, generateSessions, assertReservable, allocatePrice, checkoutActive, paymentDecision } from "./core";
+import { validateCourse, generateSessions, assertReservable, allocatePrice, checkoutActive, paymentDecision, localInstant } from "./core";
 const input = { name: "Karate", categoryId: "martial_arts", description: "Beginners", location: "Torino", instructor: "Anna", capacity: 8, durationMinutes: 60, startDate: "2026-10-12", startTime: "18:00", timezone: "Europe/Rome", recurrence: "weekly", interval: 1, weekdays: [1, 3], endDate: "2026-10-26", lessonPriceCents: 1500, seriesPriceCents: 6500, bookingNoticeHours: 2, cancellationHours: 24, level: "Beginner", equipment: "", state: "published" };
 describe("course rules", () => {
   it("accepts annual courses with one, two or all selected weekdays", () => {
@@ -24,6 +24,28 @@ describe("course rules", () => {
     for (const patch of [{ capacity: 0 }, { endDate: "" }, { lessonPriceCents: null, seriesPriceCents: null }, { lessonPriceCents: 12.5 }]) {
       expect(() => validateCourse({ ...input, ...patch })).toThrow();
     }
+  });
+  it("accepts free prices but rejects negative ones and still requires one price", () => {
+    const free = validateCourse({ ...input, lessonPriceCents: 0, seriesPriceCents: 0 });
+    expect(free.lessonPriceCents).toBe(0);
+    expect(free.seriesPriceCents).toBe(0);
+    expect(() => validateCourse({ ...input, lessonPriceCents: -1 })).toThrow();
+    expect(() => validateCourse({ ...input, lessonPriceCents: null, seriesPriceCents: null })).toThrow("pricing_required");
+  });
+  it("defaults the venue room, instructor and waitlist fields", () => {
+    const course = validateCourse(input);
+    expect(course.waitlistEnabled).toBe(true);
+    expect([course.locationId, course.roomId, course.instructorId]).toEqual([null, null, null]);
+  });
+  it("converts a wall time to an instant and rejects DST gaps and ambiguity", () => {
+    expect(() => localInstant("2026-03-29", "02:30", "Europe/Rome")).toThrow("invalid_local_time");
+    expect(() => localInstant("2026-10-25", "02:30", "Europe/Rome")).toThrow("ambiguous_local_time");
+    expect(localInstant("2026-10-12", "18:00", "Europe/Rome").toISOString()).toBe("2026-10-12T16:00:00.000Z");
+  });
+  it("reports a full lesson as lesson_full", () => {
+    const course = validateCourse(input);
+    const sessions = [{ startsAt: new Date("2026-10-12T16:00Z"), occupied: 8, held: 0, state: "scheduled" }];
+    expect(() => assertReservable(course, sessions, [], new Date("2026-10-01"))).toThrow("lesson_full");
   });
   it("supports daily annual courses and leap years", () => {
     expect(generateSessions(validateCourse({ ...input, recurrence: "daily", endDate: "2027-10-11" }))).toHaveLength(365);

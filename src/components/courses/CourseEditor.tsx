@@ -10,6 +10,7 @@ import type { MessageKey } from '@/i18n/messages';
 function emptyDraft(): CourseDraft {
   const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
   return { name: '', description: '', categoryId: '', location: '', city: '', instructor: '', venueId: null,
+    locationId: null, roomId: null, instructorId: null, waitlistEnabled: true,
     capacity: 10, durationMinutes: 60, startDate: tomorrow, startTime: '18:00', timezone: 'Europe/Rome',
     recurrence: 'none', interval: 1, weekdays: [1], endDate: tomorrow,
     lessonPriceCents: 1500, seriesPriceCents: null, bookingNoticeHours: 2, cancellationHours: 24,

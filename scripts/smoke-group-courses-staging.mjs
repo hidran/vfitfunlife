@@ -58,7 +58,7 @@ try {
   assert.equal(lesson.state, 'confirmed'); assert.equal(lesson.totalCents, 1500); mark('Customer reserves one lesson');
   const replay = await call('enrollInCourse', customer, { courseId, scope: 'lesson', sessionId: preview.sessions[0].id, requestId });
   assert.equal(replay.enrollmentId, lesson.enrollmentId); mark('Reservation replay is idempotent');
-  await call('enrollInCourse', admin, { courseId, scope: 'series', requestId: randomUUID() }, /session_full/);
+  await call('enrollInCourse', admin, { courseId, scope: 'series', requestId: randomUUID() }, /lesson_full/);
   const emptyLesson = await document(`courses/${courseId}/sessions/${preview.sessions[1].id}`, customer);
   assert.equal(value(emptyLesson.occupied), 0); mark('Full lesson rejects series without partial occupancy');
   await call('recordCoursePayment', provider, { enrollmentId: lesson.enrollmentId, method: 'cash' });
