@@ -1,15 +1,16 @@
 import { onCall, onRequest, HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions";
-import { Timestamp } from "firebase-admin/firestore";
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import type Stripe from "stripe";
 import { region } from "../lib/runtimeOptions";
 import { getStripe } from "../lib/stripeClient";
 import { readPaymentSettings } from "../payments/paymentSettingsCallables";
 import { checkoutActive, paymentDecision } from "./core";
-import { db, safeId, uidOf, nowStamp, Enrollment, Session } from "./store";
+import { db, safeId, uidOf, nowStamp, Enrollment, Session, Course } from "./store";
 import { queueCourseNotification } from "./notifications";
 import { releaseEnrollment } from "./operations";
 import { assertStripeAmount } from "./pricing";
+import { planPromotions } from "./waitlist";
 
 function returnOrigin(): string {
   const project = process.env.GCLOUD_PROJECT;
@@ -63,6 +64,7 @@ export const createCourseCheckout = onCall(
 
 export async function fulfillCourseCheckout(session: Stripe.Checkout.Session): Promise<void> {
   const id = safeId(session.metadata?.courseEnrollmentId);
+  const checkoutOn = checkoutActive(await readPaymentSettings());
   await db.runTransaction(async (tx) => {
     const ref = db.doc(`courseEnrollments/${id}`);
     const e = (await tx.get(ref)).data() as Enrollment | undefined;
@@ -75,13 +77,24 @@ export async function fulfillCourseCheckout(session: Stripe.Checkout.Session): P
     const intentId = typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id;
     if (!intentId) throw new Error("payment_intent_missing");
     if (decision === "refund" || unavailable) {
+      // Releasing a hold frees seats: the waitlist gets them in this transaction, planned before the first write.
+      const courseRef = db.doc(`courses/${e.courseId}`);
+      const course = e.state === "held" ? (await tx.get(courseRef)).data() as Course | undefined : undefined;
+      const promotion = course ? await planPromotions(tx, { course: { ...course, id: e.courseId },
+        sessions: new Map(sessions.filter((d) => d.exists).map((d) => [d.id, d.data() as Session])),
+        freed: e.activeSessionIds.map((sessionId) => ({ sessionId, kind: "held" as const })),
+        checkoutOn, now: new Date() }) : undefined;
       if (e.state === "held") {
         sessions.forEach((d) => {
           const s = d.data() as Session;
           if (s.held < 1) throw new Error("seat_counter_inconsistent");
-          tx.update(d.ref, { held: s.held - 1 });
+          tx.update(d.ref, { held: FieldValue.increment(-1) });
           tx.delete(d.ref.collection("participants").doc(e.userId));
         });
+        // The hold took one off the course's seat counter; giving it back keeps a promotion into it net zero.
+        if (course && e.activeSessionIds.includes(course.nextSessionId)) {
+          tx.update(courseRef, { nextAvailableSeats: FieldValue.increment(1) });
+        }
         tx.update(ref, { state: "expired", activeSessionIds: [], updatedAt: nowStamp() });
       }
       tx.set(db.doc(`courseRefunds/${id}_late`), { enrollmentId: id, providerId: e.providerId, userId: e.userId,
@@ -89,12 +102,13 @@ export async function fulfillCourseCheckout(session: Stripe.Checkout.Session): P
         paymentIntentId: intentId, status: "pending", createdAt: nowStamp() }, { merge: true });
       tx.update(ref, { stripePaymentIntentId: intentId, paymentStatus: "paid", checkoutSettled: true,
         providerAmountOwedCents: 0, paymentException: "late_or_cancelled" });
+      promotion?.apply();
       return;
     }
     sessions.forEach((d) => {
       const s = d.data() as Session;
       if (s.held < 1) throw new Error("seat_counter_inconsistent");
-      tx.update(d.ref, { held: s.held - 1, occupied: s.occupied + 1 });
+      tx.update(d.ref, { held: FieldValue.increment(-1), occupied: FieldValue.increment(1) });
       tx.update(d.ref.collection("participants").doc(e.userId), { state: "confirmed" });
     });
     tx.update(ref, { state: "confirmed", checkoutSettled: true, paymentStatus: "paid", paidCents: e.totalCents,

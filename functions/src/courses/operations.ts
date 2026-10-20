@@ -1,9 +1,12 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { Timestamp } from "firebase-admin/firestore";
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { region } from "../lib/runtimeOptions";
+import { readPaymentSettings } from "../payments/paymentSettingsCallables";
+import { checkoutActive } from "./core";
 import { db, safeId, uidOf, nowStamp, domainError, Enrollment, Course, Session } from "./store";
 import { canManageCourse, type Authority } from "./authority";
 import { queueCourseNotification } from "./notifications";
+import { planPromotions } from "./waitlist";
 
 // Authority is resolved once by the caller (R13); release never looks it up again.
 export type ReleaseActor =
@@ -20,6 +23,8 @@ export async function releaseActorFor(uid: string, enrollment: Pick<Enrollment, 
 export async function releaseEnrollment(
   enrollmentId: string, actor: ReleaseActor, selected?: string[], reason = "", expired = false
 ): Promise<void> {
+  // Read once, outside the transaction: promoted Stripe entries are only held while checkout is on.
+  const checkoutOn = checkoutActive(await readPaymentSettings());
   await db.runTransaction(async (tx) => {
     const ref = db.doc(`courseEnrollments/${enrollmentId}`);
     const enrollment = (await tx.get(ref)).data() as Enrollment | undefined;
@@ -44,8 +49,14 @@ export async function releaseEnrollment(
     }
     const courseRef = db.doc(`courses/${enrollment.courseId}`);
     const course = (await tx.get(courseRef)).data() as Course;
+    // The freed seats go to the waitlist inside this transaction. The planner only reads, so it runs before the first
+    // write; its writes follow ours and compose with them (every seat counter below is an increment).
+    const promotion = await planPromotions(tx, { course: { ...course, id: enrollment.courseId },
+      sessions: new Map(sessions.filter((doc) => doc.exists).map((doc) => [doc.id, doc.data() as Session])),
+      freed: active.map((sessionId) => ({ sessionId, kind: enrollment.state === "held" ? "held" : "occupied" })),
+      checkoutOn, now: new Date() });
     if (active.includes(course.nextSessionId)) {
-      tx.update(courseRef, { nextAvailableSeats: course.nextAvailableSeats + 1 });
+      tx.update(courseRef, { nextAvailableSeats: FieldValue.increment(1) });
     }
     const refund = enrollment.paymentStatus === "paid" ?
       active.reduce((sum, id) => sum + enrollment.allocations[id], 0) : 0;
@@ -61,7 +72,7 @@ export async function releaseEnrollment(
       const s = doc.data() as Session;
       const field = enrollment.state === "held" ? "held" : "occupied";
       if (s[field] < 1) throw new Error("seat_counter_inconsistent");
-      tx.update(doc.ref, { [field]: s[field] - 1 });
+      tx.update(doc.ref, { [field]: FieldValue.increment(-1) });
       tx.delete(doc.ref.collection("participants").doc(enrollment.userId));
       if (refund && enrollment.allocations[doc.id] > 0) {
         tx.set(db.doc(`courseRefunds/${enrollmentId}_${doc.id}`), {
@@ -77,6 +88,7 @@ export async function releaseEnrollment(
         isCustomer ? "cancelled_by_client" : "cancelled_by_trainer", enrollment.userId,
         { name: enrollment.courseName }, undefined, reason);
     }
+    promotion.apply();
   });
 }
 

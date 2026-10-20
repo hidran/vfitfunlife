@@ -583,3 +583,191 @@ describe("clearWaitlistInTx", () => {
       .toEqual([]);
   });
 });
+
+// -- Promotion on every release (D5) --------------------------------------------------------------------------------
+const holderEnrollment = (id = SESSION) => enrollmentIdOf("h", `hold-h-${id}`);
+const cancel = (uid: string, enrollmentId: string, extra: Record<string, unknown> = {}) =>
+  api.cancelCourseEnrollment.run(request(uid, { enrollmentId, ...extra }));
+const past = () => admin.firestore.Timestamp.fromMillis(Date.now() - 60000);
+const stripeSwitch = async (on: boolean) => {
+  await db.doc("systemSettings/payments").set({ stripePaymentsEnabled: on, courseCheckoutEnabled: on });
+  (await import("../lib/cachedDoc")).invalidateCachedDoc("systemSettings/payments");
+};
+const maintain = () => api.maintainCourseEnrollments.run({ scheduleTime: new Date().toISOString(), jobName: "test" });
+async function stripeHold(courseId: string, uid = "h", id = SESSION) {
+  const quote = await api.quoteCourse.run(request(uid, { courseId }));
+  const line = quote.sessions.find((l) => l.sessionId === id)!;
+  return api.enrollInCourse.run(request(uid, { courseId, scope: "lesson", sessionId: id, paymentMode: "stripe",
+    requestId: `hold-${uid}-${id}`, expectedFinalCents: line.finalCents, expectedRevisions: { [id]: line.revision } }));
+}
+
+describe("promotion when a seat is released", () => {
+  it("seats the first waitlisted customer when the holder cancels", async () => {
+    const courseId = await fullCourse();
+    for (const uid of ["u1", "u2"]) await join(uid, courseId);
+    await cancel("h", holderEnrollment());
+    expect(await enrollmentOf("u1", "w-u1")).toMatchObject({ state: "confirmed", promotedFromWaitlist: true });
+    expect(await enrollmentOf("h", `hold-h-${SESSION}`)).toMatchObject({ state: "cancelled" });
+    // The released seat went straight to the customer: the counter never dropped.
+    expect(await sessionOf(courseId)).toMatchObject({ occupied: 1, held: 0, waitlisted: 1 });
+    expect(await waitlistView(courseId)).toEqual([["u2", 1]]);
+    expect(await notices("waitlist_promoted")).toEqual(["u1"]);
+    await assertCounters(courseId);
+  });
+  it("does the same when the provider cancels the customer's booking", async () => {
+    const courseId = await fullCourse();
+    await join("u1", courseId);
+    await cancel("p", holderEnrollment(), { reason: "Sorry" });
+    expect(await enrollmentOf("u1", "w-u1")).toMatchObject({ state: "confirmed", promotedFromWaitlist: true });
+    expect(await notices("cancelled_by_trainer")).toEqual(["h"]);
+    expect(await sessionOf(courseId)).toMatchObject({ occupied: 1, waitlisted: 0 });
+    await assertCounters(courseId);
+  });
+  it("promotes only once when the cancellation is replayed or raced", async () => {
+    const courseId = await fullCourse();
+    for (const uid of ["u1", "u2"]) await join(uid, courseId);
+    await Promise.allSettled([cancel("h", holderEnrollment()), cancel("p", holderEnrollment())]);
+    await cancel("h", holderEnrollment());
+    expect(await enrollmentOf("u2", "w-u2")).toBeUndefined();
+    expect(await waitlistView(courseId)).toEqual([["u2", 1]]);
+    expect(await sessionOf(courseId)).toMatchObject({ occupied: 1, waitlisted: 1 });
+    await assertCounters(courseId);
+  });
+  it("promotes through a Stripe hold chain as holds expire in the maintenance run", async () => {
+    await stripeSwitch(true);
+    try {
+      const courseId = await course();
+      await stripeHold(courseId);
+      await join("u1", courseId, { paymentMode: "stripe" });
+      await join("u2", courseId);
+      await db.doc(`courseEnrollments/${holderEnrollment()}`).update({ holdExpiresAt: past() });
+      await maintain();
+      const first = (await enrollmentOf("u1", "w-u1"))!;
+      expect(first).toMatchObject({ state: "held", paymentMode: "stripe", promotedFromWaitlist: true });
+      expect(first.holdExpiresAt.toMillis()).toBeGreaterThan(Date.now() + 25 * 60000);
+      expect(await sessionOf(courseId)).toMatchObject({ occupied: 0, held: 1, waitlisted: 1 });
+      expect(await enrollmentOf("h", `hold-h-${SESSION}`)).toMatchObject({ state: "expired" });
+      await assertCounters(courseId);
+      await db.doc(`courseEnrollments/${enrollmentIdOf("u1", "w-u1")}`).update({ holdExpiresAt: past() });
+      await maintain();
+      expect(await enrollmentOf("u2", "w-u2")).toMatchObject({ state: "confirmed", paymentMode: "direct" });
+      expect(await sessionOf(courseId)).toMatchObject({ occupied: 1, held: 0, waitlisted: 0 });
+      expect(await notices("waitlist_promoted")).toEqual(["u1", "u2"]);
+      await assertCounters(courseId);
+    } finally {
+      await stripeSwitch(false);
+    }
+  });
+  it("promotes when a checkout session expires (the webhook's release)", async () => {
+    await stripeSwitch(true);
+    try {
+      const courseId = await course();
+      await stripeHold(courseId);
+      await join("u1", courseId);
+      await db.doc(`courseEnrollments/${holderEnrollment()}`).update({ holdExpiresAt: past() });
+      const { releaseEnrollment } = await import("./operations");
+      await releaseEnrollment(holderEnrollment(), { kind: "system" }, undefined, "", true);
+      expect(await enrollmentOf("u1", "w-u1")).toMatchObject({ state: "confirmed" });
+      await releaseEnrollment(holderEnrollment(), { kind: "system" }, undefined, "", true);
+      expect(await waitlist(courseId)).toEqual([]);
+      expect(await sessionOf(courseId)).toMatchObject({ occupied: 1, held: 0 });
+      await assertCounters(courseId);
+    } finally {
+      await stripeSwitch(false);
+    }
+  });
+  it("drops a Stripe entry at promotion time when checkout was switched off, and seats the next one", async () => {
+    await stripeSwitch(true);
+    try {
+      const courseId = await course();
+      await stripeHold(courseId);
+      await join("u1", courseId, { paymentMode: "stripe" });
+      await join("u2", courseId);
+      await stripeSwitch(false);
+      await db.doc(`courseEnrollments/${holderEnrollment()}`).update({ holdExpiresAt: past() });
+      await maintain();
+      expect(await enrollmentOf("u1", "w-u1")).toBeUndefined();
+      expect(await notices("waitlist_cleared")).toEqual(["u1"]);
+      expect(await enrollmentOf("u2", "w-u2")).toMatchObject({ state: "confirmed" });
+      await assertCounters(courseId);
+    } finally {
+      await stripeSwitch(false);
+    }
+  });
+  it("promotes when a late Stripe payment arrives for a hold that already ran out", async () => {
+    await stripeSwitch(true);
+    try {
+      const courseId = await course();
+      const booking = await stripeHold(courseId);
+      await join("u1", courseId);
+      await db.doc(`courseEnrollments/${booking.enrollmentId}`).update({ holdExpiresAt: past(), checkoutSessionId: "cs" });
+      const checkout = await import("./checkout");
+      await checkout.fulfillCourseCheckout({ id: "cs", payment_intent: "pi", payment_status: "paid", currency: "eur",
+        amount_total: 1500, metadata: { courseEnrollmentId: booking.enrollmentId, userId: "h" } } as never);
+      expect((await db.doc(`courseRefunds/${booking.enrollmentId}_late`).get()).data())
+        .toMatchObject({ status: "pending", amountCents: 1500 });
+      expect(await enrollmentOf("u1", "w-u1")).toMatchObject({ state: "confirmed", promotedFromWaitlist: true });
+      expect(await sessionOf(courseId)).toMatchObject({ occupied: 1, held: 0, waitlisted: 0 });
+      await assertCounters(courseId);
+    } finally {
+      await stripeSwitch(false);
+    }
+  });
+  it("promotes on every lesson of a released series that has a waitlist", async () => {
+    const courseId = await course({ endDate: "2099-10-14", seriesPriceCents: 3000 });
+    const days = ["2099-10-12", "2099-10-13", "2099-10-14"];
+    const quote = await api.quoteCourse.run(request("h", { courseId }));
+    const series = await api.enrollInCourse.run(request("h", { courseId, scope: "series", requestId: "series-h",
+      expectedFinalCents: quote.series!.finalCents, expectedRevisions: quote.series!.revisions }));
+    const wait = (uid: string, sessionId: string) =>
+      api.joinCourseWaitlist.run(request(uid, { courseId, sessionId, paymentMode: "direct", requestId: `w-${uid}-${sessionId}` }));
+    await wait("u1", days[0]);
+    await wait("u2", days[1]);
+    await wait("u3", days[2]);
+    await wait("u4", days[2]);
+    await cancel("h", series.enrollmentId);
+    for (const [uid, day] of [["u1", days[0]], ["u2", days[1]], ["u3", days[2]]]) {
+      expect(await enrollmentOf(uid, `w-${uid}-${day}`), `${uid} on ${day}`).toMatchObject({ state: "confirmed" });
+    }
+    expect(await waitlistView(courseId, days[2])).toEqual([["u4", 1]]);
+    expect(await notices("waitlist_promoted")).toEqual(["u1", "u2", "u3"]);
+    await assertCounters(courseId);
+  });
+  it("clears the waitlist, and leaves the seat free, when the seat is freed inside the notice window", async () => {
+    const courseId = await fullCourse();
+    for (const uid of ["u1", "u2"]) await join(uid, courseId);
+    await sessionRef(courseId).update({ startsAt: admin.firestore.Timestamp.fromMillis(Date.now() + 3600000) });
+    await cancel("p", holderEnrollment());
+    expect(await enrollmentOf("u1", "w-u1")).toBeUndefined();
+    expect(await waitlist(courseId)).toEqual([]);
+    expect(await sessionOf(courseId)).toMatchObject({ occupied: 0, waitlisted: 0 });
+    expect(await notices("waitlist_cleared")).toEqual(["u1", "u2"]);
+    await assertCounters(courseId);
+  });
+  it("promotes nobody into a lesson that was cancelled", async () => {
+    const courseId = await fullCourse();
+    await join("u1", courseId);
+    await api.manageCourseSession.run(request("p", { courseId, sessionId: SESSION, action: "cancel", reason: "Closed" }));
+    expect(await enrollmentOf("u1", "w-u1")).toBeUndefined();
+    expect(await notices("waitlist_promoted")).toEqual([]);
+    expect(await sessionOf(courseId)).toMatchObject({ occupied: 0, state: "cancelled" });
+  });
+  it("still cancels when the waitlist cannot be served (venue switched off)", async () => {
+    await db.doc("venues/v").set({ ownerId: "p", type: "gym", partnerStatus: "active", isActive: true });
+    const courseId = await fullCourse();
+    await db.doc(`courses/${courseId}`).update({ venueId: "v" });
+    await join("u1", courseId);
+    await db.doc("venues/v").update({ partnerStatus: "suspended" });
+    await cancel("h", holderEnrollment());
+    expect(await enrollmentOf("h", `hold-h-${SESSION}`)).toMatchObject({ state: "cancelled" });
+    expect(await enrollmentOf("u1", "w-u1")).toBeUndefined();
+    expect(await waitlistView(courseId)).toEqual([["u1", 1]]);
+    expect(await sessionOf(courseId)).toMatchObject({ occupied: 0, waitlisted: 1 });
+  });
+  it("does not touch a lesson that has no waitlist", async () => {
+    const courseId = await fullCourse();
+    await cancel("h", holderEnrollment());
+    expect(await sessionOf(courseId)).toMatchObject({ occupied: 0, waitlisted: 0 });
+    await assertCounters(courseId);
+  });
+});
