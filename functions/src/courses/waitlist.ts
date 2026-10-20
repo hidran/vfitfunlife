@@ -1,10 +1,13 @@
 import { createHash } from "crypto";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { FieldValue, type Timestamp } from "firebase-admin/firestore";
+import { logger } from "firebase-functions";
+import { FieldValue, type DocumentReference, type Timestamp, type Transaction } from "firebase-admin/firestore";
 import { region } from "../lib/runtimeOptions";
 import { readPaymentSettings } from "../payments/paymentSettingsCallables";
 import { checkoutActive } from "./core";
 import { db, safeId, uidOf, nowStamp, domainError, eligibleProvider, Course, Session, WaitlistEntry } from "./store";
+import { enrollInTx } from "./enrollTx";
+import { queueCourseNotification } from "./notifications";
 
 export const WAITLIST_MAX = 100;
 // Candidates tried per freed seat inside one transaction, and lessons handled per transaction (R16).
@@ -57,6 +60,10 @@ export function renumber(entries: { id: string; position: number }[], removed: s
   return entries.filter((entry) => !gone.has(entry.id)).map((entry, index) => ({ id: entry.id, position: index + 1 }));
 }
 
+/** The id a promotion gives the enrollment: the same as a direct booking with that request id, so retries replay. */
+const waitlistEnrollmentId = (uid: string, requestId: string) =>
+  createHash("sha256").update(`${uid}:${requestId}`).digest("hex");
+
 const waitlistRef = (courseId: string, sessionId: string, uid: string) =>
   db.doc(`courses/${courseId}/sessions/${sessionId}/waitlist/${uid}`);
 
@@ -74,7 +81,7 @@ export const joinCourseWaitlist = onCall({ region }, async (req) => {
   if (paymentMode === "stripe" && !checkoutActive(await readPaymentSettings())) {
     throw new HttpsError("failed-precondition", "Online course payments are not enabled");
   }
-  const enrollmentId = createHash("sha256").update(`${uid}:${requestId}`).digest("hex");
+  const enrollmentId = waitlistEnrollmentId(uid, requestId);
   const entryRef = waitlistRef(courseId, sessionId, uid);
   try {
     return await db.runTransaction(async (tx) => {
@@ -152,3 +159,199 @@ export const leaveCourseWaitlist = onCall({ region }, async (req) => {
     return domainError(error);
   }
 });
+
+// ---------------------------------------------------------------------------------------------------------------
+// Promotion (D4). Everything here runs inside the caller's transaction: reads in planPromotions, writes in apply().
+// ---------------------------------------------------------------------------------------------------------------
+
+// A Firestore transaction commits at most 500 writes. The caller's own release writes are small (a few per lesson),
+// so the planner keeps its share well below the limit; lessons that do not fit are left to promoteWaitlist / the sweep.
+export const PROMOTION_WRITE_BUDGET = 350;
+
+export type PromotionPlan = {
+  apply: () => void;
+  promoted: { sessionId: string; uid: string; enrollmentId: string }[];
+  // Lessons whose whole waitlist was closed because the notice window is over.
+  cleared: string[];
+  // Entries removed one by one because they can never be promoted.
+  dropped: { sessionId: string; uid: string }[];
+};
+
+type Candidate = { id: string; ref: DocumentReference; data: WaitlistEntry };
+type CourseRef = Pick<Course, "name" | "providerName" | "providerId" | "venueId"> & { id: string };
+
+// Refusals that belong to the entry: it can never be promoted as it stands, so it leaves the list and the next one
+// is tried. Anything else concerns the lesson (full, venue off, deadline, closed...): the entry stays for later.
+const ENTRY_REFUSALS = new Set(["account_inactive", "cannot_book_yourself", "already_enrolled", "request_id_reused",
+  "checkout_amount_too_low", "Online course payments are not enabled"]);
+
+/** Contention and transport errors (numeric gRPC codes) must abort so the surrounding transaction retries. */
+function classifyRefusal(error: unknown): "drop" | "stop" {
+  if (typeof (error as { code?: unknown } | null)?.code === "number") throw error;
+  const message = error instanceof Error ? error.message : "";
+  if (!ENTRY_REFUSALS.has(message)) logger.warn("waitlist promotion stopped", { message });
+  return ENTRY_REFUSALS.has(message) ? "drop" : "stop";
+}
+
+const listOf = (courseId: string, sessionId: string) =>
+  db.collection(`courses/${courseId}/sessions/${sessionId}/waitlist`);
+
+function queueCleared(tx: Transaction, course: CourseRef, entry: WaitlistEntry, reason: string): void {
+  queueCourseNotification(tx, `${course.id}_${entry.sessionId}_${entry.requestId}`, "waitlist_cleared",
+    entry.userId, course, undefined, reason);
+}
+
+/**
+ * Closes the whole waitlist of one lesson (cancelled, rescheduled, archived, window closed). Reads now; the returned
+ * writer deletes every entry, zeroes the counter and tells each customer. An empty list writes nothing.
+ */
+export async function clearWaitlistInTx(tx: Transaction, course: CourseRef, sessionId: string,
+  reason: "lesson_cancelled" | "rescheduled" | "archived" | "window_closed"): Promise<() => void> {
+  const entries = (await tx.get(listOf(course.id, sessionId).orderBy("position").limit(WAITLIST_MAX))).docs;
+  if (!entries.length) return () => undefined;
+  return () => {
+    for (const doc of entries) {
+      tx.delete(doc.ref);
+      queueCleared(tx, course, doc.data() as WaitlistEntry, reason);
+    }
+    tx.update(db.doc(`courses/${course.id}/sessions/${sessionId}`), { waitlisted: 0 });
+  };
+}
+
+type SessionPlan = {
+  writers: (() => void)[]; promoted: PromotionPlan["promoted"]; dropped: PromotionPlan["dropped"];
+  cleared: boolean; cost: number; enrollmentIds: string[];
+};
+
+async function planSession(tx: Transaction, args: {
+  course: Course & { id: string }; sessionId: string; session: Session; seats: FreedSeat[]; checkoutOn: boolean;
+  now: Date; taken: ReadonlySet<string>;
+}): Promise<SessionPlan | null> {
+  const { course, sessionId, session, seats, checkoutOn, now } = args;
+  const entries: Candidate[] = (await tx.get(listOf(course.id, sessionId).orderBy("position").limit(WAITLIST_MAX)))
+    .docs.map((doc) => ({ id: doc.id, ref: doc.ref, data: doc.data() as WaitlistEntry }));
+  if (!entries.length) return null;
+  const sessionRef = db.doc(`courses/${course.id}/sessions/${sessionId}`);
+  const plan: SessionPlan = { writers: [], promoted: [], dropped: [], cleared: false, cost: 1, enrollmentIds: [] };
+  const startsAt = session.startsAt.toDate();
+
+  if (!promotionWindowOpen(session, course, now)) {
+    plan.cleared = true;
+    plan.cost += entries.length * 2;
+    plan.writers.push(() => {
+      for (const entry of entries) {
+        tx.delete(entry.ref);
+        queueCleared(tx, course, entry.data, "window_closed");
+      }
+      tx.update(sessionRef, { waitlisted: 0 });
+    });
+    return plan;
+  }
+
+  // The freed seats count as free for the capacity check of every promotion into this lesson; there are never more
+  // promotions than freed seats, so the lesson cannot end up over capacity.
+  const released = { occupied: seats.filter((s) => s.kind === "occupied").length,
+    held: seats.filter((s) => s.kind === "held").length };
+  const removed = new Set<string>();
+  const entryAt = { cursor: 0 };
+  const writers: (() => void)[] = [];
+  const notify: (() => void)[] = [];
+  let stopped = false;
+  for (let seat = 0; seat < seats.length && !stopped; seat++) {
+    for (let scanned = 0; scanned < PROMOTION_SCAN && entryAt.cursor < entries.length; scanned++) {
+      const entry = entries[entryAt.cursor++];
+      const uid = entry.data.userId;
+      const enrollmentId = waitlistEnrollmentId(uid, entry.data.requestId);
+      let outcome: "promoted" | "drop" | "drop_silently" | "stop";
+      if (entry.data.paymentMode === "stripe" && !checkoutOn) outcome = "drop";
+      // One request id can sit on several lessons; the first promotion consumes it (the enrollment id derives from it).
+      else if (args.taken.has(enrollmentId) || plan.enrollmentIds.includes(enrollmentId)) outcome = "drop";
+      else {
+        try {
+          const { result, commit } = await enrollInTx(tx, {
+            actor: uid, uid, courseId: course.id, scope: "lesson", sessionId, paymentMode: entry.data.paymentMode,
+            requestId: entry.data.requestId, byProvider: false, skipPriceCheck: true, promotedFromWaitlist: true,
+            checkoutOn, released: { [sessionId]: released },
+          });
+          if (result.replay) outcome = "drop_silently";
+          else {
+            outcome = "promoted";
+            writers.push(commit);
+            plan.enrollmentIds.push(enrollmentId);
+            plan.promoted.push({ sessionId, uid, enrollmentId });
+            plan.cost += 10;
+            notify.push(() => queueCourseNotification(tx, enrollmentId, "waitlist_promoted", uid, course, startsAt));
+          }
+        } catch (error) {
+          outcome = classifyRefusal(error);
+        }
+      }
+      if (outcome === "stop") {
+        stopped = true;
+        break;
+      }
+      removed.add(entry.id);
+      if (outcome === "promoted") break;
+      plan.cost += 1;
+      if (outcome === "drop") {
+        plan.dropped.push({ sessionId, uid });
+        notify.push(() => queueCleared(tx, course, entry.data, "entry_dropped"));
+        plan.cost += 1;
+      }
+    }
+  }
+  if (!removed.size) return null;
+  const kept = renumber(entries.map((e) => ({ id: e.id, position: e.data.position })), [...removed]);
+  const current = new Map(entries.map((e) => [e.id, e.data.position]));
+  const moves = kept.filter(({ id, position }) => current.get(id) !== position);
+  plan.cost += moves.length;
+  plan.writers.push(...writers, () => {
+    for (const id of removed) tx.delete(listOf(course.id, sessionId).doc(id));
+    for (const { id, position } of moves) tx.update(listOf(course.id, sessionId).doc(id), { position });
+    tx.update(sessionRef, { waitlisted: FieldValue.increment(-removed.size) });
+    notify.forEach((send) => send());
+  });
+  return plan;
+}
+
+/**
+ * Plans the promotion of waitlisted customers into seats the caller frees in the SAME transaction. Only reads here;
+ * the caller writes its own release first or after, then calls apply(). No write happens unless apply() is called.
+ *
+ * Per freed seat the first PROMOTION_SCAN entries are tried in order. An entry that can never be promoted (inactive
+ * account, Stripe entry while checkout is off or the price is unpayable, the customer's own course, a request id
+ * already used by an earlier promotion) is dropped with `waitlist_cleared` and the next is tried. A refusal that
+ * concerns the lesson (full, venue off, deadline) stops that lesson and keeps its entries. Lessons whose notice
+ * window is over lose their whole waitlist. Lessons are skipped, not failed, when the write budget is spent.
+ */
+export async function planPromotions(tx: Transaction, args: {
+  course: Course & { id: string }; sessions: Map<string, Session>; freed: FreedSeat[]; checkoutOn: boolean; now: Date;
+}): Promise<PromotionPlan> {
+  const { course, sessions, freed } = args;
+  const plan: PromotionPlan = { apply: () => undefined, promoted: [], cleared: [], dropped: [] };
+  if (course.state !== "published" || course.enrollmentClosed) return plan;
+  const seatsOf = new Map<string, FreedSeat[]>();
+  for (const seat of freed) {
+    const session = sessions.get(seat.sessionId);
+    // The stored counter decides whether there is anything to read; joins write the session, so a racing join
+    // conflicts with the caller's transaction.
+    if (session?.state !== "scheduled" || (session.waitlisted ?? 0) < 1) continue;
+    seatsOf.set(seat.sessionId, [...(seatsOf.get(seat.sessionId) ?? []), seat]);
+  }
+  const writers: (() => void)[] = [];
+  const taken = new Set<string>();
+  let writes = 0;
+  for (const sessionId of [...seatsOf.keys()].slice(0, MAX_PROMOTION_SESSIONS_PER_TX)) {
+    const sessionPlan = await planSession(tx, { course, sessionId, session: sessions.get(sessionId)!,
+      seats: seatsOf.get(sessionId)!, checkoutOn: args.checkoutOn, now: args.now, taken });
+    if (!sessionPlan || writes + sessionPlan.cost > PROMOTION_WRITE_BUDGET) continue;
+    writes += sessionPlan.cost;
+    writers.push(...sessionPlan.writers);
+    sessionPlan.enrollmentIds.forEach((id) => taken.add(id));
+    plan.promoted.push(...sessionPlan.promoted);
+    plan.dropped.push(...sessionPlan.dropped);
+    if (sessionPlan.cleared) plan.cleared.push(sessionId);
+  }
+  plan.apply = () => writers.forEach((write) => write());
+  return plan;
+}
