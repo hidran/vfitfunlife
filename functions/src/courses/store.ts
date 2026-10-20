@@ -20,7 +20,7 @@ export interface Session {
   // Absent on sessions written before venue-linked courses.
   revision?: number; instructorId?: string | null; instructorName?: string; roomId?: string | null;
   locationId?: string | null; venueId?: string | null; courseId?: string; listed?: boolean; waitlisted?: number;
-  // Denormalised so a venue page labels and times its lessons without reading any course document (absent before the backfill).
+  // Denormalised so a venue page labels and times lessons without reading course documents (absent before backfill).
   courseName?: string; timezone?: string;
 }
 export interface WaitlistEntry {
