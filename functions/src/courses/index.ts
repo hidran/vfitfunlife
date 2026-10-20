@@ -6,6 +6,7 @@ import {
 } from "./core";
 import { db, safeId, uidOf, eligibleProvider, providerUsable, nowStamp, domainError, Course, Session } from "./store";
 import { canManageCourse, managesVenue } from "./authority";
+import { slotsOf, lockPaths, diffSlots, updateScheduleLocks, MAX_LOCKED_SESSIONS } from "./locks";
 import { hostsCourses, type VenueType } from "../types";
 
 type Reader = (path: string) => Promise<FirebaseFirestore.DocumentData | undefined>;
@@ -118,19 +119,10 @@ export const saveCourse = onCall({ region }, async (req) => {
       }).sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
       const next = actual.find((s) => s.startsAt > new Date() && s.state === "scheduled") ?? actual[actual.length - 1];
       const nextPrior = existing.docs.find((d) => d.id === next.id)?.data() as Session | undefined;
-      tx.set(ref, { ...input, providerEligible: true, providerId,
-        providerName: provider.fullName ?? provider.name ?? input.instructor,
-        serviceId, sessionIds: generated.map((s) => s.id), categoryIds: [input.categoryId, category.parentId],
-        nextSessionId: next.id, nextAvailableSeats: capacityOf(nextPrior) - (nextPrior?.occupied ?? 0) -
-          (nextPrior?.held ?? 0),
-        firstStartsAt: Timestamp.fromDate(actual[0].startsAt), nextStartsAt: Timestamp.fromDate(next.startsAt),
-        updatedAt: nowStamp(), ...(!old ? { createdAt: nowStamp() } : {}) });
-      const newIds = new Set(generated.map((s) => s.id));
-      for (const doc of existing.docs) if (!newIds.has(doc.id)) tx.delete(doc.ref);
       // A lesson-level room or substitute (from manageCourseSession) survives while the course value is unchanged.
       const roomKept = !!old && (old.roomId ?? null) === input.roomId;
       const instructorKept = !!old && (old.instructorId ?? null) === input.instructorId;
-      for (const session of generated) {
+      const written = generated.map((session) => {
         const previous = existing.docs.find((d) => d.id === session.id)?.data() as Session | undefined;
         const startsAt = previous && hasBookings ? previous.startsAt : Timestamp.fromDate(session.startsAt);
         const endsAt = previous && hasBookings ? previous.endsAt : Timestamp.fromDate(session.endsAt);
@@ -146,14 +138,32 @@ export const saveCourse = onCall({ region }, async (req) => {
           { startsAt: previous.startsAt.toMillis(), endsAt: previous.endsAt.toMillis(),
             roomId: previous.roomId ?? null, instructorId: previous.instructorId ?? null },
           { startsAt: startsAt.toMillis(), endsAt: endsAt.toMillis(), roomId, instructorId }));
-        tx.set(ref.collection("sessions").doc(session.id), {
+        return { id: session.id, data: {
           startsAt, endsAt, capacity: capacityOf(previous), occupied: previous?.occupied ?? 0,
           held: previous?.held ?? 0, state, location: previous?.location ?? input.location, instructor,
           courseId: id, venueId: input.venueId, locationId, roomId, instructorId,
           instructorName, listed: input.state === "published", waitlisted: previous?.waitlisted ?? 0,
           revision: (previous?.revision ?? 1) + (bumped ? 1 : 0),
-        });
+        } };
+      });
+      // The lock documents are read here, so this comes before the first write.
+      const before = old ? slotsOf(id, old, existing.docs.map((d) => ({ id: d.id, data: d.data() as Session }))) : [];
+      const after = slotsOf(id, input, written);
+      if (after.filter((slot) => lockPaths(slot).length).length > MAX_LOCKED_SESSIONS) {
+        throw new HttpsError("failed-precondition", "locked_schedule_too_long", { fields: ["startDate", "endDate"] });
       }
+      const { remove, add } = diffSlots(before, after);
+      await updateScheduleLocks(tx, remove, add);
+      tx.set(ref, { ...input, providerEligible: true, providerId,
+        providerName: provider.fullName ?? provider.name ?? input.instructor,
+        serviceId, sessionIds: generated.map((s) => s.id), categoryIds: [input.categoryId, category.parentId],
+        nextSessionId: next.id, nextAvailableSeats: capacityOf(nextPrior) - (nextPrior?.occupied ?? 0) -
+          (nextPrior?.held ?? 0),
+        firstStartsAt: Timestamp.fromDate(actual[0].startsAt), nextStartsAt: Timestamp.fromDate(next.startsAt),
+        updatedAt: nowStamp(), ...(!old ? { createdAt: nowStamp() } : {}) });
+      const newIds = new Set(generated.map((s) => s.id));
+      for (const doc of existing.docs) if (!newIds.has(doc.id)) tx.delete(doc.ref);
+      for (const { id: sessionId, data } of written) tx.set(ref.collection("sessions").doc(sessionId), data);
       tx.set(db.doc(`instructors/${providerId}/services/${serviceId}`), {
         name: input.name, description: input.description, categoryId: input.categoryId,
         price: (input.lessonPriceCents ?? input.seriesPriceCents ?? 0) / 100,

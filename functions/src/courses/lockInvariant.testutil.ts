@@ -1,8 +1,11 @@
 import type { Firestore } from "firebase-admin/firestore";
 import { expect } from "vitest";
-import { slotsOf } from "./locks";
+import { lockPaths, slotsOf } from "./locks";
 
-/** A lock slot exists iff its course is published and its session is scheduled (future sessions only). */
+/**
+ * A lock slot exists iff its course is published and its session is scheduled (future sessions only).
+ * A slot that names no room and no instructor has no lock document, so it is not expected either.
+ */
 export async function assertLockInvariant(db: Firestore): Promise<void> {
   const now = Date.now();
   const expected = new Set<string>();
@@ -11,7 +14,7 @@ export async function assertLockInvariant(db: Firestore): Promise<void> {
     const sessions = (await course.ref.collection("sessions").get()).docs
       .map((doc) => ({ id: doc.id, data: doc.data() as Parameters<typeof slotsOf>[2][number]["data"] }));
     for (const slot of slotsOf(course.id, { state: data.state, name: data.name }, sessions)) {
-      if (slot.startsAt.getTime() > now) expected.add(slot.id);
+      if (slot.startsAt.getTime() > now && lockPaths(slot).length) expected.add(slot.id);
     }
   }
   const stored = new Set<string>();

@@ -1,6 +1,7 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import * as admin from "firebase-admin";
 import type { CallableRequest } from "firebase-functions/v2/https";
+import { assertLockInvariant } from "./lockInvariant.testutil";
 process.env.FIRESTORE_EMULATOR_HOST = "127.0.0.1:8080";
 vi.mock("../lib/stripeClient", () => ({ getStripe: async () => ({}) }));
 const auth = vi.hoisted(() => ({ generatePasswordResetLink: vi.fn() }));
@@ -16,7 +17,7 @@ const input = { name: "Karate", categoryId: "karate", location: "Torino", instru
   recurrence: "daily", endDate: "2099-10-13", lessonPriceCents: 1500, seriesPriceCents: 2500, state: "published" };
 const SESSION = "2099-10-12";
 const COLLECTIONS = ["courses", "courseEnrollments", "courseRefunds", "courseNotifications", "clients",
-  "users", "instructors", "serviceCategories", "venues", "venueStaff", "rateLimits"];
+  "users", "instructors", "serviceCategories", "venues", "venueStaff", "rateLimits", "courseScheduleLocks"];
 
 beforeAll(async () => {
   for (const app of admin.apps) if (app) await app.delete();
@@ -216,7 +217,7 @@ describe("saveCourse provider and venue authority", () => {
   });
   it("creates on behalf of the owner when active staff leave providerId out or send their own", async () => {
     expect(await providerOf((await save("s", venueInput)).courseId)).toBe("biz");
-    expect(await providerOf((await save("s", { ...venueInput, name: "Judo" }, { providerId: "s" })).courseId)).toBe("biz");
+    expect(await providerOf((await save("s", { ...venueInput, name: "Judo", startTime: "20:00" }, { providerId: "s" })).courseId)).toBe("biz");
   });
   it("keeps the stored provider when staff edit, whatever the client sends", async () => {
     const { courseId } = await save("biz", venueInput);
@@ -241,8 +242,8 @@ describe("saveCourse provider and venue authority", () => {
     await expect(save("p", input, { providerId: "biz" })).rejects.toMatchObject(
       { code: "permission-denied", message: "course_owner_required" });
     expect(await providerOf((await save("a", input, { providerId: "p" })).courseId)).toBe("p");
-    expect(await providerOf((await save("a", venueInput, { providerId: "p" })).courseId)).toBe("p");
-    expect(await providerOf((await save("a", venueInput)).courseId)).toBe("biz");
+    expect(await providerOf((await save("a", { ...venueInput, startTime: "20:00" }, { providerId: "p" })).courseId)).toBe("p");
+    expect(await providerOf((await save("a", { ...venueInput, startTime: "21:00" })).courseId)).toBe("biz");
   });
   it("needs an owner when staff create on behalf of an ownerless venue", async () => {
     await db.doc("venues/vn").set({ type: "gym", partnerStatus: "active", isActive: true });
@@ -440,5 +441,115 @@ describe("saveCourse session snapshots and revisions", () => {
     await db.doc(`courses/${courseId}/sessions/${SESSION}`).update({ roomId: "r3", instructorId: "p2", instructorName: "Paola", revision: 4 });
     await save("biz", { ...venueInput, name: "Karate 2" }, courseId);
     expect((await sessions(courseId))[0]).toMatchObject({ roomId: "r3", instructorId: "p2", instructorName: "Paola", revision: 4 });
+  });
+});
+
+describe("saveCourse lock lifecycle", () => {
+  const venueInput = { ...input, venueId: "v", locationId: "l1", roomId: "r1", instructorId: "p" };
+  const save = (uid: string, course: Record<string, unknown>, courseId?: string) =>
+    api.saveCourse.run(request(uid, { course, ...(courseId ? { courseId } : {}) }));
+  const slotsIn = async (path: string) => Object.keys((await db.doc(path).get()).data()?.slots ?? {});
+  const lockDocs = async () => (await db.collection("courseScheduleLocks").get()).size;
+  beforeEach(async () => {
+    await db.doc("venues/v/instructors/p").set({ isActive: true, name: "Anna" });
+    await db.doc("venues/v/instructors/p2").set({ isActive: true, name: "Paola" });
+    await db.doc("instructors/p2").set({ fullName: "Paola", isActive: true, applicationStatus: "approved",
+      providerProfile: { isVerified: true } });
+    await db.doc("venues/v/locations/l1/rooms/r3").set({ name: "Sala 3", isActive: true });
+  });
+  afterEach(async () => assertLockInvariant(db));
+  it("takes a room and an instructor lock for every session of a published course", async () => {
+    const { courseId } = await save("biz", venueInput);
+    for (const day of ["2099-10-12", "2099-10-13"]) {
+      expect(await slotsIn(`courseScheduleLocks/room_v_l1_r1_${day}`)).toEqual([`${courseId}_${day}`]);
+      expect(await slotsIn(`courseScheduleLocks/instructor_p_${day}`)).toEqual([`${courseId}_${day}`]);
+    }
+    expect(await lockDocs()).toBe(4);
+  });
+  it("rejects an overlapping room with the first course's name and time, and writes nothing", async () => {
+    await save("biz", venueInput);
+    const before = (await db.collection("courses").get()).size;
+    await expect(save("biz", { ...venueInput, name: "Judo", instructorId: "p2", startTime: "18:30" }))
+      .rejects.toMatchObject({ message: "room_overlap", details: { courseName: "Karate",
+        startsAt: "2099-10-12T16:00:00.000Z", endsAt: "2099-10-12T17:00:00.000Z" } });
+    expect((await db.collection("courses").get()).size).toBe(before);
+    expect(await lockDocs()).toBe(4);
+  });
+  it("rejects the same instructor in another room as instructor_overlap", async () => {
+    await save("biz", venueInput);
+    await expect(save("biz", { ...venueInput, name: "Judo", roomId: "r3" })).rejects.toMatchObject(
+      { message: "instructor_overlap", details: { courseName: "Karate" } });
+  });
+  it("allows adjacent lessons in the same room and with the same instructor", async () => {
+    await save("biz", venueInput);
+    await save("biz", { ...venueInput, name: "Judo", startTime: "19:00" });
+    expect(await lockDocs()).toBe(4);
+  });
+  it("takes no locks for a draft, and none for an unlinked course without an instructor", async () => {
+    await save("biz", { ...venueInput, state: "draft" });
+    await save("p", input);
+    expect(await lockDocs()).toBe(0);
+  });
+  it("takes instructor locks only for an unlinked course with an instructor", async () => {
+    const { courseId } = await save("p", { ...input, instructorId: "p2" });
+    expect(await slotsIn("courseScheduleLocks/instructor_p2_2099-10-12")).toEqual([`${courseId}_2099-10-12`]);
+    expect(await lockDocs()).toBe(2);
+  });
+  it.each(["draft", "archived"])("releases every lock when the course goes back to %s", async (state) => {
+    const { courseId } = await save("biz", venueInput);
+    await save("biz", { ...venueInput, state }, courseId);
+    expect(await lockDocs()).toBe(0);
+  });
+  it("re-takes locks on republish and fails if someone else holds the slot by then", async () => {
+    const { courseId } = await save("biz", venueInput);
+    await save("biz", { ...venueInput, state: "draft" }, courseId);
+    await save("biz", { ...venueInput, name: "Judo", instructorId: "p2" });
+    await expect(save("biz", venueInput, courseId)).rejects.toThrow("room_overlap");
+    expect((await db.doc(`courses/${courseId}`).get()).data()?.state).toBe("draft");
+  });
+  it("releases the slots of sessions a schedule edit drops", async () => {
+    const { courseId } = await save("biz", venueInput);
+    await save("biz", { ...venueInput, endDate: "2099-10-12" }, courseId);
+    expect(await slotsIn("courseScheduleLocks/room_v_l1_r1_2099-10-13")).toEqual([]);
+    expect(await slotsIn("courseScheduleLocks/room_v_l1_r1_2099-10-12")).toEqual([`${courseId}_2099-10-12`]);
+  });
+  it("re-keys cleanly when a weekly course moves by one hour", async () => {
+    const { courseId } = await save("biz", venueInput);
+    await save("biz", { ...venueInput, startTime: "19:00" }, courseId);
+    const slots = (await db.doc("courseScheduleLocks/room_v_l1_r1_2099-10-12").get()).data()!.slots;
+    expect(slots[`${courseId}_2099-10-12`]).toMatchObject({ start: Date.parse("2099-10-12T17:00:00Z") });
+  });
+  it("does not conflict with itself when re-saved, renamed or moved onto its own old slot", async () => {
+    const { courseId } = await save("biz", venueInput);
+    await save("biz", venueInput, courseId);
+    await save("biz", { ...venueInput, name: "Karate 2", startTime: "18:30" }, courseId);
+    expect(await lockDocs()).toBe(4);
+  });
+  it("rejects a venue course with more than 400 locked sessions, but not an unlinked one (annual)", async () => {
+    const twoYears = { ...venueInput, endDate: "2101-10-12" };
+    await expect(save("biz", twoYears)).rejects.toMatchObject(
+      { message: "locked_schedule_too_long", details: { fields: ["startDate", "endDate"] } });
+    await expect(save("biz", { ...twoYears, state: "draft" })).resolves.toHaveProperty("courseId");
+    await expect(save("p", { ...input, endDate: "2101-10-12" })).resolves.toHaveProperty("courseId");
+    await expect(save("p", { ...input, endDate: "2101-10-12", instructorId: "p2", name: "Pilates" }))
+      .rejects.toThrow("locked_schedule_too_long");
+  });
+  it("still locks a year of daily lessons (366 sessions, under the cap)", async () => {
+    await save("biz", { ...venueInput, endDate: "2100-10-12" });
+    expect(await lockDocs()).toBe(732);
+  });
+  it("lets exactly one of two concurrent overlapping publishes win", async () => {
+    for (let round = 0; round < 3; round++) {
+      await db.recursiveDelete(db.collection("courses"));
+      await db.recursiveDelete(db.collection("courseScheduleLocks"));
+      const results = await Promise.allSettled([
+        save("biz", { ...venueInput, name: "Alpha", instructorId: "p" }),
+        save("biz", { ...venueInput, name: "Bravo", instructorId: "p2", startTime: "18:30" }),
+      ]);
+      expect(results.map((r) => r.status === "rejected" ? r.reason.message : "ok").sort()).toEqual(["ok", "room_overlap"]);
+      const failed = results.find((r) => r.status === "rejected") as PromiseRejectedResult;
+      expect(failed.reason.message).toBe("room_overlap");
+      await assertLockInvariant(db);
+    }
   });
 });
