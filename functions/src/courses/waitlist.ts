@@ -355,3 +355,40 @@ export async function planPromotions(tx: Transaction, args: {
   plan.apply = () => writers.forEach((write) => write());
   return plan;
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// Standalone promotion (D6): seats that were free before anyone looked (capacity raised, lessons D5 skipped, a venue
+// that came back). Used by the capacity increase and by the maintenance sweep.
+// ---------------------------------------------------------------------------------------------------------------
+
+const MAX_PROMOTION_ROUNDS = 50;
+
+/**
+ * Fills the free seats of one lesson from its waitlist, one single-seat transaction at a time, and returns how many
+ * customers were seated. Replays are inert: a seated customer leaves the list, so a second call finds nothing to do.
+ * A round that dropped unpromotable entries counts as progress (the next entries have not been examined yet); a
+ * round that only meets a lesson-level refusal (venue off, deadline) ends the loop and keeps the entries.
+ */
+export async function promoteWaitlist(courseId: string, sessionId: string): Promise<number> {
+  const checkoutOn = checkoutActive(await readPaymentSettings());
+  const courseRef = db.doc(`courses/${courseId}`);
+  const sessionRef = courseRef.collection("sessions").doc(sessionId);
+  let promoted = 0;
+  for (let round = 0; round < MAX_PROMOTION_ROUNDS; round++) {
+    const outcome = await db.runTransaction(async (tx) => {
+      const [courseDoc, sessionDoc] = await tx.getAll(courseRef, sessionRef);
+      const course = courseDoc.data() as Course | undefined;
+      const session = sessionDoc.data() as Session | undefined;
+      if (!course || !session || session.state !== "scheduled" || (session.waitlisted ?? 0) < 1 ||
+        session.capacity - session.occupied - session.held < 1) return { seated: 0, progress: false };
+      const plan = await planPromotions(tx, { course: { ...course, id: courseId },
+        sessions: new Map([[sessionId, session]]), freed: [{ sessionId, kind: "free" }], checkoutOn, now: new Date() });
+      plan.apply();
+      return { seated: plan.promoted.length,
+        progress: plan.promoted.length + plan.dropped.length + plan.cleared.length > 0 };
+    });
+    promoted += outcome.seated;
+    if (!outcome.progress) break;
+  }
+  return promoted;
+}

@@ -4,6 +4,7 @@ import * as admin from "firebase-admin";
 import { createHash } from "crypto";
 import type { CallableRequest } from "firebase-functions/v2/https";
 import { assertLockInvariant } from "./lockInvariant.testutil";
+import { retryEmulatorAbort } from "./raceRetry.testutil";
 process.env.FIRESTORE_EMULATOR_HOST = "127.0.0.1:8080";
 vi.mock("../lib/stripeClient", () => ({ getStripe: async () => ({}) }));
 const auth = vi.hoisted(() => ({ generatePasswordResetLink: vi.fn() }));
@@ -19,7 +20,7 @@ const SESSION = "2099-10-12";
 const OTHER = "2099-10-13";
 const COLLECTIONS = ["courses", "courseEnrollments", "courseRefunds", "courseNotifications", "clients",
   "users", "instructors", "serviceCategories", "venues", "venueStaff", "rateLimits", "courseScheduleLocks",
-  "systemSettings"];
+  "systemSettings", "courseSweepState", "elsewhere"];
 const CUSTOMERS = ["u1", "u2", "u3", "u4", "u5", "u6", "h"];
 
 beforeAll(async () => {
@@ -768,6 +769,191 @@ describe("promotion when a seat is released", () => {
     const courseId = await fullCourse();
     await cancel("h", holderEnrollment());
     expect(await sessionOf(courseId)).toMatchObject({ occupied: 0, waitlisted: 0 });
+    await assertCounters(courseId);
+  });
+});
+
+// -- promoteWaitlist and the sweep (D6) -----------------------------------------------------------------------------
+/** The holder's seat vanishes from the counters only (a stranded waitlist: free seat, entries still waiting). */
+async function strand(courseId: string, id = SESSION) {
+  await sessionRef(courseId, id).collection("participants").doc("h").delete();
+  await sessionRef(courseId, id).update({ occupied: 0 });
+  const stored = (await db.doc(`courses/${courseId}`).get()).data()!;
+  if (stored.nextSessionId === id) await db.doc(`courses/${courseId}`).update({ nextAvailableSeats: 1 });
+}
+const promoteStandalone = async (courseId: string, id = SESSION) =>
+  (await import("./waitlist")).promoteWaitlist(courseId, id);
+const sweep = async (options: Record<string, unknown> = {}) => (await import("./maintenance")).sweepWaitlists(options);
+const soon = () => admin.firestore.Timestamp.fromMillis(Date.now() + 3600000);
+
+describe("promoteWaitlist", () => {
+  it("seats as many customers as there are free seats and leaves the rest waiting; a replay seats nobody", async () => {
+    const courseId = await fullCourse();
+    for (const uid of ["u1", "u2", "u3"]) await join(uid, courseId);
+    // Staff raised the capacity 1 -> 3 (the E4 hook will call promoteWaitlist after writing it).
+    await sessionRef(courseId).update({ capacity: 3 });
+    await db.doc(`courses/${courseId}`).update({ nextAvailableSeats: 2 });
+    expect(await promoteStandalone(courseId)).toBe(2);
+    expect(await sessionOf(courseId)).toMatchObject({ occupied: 3, held: 0, waitlisted: 1, capacity: 3 });
+    expect(await waitlistView(courseId)).toEqual([["u3", 1]]);
+    expect(await enrollmentOf("u1", "w-u1")).toMatchObject({ state: "confirmed", promotedFromWaitlist: true });
+    expect(await enrollmentOf("u2", "w-u2")).toMatchObject({ state: "confirmed", promotedFromWaitlist: true });
+    expect(await notices("waitlist_promoted")).toEqual(["u1", "u2"]);
+    await assertCounters(courseId);
+    expect(await promoteStandalone(courseId)).toBe(0);
+    await assertCounters(courseId);
+  });
+  it("does nothing, and writes nothing, for a full lesson", async () => {
+    const courseId = await fullCourse();
+    await join("u1", courseId);
+    const before = (await sessionRef(courseId).get()).updateTime;
+    expect(await promoteStandalone(courseId)).toBe(0);
+    expect((await sessionRef(courseId).get()).updateTime).toEqual(before);
+    expect(await waitlistView(courseId)).toEqual([["u1", 1]]);
+    await assertCounters(courseId);
+  });
+  it("does nothing for a lesson without a waitlist, a cancelled lesson, a closed course and unknown ids", async () => {
+    const courseId = await fullCourse();
+    await strand(courseId);
+    expect(await promoteStandalone(courseId)).toBe(0);
+    await join("u1", courseId).catch(() => undefined);
+    await sessionRef(courseId).set({ waitlisted: 1 }, { merge: true });
+    await sessionRef(courseId).update({ state: "cancelled" });
+    expect(await promoteStandalone(courseId)).toBe(0);
+    await sessionRef(courseId).update({ state: "scheduled" });
+    await db.doc(`courses/${courseId}`).update({ enrollmentClosed: true });
+    expect(await promoteStandalone(courseId)).toBe(0);
+    expect(await promoteStandalone(courseId, "2099-01-01")).toBe(0);
+    expect(await promoteStandalone("missing", SESSION)).toBe(0);
+  });
+  it("keeps going past dropped entries until it finds a customer it can seat", async () => {
+    const courseId = await fullCourse();
+    const ids = ["u1", "u2", "u3", "u4", "u5", "u6"];
+    for (const uid of ids) await join(uid, courseId);
+    for (const uid of ids.slice(0, 5)) await db.doc(`users/${uid}`).update({ isActive: false });
+    await strand(courseId);
+    expect(await promoteStandalone(courseId)).toBe(1);
+    expect(await enrollmentOf("u6", "w-u6")).toMatchObject({ state: "confirmed" });
+    expect(await waitlist(courseId)).toEqual([]);
+    expect(await notices("waitlist_cleared")).toEqual(ids.slice(0, 5));
+    await assertCounters(courseId);
+  });
+  it("keeps every entry when the refusal concerns the lesson (venue switched off)", async () => {
+    await db.doc("venues/v").set({ ownerId: "p", type: "gym", partnerStatus: "active", isActive: true });
+    const courseId = await fullCourse();
+    await db.doc(`courses/${courseId}`).update({ venueId: "v" });
+    await join("u1", courseId);
+    await strand(courseId);
+    await db.doc("venues/v").update({ partnerStatus: "suspended" });
+    expect(await promoteStandalone(courseId)).toBe(0);
+    expect(await waitlistView(courseId)).toEqual([["u1", 1]]);
+    await db.doc("venues/v").update({ partnerStatus: "active" });
+    expect(await promoteStandalone(courseId)).toBe(1);
+    await assertCounters(courseId);
+  });
+  it("two concurrent calls never seat more customers than there are seats", async () => {
+    const courseId = await fullCourse();
+    for (const uid of ["u1", "u2", "u3", "u4"]) await join(uid, courseId);
+    await sessionRef(courseId).update({ capacity: 3 });
+    await db.doc(`courses/${courseId}`).update({ nextAvailableSeats: 2 });
+    await Promise.all([1, 2].map(() => retryEmulatorAbort(() => promoteStandalone(courseId))));
+    expect(await sessionOf(courseId)).toMatchObject({ occupied: 3, waitlisted: 2 });
+    await assertCounters(courseId);
+  });
+});
+
+describe("sweepWaitlists", () => {
+  it("promotes a stranded entry into a free seat, once", async () => {
+    const courseId = await fullCourse();
+    await join("u1", courseId);
+    await strand(courseId);
+    expect(await sweep()).toEqual({ examined: 1, promoted: 1, cleared: 0 });
+    expect(await enrollmentOf("u1", "w-u1")).toMatchObject({ state: "confirmed" });
+    await assertCounters(courseId);
+    expect(await sweep()).toEqual({ examined: 0, promoted: 0, cleared: 0 });
+    await assertCounters(courseId);
+  });
+  it("is part of the five minute maintenance run", async () => {
+    const courseId = await fullCourse();
+    await join("u1", courseId);
+    await strand(courseId);
+    await maintain();
+    expect(await enrollmentOf("u1", "w-u1")).toMatchObject({ state: "confirmed" });
+    await assertCounters(courseId);
+  });
+  it("closes the list of a lesson inside the notice window or already started, with a notice for each customer", async () => {
+    const courseId = await course();
+    await holdSeat(courseId, "h", SESSION);
+    await holdSeat(courseId, "h", OTHER);
+    for (const id of [SESSION, OTHER]) {
+      await api.joinCourseWaitlist.run(request("u1", { courseId, sessionId: id, paymentMode: "direct", requestId: `w-u1-${id}` }));
+    }
+    await join("u2", courseId);
+    await sessionRef(courseId, SESSION).update({ startsAt: admin.firestore.Timestamp.fromMillis(Date.now() - 60000) });
+    await sessionRef(courseId, OTHER).update({ startsAt: soon() });
+    expect(await sweep()).toEqual({ examined: 2, promoted: 0, cleared: 2 });
+    expect(await waitlist(courseId, SESSION)).toEqual([]);
+    expect(await waitlist(courseId, OTHER)).toEqual([]);
+    expect(await sessionOf(courseId, SESSION)).toMatchObject({ waitlisted: 0, occupied: 1 });
+    expect(await notices("waitlist_cleared")).toEqual(["u1", "u1", "u2"]);
+    expect(await notices("waitlist_promoted")).toEqual([]);
+    expect(await sweep()).toEqual({ examined: 0, promoted: 0, cleared: 0 });
+  });
+  it("leaves a legitimate waitlist of a full lesson alone", async () => {
+    const courseId = await fullCourse();
+    await join("u1", courseId);
+    const before = (await sessionRef(courseId).get()).updateTime;
+    expect(await sweep()).toEqual({ examined: 1, promoted: 0, cleared: 0 });
+    expect((await sessionRef(courseId).get()).updateTime).toEqual(before);
+    await assertCounters(courseId);
+  });
+  it("ignores sessions of other collections", async () => {
+    await db.doc("elsewhere/x/sessions/s").set({ state: "scheduled", waitlisted: 3, startsAt: soon() });
+    const courseId = await fullCourse();
+    await join("u1", courseId);
+    expect(await sweep()).toEqual({ examined: 1, promoted: 0, cleared: 0 });
+    expect((await db.doc("elsewhere/x/sessions/s").get()).data()).toMatchObject({ waitlisted: 3 });
+  });
+  it("continues after the lesson the previous run stopped at, and wraps around", async () => {
+    const courseId = await course();
+    await holdSeat(courseId, "h", SESSION);
+    await holdSeat(courseId, "h", OTHER);
+    for (const id of [SESSION, OTHER]) {
+      await api.joinCourseWaitlist.run(request("u1", { courseId, sessionId: id, paymentMode: "direct", requestId: `w-u1-${id}` }));
+    }
+    // A full lesson with a waitlist first in line must not starve the stranded one behind it.
+    await sessionRef(courseId, SESSION).update({ waitlisted: 1 });
+    await strand(courseId, OTHER);
+    const one = { pageSize: 1, maxPages: 1 };
+    const first = await sweep(one);
+    expect(first.promoted).toBe(0);
+    expect((await db.doc("courseSweepState/waitlist").get()).data()?.cursor).toContain("/sessions/");
+    const second = await sweep(one);
+    expect(second).toEqual({ examined: 1, promoted: 1, cleared: 0 });
+    expect(await enrollmentOf("u1", `w-u1-${OTHER}`)).toMatchObject({ state: "confirmed" });
+    expect(await sessionOf(courseId, SESSION)).toMatchObject({ occupied: 1, waitlisted: 1 });
+  });
+  it("works through the existing indexes while the (state, waitlisted) index is missing", async () => {
+    const courseId = await fullCourse();
+    await join("u1", courseId);
+    await strand(courseId);
+    expect(await sweep({ scan: "fallback" })).toEqual({ examined: 1, promoted: 1, cleared: 0 });
+    await assertCounters(courseId);
+  });
+  it("falls back when Firestore reports the missing index (code 9)", async () => {
+    const courseId = await fullCourse();
+    await join("u1", courseId);
+    await strand(courseId);
+    const original = admin.firestore.Query.prototype.orderBy;
+    vi.spyOn(admin.firestore.Query.prototype, "orderBy").mockImplementation(function (this: admin.firestore.Query, field, dir) {
+      if (field === "waitlisted") {
+        return { limit: () => ({ get: async () => { throw Object.assign(new Error("index"), { code: 9 }); } }),
+          startAfter: () => ({ limit: () => ({ get: async () => { throw Object.assign(new Error("index"), { code: 9 }); } }) }) } as never;
+      }
+      return original.call(this, field as never, dir);
+    });
+    expect(await sweep()).toEqual({ examined: 1, promoted: 1, cleared: 0 });
+    vi.restoreAllMocks();
     await assertCounters(courseId);
   });
 });
