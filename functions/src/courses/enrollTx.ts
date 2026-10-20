@@ -2,7 +2,7 @@ import { createHash } from "crypto";
 import { HttpsError } from "firebase-functions/v2/https";
 import { FieldValue, Timestamp, Transaction, type DocumentData } from "firebase-admin/firestore";
 import { assertReservable } from "./core";
-import { db, safeId, eligibleProvider, nowStamp, Course, Session, Enrollment } from "./store";
+import { db, safeId, eligibleProvider, nowStamp, venueTakesBookings, Course, Session, Enrollment } from "./store";
 import { canManageCourse } from "./authority";
 import { rosterClientId } from "../bookings/clientRosterCore";
 import { queueCourseNotification } from "./notifications";
@@ -89,7 +89,7 @@ export async function enrollInTx(tx: Transaction, input: EnrollInput):
   let venue: DocumentData | null = null;
   if (course.venueId) {
     venue = (await tx.get(db.doc(`venues/${course.venueId}`))).data() ?? null;
-    if (!venue || venue.isActive === false || venue.partnerStatus !== "active") {
+    if (!venueTakesBookings(venue)) {
       throw new HttpsError("failed-precondition", "venue_not_active");
     }
   }

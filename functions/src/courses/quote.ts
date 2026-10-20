@@ -1,7 +1,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import type { DocumentData, DocumentReference, Transaction } from "firebase-admin/firestore";
 import { region } from "../lib/runtimeOptions";
-import { db, safeId, uidOf, domainError, Course, Session } from "./store";
+import { db, safeId, uidOf, domainError, venueTakesBookings, Course, Session } from "./store";
 import { canManageCourse } from "./authority";
 import { discountPercents, applyDiscount, quoteSeries, STRIPE_MIN_CENTS } from "./pricing";
 
@@ -130,7 +130,7 @@ export const quoteCourse = onCall({ region }, async (req) => {
     }
     if (course.venueId && !manages) {
       const venue = (await db.doc(`venues/${course.venueId}`).get()).data();
-      if (!venue || venue.isActive === false || venue.partnerStatus !== "active") {
+      if (!venueTakesBookings(venue)) {
         throw new HttpsError("failed-precondition", "venue_not_active");
       }
     }

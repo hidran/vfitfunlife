@@ -195,6 +195,11 @@ describe('public venue timetable and waitlist queries', () => {
       await db.doc('courses/c2/sessions/elsewhere').set(session('w', 'c2'));
       await db.doc('courses/free').set({ providerId: 'p2', state: 'published', providerEligible: true });
       await db.doc('courses/free/sessions/f1').set(session(null, 'free'));
+      for (const type of ['school', 'studio']) {
+        await db.doc(`venues/${type}`).set({ type, isActive: true, ownerId: 'owner', partnerStatus: 'active' });
+        await db.doc(`courses/${type}Course`).set({ providerId: 'p3', venueId: type, state: 'published', providerEligible: true });
+        await db.doc(`courses/${type}Course/sessions/x`).set(session(type, `${type}Course`));
+      }
       for (const [venue, id] of [['susp', 'sus'], ['off', 'off'], ['spa', 'spa']]) {
         await db.doc(`courses/${id}`).set({ providerId: 'p3', venueId: venue, state: 'published', providerEligible: true });
         await db.doc(`courses/${id}/sessions/x`).set(session(venue, id));
@@ -218,6 +223,13 @@ describe('public venue timetable and waitlist queries', () => {
   it('refuses the timetable query when the venue is not an active partner of a course-hosting type', async () => {
     for (const venue of ['susp', 'off', 'spa']) await assertFails(week(venue).get());
     await assertSucceeds(week('w').get());
+  });
+
+  it('lets anyone run the timetable query at an active school or studio partner', async () => {
+    for (const type of ['school', 'studio']) {
+      const result = await assertSucceeds(week(type).get());
+      expect(result.docs.map(d => d.id)).toEqual(['x']);
+    }
   });
 
   it('refuses the timetable query without the listed constraint or without a venue constraint', async () => {

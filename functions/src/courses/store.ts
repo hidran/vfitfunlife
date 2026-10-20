@@ -2,6 +2,7 @@ import { getFirestore, Timestamp, FieldValue, Transaction } from "firebase-admin
 import { HttpsError } from "firebase-functions/v2/https";
 import { ZodError } from "zod";
 import type { CourseInput } from "./core";
+import { hostsCourses, type VenueType } from "../types";
 export const db = getFirestore();
 // Archiving a course unlists its remaining lessons in the same transaction. A transaction commits at most 500 writes
 // and the archiving shares them with its own work, so it stops well short (a lesson left listed is still hidden by
@@ -69,6 +70,13 @@ export function providerUsable(provider: Record<string, unknown> | undefined): b
     (provider.providerProfile as { isVerified?: boolean } | undefined)?.isVerified === true &&
     !["pending", "rejected", "suspended"].includes(provider.applicationStatus as string);
 }
+/** Bookings need an active partner venue of a type that hosts courses (mirrors the activePartnerGym rule). */
+type VenueFlags = { type?: unknown; isActive?: unknown; partnerStatus?: unknown };
+export function venueTakesBookings(venue: VenueFlags | null | undefined) {
+  return !!venue && hostsCourses(venue.type as VenueType) && venue.isActive !== false &&
+    venue.partnerStatus === "active";
+}
+
 export async function eligibleProvider(providerId: string, tx: Transaction): Promise<Record<string, unknown>> {
   const provider = (await tx.get(db.doc(`instructors/${providerId}`))).data();
   if (!provider || !providerUsable(provider)) throw new HttpsError("failed-precondition", "provider_unavailable");

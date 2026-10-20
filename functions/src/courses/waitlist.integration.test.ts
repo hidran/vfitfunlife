@@ -238,6 +238,8 @@ describe("joinCourseWaitlist", () => {
     await refusal(join("u2", courseId), "venue_not_active");
     await db.doc("venues/v").update({ partnerStatus: "active", isActive: false });
     await refusal(join("u2", courseId), "venue_not_active");
+    await db.doc("venues/v").update({ isActive: true, type: "spa" });
+    await refusal(join("u2", courseId), "venue_not_active");
   });
   it("gives concurrent joins distinct consecutive positions", async () => {
     const courseId = await fullCourse();

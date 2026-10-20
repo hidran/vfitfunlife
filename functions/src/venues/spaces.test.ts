@@ -96,6 +96,12 @@ describe("configureGymInstructor", () => {
       isActive: true, name: "Coach" });
   });
 
+  it.each(["school", "studio"])("lets an admin link a verified instructor to a %s", async (type) => {
+    await db.doc("venues/gym").update({ type });
+    await expect(spaces.configureGymInstructor.run(req("admin", link))).resolves.toEqual({ success: true });
+    expect((await db.doc("instructors/coach").get()).data()?.partnerStatus).toBe("active");
+  });
+
   it("refuses the venue owner and staff", async () => {
     for (const uid of ["owner", "staff"]) {
       await expect(spaces.configureGymInstructor.run(req(uid, link))).rejects.toThrow("admin_required");

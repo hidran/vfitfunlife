@@ -5,7 +5,9 @@ import { FieldValue, type DocumentReference, type Timestamp, type Transaction } 
 import { region } from "../lib/runtimeOptions";
 import { readPaymentSettings } from "../payments/paymentSettingsCallables";
 import { checkoutActive } from "./core";
-import { db, safeId, uidOf, nowStamp, domainError, eligibleProvider, Course, Session, WaitlistEntry } from "./store";
+import {
+  db, safeId, uidOf, nowStamp, domainError, eligibleProvider, venueTakesBookings, Course, Session, WaitlistEntry,
+} from "./store";
 import { enrollInTx } from "./enrollTx";
 import { queueCourseNotification } from "./notifications";
 
@@ -104,7 +106,7 @@ export const joinCourseWaitlist = onCall({ region }, async (req) => {
       await eligibleProvider(course.providerId, tx);
       if (course.venueId) {
         const venue = (await tx.get(db.doc(`venues/${course.venueId}`))).data();
-        if (!venue || venue.isActive === false || venue.partnerStatus !== "active") {
+        if (!venueTakesBookings(venue)) {
           throw new HttpsError("failed-precondition", "venue_not_active");
         }
       }

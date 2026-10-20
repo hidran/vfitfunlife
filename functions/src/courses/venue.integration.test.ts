@@ -977,6 +977,26 @@ describe("priced enrollment on venue courses", () => {
     expect((await db.collection("courseEnrollments").get()).empty).toBe(true);
   });
 
+  // Ported from the partner-gym flow before its removal: a venue only takes bookings while its type hosts courses.
+  it.each(["school", "studio"])("lets the owner of a %s publish and a customer book", async (type) => {
+    await db.doc("venues/v").update({ type });
+    const courseId = await create();
+    const booking = await lesson(courseId);
+    expect(booking.state).toBe("confirmed");
+    expect(booking.totalCents).toBe(1275);
+  });
+
+  it("takes no booking, quote or waitlist join once the venue's type no longer hosts courses", async () => {
+    const courseId = await create();
+    const expected = await quoted(courseId);
+    await db.doc("venues/v").update({ type: "spa" });
+    const refusal = { code: "failed-precondition", message: "venue_not_active" };
+    await expect(api.enrollInCourse.run(request("u1", { courseId, scope: "lesson", sessionId: SESSION,
+      requestId: "after-type-change", ...expected }))).rejects.toMatchObject(refusal);
+    await expect(api.quoteCourse.run(request("u1", { courseId }))).rejects.toMatchObject(refusal);
+    expect((await db.collection("courseEnrollments").get()).empty).toBe(true);
+  });
+
   it("creates nothing for a series when one lesson is full", async () => {
     const courseId = await create();
     const expected = await quoted(courseId, "series");
