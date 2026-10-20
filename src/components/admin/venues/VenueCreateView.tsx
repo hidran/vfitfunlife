@@ -5,6 +5,7 @@ import { db } from '@/lib/firebase/config';
 import { EntityDetailLayout, useEntityMutation } from '@/components/admin';
 import { VenueFormView, type VenueFormData } from './VenueFormView';
 import { useI18n } from '@/hooks/useI18n';
+import { venueLocationFields } from '@/lib/venueAddress';
 
 export function VenueCreateView() {
   const router = useRouter();
@@ -24,12 +25,7 @@ export function VenueCreateView() {
         reviewCount: 0,
         photoUrls: [],
         createdAt: serverTimestamp(),
-        address: {
-          street: data.street,
-          city: data.city,
-          zipCode: data.zipCode,
-          country: data.country,
-        },
+        ...venueLocationFields(data),
       });
       return ref.id;
     },

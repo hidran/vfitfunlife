@@ -44,6 +44,20 @@ beforeEach(() => {
   mockLessons = []; mockCourses = []; seen.lessons = []; seen.courses = [];
 });
 
+describe('VenueDetailClient address', () => {
+  it('prints a string address', () => {
+    render(<VenueDetailClient />);
+    expect(screen.getByText('Via Po 2')).toBeInTheDocument();
+  });
+
+  it('never prints [object Object] for a legacy object address', () => {
+    mockVenue = venue({ address: { street: 'Via Po 2', city: 'Torino', zipCode: '10100', country: 'IT' } });
+    const { container } = render(<VenueDetailClient />);
+    expect(container.textContent).not.toContain('[object Object]');
+    expect(screen.getByText('Via Po 2, 10100 Torino')).toBeInTheDocument();
+  });
+});
+
 describe('VenueDetailClient timetable button', () => {
   it.each(['gym', 'school', 'studio'])('shows the timetable for an active partner %s', (type) => {
     mockVenue = venue({ type });

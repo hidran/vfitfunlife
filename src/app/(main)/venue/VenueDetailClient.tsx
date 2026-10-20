@@ -13,6 +13,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { PhotoGallery } from '@/components/gallery/PhotoGallery';
 import { useI18n } from '@/hooks/useI18n';
 import { hostsCourses } from '@/types/venue';
+import { venueAddressText } from '@/lib/venueAddress';
 
 export default function VenueDetailClient() {
   const searchParams = useSearchParams();
@@ -101,7 +102,7 @@ export default function VenueDetailClient() {
             <h1 className="text-xl font-bold text-content">{venue.name}</h1>
             <p className="mt-1 inline-flex items-center gap-1 text-sm text-content-muted">
               <MapPin className="h-3.5 w-3.5" />
-              {venue.address}
+              {venueAddressText(venue)}
             </p>
           </div>
           <div className="inline-flex items-center gap-1 rounded-full bg-yellow-50 px-2 py-1 text-xs font-semibold text-yellow-700">

@@ -12,6 +12,7 @@ import { useVenues } from '@/hooks/useVenues';
 import { useServiceCategoryMap } from '@/hooks/useServiceCategories';
 import type { Provider } from '@/types/instructor';
 import { providerProfileHref } from '@/lib/routes';
+import { venueAddressText } from '@/lib/venueAddress';
 
 type ProviderSlug = Exclude<LifeRouteSlug, 'home-services' | 'centers' | 'hyperbaric'>;
 
@@ -97,7 +98,7 @@ export function LifeRouteScreen({ slug }: { slug: LifeRouteSlug }) {
       !normalizedQuery ||
       matchesQuery(center.name, normalizedQuery) ||
       matchesQuery(center.city, normalizedQuery) ||
-      matchesQuery(center.address, normalizedQuery)
+      matchesQuery(venueAddressText(center), normalizedQuery)
     );
   }, [centersQuery.data, query]);
 

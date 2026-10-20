@@ -20,6 +20,7 @@ import { PhotoEditorOverlay } from "@/components/gallery/PhotoEditorOverlay";
 import { useUpdateVenuePhotos } from "@/hooks/usePhotoUpload";
 import { useVenues } from "@/hooks/useVenues";
 import { Spinner } from "@/components/ui/Spinner";
+import { venueAddressText } from "@/lib/venueAddress";
 
 interface Venue {
   id: string;
@@ -54,16 +55,14 @@ export function VenuesListView() {
 
   const { data: firestoreVenues = [], isLoading } = useVenues({});
 
-  // Firestore stored address as either a flat string OR a nested object
-  // `{ street, city, zipCode, country, latitude, longitude, neighborhood }`.
-  // Render-time `<p>{venue.address}</p>` crashes with React error #31 when it
-  // gets the object form, so coerce both shapes into displayable strings here.
+  // Docs the old admin form saved hold an object `address` (migrate-venue-address.mjs repairs
+  // them); venueAddressText prints the string either way so React never gets an object.
   const venues: Venue[] = firestoreVenues.map((v) => {
     const rawAddress = v.address as unknown;
     const addr =
       rawAddress && typeof rawAddress === 'object'
-        ? (rawAddress as { street?: string }).street ?? ''
-        : (rawAddress as string | undefined) ?? '';
+        ? ((rawAddress as { street?: string }).street ?? '')
+        : venueAddressText(v);
     const cityFromAddress =
       rawAddress && typeof rawAddress === 'object'
         ? (rawAddress as { city?: string }).city

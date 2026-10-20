@@ -30,18 +30,22 @@ interface Props {
 
 export function VenueFormView({ mode, initial, onSubmit }: Props) {
   const { t } = useI18n();
+  // Canonical docs hold a string `address` plus top-level `city` / `zipCode` / `country`. Docs the
+  // old admin form saved (and migrate-venue-address.mjs has not repaired yet) hold an object
+  // `address`; read both, top-level fields first, the object only as a fallback.
   const rawAddress = initial?.address as unknown;
   const addrObj =
     rawAddress && typeof rawAddress === 'object'
       ? (rawAddress as { street?: string; city?: string; zipCode?: string; country?: string })
       : null;
+  const flat = (initial ?? {}) as { city?: string; zipCode?: string; country?: string };
   const defaults: VenueFormData = {
     name: initial?.name ?? '',
     type: (initial?.type as VenueFormData['type']) ?? 'gym',
-    street: addrObj?.street ?? (typeof rawAddress === 'string' ? rawAddress : '') ?? '',
-    city: addrObj?.city ?? (initial as { city?: string })?.city ?? '',
-    zipCode: addrObj?.zipCode ?? '',
-    country: addrObj?.country ?? 'IT',
+    street: addrObj ? (addrObj.street ?? '') : typeof rawAddress === 'string' ? rawAddress : '',
+    city: flat.city || addrObj?.city || '',
+    zipCode: flat.zipCode || addrObj?.zipCode || '',
+    country: flat.country || addrObj?.country || 'IT',
     isActive: initial?.isActive ?? true,
     partnerStatus: initial?.partnerStatus ?? 'pending',
     memberDiscountPercent: initial?.memberDiscountPercent ?? 0,

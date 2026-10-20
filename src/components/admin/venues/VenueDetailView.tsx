@@ -15,6 +15,7 @@ import { queryKeys } from '@/lib/queryKeys';
 import { VenueFormView, type VenueFormData } from './VenueFormView';
 import type { Venue } from '@/types/firebase';
 import { useI18n } from '@/hooks/useI18n';
+import { venueLocationFields } from '@/lib/venueAddress';
 import { GymInstructorPanel } from './GymInstructorPanel';
 import { VenueSpacesPanel } from '@/components/venues/VenueSpacesPanel';
 
@@ -43,12 +44,7 @@ export function VenueDetailView({ venueId }: { venueId: string }) {
         memberDiscountPercent: data.memberDiscountPercent,
         partnerInstructorExtraPercent: data.partnerInstructorExtraPercent,
         ownerId: data.ownerId,
-        address: {
-          street: data.street,
-          city: data.city,
-          zipCode: data.zipCode,
-          country: data.country,
-        },
+        ...venueLocationFields(data),
       };
       await updateDoc(doc(db, 'venues', venueId), patch);
     },
@@ -73,12 +69,7 @@ export function VenueDetailView({ venueId }: { venueId: string }) {
               memberDiscountPercent: data.memberDiscountPercent,
               partnerInstructorExtraPercent: data.partnerInstructorExtraPercent,
               ownerId: data.ownerId,
-              address: {
-                street: data.street,
-                city: data.city,
-                zipCode: data.zipCode,
-                country: data.country,
-              },
+              ...venueLocationFields(data),
             } as unknown as Venue)
           : prev,
       );

@@ -25,3 +25,33 @@ describe('VenueFormView', () => {
     expect(screen.getByLabelText('Tipo')).toHaveValue('school');
   });
 });
+
+describe('VenueFormView location defaults', () => {
+  it('pre-fills from the canonical shape: string address plus top-level city, zipCode, country', () => {
+    render(
+      <VenueFormView
+        mode="edit"
+        initial={{ name: 'Gym', address: 'Via Po 2', city: 'Torino', zipCode: '10100', country: 'IT' } as never}
+        onSubmit={() => undefined}
+      />,
+    );
+    expect(screen.getByLabelText('Via')).toHaveValue('Via Po 2');
+    expect(screen.getByLabelText('Città')).toHaveValue('Torino');
+    expect(screen.getByLabelText('CAP')).toHaveValue('10100');
+  });
+
+  it('still pre-fills from a legacy object address', () => {
+    render(
+      <VenueFormView
+        mode="edit"
+        initial={
+          { name: 'Gym', address: { street: 'Via Po 2', city: 'Torino', zipCode: '10100', country: 'IT' } } as never
+        }
+        onSubmit={() => undefined}
+      />,
+    );
+    expect(screen.getByLabelText('Via')).toHaveValue('Via Po 2');
+    expect(screen.getByLabelText('Città')).toHaveValue('Torino');
+    expect(screen.getByLabelText('CAP')).toHaveValue('10100');
+  });
+});
