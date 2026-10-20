@@ -3,7 +3,6 @@ import { httpsCallable } from 'firebase/functions';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { getFunctionsInstance } from '@/lib/firebase/config';
 import type {
-  SocialLinks,
   NotificationSettings,
   PrivacySettings,
 } from '@/types/profile';
@@ -19,20 +18,6 @@ export function useUpdateAvatar() {
         functions, 'updateAvatar'
       );
       const r = await fn({ avatarUrl });
-      return r.data;
-    },
-    onSuccess: () => uid && qc.invalidateQueries({ queryKey: ['user', uid] }),
-  });
-}
-
-export function useUpdateSocialLinks() {
-  const qc = useQueryClient();
-  const uid = useAuthStore((s) => s.user?.uid);
-  return useMutation({
-    mutationFn: async (socialLinks: SocialLinks) => {
-      const functions = await getFunctionsInstance();
-      const fn = httpsCallable<{ socialLinks: SocialLinks }, { success: true }>(functions, 'updateSocialLinks');
-      const r = await fn({ socialLinks });
       return r.data;
     },
     onSuccess: () => uid && qc.invalidateQueries({ queryKey: ['user', uid] }),

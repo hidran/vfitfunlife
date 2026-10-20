@@ -252,28 +252,10 @@ POST /updateAvatar
 
 ### Update Social Links
 
-> ✅ **Implemented (cycle C1, 2026-05).**
-
-```typescript
-POST /updateSocialLinks
-
-// Request
-{
-  socialLinks: {
-    instagram?: string;
-    facebook?: string;
-    twitter?: string;
-    linkedin?: string;
-    tiktok?: string;
-    website?: string;
-  };
-}
-
-// Response
-{
-  success: true;
-}
-```
+> Removed (2026-10-20): there is no `updateSocialLinks` callable any more. The profile editor
+> validates and normalises `socialLinks` on the client (`src/lib/socialLinks.ts`) and writes
+> them to `users/{uid}` directly; `firestore.rules` accepts only an http(s) URL or an `@handle`
+> of at most 200 characters per link.
 
 ### Update Notification Settings
 

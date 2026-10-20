@@ -364,7 +364,7 @@ Every export that changed since `877b04c` (`git diff --name-only 877b04c..HEAD -
 - Business: `applyAsProvider`, `decideProviderApplication`, `releaseBusinessVat`, `convertBusinessToIndividual`, `updateBusinessTaxId`, `syncBusinessVenueLocation` (retry trigger), and, through `deleteUserCascade` (venues deactivated, claims deleted), `adminDeleteUser`, `adminBulkDeleteUsers`, `onAdminJobCreated`.
 - Courses: `saveCourse`, `previewCourse`, `enrollInCourse`, `enrollCourseParticipant`, `notifyCourseParticipant`, `cancelCourseEnrollment`, `recordCoursePayment`, `manageCourseSession`, `cancelRemainingCourse`, `confirmCourseRefund`, `createCourseCheckout`, `courseStripeWebhook`, `maintainCourseEnrollments`, `remindCourseParticipants`, `onCourseNotification`, `onCourseProviderEligibility`, `setPaymentSettings`.
 - Partner gyms: `saveGymSpace`, `configureGymInstructor`, `saveGymSchedule`, `updateGymSession`, `quoteGymBooking`, `quoteGymTimetable`, `bookGymClass`, `cancelGymBooking`, `recordGymPayment`, `confirmGymRefund`, `onGymNotification`.
-- Bookings, profile and others: `createBooking`, `getBooking`, `listBookings`, `cancelBooking`, `confirmBooking`, `updateBookingStatus`, `createBookingAsTrainer`, `updateBookingPrivateNotes`, `createClientAccount`, `resendClientAccountEmail`, `addClientByEmail`, `syncEmailVerification`, `updateNotificationSettings`, `updatePrivacySettings`, `updateSocialLinks`, `updateAvatar`, `seedServiceCategories`, `chatWithAssistant` (the venue-search tool enum gains `school` and `studio`).
+- Bookings, profile and others: `createBooking`, `getBooking`, `listBookings`, `cancelBooking`, `confirmBooking`, `updateBookingStatus`, `createBookingAsTrainer`, `updateBookingPrivateNotes`, `createClientAccount`, `resendClientAccountEmail`, `addClientByEmail`, `syncEmailVerification`, `updateNotificationSettings`, `updatePrivacySettings`, `updateAvatar`, `seedServiceCategories`, `chatWithAssistant` (the venue-search tool enum gains `school` and `studio`).
 
 ```bash
 cd functions && npm run lint && cd ..
@@ -373,6 +373,7 @@ firebase deploy -P production --force --only functions
 ```
 
 - `--force` is required for the retrying triggers (`syncBusinessVenueLocation` and the other `retry: true` Firestore triggers); it also skips the prompt before deleting functions that exist in the project but are not in the source, so compare `functions:list` with the source first.
+- **Delete function `updateSocialLinks` (removed 2026-10-20, R11).** The callable no longer exists in the source: the profile editor writes `socialLinks` straight to `users/{uid}` (validated on the client and by the rules). The projects still have it deployed (production and staging both do). A `--force` full deploy deletes it without a prompt; otherwise delete it by hand, **after** the new hosting is live and users have had time to reload (an old cached client still calls it): `firebase functions:delete updateSocialLinks -P <staging|production> --region europe-west1 --force`. Nothing else depends on it. This repo's R11 change did not run any deploy or delete.
 - With roughly 90 functions the per-minute mutation quota can fail a first pass on a few triggers: re-run the same command.
 - New gen-2 callables answer 401 for several minutes after their first deploy. It clears on its own.
 

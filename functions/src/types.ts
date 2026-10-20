@@ -353,14 +353,12 @@ export interface ServiceType {
 // Profile types (shared with frontend)
 // ============================================
 export type {
-  SocialLinks,
   NotificationSettings,
   PrivacySettings,
   ProfileVisibility,
 } from "./types/profile";
 
 export {
-  SocialLinksSchema,
   NotificationSettingsSchema,
   PrivacySettingsSchema,
   ProfileVisibilitySchema,

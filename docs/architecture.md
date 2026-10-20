@@ -369,7 +369,6 @@ functions/src/
 │   ├── getUserProfile.ts
 │   ├── updateProfile.ts
 │   ├── uploadAvatar.ts
-│   ├── updateSocialLinks.ts
 │   ├── updateNotificationSettings.ts
 │   └── updatePrivacySettings.ts
 ├── provider/

@@ -1,34 +1,6 @@
 import { z } from 'zod';
 
 // ============================================
-// Social Links
-// ============================================
-
-const instagramRegex = /^https?:\/\/(www\.)?instagram\.com\/[A-Za-z0-9._-]+\/?$/i;
-const facebookRegex  = /^https?:\/\/(www\.)?facebook\.com\/[A-Za-z0-9.-]+\/?$/i;
-const twitterRegex   = /^https?:\/\/(www\.)?(twitter|x)\.com\/[A-Za-z0-9_]+\/?$/i;
-const linkedinRegex  = /^https?:\/\/(www\.)?linkedin\.com\/(in|company)\/[A-Za-z0-9_-]+\/?$/i;
-const tiktokRegex    = /^https?:\/\/(www\.)?tiktok\.com\/@[A-Za-z0-9._-]+\/?$/i;
-const websiteRegex   = /^https?:\/\/[^\s]+\.[^\s]+$/i;
-
-const optionalUrl = (regex: RegExp, platform: string) =>
-  z.string().refine(
-    (v) => v === '' || regex.test(v),
-    { message: `Invalid ${platform} URL` }
-  ).optional();
-
-export const SocialLinksSchema = z.object({
-  instagram: optionalUrl(instagramRegex, 'Instagram'),
-  facebook:  optionalUrl(facebookRegex, 'Facebook'),
-  twitter:   optionalUrl(twitterRegex, 'Twitter/X'),
-  linkedin:  optionalUrl(linkedinRegex, 'LinkedIn'),
-  tiktok:    optionalUrl(tiktokRegex, 'TikTok'),
-  website:   optionalUrl(websiteRegex, 'website'),
-}).strict();
-
-export type SocialLinks = z.infer<typeof SocialLinksSchema>;
-
-// ============================================
 // Notification Settings
 // ============================================
 

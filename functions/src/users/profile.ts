@@ -3,11 +3,9 @@ import * as admin from "firebase-admin";
 import {
   NotificationSettingsSchema,
   PrivacySettingsSchema,
-  SocialLinksSchema,
   makeAvatarUrlSchema,
   type NotificationSettings,
   type PrivacySettings,
-  type SocialLinks,
 } from "../types";
 import { auditLogDoc, auditLogData, toActorRole } from "../lib/audit";
 import { region } from "../lib/runtimeOptions";
@@ -104,45 +102,6 @@ export const updatePrivacySettings = onCall<UpdatePrivacySettingsData>(
         before: { privacySettings: before },
         after: { privacySettings: parsed.data },
         reason: "profile.privacy.update",
-        ip: request.rawRequest?.ip ?? null,
-        userAgent: request.rawRequest?.headers?.["user-agent"] ?? null,
-      }));
-    });
-    return { success: true } as const;
-  }
-);
-
-interface UpdateSocialLinksData { socialLinks: SocialLinks; }
-
-export const updateSocialLinks = onCall<UpdateSocialLinksData>(
-  { region },
-  async (request) => {
-    if (!request.auth) throw new HttpsError("unauthenticated", "Must be authenticated.");
-    const parsed = SocialLinksSchema.safeParse(request.data?.socialLinks);
-    if (!parsed.success) {
-      throw new HttpsError("invalid-argument", `Invalid social links: ${parsed.error.message}`);
-    }
-    const uid = request.auth.uid;
-    const userRef = db().collection("users").doc(uid);
-
-    await db().runTransaction(async (tx) => {
-      const snap = await tx.get(userRef);
-      if (!snap.exists) throw new HttpsError("not-found", "User document does not exist.");
-      const before = snap.data()?.socialLinks ?? null;
-      tx.update(userRef, {
-        socialLinks: parsed.data,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-      tx.set(auditLogDoc(), auditLogData({
-        actorUid: uid,
-        actorEmail: request.auth?.token?.email ?? "",
-        actorRole: toActorRole(snap.data()?.role),
-        action: "update",
-        entityType: "user",
-        entityId: uid,
-        before: { socialLinks: before },
-        after: { socialLinks: parsed.data },
-        reason: "profile.social.update",
         ip: request.rawRequest?.ip ?? null,
         userAgent: request.rawRequest?.headers?.["user-agent"] ?? null,
       }));
