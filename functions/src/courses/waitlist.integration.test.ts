@@ -4,7 +4,7 @@ import * as admin from "firebase-admin";
 import { createHash } from "crypto";
 import type { CallableRequest } from "firebase-functions/v2/https";
 import { assertLockInvariant } from "./lockInvariant.testutil";
-import { retryEmulatorAbort, emulatorAborts } from "./raceRetry.testutil";
+import { retryEmulatorAbort, emulatorAborts, withTimeout } from "./raceRetry.testutil";
 process.env.FIRESTORE_EMULATOR_HOST = "127.0.0.1:8080";
 vi.mock("../lib/stripeClient", () => ({ getStripe: async () => ({}) }));
 const auth = vi.hoisted(() => ({ generatePasswordResetLink: vi.fn() }));
@@ -31,15 +31,27 @@ beforeAll(async () => {
 });
 afterEach(() => vi.restoreAllMocks());
 beforeEach(() => resetDb());
+const wipe = (names: string[]) => Promise.all(names.map((name) => db.recursiveDelete(db.collection(name))));
+// Full wipe and seed: once per test.
 async function resetDb() {
-  for (const name of COLLECTIONS) await db.recursiveDelete(db.collection(name));
-  await db.doc("instructors/p").set({ fullName: "Anna", isActive: true, applicationStatus: "approved",
-    providerProfile: { isVerified: true } });
-  await db.doc("serviceCategories/karate").set({ isActive: true, parentId: "combat" });
-  await db.doc("users/p").set({ fullName: "p", role: "provider", isActive: true });
-  for (const uid of CUSTOMERS) await db.doc(`users/${uid}`).set({ fullName: `Name ${uid}`, role: "customer", isActive: true });
-  await db.doc("systemSettings/payments").set({ stripePaymentsEnabled: false, courseCheckoutEnabled: false });
+  await wipe(COLLECTIONS);
+  await seed();
 }
+async function seed() {
+  await Promise.all([
+    db.doc("instructors/p").set({ fullName: "Anna", isActive: true, applicationStatus: "approved",
+      providerProfile: { isVerified: true } }),
+    db.doc("serviceCategories/karate").set({ isActive: true, parentId: "combat" }),
+    db.doc("users/p").set({ fullName: "p", role: "provider", isActive: true }),
+    ...CUSTOMERS.map((uid) => db.doc(`users/${uid}`).set({ fullName: `Name ${uid}`, role: "customer", isActive: true })),
+    db.doc("systemSettings/payments").set({ stripePaymentsEnabled: false, courseCheckoutEnabled: false }),
+  ]);
+}
+// Between the iterations of one race only what a course run leaves behind goes: the seeded users, provider and
+// settings are never written by a race, so they stay (the full wipe above ran in beforeEach).
+const RACE_DATA = ["courses", "courseEnrollments", "courseRefunds", "courseNotifications", "clients",
+  "courseScheduleLocks", "courseSweepState", "rateLimits"];
+const resetRace = () => wipe(RACE_DATA);
 
 async function course(extra: Record<string, unknown> = {}) {
   return (await api.saveCourse.run(request("p", { course: { ...input, ...extra } }))).courseId as string;
@@ -960,29 +972,44 @@ describe("sweepWaitlists", () => {
 });
 
 // -- Concurrency and counter integrity (D7) -------------------------------------------------------------------------
-// Every race runs RACE_ITERATIONS times on a fresh course. Callables are wrapped in retryEmulatorAbort: the emulator
-// words a contention abort differently from Firestore, which the SDK would have retried (see raceRetry.testutil.ts).
-const ITERATIONS = Number(process.env.RACE_ITERATIONS ?? 10);
-const RACE_TIMEOUT = 600000;
+// Every race runs RACE_ITERATIONS times (default 3; the pre-release run uses 10) on a fresh course. Callables are wrapped
+// in retryEmulatorAbort: the emulator words a contention abort differently from Firestore, which the SDK would have
+// retried (see raceRetry.testutil.ts). Every racing call also runs under a 30 s per-attempt timeout that names the
+// stalled step, so a hang fails fast instead of waiting for the test timeout below.
+const ITERATIONS = Math.max(1, Number(process.env.RACE_ITERATIONS ?? 3));
+const RACE_TIMEOUT = Math.max(180000, ITERATIONS * 60000);
+const raceCtx = { iteration: 0 };
+const where = () => `${expect.getState().currentTestName ?? "race"} [iteration ${raceCtx.iteration + 1}/${ITERATIONS}]`;
+type Labelled = (() => Promise<unknown>) & { label?: string };
+const labelled = <F extends () => Promise<unknown>>(label: string, run: F): F & { label: string } =>
+  Object.assign(run, { label });
+/** A direct await inside a race test (setup, a sequential call) under the same hard timeout. */
+const step = <T>(label: string, promise: Promise<T>) => withTimeout(`${where()} :: ${label}`, promise);
 const CUSTOMERS_ALL = ["u1", "u2", "u3", "u4", "u5", "u6"];
 const rid = (kind: string, uid: string, courseId: string, id = SESSION) => `${kind}-${uid}-${courseId}-${id}`;
-const attempt = (run: () => Promise<unknown>) =>
-  retryEmulatorAbort(run).then(() => "ok", (error: Error & { details?: unknown }) => error.message);
+const attempt = (run: Labelled, label = run.label ?? "call") =>
+  retryEmulatorAbort(run, 8, `${where()} :: ${label}`).then(() => "ok",
+    (error: Error & { details?: unknown }) => error.message);
+/** A call that must succeed: retried on emulator noise, fails naming the step on a hang or a refusal. */
+const must = (run: Labelled, label = run.label ?? "call") => retryEmulatorAbort(run, 8, `${where()} :: ${label}`);
 
 async function lessonQuote(uid: string, courseId: string, id: string) {
   const quote = await api.quoteCourse.run(request(uid, { courseId }));
   return quote.sessions.find((l) => l.sessionId === id)!;
 }
-const raceEnroll = (uid: string, courseId: string, id = SESSION, requestId = rid("e", uid, courseId, id)) => async () => {
-  const line = await lessonQuote(uid, courseId, id);
-  return api.enrollInCourse.run(request(uid, { courseId, scope: "lesson", sessionId: id, requestId,
-    expectedFinalCents: line.finalCents, expectedRevisions: { [id]: line.revision } }));
-};
-const raceJoin = (uid: string, courseId: string, id = SESSION, requestId = rid("w", uid, courseId, id)) => () =>
-  api.joinCourseWaitlist.run(request(uid, { courseId, sessionId: id, paymentMode: "direct", requestId }));
-const raceLeave = (uid: string, courseId: string, id = SESSION) => () => leave(uid, courseId, id);
+const raceEnroll = (uid: string, courseId: string, id = SESSION, requestId = rid("e", uid, courseId, id)) =>
+  labelled(`enroll ${uid} on ${id}`, async () => {
+    const line = await lessonQuote(uid, courseId, id);
+    return api.enrollInCourse.run(request(uid, { courseId, scope: "lesson", sessionId: id, requestId,
+      expectedFinalCents: line.finalCents, expectedRevisions: { [id]: line.revision } }));
+  });
+const raceJoin = (uid: string, courseId: string, id = SESSION, requestId = rid("w", uid, courseId, id)) =>
+  labelled(`join ${uid} on ${id}`, () =>
+    api.joinCourseWaitlist.run(request(uid, { courseId, sessionId: id, paymentMode: "direct", requestId })));
+const raceLeave = (uid: string, courseId: string, id = SESSION) =>
+  labelled(`leave ${uid} on ${id}`, () => leave(uid, courseId, id));
 const raceCancel = (actor: string, courseId: string, uid: string, id = SESSION, requestId = rid("e", uid, courseId, id)) =>
-  () => cancel(actor, enrollmentIdOf(uid, requestId));
+  labelled(`cancel ${uid}'s booking by ${actor}`, () => cancel(actor, enrollmentIdOf(uid, requestId)));
 
 /** assertCounters plus: a waitlist can only exist for a lesson that is full (no promotion was lost). */
 async function assertRace(courseId: string) {
@@ -1000,7 +1027,8 @@ const waitingOf = async (courseId: string, id = SESSION) => (await waitlist(cour
 // Each iteration starts from an empty database (request ids are per customer, so a course must not see the last one's).
 const repeat = async (body: (iteration: number) => Promise<void>) => {
   for (let i = 0; i < ITERATIONS; i++) {
-    if (i > 0) await resetDb();
+    raceCtx.iteration = i;
+    if (i > 0) await step("reset between iterations", resetRace());
     await body(i);
   }
 };
@@ -1023,10 +1051,10 @@ describe("waitlist concurrency", () => {
   it("tells the losers a waitlist is available, and gives concurrent joiners positions 1 and 2", async () => {
     await repeat(async () => {
       const courseId = await course();
-      await holdSeat(courseId, "h");
-      const loser = await raceEnroll("u1", courseId)().catch((error) => error);
+      await step("hold the seat as h", holdSeat(courseId, "h"));
+      const loser = await step("u1 enrolls in a full lesson", raceEnroll("u1", courseId)().catch((error) => error));
       expect(loser).toMatchObject({ message: "lesson_full", details: { waitlistAvailable: true } });
-      await Promise.all([raceJoin("u1", courseId), raceJoin("u2", courseId)].map((run) => retryEmulatorAbort(run)));
+      await Promise.all([raceJoin("u1", courseId), raceJoin("u2", courseId)].map((run) => must(run)));
       expect((await waitlist(courseId)).map((e) => e.position)).toEqual([1, 2]);
       expect((await sessionOf(courseId)).waitlisted).toBe(2);
       await assertRace(courseId);
@@ -1036,16 +1064,16 @@ describe("waitlist concurrency", () => {
   it("promotes the first waitlisted customer when the holder cancels, renumbers the second, and ignores a replay", async () => {
     await repeat(async () => {
       const courseId = await course();
-      await holdSeat(courseId, "h");
-      await raceJoin("u1", courseId)();
-      await raceJoin("u2", courseId)();
+      await step("hold the seat as h", holdSeat(courseId, "h"));
+      await must(raceJoin("u1", courseId));
+      await must(raceJoin("u2", courseId));
       const holderId = enrollmentIdOf("h", `hold-h-${SESSION}`);
-      await cancel("h", holderId);
+      await step("h cancels", cancel("h", holderId));
       expect(await seatedOf(courseId)).toEqual(["u1"]);
       expect(await waitlistView(courseId)).toEqual([["u2", 1]]);
       await assertRace(courseId);
       // Replays, sequential and racing, change nothing.
-      await Promise.all([1, 2, 3].map(() => attempt(() => cancel("h", holderId))));
+      await Promise.all([1, 2, 3].map((n) => attempt(() => cancel("h", holderId), `replayed cancel by h #${n}`)));
       expect(await seatedOf(courseId)).toEqual(["u1"]);
       expect(await waitlistView(courseId)).toEqual([["u2", 1]]);
       expect(await notices("waitlist_promoted")).toContain("u1");
@@ -1057,11 +1085,11 @@ describe("waitlist concurrency", () => {
     let promotedRuns = 0;
     await repeat(async (iteration) => {
       const courseId = await course();
-      await holdSeat(courseId, "h");
+      await step("hold the seat as h", holdSeat(courseId, "h"));
       // Odd iterations start with an empty waitlist: a join that lands after the cancel must be refused, not stranded.
-      if (iteration % 2 === 0) await raceJoin("u5", courseId)();
+      if (iteration % 2 === 0) await must(raceJoin("u5", courseId));
       const outcomes = await Promise.all([
-        attempt(() => cancel("h", enrollmentIdOf("h", `hold-h-${SESSION}`))),
+        attempt(() => cancel("h", enrollmentIdOf("h", `hold-h-${SESSION}`)), "h cancels the held seat"),
         attempt(raceEnroll("u1", courseId)),
         attempt(raceJoin("u2", courseId)),
         attempt(raceJoin("u3", courseId)),
@@ -1092,14 +1120,13 @@ describe("waitlist concurrency", () => {
       expect(outcomes.filter((o) => o === "lesson_full")).toHaveLength(4);
       const seated = await seatedOf(courseId);
       const losers = CUSTOMERS_ALL.filter((uid) => !seated.includes(uid));
-      await Promise.all(losers.map((uid) => retryEmulatorAbort(raceJoin(uid, courseId))));
+      await Promise.all(losers.map((uid) => must(raceJoin(uid, courseId))));
       expect((await waitlist(courseId)).map((e) => e.position)).toEqual([1, 2, 3, 4]);
       await assertRace(courseId);
       // Both seat holders leave at the same time: the first two in line take their seats.
       const [first, second] = seated;
       const order = await waitingOf(courseId);
-      await Promise.all([first, second].map((uid) =>
-        attempt(raceCancel(uid, courseId, uid))));
+      await Promise.all([first, second].map((uid) => attempt(raceCancel(uid, courseId, uid))));
       expect((await seatedOf(courseId)).sort()).toEqual(order.slice(0, 2).sort());
       expect(await waitingOf(courseId)).toEqual(order.slice(2));
       expect((await sessionOf(courseId)).occupied).toBe(2);
@@ -1110,13 +1137,13 @@ describe("waitlist concurrency", () => {
   it("serves a seat freed by a capacity increase to the waitlist or a walk-in, never to both", async () => {
     await repeat(async () => {
       const courseId = await course();
-      await holdSeat(courseId, "h");
-      await raceJoin("u1", courseId)();
-      await raceJoin("u2", courseId)();
-      await sessionRef(courseId).update({ capacity: 2 });
-      await db.doc(`courses/${courseId}`).update({ nextAvailableSeats: 1 });
+      await step("hold the seat as h", holdSeat(courseId, "h"));
+      await must(raceJoin("u1", courseId));
+      await must(raceJoin("u2", courseId));
+      await step("raise capacity", Promise.all([sessionRef(courseId).update({ capacity: 2 }),
+        db.doc(`courses/${courseId}`).update({ nextAvailableSeats: 1 })]));
       const outcomes = await Promise.all([
-        attempt(() => promoteStandalone(courseId)), attempt(() => promoteStandalone(courseId)),
+        attempt(() => promoteStandalone(courseId), "promote #1"), attempt(() => promoteStandalone(courseId), "promote #2"),
         attempt(raceEnroll("u4", courseId)), attempt(raceEnroll("u3", courseId)),
       ]);
       only(outcomes, ["lesson_full"]);
@@ -1129,20 +1156,21 @@ describe("waitlist concurrency", () => {
   it("replays of enroll, join, leave and promote change nothing the second time", async () => {
     await repeat(async () => {
       const courseId = await course();
-      const [a, b] = await Promise.all([attempt(raceEnroll("u1", courseId)), attempt(raceEnroll("u1", courseId))]);
+      const [a, b] = await Promise.all([attempt(raceEnroll("u1", courseId), "enroll u1 (same request) #1"),
+        attempt(raceEnroll("u1", courseId), "enroll u1 (same request) #2")]);
       expect([a, b]).toEqual(["ok", "ok"]);
       expect(await seatedOf(courseId)).toEqual(["u1"]);
       expect(await sessionOf(courseId)).toMatchObject({ occupied: 1 });
       expect((await db.collection("courseEnrollments").where("courseId", "==", courseId).get()).size).toBe(1);
-      const joins = await Promise.all([1, 2, 3].map(() => attempt(raceJoin("u2", courseId))));
+      const joins = await Promise.all([1, 2, 3].map((n) => attempt(raceJoin("u2", courseId), `replayed join #${n}`)));
       expect(joins).toEqual(["ok", "ok", "ok"]);
       expect(await waitlistView(courseId)).toEqual([["u2", 1]]);
       expect((await sessionOf(courseId)).waitlisted).toBe(1);
       await assertRace(courseId);
-      const leaves = await Promise.all([1, 2, 3].map(() => attempt(raceLeave("u2", courseId))));
+      const leaves = await Promise.all([1, 2, 3].map((n) => attempt(raceLeave("u2", courseId), `replayed leave #${n}`)));
       expect(leaves).toEqual(["ok", "ok", "ok"]);
       expect(await waitlist(courseId)).toEqual([]);
-      expect(await promoteStandalone(courseId)).toBe(0);
+      expect(await step("promote with an empty list", promoteStandalone(courseId))).toBe(0);
       expect((await sessionOf(courseId)).waitlisted).toBe(0);
       await assertRace(courseId);
     });
@@ -1152,7 +1180,7 @@ describe("waitlist concurrency", () => {
     await repeat(async () => {
       const courseId = await course({ endDate: "2099-10-14", seriesPriceCents: 3000 });
       const days = ["2099-10-12", "2099-10-13", "2099-10-14"];
-      await holdSeat(courseId, "h", days[1]);
+      await step("hold the middle lesson as h", holdSeat(courseId, "h", days[1]));
       const series = (uid: string) => async () => {
         const quote = await api.quoteCourse.run(request(uid, { courseId }));
         return api.enrollInCourse.run(request(uid, { courseId, scope: "series", requestId: rid("s", uid, courseId),
@@ -1162,7 +1190,7 @@ describe("waitlist concurrency", () => {
       expect(await db.collection("courseEnrollments").where("userId", "==", "u1").get().then((s) => s.size)).toBe(0);
       for (const day of days) expect(await seatedOf(courseId, day)).toEqual(day === days[1] ? ["h"] : []);
       // Now the middle lesson is freed while two series buyers and a single-lesson buyer race for it.
-      await cancel("h", enrollmentIdOf("h", `hold-h-${days[1]}`));
+      await step("h cancels the middle lesson", cancel("h", enrollmentIdOf("h", `hold-h-${days[1]}`)));
       const outcomes = await Promise.all([attempt(series("u1")), attempt(series("u2")),
         attempt(raceEnroll("u3", courseId, days[1]))]);
       only(outcomes, ["lesson_full"]);
@@ -1182,24 +1210,24 @@ describe("waitlist concurrency", () => {
     await stripeSwitch(true);
     try {
       const courseId = await course();
-      await stripeHold(courseId);
-      await join("u1", courseId, { paymentMode: "stripe" });
-      await join("u2", courseId, { paymentMode: "stripe" });
-      await join("u3", courseId);
+      await step("h holds the seat with Stripe", stripeHold(courseId));
+      await step("u1 joins", join("u1", courseId, { paymentMode: "stripe" }));
+      await step("u2 joins", join("u2", courseId, { paymentMode: "stripe" }));
+      await step("u3 joins", join("u3", courseId));
       const expire = (id: string) => db.doc(`courseEnrollments/${id}`).update({ holdExpiresAt: past() });
       await expire(holderEnrollment());
-      await Promise.all([maintain(), maintain()].map((run) => retryEmulatorAbort(() => run)));
+      await Promise.all([1, 2].map((n) => must(maintain, `maintenance run #${n}`)));
       expect(await sessionOf(courseId)).toMatchObject({ occupied: 0, held: 1, waitlisted: 2 });
       expect(await seatedOf(courseId)).toEqual(["u1"]);
       await assertRace(courseId);
       await expire(enrollmentIdOf("u1", "w-u1"));
-      await maintain();
+      await step("maintenance run", maintain());
       expect(await seatedOf(courseId)).toEqual(["u2"]);
       expect(await sessionOf(courseId)).toMatchObject({ occupied: 0, held: 1, waitlisted: 1 });
       await assertRace(courseId);
       await expire(enrollmentIdOf("u2", "w-u2"));
-      await maintain();
-      await maintain();
+      await step("maintenance run", maintain());
+      await step("maintenance run", maintain());
       expect(await seatedOf(courseId)).toEqual(["u3"]);
       expect(await sessionOf(courseId)).toMatchObject({ occupied: 1, held: 0, waitlisted: 0 });
       expect(await enrollmentOf("u1", "w-u1")).toMatchObject({ state: "expired" });
