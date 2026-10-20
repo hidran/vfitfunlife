@@ -182,12 +182,61 @@ export * from "./operations";
 export * from "./checkout";
 export * from "./maintenance";
 
+type StoredSlots = Record<string, { start: number; end: number; courseName?: string }>;
+type Conflict = {
+  sessionId: string; kind: "room" | "instructor"; courseName: string; startsAt: string; endsAt: string;
+};
+
+/** Advisory only: reads the lock documents outside a transaction, so saveCourse stays the authority. */
+async function lockConflicts(
+  courseId: string | null, input: CourseInput, sessions: ReturnType<typeof generateSessions>
+): Promise<Conflict[]> {
+  const stamp = (date: Date) => ({ toDate: () => date });
+  const slots = slotsOf(courseId ?? "preview", { state: "published", name: input.name }, sessions.map((s) => ({
+    id: s.id, data: { startsAt: stamp(s.startsAt), endsAt: stamp(s.endsAt), state: "scheduled", venueId: input.venueId,
+      locationId: input.locationId, roomId: input.roomId, instructorId: input.instructorId },
+  })));
+  const paths = [...new Set(slots.flatMap(lockPaths))];
+  if (!paths.length) return [];
+  const docs = new Map((await db.getAll(...paths.map((path) => db.doc(path))))
+    .map((doc) => [doc.ref.path, (doc.data()?.slots ?? {}) as StoredSlots]));
+  // The edited course's own slots (ids `${courseId}_${date}`) are about to be replaced, so they never conflict.
+  const own = (slotId: string) => !!courseId && slotId.startsWith(`${courseId}_`) &&
+    /^\d{4}-\d{2}-\d{2}$/.test(slotId.slice(courseId.length + 1));
+  const conflicts: Conflict[] = [];
+  for (const slot of slots) {
+    const kinds = new Set<string>();
+    for (const path of lockPaths(slot)) {
+      const kind = path.includes("/room_") ? "room" : "instructor";
+      if (kinds.has(kind)) continue;
+      const clash = Object.entries(docs.get(path) ?? {}).find(([id, other]) => !own(id) &&
+        other.start < slot.endsAt.getTime() && other.end > slot.startsAt.getTime());
+      if (!clash) continue;
+      kinds.add(kind);
+      // Session ids are dates, so the slot id `${courseId}_${date}` ends with the session id.
+      conflicts.push({ sessionId: slot.id.slice(-10), kind, courseName: clash[1].courseName ?? "",
+        startsAt: new Date(clash[1].start).toISOString(), endsAt: new Date(clash[1].end).toISOString() });
+    }
+  }
+  return conflicts;
+}
+
 export const previewCourse = onCall({ region }, async (req) => {
-  uidOf(req.auth);
+  const uid = uidOf(req.auth);
   try {
-    const input = validateCourse(req.data.course);
-    return { sessions: generateSessions(input).map((s) => ({ id: s.id,
-      startsAt: s.startsAt.toISOString(), endsAt: s.endsAt.toISOString() })) };
+    const submitted = validateCourse(req.data.course);
+    const courseId = req.data.courseId ? safeId(req.data.courseId) : null;
+    if (submitted.venueId) {
+      const venueId = safeId(submitted.venueId);
+      const venue = (await db.doc(`venues/${venueId}`).get()).data();
+      if (!venue || !hostsCourses(venue.type as VenueType) || !(await managesVenue(uid, venueId))) {
+        throw new HttpsError("permission-denied", "venue_authorization_required");
+      }
+    }
+    const input = await withSpaces(submitted, async (path) => (await db.doc(path).get()).data());
+    const sessions = generateSessions(input);
+    return { sessions: sessions.map((s) => ({ id: s.id, startsAt: s.startsAt.toISOString(),
+      endsAt: s.endsAt.toISOString() })), conflicts: await lockConflicts(courseId, input, sessions) };
   } catch (error) {
     return domainError(error);
   }

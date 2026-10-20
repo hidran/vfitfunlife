@@ -553,3 +553,71 @@ describe("saveCourse lock lifecycle", () => {
     }
   });
 });
+
+describe("previewCourse conflicts", () => {
+  const one = { ...input, venueId: "v", locationId: "l1", roomId: "r1", instructorId: "p", recurrence: "none" };
+  const preview = (uid: string, course: Record<string, unknown>, courseId?: string) =>
+    api.previewCourse.run(request(uid, { course, ...(courseId ? { courseId } : {}) }));
+  const save = (uid: string, course: Record<string, unknown>, courseId?: string) =>
+    api.saveCourse.run(request(uid, { course, ...(courseId ? { courseId } : {}) }));
+  beforeEach(async () => {
+    await db.doc("venues/v/instructors/p").set({ isActive: true, name: "Anna" });
+    await db.doc("venues/v/instructors/p2").set({ isActive: true, name: "Paola" });
+    await db.doc("instructors/p2").set({ fullName: "Paola", isActive: true, applicationStatus: "approved",
+      providerProfile: { isVerified: true } });
+    await db.doc("venues/v/locations/l1/rooms/r3").set({ name: "Sala 3", isActive: true });
+  });
+  it("reports the sessions and no conflicts for a free slot", async () => {
+    const result = await preview("biz", one);
+    expect(result).toEqual({ sessions: [{ id: SESSION, startsAt: "2099-10-12T16:00:00.000Z",
+      endsAt: "2099-10-12T17:00:00.000Z" }], conflicts: [] });
+  });
+  it("names the other course when the room is taken", async () => {
+    await save("biz", { ...one, state: "published" });
+    const result = await preview("s", { ...one, name: "Judo", instructorId: "p2", startTime: "18:30" });
+    expect(result.conflicts).toEqual([{ sessionId: SESSION, kind: "room", courseName: "Karate",
+      startsAt: "2099-10-12T16:00:00.000Z", endsAt: "2099-10-12T17:00:00.000Z" }]);
+  });
+  it("names the other course when the instructor is taken in another room", async () => {
+    await save("biz", one);
+    const result = await preview("biz", { ...one, name: "Judo", roomId: "r3" });
+    expect(result.conflicts).toEqual([{ sessionId: SESSION, kind: "instructor", courseName: "Karate",
+      startsAt: "2099-10-12T16:00:00.000Z", endsAt: "2099-10-12T17:00:00.000Z" }]);
+  });
+  it("reports a room and an instructor conflict on the same lesson as two rows", async () => {
+    await save("biz", one);
+    expect((await preview("biz", { ...one, name: "Judo" })).conflicts.map((c: { kind: string }) => c.kind).sort())
+      .toEqual(["instructor", "room"]);
+  });
+  it("ignores the slots of the course being edited", async () => {
+    const { courseId } = await save("biz", one);
+    expect((await preview("biz", { ...one, startTime: "18:30" }, courseId)).conflicts).toEqual([]);
+    expect((await preview("biz", { ...one, startTime: "18:30" })).conflicts).toHaveLength(2);
+  });
+  it("is not blocked by a draft, and does not write anything", async () => {
+    await save("biz", { ...one, state: "draft" });
+    expect((await preview("biz", one)).conflicts).toEqual([]);
+    expect((await db.collection("courseScheduleLocks").get()).size).toBe(0);
+  });
+  it("applies the venue space validation and timezone override", async () => {
+    await db.doc("venues/v/locations/l1").update({ timezone: "Asia/Tokyo" });
+    expect((await preview("biz", { ...one, timezone: "America/New_York" })).sessions[0].startsAt)
+      .toBe("2099-10-12T09:00:00.000Z");
+    await expect(preview("biz", { ...one, roomId: "nope" })).rejects.toThrow("invalid_space");
+    await expect(preview("biz", { ...one, instructorId: "p3" })).rejects.toThrow("invalid_instructor");
+  });
+  it.each([["x", "a stranger"], ["si", "inactive staff"], ["os", "staff of another venue"]])(
+    "refuses %s (%s) previewing a venue course", async (uid) => {
+      await expect(preview(uid, one)).rejects.toMatchObject(
+        { code: "permission-denied", message: "venue_authorization_required" });
+    });
+  it("keeps the unlinked preview unchanged", async () => {
+    const result = await preview("x", input);
+    expect(result.sessions).toHaveLength(2);
+    expect(result.conflicts).toEqual([]);
+  });
+  it("reports instructor conflicts for an unlinked course too", async () => {
+    await save("p", { ...input, instructorId: "p2" });
+    expect((await preview("p", { ...input, instructorId: "p2", name: "Yoga" })).conflicts).toHaveLength(2);
+  });
+});
