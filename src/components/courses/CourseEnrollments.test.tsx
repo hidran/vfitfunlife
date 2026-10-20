@@ -1,19 +1,19 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const stamp = (ms: number) => ({ toDate: () => new Date(ms), toMillis: () => ms });
-const mocks = vi.hoisted(() => ({ enrollments: [] as unknown[], waitlist: [] as unknown[] }));
+const mocks = vi.hoisted(() => ({ enrollments: [] as unknown[], sessions: [] as unknown[], courses: [] as unknown[], coursesAsked: [] as string[][] }));
 vi.mock('@/hooks/useI18n', () => ({
   useI18n: () => ({ t: (k: string, values?: Record<string, unknown>) => values ? `${k}:${JSON.stringify(values)}` : k, locale: 'en' }),
 }));
 vi.mock('@/hooks/useCourses', () => ({
   useCourseEnrollments: () => ({ data: mocks.enrollments, isLoading: false, isError: false }),
-  useMyWaitlist: () => ({ data: mocks.waitlist }),
-  useCourseSessions: () => ({ data: [] }),
+  useCourseSessions: () => ({ data: mocks.sessions }),
+  useCoursesById: (ids: string[]) => { mocks.coursesAsked.push(ids); return { map: new Map((mocks.courses as { id: string }[]).filter(c => ids.includes(c.id)).map(c => [c.id, c])) }; },
   useRefreshCourses: () => vi.fn(),
 }));
 vi.mock('@/lib/firebase/courses', () => ({ courseCall: vi.fn() }));
-vi.mock('./MyWaitlist', () => ({ MyWaitlist: () => <div data-testid="my-waitlist" /> }));
+vi.mock('./MyWaitlist', () => ({ MyWaitlist: ({ showEmpty }: { showEmpty?: boolean }) => <div data-testid="my-waitlist" data-empty={String(!!showEmpty)} /> }));
 
 import { CourseEnrollments } from './CourseEnrollments';
 
@@ -21,7 +21,7 @@ const enrollment = (over: Record<string, unknown> = {}) => ({ id: 'e1', courseId
   paymentMode: 'direct', paymentStatus: 'paid', totalCents: 1000, refundCents: 0, sessionIds: ['s1'], activeSessionIds: ['s1'],
   cancellationHours: 24, timezone: 'Europe/Rome', holdExpiresAt: stamp(0), ...over });
 
-beforeEach(() => { mocks.enrollments = []; mocks.waitlist = []; });
+beforeEach(() => { mocks.enrollments = []; mocks.sessions = []; mocks.courses = []; mocks.coursesAsked = []; });
 
 describe('CourseEnrollments', () => {
   it('shows the pay-within hint next to Pay for a held enrollment promoted from the waitlist', () => {
@@ -56,12 +56,48 @@ describe('CourseEnrollments', () => {
     expect(screen.getByTestId('my-waitlist')).toBeInTheDocument();
   });
 
-  it('says there are no bookings only when there are neither enrollments nor waitlist entries', () => {
+  it('asks the waitlist section to say "no bookings" only when there are no enrollments', () => {
     const { unmount } = render(<CourseEnrollments uid="me" />);
-    expect(screen.getByText('courses.emptyBookings')).toBeInTheDocument();
+    expect(screen.getByTestId('my-waitlist')).toHaveAttribute('data-empty', 'true');
     unmount();
-    mocks.waitlist = [{ courseId: 'c1', sessionId: 's1' }];
+    mocks.enrollments = [enrollment()];
     render(<CourseEnrollments uid="me" />);
-    expect(screen.queryByText('courses.emptyBookings')).not.toBeInTheDocument();
+    expect(screen.getByTestId('my-waitlist')).toHaveAttribute('data-empty', 'false');
+  });
+
+  it('uses the singular for the last minute of a promoted hold', () => {
+    mocks.enrollments = [enrollment({ state: 'held', paymentMode: 'stripe', paymentStatus: 'pending', promotedFromWaitlist: true,
+      holdExpiresAt: stamp(Date.now() + 20000) })];
+    render(<CourseEnrollments uid="me" />);
+    expect(screen.getByTestId('pay-within')).toHaveTextContent(/^courses.payWithinOne$/);
+  });
+
+  it('confirms a cancellation with its own question and a Cancel button', () => {
+    mocks.sessions = [{ id: 's1', startsAt: stamp(Date.now() + 5 * 86400000), state: 'scheduled' }];
+    mocks.enrollments = [enrollment()];
+    render(<CourseEnrollments uid="me" />);
+    fireEvent.click(screen.getByRole('button', { name: 'courses.cancelBooking' }));
+    expect(screen.getByText('courses.cancelBookingConfirm')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'common.cancel' }));
+    expect(screen.queryByText('courses.cancelBookingConfirm')).not.toBeInTheDocument();
+  });
+
+  it('takes the time zone of an older booking from its course, and shows no time rather than a guessed one', () => {
+    mocks.sessions = [{ id: 's1', startsAt: stamp(Date.parse('2099-10-12T17:00:00Z')), state: 'scheduled' }];
+    mocks.enrollments = [enrollment({ timezone: undefined })];
+    mocks.courses = [{ id: 'c1', timezone: 'Asia/Tokyo' }];
+    const { unmount } = render(<CourseEnrollments uid="me" />);
+    expect(mocks.coursesAsked.at(-1)).toEqual(['c1']);
+    expect(screen.getByText(/Oct 13, 2099/)).toBeInTheDocument();
+    unmount();
+    mocks.courses = [];
+    render(<CourseEnrollments uid="me" />);
+    expect(screen.queryByText(/2099/)).not.toBeInTheDocument();
+  });
+
+  it('does not look up a course when the booking carries its time zone', () => {
+    mocks.enrollments = [enrollment()];
+    render(<CourseEnrollments uid="me" />);
+    expect(mocks.coursesAsked.at(-1)).toEqual([]);
   });
 });
