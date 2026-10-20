@@ -180,6 +180,7 @@ export const saveCourse = onCall({ region }, async (req) => {
 export * from "./enrollment";
 export * from "./operations";
 export * from "./quote";
+export * from "./waitlist";
 export * from "./checkout";
 export * from "./maintenance";
 

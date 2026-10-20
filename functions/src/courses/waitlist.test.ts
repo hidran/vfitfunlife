@@ -1,6 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { Timestamp } from "firebase-admin/firestore";
-import { isFull, joinDecision, promotionWindowOpen, renumber, WAITLIST_MAX } from "./waitlist";
+
+// waitlist.ts also holds the callables, whose store import needs the Firebase app test/setup.ts creates in beforeAll.
+type Waitlist = typeof import("./waitlist");
+let isFull: Waitlist["isFull"]; let joinDecision: Waitlist["joinDecision"];
+let promotionWindowOpen: Waitlist["promotionWindowOpen"]; let renumber: Waitlist["renumber"];
+let WAITLIST_MAX: Waitlist["WAITLIST_MAX"];
+beforeAll(async () => {
+  ({ isFull, joinDecision, promotionWindowOpen, renumber, WAITLIST_MAX } = await import("./waitlist"));
+});
 
 const now = new Date("2099-10-12T08:00:00Z");
 const hours = (n: number) => new Date(now.getTime() + n * 3600000);
@@ -29,6 +37,7 @@ describe("promotionWindowOpen", () => {
 });
 
 describe("joinDecision", () => {
+  it("caps a lesson's waitlist at 100 entries", () => expect(WAITLIST_MAX).toBe(100));
   it("lets a customer onto the waitlist of a full, scheduled lesson outside the notice window", () => {
     expect(joinDecision(ok)).toBeNull();
     expect(joinDecision({ ...ok, waitlisted: WAITLIST_MAX - 1 })).toBeNull();
@@ -46,8 +55,8 @@ describe("joinDecision", () => {
     ["course archived", { course: { ...course, state: "archived" as const } }, "waitlist_not_open"],
     ["already a participant", { hasParticipant: true }, "already_enrolled"],
     ["already waitlisted", { hasEntry: true }, "already_waitlisted"],
-    ["list at the cap", { waitlisted: WAITLIST_MAX }, "waitlist_full"],
-    ["list above the cap", { waitlisted: WAITLIST_MAX + 5 }, "waitlist_full"],
+    ["list at the cap", { waitlisted: 100 }, "waitlist_full"],
+    ["list above the cap", { waitlisted: 105 }, "waitlist_full"],
   ])("refuses: %s", (_name, override, code) => {
     expect(joinDecision({ ...ok, ...override })).toBe(code);
   });
