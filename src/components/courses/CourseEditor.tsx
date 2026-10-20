@@ -162,7 +162,7 @@ export function CourseEditor({ course, onSaved, onClose, storageKey, initialVenu
             <option value="">{t('common.select')}</option>
             {roomOptions.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select></label>
           {noSpaces && <p className="sm:col-span-3 text-sm"><Link className="font-semibold text-section-primary underline-offset-4 hover:underline"
-            href={`/provider/courses?venue=${venueId}#spaces`}>{t('courses.addSpaces')}</Link></p>}
+            href={`/provider/courses?venue=${encodeURIComponent(venueId)}#spaces`}>{t('courses.addSpaces')}</Link></p>}
         </>}
       </fieldset>}
       <div className="sm:col-span-2"><InstructorPicker venueId={venueId} disabled={frozen}
@@ -201,9 +201,9 @@ export function CourseEditor({ course, onSaved, onClose, storageKey, initialVenu
     <Button type="button" variant="outline" disabled={busy} onClick={() => action(false)}>{t('courses.preview')}</Button>
     {preview && preview.sessions.length > 0 && previewSignature === signature && <ol className="text-sm space-y-1 max-h-48 overflow-auto">{preview.sessions.map((s, i) => <li key={s.id ?? i}>
       {new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short', timeZone: draft.timezone }).format(new Date(s.startsAt))}
-      {conflicts.filter(c => c.sessionId === s.id).map(c => <p key={`${c.kind}-${c.startsAt}`} role="alert" className="text-red-500">
+      {conflicts.filter(c => c.sessionId === s.id).map(c => <p key={`${c.kind}-${c.startsAt}`} role="alert" className="text-error">
         {t(c.kind === 'room' ? 'courses.room' : 'courses.instructor')}: {t('courses.conflict', { name: c.courseName, time: when(c.startsAt, c.endsAt) })}</p>)}</li>)}</ol>}
-    {error && <p className="text-red-500" role="alert">{error}</p>}
+    {error && <p className="text-error" role="alert">{error}</p>}
     <div><Button type="submit" disabled={busy || (draft.state === 'published' && previewSignature !== signature)}>{busy ? t('common.loading') : t('courses.save')}</Button></div>
   </form>;
 }

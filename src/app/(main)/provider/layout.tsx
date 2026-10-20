@@ -64,7 +64,7 @@ export default function ProviderLayout({ children }: ProviderLayoutProps) {
   const isProvider = isProviderAreaUser(user);
   // Someone who only owns or staffs a venue manages its courses and nothing else here.
   const venueOnly = !isProvider && venues.length > 0;
-  const coursesHref = venues.length > 0 ? `/provider/courses?venue=${venues[0].id}` : '/provider/courses';
+  const coursesHref = venues.length > 0 ? `/provider/courses?venue=${encodeURIComponent(venues[0].id)}` : '/provider/courses';
   const navItems = venueOnly
     ? [{ icon: Users, labelKey: 'courses.manage' as MessageKey, href: coursesHref }]
     : NAV_ITEMS;

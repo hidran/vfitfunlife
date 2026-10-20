@@ -22,7 +22,7 @@ import { ParticipantInvitation } from '@/components/courses/ParticipantInvitatio
 import { LessonWaitlist } from '@/components/courses/LessonWaitlist';
 import { SubstituteInstructor } from '@/components/courses/SubstituteInstructor';
 import { LessonCapacity } from '@/components/courses/LessonCapacity';
-import { courseDate, courseMoney } from '@/components/courses/CourseBooking';
+import { courseDate, courseMoney } from '@/lib/courseFormat';
 
 const HOUR_MS = 3600000;
 
@@ -40,7 +40,7 @@ function RemoveParticipant({ courseId, sessionId, userId, name, late, busy, onRu
   if (!open) return <Button size="sm" variant="outline" className="min-h-11" disabled={busy} aria-label={`${t('courses.removeParticipant')} ${name}`}
     onClick={() => setOpen(true)}>{t('courses.removeParticipant')}</Button>;
   return <div className="w-full space-y-2 rounded-xl border border-hairline p-3">
-    {late && <p className="text-sm text-amber-600 dark:text-amber-400" role="note">{t('courses.removeLateWarning')}</p>}
+    {late && <p className="text-sm text-warning" role="note">{t('courses.removeLateWarning')}</p>}
     <label className="block space-y-1 text-sm">{t('courses.reason')}
       <input className="w-full min-h-11 rounded-xl border border-hairline bg-surface p-3 text-content" maxLength={500} value={reason} onChange={e => setReason(e.target.value)} /></label>
     <div className="flex flex-wrap gap-2">
@@ -58,15 +58,19 @@ export function ProviderCourses() {
   const { t, locale } = useI18n();
   const router = useRouter();
   const params = useSearchParams();
-  const venueId = params.get('venue') || undefined;
+  const requestedVenue = params.get('venue') || undefined;
   const uid = useAuthStore(s => s.firebaseUser?.uid);
   const user = useAuthStore(s => s.user);
   const { venues, isLoading: venuesLoading } = useManagedVenues();
   const providerUser = isProviderAreaUser(user);
+  const staff = user?.role === 'admin' || user?.role === 'superadmin';
+  // `?venue=` must be one the user owns or staffs (admins may open any). Anything else shows a message and reads nothing.
+  const venueUnavailable = !!requestedVenue && !venuesLoading && !staff && !venues.some(v => v.id === requestedVenue);
+  const venueId = venueUnavailable || venuesLoading && !staff ? undefined : requestedVenue;
   // Venue scope reads by venueId (owner and staff are allowed by the rules); otherwise the provider's own courses.
-  const own = useCourses(venueId ? undefined : uid, !venueId && !!uid);
+  const own = useCourses(requestedVenue ? undefined : uid, !requestedVenue && !!uid);
   const atVenue = useManagedVenueCourses(venueId);
-  const ownRefunds = useCourseRefunds(venueId ? undefined : uid);
+  const ownRefunds = useCourseRefunds(requestedVenue ? undefined : uid);
   const venueRefunds = useVenueRefunds(venueId);
   const refresh = useRefreshCourses();
   const [courseId, setCourseId] = useState('');
@@ -101,15 +105,15 @@ export function ProviderCourses() {
     queryFn: () => fetchVenueRooms(course!.venueId!, course!.locationId!) });
   const upcoming = selectedSession?.state === 'scheduled' && selectedSession.startsAt.toMillis() > Date.now();
   const field = 'rounded-xl border border-hairline bg-surface text-content p-3 w-full min-h-11';
-  const createHref = `/provider/courses/create${venueId ? `?venue=${venueId}` : ''}`;
+  const createHref = `/provider/courses/create${venueId ? `?venue=${encodeURIComponent(venueId)}` : ''}`;
   const repeat = new Map((counters.data ?? []).map(c => [c.userId, c]));
   const lateCancelled = (roster.data ?? []).filter(e => e.courseId === courseId && sessionId &&
     e.lateCancelledSessionIds?.includes(sessionId));
 
   // Someone who only manages a venue has no courses of their own: land on the venue.
   useEffect(() => {
-    if (!venueId && user && !providerUser && !venuesLoading && venues.length > 0) router.replace(`/provider/courses?venue=${venues[0].id}`);
-  }, [venueId, user, providerUser, venuesLoading, venues, router]);
+    if (!requestedVenue && user && !providerUser && !venuesLoading && venues.length > 0) router.replace(`/provider/courses?venue=${encodeURIComponent(venues[0].id)}`);
+  }, [requestedVenue, user, providerUser, venuesLoading, venues, router]);
 
   async function run(name: string, data: Record<string, unknown>) {
     setBusy(true); setError(''); setStatus('');
@@ -132,24 +136,28 @@ export function ProviderCourses() {
       setOperation(null); setReason(''); setNewRoom('');
     }
   }
+  if (requestedVenue && venuesLoading && !staff) return <p>{t('common.loading')}</p>;
+  if (venueUnavailable) return <div className="space-y-3 text-content">
+    <p role="alert" className="text-error">{t('courses.venueUnavailable')}</p>
+    <Link href="/provider/courses" className="inline-flex min-h-11 items-center underline">{t('courses.manage')}</Link></div>;
   const switchable = venues.length > 1 || (providerUser && venues.length > 0);
   return <div className="space-y-6 text-content">
     <header className="flex flex-wrap items-end justify-between gap-3">
       <div className="min-w-0 space-y-2">
         <h1 className="text-2xl font-bold break-words">{venueId ? t('courses.venueScope', { name: venue?.name ?? venueId }) : t('courses.manage')}</h1>
         {switchable && <label className="block text-sm">{t('courses.venue')}
-          <select className={`${field} mt-1`} value={venueId ?? ''} onChange={e => router.push(`/provider/courses${e.target.value ? `?venue=${e.target.value}` : ''}`)}>
+          <select className={`${field} mt-1`} value={venueId ?? ''} onChange={e => router.push(`/provider/courses${e.target.value ? `?venue=${encodeURIComponent(e.target.value)}` : ''}`)}>
             {providerUser && <option value="">{t('courses.manage')}</option>}
             {venues.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}</select></label>}
       </div>
       <Link href={createHref} className="inline-flex min-h-11 items-center rounded-xl bg-section-primary px-4 py-3 text-white font-semibold">{t('courses.create')}</Link></header>
-    {error && <p role="alert" className="text-red-500">{error}</p>}{status && <p role="status">{status}</p>}
+    {error && <p role="alert" className="text-error">{error}</p>}{status && <p role="status">{status}</p>}
     {query.isError && <p role="alert">{t('courses.loadError')}</p>}{query.isLoading && <p>{t('common.loading')}</p>}
     {!query.isLoading && !courses.length && <p>{t('courses.emptyProvider')}</p>}
     <div className="grid md:grid-cols-2 gap-4">{courses.map(c => <article key={c.id} className="rounded-2xl bg-surface border border-hairline p-5 space-y-3">
       <div className="flex justify-between flex-wrap gap-2"><h2 className="text-lg font-semibold">{c.name}</h2><span className="text-sm">{t(`courses.${c.state}`)}</span></div>
       <p className="text-sm text-content-muted">{c.location} · {t('courses.sessions')}: {c.sessionIds.length} · {t('courses.capacity')}: {c.capacity}</p>
-      <div className="flex flex-wrap gap-2"><Link href={`/provider/courses/edit?id=${c.id}${venueId ? `&venue=${venueId}` : ''}`} className="inline-flex min-h-11 items-center rounded-xl border border-hairline px-3 py-2 text-sm">{t('courses.edit')}</Link>
+      <div className="flex flex-wrap gap-2"><Link href={`/provider/courses/edit?id=${encodeURIComponent(c.id)}${venueId ? `&venue=${encodeURIComponent(venueId)}` : ''}`} className="inline-flex min-h-11 items-center rounded-xl border border-hairline px-3 py-2 text-sm">{t('courses.edit')}</Link>
         <Button size="sm" className="min-h-11" onClick={() => { setCourseId(c.id); setSessionId(''); setOperation(null); }}>{t('courses.roster')}</Button></div>
     </article>)}</div>
     {!venueId && own.hasNextPage && <Button onClick={() => own.fetchNextPage()}>{t('courses.more')}</Button>}
@@ -181,7 +189,7 @@ export function ProviderCourses() {
           const enrollment = roster.data?.find(e => e.id === p.enrollmentId);
           const noShows = repeat.get(p.userId)?.noShows ?? 0;
           return <li key={p.id} className="py-4 space-y-2"><div className="flex justify-between flex-wrap gap-2"><span className="font-medium">{p.customerName}
-            {p.noShow && <span className="ml-2 rounded-full bg-red-500/15 px-2 py-0.5 text-xs font-semibold text-red-500">{t('courses.noShow')}</span>}
+            {p.noShow && <span className="ml-2 rounded-full bg-error/15 px-2 py-0.5 text-xs font-semibold text-error">{t('courses.noShow')}</span>}
             {noShows >= REPEAT_NO_SHOWS && <span className="ml-2 text-xs text-content-muted">{t('courses.noShows', { count: noShows })}</span>}</span>
             <span>{enrollment && courseMoney(enrollment.totalCents, locale)} · {t(enrollment?.paymentStatus === 'paid' ? 'courses.paid' : 'courses.pending')}</span></div>
             <div className="flex flex-wrap gap-3 items-center"><label className="text-sm">{t('courses.attendance')}<select className={field} value={p.attendance}

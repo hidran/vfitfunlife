@@ -39,7 +39,7 @@ export function DashboardModeSwitch({
   // A customer who owns or staffs a venue reaches only its course management, never the provider dashboard.
   const managesVenueOnly = !isStaff && !canAccessProvider && venues.length > 0;
   const canSwitchMode = isStaff || canAccessProvider || managesVenueOnly;
-  const professionalHref = isStaff ? '/admin' : managesVenueOnly ? `/provider/courses?venue=${venues[0].id}` : '/provider/dashboard';
+  const professionalHref = isStaff ? '/admin' : managesVenueOnly ? `/provider/courses?venue=${encodeURIComponent(venues[0].id)}` : '/provider/dashboard';
   const professionalLabel = isStaff ? t('dashboard.mode.management') :
     managesVenueOnly ? t('courses.venueCourses') : t(professionalLabelKey);
 

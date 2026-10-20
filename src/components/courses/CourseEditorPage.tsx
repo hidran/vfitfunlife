@@ -19,7 +19,7 @@ export function CourseEditorPage({ editing = false }: { editing?: boolean }) {
   const initialVenueId = venues.some(v => v.id === wanted) ? wanted : undefined;
   const id = editing ? params.get('id') ?? '' : '';
   const course = useQuery({ queryKey: ['courses', 'editor', id], queryFn: () => fetchCourse(id), enabled: editing && !!id && !!uid });
-  const coursesHref = wanted ? `/provider/courses?venue=${wanted}` : '/provider/courses';
+  const coursesHref = wanted ? `/provider/courses?venue=${encodeURIComponent(wanted)}` : '/provider/courses';
   if (!uid || venuesLoading || (editing && course.isLoading)) return <p>{t('common.loading')}</p>;
   if (editing && (!id || course.isError || !course.data)) return <p role="alert">{t('courses.loadError')}</p>;
   return <div className="mx-auto max-w-3xl rounded-2xl border border-hairline bg-surface">

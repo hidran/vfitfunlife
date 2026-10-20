@@ -122,6 +122,36 @@ describe('scope', () => {
     expect(mocks.seen.venueEnrollments.at(-1)).toEqual(['v1']);
   });
 
+  it('shows a clear message, and reads nothing, for a ?venue= the user does not manage', async () => {
+    mocks.search = 'venue=ghost'; mocks.venues = [{ id: 'v1', name: 'Smoke Gym' }];
+    renderPage();
+    expect(await screen.findByRole('alert')).toHaveTextContent('courses.venueUnavailable');
+    expect(screen.queryByText('Karate')).toBeNull();
+    expect(screen.queryByTestId('spaces')).toBeNull();
+    expect(screen.queryByRole('link', { name: 'courses.create' })).toBeNull();
+    expect(mocks.seen.venueCourses.every(args => args[0] === undefined)).toBe(true);
+    expect(mocks.seen.courses.every(args => args[0] === undefined && args[1] === false)).toBe(true);
+  });
+
+  it('waits for the venue lookup before judging a ?venue=, and lets an admin open any venue', async () => {
+    mocks.search = 'venue=v1'; mocks.venues = []; mocks.venuesLoading = true; mocks.role = 'customer'; mocks.providerStatus = 'none';
+    const first = renderPage();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(mocks.seen.venueCourses.every(args => args[0] === undefined)).toBe(true);
+    first.unmount();
+    mocks.venuesLoading = false; mocks.role = 'admin';
+    renderPage();
+    expect(await screen.findByText('Karate')).toBeInTheDocument();
+    expect(mocks.seen.venueCourses.at(-1)).toEqual(['v1']);
+  });
+
+  it('encodes the venue in the links it builds', async () => {
+    mocks.search = 'venue=a%26b'; mocks.venues = [{ id: 'a&b', name: 'Odd' }];
+    renderPage();
+    expect(await screen.findByRole('link', { name: 'courses.create' })).toHaveAttribute('href', '/provider/courses/create?venue=a%26b');
+    expect(screen.getByRole('link', { name: 'courses.edit' })).toHaveAttribute('href', '/provider/courses/edit?id=c1&venue=a%26b');
+  });
+
   it('offers a switcher when the user manages several venues', async () => {
     mocks.search = 'venue=v1'; mocks.venues = [{ id: 'v1', name: 'Smoke Gym' }, { id: 'v2', name: 'Other Studio' }];
     renderPage();
