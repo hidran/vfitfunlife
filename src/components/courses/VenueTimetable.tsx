@@ -9,6 +9,9 @@ import { useVenueWeek, usePublishedVenueCourses } from '@/hooks/useCourses';
 import { useManagedVenues } from '@/hooks/useManagedVenues';
 import { useAuthStore } from '@/stores/authStore';
 import { useI18n } from '@/hooks/useI18n';
+import { useNow } from '@/hooks/useNow';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { quoteCourse } from '@/lib/firebase/courses';
 import { fetchVenueLocations, fetchVenueRooms } from '@/lib/firebase/venueSpaces';
 import { addDays, dayLabel, localDay, weekStart } from '@/lib/gymTime';
@@ -17,7 +20,10 @@ import { cn } from '@/lib/utils';
 import { TimetableCard } from './TimetableCard';
 import type { Course, SessionQuote } from '@/types/course';
 
-const MAX_QUOTED_COURSES = 20;
+/** Quotes are rate limited (60 per 10 minutes): one view never asks for more than this many courses. */
+const MAX_QUOTED_COURSES = 8;
+/** Week and day changes settle for this long before any quote is requested. */
+const QUOTE_SETTLE_MS = 350;
 const select = 'w-full min-h-11 rounded-xl border border-hairline bg-surface px-3 py-2 text-content';
 
 /** Public weekly timetable of a venue (`?id=`): seven columns on desktop, day tabs on a phone. */
@@ -54,17 +60,28 @@ export function VenueTimetable() {
   const courseMap = useMemo(() => new Map((courses.data ?? []).map(c => [c.id, c])), [courses.data]);
   const all = useMemo(() => weekLessons(sessions.data ?? [], courseMap, week), [sessions.data, courseMap, week]);
   const lessons = useMemo(() => filterLessons(all, filters), [all, filters]);
-  const now = Date.now();
+  const now = useNow(30000);
+  const wide = useMediaQuery('(min-width: 1024px)');
+  const dayLessons = lessons.filter(l => l.day === day);
 
-  // One quote per course, over every lesson of the week, so filters and day tabs never re-quote (quotes are rate limited).
-  const quoted = useMemo(() => {
+  // Only what is on screen is quoted: the selected day on a phone, the filtered week on a desktop; upcoming lessons only,
+  // one request per course (soonest first). Past lessons and lessons past the cap keep the regular price.
+  const targetKey = useMemo(() => {
     const byCourse = new Map<string, string[]>();
-    for (const { session, course } of all) byCourse.set(course.id, [...(byCourse.get(course.id) ?? []), session.id]);
-    return [...byCourse].slice(0, MAX_QUOTED_COURSES);
-  }, [all]);
+    for (const { session, course } of wide ? lessons : dayLessons) {
+      if (session.startsAt.toMillis() <= now) continue;
+      byCourse.set(course.id, [...(byCourse.get(course.id) ?? []), session.id]);
+    }
+    return JSON.stringify([...byCourse].slice(0, MAX_QUOTED_COURSES));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wide, lessons, day, now]);
+  // Paging through weeks quotes only the week you stop on.
+  const settledKey = useDebouncedValue(targetKey, QUOTE_SETTLE_MS);
+  const quoted = useMemo(() => JSON.parse(settledKey) as [string, string[]][], [settledKey]);
   const quotes = useQueries({ queries: quoted.map(([courseId, ids]) => ({
     queryKey: ['courses', 'quote', 'timetable', uid, courseId, ids.join(',')], enabled: !!uid,
-    queryFn: () => quoteCourse(courseId, ids, false), staleTime: 60000, refetchOnWindowFocus: false, retry: false })) });
+    queryFn: () => quoteCourse(courseId, ids, false), staleTime: 10 * 60000, gcTime: 30 * 60000,
+    refetchOnWindowFocus: false, retry: false })) });
   const quoteOf = useMemo(() => {
     const map = new Map<string, SessionQuote>();
     // Lesson ids are dates, shared by every course: the key carries the course too.
@@ -84,7 +101,6 @@ export function VenueTimetable() {
   }, [all]);
   const roomOptions = rooms.filter(r => !filters.locationId || r.locationId === filters.locationId);
   const times = [...new Set(lessons.map(l => l.time))].sort();
-  const dayLessons = lessons.filter(l => l.day === day);
 
   if (!venueId) return <div className="p-6"><Link className="underline" href="/fit/gyms">{t('gym.selectGym')}</Link></div>;
   const weekText = t('timetable.week', { date: dayLabel(week, locale, { day: 'numeric', month: 'long' }) });
@@ -123,7 +139,7 @@ export function VenueTimetable() {
       {!loading && !sessions.isError && !courses.isError && lessons.length === 0 &&
         <p className="text-content-muted" data-testid="timetable-empty">{t('timetable.empty')}</p>}
       {/* Phone: one day at a time. */}
-      <section className="space-y-3 md:hidden" aria-label={weekText} data-testid="day-list">
+      <section className="space-y-3 lg:hidden" aria-label={weekText} data-testid="day-list">
         <div className="grid grid-cols-7 gap-1">{days.map(value => <button key={value} type="button" data-testid={`tab-${value}`}
           aria-pressed={value === day} onClick={() => setSelectedDay(value)}
           className={cn('min-h-14 rounded-xl border p-1 text-center text-xs', value === day ?
@@ -135,7 +151,7 @@ export function VenueTimetable() {
         <div className="space-y-3">{dayLessons.map(card)}</div>
       </section>
       {/* Desktop: Monday to Sunday, one row per start time. */}
-      <section className="hidden md:block" aria-label={weekText} data-testid="week-grid">
+      <section className="hidden lg:block" aria-label={weekText} data-testid="week-grid">
         <div className="grid gap-2" style={{ gridTemplateColumns: '4rem repeat(7, minmax(0, 1fr))' }}>
           <div />
           {days.map(value => <div key={value} className={cn('rounded-xl border p-2 text-center text-sm', value === day ?

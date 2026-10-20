@@ -21,10 +21,13 @@ export const useCourseParticipants = (courseId?: string, sessionId?: string) => 
   queryFn: () => fetchCourseParticipants(courseId!, sessionId!), enabled: !!courseId && !!sessionId });
 export const useCourseRefunds = (uid?: string) => useQuery({ queryKey: ['courses', 'refunds', uid],
   queryFn: () => fetchCourseRefunds(uid!), enabled: !!uid });
+/** A rate-limited quote is not retried: every retry spends another of the 60 calls per 10 minutes. */
+const retryQuote = (count: number, err: unknown) => count < 2 &&
+  !/rate_limited|resource-exhausted/.test(`${(err as { message?: string })?.message ?? ''} ${(err as { code?: string })?.code ?? ''}`);
 /** Server quote for the given lessons; the key carries the ids so a different selection never reuses a stale price. */
 export const useCourseQuote = (courseId?: string, sessionIds?: string[], includeSeries = true, enabled = true) => useQuery({
   queryKey: ['courses', 'quote', courseId, sessionIds ?? null, includeSeries],
-  queryFn: () => quoteCourse(courseId!, sessionIds, includeSeries), enabled: !!courseId && enabled, staleTime: 15000 });
+  queryFn: () => quoteCourse(courseId!, sessionIds, includeSeries), enabled: !!courseId && enabled, staleTime: 15000, retry: retryQuote });
 /** Not `useVenueCourses` (src/hooks/useVenues.ts is the legacy gym classes list, removed with the gym flow). */
 export const useManagedVenueCourses = (venueId?: string) => useQuery({ queryKey: ['courses', 'venue', venueId],
   queryFn: () => fetchVenueCourses(venueId!), enabled: !!venueId, refetchInterval: 30000 });

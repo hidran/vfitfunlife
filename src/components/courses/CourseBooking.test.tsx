@@ -55,6 +55,16 @@ beforeEach(() => {
 });
 
 describe('CourseBooking', () => {
+  it('shows the rate-limit message when the review quote is refused and keeps the list usable', async () => {
+    mocks.quote.mockRejectedValue(rejection('rate_limited'));
+    renderBooking();
+    fireEvent.click(screen.getAllByRole('button', { name: /courses.bookLesson/ })[0]);
+    expect(await screen.findByRole('alert')).toHaveTextContent('courses.err.rate_limited');
+    expect(screen.queryByRole('region', { name: 'courses.review' })).not.toBeInTheDocument();
+    for (const button of screen.getAllByRole('button', { name: /courses.bookLesson/ })) expect(button).toBeEnabled();
+    expect(screen.getByTestId('series-price')).toHaveTextContent('€20.00');
+  });
+
   it('shows the regular price struck through and the discounted price in the list', () => {
     renderBooking();
     const row = screen.getAllByRole('button', { name: /courses.bookLesson/ })[0];

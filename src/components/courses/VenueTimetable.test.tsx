@@ -8,7 +8,9 @@ const mocks = vi.hoisted(() => ({
   search: 'id=v1', uid: undefined as string | undefined, role: 'customer',
   venue: { id: 'v1', name: 'Smoke Gym', partnerStatus: 'active', isActive: true } as Record<string, unknown> | undefined,
   sessions: [] as unknown[], courses: [] as unknown[], managed: [] as { id: string }[],
-  quote: vi.fn(),
+  quote: vi.fn(), wide: false,
+  /** Per-week sessions for the paging tests; falls back to `sessions`. */
+  sessionsOf: undefined as undefined | ((week: string) => unknown[]),
 }));
 
 vi.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams(mocks.search) }));
@@ -22,7 +24,8 @@ vi.mock('@/stores/authStore', () => ({
 vi.mock('@/hooks/useVenues', () => ({ useVenue: () => ({ data: mocks.venue, isLoading: false }) }));
 vi.mock('@/hooks/useManagedVenues', () => ({ useManagedVenues: () => ({ venues: mocks.managed, isLoading: false }) }));
 vi.mock('@/hooks/useCourses', () => ({
-  useVenueWeek: (venueId?: string) => ({ data: venueId ? mocks.sessions : undefined, isLoading: false, isError: false }),
+  useVenueWeek: (venueId?: string, week?: string) => ({ data: venueId ? (mocks.sessionsOf ? mocks.sessionsOf(week!) : mocks.sessions) : undefined,
+    isLoading: false, isError: false }),
   usePublishedVenueCourses: (venueId?: string) => ({ data: venueId ? mocks.courses : undefined, isLoading: false, isError: false }),
 }));
 vi.mock('@/lib/firebase/courses', () => ({ quoteCourse: (...args: unknown[]) => mocks.quote(...args) }));
@@ -52,8 +55,9 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-10-14T09:00:00Z') });
   mocks.search = 'id=v1'; mocks.uid = undefined; mocks.role = 'customer'; mocks.managed = [];
   mocks.venue = { id: 'v1', name: 'Smoke Gym', partnerStatus: 'active', isActive: true };
-  mocks.courses = [course()]; mocks.sessions = [];
+  mocks.courses = [course()]; mocks.sessions = []; mocks.sessionsOf = undefined; mocks.wide = false;
   mocks.quote.mockReset();
+  window.matchMedia = ((query: string) => ({ matches: mocks.wide, media: query, addEventListener: () => {}, removeEventListener: () => {} })) as unknown as typeof window.matchMedia;
 });
 afterEach(() => vi.useRealTimers());
 
@@ -117,7 +121,7 @@ describe('VenueTimetable', () => {
   });
 
   it('shows the regular price struck through and the discounted price to a signed-in user', async () => {
-    mocks.uid = 'u1';
+    mocks.uid = 'u1'; mocks.wide = true;
     mocks.sessions = [lesson('a', '2026-10-15T17:00:00Z')];
     mocks.quote.mockResolvedValue({ series: null, sessions: [{ sessionId: 'a', revision: 1, regularCents: 1000, discountPercent: 20,
       discountCents: 200, finalCents: 800, gymPercent: 20, instructorPercent: 0, availableSeats: 2, waitlisted: 0, stripeEligible: true }] });
@@ -128,7 +132,7 @@ describe('VenueTimetable', () => {
   });
 
   it('keeps two courses with the same lesson date apart (lesson ids are dates)', async () => {
-    mocks.uid = 'u1';
+    mocks.uid = 'u1'; mocks.wide = true;
     mocks.courses = [course(), course({ id: 'c2', name: 'Pilates', lessonPriceCents: 0 })];
     mocks.sessions = [lesson('2026-10-15', '2026-10-15T17:00:00Z'), lesson('2026-10-15', '2026-10-15T17:00:00Z', { courseId: 'c2' })];
     const q = (sessionId: string, finalCents: number) => ({ series: null, sessions: [{ sessionId, revision: 1, regularCents: finalCents,
@@ -138,6 +142,68 @@ describe('VenueTimetable', () => {
     await waitFor(() => {
       const cards = within(grid()).getAllByTestId('timetable-card');
       expect(cards.map(c => within(c).getByTestId('final-price').textContent)).toEqual(['€10.00', 'courses.free']);
+    });
+  });
+
+  describe('quote budget (60 calls / 10 min per user)', () => {
+    const courses20 = Array.from({ length: 20 }, (_, i) => course({ id: `c${i}`, name: `Course ${i}` }));
+    /** Every course has a lesson on the Wednesday of the requested week. */
+    const wednesdays = (week: string) => courses20.map((c, i) => {
+      const day = new Date(new Date(`${week}T00:00:00Z`).getTime() + 2 * 86400000).toISOString().slice(0, 10);
+      return lesson(day, `${day}T${String(8 + (i % 10)).padStart(2, '0')}:00:00Z`, { courseId: c.id as string });
+    });
+    const answer = async (courseId: string, ids: string[]) => ({ series: null, sessions: ids.map(sessionId => ({ sessionId, revision: 1,
+      regularCents: 1000, discountPercent: 0, discountCents: 0, finalCents: 1000, gymPercent: 0, instructorPercent: 0, availableSeats: 2,
+      waitlisted: 0, stripeEligible: true, courseId })) });
+
+    it('on a phone quotes only the courses of the selected day, once each', async () => {
+      mocks.uid = 'u1'; mocks.courses = courses20;
+      mocks.sessions = [lesson('2026-10-14', '2026-10-14T17:00:00Z', { courseId: 'c3' }), lesson('2026-10-15', '2026-10-15T17:00:00Z', { courseId: 'c4' })];
+      mocks.quote.mockImplementation(answer);
+      renderTimetable();
+      await waitFor(() => expect(mocks.quote).toHaveBeenCalledTimes(1));
+      expect(mocks.quote).toHaveBeenCalledWith('c3', ['2026-10-14'], false);
+      fireEvent.click(screen.getByTestId('tab-2026-10-15'));
+      await waitFor(() => expect(mocks.quote).toHaveBeenCalledTimes(2));
+      expect(mocks.quote).toHaveBeenLastCalledWith('c4', ['2026-10-15'], false);
+      // Back to a day already quoted: served from the cache.
+      fireEvent.click(screen.getByTestId('tab-2026-10-14'));
+      await new Promise(resolve => setTimeout(resolve, 500));
+      expect(mocks.quote).toHaveBeenCalledTimes(2);
+    });
+
+    it('caps a crowded day and a crowded desktop week at 8 courses, and skips past lessons', async () => {
+      mocks.uid = 'u1'; mocks.courses = courses20; mocks.wide = true;
+      mocks.sessionsOf = wednesdays;
+      mocks.quote.mockImplementation(answer);
+      renderTimetable();
+      await waitFor(() => expect(mocks.quote).toHaveBeenCalledTimes(8));
+      await new Promise(resolve => setTimeout(resolve, 500));
+      expect(mocks.quote).toHaveBeenCalledTimes(8);
+    });
+
+    it('does not quote lessons that already started', async () => {
+      mocks.uid = 'u1';
+      mocks.sessions = [lesson('2026-10-14', '2026-10-14T07:00:00Z')];
+      renderTimetable();
+      await new Promise(resolve => setTimeout(resolve, 500));
+      expect(mocks.quote).not.toHaveBeenCalled();
+    });
+
+    it('five quick week changes on a 20-course venue issue a bounded number of calls', async () => {
+      mocks.uid = 'u1'; mocks.courses = courses20;
+      mocks.sessionsOf = wednesdays;
+      mocks.quote.mockImplementation(answer);
+      renderTimetable();
+      await waitFor(() => expect(mocks.quote).toHaveBeenCalled());
+      await new Promise(resolve => setTimeout(resolve, 500));
+      const before = mocks.quote.mock.calls.length;
+      expect(before).toBeLessThanOrEqual(8);
+      for (let i = 0; i < 5; i++) fireEvent.click(screen.getByLabelText('timetable.next'));
+      await new Promise(resolve => setTimeout(resolve, 800));
+      // Only the week you stop on is quoted, with the same day's courses.
+      expect(mocks.quote.mock.calls.length - before).toBeLessThanOrEqual(8);
+      expect(mocks.quote.mock.calls.length).toBeLessThanOrEqual(16);
     });
   });
 
