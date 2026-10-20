@@ -41,6 +41,8 @@ beforeAll(async () => {
     await db.doc('courseRefunds/oldRefund').set({ userId: 'u', providerId: 'p', enrollmentId: 'old' });
     await db.doc('courseScheduleLocks/x').set({ slots: {} });
     await db.doc('courseSweepState/waitlist').set({ cursor: 'a' });
+    await db.doc('instructors/coach').set({ uid: 'coach', providerProfile: { isVerified: true },
+      applicationStatus: 'approved', partnerStatus: 'pending' });
   });
 });
 afterAll(async () => { await env?.cleanup(); });
@@ -321,5 +323,16 @@ describe('public venue timetable and waitlist queries', () => {
       await assertFails(db.doc('courses/c/sessions/new').set({ venueId: 'v', listed: true }));
     }
     await assertFails(anon().doc('courses/c/sessions/s1').update({ listed: false }));
+  });
+});
+
+describe('instructor partnership', () => {
+  it('keeps instructor partnership separate from provider verification', async () => {
+    await assertFails(as('coach').doc('instructors/coach').update({ partnerStatus: 'active' }));
+    await assertFails(as('rogue').doc('instructors/rogue').set({
+      uid: 'rogue', providerProfile: { isVerified: false }, applicationStatus: 'pending',
+      partnerStatus: 'active',
+    }));
+    await assertSucceeds(as('admin').doc('instructors/coach').update({ partnerStatus: 'active' }));
   });
 });

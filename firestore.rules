@@ -746,35 +746,6 @@ service cloud.firestore {
         get(/databases/$(database)/documents/venues/$(venueId)).data.get('isActive', true) == true;
     }
 
-    match /gymSessions/{sessionId} {
-      allow read: if (resource.data.status == 'published' && activePartnerGym(resource.data.venueId)) ||
-        managesVenue(resource.data.venueId);
-      allow write: if false;
-    }
-
-    match /gymBookings/{bookingId} {
-      allow read: if isAuthenticated() &&
-        (resource.data.userId == request.auth.uid || managesVenue(resource.data.venueId));
-      allow write: if false;
-    }
-
-    match /gymSeries/{seriesId} {
-      allow read: if managesVenue(resource.data.venueId);
-      allow write: if false;
-    }
-
-    match /gymScheduleLocks/{lockId} {
-      allow read, write: if false;
-    }
-
-    match /gymSessionMembers/{memberId} {
-      allow read, write: if false;
-    }
-
-    match /gymNotifications/{notificationId} {
-      allow read, write: if false;
-    }
-
     match /bookings/{bookingId} {
       // Read: Owner, assigned trainer, or admin
       allow read: if isAuthenticated() && (

@@ -675,31 +675,6 @@
         { "fieldPath": "createdAt", "order": "ASCENDING" }
       ]
     },
-    {
-      "collectionGroup": "gymSessions",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "venueId", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "startsAt", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "gymSessions",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "venueId", "order": "ASCENDING" },
-        { "fieldPath": "startsAt", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "gymBookings",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "sessionId", "order": "ASCENDING" },
-        { "fieldPath": "state", "order": "ASCENDING" }
-      ]
-    },
     // Unified courses (plan 2026-10-19, F3): venue timetable, instructor lessons, waitlist sweep and a customer's
     // waitlist entries. The emulator does not enforce indexes: deploy and wait for READY before relying on them.
     {
