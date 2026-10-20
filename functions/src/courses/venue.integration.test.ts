@@ -470,8 +470,8 @@ describe("saveCourse lock lifecycle", () => {
   it("takes a room and an instructor lock for every session of a published course", async () => {
     const { courseId } = await save("biz", venueInput);
     for (const day of ["2099-10-12", "2099-10-13"]) {
-      expect(await slotsIn(`courseScheduleLocks/room_v_l1_r1_${day}`)).toEqual([`${courseId}_${day}`]);
-      expect(await slotsIn(`courseScheduleLocks/instructor_p_${day}`)).toEqual([`${courseId}_${day}`]);
+      expect(await slotsIn(`courseScheduleLocks/room:v:l1:r1|${day}`)).toEqual([`${courseId}_${day}`]);
+      expect(await slotsIn(`courseScheduleLocks/instructor:p|${day}`)).toEqual([`${courseId}_${day}`]);
     }
     expect(await lockDocs()).toBe(4);
   });
@@ -501,7 +501,7 @@ describe("saveCourse lock lifecycle", () => {
   });
   it("takes instructor locks only for an unlinked course with an instructor", async () => {
     const { courseId } = await save("p", { ...input, instructorId: "p2" });
-    expect(await slotsIn("courseScheduleLocks/instructor_p2_2099-10-12")).toEqual([`${courseId}_2099-10-12`]);
+    expect(await slotsIn("courseScheduleLocks/instructor:p2|2099-10-12")).toEqual([`${courseId}_2099-10-12`]);
     expect(await lockDocs()).toBe(2);
   });
   it.each(["draft", "archived"])("releases every lock when the course goes back to %s", async (state) => {
@@ -549,13 +549,13 @@ describe("saveCourse lock lifecycle", () => {
   it("releases the slots of sessions a schedule edit drops", async () => {
     const { courseId } = await save("biz", venueInput);
     await save("biz", { ...venueInput, endDate: "2099-10-12" }, courseId);
-    expect(await slotsIn("courseScheduleLocks/room_v_l1_r1_2099-10-13")).toEqual([]);
-    expect(await slotsIn("courseScheduleLocks/room_v_l1_r1_2099-10-12")).toEqual([`${courseId}_2099-10-12`]);
+    expect(await slotsIn("courseScheduleLocks/room:v:l1:r1|2099-10-13")).toEqual([]);
+    expect(await slotsIn("courseScheduleLocks/room:v:l1:r1|2099-10-12")).toEqual([`${courseId}_2099-10-12`]);
   });
   it("re-keys cleanly when a weekly course moves by one hour", async () => {
     const { courseId } = await save("biz", venueInput);
     await save("biz", { ...venueInput, startTime: "19:00" }, courseId);
-    const slots = (await db.doc("courseScheduleLocks/room_v_l1_r1_2099-10-12").get()).data()!.slots;
+    const slots = (await db.doc("courseScheduleLocks/room:v:l1:r1|2099-10-12").get()).data()!.slots;
     expect(slots[`${courseId}_2099-10-12`]).toMatchObject({ start: Date.parse("2099-10-12T17:00:00Z") });
   });
   it("does not conflict with itself when re-saved, renamed or moved onto its own old slot", async () => {

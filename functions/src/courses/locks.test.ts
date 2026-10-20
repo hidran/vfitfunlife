@@ -15,45 +15,54 @@ const slot = (over: Partial<LockSlot> & { start: string; end: string }): LockSlo
 describe("lockPaths", () => {
   it("gives one room and one instructor key for an 18:00-19:00 Rome slot", () => {
     const paths = lockPaths(slot({ start: "2099-10-12T16:00:00Z", end: "2099-10-12T17:00:00Z" }));
-    expect(paths).toEqual(["courseScheduleLocks/room_v_l_r_2099-10-12", "courseScheduleLocks/instructor_i_2099-10-12"]);
+    expect(paths).toEqual(["courseScheduleLocks/room:v:l:r|2099-10-12", "courseScheduleLocks/instructor:i|2099-10-12"]);
   });
 
   it("gives two days each when the slot crosses UTC midnight", () => {
     const paths = lockPaths(slot({ start: "2099-10-12T23:30:00Z", end: "2099-10-13T00:30:00Z" }));
     expect(paths).toHaveLength(4);
-    expect(paths).toContain("courseScheduleLocks/room_v_l_r_2099-10-12");
-    expect(paths).toContain("courseScheduleLocks/room_v_l_r_2099-10-13");
-    expect(paths).toContain("courseScheduleLocks/instructor_i_2099-10-12");
-    expect(paths).toContain("courseScheduleLocks/instructor_i_2099-10-13");
+    expect(paths).toContain("courseScheduleLocks/room:v:l:r|2099-10-12");
+    expect(paths).toContain("courseScheduleLocks/room:v:l:r|2099-10-13");
+    expect(paths).toContain("courseScheduleLocks/instructor:i|2099-10-12");
+    expect(paths).toContain("courseScheduleLocks/instructor:i|2099-10-13");
   });
 
   it("does not touch the next day when the slot ends exactly at 00:00 UTC", () => {
     const paths = lockPaths(slot({ start: "2099-10-12T23:00:00Z", end: "2099-10-13T00:00:00Z" }));
-    expect(paths).toEqual(["courseScheduleLocks/room_v_l_r_2099-10-12", "courseScheduleLocks/instructor_i_2099-10-12"]);
+    expect(paths).toEqual(["courseScheduleLocks/room:v:l:r|2099-10-12", "courseScheduleLocks/instructor:i|2099-10-12"]);
   });
 
   it("omits the room key without a room, venue or location", () => {
     const base = { start: "2099-10-12T16:00:00Z", end: "2099-10-12T17:00:00Z" };
-    expect(lockPaths(slot({ ...base, roomId: null }))).toEqual(["courseScheduleLocks/instructor_i_2099-10-12"]);
-    expect(lockPaths(slot({ ...base, venueId: null }))).toEqual(["courseScheduleLocks/instructor_i_2099-10-12"]);
-    expect(lockPaths(slot({ ...base, locationId: null }))).toEqual(["courseScheduleLocks/instructor_i_2099-10-12"]);
+    expect(lockPaths(slot({ ...base, roomId: null }))).toEqual(["courseScheduleLocks/instructor:i|2099-10-12"]);
+    expect(lockPaths(slot({ ...base, venueId: null }))).toEqual(["courseScheduleLocks/instructor:i|2099-10-12"]);
+    expect(lockPaths(slot({ ...base, locationId: null }))).toEqual(["courseScheduleLocks/instructor:i|2099-10-12"]);
   });
 
   it("omits the instructor key without an instructor", () => {
     expect(lockPaths(slot({ start: "2099-10-12T16:00:00Z", end: "2099-10-12T17:00:00Z", instructorId: null })))
-      .toEqual(["courseScheduleLocks/room_v_l_r_2099-10-12"]);
+      .toEqual(["courseScheduleLocks/room:v:l:r|2099-10-12"]);
   });
 
   it("keys a DST-change day slot (2026-10-25 02:00-03:00 Rome) by UTC days", () => {
     // 02:00 CEST = 00:00Z; the ambiguous 02:30 wall time exists twice, the slot ends 03:00 CET = 02:00Z.
     const paths = lockPaths(slot({ start: "2026-10-25T00:00:00Z", end: "2026-10-25T02:00:00Z" }));
-    expect(paths).toEqual(["courseScheduleLocks/room_v_l_r_2026-10-25", "courseScheduleLocks/instructor_i_2026-10-25"]);
+    expect(paths).toEqual(["courseScheduleLocks/room:v:l:r|2026-10-25", "courseScheduleLocks/instructor:i|2026-10-25"]);
   });
 
   it("keys the evening of the spring DST-change day by UTC days", () => {
     const paths = lockPaths(slot({ start: "2026-03-29T22:30:00Z", end: "2026-03-30T00:30:00Z" }));
-    expect(paths.filter((p) => p.includes("/room_"))).toEqual([
-      "courseScheduleLocks/room_v_l_r_2026-03-29", "courseScheduleLocks/room_v_l_r_2026-03-30"]);
+    expect(paths.filter((p) => p.includes("/room:"))).toEqual([
+      "courseScheduleLocks/room:v:l:r|2026-03-29", "courseScheduleLocks/room:v:l:r|2026-03-30"]);
+  });
+
+  it("keeps distinct (venue, location, room) triples apart even when the ids contain underscores", () => {
+    const base = { start: "2099-10-12T16:00:00Z", end: "2099-10-12T17:00:00Z", instructorId: null };
+    const one = lockPaths(slot({ ...base, venueId: "a_b", locationId: "c", roomId: "d" }));
+    const two = lockPaths(slot({ ...base, venueId: "a", locationId: "b_c", roomId: "d" }));
+    expect(one).toEqual(["courseScheduleLocks/room:a_b:c:d|2099-10-12"]);
+    expect(two).toEqual(["courseScheduleLocks/room:a:b_c:d|2099-10-12"]);
+    expect(one).not.toEqual(two);
   });
 
   it("returns no key for an interval that ends on an earlier day than it starts", () => {
@@ -145,20 +154,20 @@ describe("updateScheduleLocks (emulator)", () => {
     expect(err.message).toBe("room_overlap");
     expect(err.code).toBe("failed-precondition");
     expect(err.details).toEqual({ courseName: "c1_s1", startsAt: `${day}T16:00:00.000Z`, endsAt: `${day}T17:00:00.000Z` });
-    expect((await db.doc(`courseScheduleLocks/room_v_l_r_${day}`).get()).data()?.slots).not.toHaveProperty("c2_s1");
+    expect((await db.doc(`courseScheduleLocks/room:v:l:r|${day}`).get()).data()?.slots).not.toHaveProperty("c2_s1");
   });
 
   it("writes nothing when a later path of the same add conflicts", async () => {
     await run([], [room("c1_s1", `${day}T23:30:00Z`, `2099-10-13T00:30:00Z`)]);
     await expect(run([], [room("c2_s1", `2099-10-13T00:00:00Z`, `2099-10-13T01:00:00Z`, { instructorId: "x" })]))
       .rejects.toThrow("room_overlap");
-    expect((await db.doc("courseScheduleLocks/instructor_x_2099-10-13").get()).exists).toBe(false);
+    expect((await db.doc("courseScheduleLocks/instructor:x|2099-10-13").get()).exists).toBe(false);
   });
 
   it("allows touching slots (end equals start)", async () => {
     await run([], [room("c1_s1", `${day}T16:00:00Z`, `${day}T17:00:00Z`)]);
     await run([], [room("c2_s1", `${day}T17:00:00Z`, `${day}T18:00:00Z`)]);
-    expect(Object.keys((await db.doc(`courseScheduleLocks/room_v_l_r_${day}`).get()).data()!.slots).sort())
+    expect(Object.keys((await db.doc(`courseScheduleLocks/room:v:l:r|${day}`).get()).data()!.slots).sort())
       .toEqual(["c1_s1", "c2_s1"]);
   });
 
@@ -189,7 +198,7 @@ describe("updateScheduleLocks (emulator)", () => {
     const after = room("c1_s1", `${day}T16:30:00Z`, `${day}T17:30:00Z`);
     await run([], [before]);
     await run([before], [after]);
-    const slots = (await db.doc(`courseScheduleLocks/room_v_l_r_${day}`).get()).data()!.slots;
+    const slots = (await db.doc(`courseScheduleLocks/room:v:l:r|${day}`).get()).data()!.slots;
     expect(slots.c1_s1.start).toBe(after.startsAt.getTime());
   });
 
@@ -203,7 +212,7 @@ describe("updateScheduleLocks (emulator)", () => {
     const first = room("c1_s1", `${day}T16:00:00Z`, `${day}T17:00:00Z`);
     await run([], [first]);
     await run([first], []);
-    expect((await db.doc(`courseScheduleLocks/room_v_l_r_${day}`).get()).exists).toBe(false);
+    expect((await db.doc(`courseScheduleLocks/room:v:l:r|${day}`).get()).exists).toBe(false);
     await run([], [room("c2_s1", `${day}T16:00:00Z`, `${day}T17:00:00Z`)]);
   });
 
@@ -224,7 +233,7 @@ describe("updateScheduleLocks (emulator)", () => {
     expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
     const rejected = results.find((r) => r.status === "rejected") as PromiseRejectedResult;
     expect(rejected.reason.message).toBe("room_overlap");
-    expect(Object.keys((await db.doc(`courseScheduleLocks/room_v_l_r_${day}`).get()).data()!.slots)).toHaveLength(1);
+    expect(Object.keys((await db.doc(`courseScheduleLocks/room:v:l:r|${day}`).get()).data()!.slots)).toHaveLength(1);
   });
 
   it("keeps concurrent non-overlapping adds on the same day document", async () => {
@@ -233,7 +242,7 @@ describe("updateScheduleLocks (emulator)", () => {
       run([], [room("c2_s1", `${day}T12:00:00Z`, `${day}T13:00:00Z`, { instructorId: "b" })]),
       run([], [room("c3_s1", `${day}T14:00:00Z`, `${day}T15:00:00Z`, { instructorId: "c" })]),
     ]);
-    expect(Object.keys((await db.doc(`courseScheduleLocks/room_v_l_r_${day}`).get()).data()!.slots).sort())
+    expect(Object.keys((await db.doc(`courseScheduleLocks/room:v:l:r|${day}`).get()).data()!.slots).sort())
       .toEqual(["c1_s1", "c2_s1", "c3_s1"]);
   });
 

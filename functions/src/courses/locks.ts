@@ -20,12 +20,14 @@ function utcDays(start: Date, end: Date): string[] {
   return days;
 }
 
+// Ids are [a-zA-Z0-9_-], so `:` and `|` can never occur inside a part: distinct (venue, location, room) triples
+// cannot collide the way `a_b` + `c` and `a` + `b_c` did with an underscore separator.
 export function lockPaths(slot: LockSlot): string[] {
   const room = slot.venueId && slot.locationId && slot.roomId ?
-    `room_${slot.venueId}_${slot.locationId}_${slot.roomId}` : null;
+    `room:${slot.venueId}:${slot.locationId}:${slot.roomId}` : null;
   return utcDays(slot.startsAt, slot.endsAt).flatMap((day) => [
-    ...(room ? [`courseScheduleLocks/${room}_${day}`] : []),
-    ...(slot.instructorId ? [`courseScheduleLocks/instructor_${slot.instructorId}_${day}`] : []),
+    ...(room ? [`courseScheduleLocks/${room}|${day}`] : []),
+    ...(slot.instructorId ? [`courseScheduleLocks/instructor:${slot.instructorId}|${day}`] : []),
   ]);
 }
 
@@ -73,7 +75,7 @@ export async function updateScheduleLocks(tx: Transaction, remove: LockSlot[], a
       const clash = Object.entries(current).find(([id, other]) =>
         id !== slot.id && other.start < end && other.end > start);
       if (clash) {
-        throw new HttpsError("failed-precondition", path.includes("/room_") ? "room_overlap" : "instructor_overlap", {
+        throw new HttpsError("failed-precondition", path.includes("/room:") ? "room_overlap" : "instructor_overlap", {
           courseName: clash[1].courseName ?? "", startsAt: new Date(clash[1].start).toISOString(),
           endsAt: new Date(clash[1].end).toISOString(),
         });

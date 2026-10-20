@@ -229,7 +229,7 @@ async function lockConflicts(
   for (const slot of slots) {
     const kinds = new Set<string>();
     for (const path of lockPaths(slot)) {
-      const kind = path.includes("/room_") ? "room" : "instructor";
+      const kind = path.includes("/room:") ? "room" : "instructor";
       if (kinds.has(kind)) continue;
       const clash = Object.entries(docs.get(path) ?? {}).find(([id, other]) => !own(id) &&
         other.start < slot.endsAt.getTime() && other.end > slot.startsAt.getTime());
