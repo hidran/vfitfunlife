@@ -440,6 +440,42 @@ Production has **never** run the courses / participants / partner-gym stack: 9 i
 
 Until the owner decides, production stays on the 2026-10-06 tree. The unified-courses plan (P2) assumes prod has no gym data (task L8 step 1): if option 1 is taken, that preflight will list gym functions and L8 must take its two-deploy path.
 
+### Staging redeploy — 2026-10-20 (reconciled f3abc70)
+
+Deployed to `vfit-app-staging` only, from `main` at `f3abc70` (clean tree, in sync with `origin/main`), in the runbook order. Production was not touched.
+
+| Step | Result |
+|---|---|
+| Gates | `npx tsc --noEmit -p .`, `cd functions && npm run lint`, `npm run build` all exit 0 |
+| Indexes | `firebase deploy -P staging --only firestore:indexes` (additive). All 62 indexes of the file were already present (the earlier branch restore had left the four `providerKind` ones in place), so the deploy created nothing; 66 indexes on the project, 66 READY (checked through the Firestore Admin REST API, the CLI does not print state). `verify-admin-list-indexes.mjs --project vfit-app-staging`: 92 query shapes OK, 0 missing |
+| Functions | `firebase deploy -P staging --force --only functions`: 159 functions updated, all ACTIVE with an update time of 2026-10-20. The per-minute mutation quota ("Quota Exceeded") hit about 50 functions during the first pass and the CLI retried them; the run ended with `onAdminJobCreated` and `seedDemoData` not reported, so they were deployed once more with `--only functions:onAdminJobCreated,functions:seedDemoData` (both succeeded, `fix-staging-blocking-uris.mjs` postdeploy ran). Nothing was deleted: the four live-only functions (`addStagingAccess`, `removeStagingAccess`, `stagingBeforeUserCreated`, `stagingBeforeUserSignedIn`) are exported by the source for `GCLOUD_PROJECT=vfit-app-staging`. Confirmed present: `applyAsProvider`, `decideProviderApplication`, `releaseBusinessVat`, `convertBusinessToIndividual`, `updateBusinessTaxId`, `syncBusinessVenueLocation`, `onInstructorWriteSearchIndex`, the course, partner-gym and participant callables |
+| Rules | `firebase deploy -P staging --only firestore:rules`, released (after the functions) |
+| Hosting | `npm run build:staging` (outside the sandbox: Turbopack's PostCSS worker needs to bind a port), then `firebase deploy -P staging --only hosting`; `https://vfit-app-staging.web.app` answers 200 |
+| Backfill dry run | `backfill-search-tokens.mjs --project vfit-app-staging`: 34 users scanned, 0 documents to update (no `providerKind` gaps) |
+
+**Stray indexes** (on staging, not in `firestore.indexes.json`; left alone, `--force` was not used). They are the four `providerType` indexes from main's old build, all on `users`:
+
+1. `adminHidden`, `isSuspended`, `providerVerification`, `providerType`, `createdAt desc`
+2. `adminHidden`, `providerVerification`, `providerType`, `createdAt desc`
+3. `searchTokens` (array), `adminHidden`, `isSuspended`, `providerVerification`, `providerType`, `createdAt desc`
+4. `searchTokens` (array), `adminHidden`, `providerVerification`, `providerType`, `createdAt desc`
+
+Delete them from the console (or with `--force` on staging only) once the B10 journey has been repeated.
+
+**Leftover synthetic data from main's flows** (read-only count, nothing deleted): `businessVat` has **0** documents, although two approved companies exist (see below), so the claims were not created by main's build. Three `venues/biz_*` and five instructors with a `business` map, all `@vitfitdemo.dev` test accounts:
+
+| uid | email | state | tax id | venue |
+|---|---|---|---|---|
+| `EEK8TcGzZ4YAaeBbMLubf2nYPrm1` | `journey.biz.it.202610191930@vitfitdemo.dev` | provider, verified | 12345678903 | `biz_EEK8…` "Palestra Journey Milano", active |
+| `GjMJqDTrn0Y0KyEMJfApoLIBD6m1` | `journey.biz.en.202610191930@vitfitdemo.dev` | provider, verified | 01234567897 | `biz_GjMJ…` "Journey Fitness Torino", active |
+| `x473tgl2PZanNCUgd6YM6QvYuKC2` | `journey.biz.recheck.a.202610192224@vitfitdemo.dev` | provider, verified | 01234567897 | `biz_x473…` "Recheck Gym A Renamed", active |
+| `DcUGtqHiUjaBxYBUN9ifeivbA502` | `journey.biz.recheck.b.202610192224@vitfitdemo.dev` | customer, pending | 12345678903 | none |
+| `RRLZbsBhO1PYLUxtBqmRj3ZPATq2` | `journey.biz.dup.202610191930@vitfitdemo.dev` | customer, pending | 01234567897 | none |
+
+Their `users` documents carry both `providerKind: 'business'` and the old `providerType: 'business'`. Tax ids repeat across accounts (12345678903 twice, 01234567897 three times) and no `businessVat` claim backs any of them, so the uniqueness guarantee does not hold for this data: do not use these accounts to judge duplicate-VAT behaviour, and delete them (Auth user, `users`, `instructors`, `venues/biz_*`) after the B10 journey, using fresh tax ids for it.
+
+Still to do on staging: the B10 browser journey (section 5), the courses smoke scripts, and hard-reloading `/admin`.
+
 ### Staging deploy of main's rebuild, 2026-10-19 (superseded, kept as a record)
 
 Deployed to `vfit-app-staging` only from `main` at `ed9302f`, later rebuilt through `20759f9`/`1fa024b`: `firestore:indexes` (four `users` `providerType` indexes, about 5 minutes; 92 query shapes OK; the CLI warned about four indexes in the project that are not in the file and they were left alone), rules, 16 functions (`applyAsProvider`, `decideProviderApplication`, `releaseBusinessVat` updated with input `providerId`, `syncBusinessVenueLocation` created, `onInstructorWriteSearchIndex`, the ten partner-gym callables, `chatWithAssistant`), hosting from `build:staging`, backfills (`backfill-provider-search.mjs` 0 to update; `backfill-provider-type.mjs` 12 users + 12 instructors, since deleted). The B10 browser verification of that build is in [`business-signup-verification.md`](../user-journeys/business-signup-verification.md) (with the reconciliation banner).
