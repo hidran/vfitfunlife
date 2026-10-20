@@ -13,6 +13,8 @@ Index of project documentation. Each file is the canonical source for its topic;
 | [user-journeys/signup-to-booking.md](user-journeys/signup-to-booking.md) · [Italiano](user-journeys/signup-to-booking.it.md) | Screenshot walkthrough (dark theme, mobile): provider and customer from signup to a confirmed booking, in English and Italian (each also as `.docx`) |
 | [user-journeys/business-signup.md](user-journeys/business-signup.md) · [Italiano](user-journeys/business-signup.it.md) | Company signup walkthrough: register as a company with venue type and address, admin approval (the venue is created on approval), search with the Company badge, profile and logo editing, the venue under Gyms & schools, releasing a tax id (venue-step screenshots pending re-shoot) |
 | [user-journeys/business-signup-verification.md](user-journeys/business-signup-verification.md) | Main's superseded B10 browser-verification log (defects D1-D16) with a banner showing which the reconciled branch resolves |
+| [user-journeys/group-courses.md](user-journeys/group-courses.md) | Group courses, unified for individual providers and venues: venue set-up, authoring with rooms and instructors, weekly timetable, price review and partner discounts, waitlist, substitution, no-shows, online checkout, participants |
+| [user-journeys/partner-gym-timetable.md](user-journeys/partner-gym-timetable.md) | Stub: the separate partner-gym flow is superseded by group courses and being removed |
 | [user-journeys/production-release-checklist.md](user-journeys/production-release-checklist.md) | Production test checklist of the 2026-10-06 business release |
 | [database-schema.md](database-schema.md) | Firestore collections, document shapes, indexes |
 | [design-system.md](design-system.md) | Brand identity, color tokens, typography, component inventory, Tailwind v4 patterns |
@@ -46,7 +48,7 @@ Index of project documentation. Each file is the canonical source for its topic;
 |---|---|
 | [deployment/guide.md](deployment/guide.md) | Comprehensive deployment guide (envs, Firebase, hosting) |
 | [deployment/checklist.md](deployment/checklist.md) | Pre-deploy checklist for releases |
-| [deployment/staging.md](deployment/staging.md) | Staging environment, group-courses release notes and the **Reconciled business release - deployment runbook** (indexes, functions, rules, hosting; staging then production) |
+| [deployment/staging.md](deployment/staging.md) | Staging environment, group-courses release notes, the **Reconciled business release - deployment runbook** (indexes, functions, rules, hosting; staging then production) and the **Unified courses hosting deploy** checklist |
 
 ## Plans & reports
 
@@ -55,7 +57,8 @@ Index of project documentation. Each file is the canonical source for its topic;
 | [plans/2026-10-04-business-accounts-plan.md](plans/2026-10-04-business-accounts-plan.md) | Business (company) accounts plan: tasks B1-B12, Log, and the appendix with main's superseded rebuild and the open follow-ups |
 | [reports/2026-10-19-business-reconciliation-analysis.md](reports/2026-10-19-business-reconciliation-analysis.md) | Reconciliation of `feat/business-accounts` and main: data model, port list, merge plan, risks, deployment |
 | [reports/2026-10-06-business-production-release.md](reports/2026-10-06-business-production-release.md) | Evidence of the 2026-10-06 production release of business accounts |
-| [superpowers/plans/2026-10-19-unified-courses.md](superpowers/plans/2026-10-19-unified-courses.md) | P2 plan: unified group courses for individuals, gyms, schools and studios (starts with the P1 reconciliation notes) |
+| [superpowers/plans/2026-10-19-unified-courses.md](superpowers/plans/2026-10-19-unified-courses.md) | P2 plan: unified group courses for individuals, gyms, schools and studios (starts with the P1 reconciliation notes; execution log at the end) |
+| [superpowers/specs/2026-10-19-unified-group-courses-design.md](superpowers/specs/2026-10-19-unified-group-courses-design.md) | P2 design spec for the unified group courses |
 
 ## Testing
 
@@ -75,4 +78,3 @@ Index of project documentation. Each file is the canonical source for its topic;
 - **`CLAUDE.md`** and **`GEMINI.md`** at the repo root are tool/agent config, not project docs — they intentionally live outside `docs/`.
 - **Code-adjacent docs** (e.g. `functions/docs/SEEDING.md`, `src/dataconnect-generated/README.md`, `scripts/README.md`) stay next to their code.
 
-- [Group courses: provider creation, customer bookings and payments](user-journeys/group-courses.md)
