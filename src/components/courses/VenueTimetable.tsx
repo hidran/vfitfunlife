@@ -136,10 +136,10 @@ export function VenueTimetable() {
             {instructors.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
       </div>
       <div className="flex items-center justify-between gap-3">
-        <button type="button" className="grid size-11 place-items-center rounded-xl border border-hairline text-content" aria-label={t('timetable.previous')}
+        <button type="button" className="grid size-11 shrink-0 place-items-center rounded-xl border border-hairline text-content" aria-label={t('timetable.previous')}
           onClick={() => setSelectedDay(addDays(day, -7))}><ChevronLeft size={20} /></button>
         <h2 className="text-center text-lg font-semibold text-content">{weekText}</h2>
-        <button type="button" className="grid size-11 place-items-center rounded-xl border border-hairline text-content" aria-label={t('timetable.next')}
+        <button type="button" className="grid size-11 shrink-0 place-items-center rounded-xl border border-hairline text-content" aria-label={t('timetable.next')}
           onClick={() => setSelectedDay(addDays(day, 7))}><ChevronRight size={20} /></button>
       </div>
       {loading && <p className="text-content">{t('common.loading')}</p>}

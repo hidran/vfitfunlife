@@ -68,7 +68,7 @@ export default function VenueDetailClient() {
         <div className="absolute left-4 top-4 z-10">
           <Link
             href="/fit/gyms"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-background-dark/80 text-text-inverse"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-background-dark/80 text-text-inverse"
             aria-label={t('venueDetail.back.aria')}
           >
             <ChevronLeft className="h-5 w-5" />

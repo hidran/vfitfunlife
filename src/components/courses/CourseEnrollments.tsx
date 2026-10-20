@@ -44,7 +44,7 @@ function EnrollmentCard({ enrollment: e }: { enrollment: CourseEnrollment }) {
   const holdOpen = e.state === 'held' && e.holdExpiresAt.toMillis() > now;
   const minutesLeft = Math.max(1, Math.ceil((e.holdExpiresAt.toMillis() - now) / 60000));
   return <article className="rounded-2xl border border-hairline bg-surface p-5 space-y-3">
-    <div className="flex flex-wrap justify-between gap-2"><Link className="font-semibold text-lg underline-offset-4 hover:underline" href={`/courses?id=${encodeURIComponent(e.courseId)}`}>{e.courseName}</Link>
+    <div className="flex flex-wrap justify-between gap-2"><Link className="inline-flex min-h-11 items-center font-semibold text-lg underline-offset-4 hover:underline" href={`/courses?id=${encodeURIComponent(e.courseId)}`}>{e.courseName}</Link>
       <span className="text-sm">{t(`courses.${e.state}`)}</span></div>
     <p>{t(`courses.${e.scope}`)} · {coursePrice(e.totalCents, locale, t('courses.free'))} · {t(e.paymentStatus === 'paid' ? 'courses.paid' : 'courses.pending')}</p>
     <p className="text-sm text-content-muted">{t(e.paymentMode === 'direct' ? 'courses.direct' : 'courses.online')}</p>

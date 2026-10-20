@@ -54,7 +54,7 @@ function CoursesContent() {
   function booked() { setSuccess(t('courses.booked')); closeSheet(); setTab('bookings'); }
   const field = 'w-full rounded-xl border border-hairline bg-surface px-3 py-2 text-content';
   return <div className="mx-auto max-w-5xl p-4 md:p-8 space-y-6 pb-24">
-    <header className="space-y-2"><h1 className="text-3xl font-display font-bold">{t('courses.title')}</h1>
+    <header className="space-y-2"><h1 className="text-2xl sm:text-3xl font-display font-bold break-words">{t('courses.title')}</h1>
       <div className="flex gap-2"><Button variant={tab === 'browse' ? 'primary' : 'outline'} onClick={() => setTab('browse')}>{t('courses.browse')}</Button>
         <Button variant={tab === 'bookings' ? 'primary' : 'outline'} onClick={() => setTab('bookings')}>{t('courses.myBookings')}</Button></div></header>
     {success && <p role="status" className="text-success">{success}</p>}
