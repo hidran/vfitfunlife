@@ -1124,6 +1124,7 @@ Instructor services gain `kind: group` and `courseId` when linked to a course. O
 | Field | Meaning |
 |---|---|
 | `courseId`, `venueId` | Denormalized so the collection-group timetable query and rules need no course read |
+| `courseName`, `timezone` | The course's name and timezone, rewritten on every `saveCourse` (a rename or a location change), so venue pages can label and time lessons without reading course documents; older lessons lack them until `backfill-session-listed.mjs --names` |
 | `locationId`, `roomId` | The lesson's own place (a rescheduled lesson may use another room than the course) |
 | `instructorId`, `instructorName` | The lesson's instructor (a substituted lesson differs from the course) |
 | `revision` | Starts at 1. Rises when the lesson's start/end/room/instructor changes, when its capacity changes, and for every scheduled lesson when the course's lesson price, series price, capacity, `cancellationHours` or `bookingNoticeHours` changes. A quote records it and `enrollInCourse` refuses a different one (`price_changed`, reason `availability`) |

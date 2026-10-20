@@ -475,7 +475,7 @@ One engine for the group classes of individual providers and of gym, school and 
 **Notifications.** Course notices use `bookingMessages.ts` templates in `it, en, es, fr, de` (type-enforced: a new event must have all five). New events: `waitlist_promoted`, `waitlist_promoted_hold`, `waitlist_cleared`, `waitlist_removed`, `instructor_changed`; tests in `functions/src/notifications/bookingMessages.test.ts`. Voice follows the existing templates: it informal, es "tu", fr "vous", de "du".
 
 **Operations.**
-- `node scripts/backfill-session-listed.mjs --project vfit-app-staging [--apply]` repairs `sessions.listed` for venue-linked courses (dry run by default).
+- `node scripts/backfill-session-listed.mjs --project vfit-app-staging [--apply]` repairs `sessions.listed` for venue-linked courses (dry run by default); `--names` also copies the course name and timezone onto lessons written before `saveCourse` did.
 - `node scripts/smoke-unified-courses-staging.mjs [--keep|--cleanup]` is the 25-check staging smoke (needs the demo accounts); `scripts/smoke-unified-courses-load-staging.mjs` runs the 400-lesson cancel and a 20-way waitlist burst against throwaway data.
 - Emulator tests run outside the sandbox: `cd functions && npx firebase emulators:exec --only firestore --project demo-vfit "npx vitest run src/courses test/courses-rules.test.ts test/unified-courses-rules.test.ts"`; `RACE_ITERATIONS` sets the repeat count of the race suite (default 3, 10 before a release). Pure suites run with `npx vitest run src/courses/pricing.test.ts` and similar.
 
