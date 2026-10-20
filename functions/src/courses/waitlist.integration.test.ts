@@ -596,6 +596,42 @@ describe("planPromotions", () => {
     expect(await waitlistView(courseId)).toEqual([["u2", 1], ["u3", 2]]);
     await assertCounters(courseId);
   });
+  // The planner's own reads are not the only way contention reaches it: enrollInTx runs inside it, and a numeric gRPC
+  // code from there (ABORTED, UNAVAILABLE, DEADLINE_EXCEEDED) must abort the whole transaction so it is retried.
+  // Swallowing it as "stop" would commit the caller's release without the promotion; as "drop" it would delete an
+  // innocent customer's entry.
+  it.each([[10, "ABORTED"], [14, "UNAVAILABLE"], [4, "DEADLINE_EXCEEDED"]])(
+    "rethrows gRPC code %i (%s) raised inside enrollInTx instead of stopping or dropping the entry",
+    async (code) => {
+      const courseId = await fullCourse();
+      await join("u1", courseId);
+      const { planPromotions } = await import("./waitlist");
+      const failure = Object.assign(new Error(`${code} gRPC failure`), { code });
+      const planned = db.runTransaction(async (tx) => {
+        const course = (await tx.get(db.doc(`courses/${courseId}`))).data() as never;
+        const sessions = new Map([[SESSION, (await tx.get(sessionRef(courseId))).data()]]) as never;
+        // Everything the planner reads passes through; the customer's account, read by enrollInTx, fails.
+        const guarded = new Proxy(tx, {
+          get(target, prop) {
+            const value = Reflect.get(target, prop) as (...args: unknown[]) => unknown;
+            if (prop !== "get" && prop !== "getAll") return typeof value === "function" ? value.bind(target) : value;
+            return (...refs: unknown[]) => {
+              if (refs.some((ref) => (ref as { path?: string })?.path === "users/u1")) throw failure;
+              return value.apply(target, refs);
+            };
+          },
+        });
+        const result = await planPromotions(guarded, { course: { ...(course as object), id: courseId } as never,
+          sessions, freed: [seat], checkoutOn: false, now: new Date() });
+        result.apply();
+      }, { maxAttempts: 1 });
+      await expect(planned).rejects.toMatchObject({ code });
+      // Nothing was written: the entry is still waiting and nobody was told anything.
+      expect(await waitlistView(courseId)).toEqual([["u1", 1]]);
+      expect(await sessionOf(courseId)).toMatchObject({ waitlisted: 1, occupied: 1 });
+      expect(await queued()).not.toContain("waitlist_removed:u1");
+      await assertCounters(courseId);
+    });
   it("aborts on a Firestore contention error instead of swallowing it", async () => {
     const { planPromotions } = await import("./waitlist");
     const tx = { get: async () => { throw Object.assign(new Error("aborted"), { code: 10 }); } };
