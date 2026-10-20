@@ -3493,6 +3493,19 @@ export const itMessages = {
   'venueSpaces.activate': "Riattiva",
   'venueSpaces.inactive': "Non attiva",
   'venueSpaces.instructors': "Istruttori collegati",
+  'courses.venue': "Struttura",
+  'courses.noVenue': "Nessuna struttura (corso indipendente)",
+  'courses.locationSelect': "Sede",
+  'courses.room': "Sala",
+  'courses.instructorSelect': "Istruttore della struttura",
+  'courses.instructorOther': "Altro (scrivi un nome)",
+  'courses.linkInstructor': "Collega a un istruttore registrato",
+  'courses.linkMyself': "Collega il mio profilo di istruttore",
+  'courses.waitlist': "Lista d’attesa quando la lezione è al completo",
+  'courses.free': "Gratis",
+  'courses.addSpaces': "Aggiungi sedi e sale",
+  'courses.timezoneFromLocation': "Il fuso orario è quello della sede.",
+  'courses.conflict': "In conflitto con «{{name}}» ({{time}})",
 } as const;
 
 export type MessageKey = keyof typeof itMessages;
