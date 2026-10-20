@@ -57,8 +57,9 @@ describe("saveGymSpace", () => {
     expect((await db.collection("venues/gym/locations").get()).size).toBe(0);
   });
 
-  it("rejects an unknown IANA timezone", async () => {
-    await expect(spaces.saveGymSpace.run(req("owner", { ...location, timezone: "Mars/Phobos" }))).rejects.toThrow();
+  it("rejects an unknown IANA timezone as invalid_timezone, not as an internal error", async () => {
+    await expect(spaces.saveGymSpace.run(req("owner", { ...location, timezone: "Mars/Phobos" }))).rejects.toMatchObject({
+      code: "invalid-argument", message: "invalid_timezone", details: { fields: ["timezone"] } });
     expect((await db.collection("venues/gym/locations").get()).size).toBe(0);
   });
 
@@ -73,7 +74,13 @@ describe("saveGymSpace", () => {
   });
 
   it("rejects ids that are not safe path segments", async () => {
-    await expect(spaces.saveGymSpace.run(req("owner", { ...location, venueId: "a/b" }))).rejects.toThrow("invalid_id");
+    await expect(spaces.saveGymSpace.run(req("owner", { ...location, venueId: "a/b" }))).rejects.toMatchObject({
+      code: "invalid-argument", message: "invalid_id" });
+  });
+
+  it("reports a malformed payload as course_validation_failed with the offending fields", async () => {
+    await expect(spaces.saveGymSpace.run(req("owner", { ...location, name: "" }))).rejects.toMatchObject({
+      code: "invalid-argument", message: "course_validation_failed", details: { fields: ["name"] } });
   });
 
   it("requires sign-in", async () => {

@@ -1,10 +1,10 @@
-import { HttpsError, onCall } from "firebase-functions/v2/https";
+import { HttpsError, onCall, type CallableRequest } from "firebase-functions/v2/https";
 import type { Transaction } from "firebase-admin/firestore";
 import { z } from "zod";
 import { region } from "../lib/runtimeOptions";
 import { hostsCourses, type VenueType } from "../types";
 import { managesVenue } from "../courses/authority";
-import { db, nowStamp, safeId, uidOf } from "../courses/store";
+import { db, domainError, nowStamp, safeId, uidOf } from "../courses/store";
 
 const spaceSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("location"), venueId: z.string(), id: z.string().optional(),
@@ -13,6 +13,15 @@ const spaceSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("room"), venueId: z.string(), locationId: z.string(), id: z.string().optional(),
     name: z.string().trim().min(2).max(120), isActive: z.boolean() }),
 ]);
+
+/** An unknown IANA zone is the caller's mistake (`invalid_timezone`), not an internal error. */
+function assertTimezone(timeZone: string) {
+  try {
+    new Intl.DateTimeFormat("en", { timeZone });
+  } catch {
+    throw new HttpsError("invalid-argument", "invalid_timezone", { fields: ["timezone"] });
+  }
+}
 
 /** A venue that cannot host courses is "not found" for everyone, as it was in the partner-gym flow. */
 async function assertSpaceManager(uid: string, venueId: string, tx: Transaction) {
@@ -24,12 +33,20 @@ async function assertSpaceManager(uid: string, venueId: string, tx: Transaction)
 }
 
 export const saveGymSpace = onCall({ region }, async (req) => {
+  try {
+    return await saveSpace(req);
+  } catch (error) {
+    return domainError(error);
+  }
+});
+
+async function saveSpace(req: CallableRequest) {
   const uid = uidOf(req.auth);
   const input = spaceSchema.parse(req.data);
   const venueId = safeId(input.venueId);
   const id = input.id ? safeId(input.id) : db.collection("venues").doc().id;
   if (input.kind === "location") {
-    new Intl.DateTimeFormat("en", { timeZone: input.timezone });
+    assertTimezone(input.timezone);
     await db.runTransaction(async (tx) => {
       await assertSpaceManager(uid, venueId, tx);
       tx.set(db.doc(`venues/${venueId}/locations/${id}`), {
@@ -50,9 +67,17 @@ export const saveGymSpace = onCall({ region }, async (req) => {
     });
   }
   return { id };
-});
+}
 
 export const configureGymInstructor = onCall({ region }, async (req) => {
+  try {
+    return await configureInstructor(req);
+  } catch (error) {
+    return domainError(error);
+  }
+});
+
+async function configureInstructor(req: CallableRequest) {
   const uid = uidOf(req.auth);
   const venueId = safeId(req.data.venueId);
   const instructorId = safeId(req.data.instructorId);
@@ -79,4 +104,4 @@ export const configureGymInstructor = onCall({ region }, async (req) => {
     tx.update(db.doc(`instructors/${instructorId}`), { partnerStatus: status, updatedAt: nowStamp() });
   });
   return { success: true };
-});
+}
