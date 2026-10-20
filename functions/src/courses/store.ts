@@ -3,6 +3,10 @@ import { HttpsError } from "firebase-functions/v2/https";
 import { ZodError } from "zod";
 import type { CourseInput } from "./core";
 export const db = getFirestore();
+// Archiving a course unlists its remaining lessons in the same transaction. A transaction commits at most 500 writes
+// and the archiving shares them with its own work, so it stops well short (a lesson left listed is still hidden by
+// its course's state; the next eligibility sync, which chunks, sets it).
+export const UNLIST_LIMIT = 300;
 export interface Course extends CourseInput {
   providerEligible: boolean; providerId: string; providerName: string; serviceId: string; sessionIds: string[];
   nextSessionId: string; nextAvailableSeats: number;

@@ -5,7 +5,7 @@ import { region } from "../lib/runtimeOptions";
 import { readPaymentSettings } from "../payments/paymentSettingsCallables";
 import { checkoutActive } from "./core";
 import {
-  db, safeId, uidOf, nowStamp, domainError, providerUsable, Enrollment, Course, Session,
+  db, safeId, uidOf, nowStamp, domainError, providerUsable, UNLIST_LIMIT, Enrollment, Course, Session,
 } from "./store";
 import { canManageCourse, type Authority } from "./authority";
 import { queueCourseNotification } from "./notifications";
@@ -235,11 +235,16 @@ async function cancelOrReschedule(a: SessionAction, action: "cancel" | "reschedu
     await relock(tx, courseId, { course, sessions: scope }, { course: { ...course, ...metadata },
       sessions: scope.map((x) => ({ id: x.id, data: x.id === sessionId ? changed : x.data })) });
     if (action === "cancel") {
-      tx.update(ref, { state: "cancelled", cancellationReconciled: false, cancellationReason: reason });
+      tx.update(ref, { state: "cancelled", listed: false, cancellationReconciled: false, cancellationReason: reason });
     } else {
       tx.update(ref, { ...moved!, ...place, rescheduleReason: reason, revision: FieldValue.increment(1) });
     }
     tx.update(courseRef, metadata);
+    // An archived course is not listed: the lessons it keeps (done, or under way) leave the public timetable with it.
+    if (archiving) {
+      stored.filter((x) => x.id !== sessionId && x.data.listed !== false).slice(0, UNLIST_LIMIT)
+        .forEach((x) => tx.update(courseRef.collection("sessions").doc(x.id), { listed: false }));
+    }
     clearWaitlist();
   });
   return requested;
@@ -435,8 +440,13 @@ export const cancelRemainingCourse = onCall({ region }, async (req) => {
       { course: { ...course, state: "archived" }, sessions: stored });
     tx.update(ref, { enrollmentClosed: true, state: "archived", updatedAt: nowStamp() });
     future.forEach((d) => {
-      tx.update(d.ref, { state: "cancelled", cancellationReconciled: false, cancellationReason: reason });
+      tx.update(d.ref, { state: "cancelled", listed: false, cancellationReconciled: false,
+        cancellationReason: reason });
     });
+    // The course is archived, so the lessons that stay as they are (done, or under way) are unlisted with it.
+    const futureIds = new Set(future.map((d) => d.id));
+    sessions.docs.filter((d) => !futureIds.has(d.id) && d.data().listed !== false).slice(0, UNLIST_LIMIT)
+      .forEach((d) => tx.update(d.ref, { listed: false }));
     clears.forEach((clear) => clear());
   });
   const sessions = await ref.collection("sessions").where("state", "==", "cancelled").get();

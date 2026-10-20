@@ -1566,6 +1566,58 @@ describe("manageCourseSession cancel and reschedule move only the changed lesson
   });
 });
 
+describe("sessions of a cancelled or archived course leave the public listing", () => {
+  const DAYS = ["2099-10-12", "2099-10-13", "2099-10-14"];
+  const listedOf = async (courseId: string) => Object.fromEntries(
+    (await db.collection(`courses/${courseId}/sessions`).orderBy("startsAt").get()).docs
+      .map((d) => [d.id, d.data().listed]));
+  const past = (courseId: string, id: string) => sessionRef(courseId, id).update({
+    startsAt: admin.firestore.Timestamp.fromMillis(Date.now() - 7200000),
+    endsAt: admin.firestore.Timestamp.fromMillis(Date.now() - 3600000) });
+
+  it("a cancelled lesson is unlisted; the others stay listed", async () => {
+    const courseId = await course({ endDate: DAYS[2] });
+    expect(await listedOf(courseId)).toEqual({ [DAYS[0]]: true, [DAYS[1]]: true, [DAYS[2]]: true });
+    await manage("p", { courseId, sessionId: DAYS[1], action: "cancel", reason: "Sick" });
+    expect(await listedOf(courseId)).toEqual({ [DAYS[0]]: true, [DAYS[1]]: false, [DAYS[2]]: true });
+    expect(await sessionOf(courseId, DAYS[1])).toMatchObject({ state: "cancelled" });
+  });
+  it("cancelling the last lesson archives the course and unlists everything that is left", async () => {
+    const courseId = await course({ endDate: DAYS[1] });
+    await past(courseId, DAYS[0]);
+    await manage("p", { courseId, sessionId: DAYS[1], action: "cancel", reason: "Sick" });
+    expect(await db.doc(`courses/${courseId}`).get().then((d) => d.data())).toMatchObject({ state: "archived" });
+    expect(await listedOf(courseId)).toEqual({ [DAYS[0]]: false, [DAYS[1]]: false });
+  });
+  it("cancelRemainingCourse unlists the cancelled lessons and the one already under way", async () => {
+    const courseId = await course({ endDate: DAYS[2] });
+    await past(courseId, DAYS[0]);
+    await api.cancelRemainingCourse.run(request("p", { courseId, reason: "Closing" }));
+    expect(await db.doc(`courses/${courseId}`).get().then((d) => d.data())).toMatchObject({ state: "archived" });
+    expect(await listedOf(courseId)).toEqual({ [DAYS[0]]: false, [DAYS[1]]: false, [DAYS[2]]: false });
+    expect((await sessionOf(courseId, DAYS[0])).state).toBe("scheduled");
+    expect((await sessionOf(courseId, DAYS[1])).state).toBe("cancelled");
+    await assertCounters(courseId);
+  });
+  it("the maintenance run that archives a finished course unlists its lessons", async () => {
+    const courseId = await course({ endDate: DAYS[1] });
+    for (const id of [DAYS[0], DAYS[1]]) await past(courseId, id);
+    await db.doc(`courses/${courseId}`).update({ nextStartsAt: admin.firestore.Timestamp.fromMillis(Date.now() - 3600000) });
+    await maintain();
+    expect(await db.doc(`courses/${courseId}`).get().then((d) => d.data())).toMatchObject({
+      state: "archived", enrollmentClosed: true });
+    expect(await listedOf(courseId)).toEqual({ [DAYS[0]]: false, [DAYS[1]]: false });
+  });
+  it("a course that is not archived keeps its lessons listed after the maintenance run", async () => {
+    const courseId = await course({ endDate: DAYS[1] });
+    await past(courseId, DAYS[0]);
+    await db.doc(`courses/${courseId}`).update({ nextStartsAt: admin.firestore.Timestamp.fromMillis(Date.now() - 3600000) });
+    await maintain();
+    expect(await db.doc(`courses/${courseId}`).get().then((d) => d.data())).toMatchObject({ state: "published" });
+    expect(await listedOf(courseId)).toEqual({ [DAYS[0]]: true, [DAYS[1]]: true });
+  });
+});
+
 describe("manageCourseSession removeParticipant, removeWaitlistEntry and no-shows", () => {
   const remove = (uid: string, courseId: string, userId: unknown, extra: Record<string, unknown> = {}) =>
     manage(uid, { courseId, action: "removeParticipant", userId, ...extra });

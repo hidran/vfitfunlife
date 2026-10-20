@@ -4,7 +4,7 @@ import { logger } from "firebase-functions";
 import { region } from "../lib/runtimeOptions";
 import { readPaymentSettings } from "../payments/paymentSettingsCallables";
 import { checkoutActive } from "./core";
-import { db, Enrollment, Session, Course } from "./store";
+import { db, UNLIST_LIMIT, Enrollment, Session, Course } from "./store";
 import { releaseEnrollment } from "./operations";
 import { processCourseRefund } from "./checkout";
 import { queueCourseNotification } from "./notifications";
@@ -213,7 +213,11 @@ export const maintainCourseEnrollments = onSchedule(
           const next = future[0].data();
           tx.update(doc.ref, { nextStartsAt: next.startsAt, nextSessionId: future[0].id,
             nextAvailableSeats: next.capacity - next.occupied - next.held });
-        } else tx.update(doc.ref, { enrollmentClosed: true, state: "archived" });
+        } else {
+          tx.update(doc.ref, { enrollmentClosed: true, state: "archived" });
+          sessions.docs.filter((s) => s.data().listed !== false).slice(0, UNLIST_LIMIT)
+            .forEach((s) => tx.update(s.ref, { listed: false }));
+        }
       });
     }
     try {
