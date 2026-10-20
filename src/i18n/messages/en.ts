@@ -3571,4 +3571,5 @@ export const enMessages: Messages = {
   "courses.confirmCancelLesson": "Confirm cancellation",
   "courses.confirmReschedule": "Confirm new time",
   "courses.paymentMethod": "Payment method",
+  "courses.cancelClosed": "Cancellation is closed: the deadline was {{hours}} hours before the lesson.",
 };

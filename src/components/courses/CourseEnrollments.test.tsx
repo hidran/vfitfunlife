@@ -84,6 +84,19 @@ describe('CourseEnrollments', () => {
     expect(screen.queryByText('courses.cancelBookingConfirm')).not.toBeInTheDocument();
   });
 
+  it('says why Cancel booking is missing for an upcoming lesson inside the cancellation window, and not for a free-to-cancel or past one', () => {
+    mocks.sessions = [
+      { id: 's1', startsAt: stamp(Date.now() + 2 * 3600000), state: 'scheduled' },
+      { id: 's2', startsAt: stamp(Date.now() + 5 * 86400000), state: 'scheduled' },
+      { id: 's3', startsAt: stamp(Date.now() - 3600000), state: 'scheduled' }];
+    mocks.enrollments = [enrollment({ sessionIds: ['s1', 's2', 's3'], activeSessionIds: ['s1', 's2', 's3'] })];
+    render(<CourseEnrollments uid="me" />);
+    expect(screen.getAllByRole('button', { name: 'courses.cancelBooking' })).toHaveLength(1);
+    const reasons = screen.getAllByTestId('cancel-closed');
+    expect(reasons).toHaveLength(1);
+    expect(reasons[0]).toHaveTextContent('courses.cancelClosed:{"hours":24}');
+  });
+
   it('takes the time zone of an older booking from its course, and shows no time rather than a guessed one', () => {
     mocks.sessions = [{ id: 's1', startsAt: stamp(Date.parse('2099-10-12T17:00:00Z')), state: 'scheduled' }];
     mocks.enrollments = [enrollment({ timezone: undefined })];

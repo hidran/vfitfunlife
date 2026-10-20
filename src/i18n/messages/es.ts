@@ -3544,4 +3544,5 @@ export const esMessages: Messages = {
   "courses.confirmCancelLesson": "Confirmar cancelación",
   "courses.confirmReschedule": "Confirmar nuevo horario",
   "courses.paymentMethod": "Método de pago",
+  "courses.cancelClosed": "Ya no se puede cancelar: el plazo era {{hours}} horas antes de la lección.",
 };

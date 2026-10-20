@@ -3553,4 +3553,5 @@ export const frMessages: Messages = {
   "courses.confirmCancelLesson": "Confirmer l’annulation",
   "courses.confirmReschedule": "Confirmer le nouvel horaire",
   "courses.paymentMethod": "Mode de paiement",
+  "courses.cancelClosed": "Annulation impossible : le délai était de {{hours}} heures avant la séance.",
 };

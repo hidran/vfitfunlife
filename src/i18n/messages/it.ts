@@ -3569,6 +3569,7 @@ export const itMessages = {
   "courses.confirmCancelLesson": "Conferma annullamento",
   "courses.confirmReschedule": "Conferma nuovo orario",
   "courses.paymentMethod": "Metodo di pagamento",
+  "courses.cancelClosed": "Non puoi più annullare: il termine era {{hours}} ore prima della lezione.",
 } as const;
 
 export type MessageKey = keyof typeof itMessages;

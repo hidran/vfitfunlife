@@ -3551,4 +3551,5 @@ export const deMessages: Messages = {
   "courses.confirmCancelLesson": "Absage bestätigen",
   "courses.confirmReschedule": "Neue Zeit bestätigen",
   "courses.paymentMethod": "Zahlungsart",
+  "courses.cancelClosed": "Stornierung nicht mehr möglich: Die Frist war {{hours}} Stunden vor der Einheit.",
 };
