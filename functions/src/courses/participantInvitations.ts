@@ -8,14 +8,20 @@ import {
 import { appBaseUrl } from "../bookings/addClientByEmailCore";
 import { findRosterDoc } from "../bookings/addClientShared";
 import { accountConfirmContinueUrl, normalizePhone } from "../bookings/createClientAccountCore";
-import { db, safeId, uidOf, assertManager, eligibleProvider, nowStamp } from "./store";
+import { db, safeId, uidOf, eligibleProvider, nowStamp, Course } from "./store";
+import { canManageCourse } from "./authority";
 
 export const notifyCourseParticipant = onCall({ region, secrets: EMAIL_SECRETS }, async (req) => {
-  const providerId = uidOf(req.auth);
+  const caller = uidOf(req.auth);
+  const courseId = safeId(req.data.courseId);
   const userId = safeId(req.data.userId);
   const channel = req.data.channel;
   if (!["email", "phone"].includes(channel)) throw new HttpsError("invalid-argument", "invalid_channel");
-  await assertManager(providerId, providerId);
+  const course = (await db.doc(`courses/${courseId}`).get()).data() as Course | undefined;
+  if (!course) throw new HttpsError("not-found", "course_not_found");
+  await canManageCourse(caller, course);
+  // The course owner is the provider of record: staff act on the owner's roster and rate limit.
+  const providerId = course.providerId;
   const provider = await db.runTransaction((tx) => eligibleProvider(providerId, tx));
   const relation = await findRosterDoc(db, providerId, userId);
   if (!relation) throw new HttpsError("permission-denied", "provider_client_required");

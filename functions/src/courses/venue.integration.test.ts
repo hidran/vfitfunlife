@@ -16,7 +16,7 @@ const input = { name: "Karate", categoryId: "karate", location: "Torino", instru
   recurrence: "daily", endDate: "2099-10-13", lessonPriceCents: 1500, seriesPriceCents: 2500, state: "published" };
 const SESSION = "2099-10-12";
 const COLLECTIONS = ["courses", "courseEnrollments", "courseRefunds", "courseNotifications", "clients",
-  "users", "instructors", "serviceCategories", "venues", "venueStaff"];
+  "users", "instructors", "serviceCategories", "venues", "venueStaff", "rateLimits"];
 
 beforeAll(async () => {
   for (const app of admin.apps) if (app) await app.delete();
@@ -154,5 +154,49 @@ describe("releaseActorFor", () => {
     expect(await operations.releaseActorFor("s", enrollment))
       .toEqual({ kind: "manager", authority: { uid: "s", via: "venue" } });
     await expect(operations.releaseActorFor("x", enrollment)).rejects.toThrow("course_owner_required");
+  });
+});
+
+describe("participant callables by course authority", () => {
+  const link = () => db.doc("clients/p_u1").set({ providerId: "p", userId: "u1", phone: "+393331234567" });
+  const enrollData = (courseId: string) => ({ courseId, userId: "u1", scope: "lesson", sessionId: SESSION, requestId: "staff-add" });
+  it("lets venue staff enroll a client linked to the course provider", async () => {
+    const courseId = await venueCourse();
+    await link();
+    const booking = await api.enrollCourseParticipant.run(request("s", enrollData(courseId)));
+    expect((await db.doc(`courseEnrollments/${booking.enrollmentId}`).get()).data())
+      .toMatchObject({ userId: "u1", providerId: "p", createdBy: "s", paymentMode: "direct", state: "confirmed" });
+    expect((await api.enrollCourseParticipant.run(request("s", enrollData(courseId)))).enrollmentId)
+      .toBe(booking.enrollmentId);
+  });
+  it("requires the clients pair with the course provider, not with the staff member", async () => {
+    const courseId = await venueCourse();
+    await db.doc("clients/s_u1").set({ providerId: "s", userId: "u1" });
+    await expect(api.enrollCourseParticipant.run(request("s", enrollData(courseId))))
+      .rejects.toThrow("provider_client_required");
+  });
+  it.each(["x", "si", "os"])("refuses enrollment by %s", async (uid) => {
+    const courseId = await venueCourse();
+    await link();
+    await expect(api.enrollCourseParticipant.run(request(uid, enrollData(courseId))))
+      .rejects.toThrow("course_owner_required");
+  });
+  it("lets venue staff prepare an invitation through the course provider's roster", async () => {
+    const courseId = await venueCourse();
+    await link();
+    await db.doc("users/u1").update({ email: "u1@example.com" });
+    const result = await api.notifyCourseParticipant.run(request("s", { courseId, userId: "u1", channel: "phone" }));
+    expect(result).toMatchObject({ status: "ready", url: expect.stringContaining("/courses?tab=bookings") });
+    expect((await db.doc("rateLimits/participantNotifications_p").get()).data()?.count).toBe(1);
+  });
+  it("refuses invitations from strangers, for unlinked users and without a course", async () => {
+    const courseId = await venueCourse();
+    await link();
+    await expect(api.notifyCourseParticipant.run(request("x", { courseId, userId: "u1", channel: "phone" })))
+      .rejects.toMatchObject({ code: "permission-denied" });
+    await expect(api.notifyCourseParticipant.run(request("s", { courseId, userId: "u2", channel: "phone" })))
+      .rejects.toThrow("provider_client_required");
+    await expect(api.notifyCourseParticipant.run(request("s", { userId: "u1", channel: "phone" })))
+      .rejects.toThrow("invalid_id");
   });
 });

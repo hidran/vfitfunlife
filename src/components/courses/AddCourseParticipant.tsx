@@ -84,6 +84,6 @@ export function AddCourseParticipant({ course, session, onAdded }: { course: Cou
       <Button type="submit" disabled={busy || (!creating && !selected)}>{t('courses.addParticipant')}</Button>
     </fieldset></form>
     {error && <p role="alert">{error}</p>}
-    {added && <div className="space-y-3"><p role="status">{t('courses.participantAdded')}</p><ParticipantInvitation userId={added} /></div>}
+    {added && <div className="space-y-3"><p role="status">{t('courses.participantAdded')}</p><ParticipantInvitation courseId={course.id} userId={added} /></div>}
   </section>;
 }

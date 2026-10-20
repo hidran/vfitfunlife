@@ -77,10 +77,10 @@ try {
   const patched = await fetch(`https://firestore.googleapis.com/v1/projects/${project}/databases/(default)/documents/clients/${created.client.id}?updateMask.fieldPaths=phone`, {
     method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${provider.token}` }, body: JSON.stringify({ fields: { phone: { stringValue: '+393330000000' } } }) });
   assert(patched.ok);
-  const phone = await call('notifyCourseParticipant', provider, { userId, channel: 'phone' });
+  const phone = await call('notifyCourseParticipant', provider, { courseId, userId, channel: 'phone' });
   assert.equal(phone.status, 'ready'); assert(phone.url.includes('/auth/participant?email=')); assert(!JSON.stringify(phone).includes('oobCode'));
   assert(phone.smsUrl.startsWith('sms:')); assert(phone.whatsAppUrl.startsWith('https://wa.me/')); mark('Phone invitation provides credential-free SMS and WhatsApp composers');
-  const mail = await call('notifyCourseParticipant', provider, { userId, channel: 'email' });
+  const mail = await call('notifyCourseParticipant', provider, { courseId, userId, channel: 'email' });
   evidence.emailDelivery = mail.status; assert(['sent', 'failed'].includes(mail.status)); assert(!JSON.stringify(mail).includes('oobCode'));
   mark(`Email notification reports actual delivery result: ${mail.status}`);
   const participant = await claim(email); assert.equal(participant.uid, userId);

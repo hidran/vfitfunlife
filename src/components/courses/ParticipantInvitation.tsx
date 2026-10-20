@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useI18n } from '@/hooks/useI18n';
 import { courseCall } from '@/lib/firebase/courses';
-export function ParticipantInvitation({ userId }: { userId: string }) {
+export function ParticipantInvitation({ courseId, userId }: { courseId: string; userId: string }) {
   const { t } = useI18n();
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
@@ -11,7 +11,7 @@ export function ParticipantInvitation({ userId }: { userId: string }) {
   async function notify(channel: 'email' | 'phone') {
     setBusy(true); setStatus(''); setLinks(null);
     try {
-      const result = await courseCall<{ status: string; smsUrl: string; whatsAppUrl?: string | null }>('notifyCourseParticipant', { userId, channel });
+      const result = await courseCall<{ status: string; smsUrl: string; whatsAppUrl?: string | null }>('notifyCourseParticipant', { courseId, userId, channel });
       if (result.status === 'ready') { setLinks(result); setStatus(t('courses.phoneInviteHint')); }
       else setStatus(t(result.status === 'sent' ? 'courses.invitationSent' : 'courses.invitationFailed'));
     } catch (error) {

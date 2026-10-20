@@ -2,7 +2,8 @@ import { createHash } from "crypto";
 import { HttpsError } from "firebase-functions/v2/https";
 import { FieldValue, Timestamp, Transaction } from "firebase-admin/firestore";
 import { allocatePrice, assertReservable } from "./core";
-import { db, safeId, eligibleProvider, assertManager, nowStamp, Course, Session, Enrollment } from "./store";
+import { db, safeId, eligibleProvider, nowStamp, Course, Session, Enrollment } from "./store";
+import { canManageCourse } from "./authority";
 import { rosterClientId } from "../bookings/clientRosterCore";
 import { queueCourseNotification } from "./notifications";
 
@@ -26,7 +27,7 @@ export async function enrollInTx(tx: Transaction, input: EnrollInput):
     (await tx.get(db.doc(`courses/${courseId}`))).data() as Course | undefined : undefined;
   if (byProvider) {
     if (!managed) throw new HttpsError("not-found", "course_not_found");
-    await assertManager(actor, managed.providerId, tx);
+    await canManageCourse(actor, managed, tx);
   }
   const prior = (await tx.get(enrollmentRef)).data() as Enrollment | undefined;
   if (prior) {

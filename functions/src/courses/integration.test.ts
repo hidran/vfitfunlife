@@ -285,24 +285,26 @@ describe("participant invitations and account activation", () => {
   }
   it("sends private setup credentials only to the linked recipient and never returns them", async () => {
     await linked(); mail.mockResolvedValue(true);
+    const courseId = await create();
     auth.generatePasswordResetLink.mockResolvedValue("https://private.example/?oobCode=secret");
-    const result = await api.notifyCourseParticipant.run(request("p", { userId: "u", channel: "email", email: "attacker@example.com" }));
+    const result = await api.notifyCourseParticipant.run(request("p", { courseId, userId: "u", channel: "email", email: "attacker@example.com" }));
     expect(result).toEqual({ status: "sent" });
     expect(mail).toHaveBeenCalledWith(expect.objectContaining({ to: "recipient@example.com",
       action: expect.objectContaining({ url: "https://private.example/?oobCode=secret" }) }));
     expect(JSON.stringify(result)).not.toContain("secret");
-    await expect(api.notifyCourseParticipant.run(request("p", { userId: "v", channel: "email" })))
+    await expect(api.notifyCourseParticipant.run(request("p", { courseId, userId: "v", channel: "email" })))
       .rejects.toThrow("provider_client_required");
   });
   it("shares only a public registration landing page by phone and reports email failures", async () => {
     await linked();
-    const result = await api.notifyCourseParticipant.run(request("p", { userId: "u", channel: "phone" }));
+    const courseId = await create();
+    const result = await api.notifyCourseParticipant.run(request("p", { courseId, userId: "u", channel: "phone" }));
     expect(result).toMatchObject({ status: "ready", url: expect.stringContaining("/auth/participant?email=") });
     expect(JSON.stringify(result)).not.toContain("oobCode");
     expect(auth.generatePasswordResetLink).not.toHaveBeenCalled();
     expect(mail).not.toHaveBeenCalled();
     auth.generatePasswordResetLink.mockResolvedValue("private-link"); mail.mockResolvedValue(false);
-    expect(await api.notifyCourseParticipant.run(request("p", { userId: "u", channel: "email" }))).toEqual({ status: "failed" });
+    expect(await api.notifyCourseParticipant.run(request("p", { courseId, userId: "u", channel: "email" }))).toEqual({ status: "failed" });
   });
   it("activates the same invited identity across every linked provider without losing enrollment", async () => {
     await linked();

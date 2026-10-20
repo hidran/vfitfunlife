@@ -8,14 +8,14 @@ beforeEach(() => call.mockReset());
 describe('participant invitations', () => {
   it('reports failed email delivery honestly', async () => {
     call.mockResolvedValue({ status: 'failed' });
-    render(<ParticipantInvitation userId="u" />);
+    render(<ParticipantInvitation courseId="c" userId="u" />);
     fireEvent.click(screen.getByRole('button', { name: 'courses.inviteEmail' }));
     expect(await screen.findByRole('status')).toHaveTextContent('courses.invitationFailed');
-    expect(call).toHaveBeenCalledWith('notifyCourseParticipant', { userId: 'u', channel: 'email' });
+    expect(call).toHaveBeenCalledWith('notifyCourseParticipant', { courseId: 'c', userId: 'u', channel: 'email' });
   });
   it('opens phone composers without claiming the message was delivered', async () => {
     call.mockResolvedValue({ status: 'ready', smsUrl: 'sms:+391234?body=invite', whatsAppUrl: 'https://wa.me/391234' });
-    render(<ParticipantInvitation userId="u" />);
+    render(<ParticipantInvitation courseId="c" userId="u" />);
     fireEvent.click(screen.getByRole('button', { name: 'courses.invitePhone' }));
     expect(await screen.findByRole('link', { name: 'courses.openSms' })).toHaveAttribute('href', 'sms:+391234?body=invite');
     expect(screen.getByRole('status')).toHaveTextContent('courses.phoneInviteHint');

@@ -90,7 +90,7 @@ export default function ProviderCoursesPage() {
               onChange={e => run('manageCourseSession', { courseId, sessionId, action: 'attendance', userId: p.userId, attendance: e.target.value })}>
               {(['unmarked', 'present', 'absent'] as const).map(v => <option key={v} value={v}>{t(`courses.${v}`)}</option>)}</select></label>
               {enrollment?.paymentMode === 'direct' && enrollment.paymentStatus !== 'paid' && <Button size="sm" disabled={busy} onClick={() => setPayment({ enrollmentId: p.enrollmentId, method: 'cash' })}>{t('courses.recordPayment')}</Button>}
-            </div><ParticipantInvitation userId={p.userId} /></li>;
+            </div><ParticipantInvitation courseId={courseId} userId={p.userId} /></li>;
         })}</ul>
       </>}
     </section>}
