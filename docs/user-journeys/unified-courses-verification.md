@@ -183,3 +183,33 @@ Recorded at every step (browser console plus network). Everything observed:
 - The availability variant of the review notice ("The lesson was updated…"), a series booking refused because a lesson is full (only a disabled button was seen), "Add participant" and "Notify" flows, push and email delivery.
 - `course_instructor_not_allowed` rendered in the browser (no UI path); German, French and Spanish screens beyond the two German 320 pages; real devices and screen readers.
 - The "owner changes capacity in a second context while the review is open" variant of plan K2 step 3 was replaced by the price change.
+
+## Regression after gym-flow removal (L7)
+
+- **Date:** 2026-10-20. **Site:** https://vfit-app-staging.web.app (project `vfit-app-staging`; production not touched).
+- **Build under test:** hosting rebuilt with `npm run build:staging` from `main` at `f7c876b` (gym screens, `src/lib/firebase/gym.ts` and the `gym.*` callables removed); functions redeployed with the nine gym functions deleted; rules and indexes redeployed (the 3 gym indexes and the 4 stray `providerType` indexes deleted); the gym collections were already empty (cleanup script 0 to 0). Backend smoke `scripts/smoke-unified-courses-staging.mjs --keep`: 25 of 25 PASS.
+- **Method:** Playwright MCP, 390x844, one fresh private browser context per actor, service workers blocked, English and Italian, light and dark. Accounts: `demo.customer`, `demo.provider` (owner of the fixture venue and an individual provider), `journey.it.provider` (venue staff), `demo.admin`. Screenshots are `courses-L7-NN-<slug>.png` in `screenshots/` (English) and `screenshots-it/` (Italian). Signed-out visitors are redirected to production by the staging gate, so every actor signs in at `/auth/login/` first.
+- **Console and network:** every actor's console and failed-request log was collected for the whole session. No `error`, `pageerror`, HTTP 4xx/5xx or failed callable was seen. The only entries were aborted Firestore `Listen` long-poll requests, aborted Next.js route prefetches and the "service worker blocked" warning caused by the test setup. No request to any removed callable (`bookGymClass`, `quoteGym*`, `saveGymSchedule`, ...) and no `gymSessions` / `gymBookings` read appeared in the resource list of the admin and customer sessions.
+
+| # | Item | Result | Evidence |
+|---|---|---|---|
+| 1 | `/bookings` has no gym tab or section | **PASS** | Only "My course bookings" chip, Upcoming / Past / Cancelled, no "gym" text in `main` (`courses-L7-01`, `-16`) |
+| 2 | `/bookings?tab=gym` just shows the default view | **PASS** | Identical page, no error (`courses-L7-02`) |
+| 3 | `/courses?tab=bookings` | **PASS** | Course bookings list with Cancel booking, refunds and payment lines (`courses-L7-03`) |
+| 4 | Venue timetable, customer, en light and it dark | **PASS** | Next week, Tue 27: Smoke Unified A "Regular price 15.00, Your price 12.75, -15%", C 13.50 (-10%), Free; location/room/instructor filters (`courses-L7-04`, `-12`) |
+| 5 | Discounted booking review: sheet surface in light and dark | **PASS** | White surface in light, dark surface in dark, benefit lines (10 % + 5 %), regular 15.00, savings -2.25, your price 12.75 (`courses-L7-05`, `-06`, it `-13`, `-14`). Not-yet-selected lesson buttons are disabled (opacity 0.5) while a review is open: looks pale in light, expected |
+| 6 | Confirm, then cancel the booking | **PASS** | "Booking confirmed", then "Yes, cancel booking": row shows Cancelled, 12.75 (`courses-L7-07`, `-08`, `-09`) |
+| 7 | `/fit/gyms` listing | **PASS** | "Gyms & schools" list with PARTNER badges (`courses-L7-10`) |
+| 8 | `/venue?id=smoke_unified_venue` | **PASS** | "Next lessons" (A, C, Free) and "Full timetable" link (`courses-L7-11`) |
+| 9 | `/gym/manage/` is gone | **PASS (note)** | No gym manager. Hosting's catch-all rewrite answers 200 with the public landing page, not a 404 status; same as any unknown route |
+| 10 | Owner: venue courses entry, locations and rooms panel | **PASS** | `/provider/courses/?venue=smoke_unified_venue` lists A, C, Free; panel with Smoke Location, rooms 1, 2, X, linked instructors (`courses-L7-17`, `-25`, `-26`) |
+| 11 | Owner: roster and lesson actions | **PASS** | Lesson select, Add participant, Cancel lesson, Reschedule, Substitute instructor, Change capacity, participants with payment, attendance, remove, notify (`courses-L7-18`, `-19`) |
+| 12 | Venue staff (`journey.it.provider`) | **PASS** | Portal shows Manage courses, venue list and roster with the same lesson actions (`courses-L7-27`, `-28`) |
+| 13 | Individual provider, unlinked: create, preview, save, cancel | **PASS** | "L7 Regression Yoga" no venue: preview lists 20 Nov 2026 11:00, `saveCourse` 200, `cancelRemainingCourse` 200, lesson Annullato and course Archiviato (`courses-L7-20` to `-24`) |
+| 14 | Admin: venue detail with the spaces panel | **PASS** | `/admin/venues/?id=smoke_unified_venue`: partner fields, Locations and rooms, Linked instructors (`courses-L7-29`, `-30`) |
+| 15 | Sheet contrast fixes (K2-fix) in light | **PASS** | D2 is fixed: the sheet and review have an opaque surface, text and the green benefit lines are readable (`courses-L7-05`, `-14`) |
+| 16 | Console errors and removed callables in network failures | **PASS** | See the summary above |
+
+**Defects.** None blocking. Observations: (a) the editor's "Preview lessons" button does nothing visible when a required field is empty (the category combobox and the instructor name); only the browser's native validation bubble tells the user, which headless screenshots do not show. (b) The fixture courses show the literal instructor text "placeholder" in the timetable and venue page because the smoke script seeds it (`instructor: 'placeholder'`); it is fixture data, not a product defect. (c) `/provider/courses/` without `?venue=` for venue staff shows the own-courses view (empty) first; the venue is chosen in the select.
+
+**Cleanup (K3).** After this pass `node scripts/smoke-unified-courses-staging.mjs --cleanup` removed the fixture: `venues/smoke_unified_venue` does not exist, no course has `venueId: smoke_unified_venue`, and no `courseScheduleLocks` slot remains (two older day documents for 22 and 23 Oct 2026 `instructor:demo-provider-vfit` exist with `slots: {}`). The archived "L7 Regression Yoga" course (cancelled lesson, no participants) was left in place.
