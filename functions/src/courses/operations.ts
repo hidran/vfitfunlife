@@ -66,7 +66,8 @@ export async function releaseEnrollment(
       if (refund && enrollment.allocations[doc.id] > 0) {
         tx.set(db.doc(`courseRefunds/${enrollmentId}_${doc.id}`), {
           enrollmentId, providerId: enrollment.providerId, userId: enrollment.userId,
-          sessionId: doc.id, amountCents: enrollment.allocations[doc.id], paymentMode: enrollment.paymentMode,
+          courseId: enrollment.courseId, venueId: enrollment.venueId ?? null, sessionId: doc.id,
+          amountCents: enrollment.allocations[doc.id], paymentMode: enrollment.paymentMode,
           paymentIntentId: enrollment.stripePaymentIntentId ?? null, status: "pending", createdAt: nowStamp(),
         });
       }

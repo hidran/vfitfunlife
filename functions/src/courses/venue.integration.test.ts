@@ -9,6 +9,7 @@ vi.mock("firebase-admin/auth", () => ({ getAuth: () => auth }));
 vi.mock("../lib/email", () => ({ EMAIL_SECRETS: [], sendEmail: vi.fn() }));
 let api: typeof import("./index");
 let operations: typeof import("./operations");
+let checkout: typeof import("./checkout");
 let authority: typeof import("./authority");
 let db: admin.firestore.Firestore;
 const request = (uid: string, data: unknown) => ({ auth: { uid, token: {} }, data }) as CallableRequest;
@@ -25,6 +26,7 @@ beforeAll(async () => {
   db = admin.firestore();
   api = await import("./index");
   operations = await import("./operations");
+  checkout = await import("./checkout");
   authority = await import("./authority");
 });
 afterEach(() => vi.restoreAllMocks());
@@ -719,5 +721,61 @@ describe("priced enrollment on venue courses", () => {
     expect((await db.collection("courseEnrollments").get()).empty).toBe(true);
     const counters = await Promise.all(DAYS.map(async (d) => (await db.doc(`courses/${courseId}/sessions/${d}`).get()).data()!.occupied));
     expect(counters).toEqual([0, 2, 0]);
+  });
+  describe("refunds", () => {
+    const refunds = async () => (await db.collection("courseRefunds").get()).docs.map((d) => ({ id: d.id, ...d.data() }));
+    const paidSeries = async () => {
+      const courseId = await create();
+      const booking = await api.enrollInCourse.run(request("u1", { courseId, scope: "series", requestId: "s1",
+        ...await quoted(courseId, "series") }));
+      await api.recordCoursePayment.run(request("biz", { enrollmentId: booking.enrollmentId, method: "cash" }));
+      return { courseId, enrollmentId: booking.enrollmentId };
+    };
+    it("refunds the exact post-discount allocation per lesson and the full total over the whole series", async () => {
+      const { courseId, enrollmentId } = await paidSeries();
+      await api.cancelCourseEnrollment.run(request("u1", { enrollmentId, sessionIds: [DAYS[1]] }));
+      expect(await refunds()).toEqual([expect.objectContaining({ id: `${enrollmentId}_${DAYS[1]}`, amountCents: 1134,
+        courseId, venueId: "v", enrollmentId, sessionId: DAYS[1], status: "pending" })]);
+      await api.cancelCourseEnrollment.run(request("u1", { enrollmentId }));
+      const all = await refunds();
+      expect(all).toHaveLength(3);
+      expect(all.reduce((sum, r) => sum + (r as unknown as { amountCents: number }).amountCents, 0)).toBe(3402);
+      expect(all.every((r) => (r as unknown as { courseId: string; venueId: string }).venueId === "v")).toBe(true);
+      expect((await enrollment(enrollmentId)).refundCents).toBe(3402);
+    });
+    it("lets venue staff read-confirm a refund written by a staff cancellation", async () => {
+      const { enrollmentId } = await paidSeries();
+      await api.cancelCourseEnrollment.run(request("s", { enrollmentId, sessionIds: [DAYS[0]] }));
+      const [refund] = await refunds();
+      await api.confirmCourseRefund.run(request("s", { refundId: refund.id }));
+      expect((await db.doc(`courseRefunds/${refund.id}`).get()).data()).toMatchObject({ status: "completed", venueId: "v" });
+    });
+    it("creates no refund document when a free booking is cancelled", async () => {
+      await db.doc("venues/v").update({ memberDiscountPercent: 100 });
+      const courseId = await create();
+      const booking = await lesson(courseId);
+      await api.cancelCourseEnrollment.run(request("u1", { enrollmentId: booking.enrollmentId }));
+      expect(await refunds()).toEqual([]);
+      expect(await enrollment(booking.enrollmentId)).toMatchObject({ state: "cancelled", refundCents: 0 });
+    });
+    it("records course and venue on a late Stripe refund", async () => {
+      const courseId = await create();
+      const booking = await lesson(courseId);
+      const ref = db.doc(`courseEnrollments/${booking.enrollmentId}`);
+      await ref.update({ paymentMode: "stripe", state: "expired", activeSessionIds: [],
+        holdExpiresAt: admin.firestore.Timestamp.fromMillis(1), checkoutSessionId: "cs" });
+      await checkout.fulfillCourseCheckout({ id: "cs", payment_intent: "pi", payment_status: "paid", currency: "eur",
+        amount_total: 1275, metadata: { courseEnrollmentId: booking.enrollmentId, userId: "u1" } } as never);
+      expect((await db.doc(`courseRefunds/${booking.enrollmentId}_late`).get()).data())
+        .toMatchObject({ courseId, venueId: "v", amountCents: 1275, paymentMode: "stripe", status: "pending" });
+    });
+    it("still confirms a legacy refund that has no courseId through its enrollment", async () => {
+      const { enrollmentId } = await paidSeries();
+      await db.doc("courseRefunds/legacy").set({ enrollmentId, providerId: "biz", userId: "u1", amountCents: 1134,
+        paymentMode: "direct", status: "pending" });
+      await expect(api.confirmCourseRefund.run(request("x", { refundId: "legacy" }))).rejects.toThrow("course_owner_required");
+      await api.confirmCourseRefund.run(request("s", { refundId: "legacy" }));
+      expect((await db.doc("courseRefunds/legacy").get()).data()?.status).toBe("completed");
+    });
   });
 });

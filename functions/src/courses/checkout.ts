@@ -83,8 +83,8 @@ export async function fulfillCourseCheckout(session: Stripe.Checkout.Session): P
         tx.update(ref, { state: "expired", activeSessionIds: [], updatedAt: nowStamp() });
       }
       tx.set(db.doc(`courseRefunds/${id}_late`), { enrollmentId: id, providerId: e.providerId, userId: e.userId,
-        amountCents: e.totalCents, paymentMode: "stripe", paymentIntentId: intentId,
-        status: "pending", createdAt: nowStamp() }, { merge: true });
+        courseId: e.courseId, venueId: e.venueId ?? null, amountCents: e.totalCents, paymentMode: "stripe",
+        paymentIntentId: intentId, status: "pending", createdAt: nowStamp() }, { merge: true });
       tx.update(ref, { stripePaymentIntentId: intentId, paymentStatus: "paid", checkoutSettled: true,
         providerAmountOwedCents: 0, paymentException: "late_or_cancelled" });
       return;

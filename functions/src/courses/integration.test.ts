@@ -169,6 +169,7 @@ describe("transactional course enrollment", () => {
     const refunds = await db.collection("courseRefunds").get();
     expect(refunds.size).toBe(3);
     expect(refunds.docs.reduce((sum, d) => sum + d.data().amountCents, 0)).toBe(4000);
+    expect(refunds.docs.every(d => d.data().courseId === id && d.data().venueId === null)).toBe(true);
     expect((await db.doc(`courses/${id}/sessions/2099-10-12`).get()).data()?.occupied).toBe(0);
   });
   it("locks booked schedules and rejects reducing capacity below occupancy", async () => {
@@ -281,6 +282,7 @@ describe("transactional course enrollment", () => {
       metadata: { courseEnrollmentId: result.enrollmentId, userId: "u" } } as unknown as Stripe.Checkout.Session;
     await checkout.fulfillCourseCheckout(session);
     const refund = db.doc(`courseRefunds/${result.enrollmentId}_late`);
+    expect((await refund.get()).data()).toMatchObject({ courseId: id, venueId: null, amountCents: 4000 });
     await refund.update({ status: "completed" });
     await checkout.fulfillCourseCheckout(session);
     expect((await refund.get()).data()?.status).toBe("completed");
