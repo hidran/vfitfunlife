@@ -3487,6 +3487,12 @@ export const itMessages = {
   'courses.err.gym_location_not_found': "Sede non trovata.",
   'courses.err.active_leaf_required': "Scegli una categoria attiva.",
   'courses.venueCourses': "Corsi della struttura",
+  'venueSpaces.title': "Sedi e sale",
+  'venueSpaces.empty': "Nessuna sede per ora. Aggiungi la prima per poter creare corsi.",
+  'venueSpaces.deactivate': "Disattiva",
+  'venueSpaces.activate': "Riattiva",
+  'venueSpaces.inactive': "Non attiva",
+  'venueSpaces.instructors': "Istruttori collegati",
 } as const;
 
 export type MessageKey = keyof typeof itMessages;

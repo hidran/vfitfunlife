@@ -1,28 +1,12 @@
 import { collection, doc, getDoc, getDocs, query, Timestamp, where } from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
 import { db } from './config';
-import { getFunctionsInstance } from './app';
-import type { GymBooking, GymInstructorLink, GymLocation, GymRoom, GymSession } from '@/types/gym';
+import type { GymBooking, GymSession } from '@/types/gym';
 
-export async function gymCall<T>(name: string, data: Record<string, unknown>): Promise<T> {
-  const result = await httpsCallable<Record<string, unknown>, T>(await getFunctionsInstance(), name)(data);
-  return result.data;
-}
-
-export async function fetchGymLocations(venueId: string): Promise<GymLocation[]> {
-  const snap = await getDocs(collection(db, 'venues', venueId, 'locations'));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }) as GymLocation);
-}
-
-export async function fetchGymRooms(venueId: string, locationId: string): Promise<GymRoom[]> {
-  const snap = await getDocs(collection(db, 'venues', venueId, 'locations', locationId, 'rooms'));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }) as GymRoom);
-}
-
-export async function fetchGymInstructors(venueId: string): Promise<GymInstructorLink[]> {
-  const snap = await getDocs(collection(db, 'venues', venueId, 'instructors'));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }) as GymInstructorLink);
-}
+// Moved to ./venueSpaces (shared with the course screens); re-exported so the gym flow compiles until it is removed.
+export {
+  venueCall as gymCall, fetchVenueLocations as fetchGymLocations, fetchVenueRooms as fetchGymRooms,
+  fetchVenueInstructorLinks as fetchGymInstructors,
+} from './venueSpaces';
 
 export async function fetchGymSessions(venueId: string, weekStart: string, staff = false): Promise<GymSession[]> {
   const start = new Date(`${weekStart}T00:00:00Z`);

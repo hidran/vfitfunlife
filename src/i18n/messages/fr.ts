@@ -3471,4 +3471,10 @@ export const frMessages: Messages = {
   'courses.err.gym_location_not_found': "Site introuvable.",
   'courses.err.active_leaf_required': "Choisissez une catégorie active.",
   'courses.venueCourses': "Cours du lieu",
+  'venueSpaces.title': "Sites et salles",
+  'venueSpaces.empty': "Aucun site pour le moment. Ajoutez le premier pour créer des cours.",
+  'venueSpaces.deactivate': "Désactiver",
+  'venueSpaces.activate': "Réactiver",
+  'venueSpaces.inactive': "Inactive",
+  'venueSpaces.instructors': "Instructeurs liés",
 };

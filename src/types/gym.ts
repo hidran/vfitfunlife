@@ -1,10 +1,11 @@
 import type { Timestamp } from 'firebase/firestore';
 
-export interface GymLocation {
-  id: string; name: string; address: string; city: string; timezone: string; isActive: boolean;
-}
-export interface GymRoom { id: string; name: string; isActive: boolean }
-export interface GymInstructorLink { id: string; name: string; photoUrl?: string; isActive: boolean }
+import type { VenueInstructorLink, VenueLocation, VenueRoom } from './venueSpaces';
+
+// Shared with the course screens (./venueSpaces); aliases keep the gym flow compiling until it is removed.
+export type GymLocation = VenueLocation;
+export type GymRoom = VenueRoom;
+export type GymInstructorLink = VenueInstructorLink;
 
 export interface GymSession {
   id: string; venueId: string; locationId: string; roomId: string; instructorId: string;

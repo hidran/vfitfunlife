@@ -16,6 +16,7 @@ import { VenueFormView, type VenueFormData } from './VenueFormView';
 import type { Venue } from '@/types/firebase';
 import { useI18n } from '@/hooks/useI18n';
 import { GymInstructorPanel } from './GymInstructorPanel';
+import { VenueSpacesPanel } from '@/components/venues/VenueSpacesPanel';
 
 export function VenueDetailView({ venueId }: { venueId: string }) {
   const router = useRouter();
@@ -124,6 +125,7 @@ export function VenueDetailView({ venueId }: { venueId: string }) {
           onSubmit={(d) => updateMut.mutate(d)}
         />
       </EntityDetailLayout>
+      {hostsCourses(venue.type) && <div className="m-4"><VenueSpacesPanel venueId={venueId} /></div>}
       {hostsCourses(venue.type) && <GymInstructorPanel venueId={venueId} />}
       <ConfirmDeleteDialog
         open={confirmOpen}

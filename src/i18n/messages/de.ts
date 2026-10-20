@@ -3469,4 +3469,10 @@ export const deMessages: Messages = {
   'courses.err.gym_location_not_found': "Standort nicht gefunden.",
   'courses.err.active_leaf_required': "Wählen Sie eine aktive Kategorie.",
   'courses.venueCourses': "Venue-Kurse",
+  'venueSpaces.title': "Standorte und Räume",
+  'venueSpaces.empty': "Noch keine Standorte. Fügen Sie den ersten hinzu, um Kurse anzulegen.",
+  'venueSpaces.deactivate': "Deaktivieren",
+  'venueSpaces.activate': "Reaktivieren",
+  'venueSpaces.inactive': "Inaktiv",
+  'venueSpaces.instructors': "Verknüpfte Trainer",
 };

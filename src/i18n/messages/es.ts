@@ -3462,4 +3462,10 @@ export const esMessages: Messages = {
   'courses.err.gym_location_not_found': "Sede no encontrada.",
   'courses.err.active_leaf_required': "Elige una categoría activa.",
   'courses.venueCourses': "Cursos del centro",
+  'venueSpaces.title': "Sedes y salas",
+  'venueSpaces.empty': "Aún no hay sedes. Añade la primera para crear cursos.",
+  'venueSpaces.deactivate': "Desactivar",
+  'venueSpaces.activate': "Reactivar",
+  'venueSpaces.inactive': "Inactiva",
+  'venueSpaces.instructors': "Instructores vinculados",
 };

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchGymInstructors, gymCall } from '@/lib/firebase/gym';
+import { fetchVenueInstructorLinks, venueCall } from '@/lib/firebase/venueSpaces';
 import { useI18n } from '@/hooks/useI18n';
 import { Button } from '@/components/ui/button';
 
@@ -10,7 +10,7 @@ export function GymInstructorPanel({ venueId }: { venueId: string }) {
   const { t } = useI18n();
   const qc = useQueryClient();
   const instructors = useQuery({ queryKey: ['gym', 'instructors', venueId],
-    queryFn: () => fetchGymInstructors(venueId) });
+    queryFn: () => fetchVenueInstructorLinks(venueId) });
   const [instructorId, setInstructorId] = useState('');
   const [partnerStatus, setPartnerStatus] = useState<'pending' | 'active' | 'suspended'>('pending');
   const [isActive, setIsActive] = useState(true);
@@ -18,7 +18,7 @@ export function GymInstructorPanel({ venueId }: { venueId: string }) {
   const [error, setError] = useState('');
   async function submit(event: React.FormEvent) {
     event.preventDefault(); setBusy(true); setError('');
-    try { await gymCall('configureGymInstructor', { venueId, instructorId, partnerStatus, isActive });
+    try { await venueCall('configureGymInstructor', { venueId, instructorId, partnerStatus, isActive });
       setInstructorId(''); await qc.invalidateQueries({ queryKey: ['gym', 'instructors', venueId] }); }
     catch { setError(t('gym.error')); } finally { setBusy(false); }
   }
