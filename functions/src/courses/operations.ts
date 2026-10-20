@@ -1,17 +1,32 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { Timestamp } from "firebase-admin/firestore";
 import { region } from "../lib/runtimeOptions";
-import { db, safeId, uidOf, assertManager, nowStamp, domainError, Enrollment, Course, Session } from "./store";
+import { db, safeId, uidOf, nowStamp, domainError, Enrollment, Course, Session } from "./store";
+import { canManageCourse, type Authority } from "./authority";
 import { queueCourseNotification } from "./notifications";
 
+// Authority is resolved once by the caller (R13); release never looks it up again.
+export type ReleaseActor =
+  { kind: "system" } | { kind: "customer"; uid: string } | { kind: "manager"; authority: Authority };
+
+export async function releaseActorFor(uid: string, enrollment: Pick<Enrollment, "userId" | "courseId">):
+  Promise<ReleaseActor> {
+  if (uid === enrollment.userId) return { kind: "customer", uid };
+  const course = (await db.doc(`courses/${enrollment.courseId}`).get()).data() as Course | undefined;
+  if (!course) throw new HttpsError("not-found", "course_not_found");
+  return { kind: "manager", authority: await canManageCourse(uid, course) };
+}
+
 export async function releaseEnrollment(
-  enrollmentId: string, actorUid: string | null, selected?: string[], reason = "", expired = false
+  enrollmentId: string, actor: ReleaseActor, selected?: string[], reason = "", expired = false
 ): Promise<void> {
   await db.runTransaction(async (tx) => {
     const ref = db.doc(`courseEnrollments/${enrollmentId}`);
     const enrollment = (await tx.get(ref)).data() as Enrollment | undefined;
     if (!enrollment) throw new HttpsError("not-found", "enrollment_not_found");
-    if (actorUid && actorUid !== enrollment.userId) await assertManager(actorUid, enrollment.providerId, tx);
+    if (actor.kind === "customer" && actor.uid !== enrollment.userId) {
+      throw new HttpsError("permission-denied", "course_owner_required");
+    }
     if (expired && (enrollment.state !== "held" || enrollment.holdExpiresAt.toMillis() > Date.now())) return;
     if (!["confirmed", "held"].includes(enrollment.state)) return;
     const ids = enrollment.state === "held" ? enrollment.activeSessionIds : selected ?? enrollment.activeSessionIds;
@@ -19,12 +34,12 @@ export async function releaseEnrollment(
     const active = [...new Set(ids)].filter((id) => enrollment.activeSessionIds.includes(id));
     if (!active.length) return;
     const sessions = await tx.getAll(...active.map((id) => db.doc(`courses/${enrollment.courseId}/sessions/${id}`)));
-    const isCustomer = actorUid === enrollment.userId;
+    const isCustomer = actor.kind === "customer";
     if (isCustomer && !expired && enrollment.state === "confirmed" && sessions.some((doc) =>
       (doc.data() as Session).startsAt.toMillis() <= Date.now() + enrollment.cancellationHours * 3600000)) {
       throw new Error("cancellation_deadline");
     }
-    if (!isCustomer && actorUid && sessions.some((doc) => (doc.data() as Session).startsAt.toMillis() <= Date.now())) {
+    if (actor.kind === "manager" && sessions.some((doc) => (doc.data() as Session).startsAt.toMillis() <= Date.now())) {
       throw new Error("cannot_cancel_past_lesson");
     }
     const courseRef = db.doc(`courses/${enrollment.courseId}`);
@@ -71,7 +86,10 @@ export const cancelCourseEnrollment = onCall({ region }, async (req) => {
     if (selected !== undefined && (!Array.isArray(selected) || !selected.length)) {
       throw new Error("invalid_sessions");
     }
-    await releaseEnrollment(safeId(req.data.enrollmentId), uid, selected?.map(safeId),
+    const enrollmentId = safeId(req.data.enrollmentId);
+    const enrollment = (await db.doc(`courseEnrollments/${enrollmentId}`).get()).data() as Enrollment | undefined;
+    if (!enrollment) throw new HttpsError("not-found", "enrollment_not_found");
+    await releaseEnrollment(enrollmentId, await releaseActorFor(uid, enrollment), selected?.map(safeId),
       String(req.data.reason ?? "").slice(0, 500));
     return { success: true };
   } catch (error) {
@@ -90,7 +108,9 @@ export const recordCoursePayment = onCall({ region }, async (req) => {
     const ref = db.doc(`courseEnrollments/${id}`);
     const e = (await tx.get(ref)).data() as Enrollment | undefined;
     if (!e) throw new HttpsError("not-found", "enrollment_not_found");
-    await assertManager(uid, e.providerId, tx);
+    const course = (await tx.get(db.doc(`courses/${e.courseId}`))).data() as Course | undefined;
+    if (!course) throw new HttpsError("not-found", "course_not_found");
+    await canManageCourse(uid, course, tx);
     if (e.paymentMode !== "direct" || e.state !== "confirmed") {
       throw new HttpsError("failed-precondition", "direct_confirmed_enrollment_required");
     }
@@ -111,7 +131,7 @@ export const manageCourseSession = onCall({ region }, async (req) => {
   try {
     const course = (await db.doc(`courses/${courseId}`).get()).data() as Course | undefined;
     if (!course) throw new HttpsError("not-found", "course_not_found");
-    await assertManager(uid, course.providerId);
+    const manager: ReleaseActor = { kind: "manager", authority: await canManageCourse(uid, course) };
     const ref = db.doc(`courses/${courseId}/sessions/${sessionId}`);
     if (action === "attendance") {
       const userId = safeId(req.data.userId);
@@ -165,7 +185,7 @@ export const manageCourseSession = onCall({ region }, async (req) => {
       // Mark unavailable before processing participants: concurrent enrollments see cancellation immediately.
       const participants = await ref.collection("participants").get();
       for (const p of participants.docs) {
-        if (action === "cancel") await releaseEnrollment(p.data().enrollmentId, uid, [sessionId], reason);
+        if (action === "cancel") await releaseEnrollment(p.data().enrollmentId, manager, [sessionId], reason);
         else {
           const batch = db.batch();
           const startsAt = new Date(req.data.startsAt);
@@ -190,7 +210,13 @@ export const confirmCourseRefund = onCall({ region }, async (req) => {
   await db.runTransaction(async (tx) => {
     const refund = (await tx.get(ref)).data();
     if (!refund) throw new HttpsError("not-found", "refund_not_found");
-    await assertManager(uid, refund.providerId, tx);
+    // Refunds written before venue courses carry no courseId (R14).
+    const courseId = refund.courseId ?? ((await tx.get(db.doc(`courseEnrollments/${refund.enrollmentId}`)))
+      .data() as Enrollment | undefined)?.courseId;
+    if (!courseId) throw new HttpsError("not-found", "enrollment_not_found");
+    const course = (await tx.get(db.doc(`courses/${courseId}`))).data() as Course | undefined;
+    if (!course) throw new HttpsError("not-found", "course_not_found");
+    await canManageCourse(uid, course, tx);
     if (refund.paymentMode !== "direct") throw new HttpsError("failed-precondition", "direct_refund_required");
     tx.update(ref, { status: "completed", confirmedAt: nowStamp(), confirmedBy: uid });
   });
@@ -206,7 +232,7 @@ export const cancelRemainingCourse = onCall({ region }, async (req) => {
   await db.runTransaction(async (tx) => {
     const course = (await tx.get(ref)).data() as Course | undefined;
     if (!course) throw new HttpsError("not-found", "course_not_found");
-    await assertManager(uid, course.providerId, tx);
+    await canManageCourse(uid, course, tx);
     const sessions = await tx.get(ref.collection("sessions"));
     tx.update(ref, { enrollmentClosed: true, state: "archived", updatedAt: nowStamp() });
     sessions.docs.filter((d) => d.data().startsAt.toMillis() > Date.now()).forEach((d) => {
@@ -216,7 +242,9 @@ export const cancelRemainingCourse = onCall({ region }, async (req) => {
   const sessions = await ref.collection("sessions").where("state", "==", "cancelled").get();
   for (const s of sessions.docs) {
     const participants = await s.ref.collection("participants").get();
-    for (const p of participants.docs) await releaseEnrollment(p.data().enrollmentId, null, [s.id], reason);
+    for (const p of participants.docs) {
+      await releaseEnrollment(p.data().enrollmentId, { kind: "system" }, [s.id], reason);
+    }
     await s.ref.update({ cancellationReconciled: true });
   }
   return { success: true };

@@ -11,7 +11,7 @@ export const maintainCourseEnrollments = onSchedule(
   { region, schedule: "every 5 minutes", timeoutSeconds: 540, secrets: ["STRIPE_SECRET_KEY"] }, async () => {
     const holds = await db.collection("courseEnrollments").where("state", "==", "held")
       .where("holdExpiresAt", "<=", Timestamp.now()).limit(100).get();
-    for (const d of holds.docs) await releaseEnrollment(d.id, null, undefined, "", true);
+    for (const d of holds.docs) await releaseEnrollment(d.id, { kind: "system" }, undefined, "", true);
     const refundQuery = db.collection("courseRefunds").where("paymentMode", "==", "stripe")
       .where("status", "in", ["pending", "processing"]);
     let refunds = await refundQuery.limit(100).get();
@@ -49,7 +49,8 @@ export const maintainCourseEnrollments = onSchedule(
       if (s.ref.parent.parent?.parent.id !== "courses") continue;
       const participants = await s.ref.collection("participants").get();
       for (const p of participants.docs) {
-        await releaseEnrollment(p.data().enrollmentId, null, [s.id], s.data().cancellationReason ?? "Lesson cancelled");
+        await releaseEnrollment(p.data().enrollmentId, { kind: "system" }, [s.id],
+          s.data().cancellationReason ?? "Lesson cancelled");
       }
       await s.ref.update({ cancellationReconciled: true });
     }

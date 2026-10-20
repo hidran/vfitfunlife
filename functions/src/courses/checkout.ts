@@ -158,7 +158,7 @@ export const courseStripeWebhook = onRequest(
       } else if (event.type === "checkout.session.expired") {
         const session = event.data.object as Stripe.Checkout.Session;
         if (session.metadata?.courseEnrollmentId) {
-          await releaseEnrollment(safeId(session.metadata.courseEnrollmentId), null, undefined, "", true);
+          await releaseEnrollment(safeId(session.metadata.courseEnrollmentId), { kind: "system" }, undefined, "", true);
         }
       } else if (event.type === "refund.updated") {
         const refund = event.data.object as Stripe.Refund;
