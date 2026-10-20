@@ -1,12 +1,13 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import { FieldValue, Timestamp, type Transaction } from "firebase-admin/firestore";
 import { region } from "../lib/runtimeOptions";
 import { readPaymentSettings } from "../payments/paymentSettingsCallables";
 import { checkoutActive } from "./core";
 import { db, safeId, uidOf, nowStamp, domainError, Enrollment, Course, Session } from "./store";
 import { canManageCourse, type Authority } from "./authority";
 import { queueCourseNotification } from "./notifications";
-import { planPromotions } from "./waitlist";
+import { planPromotions, clearWaitlistInTx } from "./waitlist";
+import { slotsOf, diffSlots, updateScheduleLocks } from "./locks";
 
 // Authority is resolved once by the caller (R13); release never looks it up again.
 export type ReleaseActor =
@@ -136,6 +137,96 @@ export const recordCoursePayment = onCall({ region }, async (req) => {
   return { success: true };
 });
 
+type SessionAction = {
+  uid: string; courseId: string; sessionId: string; data: Record<string, unknown>; course: Course;
+  manager: Extract<ReleaseActor, { kind: "manager" }>;
+};
+const text = (value: unknown, max = 500) => String(value ?? "").trim().slice(0, max);
+const sessionPath = (courseId: string, sessionId: string) => `courses/${courseId}/sessions/${sessionId}`;
+
+/**
+ * Moves the lock slots from one state of a course to the next, in the caller's transaction. Slots are derived from the
+ * stored sessions and from the sessions as they will be, so a published course whose last lesson is cancelled (and
+ * therefore archived) releases everything, and a single moved lesson releases only its own old slot. Throws
+ * room_overlap / instructor_overlap before it writes anything; call it after the last transaction read.
+ */
+async function relock(tx: Transaction, courseId: string,
+  before: { course: Pick<Course, "state" | "name">; sessions: { id: string; data: Session }[] },
+  after: { course: Pick<Course, "state" | "name">; sessions: { id: string; data: Session }[] }): Promise<void> {
+  const { remove, add } = diffSlots(slotsOf(courseId, before.course, before.sessions),
+    slotsOf(courseId, after.course, after.sessions, new Date()));
+  await updateScheduleLocks(tx, remove, add);
+}
+
+async function cancelOrReschedule(a: SessionAction, action: "cancel" | "reschedule"): Promise<Date | null> {
+  const { courseId, sessionId, data } = a;
+  const reason = text(data.reason);
+  if (!reason) throw new Error("reason_required");
+  // Removing one customer is its own action: a stray customer id must never turn into a lesson cancellation.
+  if (data.userId !== undefined) throw new Error("invalid_session_action");
+  const courseRef = db.doc(`courses/${courseId}`);
+  const ref = db.doc(sessionPath(courseId, sessionId));
+  const requested = action === "reschedule" ? new Date(String(data.startsAt)) : null;
+  await db.runTransaction(async (tx) => {
+    const [courseDoc, sessionDoc] = await tx.getAll(courseRef, ref);
+    const course = courseDoc.data() as Course | undefined;
+    if (!course) throw new HttpsError("not-found", "course_not_found");
+    const s = sessionDoc.data() as Session | undefined;
+    if (!s) throw new Error("session_not_found");
+    if (s.startsAt.toMillis() <= Date.now()) throw new Error("cannot_change_past_lesson");
+    let place: Partial<Session> = {};
+    let moved: Pick<Session, "startsAt" | "endsAt"> | null = null;
+    if (action === "reschedule") {
+      if (s.state !== "scheduled" || s.held > 0) throw new Error("session_unavailable");
+      if (!requested || !Number.isFinite(requested.getTime()) ||
+        requested.getTime() <= Date.now() + course.bookingNoticeHours * 3600000) throw new Error("invalid_start_time");
+      moved = { startsAt: Timestamp.fromDate(requested),
+        endsAt: Timestamp.fromMillis(requested.getTime() + course.durationMinutes * 60000) };
+      // The room only means something for a venue course; an unlinked course ignores it.
+      const roomId = course.venueId && data.roomId != null ? safeId(data.roomId) : null;
+      if (roomId && roomId !== (s.roomId ?? null)) {
+        const locationId = s.locationId ?? course.locationId;
+        if (!locationId) throw new HttpsError("invalid-argument", "invalid_space");
+        const [room, location] = await tx.getAll(
+          db.doc(`venues/${course.venueId}/locations/${locationId}/rooms/${roomId}`),
+          db.doc(`venues/${course.venueId}/locations/${locationId}`));
+        if (room.data()?.isActive !== true || !location.exists) {
+          throw new HttpsError("invalid-argument", "invalid_space");
+        }
+        place = { roomId, locationId, venueId: course.venueId,
+          location: `${room.data()!.name} · ${location.data()!.name}` };
+      }
+    }
+    // A repeated request changes nothing (the participants are told again by the caller; their notice ids repeat).
+    if (moved && moved.startsAt.toMillis() === s.startsAt.toMillis() && !Object.keys(place).length) return;
+    const allSessions = await tx.get(courseRef.collection("sessions"));
+    const stored = allSessions.docs.map((doc) => ({ id: doc.id, data: doc.data() as Session }));
+    const changed: Session = action === "cancel" ? { ...s, state: "cancelled" } : { ...s, ...moved!, ...place };
+    const actual = stored.map((x) => x.id === sessionId ? { ...changed, id: x.id } : { ...x.data, id: x.id })
+      .sort((x, y) => x.startsAt.toMillis() - y.startsAt.toMillis());
+    const next = actual.find((x) => x.state === "scheduled" && x.startsAt.toMillis() > Date.now());
+    const metadata = { firstStartsAt: actual[0].startsAt,
+      ...(next ? { nextStartsAt: next.startsAt, nextSessionId: next.id,
+        nextAvailableSeats: next.capacity - next.occupied - next.held } :
+        { enrollmentClosed: true, state: "archived" as const }) };
+    // The waitlist is read now (a writer comes back), the locks are read and written last among the reads.
+    const clearWaitlist = action === "reschedule" ?
+      await clearWaitlistInTx(tx, { ...course, id: courseId }, sessionId, "rescheduled") : () => undefined;
+    if (action === "reschedule") {
+      await relock(tx, courseId, { course, sessions: stored }, { course: { ...course, ...metadata },
+        sessions: stored.map((x) => ({ id: x.id, data: x.id === sessionId ? changed : x.data })) });
+    }
+    if (action === "cancel") {
+      tx.update(ref, { state: "cancelled", cancellationReconciled: false, cancellationReason: reason });
+    } else {
+      tx.update(ref, { ...moved!, ...place, rescheduleReason: reason, revision: FieldValue.increment(1) });
+    }
+    tx.update(courseRef, metadata);
+    clearWaitlist();
+  });
+  return requested;
+}
+
 export const manageCourseSession = onCall({ region }, async (req) => {
   const uid = uidOf(req.auth);
   const courseId = safeId(req.data.courseId);
@@ -144,8 +235,10 @@ export const manageCourseSession = onCall({ region }, async (req) => {
   try {
     const course = (await db.doc(`courses/${courseId}`).get()).data() as Course | undefined;
     if (!course) throw new HttpsError("not-found", "course_not_found");
-    const manager: ReleaseActor = { kind: "manager", authority: await canManageCourse(uid, course) };
-    const ref = db.doc(`courses/${courseId}/sessions/${sessionId}`);
+    const authority = await canManageCourse(uid, course);
+    const manager = { kind: "manager", authority } as const;
+    const a: SessionAction = { uid, courseId, sessionId, data: req.data, course, manager };
+    const ref = db.doc(sessionPath(courseId, sessionId));
     if (action === "attendance") {
       const userId = safeId(req.data.userId);
       if (!["present", "absent", "unmarked"].includes(req.data.attendance)) throw new Error("invalid_attendance");
@@ -159,53 +252,18 @@ export const manageCourseSession = onCall({ region }, async (req) => {
         tx.update(participant, { attendance: req.data.attendance, markedAt: nowStamp(), markedBy: uid });
       });
     } else if (action === "cancel" || action === "reschedule") {
-      const reason = String(req.data.reason ?? "").trim().slice(0, 500);
-      if (!reason) throw new Error("reason_required");
-      await db.runTransaction(async (tx) => {
-        const s = (await tx.get(ref)).data() as Session | undefined;
-        if (!s) throw new Error("session_not_found");
-        if (s.startsAt.toMillis() <= Date.now()) throw new Error("cannot_change_past_lesson");
-        const courseRef = db.doc(`courses/${courseId}`);
-        const allSessions = await tx.get(courseRef.collection("sessions"));
-        const actual = allSessions.docs.map((doc) => {
-          const data = doc.data() as Session;
-          return { ...data, id: doc.id, state: doc.id === sessionId && action === "cancel" ? "cancelled" : data.state,
-            startsAt: doc.id === sessionId && action === "reschedule" ?
-              Timestamp.fromDate(new Date(req.data.startsAt)) : data.startsAt };
-        }).sort((a, b) => a.startsAt.toMillis() - b.startsAt.toMillis());
-        const next = actual.find((s) => s.state === "scheduled" && s.startsAt.toMillis() > Date.now());
-        const metadata = { firstStartsAt: actual[0].startsAt,
-          ...(next ? { nextStartsAt: next.startsAt, nextSessionId: next.id,
-            nextAvailableSeats: next.capacity - next.occupied - next.held } :
-            { enrollmentClosed: true, state: "archived" }) };
-        if (action === "cancel") {
-          tx.update(ref, {
-            state: "cancelled", cancellationReconciled: false, cancellationReason: reason,
-          });
-        } else {
-          if (s.state !== "scheduled" || s.held > 0) throw new Error("session_unavailable");
-          const starts = new Date(req.data.startsAt);
-          if (!Number.isFinite(starts.getTime()) ||
-            starts.getTime() <= Date.now() + course.bookingNoticeHours * 3600000) {
-            throw new Error("invalid_start_time");
-          }
-          tx.update(ref, { startsAt: Timestamp.fromDate(starts),
-            endsAt: Timestamp.fromMillis(starts.getTime() + course.durationMinutes * 60000),
-            rescheduleReason: reason });
-        }
-        tx.update(courseRef, metadata);
-      });
+      const startsAt = await cancelOrReschedule(a, action);
+      const reason = text(req.data.reason);
       // Mark unavailable before processing participants: concurrent enrollments see cancellation immediately.
       const participants = await ref.collection("participants").get();
       for (const p of participants.docs) {
         if (action === "cancel") await releaseEnrollment(p.data().enrollmentId, manager, [sessionId], reason);
         else {
           const batch = db.batch();
-          const startsAt = new Date(req.data.startsAt);
           // Batch shares the notification setter API with transactions.
           queueCourseNotification(batch,
-            `${p.data().enrollmentId}_${sessionId}_${startsAt.getTime()}`,
-            "rescheduled", p.id, course, startsAt, reason);
+            `${p.data().enrollmentId}_${sessionId}_${startsAt!.getTime()}`,
+            "rescheduled", p.id, course, startsAt!, reason);
           await batch.commit();
         }
       }

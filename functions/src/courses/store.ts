@@ -23,8 +23,11 @@ export interface WaitlistEntry {
 export interface Participant {
   enrollmentId: string; userId: string; customerName: string; providerId: string;
   state: "held" | "confirmed"; attendance: "present" | "absent" | "unmarked";
-  markedAt?: Timestamp; markedBy?: string; lateCancel?: boolean; noShow?: boolean;
+  markedAt?: Timestamp; markedBy?: string; noShow?: boolean;
 }
+// courses/{id}/customers/{uid}: per-customer reliability counters (R20: a removed participant's doc is deleted, so late
+// removals are counted here and on the enrollment instead of on the participant).
+export interface CourseCustomer { userId: string; createdAt?: Timestamp; noShows?: number; lateCancels?: number }
 export interface Enrollment {
   userId: string; providerId: string; courseId: string; courseName: string; customerName: string;
   sessionIds: string[]; activeSessionIds: string[]; cancelledSessionIds: string[];

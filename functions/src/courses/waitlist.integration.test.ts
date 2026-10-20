@@ -1226,6 +1226,23 @@ describe("waitlist concurrency", () => {
   });
 });
 
+// -- manageCourseSession (Group E) -----------------------------------------------------------------------------------
+const manage = (uid: string, data: Record<string, unknown>) =>
+  api.manageCourseSession.run(request(uid, { sessionId: SESSION, ...data }));
+
+describe("manageCourseSession reschedule and the waitlist", () => {
+  it("closes the lesson's waitlist with waitlist_cleared and tells the seated customer", async () => {
+    const courseId = await fullCourse();
+    for (const uid of ["u1", "u2"]) await join(uid, courseId);
+    await manage("p", { courseId, action: "reschedule", reason: "Later", startsAt: "2099-10-12T17:00:00Z" });
+    expect(await waitlist(courseId)).toEqual([]);
+    expect(await sessionOf(courseId)).toMatchObject({ waitlisted: 0, occupied: 1, revision: 2 });
+    expect(await notices("waitlist_cleared")).toEqual(["u1", "u2"]);
+    expect(await notices("rescheduled")).toEqual(["h"]);
+    await assertCounters(courseId);
+  });
+});
+
 afterAll(() => {
   // Reported with the run so a flaky emulator abort rate is visible next to the pass count.
   console.info(`emulator aborts retried: ${emulatorAborts()}`);
