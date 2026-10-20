@@ -6,6 +6,7 @@ process.env.FIRESTORE_EMULATOR_HOST = '127.0.0.1:8080';
 let db: admin.firestore.Firestore;
 let schedule: typeof import('./schedule');
 let bookings: typeof import('./bookings');
+let spaces: typeof import('../venues/spaces');
 const req = (uid: string, data: unknown) => ({ auth: { uid, token: {} }, data }) as CallableRequest;
 const input = { venueId: 'gym', locationId: 'main', roomId: 'studio', instructorId: 'coach',
   title: 'Pilates', description: '', startDate: '2099-10-12', startTime: '18:00', endTime: '19:00',
@@ -18,6 +19,7 @@ beforeAll(async () => {
   db = admin.firestore();
   schedule = await import('./schedule');
   bookings = await import('./bookings');
+  spaces = await import('../venues/spaces');
 });
 
 beforeEach(async () => {
@@ -140,7 +142,7 @@ describe('venue types that host a timetable', () => {
   it('lets an admin link a verified instructor to a school', async () => {
     await asType('school');
     await db.doc('users/admin').set({ role: 'admin', isActive: true, fullName: 'admin' });
-    await expect(schedule.configureGymInstructor.run(req('admin', { venueId: 'gym', instructorId: 'coach2',
+    await expect(spaces.configureGymInstructor.run(req('admin', { venueId: 'gym', instructorId: 'coach2',
       partnerStatus: 'active', isActive: true }))).resolves.toEqual({ success: true });
     expect((await db.doc('instructors/coach2').get()).data()?.partnerStatus).toBe('active');
   });
@@ -149,7 +151,7 @@ describe('venue types that host a timetable', () => {
     await asType('spa');
     await db.doc('users/admin').set({ role: 'admin', isActive: true, fullName: 'admin' });
     await expect(schedule.saveGymSchedule.run(req('owner', input))).rejects.toThrow('gym_not_found');
-    await expect(schedule.configureGymInstructor.run(req('admin', { venueId: 'gym', instructorId: 'coach2',
+    await expect(spaces.configureGymInstructor.run(req('admin', { venueId: 'gym', instructorId: 'coach2',
       partnerStatus: 'active', isActive: true }))).rejects.toThrow('verified_instructor_required');
   });
 

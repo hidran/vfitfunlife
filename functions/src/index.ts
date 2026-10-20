@@ -72,6 +72,7 @@ if (stagingAllowlistEnabled()) {
 }
 
 export * from "./courses";
+export * from "./venues/spaces";
 export * from "./partnerGyms/schedule";
 export * from "./partnerGyms/bookings";
 export * from "./partnerGyms/notifications";
