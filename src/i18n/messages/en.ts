@@ -3565,4 +3565,10 @@ export const enMessages: Messages = {
   'courses.cancelBookingConfirm': "Cancel this booking?",
   'courses.payWithinOne': "Pay within 1 minute to keep your spot.",
   'courses.venueUnavailable': "This venue does not exist or you do not manage it.",
+  "common.confirm": "Confirm",
+  "courses.confirmCancelBooking": "Yes, cancel booking",
+  "courses.confirmLeaveWaitlist": "Yes, leave waitlist",
+  "courses.confirmCancelLesson": "Confirm cancellation",
+  "courses.confirmReschedule": "Confirm new time",
+  "courses.paymentMethod": "Payment method",
 };

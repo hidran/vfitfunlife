@@ -3545,4 +3545,10 @@ export const deMessages: Messages = {
   'courses.cancelBookingConfirm': "Diese Buchung stornieren?",
   'courses.payWithinOne': "Zahle innerhalb von 1 Minute, um deinen Platz zu behalten.",
   'courses.venueUnavailable': "Dieser Standort existiert nicht oder du verwaltest ihn nicht.",
+  "common.confirm": "Bestätigen",
+  "courses.confirmCancelBooking": "Ja, Buchung stornieren",
+  "courses.confirmLeaveWaitlist": "Ja, Warteliste verlassen",
+  "courses.confirmCancelLesson": "Absage bestätigen",
+  "courses.confirmReschedule": "Neue Zeit bestätigen",
+  "courses.paymentMethod": "Zahlungsart",
 };

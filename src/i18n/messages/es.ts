@@ -3538,4 +3538,10 @@ export const esMessages: Messages = {
   'courses.cancelBookingConfirm': "¿Cancelar esta reserva?",
   'courses.payWithinOne': "Paga en 1 minuto para conservar tu plaza.",
   'courses.venueUnavailable': "Esta sede no existe o no la gestionas.",
+  "common.confirm": "Confirmar",
+  "courses.confirmCancelBooking": "Sí, cancelar la reserva",
+  "courses.confirmLeaveWaitlist": "Sí, salir de la lista",
+  "courses.confirmCancelLesson": "Confirmar cancelación",
+  "courses.confirmReschedule": "Confirmar nuevo horario",
+  "courses.paymentMethod": "Método de pago",
 };

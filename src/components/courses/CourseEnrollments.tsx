@@ -59,7 +59,7 @@ function EnrollmentCard({ enrollment: e }: { enrollment: CourseEnrollment }) {
         <span>{timezone && courseDate(s, locale, timezone)} {!active && `· ${t('courses.cancelled')}`}</span>
         {cancellable && <Button size="sm" variant="outline" className="min-h-11" disabled={busy} onClick={() => setCancelId(s.id)}>{t('courses.cancelBooking')}</Button>}
         {cancelId === s.id && <div className="w-full flex flex-wrap gap-2"><p className="w-full">{t('courses.cancelBookingConfirm')}</p>
-          <Button size="sm" className="min-h-11" disabled={busy} onClick={() => cancel(s.id)}>{t('courses.confirm')}</Button>
+          <Button size="sm" className="min-h-11" disabled={busy} onClick={() => cancel(s.id)}>{t('courses.confirmCancelBooking')}</Button>
           <Button size="sm" variant="ghost" className="min-h-11" onClick={() => setCancelId(null)}>{t('common.cancel')}</Button></div>}
       </div>;
     })}

@@ -167,7 +167,7 @@ export function ProviderCourses() {
       <label className="block space-y-1">{t('courses.lesson')}<select className={field} value={sessionId} onChange={e => { setSessionId(e.target.value); setOperation(null); }}>
         <option value="">{t('common.select')}</option>{sessions.data?.map(s => <option key={s.id} value={s.id}>{courseDate(s, locale, course.timezone)} · {s.occupied + s.held}/{s.capacity} {s.state === 'cancelled' ? t('courses.cancelled') : ''}</option>)}</select></label>
       {operation === 'cancelRemaining' && <div className="space-y-3"><label className="block">{t('courses.reason')}<input required className={field} value={reason} onChange={e => setReason(e.target.value)} /></label>
-        <Button disabled={busy || !reason.trim()} onClick={() => sessionAction()}>{t('courses.confirm')}</Button></div>}
+        <Button disabled={busy || !reason.trim()} onClick={() => sessionAction()}>{t('courses.confirmCancelLesson')}</Button></div>}
       {selectedSession && <>
         {selectedSession.state === 'scheduled' && selectedSession.startsAt.toMillis() > Date.now() &&
           <AddCourseParticipant key={selectedSession.id} course={course} session={selectedSession} onAdded={() => { void refresh(); }} />}
@@ -182,7 +182,7 @@ export function ProviderCourses() {
           {operation === 'reschedule' && course.venueId && <label className="block">{t('courses.rescheduleRoom')}
             <select className={field} value={newRoom || selectedSession.roomId || course.roomId || ''} onChange={e => setNewRoom(e.target.value)}>
               {(rooms.data ?? []).filter(r => r.isActive || r.id === (selectedSession.roomId ?? course.roomId)).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select></label>}
-          <Button disabled={busy || !reason.trim() || (operation === 'reschedule' && !newDate)} onClick={() => sessionAction()}>{t('courses.confirm')}</Button></div>}
+          <Button disabled={busy || !reason.trim() || (operation === 'reschedule' && !newDate)} onClick={() => sessionAction()}>{t(operation === 'reschedule' ? 'courses.confirmReschedule' : 'courses.confirmCancelLesson')}</Button></div>}
         {participants.isError && <p role="alert">{t('courses.loadError')}</p>}
         <h3 className="font-semibold">{t('courses.roster')}</h3>
         <ul className="divide-y divide-hairline">{participants.data?.map(p => {
@@ -217,9 +217,9 @@ export function ProviderCourses() {
     {venueId && <VenueSpacesPanel venueId={venueId} />}
     {payment && <Modal onClose={() => setPayment(null)} className="w-full max-w-md rounded-2xl border border-hairline bg-surface shadow-xl" ariaLabel={t('courses.recordPayment')}>
       {payment && <div className="space-y-4 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] text-content"><h2 className="font-semibold">{t('courses.recordPayment')}</h2>
-        <label className="block">{t('courses.direct')}<select className={field} value={payment.method} onChange={e => setPayment({ ...payment, method: e.target.value })}>
+        <label className="block">{t('courses.paymentMethod')}<select className={field} value={payment.method} onChange={e => setPayment({ ...payment, method: e.target.value })}>
           {(['cash', 'bank_transfer', 'satispay', 'other'] as const).map(v => <option key={v} value={v}>{t(`courses.${v}`)}</option>)}</select></label>
-        <Button disabled={busy} onClick={async () => { if (await run('recordCoursePayment', payment)) setPayment(null); }}>{t('courses.confirm')}</Button>
+        <Button disabled={busy} onClick={async () => { if (await run('recordCoursePayment', payment)) setPayment(null); }}>{t('common.confirm')}</Button>
         <Button variant="ghost" onClick={() => setPayment(null)}>{t('common.close')}</Button></div>}
     </Modal>}
   </div>;

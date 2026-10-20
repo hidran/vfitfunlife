@@ -3547,4 +3547,10 @@ export const frMessages: Messages = {
   'courses.cancelBookingConfirm': "Annuler cette réservation ?",
   'courses.payWithinOne': "Payez dans la minute pour garder votre place.",
   'courses.venueUnavailable': "Ce lieu n’existe pas ou vous ne le gérez pas.",
+  "common.confirm": "Confirmer",
+  "courses.confirmCancelBooking": "Oui, annuler la réservation",
+  "courses.confirmLeaveWaitlist": "Oui, quitter la liste",
+  "courses.confirmCancelLesson": "Confirmer l’annulation",
+  "courses.confirmReschedule": "Confirmer le nouvel horaire",
+  "courses.paymentMethod": "Mode de paiement",
 };

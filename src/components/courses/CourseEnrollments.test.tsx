@@ -78,6 +78,8 @@ describe('CourseEnrollments', () => {
     render(<CourseEnrollments uid="me" />);
     fireEvent.click(screen.getByRole('button', { name: 'courses.cancelBooking' }));
     expect(screen.getByText('courses.cancelBookingConfirm')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'courses.confirmCancelBooking' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'courses.confirm' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'common.cancel' }));
     expect(screen.queryByText('courses.cancelBookingConfirm')).not.toBeInTheDocument();
   });

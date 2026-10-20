@@ -59,7 +59,7 @@ describe('MyWaitlist', () => {
     renderIt();
     fireEvent.click(await screen.findByRole('button', { name: 'courses.leaveWaitlist' }));
     expect(mocks.leave).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'courses.confirm' }));
+    fireEvent.click(screen.getByRole('button', { name: 'courses.confirmLeaveWaitlist' }));
     await waitFor(() => expect(mocks.leave).toHaveBeenCalledWith('c1', 's1'));
     await waitFor(() => expect(mocks.refresh).toHaveBeenCalled());
   });
@@ -70,7 +70,7 @@ describe('MyWaitlist', () => {
     mocks.leave.mockRejectedValue(Object.assign(new Error('session_not_found'), {}));
     renderIt();
     fireEvent.click(await screen.findByRole('button', { name: 'courses.leaveWaitlist' }));
-    fireEvent.click(screen.getByRole('button', { name: 'courses.confirm' }));
+    fireEvent.click(screen.getByRole('button', { name: 'courses.confirmLeaveWaitlist' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('courses.err.session_not_found');
   });
 

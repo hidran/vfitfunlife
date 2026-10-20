@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -216,6 +216,32 @@ describe('roster', () => {
   });
 });
 
+describe('confirm buttons', () => {
+  beforeEach(() => { mocks.search = 'venue=v1'; mocks.venues = [{ id: 'v1', name: 'Smoke Gym' }]; });
+
+  it('cancel lesson confirms with its own label, never "Confirm booking"', async () => {
+    renderPage(); await openLesson();
+    fireEvent.click(screen.getByRole('button', { name: 'courses.cancelLesson' }));
+    fireEvent.change(screen.getByLabelText('courses.reason'), { target: { value: 'Teacher ill' } });
+    expect(screen.queryByRole('button', { name: 'courses.confirm' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'courses.confirmCancelLesson' }));
+    await waitFor(() => expect(mocks.call).toHaveBeenCalledWith('manageCourseSession', expect.objectContaining({ action: 'cancel', reason: 'Teacher ill' })));
+  });
+
+  it('record payment opens a surfaced dialog with a payment-method field and a generic Confirm', async () => {
+    mocks.participants = [{ id: 'u2', userId: 'u2', customerName: 'Bob', enrollmentId: 'e2', state: 'confirmed', attendance: 'unmarked' }];
+    mocks.enrollments = [{ id: 'e2', courseId: 'c1', customerName: 'Bob', paymentMode: 'direct', paymentStatus: 'pending', totalCents: 1000, cancellationHours: 1 }];
+    renderPage(); await openLesson();
+    fireEvent.click(screen.getByRole('button', { name: 'courses.recordPayment' }));
+    const dialog = await screen.findByRole('dialog', { name: 'courses.recordPayment' });
+    expect(dialog).toHaveClass('bg-surface', 'border-hairline');
+    expect(within(dialog).getByLabelText('courses.paymentMethod')).toBeInTheDocument();
+    expect(within(dialog).queryByText('courses.direct')).toBeNull();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common.confirm' }));
+    await waitFor(() => expect(mocks.call).toHaveBeenCalledWith('recordCoursePayment', { enrollmentId: 'e2', method: 'cash' }));
+  });
+});
+
 describe('reschedule', () => {
   it('sends the chosen room and the previewed instant', async () => {
     mocks.search = 'venue=v1'; mocks.venues = [{ id: 'v1', name: 'Smoke Gym' }];
@@ -229,7 +255,7 @@ describe('reschedule', () => {
     fireEvent.change(screen.getByLabelText('courses.rescheduleRoom'), { target: { value: 'r2' } });
     fireEvent.change(screen.getByLabelText('courses.reason'), { target: { value: 'Teacher ill' } });
     fireEvent.change(screen.getByLabelText(/courses.startDate/), { target: { value: '2030-01-01T11:00' } });
-    fireEvent.click(screen.getByRole('button', { name: 'courses.confirm' }));
+    fireEvent.click(screen.getByRole('button', { name: 'courses.confirmReschedule' }));
     await waitFor(() => expect(mocks.call).toHaveBeenCalledWith('manageCourseSession', expect.objectContaining({
       courseId: 'c1', sessionId: 's1', action: 'reschedule', roomId: 'r2', reason: 'Teacher ill', startsAt: '2030-01-01T10:00:00.000Z' })));
   });
@@ -245,7 +271,7 @@ describe('reschedule', () => {
     fireEvent.click(screen.getByRole('button', { name: 'courses.reschedule' }));
     fireEvent.change(screen.getByLabelText('courses.reason'), { target: { value: 'x' } });
     fireEvent.change(screen.getByLabelText(/courses.startDate/), { target: { value: '2030-01-01T11:00' } });
-    fireEvent.click(screen.getByRole('button', { name: 'courses.confirm' }));
+    fireEvent.click(screen.getByRole('button', { name: 'courses.confirmReschedule' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('courses.err.room_overlap');
   });
 

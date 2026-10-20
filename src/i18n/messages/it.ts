@@ -3563,6 +3563,12 @@ export const itMessages = {
   'courses.cancelBookingConfirm': "Annullare questa prenotazione?",
   'courses.payWithinOne': "Paga entro 1 minuto per mantenere il posto.",
   'courses.venueUnavailable': "Questa sede non esiste o non la gestisci.",
+  "common.confirm": "Conferma",
+  "courses.confirmCancelBooking": "Sì, annulla la prenotazione",
+  "courses.confirmLeaveWaitlist": "Sì, esci dalla lista",
+  "courses.confirmCancelLesson": "Conferma annullamento",
+  "courses.confirmReschedule": "Conferma nuovo orario",
+  "courses.paymentMethod": "Metodo di pagamento",
 } as const;
 
 export type MessageKey = keyof typeof itMessages;
