@@ -24,7 +24,7 @@ export function LessonWaitlist({ courseId, sessionId }: { courseId: string; sess
     finally { setBusy(false); }
   }
   const entries = waitlist.data ?? [];
-  if (!entries.length) return error ? <p role="alert" className="text-red-500">{error}</p> : null;
+  if (!entries.length) return error ? <p role="alert" className="text-error">{error}</p> : null;
   return <section className="space-y-2">
     <h3 className="font-semibold">{t('courses.waitlistTitle')}</h3>
     <ul className="divide-y divide-hairline">{entries.map(e => <li key={e.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
@@ -35,6 +35,6 @@ export function LessonWaitlist({ courseId, sessionId }: { courseId: string; sess
         <Button size="sm" variant="outline" className="min-h-11" disabled={busy} aria-label={`${t('courses.removeEntry')} ${e.customerName}`}
           onClick={() => setConfirming(e.userId)}>{t('courses.removeEntry')}</Button>}
     </li>)}</ul>
-    {error && <p role="alert" className="text-red-500">{error}</p>}
+    {error && <p role="alert" className="text-error">{error}</p>}
   </section>;
 }

@@ -36,6 +36,6 @@ export function SubstituteInstructor({ course, session }: { course: Pick<Course,
     <div className="flex flex-wrap gap-2">
       <Button type="submit" className="min-h-11" disabled={busy || !instructor.instructorId}>{t('courses.substituteConfirm')}</Button>
       <Button type="button" variant="ghost" className="min-h-11" disabled={busy} onClick={() => setOpen(false)}>{t('common.cancel')}</Button></div>
-    {error && <p role="alert" className="text-sm text-red-500">{error}</p>}
+    {error && <p role="alert" className="text-sm text-error">{error}</p>}
   </form>;
 }
