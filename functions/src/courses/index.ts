@@ -7,7 +7,7 @@ import {
 } from "./core";
 import { db, safeId, uidOf, eligibleProvider, providerUsable, nowStamp, domainError, Course, Session } from "./store";
 import { canManageCourse, managesVenue } from "./authority";
-import { promoteWaitlist } from "./waitlist";
+import { promoteWaitlist, clearWaitlistInTx } from "./waitlist";
 import { slotsOf, lockPaths, diffSlots, updateScheduleLocks, MAX_LOCKED_SESSIONS } from "./locks";
 import { hostsCourses, type VenueType } from "../types";
 
@@ -204,6 +204,10 @@ export const saveCourse = onCall({ region }, async (req) => {
         throw new HttpsError("failed-precondition", "locked_schedule_too_long", { fields: ["startDate", "endDate"] });
       }
       const { remove, add } = diffSlots(before, after);
+      // A course that stops being published closes the waiting lists of its lessons (read now, written below).
+      const clearWaitlists = input.state === "published" ? [] : await Promise.all(
+        existing.docs.filter((d) => (d.data().waitlisted ?? 0) > 0 && generated.some((g) => g.id === d.id)).map((d) =>
+          clearWaitlistInTx(tx, { ...old!, id }, d.id, "archived")));
       await updateScheduleLocks(tx, remove, add);
       tx.set(ref, { ...input, providerEligible: true, providerId,
         providerName: provider ? provider.fullName ?? provider.name ?? input.instructor : old!.providerName,
@@ -215,6 +219,8 @@ export const saveCourse = onCall({ region }, async (req) => {
       const newIds = new Set(generated.map((s) => s.id));
       for (const doc of existing.docs) if (!newIds.has(doc.id)) tx.delete(doc.ref);
       for (const { id: sessionId, data } of written) tx.set(ref.collection("sessions").doc(sessionId), data);
+      // After the session writes, so the cleared counter is the last write to each lesson.
+      clearWaitlists.forEach((clear) => clear());
       tx.set(db.doc(`instructors/${providerId}/services/${serviceId}`), {
         name: input.name, description: input.description, categoryId: input.categoryId,
         price: (input.lessonPriceCents ?? input.seriesPriceCents ?? 0) / 100,

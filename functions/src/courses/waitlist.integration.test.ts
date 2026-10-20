@@ -1478,6 +1478,76 @@ describe("manageCourseSession capacity and saveCourse capacity increases", () =>
   });
 });
 
+describe("cancellation and archiving close the waitlists", () => {
+  it("cancelling a lesson clears its waitlist and promotes nobody", async () => {
+    const courseId = await fullCourse();
+    for (const uid of ["u1", "u2"]) await join(uid, courseId);
+    await manage("p", { courseId, action: "cancel", reason: "Closed" });
+    expect(await waitlist(courseId)).toEqual([]);
+    expect(await sessionOf(courseId)).toMatchObject({ state: "cancelled", waitlisted: 0, occupied: 0 });
+    expect(await notices("waitlist_cleared")).toEqual(["u1", "u2"]);
+    expect(await notices("waitlist_promoted")).toEqual([]);
+    expect(await notices("cancelled_by_trainer")).toEqual(["h"]);
+    expect(await enrollmentOf("u1", "w-u1")).toBeUndefined();
+    await assertCounters(courseId);
+  });
+  it("cancelling a lesson leaves the waitlist of the other lessons alone", async () => {
+    const courseId = await fullCourse();
+    await holdSeat(courseId, "h", OTHER);
+    await join("u1", courseId);
+    await join("u2", courseId, { sessionId: OTHER });
+    await manage("p", { courseId, action: "cancel", reason: "Closed" });
+    expect(await waitlistView(courseId, OTHER)).toEqual([["u2", 1]]);
+    expect(await sessionOf(courseId, OTHER)).toMatchObject({ waitlisted: 1 });
+    expect(await notices("waitlist_cleared")).toEqual(["u1"]);
+    await assertCounters(courseId);
+  });
+  it("cancelRemainingCourse clears every waitlist of the course", async () => {
+    const courseId = await fullCourse();
+    await holdSeat(courseId, "h", OTHER);
+    await join("u1", courseId);
+    await join("u2", courseId, { sessionId: OTHER });
+    await join("u3", courseId, { sessionId: OTHER });
+    await api.cancelRemainingCourse.run(request("p", { courseId, reason: "Closed" }));
+    expect(await waitlist(courseId)).toEqual([]);
+    expect(await waitlist(courseId, OTHER)).toEqual([]);
+    expect(await sessionOf(courseId)).toMatchObject({ state: "cancelled", waitlisted: 0, occupied: 0 });
+    expect(await sessionOf(courseId, OTHER)).toMatchObject({ state: "cancelled", waitlisted: 0, occupied: 0 });
+    expect(await notices("waitlist_cleared")).toEqual(["u1", "u2", "u3"]);
+    expect(await notices("waitlist_promoted")).toEqual([]);
+    await assertCounters(courseId);
+  });
+  it.each(["draft", "archived"])("moving the course to %s clears every waitlist", async (state) => {
+    const courseId = await fullCourse();
+    await holdSeat(courseId, "h", OTHER);
+    for (const uid of ["u1", "u2"]) await join(uid, courseId);
+    await join("u3", courseId, { sessionId: OTHER });
+    await api.saveCourse.run(request("p", { courseId, course: { ...input, state } }));
+    expect(await waitlist(courseId)).toEqual([]);
+    expect(await waitlist(courseId, OTHER)).toEqual([]);
+    expect(await sessionOf(courseId)).toMatchObject({ waitlisted: 0, occupied: 1, listed: false });
+    expect(await sessionOf(courseId, OTHER)).toMatchObject({ waitlisted: 0, occupied: 1 });
+    expect(await notices("waitlist_cleared")).toEqual(["u1", "u2", "u3"]);
+    await assertCounters(courseId);
+  });
+  it("an edit that keeps the course published keeps its waitlists", async () => {
+    const courseId = await fullCourse();
+    await join("u1", courseId);
+    await api.saveCourse.run(request("p", { courseId, course: { ...input, name: "Karate 2" } }));
+    expect(await waitlistView(courseId)).toEqual([["u1", 1]]);
+    expect(await notices("waitlist_cleared")).toEqual([]);
+    await assertCounters(courseId);
+  });
+  it("a customer who was cleared can join again once the course is published again", async () => {
+    const courseId = await fullCourse();
+    await join("u1", courseId);
+    await api.saveCourse.run(request("p", { courseId, course: { ...input, state: "draft" } }));
+    await api.saveCourse.run(request("p", { courseId, course: { ...input, state: "published" } }));
+    expect(await join("u1", courseId)).toMatchObject({ success: true, position: 1 });
+    await assertCounters(courseId);
+  });
+});
+
 afterAll(() => {
   // Reported with the run so a flaky emulator abort rate is visible next to the pass count.
   console.info(`emulator aborts retried: ${emulatorAborts()}`);

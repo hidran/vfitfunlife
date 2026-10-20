@@ -1274,3 +1274,102 @@ describe("manageCourseSession substitute", () => {
     await expect(substitute("x", courseId, "p2")).rejects.toMatchObject({ message: "course_owner_required" });
   });
 });
+
+describe("cancellation releases lock slots", () => {
+  const venueInput = { ...input, venueId: "v", locationId: "l1", roomId: "r1", instructorId: "p" };
+  const save = (uid: string, course: Record<string, unknown>, courseId?: string) =>
+    api.saveCourse.run(request(uid, { course, ...(courseId ? { courseId } : {}) }));
+  const cancel = (uid: string, courseId: string, sessionId = SESSION, reason = "Closed") =>
+    api.manageCourseSession.run(request(uid, { courseId, sessionId, action: "cancel", reason }));
+  const sessionOf = async (courseId: string, id = SESSION) =>
+    (await db.doc(`courses/${courseId}/sessions/${id}`).get()).data()!;
+  const slotsIn = async (path: string) => Object.keys((await db.doc(path).get()).data()?.slots ?? {});
+  const lockDocs = async () => (await db.collection("courseScheduleLocks").get()).size;
+  const snapshot = async () => Object.fromEntries((await db.collection("courseScheduleLocks").get()).docs
+    .map((d) => [d.id, d.data()]));
+  const paymentSettings = async () => import("../payments/paymentSettingsCallables");
+  beforeEach(async () => {
+    await db.doc("venues/v/instructors/p").set({ isActive: true, name: "Anna" });
+  });
+  afterEach(async () => assertLockInvariant(db));
+
+  it("gives back the room and instructor slots of a cancelled lesson, and only that lesson's", async () => {
+    const { courseId } = await save("biz", venueInput);
+    await cancel("s", courseId);
+    expect(await slotsIn("courseScheduleLocks/room:v:l1:r1|2099-10-12")).toEqual([]);
+    expect(await slotsIn("courseScheduleLocks/instructor:p|2099-10-12")).toEqual([]);
+    expect(await slotsIn("courseScheduleLocks/room:v:l1:r1|2099-10-13")).toEqual([`${courseId}_2099-10-13`]);
+    expect((await db.doc(`courses/${courseId}`).get()).data()).toMatchObject({ state: "published", nextSessionId: "2099-10-13" });
+    expect(await sessionOf(courseId)).toMatchObject({ state: "cancelled", cancellationReconciled: true });
+  });
+  it("lets another course take the freed slot, and refuses the lesson that is still held", async () => {
+    const { courseId } = await save("biz", venueInput);
+    await cancel("s", courseId);
+    await save("biz", { ...venueInput, name: "Judo", startDate: "2099-10-12", endDate: "2099-10-12", recurrence: "none" });
+    await expect(save("biz", { ...venueInput, name: "Yoga", startDate: "2099-10-13", endDate: "2099-10-13",
+      recurrence: "none" })).rejects.toThrow("room_overlap");
+  });
+  it("cancels a lesson twice without releasing or rewriting anything the second time", async () => {
+    const { courseId } = await save("biz", venueInput);
+    await cancel("s", courseId, SESSION, "First reason");
+    const locks = await snapshot();
+    await expect(cancel("s", courseId, SESSION, "Second reason")).resolves.toEqual({ success: true });
+    expect(await sessionOf(courseId)).toMatchObject({ cancellationReason: "First reason", cancellationReconciled: true });
+    expect(await snapshot()).toEqual(locks);
+  });
+  it("releases the seats of a cancelled lesson and its slot together", async () => {
+    const { courseId } = await save("biz", venueInput);
+    const enrollmentId = await book(courseId, "u1");
+    await cancel("s", courseId);
+    expect((await db.doc(`courseEnrollments/${enrollmentId}`).get()).data()).toMatchObject({ state: "cancelled" });
+    expect(await sessionOf(courseId)).toMatchObject({ occupied: 0 });
+    expect(await slotsIn("courseScheduleLocks/room:v:l1:r1|2099-10-12")).toEqual([]);
+  });
+  it("archives the course and frees every slot when its last lesson is cancelled", async () => {
+    const { courseId } = await save("biz", venueInput);
+    await cancel("s", courseId, "2099-10-13");
+    expect(await lockDocs()).toBe(2);
+    await cancel("s", courseId, SESSION);
+    expect((await db.doc(`courses/${courseId}`).get()).data()).toMatchObject({ state: "archived", enrollmentClosed: true });
+    expect(await lockDocs()).toBe(0);
+  });
+  it("cancelRemainingCourse frees every slot, archives the course and releases its participants", async () => {
+    const { courseId } = await save("biz", venueInput);
+    const enrollmentId = await book(courseId, "u1", "series");
+    await api.cancelRemainingCourse.run(request("s", { courseId, reason: "Closed" }));
+    expect(await lockDocs()).toBe(0);
+    expect((await db.doc(`courses/${courseId}`).get()).data()).toMatchObject({ state: "archived", enrollmentClosed: true });
+    expect(await sessionOf(courseId)).toMatchObject({ state: "cancelled", occupied: 0, cancellationReconciled: true });
+    expect(await sessionOf(courseId, "2099-10-13")).toMatchObject({ state: "cancelled", occupied: 0 });
+    expect((await db.doc(`courseEnrollments/${enrollmentId}`).get()).data()).toMatchObject({ state: "cancelled" });
+    // Called again it has nothing left to do, and keeps the first reason.
+    await api.cancelRemainingCourse.run(request("s", { courseId, reason: "Again" }));
+    expect(await sessionOf(courseId)).toMatchObject({ cancellationReason: "Closed" });
+    expect(await lockDocs()).toBe(0);
+  });
+  it("cancelRemainingCourse of a draft course takes no locks and leaves nothing behind", async () => {
+    const { courseId } = await save("biz", { ...venueInput, state: "draft" });
+    await api.cancelRemainingCourse.run(request("s", { courseId, reason: "Closed" }));
+    expect(await lockDocs()).toBe(0);
+  });
+  it("maintenance finishes an interrupted cancellation without touching the locks again", async () => {
+    const { courseId } = await save("biz", venueInput);
+    const enrollmentId = await book(courseId, "u1");
+    // The cancellation commits, then releasing the participants fails (the caller's connection dies).
+    const spy = vi.spyOn(await paymentSettings(), "readPaymentSettings").mockRejectedValueOnce(new Error("crash"));
+    await expect(cancel("s", courseId)).rejects.toThrow();
+    spy.mockRestore();
+    expect(await sessionOf(courseId)).toMatchObject({ state: "cancelled", cancellationReconciled: false, occupied: 1 });
+    expect(await slotsIn("courseScheduleLocks/room:v:l1:r1|2099-10-12")).toEqual([]);
+    const locks = await snapshot();
+    await api.maintainCourseEnrollments.run({ scheduleTime: new Date().toISOString(), jobName: "test" });
+    expect((await db.doc(`courseEnrollments/${enrollmentId}`).get()).data()).toMatchObject({ state: "cancelled" });
+    expect(await sessionOf(courseId)).toMatchObject({ occupied: 0, cancellationReconciled: true });
+    expect(await snapshot()).toEqual(locks);
+  });
+  it("keeps the authority checks on cancel", async () => {
+    const { courseId } = await save("biz", venueInput);
+    await expect(cancel("x", courseId)).rejects.toMatchObject({ message: "course_owner_required" });
+    expect(await lockDocs()).toBe(4);
+  });
+});

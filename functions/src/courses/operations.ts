@@ -188,6 +188,8 @@ async function cancelOrReschedule(a: SessionAction, action: "cancel" | "reschedu
     const s = sessionDoc.data() as Session | undefined;
     if (!s) throw new Error("session_not_found");
     if (s.startsAt.toMillis() <= Date.now()) throw new Error("cannot_change_past_lesson");
+    // Already cancelled: nothing to release or clear (the caller still finishes the participants' reconciliation).
+    if (action === "cancel" && s.state === "cancelled") return;
     let place: Partial<Session> = {};
     let moved: Pick<Session, "startsAt" | "endsAt"> | null = null;
     if (action === "reschedule") {
@@ -223,13 +225,12 @@ async function cancelOrReschedule(a: SessionAction, action: "cancel" | "reschedu
       ...(next ? { nextStartsAt: next.startsAt, nextSessionId: next.id,
         nextAvailableSeats: next.capacity - next.occupied - next.held } :
         { enrollmentClosed: true, state: "archived" as const }) };
-    // The waitlist is read now (a writer comes back), the locks are read and written last among the reads.
-    const clearWaitlist = action === "reschedule" ?
-      await clearWaitlistInTx(tx, { ...course, id: courseId }, sessionId, "rescheduled") : () => undefined;
-    if (action === "reschedule") {
-      await relock(tx, courseId, { course, sessions: stored }, { course: { ...course, ...metadata },
-        sessions: stored.map((x) => ({ id: x.id, data: x.id === sessionId ? changed : x.data })) });
-    }
+    // The waitlist is read now (a writer comes back); the locks are read and written last among the reads. A cancelled
+    // lesson gives its slot back, and so does the whole course when that was its last lesson (it is archived below).
+    const clearWaitlist = await clearWaitlistInTx(tx, { ...course, id: courseId }, sessionId,
+      action === "cancel" ? "lesson_cancelled" : "rescheduled");
+    await relock(tx, courseId, { course, sessions: stored }, { course: { ...course, ...metadata },
+      sessions: stored.map((x) => ({ id: x.id, data: x.id === sessionId ? changed : x.data })) });
     if (action === "cancel") {
       tx.update(ref, { state: "cancelled", cancellationReconciled: false, cancellationReason: reason });
     } else {
@@ -420,10 +421,20 @@ export const cancelRemainingCourse = onCall({ region }, async (req) => {
     if (!course) throw new HttpsError("not-found", "course_not_found");
     await canManageCourse(uid, course, tx);
     const sessions = await tx.get(ref.collection("sessions"));
+    const future = sessions.docs.filter((d) => d.data().state !== "cancelled" &&
+      d.data().startsAt.toMillis() > Date.now());
+    // Every waiting customer is told; reads first, writers after the last read.
+    const clears = await Promise.all(future.filter((d) => (d.data().waitlisted ?? 0) > 0)
+      .map((d) => clearWaitlistInTx(tx, { ...course, id: courseId }, d.id, "lesson_cancelled")));
+    // The course is archived, so every slot it holds (including a lesson in progress) goes back.
+    const stored = sessions.docs.map((d) => ({ id: d.id, data: d.data() as Session }));
+    await relock(tx, courseId, { course, sessions: stored },
+      { course: { ...course, state: "archived" }, sessions: stored });
     tx.update(ref, { enrollmentClosed: true, state: "archived", updatedAt: nowStamp() });
-    sessions.docs.filter((d) => d.data().startsAt.toMillis() > Date.now()).forEach((d) => {
+    future.forEach((d) => {
       tx.update(d.ref, { state: "cancelled", cancellationReconciled: false, cancellationReason: reason });
     });
+    clears.forEach((clear) => clear());
   });
   const sessions = await ref.collection("sessions").where("state", "==", "cancelled").get();
   for (const s of sessions.docs) {
