@@ -47,6 +47,11 @@ describe("course rules", () => {
     const sessions = [{ startsAt: new Date("2026-10-12T16:00Z"), occupied: 8, held: 0, state: "scheduled" }];
     expect(() => assertReservable(course, sessions, [], new Date("2026-10-01"))).toThrow("lesson_full");
   });
+  it("reports a full lesson as lesson_full even inside the notice window", () => {
+    const course = validateCourse(input);
+    const sessions = [{ startsAt: new Date("2026-10-12T16:00Z"), occupied: 8, held: 0, state: "scheduled" }];
+    expect(() => assertReservable(course, sessions, [], new Date("2026-10-12T15:00Z"))).toThrow("lesson_full");
+  });
   it("supports daily annual courses and leap years", () => {
     expect(generateSessions(validateCourse({ ...input, recurrence: "daily", endDate: "2027-10-11" }))).toHaveLength(365);
     expect(generateSessions(validateCourse({ ...input, recurrence: "daily", startDate: "2028-01-01", endDate: "2028-12-31" }))).toHaveLength(366);

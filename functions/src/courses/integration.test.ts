@@ -39,8 +39,16 @@ beforeEach(async () => {
   for (const uid of ["p", "u", "v"]) await db.doc(`users/${uid}`).set({ fullName: uid, role: uid === "p" ? "provider" : "customer", isActive: true });
 });
 async function create() { return (await api.saveCourse.run(request("p", { course: input }))).courseId; }
+// What a customer's confirm sends: the final price and revisions of the quote they reviewed.
+async function quoted(courseId: string, scope: string, sessionId = "2099-10-12") {
+  const quote = await api.quoteCourse.run(request("u", { courseId }));
+  const lines = scope === "series" ? quote.sessions : quote.sessions.filter(l => l.sessionId === sessionId);
+  return { expectedFinalCents: scope === "series" ? quote.series!.finalCents : lines[0].finalCents,
+    expectedRevisions: Object.fromEntries(lines.map(l => [l.sessionId, l.revision])) };
+}
 async function enroll(courseId: string, uid = "u", scope = "series", requestId = "r1") {
-  return api.enrollInCourse.run(request(uid, { courseId, scope, sessionId: "2099-10-12", requestId }));
+  return api.enrollInCourse.run(request(uid, { courseId, scope, sessionId: "2099-10-12", requestId,
+    ...await quoted(courseId, scope) }));
 }
 describe("transactional course enrollment", () => {
   it("lets only the course owner enroll a linked client, with direct-payment and creator audit", async () => {
@@ -178,7 +186,8 @@ describe("transactional course enrollment", () => {
     const id = await create();
     await db.doc("systemSettings/payments").set({ stripePaymentsEnabled: true, courseCheckoutEnabled: true });
     (await import("../lib/cachedDoc")).invalidateCachedDoc("systemSettings/payments");
-    const e = await api.enrollInCourse.run(request("u", { courseId: id, scope: "series", requestId: "stripe", paymentMode: "stripe" }));
+    const e = await api.enrollInCourse.run(request("u", { courseId: id, scope: "series", requestId: "stripe", paymentMode: "stripe",
+      ...await quoted(id, "series") }));
     stripe.checkout.sessions.create.mockResolvedValue({ id: "cs", url: "https://checkout.stripe.com/test" });
     const ref = db.doc(`courseEnrollments/${e.enrollmentId}`);
     const prototype = Object.getPrototypeOf(ref);
@@ -297,7 +306,7 @@ describe("checkout and release rules", () => {
     await db.doc("systemSettings/payments").set({ stripePaymentsEnabled: true, courseCheckoutEnabled: true });
     (await import("../lib/cachedDoc")).invalidateCachedDoc("systemSettings/payments");
     const booking = await api.enrollInCourse.run(request("u", { courseId: id, scope: "lesson", sessionId: first,
-      requestId: "free", paymentMode: "stripe" }));
+      requestId: "free", paymentMode: "stripe", ...await quoted(id, "lesson") }));
     expect(booking).toMatchObject({ state: "confirmed", totalCents: 0 });
     expect((await db.doc(`courseEnrollments/${booking.enrollmentId}`).get()).data())
       .toMatchObject({ paymentMode: "direct", paymentStatus: "paid" });
@@ -324,6 +333,86 @@ describe("checkout and release rules", () => {
     await api.cancelCourseEnrollment.run(request("u", { enrollmentId: e.enrollmentId }));
     expect((await sessionRef(id).get()).data()?.occupied).toBe(0);
     expect((await db.doc(`courseEnrollments/${e.enrollmentId}`).get()).data()?.state).toBe("cancelled");
+  });
+});
+describe("priced enrollment", () => {
+  const first = "2099-10-12";
+  const lessonRequest = async (id: string, uid: string, requestId: string, over: Record<string, unknown> = {}) =>
+    ({ courseId: id, scope: "lesson", sessionId: first, requestId, ...await quoted(id, "lesson"), ...over });
+  const nothingWritten = async (id: string, occupied = 0) => {
+    expect((await db.collection("courseEnrollments").get()).empty).toBe(true);
+    expect((await db.doc(`courses/${id}/sessions/${first}`).get()).data()?.occupied).toBe(occupied);
+  };
+  it("requires the price and revisions a customer reviewed", async () => {
+    const id = await create();
+    const data = await lessonRequest(id, "u", "r");
+    for (const missing of [{ expectedFinalCents: undefined }, { expectedRevisions: undefined }, { expectedFinalCents: 1.5 },
+      { expectedRevisions: { [first]: "1" } }, { expectedRevisions: [1] }]) {
+      await expect(api.enrollInCourse.run(request("u", { ...data, ...missing }))).rejects.toThrow("expected_price_required");
+    }
+    await nothingWritten(id);
+  });
+  it("reports price_changed with reason price when the lesson price is edited after the quote", async () => {
+    const id = await create();
+    const data = await lessonRequest(id, "u", "r");
+    await api.saveCourse.run(request("p", { courseId: id, course: { ...input, lessonPriceCents: 1600 } }));
+    await expect(api.enrollInCourse.run(request("u", data))).rejects.toMatchObject(
+      { code: "failed-precondition", message: "price_changed", details: { reason: "price" } });
+    await nothingWritten(id);
+    // The re-reviewed quote goes through.
+    const again = await api.enrollInCourse.run(request("u", await lessonRequest(id, "u", "r2")));
+    expect(again.totalCents).toBe(1600);
+  });
+  it("reports price_changed with reason availability when only the capacity was edited", async () => {
+    const id = await create();
+    const data = await lessonRequest(id, "u", "r");
+    await api.saveCourse.run(request("p", { courseId: id, course: { ...input, capacity: 2 } }));
+    await expect(api.enrollInCourse.run(request("u", data))).rejects.toMatchObject(
+      { code: "failed-precondition", message: "price_changed", details: { reason: "availability" } });
+    await nothingWritten(id);
+  });
+  it("replays an accepted request without comparing the quote again", async () => {
+    const id = await create();
+    const data = await lessonRequest(id, "u", "r");
+    const booking = await api.enrollInCourse.run(request("u", data));
+    await db.doc(`courses/${id}`).update({ lessonPriceCents: 1600 });
+    await db.doc(`courses/${id}/sessions/${first}`).update({ revision: 7 });
+    expect(await api.enrollInCourse.run(request("u", data))).toEqual({ ...booking, replay: true });
+    expect((await db.doc(`courses/${id}/sessions/${first}`).get()).data()?.occupied).toBe(1);
+  });
+  it("snapshots an undiscounted unlinked booking", async () => {
+    const id = await create();
+    const booking = await enroll(id, "u", "lesson");
+    expect((await db.doc(`courseEnrollments/${booking.enrollmentId}`).get()).data()).toMatchObject({
+      venueId: null, regularCents: 1500, discountCents: 0, discountPercent: 0, gymPercent: 0, instructorPercent: 0,
+      totalCents: 1500, allocations: { [first]: 1500 }, sessionRevisions: { [first]: 1 }, promotedFromWaitlist: false });
+  });
+  it.each([
+    ["a single lesson with the waitlist on", {}, "lesson", true],
+    ["a series", {}, "series", false],
+    ["a lesson of a course without a waitlist", { waitlistEnabled: false }, "lesson", false],
+  ])("reports lesson_full with waitlistAvailable for %s", async (_name, course, scope, expected) => {
+    const id = await create();
+    await db.doc(`courses/${id}`).set(course, { merge: true });
+    await enroll(id, "u", "lesson");
+    const data = { ...await lessonRequest(id, "v", "rv"), scope, ...await quoted(id, scope as string) };
+    await expect(api.enrollInCourse.run(request("v", data))).rejects.toMatchObject(
+      { code: "failed-precondition", message: "lesson_full", details: { waitlistAvailable: expected } });
+  });
+  it("offers no waitlist for a full lesson inside the notice window", async () => {
+    const id = await create();
+    await enroll(id, "u", "lesson");
+    await db.doc(`courses/${id}/sessions/${first}`).update({ startsAt: admin.firestore.Timestamp.fromMillis(Date.now() + 3600000) });
+    await expect(api.enrollInCourse.run(request("v", await lessonRequest(id, "v", "rv")))).rejects.toMatchObject(
+      { message: "lesson_full", details: { waitlistAvailable: false } });
+  });
+  it("lets the course owner add a participant without an expected price", async () => {
+    const id = await create();
+    await db.doc("clients/p_u").set({ providerId: "p", userId: "u" });
+    await db.doc(`courses/${id}`).update({ lessonPriceCents: 1700 });
+    const booking = await api.enrollCourseParticipant.run(request("p", { courseId: id, userId: "u", scope: "lesson",
+      sessionId: first, requestId: "staff" }));
+    expect(booking.totalCents).toBe(1700);
   });
 });
 describe("participant invitations and account activation", () => {

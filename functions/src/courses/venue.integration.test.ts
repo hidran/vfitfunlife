@@ -55,9 +55,16 @@ async function venueCourse() {
   await db.doc(`courses/${courseId}`).update({ venueId: "v" });
   return courseId as string;
 }
+// A customer confirms the quote they reviewed: its final price and the revisions it showed.
+async function quoted(courseId: string, scope = "lesson", sessionId = SESSION) {
+  const quote = await api.quoteCourse.run(request("u1", { courseId }));
+  const lines = scope === "series" ? quote.sessions : quote.sessions.filter((l) => l.sessionId === sessionId);
+  return { expectedFinalCents: scope === "series" ? quote.series!.finalCents : lines[0].finalCents,
+    expectedRevisions: Object.fromEntries(lines.map((l) => [l.sessionId, l.revision])) };
+}
 async function book(courseId: string, uid = "u1", scope = "lesson") {
-  return (await api.enrollInCourse.run(request(uid, { courseId, scope, sessionId: SESSION, requestId: `r-${uid}` })))
-    .enrollmentId as string;
+  return (await api.enrollInCourse.run(request(uid, { courseId, scope, sessionId: SESSION, requestId: `r-${uid}`,
+    ...await quoted(courseId, scope) }))).enrollmentId as string;
 }
 async function directRefund(courseId: string, withCourseId: boolean) {
   const enrollmentId = await book(courseId);
@@ -619,5 +626,98 @@ describe("previewCourse conflicts", () => {
   it("reports instructor conflicts for an unlinked course too", async () => {
     await save("p", { ...input, instructorId: "p2" });
     expect((await preview("p", { ...input, instructorId: "p2", name: "Yoga" })).conflicts).toHaveLength(2);
+  });
+});
+
+describe("priced enrollment on venue courses", () => {
+  const priced = { ...input, endDate: "2099-10-14", seriesPriceCents: 4000, capacity: 2, venueId: "v",
+    locationId: "l1", roomId: "r1", instructorId: "p" };
+  const DAYS = ["2099-10-12", "2099-10-13", "2099-10-14"];
+  beforeEach(async () => {
+    await db.doc("venues/v").update({ memberDiscountPercent: 10, partnerInstructorExtraPercent: 5 });
+    await db.doc("instructors/p").update({ partnerStatus: "active" });
+    await db.doc("venues/v/instructors/p").set({ isActive: true, name: "Anna" });
+  });
+  const create = async (course: Record<string, unknown> = priced) =>
+    (await api.saveCourse.run(request("biz", { course }))).courseId as string;
+  const enrollment = async (id: string) => (await db.doc(`courseEnrollments/${id}`).get()).data()!;
+  const lesson = async (courseId: string, uid = "u1", requestId = `r-${uid}`) => api.enrollInCourse.run(request(uid,
+    { courseId, scope: "lesson", sessionId: SESSION, requestId, ...await quoted(courseId) }));
+
+  it("stores the discount snapshot of a lesson and charges the discounted price", async () => {
+    const courseId = await create();
+    const booking = await lesson(courseId);
+    expect(booking.totalCents).toBe(1275);
+    expect(await enrollment(booking.enrollmentId)).toMatchObject({ venueId: "v", regularCents: 1500,
+      discountCents: 225, discountPercent: 15, gymPercent: 10, instructorPercent: 5, totalCents: 1275,
+      allocations: { [SESSION]: 1275 }, sessionRevisions: { [SESSION]: 1 }, promotedFromWaitlist: false });
+  });
+
+  it("stores post-discount allocations for a series with every lesson's revision", async () => {
+    const courseId = await create();
+    const booking = await api.enrollInCourse.run(request("u1", { courseId, scope: "series", requestId: "s1",
+      ...await quoted(courseId, "series") }));
+    const stored = await enrollment(booking.enrollmentId);
+    expect(stored).toMatchObject({ totalCents: 3402, regularCents: 4000, discountCents: 598, discountPercent: 15,
+      allocations: { [DAYS[0]]: 1134, [DAYS[1]]: 1134, [DAYS[2]]: 1134 },
+      sessionRevisions: { [DAYS[0]]: 1, [DAYS[1]]: 1, [DAYS[2]]: 1 } });
+    expect(Object.values(stored.allocations as Record<string, number>).reduce((a, b) => a + b, 0)).toBe(stored.totalCents);
+  });
+
+  it("prices a substituted lesson by the substitute's partner status", async () => {
+    const courseId = await create();
+    await db.doc("instructors/p2").set({ partnerStatus: "pending" });
+    await db.doc(`courses/${courseId}/sessions/${SESSION}`).update({ instructorId: "p2" });
+    const booking = await lesson(courseId);
+    expect(await enrollment(booking.enrollmentId)).toMatchObject({ discountPercent: 10, instructorPercent: 0, totalCents: 1350 });
+  });
+
+  it("gives staff-added participants the discount without any expected price", async () => {
+    const courseId = await create();
+    await db.doc("clients/biz_u1").set({ providerId: "biz", userId: "u1" });
+    const booking = await api.enrollCourseParticipant.run(request("s", { courseId, userId: "u1", scope: "lesson",
+      sessionId: SESSION, requestId: "staff-add" }));
+    expect(await enrollment(booking.enrollmentId)).toMatchObject({ createdBy: "s", totalCents: 1275, discountCents: 225,
+      paymentMode: "direct", state: "confirmed" });
+  });
+
+  it("reports price_changed when the venue discount moves between quote and confirm", async () => {
+    const courseId = await create();
+    const expected = await quoted(courseId);
+    await db.doc("venues/v").update({ memberDiscountPercent: 20 });
+    await expect(api.enrollInCourse.run(request("u1", { courseId, scope: "lesson", sessionId: SESSION,
+      requestId: "drift", ...expected }))).rejects.toMatchObject(
+      { code: "failed-precondition", message: "price_changed", details: { reason: "price" } });
+    expect((await db.collection("courseEnrollments").get()).empty).toBe(true);
+    expect((await db.doc(`courses/${courseId}/sessions/${SESSION}`).get()).data()?.occupied).toBe(0);
+  });
+
+  it("books a 100 percent discount as a free direct booking", async () => {
+    await db.doc("venues/v").update({ memberDiscountPercent: 100 });
+    const courseId = await create();
+    const booking = await lesson(courseId);
+    expect(booking.totalCents).toBe(0);
+    expect(await enrollment(booking.enrollmentId)).toMatchObject({ paymentMode: "direct", paymentStatus: "paid",
+      discountCents: 1500, state: "confirmed" });
+  });
+
+  it("refuses a booking once the venue stopped being an active partner", async () => {
+    const courseId = await create();
+    const expected = await quoted(courseId);
+    await db.doc("venues/v").update({ partnerStatus: "suspended" });
+    await expect(api.enrollInCourse.run(request("u1", { courseId, scope: "lesson", sessionId: SESSION,
+      requestId: "late", ...expected }))).rejects.toMatchObject({ code: "failed-precondition", message: "venue_not_active" });
+    expect((await db.collection("courseEnrollments").get()).empty).toBe(true);
+  });
+
+  it("creates nothing for a series when one lesson is full", async () => {
+    const courseId = await create();
+    const expected = await quoted(courseId, "series");
+    await db.doc(`courses/${courseId}/sessions/${DAYS[1]}`).update({ occupied: 2 });
+    await expect(api.enrollInCourse.run(request("u1", { courseId, scope: "series", requestId: "partial", ...expected })))
+      .rejects.toMatchObject({ code: "failed-precondition", message: "lesson_full", details: { waitlistAvailable: false } });
+    expect((await db.collection("courseEnrollments").get()).empty).toBe(true);
+    const counters = await Promise.all(DAYS.map(async (d) => (await db.doc(`courses/${courseId}/sessions/${d}`).get()).data()!.occupied));
+    expect(counters).toEqual([0, 2, 0]);
   });
 });

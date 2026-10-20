@@ -11,7 +11,7 @@ const day = "2099-10-12";
 
 const input = (uid: string, over: Partial<EnrollInput> = {}): EnrollInput => ({
   actor: uid, uid, courseId: "c1", scope: "lesson", sessionId: day, paymentMode: "direct", requestId: `r-${uid}`,
-  byProvider: false, checkoutOn: false, ...over,
+  byProvider: false, checkoutOn: false, skipPriceCheck: true, ...over,
 });
 async function book(i: EnrollInput, doCommit = true) {
   return db.runTransaction(async (tx) => {

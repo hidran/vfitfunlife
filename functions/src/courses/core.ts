@@ -114,10 +114,11 @@ export function assertReservable(
   if (memberships.some(Boolean)) throw new Error("already_enrolled");
   for (const session of sessions) {
     if (session.state !== "scheduled") throw new Error("session_unavailable");
+    // Fullness is reported first: enrollInTx decides from it whether the lesson can still be waitlisted.
+    if (session.occupied + session.held >= (session.capacity ?? course.capacity)) throw new Error("lesson_full");
     if (session.startsAt.getTime() <= now.getTime() + course.bookingNoticeHours * 3600000) {
       throw new Error("booking_deadline");
     }
-    if (session.occupied + session.held >= (session.capacity ?? course.capacity)) throw new Error("lesson_full");
   }
 }
 export function allocatePrice(total: number, count: number): number[] {

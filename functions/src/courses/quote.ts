@@ -21,6 +21,8 @@ export type QuoteOptions = {
   sessions?: Map<string, Session>;
   // Series pricing reads every lesson of the course: lesson-only callers turn it off.
   includeSeries?: boolean;
+  // The venue document, when the caller has already read it (null = no such venue).
+  venue?: DocumentData | null;
 };
 
 const MAX_QUOTE_SESSIONS = 100;
@@ -40,7 +42,8 @@ export async function buildQuote(
   const loaded = new Map<string, Session>(options.sessions ?? []);
   const missing = needed.filter((id) => !loaded.has(id));
   const [venue, fetched] = await Promise.all([
-    course.venueId ? readAll(tx, [db.doc(`venues/${course.venueId}`)]).then((r) => r[0]) : undefined,
+    !course.venueId ? undefined : options.venue !== undefined ? options.venue ?? undefined :
+      readAll(tx, [db.doc(`venues/${course.venueId}`)]).then((r) => r[0]),
     readAll(tx, missing.map((id) => db.doc(`courses/${course.id}/sessions/${id}`))),
   ]);
   fetched.forEach((data, i) => {

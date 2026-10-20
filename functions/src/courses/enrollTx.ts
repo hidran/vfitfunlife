@@ -1,11 +1,12 @@
 import { createHash } from "crypto";
 import { HttpsError } from "firebase-functions/v2/https";
-import { FieldValue, Timestamp, Transaction } from "firebase-admin/firestore";
-import { allocatePrice, assertReservable } from "./core";
+import { FieldValue, Timestamp, Transaction, type DocumentData } from "firebase-admin/firestore";
+import { assertReservable } from "./core";
 import { db, safeId, eligibleProvider, nowStamp, Course, Session, Enrollment } from "./store";
 import { canManageCourse } from "./authority";
 import { rosterClientId } from "../bookings/clientRosterCore";
 import { queueCourseNotification } from "./notifications";
+import { buildQuote } from "./quote";
 
 export type EnrollInput = {
   actor: string; uid: string; courseId: string; scope: "lesson" | "series"; sessionId?: string;
@@ -73,11 +74,46 @@ export async function enrollInTx(tx: Transaction, input: EnrollInput):
     return { ...s, startsAt: s.startsAt.toDate(),
       occupied: s.occupied - (freed?.occupied ?? 0), held: s.held - (freed?.held ?? 0) };
   });
-  assertReservable(course, sessions, memberships.map((d) => d.exists), now);
-  const totalCents = scope === "series" ? course.seriesPriceCents : course.lessonPriceCents;
-  if (totalCents === null) throw new Error("pricing_option_unavailable");
-  const prices = allocatePrice(totalCents, selected.length);
-  const allocations = Object.fromEntries(selected.map((id: string, i: number) => [id, prices[i]]));
+  try {
+    assertReservable(course, sessions, memberships.map((d) => d.exists), now);
+  } catch (error) {
+    if (error instanceof Error && error.message === "lesson_full") {
+      // Only a single lesson can be waitlisted, and not once the notice window has closed (R6).
+      const waitlistAvailable = scope === "lesson" && course.waitlistEnabled !== false &&
+        sessions[0].startsAt.getTime() > now.getTime() + course.bookingNoticeHours * 3600000;
+      throw new HttpsError("failed-precondition", "lesson_full", { waitlistAvailable });
+    }
+    throw error;
+  }
+  let venue: DocumentData | null = null;
+  if (course.venueId) {
+    venue = (await tx.get(db.doc(`venues/${course.venueId}`))).data() ?? null;
+    if (!venue || venue.isActive === false || venue.partnerStatus !== "active") {
+      throw new HttpsError("failed-precondition", "venue_not_active");
+    }
+  }
+  const stored = new Map(sessionDocs.map((d, i) => [selected[i], d.data() as Session]));
+  const quote = await buildQuote(tx, { ...course, id: courseId }, selected,
+    { sessions: stored, includeSeries: scope === "series", venue });
+  const priced = scope === "series" ? quote.series : quote.sessions[0];
+  if (!priced) throw new Error("pricing_option_unavailable");
+  const { regularCents, discountCents, discountPercent, gymPercent, instructorPercent } = priced;
+  const totalCents = priced.finalCents;
+  const sessionRevisions = Object.fromEntries(selected.map((id: string) => [id, stored.get(id)!.revision ?? 1]));
+  if (!input.skipPriceCheck) {
+    // Customers confirm the quote they reviewed; any drift is re-reviewed, never silently repriced.
+    if (!Number.isInteger(input.expectedFinalCents) || !input.expectedRevisions) {
+      throw new HttpsError("invalid-argument", "expected_price_required");
+    }
+    if (input.expectedFinalCents !== totalCents) {
+      throw new HttpsError("failed-precondition", "price_changed", { reason: "price" });
+    }
+    if (selected.some((id: string) => input.expectedRevisions![id] !== sessionRevisions[id])) {
+      throw new HttpsError("failed-precondition", "price_changed", { reason: "availability" });
+    }
+  }
+  const allocations: Record<string, number> = scope === "series" ? quote.series!.allocations :
+    { [selected[0]]: totalCents };
   // Free bookings never hold a seat for checkout: there is nothing to pay.
   const free = totalCents === 0;
   const mode = free ? "direct" : paymentMode;
@@ -90,7 +126,9 @@ export async function enrollInTx(tx: Transaction, input: EnrollInput):
       createdBy: actor,
       userId: uid, customerName: user.fullName ?? user.displayName ?? "", providerId: course.providerId,
       courseId, courseName: course.name, sessionIds: selected, activeSessionIds: selected, cancelledSessionIds: [],
-      timezone: course.timezone, allocations, scope, totalCents,
+      timezone: course.timezone, allocations, scope, totalCents, venueId: course.venueId ?? null,
+      regularCents, discountCents, discountPercent, gymPercent, instructorPercent, sessionRevisions,
+      promotedFromWaitlist: input.promotedFromWaitlist === true,
       cancellationHours: course.cancellationHours, paymentMode: mode, state,
       ...(free ? { paymentStatus: "paid", paidCents: 0, paymentMethod: "free", paidAt: nowStamp() } :
         { paymentStatus: "pending" }),
@@ -98,7 +136,8 @@ export async function enrollInTx(tx: Transaction, input: EnrollInput):
       createdAt: nowStamp(), updatedAt: nowStamp(),
     });
     if (relation.empty) {
-      tx.create(db.doc(`clients/${rosterClientId(course.providerId, uid)}`), {
+      // set, not create: two promotions of one user may share a transaction (the second then rewrites the same doc).
+      tx.set(db.doc(`clients/${rosterClientId(course.providerId, uid)}`), {
         providerId: course.providerId, userId: uid, providerName: course.providerName,
         name: user.fullName ?? user.displayName ?? "", email: user.email ?? "", phone: user.phone ?? "",
         totalBookings: 0, totalSpent: 0, firstVisit: null, lastVisit: null, notes: "", tags: [], photoUrl: "",
