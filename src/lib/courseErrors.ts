@@ -23,7 +23,9 @@ export const COURSE_ERROR_CODES = [
   'invalid_instructor_partnership', 'invalid_local_time', 'ambiguous_local_time', 'schedule_too_long',
   'empty_schedule', 'invalid_timezone', 'pricing_required', 'participant_not_found', 'refund_not_found',
   'admin_required', 'phone_required', 'email_required', 'invalid_payment_method', 'gym_not_found',
-  'gym_location_not_found', 'active_leaf_required',
+  'gym_location_not_found', 'active_leaf_required', 'invalid_start_time', 'attendance_unavailable', 'invalid_attendance',
+  'session_not_in_enrollment', 'invalid_sessions', 'invalid_channel', 'invalid_id', 'course_validation_failed',
+  'end_date_required', 'weekdays_required', 'invalid_date',
 ] as const;
 export type CourseErrorCode = (typeof COURSE_ERROR_CODES)[number];
 

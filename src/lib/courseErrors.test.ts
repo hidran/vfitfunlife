@@ -23,6 +23,14 @@ describe('course error catalog', () => {
       expect(COURSE_ERROR_CODES, code).toContain(code);
     }
   });
+  it('translates the server codes that used to fall through to the generic message', () => {
+    for (const code of ['invalid_start_time', 'attendance_unavailable', 'invalid_attendance', 'session_not_in_enrollment',
+      'invalid_sessions', 'invalid_channel', 'invalid_id', 'course_validation_failed', 'end_date_required', 'weekdays_required',
+      'invalid_date', 'invalid_timezone']) {
+      expect(COURSE_ERROR_CODES, code).toContain(code);
+      expect(courseErrorMessage(callableError(code), t, 'en'), code).not.toBe(enMessages['courses.error']);
+    }
+  });
   it('has the price_changed reason variants in the source locale', () => {
     expect(itMessages).toHaveProperty('courses.err.price_changed_price');
     expect(itMessages).toHaveProperty('courses.err.price_changed_availability');

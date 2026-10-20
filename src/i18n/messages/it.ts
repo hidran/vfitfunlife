@@ -3476,6 +3476,17 @@ export const itMessages = {
   'courses.err.schedule_too_long': "Il programma è troppo lungo. Accorcia il periodo.",
   'courses.err.empty_schedule': "Con queste impostazioni non risulta nessuna lezione.",
   'courses.err.invalid_timezone': "Fuso orario non valido.",
+  'courses.err.invalid_start_time': "L’orario di inizio non è valido: scegli una data futura oltre il preavviso di prenotazione.",
+  'courses.err.attendance_unavailable': "Le presenze si possono segnare solo per partecipanti confermati di una lezione già iniziata.",
+  'courses.err.invalid_attendance': "Presenza non valida.",
+  'courses.err.session_not_in_enrollment': "Questa lezione non fa parte della prenotazione.",
+  'courses.err.invalid_sessions': "Seleziona almeno una lezione.",
+  'courses.err.invalid_channel': "Canale di invio non valido: scegli email o telefono.",
+  'courses.err.invalid_id': "Identificativo non valido.",
+  'courses.err.course_validation_failed': "Alcuni campi del corso non sono validi. Controlla i dati inseriti.",
+  'courses.err.end_date_required': "Indica la data di fine per un corso ricorrente.",
+  'courses.err.weekdays_required': "Scegli almeno un giorno della settimana.",
+  'courses.err.invalid_date': "Data non valida.",
   'courses.err.pricing_required': "Indica almeno un prezzo (anche 0 per un corso gratuito).",
   'courses.err.participant_not_found': "Partecipante non trovato.",
   'courses.err.refund_not_found': "Rimborso non trovato.",
@@ -3548,6 +3559,10 @@ export const itMessages = {
   'venue.fullTimetable': "Orario completo",
   'courses.waitlistSection': "Liste d’attesa",
   'courses.payWithin': "Paga entro {{minutes}} minuti per mantenere il posto.",
+  'courses.leaveWaitlistConfirm': "Uscire dalla lista d’attesa?",
+  'courses.cancelBookingConfirm': "Annullare questa prenotazione?",
+  'courses.payWithinOne': "Paga entro 1 minuto per mantenere il posto.",
+  'courses.venueUnavailable': "Questa sede non esiste o non la gestisci.",
 } as const;
 
 export type MessageKey = keyof typeof itMessages;
