@@ -45,6 +45,13 @@ async function withSpaces(submitted: CourseInput, read: Reader): Promise<CourseI
   return input;
 }
 
+/** The place text, timezone and instructor name a linked course already carries, for edits that skip revalidation. */
+function keepDerived(submitted: CourseInput, old: Course): CourseInput {
+  return { ...submitted, locationId: old.locationId ?? null, roomId: old.roomId ?? null,
+    ...(old.venueId ? { timezone: old.timezone, location: old.location, city: old.city } : {}),
+    ...(old.instructorId ? { instructor: old.instructor } : {}) };
+}
+
 export const saveCourse = onCall({ region }, async (req) => {
   const uid = uidOf(req.auth);
   const requestedProvider = req.data.providerId ? safeId(req.data.providerId) : null;
@@ -77,14 +84,27 @@ export const saveCourse = onCall({ region }, async (req) => {
         (isAdmin && requestedProvider ? requestedProvider : venue?.ownerId) : requestedProvider ?? uid;
       if (!providerId) throw new HttpsError("permission-denied", "venue_owner_required");
       if (!old && !submitted.venueId) await canManageCourse(uid, { providerId, venueId: null }, tx);
-      const provider = await eligibleProvider(providerId, tx);
-      const category = (await tx.get(db.doc(`serviceCategories/${safeId(submitted.categoryId)}`))).data();
-      if (!category?.isActive || !category.parentId) throw new HttpsError("invalid-argument", "active_leaf_required");
+      // Archiving or unpublishing must always work: a room, instructor link, category or provider that was switched
+      // off since the last save would otherwise keep the course's lock slots held forever. Eligibility and the
+      // derived fields are re-checked only for a new course, a changed id or a publish; otherwise the stored ones stay.
+      const publishing = submitted.state === "published";
+      const spacesChanged = !old || (["venueId", "locationId", "roomId", "instructorId"] as const).some(
+        (key) => (old[key] ?? null) !== (submitted[key] ?? null));
+      const revalidate = (changed: boolean) => !old || changed || publishing;
+      const provider = revalidate(false) ? await eligibleProvider(providerId, tx) : undefined;
+      let categoryIds = old?.categoryIds ?? [];
+      if (revalidate(old?.categoryId !== submitted.categoryId)) {
+        const category = (await tx.get(db.doc(`serviceCategories/${safeId(submitted.categoryId)}`))).data();
+        if (!category?.isActive || !category.parentId) throw new HttpsError("invalid-argument", "active_leaf_required");
+        categoryIds = [submitted.categoryId, category.parentId];
+      }
       if (submitted.venueId && submitted.state === "published" &&
         (venue?.isActive === false || venue?.partnerStatus !== "active")) {
         throw new HttpsError("failed-precondition", "venue_not_active");
       }
-      const input = await withSpaces(submitted, async (path) => (await tx.get(db.doc(path))).data());
+      const input = revalidate(spacesChanged) ?
+        await withSpaces(submitted, async (path) => (await tx.get(db.doc(path))).data()) :
+        keepDerived(submitted, old!);
       const generated = generateSessions(input);
       if (input.state === "published" && generated[0].startsAt <= new Date() && (!old || old.state !== "published")) {
         throw new HttpsError("invalid-argument", "start_must_be_future");
@@ -155,8 +175,8 @@ export const saveCourse = onCall({ region }, async (req) => {
       const { remove, add } = diffSlots(before, after);
       await updateScheduleLocks(tx, remove, add);
       tx.set(ref, { ...input, providerEligible: true, providerId,
-        providerName: provider.fullName ?? provider.name ?? input.instructor,
-        serviceId, sessionIds: generated.map((s) => s.id), categoryIds: [input.categoryId, category.parentId],
+        providerName: provider ? provider.fullName ?? provider.name ?? input.instructor : old!.providerName,
+        serviceId, sessionIds: generated.map((s) => s.id), categoryIds,
         nextSessionId: next.id, nextAvailableSeats: capacityOf(nextPrior) - (nextPrior?.occupied ?? 0) -
           (nextPrior?.held ?? 0),
         firstStartsAt: Timestamp.fromDate(actual[0].startsAt), nextStartsAt: Timestamp.fromDate(next.startsAt),

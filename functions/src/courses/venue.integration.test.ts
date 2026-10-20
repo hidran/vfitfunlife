@@ -509,6 +509,36 @@ describe("saveCourse lock lifecycle", () => {
     await save("biz", { ...venueInput, state }, courseId);
     expect(await lockDocs()).toBe(0);
   });
+  describe.each(["archived", "draft"])("moving a published course to %s after its resources were switched off", (state) => {
+    const off: [string, () => Promise<unknown>][] = [
+      ["its room", () => db.doc("venues/v/locations/l1/rooms/r1").update({ isActive: false })],
+      ["its location", () => db.doc("venues/v/locations/l1").update({ isActive: false })],
+      ["its instructor link", () => db.doc("venues/v/instructors/p").update({ isActive: false })],
+      ["its provider", () => db.doc("instructors/biz").update({ isActive: false })],
+      ["its category", () => db.doc("serviceCategories/karate").update({ isActive: false })],
+    ];
+    it.each(off)("succeeds and releases every lock slot when %s is off", async (_name, switchOff) => {
+      const { courseId } = await save("biz", venueInput);
+      expect(await lockDocs()).toBe(4);
+      await switchOff();
+      await save("biz", { ...venueInput, state }, courseId);
+      expect(await lockDocs()).toBe(0);
+      expect((await db.doc(`courses/${courseId}`).get()).data()).toMatchObject({ state, roomId: "r1",
+        locationId: "l1", instructorId: "p", location: "Sala 1 · Sede", providerName: "Biz" });
+    });
+    it("still refuses to publish again while the room is off", async () => {
+      const { courseId } = await save("biz", venueInput);
+      await db.doc("venues/v/locations/l1/rooms/r1").update({ isActive: false });
+      await save("biz", { ...venueInput, state }, courseId);
+      await expect(save("biz", venueInput, courseId)).rejects.toThrow("invalid_space");
+    });
+    it("still validates a room id that is changed in the same save", async () => {
+      const { courseId } = await save("biz", venueInput);
+      await db.doc("venues/v/locations/l1/rooms/r3").update({ isActive: false });
+      await expect(save("biz", { ...venueInput, state, roomId: "r3" }, courseId)).rejects.toThrow("invalid_space");
+      expect(await lockDocs()).toBe(4);
+    });
+  });
   it("re-takes locks on republish and fails if someone else holds the slot by then", async () => {
     const { courseId } = await save("biz", venueInput);
     await save("biz", { ...venueInput, state: "draft" }, courseId);
