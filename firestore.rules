@@ -677,6 +677,10 @@ service cloud.firestore {
           allow read: if managesCourse() || (isAuthenticated() && participantId == request.auth.uid);
           allow write: if false;
         }
+        match /waitlist/{waitlistId} {
+          allow read: if managesCourse() || (isAuthenticated() && waitlistId == request.auth.uid);
+          allow write: if false;
+        }
       }
       match /customers/{customerId} {
         allow read: if managesCourse() || (isAuthenticated() && customerId == request.auth.uid);
@@ -704,6 +708,26 @@ service cloud.firestore {
     }
     match /courseSweepState/{stateId} {
       allow read, write: if false;
+    }
+
+    // Public weekly timetable: a collection-group query on sessions with venueId == X && listed == true (&& state,
+    // startsAt for the index). `listed` is written by the course callables (published course of an eligible
+    // provider), so no course lookup is needed here, and the venue test runs on the queried venueId. Nothing else
+    // under a session (participants, waitlist) is exposed; managers read unlisted lessons through
+    // courses/{c}/sessions/{s} above.
+    match /{path=**}/sessions/{sessionId} {
+      // Direct property access, not get(key, default): on a query the engine reads an unconstrained field as its
+      // default, which would make `get('venueId', null) == null` true for every venue and expose suspended venues.
+      // saveCourse always writes venueId (null when unlinked) and listed.
+      allow read: if resource.data.listed == true &&
+        (resource.data.venueId == null || activePartnerGym(resource.data.venueId));
+    }
+
+    // A customer's own waitlist entries across courses: collectionGroup('waitlist').where('userId', '==', uid).
+    // Managers read a lesson's waitlist through the nested rule in courses/{c}/sessions/{s}.
+    match /{path=**}/waitlist/{waitlistId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow write: if false;
     }
 
     function managesVenue(venueId) {

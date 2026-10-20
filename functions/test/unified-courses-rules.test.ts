@@ -169,3 +169,145 @@ describe('venue managers read their courses, rosters and refunds', () => {
     }
   });
 });
+
+describe('public venue timetable and waitlist queries', () => {
+  const d1 = new Date('2099-10-12T00:00:00Z');
+  const d2 = new Date('2099-10-19T00:00:00Z');
+  const at = (day: number) => new Date(Date.UTC(2099, 9, day, 9));
+  const week = (venueId: string | null) => anon().collectionGroup('sessions')
+    .where('venueId', '==', venueId).where('listed', '==', true).where('state', '==', 'scheduled')
+    .where('startsAt', '>=', d1).where('startsAt', '<', d2);
+
+  beforeAll(async () => {
+    await env.withSecurityRulesDisabled(async ctx => {
+      const db = ctx.firestore();
+      await db.doc('venues/susp').set({ type: 'gym', isActive: true, ownerId: 'owner', partnerStatus: 'suspended' });
+      await db.doc('venues/off').set({ type: 'gym', isActive: false, ownerId: 'owner', partnerStatus: 'active' });
+      await db.doc('venues/spa').set({ type: 'spa', isActive: true, ownerId: 'owner', partnerStatus: 'active' });
+      const session = (venueId: string | null, courseId: string, extra: object = {}) => ({
+        venueId, courseId, listed: true, state: 'scheduled', startsAt: at(14), occupied: 0, ...extra });
+      await db.doc('courses/c/sessions/s1').set(session('v', 'c'));
+      await db.doc('courses/c/sessions/s2').set(session('v', 'c', { startsAt: at(15) }));
+      await db.doc('courses/c/sessions/cancelled').set(session('v', 'c', { state: 'cancelled' }));
+      await db.doc('courses/c/sessions/nextWeek').set(session('v', 'c', { startsAt: at(21) }));
+      await db.doc('courses/c/sessions/unlisted').set(session('v', 'c', { listed: false }));
+      await db.doc('courses/d/sessions/draftLesson').set(session('v', 'd', { listed: false }));
+      await db.doc('courses/c2/sessions/elsewhere').set(session('w', 'c2'));
+      await db.doc('courses/free').set({ providerId: 'p2', state: 'published', providerEligible: true });
+      await db.doc('courses/free/sessions/f1').set(session(null, 'free'));
+      for (const [venue, id] of [['susp', 'sus'], ['off', 'off'], ['spa', 'spa']]) {
+        await db.doc(`courses/${id}`).set({ providerId: 'p3', venueId: venue, state: 'published', providerEligible: true });
+        await db.doc(`courses/${id}/sessions/x`).set(session(venue, id));
+      }
+      const entry = (userId: string) => ({ userId, courseId: 'c', sessionId: 's1', venueId: 'v', position: 1,
+        createdAt: new Date('2099-01-01') });
+      await db.doc('courses/c/sessions/s1/waitlist/u').set(entry('u'));
+      await db.doc('courses/c/sessions/s1/waitlist/u2').set(entry('u2'));
+      await db.doc('courses/c/sessions/s2/waitlist/u').set({ ...entry('u'), sessionId: 's2' });
+      await db.doc('courses/d/sessions/draftLesson/waitlist/u').set({ ...entry('u'), courseId: 'd' });
+    });
+  });
+
+  it('lets anyone run the weekly timetable query and returns only listed, scheduled lessons in range', async () => {
+    const result = await assertSucceeds(week('v').get());
+    expect(result.docs.map(d => d.id).sort()).toEqual(['s1', 's2']);
+    await assertSucceeds(env.authenticatedContext('stranger').firestore().collectionGroup('sessions')
+      .where('venueId', '==', 'v').where('listed', '==', true).get());
+  });
+
+  it('refuses the timetable query when the venue is not an active partner of a course-hosting type', async () => {
+    for (const venue of ['susp', 'off', 'spa']) await assertFails(week(venue).get());
+    await assertSucceeds(week('w').get());
+  });
+
+  it('refuses the timetable query without the listed constraint or without a venue constraint', async () => {
+    const base = () => anon().collectionGroup('sessions');
+    await assertFails(base().where('venueId', '==', 'v').where('state', '==', 'scheduled')
+      .where('startsAt', '>=', d1).where('startsAt', '<', d2).get());
+    await assertFails(base().where('venueId', '==', 'v').where('listed', '==', false).get());
+    await assertFails(base().where('venueId', '==', 'v').get());
+    // Without the venueId constraint the engine cannot prove an active partner: suspended venues' lessons would leak.
+    await assertFails(base().where('listed', '==', true).get());
+    await assertFails(base().where('listed', '==', true).where('state', '==', 'scheduled').get());
+    await assertFails(base().where('listed', '==', true).where('state', '==', 'scheduled')
+      .where('startsAt', '>=', d1).where('startsAt', '<', d2).get());
+    await assertFails(base().where('listed', '==', true).where('venueId', '!=', 'v').get());
+    // An `in` query is proven one value at a time: every venue must be an active partner.
+    await assertSucceeds(base().where('listed', '==', true).where('venueId', 'in', ['v', 'w']).get());
+    await assertFails(base().where('listed', '==', true).where('venueId', 'in', ['v', 'susp']).get());
+    await assertFails(base().get());
+  });
+
+  it('never exposes the managers\' view (drafts, unlisted lessons) through a group query, owner included', async () => {
+    for (const uid of MANAGERS) {
+      await assertFails(as(uid).collectionGroup('sessions').where('venueId', '==', 'v').get());
+      await assertFails(as(uid).collectionGroup('sessions').where('venueId', '==', 'v').where('listed', '==', false).get());
+    }
+  });
+
+  it('reads unlinked listed lessons, and unlisted ones only through the course-manager path', async () => {
+    const unlinked = await assertSucceeds(anon().collectionGroup('sessions')
+      .where('venueId', '==', null).where('listed', '==', true).get());
+    expect(unlinked.docs.map(d => d.id)).toEqual(['f1']);
+    await assertSucceeds(anon().doc('courses/free/sessions/f1').get());
+    // Lessons of a draft course are unlisted: strangers and the public cannot read them, managers can.
+    await assertFails(anon().doc('courses/d/sessions/draftLesson').get());
+    await assertFails(as('stranger').doc('courses/d/sessions/draftLesson').get());
+    await assertFails(as('inactive').doc('courses/d/sessions/draftLesson').get());
+    for (const uid of MANAGERS) await assertSucceeds(as(uid).doc('courses/d/sessions/draftLesson').get());
+    for (const uid of MANAGERS) await assertSucceeds(as(uid).collection('courses/d/sessions').get());
+    await assertFails(as('stranger').collection('courses/d/sessions').get());
+  });
+
+  it('does not widen anything else under a session', async () => {
+    await assertFails(anon().collectionGroup('participants').get());
+    await assertFails(anon().collectionGroup('participants').where('userId', '==', 'u').get());
+    await assertFails(anon().doc('courses/c/sessions/s1/participants/u').get());
+    await assertFails(anon().collectionGroup('customers').get());
+  });
+
+  it('lets a customer list their own waitlist entries, and only with the userId constraint', async () => {
+    const mine = (uid: string, asked = uid) =>
+      as(uid).collectionGroup('waitlist').where('userId', '==', asked).orderBy('createdAt');
+    const result = await assertSucceeds(mine('u').get());
+    expect(result.docs.map(d => d.ref.path).sort()).toEqual([
+      'courses/c/sessions/s1/waitlist/u', 'courses/c/sessions/s2/waitlist/u', 'courses/d/sessions/draftLesson/waitlist/u']);
+    await assertFails(mine('u', 'u2').get());
+    await assertFails(mine('stranger', 'u').get());
+    await assertFails(as('u').collectionGroup('waitlist').get());
+    await assertFails(as('u').collectionGroup('waitlist').where('venueId', '==', 'v').get());
+    await assertFails(anon().collectionGroup('waitlist').where('userId', '==', 'u').get());
+    await assertFails(as('owner').collectionGroup('waitlist').where('venueId', '==', 'v').get());
+  });
+
+  it('lets managers and the entry\'s own user read a lesson waitlist, nobody else', async () => {
+    const path = 'courses/c/sessions/s1/waitlist';
+    for (const uid of MANAGERS) {
+      await assertSucceeds(as(uid).doc(`${path}/u`).get());
+      const list = await assertSucceeds(as(uid).collection(path).get());
+      expect(list.size).toBe(2);
+    }
+    await assertSucceeds(as('u').doc(`${path}/u`).get());
+    await assertSucceeds(as('u2').doc(`${path}/u2`).get());
+    await assertSucceeds(as('u').collection(path).where('userId', '==', 'u').get());
+    for (const uid of [...OUTSIDERS, 'u2']) await assertFails(as(uid).doc(`${path}/u`).get());
+    await assertFails(as('u').doc(`${path}/u2`).get());
+    await assertFails(as('u').collection(path).get());
+    await assertFails(anon().doc(`${path}/u`).get());
+    await assertFails(as('stranger').collection(path).get());
+    // A manager reaches the waitlist of a draft course's lesson too.
+    await assertSucceeds(as('staff').doc('courses/d/sessions/draftLesson/waitlist/u').get());
+  });
+
+  it('denies every client write to waitlist entries and sessions, managers and admin included', async () => {
+    for (const uid of [...MANAGERS, 'u', 'stranger']) {
+      const db = as(uid);
+      await assertFails(db.doc('courses/c/sessions/s1/waitlist/u').delete());
+      await assertFails(db.doc('courses/c/sessions/s1/waitlist/u').update({ position: 9 }));
+      await assertFails(db.doc(`courses/c/sessions/s1/waitlist/${uid}`).set({ userId: uid, position: 1 }));
+      await assertFails(db.doc('courses/c/sessions/s1').update({ listed: false }));
+      await assertFails(db.doc('courses/c/sessions/new').set({ venueId: 'v', listed: true }));
+    }
+    await assertFails(anon().doc('courses/c/sessions/s1').update({ listed: false }));
+  });
+});
