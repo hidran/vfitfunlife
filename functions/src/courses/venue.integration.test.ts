@@ -282,7 +282,8 @@ describe("saveCourse provider and venue authority", () => {
 
 describe("saveCourse venue space, instructor and timezone", () => {
   const venueInput = { ...input, venueId: "v", locationId: "l1", roomId: "r1" };
-  const save = (uid: string, course: Record<string, unknown>) => api.saveCourse.run(request(uid, { course }));
+  const save = (uid: string, course: Record<string, unknown>, extra: Record<string, unknown> = {}) =>
+    api.saveCourse.run(request(uid, { course, ...extra }));
   const stored = async (courseId: string) => (await db.doc(`courses/${courseId}`).get()).data()!;
   beforeEach(async () => {
     await db.doc("venues/v/locations/l2").set({ name: "Altra", city: "Milano", timezone: "Europe/Rome", isActive: true });
@@ -342,10 +343,33 @@ describe("saveCourse venue space, instructor and timezone", () => {
     await expect(save("biz", { ...venueInput, instructorId })).rejects.toMatchObject(
       { code: "invalid-argument", message: "invalid_instructor" });
   });
-  it("accepts any verified provider as instructor of an unlinked course", async () => {
-    const course = await stored((await save("p", { ...input, instructorId: "p2" })).courseId);
-    expect(course).toMatchObject({ instructorId: "p2", instructor: "Paola" });
-    await expect(save("p", { ...input, instructorId: "q" })).rejects.toThrow("invalid_instructor");
+  it("lets the provider of an unlinked course be its instructor, and refuses anyone else", async () => {
+    const course = await stored((await save("p", { ...input, instructorId: "p" })).courseId);
+    expect(course).toMatchObject({ instructorId: "p", instructor: "Anna" });
+    await expect(save("p", { ...input, instructorId: "p2" })).rejects.toMatchObject(
+      { code: "permission-denied", message: "course_instructor_not_allowed" });
+    await expect(save("p", { ...input, instructorId: "q" })).rejects.toThrow("course_instructor_not_allowed");
+    expect((await save("p", { ...input, instructorId: null })).courseId).toBeTruthy();
+  });
+  it("lets an admin assign another verified provider as instructor of an unlinked course", async () => {
+    const { courseId } = await save("a", { ...input, instructorId: "p2" }, { providerId: "p" });
+    expect(await stored(courseId)).toMatchObject({ providerId: "p", instructorId: "p2", instructor: "Paola" });
+    await expect(save("a", { ...input, instructorId: "q" }, { providerId: "p" })).rejects.toThrow("invalid_instructor");
+  });
+  it("does not trap an archive of an unlinked course that carries a foreign instructor", async () => {
+    const { courseId } = await save("a", { ...input, instructorId: "p2" }, { providerId: "p" });
+    await db.doc(`courses/${courseId}`).update({ state: "published" });
+    await expect(api.saveCourse.run(request("p", { courseId, course: { ...input, instructorId: "p2",
+      state: "archived" } }))).resolves.toHaveProperty("courseId");
+    await expect(api.saveCourse.run(request("p", { courseId, course: { ...input, instructorId: "p2" } })))
+      .rejects.toThrow("course_instructor_not_allowed");
+  });
+  it("keeps the venue-instructor-link rule for linked courses (a provider may pick another linked instructor)", async () => {
+    await db.doc("venues/v/instructors/p2").set({ isActive: true, name: "Paola" });
+    await db.doc("instructors/p2").set({ fullName: "Paola", isActive: true, applicationStatus: "approved",
+      providerProfile: { isVerified: true } });
+    expect(await stored((await save("biz", { ...venueInput, instructorId: "p2" })).courseId))
+      .toMatchObject({ instructorId: "p2" });
   });
   it("keeps the typed instructor name when no instructor is linked", async () => {
     expect((await stored((await save("biz", venueInput)).courseId)).instructor).toBe("Anna");
@@ -500,8 +524,8 @@ describe("saveCourse lock lifecycle", () => {
     expect(await lockDocs()).toBe(0);
   });
   it("takes instructor locks only for an unlinked course with an instructor", async () => {
-    const { courseId } = await save("p", { ...input, instructorId: "p2" });
-    expect(await slotsIn("courseScheduleLocks/instructor:p2|2099-10-12")).toEqual([`${courseId}_2099-10-12`]);
+    const { courseId } = await save("p", { ...input, instructorId: "p" });
+    expect(await slotsIn("courseScheduleLocks/instructor:p|2099-10-12")).toEqual([`${courseId}_2099-10-12`]);
     expect(await lockDocs()).toBe(2);
   });
   it.each(["draft", "archived"])("releases every lock when the course goes back to %s", async (state) => {
@@ -570,7 +594,7 @@ describe("saveCourse lock lifecycle", () => {
       { message: "locked_schedule_too_long", details: { fields: ["startDate", "endDate"] } });
     await expect(save("biz", { ...twoYears, state: "draft" })).resolves.toHaveProperty("courseId");
     await expect(save("p", { ...input, endDate: "2101-10-12" })).resolves.toHaveProperty("courseId");
-    await expect(save("p", { ...input, endDate: "2101-10-12", instructorId: "p2", name: "Pilates" }))
+    await expect(save("p", { ...input, endDate: "2101-10-12", instructorId: "p", name: "Pilates" }))
       .rejects.toThrow("locked_schedule_too_long");
   });
   it("still locks a year of daily lessons (366 sessions, under the cap)", async () => {
@@ -745,8 +769,13 @@ describe("previewCourse conflicts", () => {
     expect(result.conflicts).toEqual([]);
   });
   it("reports instructor conflicts for an unlinked course too", async () => {
-    await save("p", { ...input, instructorId: "p2" });
-    expect((await preview("p", { ...input, instructorId: "p2", name: "Yoga" })).conflicts).toHaveLength(2);
+    await save("p", { ...input, instructorId: "p" });
+    expect((await preview("p", { ...input, instructorId: "p", name: "Yoga" })).conflicts).toHaveLength(2);
+  });
+  it("applies the unlinked instructor rule to the preview as well", async () => {
+    await expect(preview("p", { ...input, instructorId: "p2" })).rejects.toMatchObject(
+      { code: "permission-denied", message: "course_instructor_not_allowed" });
+    expect((await preview("a", { ...input, instructorId: "p2" })).sessions).toHaveLength(2);
   });
 });
 

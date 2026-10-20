@@ -45,6 +45,16 @@ async function withSpaces(submitted: CourseInput, read: Reader): Promise<CourseI
   return input;
 }
 
+/**
+ * An unlinked course is the provider's own: its instructor is the provider, unless an admin assigns someone else.
+ * (Venue courses pick from the venue's instructor links instead, which withSpaces checks.)
+ */
+function assertInstructorAllowed(input: CourseInput, providerId: string, isAdmin: boolean): void {
+  if (!input.venueId && input.instructorId && input.instructorId !== providerId && !isAdmin) {
+    throw new HttpsError("permission-denied", "course_instructor_not_allowed");
+  }
+}
+
 /** The place text, timezone and instructor name a linked course already carries, for edits that skip revalidation. */
 function keepDerived(submitted: CourseInput, old: Course): CourseInput {
   return { ...submitted, locationId: old.locationId ?? null, roomId: old.roomId ?? null,
@@ -61,7 +71,7 @@ export const saveCourse = onCall({ region }, async (req) => {
     const submitted = validateCourse(req.data.course);
     await db.runTransaction(async (tx) => {
       const old = (await tx.get(ref)).data() as Course | undefined;
-      const caller = old ? undefined : (await tx.get(db.doc(`users/${uid}`))).data();
+      const caller = (await tx.get(db.doc(`users/${uid}`))).data();
       const isAdmin = ["admin", "superadmin"].includes(caller?.role);
       if (old) await canManageCourse(uid, old, tx);
       else if (!caller || caller.isActive === false || ["suspended", "deleted"].includes(caller.accountStatus)) {
@@ -91,6 +101,7 @@ export const saveCourse = onCall({ region }, async (req) => {
       const spacesChanged = !old || (["venueId", "locationId", "roomId", "instructorId"] as const).some(
         (key) => (old[key] ?? null) !== (submitted[key] ?? null));
       const revalidate = (changed: boolean) => !old || changed || publishing;
+      if (revalidate(spacesChanged)) assertInstructorAllowed(submitted, providerId, isAdmin);
       const provider = revalidate(false) ? await eligibleProvider(providerId, tx) : undefined;
       let categoryIds = old?.categoryIds ?? [];
       if (revalidate(old?.categoryId !== submitted.categoryId)) {
@@ -255,6 +266,12 @@ export const previewCourse = onCall({ region }, async (req) => {
       if (!venue || !hostsCourses(venue.type as VenueType) || !(await managesVenue(uid, venueId))) {
         throw new HttpsError("permission-denied", "venue_authorization_required");
       }
+    }
+    if (!submitted.venueId && submitted.instructorId) {
+      const [stored, caller] = await Promise.all([courseId ? db.doc(`courses/${courseId}`).get() : undefined,
+        db.doc(`users/${uid}`).get()]);
+      assertInstructorAllowed(submitted, stored?.data()?.providerId ?? uid,
+        ["admin", "superadmin"].includes(caller.data()?.role));
     }
     const input = await withSpaces(submitted, async (path) => (await db.doc(path).get()).data());
     const sessions = generateSessions(input);

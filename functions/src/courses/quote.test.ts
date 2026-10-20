@@ -148,7 +148,7 @@ describe("quoteCourse", () => {
       paths(spy).filter((path) => path.includes("/sessions/")).sort();
     const days = ["2099-10-12", "2099-10-13", "2099-10-14"];
     it("reads only the requested lessons of a lesson-only quote, and no instructor of an unlinked course", async () => {
-      const id = await save("p", { ...base, instructorId: "p2" });
+      const id = await save("p", { ...base, instructorId: "p" });
       const spy = vi.spyOn(db, "getAll");
       const result = await api.quoteCourse.run(request("u", { courseId: id, sessionIds: ["2099-10-13"],
         includeSeries: false }));
@@ -158,7 +158,7 @@ describe("quoteCourse", () => {
       spy.mockRestore();
     });
     it("reads every lesson for a series quote, with the revisions, but still no instructor when unlinked", async () => {
-      const id = await save("p", { ...base, instructorId: "p2" });
+      const id = await save("p", { ...base, instructorId: "p" });
       await db.doc(`courses/${id}/sessions/2099-10-13`).update({ revision: 3 });
       const spy = vi.spyOn(db, "getAll");
       const result = await quote("u", id, ["2099-10-13"]);
