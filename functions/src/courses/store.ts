@@ -53,15 +53,6 @@ export function uidOf(auth: { uid: string } | undefined): string {
   if (!auth) throw new HttpsError("unauthenticated", "Sign in required");
   return auth.uid;
 }
-export async function assertManager(uid: string, providerId: string, tx?: Transaction): Promise<void> {
-  const ref = db.doc(`users/${uid}`);
-  const user = (await (tx ? tx.get(ref) : ref.get())).data();
-  if (!user || user.isActive === false || user.accountStatus === "suspended" || user.accountStatus === "deleted") {
-    throw new HttpsError("permission-denied", "account_inactive");
-  }
-  if (uid === providerId || ["admin", "superadmin"].includes(user.role)) return;
-  throw new HttpsError("permission-denied", "course_owner_required");
-}
 export async function eligibleProvider(providerId: string, tx: Transaction): Promise<Record<string, unknown>> {
   const doc = await tx.get(db.doc(`instructors/${providerId}`));
   const provider = doc.data();

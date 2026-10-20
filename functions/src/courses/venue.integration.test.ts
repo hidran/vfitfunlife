@@ -38,7 +38,9 @@ beforeEach(async () => {
   for (const [uid, role] of Object.entries(users)) {
     await db.doc(`users/${uid}`).set({ fullName: uid, role, isActive: true });
   }
-  await db.doc("venues/v").set({ ownerId: "biz" });
+  await db.doc("instructors/biz").set({ fullName: "Biz", isActive: true, applicationStatus: "approved",
+    providerProfile: { isVerified: true } });
+  await db.doc("venues/v").set({ ownerId: "biz", type: "gym", partnerStatus: "active", isActive: true });
   await db.doc("venueStaff/s").set({ venueId: "v", isActive: true });
   await db.doc("venueStaff/si").set({ venueId: "v", isActive: false });
   await db.doc("venueStaff/os").set({ venueId: "w", isActive: true });
@@ -198,5 +200,70 @@ describe("participant callables by course authority", () => {
       .rejects.toThrow("provider_client_required");
     await expect(api.notifyCourseParticipant.run(request("s", { userId: "u1", channel: "phone" })))
       .rejects.toThrow("invalid_id");
+  });
+});
+
+describe("saveCourse provider and venue authority", () => {
+  const venueInput = { ...input, venueId: "v" };
+  const save = (uid: string, course: Record<string, unknown>, extra: Record<string, unknown> = {}) =>
+    api.saveCourse.run(request(uid, { course, ...extra }));
+  const providerOf = async (courseId: string) => (await db.doc(`courses/${courseId}`).get()).data()?.providerId;
+  it("lets the venue owner create a course for their venue", async () => {
+    const { courseId } = await save("biz", venueInput);
+    expect(await providerOf(courseId)).toBe("biz");
+  });
+  it("creates on behalf of the owner when active staff leave providerId out or send their own", async () => {
+    expect(await providerOf((await save("s", venueInput)).courseId)).toBe("biz");
+    expect(await providerOf((await save("s", { ...venueInput, name: "Judo" }, { providerId: "s" })).courseId)).toBe("biz");
+  });
+  it("keeps the stored provider when staff edit, whatever the client sends", async () => {
+    const { courseId } = await save("biz", venueInput);
+    await save("s", { ...venueInput, name: "Karate 2" }, { courseId, providerId: "x" });
+    expect(await providerOf(courseId)).toBe("biz");
+    expect((await db.doc(`courses/${courseId}`).get()).data()?.name).toBe("Karate 2");
+  });
+  it.each([["x", "a stranger"], ["si", "inactive staff"], ["os", "staff of another venue"]])(
+    "refuses %s (%s) linking a venue", async (uid) => {
+      await expect(save(uid, venueInput)).rejects.toMatchObject(
+        { code: "permission-denied", message: "venue_authorization_required" });
+    });
+  it("refuses a stranger editing a venue course", async () => {
+    const { courseId } = await save("biz", venueInput);
+    await expect(save("x", venueInput, { courseId })).rejects.toMatchObject(
+      { code: "permission-denied", message: "course_owner_required" });
+  });
+  it("leaves an individual provider without a venue unchanged", async () => {
+    expect(await providerOf((await save("p", input)).courseId)).toBe("p");
+  });
+  it("refuses a foreign providerId without venue authority, but lets an admin pass one", async () => {
+    await expect(save("p", input, { providerId: "biz" })).rejects.toMatchObject(
+      { code: "permission-denied", message: "course_owner_required" });
+    expect(await providerOf((await save("a", input, { providerId: "p" })).courseId)).toBe("p");
+    expect(await providerOf((await save("a", venueInput, { providerId: "p" })).courseId)).toBe("p");
+    expect(await providerOf((await save("a", venueInput)).courseId)).toBe("biz");
+  });
+  it("needs an owner when staff create on behalf of an ownerless venue", async () => {
+    await db.doc("venues/vn").set({ type: "gym", partnerStatus: "active", isActive: true });
+    await db.doc("venueStaff/s").set({ venueId: "vn", isActive: true });
+    await expect(save("s", { ...input, venueId: "vn" })).rejects.toMatchObject(
+      { code: "permission-denied", message: "venue_owner_required" });
+  });
+  it("refuses a venue that does not host courses", async () => {
+    await db.doc("venues/spa").set({ ownerId: "biz", type: "spa", partnerStatus: "active", isActive: true });
+    await expect(save("biz", { ...input, venueId: "spa" })).rejects.toMatchObject(
+      { code: "permission-denied", message: "venue_authorization_required" });
+    await expect(save("biz", { ...input, venueId: "missing" })).rejects.toMatchObject(
+      { code: "permission-denied", message: "venue_authorization_required" });
+  });
+  it("gates publishing on an active partner venue but lets drafts through", async () => {
+    await db.doc("venues/v").update({ partnerStatus: "pending" });
+    await expect(save("biz", venueInput)).rejects.toThrow("venue_not_active");
+    await expect(save("biz", { ...venueInput, state: "draft" })).resolves.toHaveProperty("courseId");
+    await db.doc("venues/v").update({ partnerStatus: "active", isActive: false });
+    await expect(save("biz", venueInput)).rejects.toThrow("venue_not_active");
+  });
+  it("applies provider eligibility to the resolved provider", async () => {
+    await db.doc("instructors/biz").update({ isActive: false });
+    await expect(save("s", venueInput)).rejects.toThrow("provider_unavailable");
   });
 });

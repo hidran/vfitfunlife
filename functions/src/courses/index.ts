@@ -2,32 +2,50 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { Timestamp } from "firebase-admin/firestore";
 import { region } from "../lib/runtimeOptions";
 import { validateCourse, generateSessions } from "./core";
-import { db, safeId, uidOf, assertManager, eligibleProvider, nowStamp, domainError, Course, Session } from "./store";
+import { db, safeId, uidOf, eligibleProvider, nowStamp, domainError, Course, Session } from "./store";
+import { canManageCourse, managesVenue } from "./authority";
+import { hostsCourses, type VenueType } from "../types";
 
 export const saveCourse = onCall({ region }, async (req) => {
   const uid = uidOf(req.auth);
-  const providerId = req.data.providerId ? safeId(req.data.providerId) : uid;
+  const requestedProvider = req.data.providerId ? safeId(req.data.providerId) : null;
   const id = req.data.courseId ? safeId(req.data.courseId) : db.collection("courses").doc().id;
   const ref = db.doc(`courses/${id}`);
   try {
     const input = validateCourse(req.data.course);
     const generated = generateSessions(input);
     await db.runTransaction(async (tx) => {
-      await assertManager(uid, providerId, tx);
+      const old = (await tx.get(ref)).data() as Course | undefined;
+      const caller = old ? undefined : (await tx.get(db.doc(`users/${uid}`))).data();
+      const isAdmin = ["admin", "superadmin"].includes(caller?.role);
+      if (old) await canManageCourse(uid, old, tx);
+      else if (!caller || caller.isActive === false || ["suspended", "deleted"].includes(caller.accountStatus)) {
+        throw new HttpsError("permission-denied", "account_inactive");
+      }
+      let venue: FirebaseFirestore.DocumentData | undefined;
+      if (input.venueId) {
+        safeId(input.venueId);
+        venue = (await tx.get(db.doc(`venues/${input.venueId}`))).data();
+        // An existing link is not re-validated, so a venue whose type later changes does not trap its courses.
+        if (!old || (old.venueId ?? null) !== input.venueId) {
+          if (!venue || !hostsCourses(venue.type as VenueType) || !(await managesVenue(uid, input.venueId, tx))) {
+            throw new HttpsError("permission-denied", "venue_authorization_required");
+          }
+        }
+      }
+      // On edit the stored provider stays and the client value is ignored. Staff of a venue create on the
+      // business's behalf: the owner stays the provider and payee.
+      const providerId = old ? old.providerId : input.venueId ?
+        (isAdmin && requestedProvider ? requestedProvider : venue?.ownerId) : requestedProvider ?? uid;
+      if (!providerId) throw new HttpsError("permission-denied", "venue_owner_required");
+      if (!old && !input.venueId) await canManageCourse(uid, { providerId, venueId: null }, tx);
       const provider = await eligibleProvider(providerId, tx);
       const category = (await tx.get(db.doc(`serviceCategories/${safeId(input.categoryId)}`))).data();
       if (!category?.isActive || !category.parentId) throw new HttpsError("invalid-argument", "active_leaf_required");
-      if (input.venueId) {
-        safeId(input.venueId);
-        const [venue, staff] = await Promise.all([
-          tx.get(db.doc(`venues/${input.venueId}`)), tx.get(db.doc(`venues/${input.venueId}/staff/${providerId}`)),
-        ]);
-        if (!venue.exists || (!staff.exists && venue.data()?.ownerId !== providerId)) {
-          throw new HttpsError("permission-denied", "venue_authorization_required");
-        }
+      if (input.venueId && input.state === "published" &&
+        (venue?.isActive === false || venue?.partnerStatus !== "active")) {
+        throw new HttpsError("failed-precondition", "venue_not_active");
       }
-      const old = (await tx.get(ref)).data() as Course | undefined;
-      if (old && old.providerId !== providerId) throw new HttpsError("permission-denied", "course_owner_required");
       if (input.state === "published" && generated[0].startsAt <= new Date() && (!old || old.state !== "published")) {
         throw new HttpsError("invalid-argument", "start_must_be_future");
       }
