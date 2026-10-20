@@ -129,13 +129,29 @@ describe('profile editor — social links', () => {
     expect(updateUserProfile).not.toHaveBeenCalled();
   });
 
-  it('is the ONLY social-links form: the same fields on the Professional tab, no second Save', async () => {
+  it('has a single set of social fields: no second social form section and no second Save button', async () => {
     mockUser = { ...mockUser, role: 'provider', providerStatus: 'verified' };
     render(<EditProfilePage />);
     await screen.findByRole('button', { name: 'Professionale' });
     expect(screen.getAllByPlaceholderText('tuosito.com')).toHaveLength(1);
     expect(document.querySelector('section#social')).toBeNull();
     expect(screen.getAllByRole('button', { name: /Salva/ })).toHaveLength(1);
+  });
+
+  it('saving from the Professional tab with an invalid link switches to Personal, focuses the field and writes nothing', async () => {
+    mockUser = { ...mockUser, role: 'provider', providerStatus: 'verified' };
+    render(<EditProfilePage />);
+    type('tuosito.com', 'javascript:alert(1)');
+    fireEvent.click(await screen.findByRole('button', { name: 'Professionale' }));
+    // The Personal inputs are not on screen any more.
+    expect(screen.queryByPlaceholderText('tuosito.com')).toBeNull();
+
+    fireEvent.click(pageSave());
+
+    const website = await screen.findByPlaceholderText('tuosito.com');
+    await waitFor(() => expect(website).toHaveFocus());
+    expect(website).toHaveAttribute('aria-invalid', 'true');
+    expect(updateUserProfile).not.toHaveBeenCalled();
   });
 
   it('has a TikTok field, stored normalised like the others', async () => {

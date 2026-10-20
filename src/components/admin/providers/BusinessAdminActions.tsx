@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { AlertTriangle, FileEdit, Unlock, UserRound, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/button';
@@ -165,6 +165,16 @@ function ActionDialog({
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Each refusal is a new object, so the effect below runs once per refusal, after the render
+  // that re-enabled the fields (a disabled field cannot take focus).
+  const [refusal, setRefusal] = useState<{ code: AdminBusinessErrorCode | null } | null>(null);
+  const onServerErrorRef = useRef(onServerError);
+  useEffect(() => {
+    onServerErrorRef.current = onServerError;
+  });
+  useEffect(() => {
+    if (refusal) onServerErrorRef.current?.(refusal.code);
+  }, [refusal]);
 
   const close = () => {
     if (!busy) onClose();
@@ -183,9 +193,7 @@ function ActionDialog({
       const key = adminBusinessErrorMessageKey(err);
       setError(t(key ?? 'admin.business.dialog.genericError'));
       setBusy(false);
-      // After the re-render: the fields are still disabled while the call runs, and a disabled
-      // field cannot take focus.
-      setTimeout(() => onServerError?.(adminBusinessErrorCode(err)), 0);
+      setRefusal({ code: adminBusinessErrorCode(err) });
     }
   };
 

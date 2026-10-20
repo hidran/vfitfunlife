@@ -1,14 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import { Instagram, Linkedin, Globe, Facebook, Twitter, Check, X, AlertCircle } from 'lucide-react';
+import { Instagram, Linkedin, Globe, Facebook, Twitter, Music, Check, X, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Input } from '@/components/ui/input';
+import {
+  SocialLinksFields,
+  focusFirstInvalidSocialField,
+  socialLinkErrorMessageKey,
+  type SocialLinkErrors,
+} from '@/components/profile/SocialLinksFields';
 import { Button } from '@/components/ui/button';
 import { updateSocialLinks } from '@/lib/firebase/auth';
 import { SocialLinks } from '@/types/firebase';
 import { useI18n } from '@/hooks/useI18n';
-import { socialLinkHref } from '@/lib/socialLinks';
+import { normalizeSocialLinks, socialLinkHref, type SocialLinkKey } from '@/lib/socialLinks';
 import type { MessageKey } from '@/i18n/messages';
 
 interface SocialLinksEditorProps {
@@ -59,16 +64,15 @@ const socialPlatforms = [
     color: '#1DA1F2',
     formatErrorKey: 'profile.social.validation.twitter',
   },
+  {
+    key: 'tiktok',
+    labelKey: 'profile.social.platform.tiktok',
+    icon: Music,
+    placeholderKey: 'profile.social.placeholder.tiktok',
+    color: '#25F4EE',
+    formatErrorKey: 'profile.social.validation.tiktok',
+  },
 ] as const;
-
-// URL validation patterns
-const URL_PATTERNS: Record<string, RegExp> = {
-  instagram: /^(@[\w.]+|https?:\/\/(www\.)?instagram\.com\/[\w.]+\/?)$/i,
-  linkedin: /^https?:\/\/(www\.)?linkedin\.com\/in\/[\w-]+\/?$/i,
-  website: /^https?:\/\/[\w.-]+\.[a-z]{2,}(\/[\w.-]*)*\/?$/i,
-  facebook: /^https?:\/\/(www\.)?facebook\.com\/[\w.]+\/?$/i,
-  twitter: /^(@[\w_]+|https?:\/\/(www\.)?(twitter|x)\.com\/[\w_]+\/?)$/i,
-};
 
 export function SocialLinksEditor({
   userId,
@@ -77,57 +81,29 @@ export function SocialLinksEditor({
   className,
 }: SocialLinksEditorProps) {
   const { t } = useI18n();
-  const [links, setLinks] = useState<SocialLinks>(socialLinks || {});
+  const [links, setLinks] = useState<Record<string, string>>({ ...((socialLinks as Record<string, string> | null) ?? {}) });
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [validationErrors, setValidationErrors] = useState<SocialLinkErrors>({});
 
-  const validateUrl = (key: keyof SocialLinks, value: string): string | null => {
-    if (!value) return null;
-    
-    // Allow @username format for Instagram and Twitter
-    if ((key === 'instagram' || key === 'twitter') && value.startsWith('@')) {
-      return null;
-    }
-    
-    // Check URL pattern
-    const pattern = URL_PATTERNS[key];
-    if (pattern && !pattern.test(value)) {
-      const platform = socialPlatforms.find((entry) => entry.key === key);
-      return t(platform?.formatErrorKey ?? 'profile.social.validation.generic');
-    }
-    
-    return null;
-  };
-
-  const handleChange = (key: keyof SocialLinks, value: string) => {
+  const handleChange = (key: SocialLinkKey, value: string) => {
     setLinks((prev) => ({ ...prev, [key]: value }));
-    
-    // Validate on change
-    const validationError = validateUrl(key, value);
-    setValidationErrors((prev) => ({
-      ...prev,
-      [key]: validationError || '',
-    }));
-    
+    setValidationErrors((prev) => ({ ...prev, [key]: undefined }));
     setError(null);
   };
 
   const handleSave = async () => {
-    // Validate all URLs before saving
-    const errors: Record<string, string> = {};
-    for (const [key, value] of Object.entries(links)) {
-      const validationError = validateUrl(key as keyof SocialLinks, value);
-      if (validationError) {
-        errors[key] = validationError;
-      }
-    }
-    
-    if (Object.keys(errors).length > 0) {
+    // The one validator of the profile editor (src/lib/socialLinks.ts): bare hosts and @handles
+    // are normalised, anything else is refused before a write is attempted.
+    const { links: normalised, invalid } = normalizeSocialLinks(links);
+    if (invalid.length > 0) {
+      const errors: SocialLinkErrors = {};
+      for (const key of invalid) errors[key] = t(socialLinkErrorMessageKey(key));
       setValidationErrors(errors);
       setError(t('profile.social.error.fixBeforeSave'));
+      focusFirstInvalidSocialField(invalid);
       return;
     }
 
@@ -135,9 +111,10 @@ export function SocialLinksEditor({
     setError(null);
 
     try {
-      await updateSocialLinks(userId, links);
+      await updateSocialLinks(userId, normalised as SocialLinks);
+      setLinks(normalised);
       setSuccess(true);
-      onUpdate?.(links);
+      onUpdate?.(normalised as SocialLinks);
       setIsEditing(false);
       
       setTimeout(() => setSuccess(false), 3000);
@@ -150,7 +127,7 @@ export function SocialLinksEditor({
   };
 
   const handleCancel = () => {
-    setLinks(socialLinks || {});
+    setLinks({ ...((socialLinks as Record<string, string> | null) ?? {}) });
     setIsEditing(false);
     setError(null);
     setValidationErrors({});
@@ -175,7 +152,7 @@ export function SocialLinksEditor({
         {hasLinks ? (
           <div className="flex flex-wrap gap-2">
             {socialPlatforms.map((platform) => {
-              const value = links[platform.key as keyof SocialLinks];
+              const value = links[platform.key];
               if (!value) return null;
 
               // Stored values are user-written: only a safe http(s) URL becomes a link.
@@ -254,33 +231,7 @@ export function SocialLinksEditor({
         </div>
       )}
 
-      <div className="space-y-3">
-        {socialPlatforms.map((platform) => (
-          <div key={platform.key}>
-            <div className="flex items-center gap-3">
-              <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{ backgroundColor: `${platform.color}20` }}
-              >
-                <platform.icon size={16} style={{ color: platform.color }} />
-              </div>
-              <Input
-                label={t(platform.labelKey)}
-                placeholder={t(platform.placeholderKey)}
-                value={links[platform.key as keyof SocialLinks] || ''}
-                onChange={(e) => handleChange(platform.key as keyof SocialLinks, e.target.value)}
-                error={validationErrors[platform.key]}
-                className="flex-1"
-              />
-            </div>
-            {validationErrors[platform.key] && (
-              <p className="text-xs text-error mt-1 ml-11">
-                {validationErrors[platform.key]}
-              </p>
-            )}
-          </div>
-        ))}
-      </div>
+      <SocialLinksFields values={links} errors={validationErrors} onChange={handleChange} />
 
       <p className="text-xs text-text-tertiary">
         {t('profile.social.hint')}

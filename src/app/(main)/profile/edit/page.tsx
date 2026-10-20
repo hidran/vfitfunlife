@@ -107,6 +107,9 @@ export default function EditProfilePage() {
   const [isProviderUser, setIsProviderUser] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const [socialErrors, setSocialErrors] = useState<SocialLinkErrors>({});
+  // Invalid social fields waiting to take focus: set by a refused save, consumed by the effect
+  // below once the Personal tab (and so the inputs) is on screen.
+  const [socialFocus, setSocialFocus] = useState<SocialLinkKey[] | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [activeTab, setActiveTab] = useState<TabType>('personal');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -261,11 +264,19 @@ export default function EditProfilePage() {
     for (const key of invalid) nextErrors[key] = t(socialLinkErrorMessageKey(key));
     setSocialErrors(nextErrors);
     if (invalid.length > 0) {
-      focusFirstInvalidSocialField(invalid);
+      setSocialFocus(invalid);
       return null;
     }
     return links as SocialLinks;
   };
+
+  // Focus the first invalid social field after the render that shows it: saving from the
+  // Professional tab first switches to Personal, whose inputs are not mounted until then.
+  useEffect(() => {
+    if (!socialFocus || activeTab !== 'personal') return;
+    focusFirstInvalidSocialField(socialFocus);
+    setSocialFocus(null);
+  }, [socialFocus, activeTab]);
 
   const validateUrl = (url: string): boolean => {
     if (!url) return true;
