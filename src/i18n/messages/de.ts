@@ -3528,4 +3528,6 @@ export const deMessages: Messages = {
   'courses.leaveWaitlist': "Warteliste verlassen",
   'venue.nextLessons': "Nächste Kurse",
   'venue.fullTimetable': "Kompletter Wochenplan",
+  'courses.waitlistSection': "Wartelisten",
+  'courses.payWithin': "Zahle innerhalb von {{minutes}} Minuten, um deinen Platz zu behalten.",
 };

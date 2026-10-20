@@ -3548,4 +3548,6 @@ export const enMessages: Messages = {
   'courses.leaveWaitlist': "Leave waitlist",
   'venue.nextLessons': "Next lessons",
   'venue.fullTimetable': "Full timetable",
+  'courses.waitlistSection': "Waitlist",
+  'courses.payWithin': "Pay within {{minutes}} minutes to keep your spot.",
 };

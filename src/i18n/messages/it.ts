@@ -3546,6 +3546,8 @@ export const itMessages = {
   'courses.leaveWaitlist': "Esci dalla lista d'attesa",
   'venue.nextLessons': "Prossime lezioni",
   'venue.fullTimetable': "Orario completo",
+  'courses.waitlistSection': "Liste d'attesa",
+  'courses.payWithin': "Paga entro {{minutes}} minuti per mantenere il posto.",
 } as const;
 
 export type MessageKey = keyof typeof itMessages;

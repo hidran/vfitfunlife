@@ -3521,4 +3521,6 @@ export const esMessages: Messages = {
   'courses.leaveWaitlist': "Salir de la lista de espera",
   'venue.nextLessons': "Próximas clases",
   'venue.fullTimetable': "Horario completo",
+  'courses.waitlistSection': "Listas de espera",
+  'courses.payWithin': "Paga en {{minutes}} minutos para conservar tu plaza.",
 };
