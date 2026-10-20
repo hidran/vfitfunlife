@@ -2349,34 +2349,143 @@ Firestore-triggered handlers (no direct invocation).
 
 ## Group course API
 
-All callables run in `europe-west1`. Course mutations reject unauthenticated/inactive/unauthorized callers, invalid categories/schedules/prices and capacity/deadline violations. Writes are server-owned.
+All callables run in `europe-west1`; source: [`functions/src/courses/`](../../functions/src/courses/) and [`functions/src/venues/spaces.ts`](../../functions/src/venues/spaces.ts). One model serves individual providers and venues (gym, school, studio): see [features.md](../features.md#group-courses-and-activities) for behaviour and [database-schema.md](../database-schema.md#group-course-collections) for the documents. Every callable needs a signed-in caller (`unauthenticated` / "Sign in required" otherwise). Errors are `HttpsError`s whose `message` is a stable code; the client turns it into text in the five locales (`courseErrorMessage` in `src/lib/courseErrors.ts`, keys `courses.err.<code>`); the full table is below. Plain `Error`s thrown by the engine reach the client as `failed-precondition` with the code as `message` in the callables that use the course error mapper (all except `recordCoursePayment`, `confirmCourseRefund`, `cancelRemainingCourse`, `createCourseCheckout`, `saveGymSpace` and `configureGymInstructor`, where an unmapped plain error is a generic `internal`). Money is integer cents. `requestId` is any `[a-zA-Z0-9_-]{1,128}` string the client generates once per booking attempt; ids derive from it so a retry replays instead of duplicating.
 
-`previewCourse` and `saveCourse` return `invalid-argument` / `course_validation_failed`
-with `details.fields` for schema errors. Schedule/pricing preconditions also include
-`details.fields`. Clients translate these field names into correction guidance; raw schema
-JSON is not a user-facing error message.
+**Authority.** Customer-facing calls act on the caller. Calls that manage a course (`saveCourse` on an existing course, `manageCourseSession`, `cancelCourseEnrollment` for someone else's booking, `recordCoursePayment`, `confirmCourseRefund`, `cancelRemainingCourse`, `enrollCourseParticipant`, `notifyCourseParticipant`) resolve `canManageCourse` once at entry: the course's provider (`via: owner`), an admin (`admin`), or, for a venue-linked course, the venue's owner or active staff (`venue`); anyone else gets `course_owner_required`, an inactive account `account_inactive`. See [roles-and-permissions.md](../backend/roles-and-permissions.md#group-course-authority).
 
 | Function | Input | Result / authorization |
 |---|---|---|
-| `previewCourse` | `{course: CourseDraft}` | Concrete lesson IDs and ISO start/end instants; authenticated |
-| `saveCourse` | `{course, courseId?, providerId?}` | `{courseId}`; verified owner or authorized admin; authorized venue linkage if provided |
-| `enrollInCourse` | `{courseId, scope: lesson\|series, sessionId?, paymentMode: direct\|stripe, requestId}` | `{enrollmentId, state, totalCents}`; authenticated customer; repeat request IDs are idempotent |
-| `cancelCourseEnrollment` | `{enrollmentId, sessionIds?, reason?}` | `{success}`; customer within deadline or owner/admin; duplicate IDs cannot duplicate refunds |
-| `recordCoursePayment` | `{enrollmentId, method: cash\|satispay\|bank_transfer\|other}` | Full active direct-payment confirmation; owner/admin; advance payment supported |
-| `manageCourseSession` | `{courseId, sessionId, action: attendance\|cancel\|reschedule, userId?, attendance?, startsAt?, reason?}` | Owner/admin; reschedule uses ISO instant; changes/cancellation require reason |
-| `cancelRemainingCourse` | `{courseId, reason}` | Closes enrollment and cancels future lessons; owner/admin |
-| `confirmCourseRefund` | `{refundId}` | Records direct refund completion; owner/admin |
-| `createCourseCheckout` | `{enrollmentId}` | `{url}`; enrollment customer; both payment flags required; server-derived price, stable Stripe idempotency parameters |
+| `previewCourse` | `{course: CourseDraft, courseId?}` | `{sessions: [{id, startsAt, endsAt}], conflicts: [{sessionId, kind: 'room'\|'instructor', courseName, startsAt, endsAt}]}`. Advisory: applies the venue timezone and place, generates the lessons and reads the lock documents without a transaction; `courseId` (an edit) ignores the course's own slots. Venue course: caller must manage the venue (`venue_authorization_required`). Unlinked course naming an instructor: only the provider themself or an admin (`course_instructor_not_allowed`), and for an existing course someone who may manage it |
+| `saveCourse` | `{course: CourseDraft, courseId?, providerId?}` | `{courseId}`. See below |
+| `quoteCourse` | `{courseId, sessionIds?, includeSeries?}` | `CourseQuote`. See below |
+| `enrollInCourse` | `{courseId, scope: 'lesson'\|'series', sessionId?, paymentMode?: 'direct'\|'stripe', requestId, expectedFinalCents, expectedRevisions}` | `{enrollmentId, state: 'held'\|'confirmed', totalCents, replay}`. See below |
+| `enrollCourseParticipant` | `{courseId, userId, scope, sessionId?, requestId}` | Same result. Course manager (owner, venue staff, admin) books a linked client: needs the `clients` pair between the course's provider and `userId` (`provider_client_required`), direct payment only (`direct_payment_required`), no price check but the venue discount applies |
+| `joinCourseWaitlist` | `{courseId, sessionId, requestId, paymentMode?}` | `{success: true, position, replay}`. See below |
+| `leaveCourseWaitlist` | `{courseId, sessionId}` | `{success: true}`; removes the caller's entry and renumbers the rest; no entry is a no-op |
+| `cancelCourseEnrollment` | `{enrollmentId, sessionIds?, reason?}` | `{success}`. The customer before the booking's cancellation deadline, or a course manager; frees the seats, creates refund obligations, promotes the waitlist |
+| `recordCoursePayment` | `{enrollmentId, method: 'cash'\|'satispay'\|'bank_transfer'\|'other'}` | Full active direct-payment confirmation; course manager; advance payment supported |
+| `manageCourseSession` | `{courseId, sessionId, action, ...}` | `{success: true}`; course manager. Actions below |
+| `cancelRemainingCourse` | `{courseId, reason}` | Closes enrollment, archives the course, cancels every future lesson, releases its locks, clears its waitlists, releases the bookings; course manager |
+| `confirmCourseRefund` | `{refundId}` | Records a direct refund as completed; course manager (the course comes from the refund's `courseId`, or from its enrollment for refunds written before the unified model) |
+| `notifyCourseParticipant` | `{courseId, userId, channel: 'email'\|'phone'}` | Course manager; acts for the course's provider. See "Provider course participants" |
+| `createCourseCheckout` | `{enrollmentId}` | `{url}`; enrollment customer; both payment flags required; server-derived price, stable Stripe idempotency parameters; refuses a zero-amount hold and one below the Stripe minimum |
+| `saveGymSpace` | `{kind: 'location', venueId, id?, name, address, city, timezone?, isActive}` or `{kind: 'room', venueId, locationId, id?, name, isActive}` | `{id}`. Venue owner, active staff or admin of a gym/school/studio (`venue_authorization_required`; any other venue type is `gym_not_found`); the timezone must be an IANA zone; a room needs an existing location (`gym_location_not_found`). The input is validated with Zod and the timezone check is not wrapped by the course error mapper, so a malformed request is a generic error, not a code |
+| `configureGymInstructor` | `{venueId, instructorId, partnerStatus: 'pending'\|'active'\|'suspended', isActive}` | `{success}`. Admin only (`admin_required`); the instructor must be a verified provider and the venue a hosting type (`verified_instructor_required`); writes `venues/{v}/instructors/{i}` and `instructors/{i}.partnerStatus` together. An `active` partner instructor adds the venue's `partnerInstructorExtraPercent` to the lessons they teach |
 | `setPaymentSettings` | `{stripePaymentsEnabled?, subscriptionsEnabled?, courseCheckoutEnabled?}` | Audited superadmin-only settings update; unknown/nonboolean keys rejected |
 
-`courseStripeWebhook` is an HTTP endpoint with Stripe raw-body signature verification. Configure Checkout completed/expired and refund.updated events. Browser redirects never mark paid. Repeated events preserve settlement/refund state. Payments received after hold expiry/cancellation enqueue refunds.
+### `saveCourse`
 
-Scheduled: `maintainCourseEnrollments` every five minutes releases expired holds, advances discovery, reconciles interrupted lesson cancellations and paginates pending/processing refunds. `remindCourseParticipants` every hour paginates all upcoming lessons and queues idempotent reminders. Triggers: `onCourseNotification` delivers outbox entries; `onCourseProviderEligibility` maintains public eligibility.
+Creates or edits a course and regenerates its lessons in one transaction. `CourseDraft` is `src/types/course.ts` (server schema `courseSchema` in `core.ts`): name, description, `categoryId`, free-text `location`/`city`/`instructor`, `venueId`, `locationId`, `roomId`, `instructorId` (each `string | null`), `waitlistEnabled` (default true), `capacity` 1..500, `durationMinutes` 10..480, `startDate`, `startTime`, `timezone`, `recurrence` (`none|daily|weekly`) with `interval`, `weekdays`, `endDate`, `lessonPriceCents` / `seriesPriceCents` (integer 0..10,000,000 or null; at least one; **0 means free**), `bookingNoticeHours`, `cancellationHours`, `level`, `equipment`, `state` (`draft|published|archived`), `enrollmentClosed`.
+
+- **Provider.** On edit the stored `providerId` stays (the client value is ignored) and the caller must manage the course. On create without a venue it is the caller (`providerId` of another user needs an admin). On create with a venue it is the venue's `ownerId` (staff create on the owner's behalf; `venue_owner_required` if the venue has none); an admin may pass `providerId`.
+- **Venue link.** Checked for a new link only (an existing link is not re-validated, so a venue whose type later changes does not trap its courses): the venue must host courses and the caller must manage it, else `venue_authorization_required`. Publishing a venue course needs `isActive !== false` and `partnerStatus === 'active'`, else `venue_not_active`; drafts and archiving are always allowed.
+- **Spaces and instructor** (re-validated for a new course, a changed link or a publish): `locationId` and `roomId` required and active (`invalid_space`); the server overwrites `timezone` with the location's, `location` with `"<room> · <location>"` and `city`; `instructorId` must be a usable provider (verified, active, not pending/rejected/suspended) and, for a venue course, linked and active at the venue (`invalid_instructor`), and its name overwrites `instructor`. Without a venue `locationId`/`roomId` are forced to null and `instructorId` may only be the provider (`course_instructor_not_allowed`).
+- **Locks.** The lessons' room and instructor slots are taken or released in the same transaction (published course, scheduled lessons that have not ended): `room_overlap` / `instructor_overlap` with `details: {courseName, startsAt, endsAt}` of the conflicting slot, nothing written. More than 400 lessons that take a lock: `locked_schedule_too_long` (`details.fields`).
+- **Booked courses.** Once a course has bookings, its schedule, prices, `venueId`, `locationId`, `roomId`, `instructorId`, timezone, recurrence fields and (when unlinked) place/instructor text are frozen (`booked_schedule_locked`); capacity cannot fall below an upcoming lesson's bookings (`capacity_below_bookings`).
+- **Per lesson.** Each lesson gets `courseId`, `venueId`, `locationId`, `roomId`, `instructorId`, `instructorName`, `listed`, `waitlisted` and a `revision` (1 for new; +1 when price, capacity, notice or cancellation terms change, or the lesson's time, room or instructor change). A lesson-level room or substitute and a lesson-level capacity survive edits that do not change that course value.
+- **After the commit.** Lessons whose capacity grew and that have a waitlist are served by `promoteWaitlist`; a failure there is logged, never returned (the sweep is the backstop). Unpublishing or archiving clears the lessons' waitlists.
+- Other errors: `start_must_be_future` (first publish with a past start), `active_leaf_required` (category), `provider_unavailable`, `account_inactive`, validation (`course_validation_failed` with `details.fields`, `pricing_required`, `invalid_timezone`, `end_date_required`, `weekdays_required`, `invalid_date`, `schedule_too_long` (over three years), `empty_schedule`, `invalid_local_time`, `ambiguous_local_time`; the schedule errors also carry `details.fields`).
+
+### `quoteCourse`
+
+Server-computed prices for a customer to review. `sessionIds` defaults to the first 100 lessons (more than 100 ids: `too_many_sessions`); `includeSeries: false` skips reading the whole course when only lessons are sold. Rate limited to 60 calls per 10 minutes per caller (`rate_limited`). A course that is not published and eligible is `course_not_found` unless the caller manages it; a venue course of an inactive partner is `venue_not_active` for everyone else; ids outside the course are `session_not_in_course`.
+
+```ts
+CourseQuote = {
+  sessions: SessionQuote[]; // [] when the course has no lesson price
+  series: null | { regularCents, discountPercent, gymPercent, instructorPercent, discountCents, finalCents,
+                   stripeEligible, allocations: Record<sessionId, cents>, revisions: Record<sessionId, number> };
+};
+SessionQuote = { sessionId, revision, regularCents, discountPercent, gymPercent, instructorPercent, discountCents,
+                 finalCents, availableSeats, waitlisted, stripeEligible };
+```
+
+`discountPercent = min(100, gymPercent + instructorPercent)`: `gymPercent` is the venue's `memberDiscountPercent`, `instructorPercent` its `partnerInstructorExtraPercent` when the lesson's effective instructor (the lesson's substitute, else the course's) has `partnerStatus: 'active'`. An unlinked course has all percents 0. `discountCents = floor(regular * percent / 100)`. The series price is split across the lessons first (`allocatePrice`), then each share is discounted with its own lesson's percent and floored, so `allocations` are post-discount and sum to `finalCents`; the series block's percents are those of the course-level instructor. `stripeEligible` is `finalCents >= 50`. `availableSeats = max(0, capacity - occupied - held)`.
+
+### `enrollInCourse`
+
+A customer confirms the quote they reviewed. Send `expectedFinalCents` (the quote's `finalCents` for the lesson or the series) and `expectedRevisions` (`{[sessionId]: revision}` for every booked lesson; for a series, `series.revisions`). Inside the booking transaction the server re-prices and compares: a different amount fails `price_changed` with `details: {reason: 'price'}`, a different revision `{reason: 'availability'}`; nothing is written. Missing values: `expected_price_required` (the staff path, `enrollCourseParticipant`, skips the check). A replay of the same `requestId` returns the stored result without re-checking. Other behaviour:
+
+- Order of checks after replay: course exists, not the provider's own course (`cannot_book_yourself`), provider eligible (`provider_unavailable`), caller active (`account_inactive`), a series only before its first lesson (`series_already_started`), course published and open (`enrollment_closed`), no existing membership (`already_enrolled`), then per lesson `session_unavailable`, `lesson_full`, `booking_deadline` (notice window), then venue active (`venue_not_active`) and the price check.
+- `lesson_full` has `details: {waitlistAvailable}`, true for a single lesson of a course with the waitlist on while the notice window is still open; the client then offers `joinCourseWaitlist`.
+- A series with any full or unavailable lesson creates nothing.
+- `totalCents` is the quote's final price. A total of 0 is booked `direct`, `confirmed`, `paid` (`paymentMethod: 'free'`) whatever the requested mode; `paymentMode: 'stripe'` while course checkout is off answers "Online course payments are not enabled" (checked before the price is known, so clients send `direct` for a free lesson); a Stripe total between 1 and 49 cents fails `checkout_amount_too_low` with `details: {minCents: 50}`.
+- Stored on the enrollment: `venueId`, `regularCents`, `discountCents`, `discountPercent`, `gymPercent`, `instructorPercent`, `sessionRevisions`, post-discount `allocations`, `promotedFromWaitlist: false`.
+
+### `joinCourseWaitlist`
+
+Joins the waitlist of one full lesson (single lessons only). The entry stores `requestId` and `paymentMode` so promotion later books it as an ordinary replay-safe enrollment (`skipPriceCheck`). In one transaction: the same `requestId` already on the list returns the stored `position` with `replay: true`; another `requestId` while on the list is `already_waitlisted`; a `requestId` already used by an enrollment is `request_id_reused`. Refusals (`failed-precondition`): `waitlist_disabled` (course setting), `already_enrolled`, `already_waitlisted`, `waitlist_not_open` (course not published or closed, lesson not scheduled, seats free, or the booking-notice window already closed), `waitlist_full` (100 entries). Also `account_inactive`, `cannot_book_yourself`, `provider_unavailable`, `venue_not_active`, and, for `paymentMode: 'stripe'` while checkout is off, "Online course payments are not enabled". `position` is `waitlisted + 1`; positions stay contiguous.
+
+### `manageCourseSession` actions
+
+All need `courseId`, `sessionId`, `action`, a course manager, and the course/lesson to exist.
+
+| `action` | Extra input | Effect and errors |
+|---|---|---|
+| `attendance` | `userId`, `attendance: 'present'\|'absent'\|'unmarked'` | The participant must be confirmed, the lesson started and not cancelled (`attendance_unavailable`; `invalid_attendance`). `absent` sets `participants/{uid}.noShow` and adds 1 to `courses/{id}/customers/{uid}.noShows`; leaving `absent` subtracts it; marking `absent` twice counts once |
+| `cancel` | `reason` (required: `reason_required`) | Lesson to `cancelled` and unlisted, its room/instructor slots released, its waitlist cleared (`waitlist_cleared`), every booking released with refunds and a `cancelled_by_trainer` notice (`cancelled_by_client` goes to customers who cancel themselves); when it was the last scheduled lesson the course is archived. Past lessons: `cannot_change_past_lesson`. A repeated call changes nothing |
+| `reschedule` | `startsAt` (ISO instant), `roomId?`, `reason` | New start (same duration) and optionally another active room of the lesson's location; `revision` +1; locks moved (`room_overlap` / `instructor_overlap`, nothing written); the lesson's waitlist cleared; every participant gets `rescheduled`. Refused with held seats or a non-scheduled lesson (`session_unavailable`), a start inside the booking-notice window (`invalid_start_time`), an unusable room (`invalid_space`), a past lesson (`cannot_change_past_lesson`). The room is ignored for an unlinked course |
+| `substitute` | `instructorId`, `reason?` | The lesson gets another instructor (usable provider; linked and active at the venue for a venue course; an unlinked course only allows its provider unless an admin acts): `instructorId`/`instructorName`/`instructor` set, the instructor lock moved (`instructor_overlap`), `revision` +1, every participant gets `instructor_changed` with the reason. Same instructor as now: `invalid_instructor`. Existing enrollments keep their price; a new quote uses the substitute's partner status |
+| `removeParticipant` | `userId`, `reason?` | Releases that customer's seat in this lesson through the customer-cancellation path: refund obligation, `cancelled_by_trainer` notice, waitlist promotion. Past lessons: `cannot_cancel_past_lesson`; unknown participant: `participant_not_found`. When the lesson starts within the booking's `cancellationHours`, it is also recorded as a late cancellation (`lateCancelledSessionIds`, `lateCancels` +1), no fee |
+| `removeWaitlistEntry` | `userId` | Deletes the entry, renumbers the rest, tells the customer (`waitlist_removed`, reason `staff`) |
+| `capacity` | `capacity` 1..500 | Sets the lesson's capacity (`invalid_capacity`; not below booked + held: `capacity_below_bookings`; scheduled future lessons only), `revision` +1, then serves the waitlist after the commit (a failure is logged, not returned) |
+
+An unknown `action` is `invalid_session_action`.
+
+### Error codes
+
+`details` in brackets. The five-locale client texts are `courses.err.<code>` (`price_changed` also has `_price` and `_availability`); codes with no text there show the generic `courses.error`.
+
+| Code | `HttpsError` | When |
+|---|---|---|
+| `venue_authorization_required` | permission-denied | Not owner, active staff or admin of the venue, or the venue does not host courses |
+| `venue_owner_required` | permission-denied | Staff create for a venue that has no `ownerId` |
+| `venue_not_active` | failed-precondition | Venue inactive or `partnerStatus` not `active` (publish, quote, enroll, join) |
+| `course_owner_required` | permission-denied | Caller does not manage the course |
+| `course_instructor_not_allowed` | permission-denied | Unlinked course names an instructor other than its provider (non-admin) |
+| `account_inactive`, `provider_unavailable` | permission-denied / failed-precondition | Suspended or deleted account; provider not verified/active |
+| `invalid_space` | invalid-argument | Location or room missing, inactive, or not of this venue/location |
+| `invalid_instructor` | invalid-argument | Instructor not usable, not linked/active at the venue, or unchanged on `substitute` |
+| `room_overlap`, `instructor_overlap` | failed-precondition | [`courseName`, `startsAt`, `endsAt` of the conflicting slot] |
+| `locked_schedule_too_long` | failed-precondition | More than 400 upcoming lessons that take a room or instructor lock [`fields`] |
+| `booked_schedule_locked` | failed-precondition | A frozen field changed on a booked course |
+| `price_changed` | failed-precondition | [`reason`: `price` or `availability`] |
+| `expected_price_required` | invalid-argument | Customer enrollment without `expectedFinalCents`/`expectedRevisions` |
+| `lesson_full` | failed-precondition | [`waitlistAvailable`: boolean] (replaces `session_full`) |
+| `already_waitlisted`, `waitlist_disabled`, `waitlist_full`, `waitlist_not_open` | failed-precondition | Waitlist refusals |
+| `checkout_amount_too_low` | failed-precondition | [`minCents`: 50] Stripe total of 1..49 cents |
+| `request_id_reused` | invalid-argument | The `requestId` belongs to a different booking |
+| `already_enrolled`, `enrollment_closed`, `booking_deadline`, `series_already_started`, `session_unavailable`, `pricing_option_unavailable`, `empty_schedule` | failed-precondition | Booking preconditions |
+| `cancellation_deadline`, `cannot_cancel_past_lesson`, `cannot_change_past_lesson`, `invalid_start_time`, `attendance_unavailable` | failed-precondition | Time rules for cancelling, changing, rescheduling and marking attendance |
+| `capacity_below_bookings`, `invalid_capacity` | failed-precondition | Capacity rules |
+| `reason_required` | invalid-argument / failed-precondition | A reason is mandatory for cancel, reschedule, `cancelRemainingCourse` |
+| `participant_not_found`, `enrollment_not_found`, `course_not_found`, `session_not_found`, `refund_not_found` | not-found | Unknown ids |
+| `enrollment_owner_required` | permission-denied | Checkout for someone else's enrollment |
+| `provider_client_required` | failed-precondition / permission-denied | No `clients` pair for staff enrollment or invitation |
+| `direct_payment_required`, `direct_refund_required`, `direct_confirmed_enrollment_required` | invalid-argument / failed-precondition | Direct-payment rules for staff bookings, refunds and payment recording |
+| `checkout_hold_unavailable` | failed-precondition | Held seat expired/absent, or a zero-amount hold |
+| `rate_limited` | resource-exhausted | `quoteCourse` 60 per 10 minutes; `notifyCourseParticipant` 100 per hour per provider |
+| "Online course payments are not enabled" | failed-precondition | Stripe course checkout is off (the one message that is a sentence; the client maps it to `online_payments_disabled`) |
+| `invalid_booking_option`, `invalid_channel`, `invalid_payment_method`, `invalid_attendance`, `invalid_sessions`, `invalid_session_action`, `invalid_id`, `session_not_in_course`, `too_many_sessions` | invalid-argument / failed-precondition | Malformed input |
+| `admin_required`, `verified_instructor_required`, `invalid_instructor_partnership`, `gym_not_found`, `gym_location_not_found` | mixed | `saveGymSpace` / `configureGymInstructor` |
+| `phone_required`, `email_required` | failed-precondition | `notifyCourseParticipant` contact missing |
+| `course_validation_failed`, `pricing_required`, `invalid_timezone`, `end_date_required`, `weekdays_required`, `invalid_date`, `schedule_too_long`, `invalid_local_time`, `ambiguous_local_time`, `start_must_be_future`, `active_leaf_required` | invalid-argument / failed-precondition | Course input and schedule validation [`fields`] |
+
+`courseStripeWebhook` is an HTTP endpoint with Stripe raw-body signature verification. Configure Checkout completed/expired and refund.updated events. Browser redirects never mark paid. Repeated events preserve settlement/refund state. Payments received after hold expiry/cancellation enqueue refunds (and the freed seat is offered to the waitlist).
+
+### Scheduled functions and triggers
+
+- `maintainCourseEnrollments` (every five minutes, 540 s): (1) releases up to 100 expired Stripe holds (each release offers the seat to the waitlist); (2) `sweepWaitlists`: serves lessons whose `waitlisted` counter is above zero (promotes into free seats, or closes the list with `waitlist_cleared` when the booking-notice window is over) and, through a second scan of the `waitlist` entries, lessons whose counter fell behind their entries; cursors in `courseSweepState/waitlist`; bounded to 50 × 4 lessons per run; (3) processes pending/processing Stripe refunds in pages; (4) advances `nextStartsAt` of published courses after a lesson starts, archiving (and unlisting the lessons of) a course with nothing left; (5) `sweepElapsedLocks`: deletes lock slots of lessons that have ended and empty day documents; (6) retries interrupted lesson cancellations (`cancellationReconciled == false`, 100 per run).
+- `remindCourseParticipants` (every 60 minutes): idempotent `reminder_24h` notices for confirmed participants of lessons in the next 24 hours.
+- `onCourseNotification` (Firestore trigger on `courseNotifications/{id}`): builds the message in the recipient's `preferredLanguage` (`functions/src/notifications/bookingMessages.ts`, all five locales), writes the in-app notification, sends push and (unless disabled) email. The outbox id is derived from the event key, so a repeated event creates one notice. Provider-side notices link to `/provider/courses` (or `/provider/courses?venue=<id>` for a venue course), customers to `/courses?tab=bookings`.
+- `onCourseProviderEligibility` (trigger on `instructors/{providerId}`, `retry: true`): when a provider becomes or stops being eligible it flips `providerEligible` on their courses and `listed` on every lesson (published and eligible), 400 lessons per transaction, repeating until done; a half-done pass leaves `listingSyncPending` on the course so the next change finishes it.
+
+Course notification events: `accepted`, `new_request`, `payment_confirmed`, `cancelled_by_client`, `cancelled_by_trainer`, `rescheduled`, `reminder_24h`, plus the unified-model events `waitlist_promoted` (confirmed booking), `waitlist_promoted_hold` (online payment, seat held 30 minutes), `waitlist_cleared` (the lesson's list was closed: cancelled, moved, archived or too close), `waitlist_removed` (one entry left; the reason code `payment_unavailable`, `amount_too_low` or `staff` picks the sentence and is never printed) and `instructor_changed` (substitution, with the reason when given). A promoted customer gets only the waitlist notice, not a second "accepted".
 
 ### Provider course participants
 
-- `enrollCourseParticipant({courseId,userId,scope:"lesson"|"series",sessionId?,requestId})`: course owner/admin only, requires that participant’s provider-client pair, atomically reserves capacity using the same policy checks as customer enrollment. Direct payment only; returns the ordinary enrollment response. `createdBy` audits the actor. Retry with the same request ID is idempotent.
+- `enrollCourseParticipant({courseId,userId,scope:"lesson"|"series",sessionId?,requestId})`: course owner, active staff of the course's venue or admin (`canManageCourse`), requires that participant’s provider-client pair, atomically reserves capacity using the same policy checks as customer enrollment. Direct payment only; returns the ordinary enrollment response. `createdBy` audits the actor. Retry with the same request ID is idempotent.
 - `createClientAccount({fullName,email,phone?,notifyByEmail?})`: verified provider only; creates an invited identity and client pair or reuses the existing normalized-email account. `notifyByEmail` defaults true; course enrollment UI passes false so invitation is an explicit subsequent action. Name/email required, phone optional. Shared account lookup/creation rate limit remains 20/day.
-- `notifyCourseParticipant({userId,channel:"email"|"phone"})`: active verified provider and existing pair required. Email returns `{status:"sent"|"failed"}`; pending account setup links go only to the actual profile email. Phone requires a stored number and returns `{status:"ready",url,message,smsUrl,whatsAppUrl}`. The URL is a credential-free registration landing page for invitees or course bookings for existing users. The provider must send the phone message themselves. Rate: 100 attempts/hour/provider.
+- `notifyCourseParticipant({courseId,userId,channel:"email"|"phone"})`: the caller must manage the course (owner, venue staff, admin); the notice is sent on behalf of the course's provider, whose active verified status and existing client pair are required (`provider_client_required`); the rate limit and the provider name in the message are the provider's. Email returns `{status:"sent"|"failed"}`; pending account setup links go only to the actual profile email. Phone requires a stored number and returns `{status:"ready",url,message,smsUrl,whatsAppUrl}`. The URL is a credential-free registration landing page for invitees or course bookings for existing users. The provider must send the phone message themselves. Rate: 100 attempts/hour/provider.
 
 `/auth/participant/?email=...` publicly completes an invited account by requesting private email password setup; it does not create a second UID. First successful account claiming through `syncEmailVerification` activates all provider relationships.

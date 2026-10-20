@@ -436,6 +436,53 @@ contention outlasting its retries ⇒ `aborted` / `concurrent_update` (never `in
 
 ---
 
+### Group courses (`../../functions/src/courses/`)
+
+One engine for the group classes of individual providers and of gym, school and studio venues. Input, output and the complete error table of every callable: [api/reference.md](../api/reference.md#group-course-api). Documents: [database-schema.md](../database-schema.md#group-course-collections). The spaces callables live in `../../functions/src/venues/spaces.ts`. All callables are `onCall({ region })`, `europe-west1`; `cancelCourseEnrollment`, `manageCourseSession`, `cancelRemainingCourse`, `createCourseCheckout`, `maintainCourseEnrollments` and the webhook bind the `STRIPE_SECRET_KEY` secret (releasing a held Stripe seat expires its open Checkout Session, best effort).
+
+| Module | What it owns |
+|---|---|
+| `core.ts` | `courseSchema`, `validateCourse`, `localInstant` (wall time to instant in a timezone; gap and ambiguous times are `invalid_local_time` / `ambiguous_local_time`), `generateSessions`, `assertReservable`, `allocatePrice`, `courseRevisionBumped`, `sessionRevisionBumped`, `checkoutActive` |
+| `authority.ts` | `managesVenue(uid, venueId, tx?)`, `canManageCourse(uid, course, tx?)` returning `{uid, via: 'owner'\|'venue'\|'admin'}`; tx-aware |
+| `locks.ts` | `courseScheduleLocks` helpers: `lockPaths`, `diffSlots`, `updateScheduleLocks(tx, remove, add)`, `slotsOf`, `MAX_LOCKED_SESSIONS = 400` |
+| `pricing.ts` | Pure maths: `discountPercents`, `applyDiscount`, `quoteSeries`, `assertStripeAmount` (`STRIPE_MIN_CENTS = 50`) |
+| `quote.ts` | `buildQuote(tx \| null, course, sessionIds, options)` and the `quoteCourse` callable |
+| `enrollTx.ts` | `enrollInTx(tx, input)`: every read, then a `commit()` closure with every write |
+| `enrollment.ts` | `enrollInCourse` / `enrollCourseParticipant`: argument parsing, payment-mode checks, one transaction around `enrollInTx` |
+| `waitlist.ts` | Pure rules (`joinDecision`, `renumber`, `promotionWindowOpen`), `joinCourseWaitlist`, `leaveCourseWaitlist`, `removeFromWaitlist`, `planPromotions`, `clearWaitlistInTx`, `promoteWaitlist`; `WAITLIST_MAX = 100`, `PROMOTION_SCAN = 5`, `MAX_PROMOTION_SESSIONS_PER_TX = 25`, `PROMOTION_WRITE_BUDGET = 350` |
+| `operations.ts` | `releaseEnrollment`, `cancelCourseEnrollment`, `recordCoursePayment`, `manageCourseSession`, `confirmCourseRefund`, `cancelRemainingCourse` |
+| `index.ts` | `saveCourse`, `previewCourse` (and re-exports the rest) |
+| `checkout.ts` | `createCourseCheckout`, `courseStripeWebhook`, late-payment refund branch |
+| `maintenance.ts` | `maintainCourseEnrollments`, `remindCourseParticipants`, `sweepWaitlists`, `sweepElapsedLocks` |
+| `providerEligibility.ts` | `onCourseProviderEligibility` / `syncCourseEligibility` |
+| `notifications.ts` | `queueCourseNotification` and the `onCourseNotification` trigger |
+| `participantInvitations.ts` | `notifyCourseParticipant` |
+
+**Design rules every callable follows.**
+- *No nested transactions.* Anything that must run inside another transaction takes a `Transaction` and returns a closure: `enrollInTx` (reads, then `commit()`), `planPromotions` (reads, then `apply()`), `clearWaitlistInTx` (reads, then a writer). A transaction does all its reads before its first write.
+- *Authority once.* `canManageCourse` is resolved at callable entry and passed down as a `ReleaseActor` (`system`, `customer`, `manager`); `releaseEnrollment` never looks it up per participant.
+- *Counters by increment.* Lesson `occupied`, `held`, `waitlisted` and the course's `nextAvailableSeats` move with `FieldValue.increment`, so several writes to one lesson in one transaction (a release plus a promotion into the same seat) compose; the promotion into a freed seat nets to zero.
+- *Replay safe.* Enrollment ids are `sha256(uid:requestId)` (`sha256(actor:uid:requestId)` for staff bookings); a retried booking, join, promotion or cancellation changes nothing the second time. Notification outbox ids derive from the event.
+- *The lock invariant.* A lock slot exists if and only if its course is published and its lesson is scheduled and has not ended. `saveCourse`, the lesson actions (`cancel`, `reschedule`, `substitute`), `cancelRemainingCourse` and archiving all update the slots in the same transaction as the lesson; `sweepElapsedLocks` removes slots of finished lessons. A test oracle (`lockInvariant.testutil.ts`) checks the invariant after every lifecycle test.
+- *Quote then confirm.* `quoteCourse` is advisory; the booking transaction recomputes the price from the same `buildQuote` and compares it with the customer's `expectedFinalCents` and each lesson's `expectedRevisions` (`price_changed`).
+- *Waitlist bounds.* A release tries the first `PROMOTION_SCAN` (5) entries per freed seat and at most 25 lessons per transaction within a 350-write budget; anything left is served by `promoteWaitlist` (loops single-seat transactions, at most 50) and by the five-minute sweep, which also repairs counters that drifted from their entries. Entries that can never be promoted leave with `waitlist_removed`; when a list is closed, `waitlist_cleared`.
+- *Capacity never exceeded.* A promotion runs `enrollInTx` with the freed seats as `released`, so it passes the capacity check only for seats actually freed in that transaction.
+
+**Callables added or changed by the unified model:** `saveCourse` (venue/space/instructor validation, forced timezone, snapshots, locks, revision), `previewCourse` (now returns `conflicts`), `quoteCourse` (new), `enrollInCourse` (priced, `expectedFinalCents` / `expectedRevisions`, `price_changed`, free bookings), `enrollCourseParticipant` (course authority, discount without price check), `notifyCourseParticipant` (takes `courseId`), `joinCourseWaitlist` and `leaveCourseWaitlist` (new), `manageCourseSession` (actions `reschedule` with `roomId`, `substitute`, `removeParticipant`, `removeWaitlistEntry`, `capacity`; `attendance` records no-shows), `cancelRemainingCourse` and `cancelCourseEnrollment` (venue staff, locks, waitlists, promotion), `confirmCourseRefund` / `recordCoursePayment` (venue staff), `saveGymSpace` and `configureGymInstructor` (moved from the partner-gym module; `saveGymSpace` now accepts venue staff).
+
+**Triggers and schedules:** `maintainCourseEnrollments` (every 5 minutes), `remindCourseParticipants` (hourly), `onCourseNotification`, `onCourseProviderEligibility` (needs `--force` to redeploy, it has `retry: true`). Details of each are in the API reference section "Scheduled functions and triggers".
+
+**Notifications.** Course notices use `bookingMessages.ts` templates in `it, en, es, fr, de` (type-enforced: a new event must have all five). New events: `waitlist_promoted`, `waitlist_promoted_hold`, `waitlist_cleared`, `waitlist_removed`, `instructor_changed`; tests in `functions/src/notifications/bookingMessages.test.ts`. Voice follows the existing templates: it informal, es "tu", fr "vous", de "du".
+
+**Operations.**
+- `node scripts/backfill-session-listed.mjs --project vfit-app-staging [--apply]` repairs `sessions.listed` for venue-linked courses (dry run by default).
+- `node scripts/smoke-unified-courses-staging.mjs [--keep|--cleanup]` is the 25-check staging smoke (needs the demo accounts); `scripts/smoke-unified-courses-load-staging.mjs` runs the 400-lesson cancel and a 20-way waitlist burst against throwaway data.
+- Emulator tests run outside the sandbox: `cd functions && npx firebase emulators:exec --only firestore --project demo-vfit "npx vitest run src/courses test/courses-rules.test.ts test/unified-courses-rules.test.ts"`; `RACE_ITERATIONS` sets the repeat count of the race suite (default 3, 10 before a release). Pure suites run with `npx vitest run src/courses/pricing.test.ts` and similar.
+
+**The partner-gym module (`../../functions/src/partnerGyms/`) is superseded.** Its callables (`saveGymSchedule`, `updateGymSession`, `quoteGymBooking`, `quoteGymTimetable`, `bookGymClass`, `cancelGymBooking`, `recordGymPayment`, `confirmGymRefund`) and trigger (`onGymNotification`) are still exported and deployed on staging but nothing in the unified flow calls them; they are being removed in the last task of the unified-courses plan.
+
+---
+
 ## Recipes (`../../functions/src/recipes/`)
 
 Added by P2-6 on 2026-08-09. Spec: `../superpowers/specs/2026-08-09-recipe-suggestions-design.md`.

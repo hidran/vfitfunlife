@@ -191,7 +191,7 @@ export const saveCourse = onCall({ region }, async (req) => {
           startsAt, endsAt, capacity: capacityOf(previous), occupied: previous?.occupied ?? 0,
           held: previous?.held ?? 0, state, instructor,
           location: ownRoom ? previous.location ?? input.location : input.location,
-          courseId: id, courseName: input.name, venueId: input.venueId, locationId, roomId, instructorId,
+          courseId: id, courseName: input.name, timezone: input.timezone, venueId: input.venueId, locationId, roomId, instructorId,
           instructorName, listed: input.state === "published", waitlisted: previous?.waitlisted ?? 0,
           revision: (previous?.revision ?? 1) + (bumped ? 1 : 0),
         } };

@@ -10,6 +10,7 @@
 - [User Profile Permissions](#user-profile-permissions)
 - [Booking Permissions](#booking-permissions)
 - [Admin Permissions](#admin-permissions)
+- [Group course authority](#group-course-authority)
 - [Firestore Security Rules](#firestore-security-rules)
 - [Best Practices](#best-practices)
 - [FAQ](#faq)
@@ -481,6 +482,27 @@ Admins **CANNOT**:
 - Modify role hierarchy or permission definitions
 
 ---
+
+## Group course authority
+
+Source: `functions/src/courses/authority.ts` (server) and `firestore.rules` (`managesVenue`, `managesCourse`). Group courses belong to a **provider of record** (`courses.providerId`: the payee and owner of the roster). A course linked to a venue (`venueId`) can also be managed by that venue's people. Both sides use the same three roles; the server resolves them **once at callable entry** (`canManageCourse`) and passes the result down, it never re-checks per participant.
+
+| Who | `managesVenue(venueId)` | `canManageCourse(course)` | Notes |
+|---|---|---|---|
+| Course's provider (`providerId`) | only if also owner/staff | yes, `via: owner` | A course owner keeps control of their own courses, venue or not |
+| Venue owner (`venues/{v}.ownerId`) | yes | yes for venue-linked courses, `via: venue` | A company's `biz_<uid>` venue is owned by the company |
+| Active venue staff (`venueStaff/{uid}` with the venue's id and `isActive !== false`) | yes | yes for venue-linked courses, `via: venue` | Inactive staff and staff of another venue get `course_owner_required` |
+| Admin or superadmin | yes | yes, `via: admin` | May create a venue course for any `providerId` and, on an unlinked course, name any instructor |
+| Anyone else | no | `course_owner_required` | |
+| Suspended, deleted or inactive account | no | `account_inactive` | Checked first |
+
+- `managesVenue` does **not** require the venue to host courses (gym, school or studio, `hostsCourses`) or to be an active partner: callers decide. `saveCourse` and `saveGymSpace` require a hosting type (`venue_authorization_required` / `gym_not_found` otherwise); publishing, quoting, booking and joining a waitlist need `partnerStatus === 'active'` (`venue_not_active`).
+- A course without `venueId` (every course written before the unified model, and every individual provider's course) stays with its provider and admins: venue staff do not manage it, and the rules never grant it through a venue.
+- Venue staff create courses **on the owner's behalf**: the course's `providerId` is the venue's owner (`venue_owner_required` if the venue has none) and the owner is the payee. On edit `providerId` never changes.
+- Venue people and admins can: edit/publish/archive, add and remove participants, mark attendance, record payments, confirm refunds, reschedule/cancel/substitute a lesson, change a lesson's capacity, remove waitlist entries, cancel the remaining course and send participant notices (which act for the provider of record). Only admins link instructors to a venue (`configureGymInstructor`) and pick the partner status.
+- Reads (`firestore.rules`): courses, enrollments and refunds are readable by venue managers through their `venueId` field, so list queries must constrain `venueId`; rosters (`participants`, `waitlist`, `customers`) through `managesCourse()`. A customer reads only their own participant, waitlist and enrollment documents. Lock and sweep documents are closed to every client.
+- The public weekly timetable needs no sign-in: it reads `listed` lessons of an active partner venue only.
+
 
 ## Firestore Security Rules
 

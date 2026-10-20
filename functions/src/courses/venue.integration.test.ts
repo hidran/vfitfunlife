@@ -324,6 +324,7 @@ describe("saveCourse venue space, instructor and timezone", () => {
     expect(await stored(courseId)).toMatchObject({ timezone: "Asia/Tokyo" });
     const session = (await db.doc(`courses/${courseId}/sessions/${SESSION}`).get()).data()!;
     expect(session.startsAt.toDate().toISOString()).toBe("2099-10-12T09:00:00.000Z");
+    expect(session.timezone).toBe("Asia/Tokyo");
   });
   it("validates wall times in the location's timezone", async () => {
     await expect(save("biz", { ...venueInput, startDate: "2099-10-25", endDate: "2099-10-25",
@@ -399,7 +400,7 @@ describe("saveCourse session snapshots and revisions", () => {
     for (const session of all) {
       expect(session).toMatchObject({ revision: 1, courseId, venueId: "v", locationId: "l1", roomId: "r1",
         instructorId: "p", instructorName: "Anna", listed: true, waitlisted: 0, capacity: 5, state: "scheduled",
-        courseName: venueInput.name });
+        courseName: venueInput.name, timezone: "Europe/Rome" });
     }
   });
   it("carries the course name on every session and follows a rename", async () => {

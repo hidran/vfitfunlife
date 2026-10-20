@@ -13,8 +13,8 @@
 //   node scripts/backfill-session-listed.mjs --project vfit-app-staging    # dry run
 //   node scripts/backfill-session-listed.mjs --project vfit-app-staging --apply
 //
-// Optional `--names` also copies the course name onto each lesson (`courseName`, what saveCourse now writes), so the
-// venue page and timetable label lessons without reading course documents:
+// Optional `--names` also copies the course name and time zone onto each lesson (`courseName`, `timezone`: what
+// saveCourse now writes), so the venue page labels and times lessons without reading course documents:
 //
 //   node scripts/backfill-session-listed.mjs --project vfit-app-staging --names --apply
 //
@@ -42,7 +42,7 @@ admin.initializeApp({ projectId });
 const db = admin.firestore();
 
 const target = useEmulator ? `the emulator (${projectId})` : projectId;
-console.log(`${apply ? "APPLY" : "DRY RUN"} - backfilling sessions.listed${names ? " and courseName" : ""} of venue-linked courses on ${target}\n`);
+console.log(`${apply ? "APPLY" : "DRY RUN"} - backfilling sessions.listed${names ? ", courseName and timezone" : ""} of venue-linked courses on ${target}\n`);
 
 const courses = await db.collection("courses").where("venueId", "!=", null).get();
 const plan = []; // { ref, updateTime, patch }
@@ -58,6 +58,7 @@ for (const course of courses.docs) {
     const patch = {};
     if (session.get("listed") !== listed) patch.listed = listed;
     if (names && typeof data.name === "string" && session.get("courseName") !== data.name) patch.courseName = data.name;
+    if (names && typeof data.timezone === "string" && session.get("timezone") !== data.timezone) patch.timezone = data.timezone;
     if (Object.keys(patch).length) {
       plan.push({ ref: session.ref, updateTime: session.updateTime, patch });
       touchedCourses.add(course.id);
