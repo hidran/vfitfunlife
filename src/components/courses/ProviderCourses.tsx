@@ -19,7 +19,37 @@ import { Modal } from '@/components/ui/Modal';
 import { VenueSpacesPanel } from '@/components/venues/VenueSpacesPanel';
 import { AddCourseParticipant } from '@/components/courses/AddCourseParticipant';
 import { ParticipantInvitation } from '@/components/courses/ParticipantInvitation';
+import { LessonWaitlist } from '@/components/courses/LessonWaitlist';
+import { SubstituteInstructor } from '@/components/courses/SubstituteInstructor';
+import { LessonCapacity } from '@/components/courses/LessonCapacity';
 import { courseDate, courseMoney } from '@/components/courses/CourseBooking';
+
+const HOUR_MS = 3600000;
+
+/**
+ * Staff removal of one participant from one lesson (seat freed, refund and waitlist promotion follow on the server).
+ * Past the customer's own cancellation deadline the removal is recorded as a late cancellation, which the warning says.
+ */
+function RemoveParticipant({ courseId, sessionId, userId, name, late, busy, onRun }: {
+  courseId: string; sessionId: string; userId: string; name: string; late: boolean; busy: boolean;
+  onRun: (name: string, data: Record<string, unknown>) => Promise<boolean>;
+}) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState('');
+  if (!open) return <Button size="sm" variant="outline" className="min-h-11" disabled={busy} aria-label={`${t('courses.removeParticipant')} ${name}`}
+    onClick={() => setOpen(true)}>{t('courses.removeParticipant')}</Button>;
+  return <div className="w-full space-y-2 rounded-xl border border-hairline p-3">
+    {late && <p className="text-sm text-amber-600 dark:text-amber-400" role="note">{t('courses.removeLateWarning')}</p>}
+    <label className="block space-y-1 text-sm">{t('courses.reason')}
+      <input className="w-full min-h-11 rounded-xl border border-hairline bg-surface p-3 text-content" maxLength={500} value={reason} onChange={e => setReason(e.target.value)} /></label>
+    <div className="flex flex-wrap gap-2">
+      <Button size="sm" className="min-h-11" disabled={busy} onClick={async () => {
+        if (await onRun('manageCourseSession', { courseId, sessionId, action: 'removeParticipant', userId, ...(reason.trim() ? { reason: reason.trim() } : {}) })) setOpen(false);
+      }}>{t('courses.confirmRemove')}</Button>
+      <Button size="sm" variant="ghost" className="min-h-11" disabled={busy} onClick={() => setOpen(false)}>{t('common.cancel')}</Button></div>
+  </div>;
+}
 
 /** No-shows from this count on are called out next to the customer's name. */
 const REPEAT_NO_SHOWS = 2;
@@ -65,6 +95,7 @@ export function ProviderCourses() {
   const rooms = useQuery({ queryKey: ['venueSpaces', course?.venueId, 'rooms', course?.locationId],
     enabled: operation === 'reschedule' && !!course?.venueId && !!course.locationId,
     queryFn: () => fetchVenueRooms(course!.venueId!, course!.locationId!) });
+  const upcoming = selectedSession?.state === 'scheduled' && selectedSession.startsAt.toMillis() > Date.now();
   const field = 'rounded-xl border border-hairline bg-surface text-content p-3 w-full min-h-11';
   const createHref = `/provider/courses/create${venueId ? `?venue=${venueId}` : ''}`;
   const repeat = new Map((counters.data ?? []).map(c => [c.userId, c]));
@@ -131,7 +162,9 @@ export function ProviderCourses() {
         <div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" className="min-h-11" disabled={busy || selectedSession.state !== 'scheduled' || selectedSession.startsAt.toMillis() <= Date.now()}
           onClick={() => setOperation('cancel')}>{t('courses.cancelLesson')}</Button>
           <Button variant="outline" size="sm" className="min-h-11" disabled={busy || selectedSession.state !== 'scheduled' || selectedSession.startsAt.toMillis() <= Date.now()}
-            onClick={() => setOperation('reschedule')}>{t('courses.reschedule')}</Button></div>
+            onClick={() => setOperation('reschedule')}>{t('courses.reschedule')}</Button>
+          {upcoming && <SubstituteInstructor key={`sub-${selectedSession.id}`} course={course} session={selectedSession} />}
+          {upcoming && <LessonCapacity key={`cap-${selectedSession.id}`} courseId={courseId} session={selectedSession} />}</div>
         {operation && operation !== 'cancelRemaining' && <div className="space-y-3"><label className="block">{t('courses.reason')}<input required className={field} value={reason} onChange={e => setReason(e.target.value)} /></label>
           {operation === 'reschedule' && <label className="block">{t('courses.startDate')} · {course.timezone}<input type="datetime-local" className={field} value={newDate} onChange={e => setNewDate(e.target.value)} /></label>}
           {operation === 'reschedule' && course.venueId && <label className="block">{t('courses.rescheduleRoom')}
@@ -152,8 +185,11 @@ export function ProviderCourses() {
               onChange={e => run('manageCourseSession', { courseId, sessionId, action: 'attendance', userId: p.userId, attendance: e.target.value })}>
               {(['unmarked', 'present', 'absent'] as const).map(v => <option key={v} value={v}>{t(`courses.${v}`)}</option>)}</select></label>
               {enrollment?.paymentMode === 'direct' && enrollment.paymentStatus !== 'paid' && <Button size="sm" className="min-h-11" disabled={busy} onClick={() => setPayment({ enrollmentId: p.enrollmentId, method: 'cash' })}>{t('courses.recordPayment')}</Button>}
+              {upcoming && <RemoveParticipant key={`${sessionId}-${p.userId}`} courseId={courseId} sessionId={sessionId} userId={p.userId} name={p.customerName} busy={busy} onRun={run}
+                late={!!enrollment && selectedSession.startsAt.toMillis() <= Date.now() + enrollment.cancellationHours * HOUR_MS} />}
             </div><ParticipantInvitation courseId={courseId} userId={p.userId} /></li>;
         })}</ul>
+        <LessonWaitlist key={`wl-${sessionId}`} courseId={courseId} sessionId={sessionId} />
         {lateCancelled.length > 0 && <div className="space-y-1"><h3 className="font-semibold">{t('courses.lateCancels')}</h3>
           <ul className="text-sm text-content-muted">{lateCancelled.map(e => {
             const count = repeat.get(e.userId)?.lateCancels ?? 0;

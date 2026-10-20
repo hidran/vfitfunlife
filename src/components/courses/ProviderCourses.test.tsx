@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
   search: '' as string, push: vi.fn(), replace: vi.fn(), call: vi.fn(), refresh: vi.fn(),
   role: 'provider', providerStatus: 'verified', venues: [] as { id: string; name: string }[], venuesLoading: false,
   providerCourses: [] as unknown[], venueCourses: [] as unknown[], enrollments: [] as unknown[], sessions: [] as unknown[],
-  participants: [] as unknown[], counters: [] as unknown[], rooms: [] as unknown[],
+  participants: [] as unknown[], counters: [] as unknown[], rooms: [] as unknown[], waitlist: [] as unknown[],
   seen: { courses: [] as unknown[][], venueCourses: [] as unknown[][], enrollments: [] as unknown[][], venueEnrollments: [] as unknown[][] },
 }));
 
@@ -42,6 +42,7 @@ vi.mock('@/hooks/useCourses', () => ({
   useCourseSessions: (id?: string) => ({ data: id ? mocks.sessions : undefined }),
   useCourseParticipants: (c?: string, s?: string) => ({ data: c && s ? mocks.participants : undefined, isError: false }),
   useCustomerCounters: () => ({ data: mocks.counters }),
+  useWaitlist: () => ({ data: mocks.waitlist }),
   useRefreshCourses: () => mocks.refresh,
 }));
 vi.mock('@/lib/firebase/courses', () => ({ courseCall: mocks.call }));
@@ -72,7 +73,7 @@ beforeEach(() => {
   Object.assign(mocks, { search: '', role: 'provider', providerStatus: 'verified', venues: [], venuesLoading: false,
     providerCourses: [course({ venueId: null, locationId: null, roomId: null })], venueCourses: [course()], enrollments: [],
     sessions: [{ id: 's1', startsAt: ts(FUTURE), endsAt: ts(FUTURE + 3600000), capacity: 8, occupied: 1, held: 0, state: 'scheduled', roomId: 'r1' }],
-    participants: [], counters: [], rooms: [] });
+    participants: [], counters: [], rooms: [], waitlist: [] });
   for (const list of Object.values(mocks.seen)) list.length = 0;
 });
 
@@ -204,5 +205,57 @@ describe('reschedule', () => {
     renderPage(); await openLesson();
     fireEvent.click(screen.getByRole('button', { name: 'courses.reschedule' }));
     expect(screen.queryByLabelText('courses.rescheduleRoom')).toBeNull();
+  });
+});
+
+describe('lesson actions', () => {
+  const person = { id: 'u1', userId: 'u1', customerName: 'Ada', enrollmentId: 'e1', state: 'confirmed', attendance: 'unmarked' };
+  beforeEach(() => {
+    mocks.search = 'venue=v1'; mocks.venues = [{ id: 'v1', name: 'Smoke Gym' }];
+    mocks.participants = [person];
+    mocks.enrollments = [{ id: 'e1', courseId: 'c1', customerName: 'Ada', paymentMode: 'direct', paymentStatus: 'paid', totalCents: 1000, cancellationHours: 24 }];
+  });
+
+  it('offers substitute, capacity and removal on an upcoming lesson only', async () => {
+    renderPage(); await openLesson();
+    expect(screen.getByRole('button', { name: 'courses.substitute' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'courses.capacityAction' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'courses.removeParticipant Ada' })).toBeInTheDocument();
+  });
+
+  it('hides them once the lesson has started', async () => {
+    mocks.sessions = [{ id: 's1', startsAt: ts(PAST), endsAt: ts(PAST + 3600000), capacity: 8, occupied: 1, held: 0, state: 'scheduled' }];
+    renderPage(); await openLesson();
+    expect(screen.queryByRole('button', { name: 'courses.substitute' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'courses.capacityAction' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /courses.removeParticipant/ })).toBeNull();
+  });
+
+  it('removes a participant after a confirmation, without a late warning before the deadline', async () => {
+    renderPage(); await openLesson();
+    fireEvent.click(screen.getByRole('button', { name: 'courses.removeParticipant Ada' }));
+    expect(screen.queryByText('courses.removeLateWarning')).toBeNull();
+    expect(mocks.call).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'courses.confirmRemove' }));
+    await waitFor(() => expect(mocks.call).toHaveBeenCalledWith('manageCourseSession',
+      { courseId: 'c1', sessionId: 's1', action: 'removeParticipant', userId: 'u1' }));
+  });
+
+  it('warns about a late cancellation past the customer deadline and still sends the reason', async () => {
+    mocks.enrollments = [{ id: 'e1', courseId: 'c1', customerName: 'Ada', paymentMode: 'direct', paymentStatus: 'paid', totalCents: 1000, cancellationHours: 24 * 30 }];
+    renderPage(); await openLesson();
+    fireEvent.click(screen.getByRole('button', { name: 'courses.removeParticipant Ada' }));
+    expect(screen.getByText('courses.removeLateWarning')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('courses.reason'), { target: { value: 'No show last time' } });
+    fireEvent.click(screen.getByRole('button', { name: 'courses.confirmRemove' }));
+    await waitFor(() => expect(mocks.call).toHaveBeenCalledWith('manageCourseSession',
+      expect.objectContaining({ action: 'removeParticipant', userId: 'u1', reason: 'No show last time' })));
+  });
+
+  it('shows the waitlist of the lesson', async () => {
+    mocks.waitlist = [{ id: 'w1', userId: 'w1', customerName: 'Wendy', position: 1 }];
+    renderPage(); await openLesson();
+    expect(screen.getByText('courses.waitlistTitle')).toBeInTheDocument();
+    expect(screen.getByText('Wendy')).toBeInTheDocument();
   });
 });

@@ -3511,6 +3511,15 @@ export const itMessages = {
   'courses.noShows': "{{count}} assenze non giustificate",
   'courses.lateCancels': "Cancellazioni tardive",
   'courses.rescheduleRoom': "Sala della nuova lezione",
+  'courses.waitlistTitle': "Lista d’attesa",
+  'courses.position': "Posizione {{position}}",
+  'courses.removeEntry': "Rimuovi dalla lista",
+  'courses.substitute': "Sostituisci istruttore",
+  'courses.substituteConfirm': "Conferma sostituzione",
+  'courses.capacityAction': "Cambia capienza",
+  'courses.removeParticipant': "Rimuovi partecipante",
+  'courses.removeLateWarning': "Il termine di cancellazione del cliente è passato: la rimozione verrà registrata come cancellazione tardiva (nessuna penale).",
+  'courses.confirmRemove': "Conferma rimozione",
 } as const;
 
 export type MessageKey = keyof typeof itMessages;

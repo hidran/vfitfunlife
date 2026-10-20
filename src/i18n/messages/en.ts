@@ -3513,4 +3513,13 @@ export const enMessages: Messages = {
   'courses.noShows': "{{count}} no-shows",
   'courses.lateCancels': "Late cancellations",
   'courses.rescheduleRoom': "Room for the new time",
+  'courses.waitlistTitle': "Waitlist",
+  'courses.position': "Position {{position}}",
+  'courses.removeEntry': "Remove from waitlist",
+  'courses.substitute': "Substitute instructor",
+  'courses.substituteConfirm': "Confirm substitution",
+  'courses.capacityAction': "Change capacity",
+  'courses.removeParticipant': "Remove participant",
+  'courses.removeLateWarning': "The customer’s cancellation deadline has passed: this removal is recorded as a late cancellation (no fee).",
+  'courses.confirmRemove': "Confirm removal",
 };

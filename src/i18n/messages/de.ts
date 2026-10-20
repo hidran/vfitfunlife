@@ -3493,4 +3493,13 @@ export const deMessages: Messages = {
   'courses.noShows': "{{count}} Nichterscheinen",
   'courses.lateCancels': "Späte Stornierungen",
   'courses.rescheduleRoom': "Raum für den neuen Termin",
+  'courses.waitlistTitle': "Warteliste",
+  'courses.position': "Position {{position}}",
+  'courses.removeEntry': "Von der Warteliste entfernen",
+  'courses.substitute': "Kursleitung vertreten",
+  'courses.substituteConfirm': "Vertretung bestätigen",
+  'courses.capacityAction': "Kapazität ändern",
+  'courses.removeParticipant': "Teilnehmer entfernen",
+  'courses.removeLateWarning': "Die Stornofrist des Kunden ist abgelaufen: Das Entfernen wird als späte Stornierung erfasst (keine Gebühr).",
+  'courses.confirmRemove': "Entfernen bestätigen",
 };

@@ -3495,4 +3495,13 @@ export const frMessages: Messages = {
   'courses.noShows': "{{count}} absences non excusées",
   'courses.lateCancels': "Annulations tardives",
   'courses.rescheduleRoom': "Salle du nouvel horaire",
+  'courses.waitlistTitle': "Liste d’attente",
+  'courses.position': "Position {{position}}",
+  'courses.removeEntry': "Retirer de la liste",
+  'courses.substitute': "Remplacer l’instructeur",
+  'courses.substituteConfirm': "Confirmer le remplacement",
+  'courses.capacityAction': "Modifier la capacité",
+  'courses.removeParticipant': "Retirer le participant",
+  'courses.removeLateWarning': "Le délai d’annulation du client est dépassé : ce retrait sera enregistré comme annulation tardive (sans frais).",
+  'courses.confirmRemove': "Confirmer le retrait",
 };

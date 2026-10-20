@@ -3486,4 +3486,13 @@ export const esMessages: Messages = {
   'courses.noShows': "{{count}} ausencias sin aviso",
   'courses.lateCancels': "Cancelaciones tardías",
   'courses.rescheduleRoom': "Sala de la nueva hora",
+  'courses.waitlistTitle': "Lista de espera",
+  'courses.position': "Posición {{position}}",
+  'courses.removeEntry': "Quitar de la lista",
+  'courses.substitute': "Sustituir instructor",
+  'courses.substituteConfirm': "Confirmar sustitución",
+  'courses.capacityAction': "Cambiar aforo",
+  'courses.removeParticipant': "Quitar participante",
+  'courses.removeLateWarning': "El plazo de cancelación del cliente ha pasado: la baja se registrará como cancelación tardía (sin penalización).",
+  'courses.confirmRemove': "Confirmar baja",
 };
