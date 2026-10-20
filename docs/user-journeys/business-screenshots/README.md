@@ -25,3 +25,18 @@ Cleanup verified: all five temporary Auth accounts, user/instructor documents an
 The final screenshot audit found the existing admin tabs overflowing to 525px. Code `4ce0263` wraps those tabs, and `1777547` wraps long subtitle emails; corrected admin screenshots use a temporary layout fixture with the same reviewed details, removed after the check.
 
 Final Playwright assertions on `1777547`: document width equals viewport at 320/390px in light/dark; all admin tabs are reachable. The temporary layout fixture and browser auth-state files were removed. All 28 PNG evidence files passed integrity/width checks and guide links resolve.
+
+## Reconciled build re-shoot: venue steps, 20 October 2026
+
+Environment: `vfit-app-staging`, code `f3abc70` (main `a545614`). Full results: [business-reconciled-verification.md](../business-reconciled-verification.md). Companies shown: `RC Gym Journey` (renamed `RC Gym Journey Centro`) and `RC Shot Gym`, synthetic, deleted afterwards (their venues stay as inactive documents).
+
+| Step | Evidence |
+|---|---|
+| Admin review card shows venue type and address | [Italian 390 dark](it-admin-review-venue-390-dark.png) |
+| Venue created on approval, Owner column | [Admin → Venues, Titolare/Stato columns](it-admin-venues-owner-390-dark.png), [venue detail](it-admin-venue-detail-390-dark.png) |
+| Venue listed in Gyms & schools after "Near me" (location saved) | [English light](en-gyms-near-me-venue-390-light.png), [English dark](en-gyms-near-me-venue-390-dark.png), [Italian light](it-gyms-near-me-venue-390-light.png), [Italian dark](it-gyms-near-me-venue-390-dark.png) |
+| Venue page | [Italian dark](it-venue-page-390-dark.png), [English light](en-venue-page-390-light.png) |
+| Venue inactive after conversion to individual (status "Sospeso") | [Admin → Venues](it-admin-venue-deactivated-390-dark.png) |
+| Search card: logo, Company/Business + Verified badges stacked at 320 | [Italian](it-search-logo-badges-320-light.png), [German](de-search-logo-badges-320-light.png) |
+| Booking detail with company name and logo | [English light](en-booking-detail-logo-390-light.png) |
+| Company signup: inline errors, focus on the tax-id field, venue fields | [Italian 390 light](it-signup-venue-errors-390-light.png) |

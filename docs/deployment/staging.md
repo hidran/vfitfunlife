@@ -474,7 +474,7 @@ Delete them from the console (or with `--force` on staging only) once the B10 jo
 
 Their `users` documents carry both `providerKind: 'business'` and the old `providerType: 'business'`. Tax ids repeat across accounts (12345678903 twice, 01234567897 three times) and no `businessVat` claim backs any of them, so the uniqueness guarantee does not hold for this data: do not use these accounts to judge duplicate-VAT behaviour, and delete them (Auth user, `users`, `instructors`, `venues/biz_*`) after the B10 journey, using fresh tax ids for it.
 
-Still to do on staging: the B10 browser journey (section 5), the courses smoke scripts, and hard-reloading `/admin`.
+The B10 browser journey (section 5) was run on 2026-10-20: see [`business-reconciled-verification.md`](../user-journeys/business-reconciled-verification.md); the five leftover synthetic companies above were deleted through the admin UI (their `venues/biz_*` documents remain, inactive). Still to do on staging: the courses smoke scripts and the stray-index deletion.
 
 ### Staging deploy of main's rebuild, 2026-10-19 (superseded, kept as a record)
 

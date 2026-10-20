@@ -1,5 +1,7 @@
 # Business (company) accounts: browser verification (plan task B10)
 
+> **Update 2026-10-20:** the reconciled build was re-verified in the browser on staging: see [`business-reconciled-verification.md`](business-reconciled-verification.md); it supersedes the "by code reading" column below.
+>
 > **Status banner (added 2026-10-19, reconciliation).** This log was written against **main's rebuild** of business accounts (staging
 > build `cf505de`, re-check at `20759f9`), which is **superseded**: the branch `feat/business-accounts` (production-deployed
 > 2026-10-06) is the base and main's delta was ported onto `reconcile/business-accounts` (see
