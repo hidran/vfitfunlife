@@ -1,4 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { testProjectId } from "./testProject";
 import * as admin from "firebase-admin";
 import type { CallableRequest } from "firebase-functions/v2/https";
 import type Stripe from "stripe";
@@ -21,7 +22,7 @@ const input = { name: "Karate", categoryId: "karate", location: "Torino", instru
   recurrence: "daily", endDate: "2099-10-14", lessonPriceCents: 1500, seriesPriceCents: 4000, state: "published" };
 beforeAll(async () => {
   for (const app of admin.apps) if (app) await app.delete();
-  admin.initializeApp({ projectId: "demo-vfit-courses-api" });
+  admin.initializeApp({ projectId: testProjectId("demo-vfit-courses-api") });
   db = admin.firestore();
   api = await import("./index");
   checkout = await import("./checkout");

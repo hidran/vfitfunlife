@@ -1,4 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { testProjectId } from "../courses/testProject";
 import * as admin from "firebase-admin";
 import type { CallableRequest } from "firebase-functions/v2/https";
 
@@ -12,7 +13,7 @@ const link = { venueId: "gym", instructorId: "coach", partnerStatus: "active", i
 
 beforeAll(async () => {
   for (const app of admin.apps) if (app) await app.delete();
-  admin.initializeApp({ projectId: "demo-vfit-spaces" });
+  admin.initializeApp({ projectId: testProjectId("demo-vfit-spaces") });
   db = admin.firestore();
   spaces = await import("./spaces");
 });

@@ -1,4 +1,5 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { testProjectId } from "./testProject";
 import * as admin from "firebase-admin";
 import { createHash } from "crypto";
 import type { CallableRequest } from "firebase-functions/v2/https";
@@ -23,7 +24,7 @@ const CUSTOMERS = ["u1", "u2", "u3", "u4", "u5", "h"];
 
 beforeAll(async () => {
   for (const app of admin.apps) if (app) await app.delete();
-  admin.initializeApp({ projectId: "demo-vfit-waitlist" });
+  admin.initializeApp({ projectId: testProjectId("demo-vfit-waitlist") });
   db = admin.firestore();
   api = await import("./index");
 });

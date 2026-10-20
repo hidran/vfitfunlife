@@ -1,4 +1,5 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { testProjectId } from "./testProject";
 import * as admin from "firebase-admin";
 import type { CallableRequest } from "firebase-functions/v2/https";
 import { assertLockInvariant } from "./lockInvariant.testutil";
@@ -22,7 +23,7 @@ const COLLECTIONS = ["courses", "courseEnrollments", "courseRefunds", "courseNot
 
 beforeAll(async () => {
   for (const app of admin.apps) if (app) await app.delete();
-  admin.initializeApp({ projectId: "demo-vfit-venue-courses" });
+  admin.initializeApp({ projectId: testProjectId("demo-vfit-venue-courses") });
   db = admin.firestore();
   api = await import("./index");
   operations = await import("./operations");

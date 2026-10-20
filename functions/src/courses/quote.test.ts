@@ -1,4 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { testProjectId } from "./testProject";
 import * as admin from "firebase-admin";
 import type { CallableRequest } from "firebase-functions/v2/https";
 process.env.FIRESTORE_EMULATOR_HOST = "127.0.0.1:8080";
@@ -19,7 +20,7 @@ const COLLECTIONS = ["courses", "users", "instructors", "serviceCategories", "ve
 
 beforeAll(async () => {
   for (const app of admin.apps) if (app) await app.delete();
-  admin.initializeApp({ projectId: "demo-vfit-course-quote" });
+  admin.initializeApp({ projectId: testProjectId("demo-vfit-course-quote") });
   db = admin.firestore();
   api = await import("./index");
 });

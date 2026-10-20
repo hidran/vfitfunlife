@@ -1,10 +1,11 @@
 import { describe, it, beforeAll, afterAll, expect } from 'vitest';
+import { testProjectId } from '../src/courses/testProject';
 import { initializeTestEnvironment, assertFails, assertSucceeds, type RulesTestEnvironment } from '@firebase/rules-unit-testing';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 let env: RulesTestEnvironment;
 beforeAll(async () => {
-  env = await initializeTestEnvironment({ projectId: 'demo-vfit-courses-rules', firestore: {
+  env = await initializeTestEnvironment({ projectId: testProjectId('demo-vfit-courses-rules'), firestore: {
     rules: readFileSync(resolve(__dirname, '../../firestore.rules'), 'utf8'), host: '127.0.0.1', port: 8080 } });
   await env.clearFirestore();
   await env.withSecurityRulesDisabled(async ctx => {

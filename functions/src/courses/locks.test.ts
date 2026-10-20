@@ -1,4 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { testProjectId } from "./testProject";
 import * as admin from "firebase-admin";
 import { Timestamp } from "firebase-admin/firestore";
 import { diffSlots, lockPaths, MAX_LOCKED_SESSIONS, slotsOf, updateScheduleLocks, type LockSlot } from "./locks";
@@ -148,7 +149,7 @@ describe("updateScheduleLocks (emulator)", () => {
 
   beforeAll(async () => {
     for (const app of admin.apps) if (app) await app.delete();
-    admin.initializeApp({ projectId: "demo-vfit-course-locks" });
+    admin.initializeApp({ projectId: testProjectId("demo-vfit-course-locks") });
     db = admin.firestore();
   });
   beforeEach(async () => {

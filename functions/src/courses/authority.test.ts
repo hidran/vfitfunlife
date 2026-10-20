@@ -1,4 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { testProjectId } from "./testProject";
 import * as admin from "firebase-admin";
 process.env.FIRESTORE_EMULATOR_HOST = "127.0.0.1:8080";
 let db: admin.firestore.Firestore;
@@ -7,7 +8,7 @@ const course = { providerId: "p", venueId: "v" };
 const denied = (message: string) => expect.objectContaining({ code: "permission-denied", message });
 beforeAll(async () => {
   for (const app of admin.apps) if (app) await app.delete();
-  admin.initializeApp({ projectId: "demo-vfit-authority" });
+  admin.initializeApp({ projectId: testProjectId("demo-vfit-authority") });
   db = admin.firestore();
   authority = await import("./authority");
 });

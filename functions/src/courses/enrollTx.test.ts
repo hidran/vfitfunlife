@@ -1,4 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { testProjectId } from "./testProject";
 import * as admin from "firebase-admin";
 import { Timestamp } from "firebase-admin/firestore";
 import type { EnrollInput } from "./enrollTx";
@@ -24,7 +25,7 @@ const session = async () => (await db.doc(`courses/c1/sessions/${day}`).get()).d
 
 beforeAll(async () => {
   for (const app of admin.apps) if (app) await app.delete();
-  admin.initializeApp({ projectId: "demo-vfit-enroll-tx" });
+  admin.initializeApp({ projectId: testProjectId("demo-vfit-enroll-tx") });
   db = admin.firestore();
   ({ enrollInTx } = await import("./enrollTx"));
 });
