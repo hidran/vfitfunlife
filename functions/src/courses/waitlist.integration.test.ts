@@ -1454,6 +1454,82 @@ describe("manageCourseSession reschedule and the waitlist", () => {
   });
 });
 
+describe("manageCourseSession cancel and reschedule move only the changed lesson's lock", () => {
+  const DAYS = ["2099-10-12", "2099-10-13", "2099-10-14"];
+  // Paths of the lock documents any transaction asks for while `body` runs.
+  async function lockReads(body: () => Promise<unknown>): Promise<string[]> {
+    const paths: string[] = [];
+    const original = admin.firestore.Transaction.prototype.getAll;
+    const spy = vi.spyOn(admin.firestore.Transaction.prototype, "getAll").mockImplementation(function (
+      this: admin.firestore.Transaction, ...refs: unknown[]) {
+      for (const ref of refs) {
+        const path = (ref as { path?: string })?.path;
+        if (typeof path === "string" && path.startsWith("courseScheduleLocks/")) paths.push(path);
+      }
+      return (original as (...a: unknown[]) => Promise<unknown>).apply(this, refs);
+    } as never);
+    try {
+      await body();
+    } finally {
+      spy.mockRestore();
+    }
+    return paths;
+  }
+  // The first lesson is over (it still reads "scheduled", as before the next maintenance run) and its lock is gone.
+  async function courseWithPastFirstLesson() {
+    const courseId = await course({ endDate: DAYS[2], instructorId: "p" });
+    await sessionRef(courseId, DAYS[0]).update({
+      startsAt: admin.firestore.Timestamp.fromMillis(Date.now() - 7200000),
+      endsAt: admin.firestore.Timestamp.fromMillis(Date.now() - 3600000) });
+    for (const doc of (await db.collection("courseScheduleLocks").where("day", "==", DAYS[0]).get()).docs) {
+      await doc.ref.delete();
+    }
+    return courseId;
+  }
+  const locksOf = async (courseId: string) => (await db.collection("courseScheduleLocks").get()).docs
+    .flatMap((d) => Object.keys(d.data().slots ?? {})).filter((id) => id.startsWith(`${courseId}_`)).sort();
+
+  it("cancelling a lesson reads only its own lock days, not the lessons that already ended", async () => {
+    const courseId = await courseWithPastFirstLesson();
+    const reads = await lockReads(() => manage("p", { courseId, sessionId: DAYS[2], action: "cancel", reason: "Sick" }));
+    expect(reads.length).toBeGreaterThan(0);
+    expect(reads.every((path) => path.endsWith(`|${DAYS[2]}`)), reads.join()).toBe(true);
+    expect(await locksOf(courseId)).toEqual([`${courseId}_${DAYS[1]}`]);
+    expect(await sessionOf(courseId, DAYS[2])).toMatchObject({ state: "cancelled" });
+    await assertCounters(courseId);
+  });
+  it("rescheduling reads only the old and new day of that lesson and moves its slot", async () => {
+    const courseId = await courseWithPastFirstLesson();
+    const reads = await lockReads(() => manage("p", { courseId, sessionId: DAYS[1], action: "reschedule",
+      reason: "Later", startsAt: `${DAYS[1]}T17:00:00Z` }));
+    expect(reads.length).toBeGreaterThan(0);
+    expect(reads.every((path) => path.endsWith(`|${DAYS[1]}`)), reads.join()).toBe(true);
+    expect(await locksOf(courseId)).toEqual([`${courseId}_${DAYS[1]}`, `${courseId}_${DAYS[2]}`]);
+    const moved = (await db.collection("courseScheduleLocks").get()).docs
+      .map((d) => d.data().slots?.[`${courseId}_${DAYS[1]}`]).find(Boolean);
+    expect(moved.start).toBe(new Date(`${DAYS[1]}T17:00:00Z`).getTime());
+    await assertCounters(courseId);
+  });
+  it("cancelling the last lesson archives the course and gives every slot back", async () => {
+    const courseId = await course({ endDate: DAYS[1], instructorId: "p" });
+    await manage("p", { courseId, sessionId: DAYS[0], action: "cancel", reason: "Sick" });
+    expect(await locksOf(courseId)).toEqual([`${courseId}_${DAYS[1]}`]);
+    const reads = await lockReads(() => manage("p", { courseId, sessionId: DAYS[1], action: "cancel", reason: "Sick" }));
+    expect(reads.length).toBeGreaterThan(0);
+    expect(await locksOf(courseId)).toEqual([]);
+    expect(await db.doc(`courses/${courseId}`).get().then((d) => d.data())).toMatchObject({ state: "archived" });
+    await assertCounters(courseId);
+  });
+  it("a repeated cancel changes nothing", async () => {
+    const courseId = await course({ endDate: DAYS[1], instructorId: "p" });
+    await manage("p", { courseId, sessionId: DAYS[1], action: "cancel", reason: "Sick" });
+    const reads = await lockReads(() => manage("p", { courseId, sessionId: DAYS[1], action: "cancel", reason: "Sick" }));
+    expect(reads).toEqual([]);
+    expect(await locksOf(courseId)).toEqual([`${courseId}_${DAYS[0]}`]);
+    await assertCounters(courseId);
+  });
+});
+
 describe("manageCourseSession removeParticipant, removeWaitlistEntry and no-shows", () => {
   const remove = (uid: string, courseId: string, userId: unknown, extra: Record<string, unknown> = {}) =>
     manage(uid, { courseId, action: "removeParticipant", userId, ...extra });

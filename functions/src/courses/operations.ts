@@ -225,12 +225,15 @@ async function cancelOrReschedule(a: SessionAction, action: "cancel" | "reschedu
       ...(next ? { nextStartsAt: next.startsAt, nextSessionId: next.id,
         nextAvailableSeats: next.capacity - next.occupied - next.held } :
         { enrollmentClosed: true, state: "archived" as const }) };
-    // The waitlist is read now (a writer comes back); the locks are read and written last among the reads. A cancelled
-    // lesson gives its slot back, and so does the whole course when that was its last lesson (it is archived below).
+    // The waitlist is read now (a writer comes back); the locks are read and written last among the reads. Only the
+    // changed lesson's slot moves (as in substituteInstructor), so no other lesson's lock day is read; the whole
+    // course is diffed only when this was its last lesson and it is archived below, which gives every slot back.
+    const archiving = !next;
     const clearWaitlist = await clearWaitlistInTx(tx, { ...course, id: courseId }, sessionId,
       action === "cancel" ? "lesson_cancelled" : "rescheduled");
-    await relock(tx, courseId, { course, sessions: stored }, { course: { ...course, ...metadata },
-      sessions: stored.map((x) => ({ id: x.id, data: x.id === sessionId ? changed : x.data })) });
+    const scope = archiving ? stored : [{ id: sessionId, data: s }];
+    await relock(tx, courseId, { course, sessions: scope }, { course: { ...course, ...metadata },
+      sessions: scope.map((x) => ({ id: x.id, data: x.id === sessionId ? changed : x.data })) });
     if (action === "cancel") {
       tx.update(ref, { state: "cancelled", cancellationReconciled: false, cancellationReason: reason });
     } else {
