@@ -537,3 +537,15 @@ Ships the customer and provider course UI (plan Groups G and H) to `vfit-app-sta
 8. **Record and push.** Add the result (commit, what was redeployed, smoke and journey evidence paths, known gaps) to this file as a dated entry (plan task K3), run `node scripts/smoke-unified-courses-staging.mjs --cleanup` to remove the fixture, then `gh auth switch --user hidran && git push`.
 
 Rolling hosting back to the previous build would bring back the broken customer booking (the backend no longer accepts its calls): fix forward instead.
+
+#### Unified courses hosting deploy — 2026-10-20
+
+Deployed to `vfit-app-staging` from `1dd1261` (main, clean tree, nothing foreign on `origin/main`), in the order above:
+
+- **Gates:** `functions` `tsc --noEmit`, `npm run lint` and `npm run build` clean; root `tsc --noEmit -p .` clean.
+- **Indexes (first):** `firebase deploy -P staging --only firestore:indexes` (no `--force`). 7 new composite indexes (`courseEnrollments`: userId, providerId, venueId, venueId+courseId, providerId+courseId, each by `createdAt` desc; `courseRefunds`: venueId, providerId by `createdAt` desc); the live count went 72 to 79 and none was left CREATING. `scripts/verify-admin-list-indexes.mjs --project vfit-app-staging`: 0 missing, 0 other errors.
+- **Rules:** unchanged since `cc8671f`, not redeployed.
+- **Functions:** `firebase deploy -P staging --force --only functions` (whole codebase, 161 functions updated, none created or deleted). The mutation quota answered 429 for 43 functions; the CLI's own retry updated all of them, no manual retry was needed. `quoteCourse`, `joinCourseWaitlist`, `leaveCourseWaitlist`, `syncBusinessVenueLocation`, `saveCourse`, `enrollInCourse` and `onCourseNotification` are listed; `updateSocialLinks` stays deleted.
+- **Backfill:** `scripts/backfill-session-listed.mjs --project vfit-app-staging --names`: dry run 3 courses / 7 lessons to update, `--apply` 7 updated 0 failed, a second dry run reports 0.
+- **Hosting:** `npm run build:staging`, then `firebase deploy -P staging --only hosting` (476 files, release complete).
+- **Smoke:** `/`, `/courses/`, `/fit/gyms/timetable/?id=smoke_unified_venue` and `/provider/courses/` answer 200, a missing `/_next/static/chunks/nonexistent.js` answers 404. `node scripts/smoke-unified-courses-staging.mjs --keep`: 25 of 25 checks PASS, evidence `output/playwright/unified-courses-staging-smoke.json`; the fixture `smoke_unified_venue` was kept for the browser journeys (plan task K2) and still has to be removed with `--cleanup`.
