@@ -6,6 +6,41 @@ import { db, Enrollment, Session, Course } from "./store";
 import { releaseEnrollment } from "./operations";
 import { processCourseRefund } from "./checkout";
 import { queueCourseNotification } from "./notifications";
+import { dayOfPath } from "./locks";
+
+/**
+ * Deletes the lock slots of lessons that have ended, and day documents left empty. Only documents of today or
+ * earlier UTC days are visited (a slot that crosses midnight stays until it ends). Bounded: `pageSize` documents
+ * per page, `maxPages` pages per run; the next run continues, since swept documents are gone.
+ */
+export async function sweepElapsedLocks(now = new Date(), pageSize = 100, maxPages = 5): Promise<number> {
+  const today = now.toISOString().slice(0, 10);
+  let swept = 0;
+  let cursor: FirebaseFirestore.QueryDocumentSnapshot | undefined;
+  for (let page = 0; page < maxPages; page++) {
+    let query = db.collection("courseScheduleLocks").where("day", "<=", today).orderBy("day").limit(pageSize);
+    if (cursor) query = query.startAfter(cursor);
+    const snapshot = await query.get();
+    if (snapshot.empty) break;
+    const elapsed = (data: FirebaseFirestore.DocumentData) =>
+      Object.values(data.slots ?? {}).some((slot) => (slot as { end: number }).end <= now.getTime());
+    for (const doc of snapshot.docs.filter((d) => elapsed(d.data()) || !Object.keys(d.data().slots ?? {}).length)) {
+      swept += await db.runTransaction(async (tx) => {
+        const current = await tx.get(doc.ref);
+        if (!current.exists) return 0;
+        const slots = { ...(current.data()?.slots ?? {}) } as Record<string, { end: number }>;
+        const live = Object.fromEntries(Object.entries(slots).filter(([, slot]) => slot.end > now.getTime()));
+        const dropped = Object.keys(slots).length - Object.keys(live).length;
+        if (!Object.keys(live).length) tx.delete(doc.ref);
+        else if (dropped) tx.set(doc.ref, { slots: live, day: dayOfPath(doc.ref.path) });
+        return dropped || (Object.keys(live).length ? 0 : 1);
+      });
+    }
+    cursor = snapshot.docs[snapshot.docs.length - 1];
+    if (snapshot.size < pageSize) break;
+  }
+  return swept;
+}
 
 export const maintainCourseEnrollments = onSchedule(
   { region, schedule: "every 5 minutes", timeoutSeconds: 540, secrets: ["STRIPE_SECRET_KEY"] }, async () => {
@@ -41,6 +76,11 @@ export const maintainCourseEnrollments = onSchedule(
             nextAvailableSeats: next.capacity - next.occupied - next.held });
         } else tx.update(doc.ref, { enrollmentClosed: true, state: "archived" });
       });
+    }
+    try {
+      await sweepElapsedLocks();
+    } catch (error) {
+      logger.error("lock sweep failed", { error });
     }
     // Retry interrupted provider cancellations independently of the caller's browser.
     const cancelled = await db.collectionGroup("sessions").where("state", "==", "cancelled")

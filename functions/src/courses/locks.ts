@@ -7,7 +7,9 @@ export type LockSlot = {
 };
 type StoredSlot = { start: number; end: number; courseName?: string };
 
-// A course that takes any lock writes up to two day documents per session; this keeps one transaction small.
+// A session writes up to four day documents (a room and an instructor, each over two UTC days when it crosses
+// midnight). Firestore no longer limits writes per transaction; the cap bounds contention and latency of one save.
+// It counts only sessions that have not ended yet.
 export const MAX_LOCKED_SESSIONS = 400;
 
 // Keys are UTC days so a slot's documents never depend on the venue timezone or on DST.
@@ -30,6 +32,9 @@ export function lockPaths(slot: LockSlot): string[] {
     ...(slot.instructorId ? [`courseScheduleLocks/instructor:${slot.instructorId}|${day}`] : []),
   ]);
 }
+
+// Every lock document id ends with its UTC day; the stored `day` field lets the maintenance sweep query by it.
+export const dayOfPath = (path: string) => path.slice(-10);
 
 // courseName is display-only (it feeds the overlap error), so a rename does not rewrite hundreds of lock documents.
 const sameSlot = (a: LockSlot, b: LockSlot) => a.venueId === b.venueId && a.locationId === b.locationId &&
@@ -60,6 +65,8 @@ export async function updateScheduleLocks(tx: Transaction, remove: LockSlot[], a
     { ...(doc.data()?.slots ?? {}) } as Record<string, StoredSlot>]));
   const exists = new Map(docs.map((doc) => [doc.ref.path, doc.exists]));
   const dirty = new Set<string>();
+  const now = Date.now();
+  const added = new Set(add.map((slot) => slot.id));
   for (const slot of remove) {
     for (const path of lockPaths(slot)) {
       if (entries.get(path)![slot.id]) {
@@ -72,8 +79,9 @@ export async function updateScheduleLocks(tx: Transaction, remove: LockSlot[], a
     const end = slot.endsAt.getTime();
     for (const path of lockPaths(slot)) {
       const current = entries.get(path)!;
+      // A slot that has already ended is history: it never blocks anything.
       const clash = Object.entries(current).find(([id, other]) =>
-        id !== slot.id && other.start < end && other.end > start);
+        id !== slot.id && other.end > now && other.start < end && other.end > start);
       if (clash) {
         throw new HttpsError("failed-precondition", path.includes("/room:") ? "room_overlap" : "instructor_overlap", {
           courseName: clash[1].courseName ?? "", startsAt: new Date(clash[1].start).toISOString(),
@@ -86,7 +94,8 @@ export async function updateScheduleLocks(tx: Transaction, remove: LockSlot[], a
   }
   refs.filter((ref) => dirty.has(ref.path)).forEach((ref) => {
     const slots = entries.get(ref.path)!;
-    if (Object.keys(slots).length) tx.set(ref, { slots });
+    for (const [id, other] of Object.entries(slots)) if (other.end <= now && !added.has(id)) delete slots[id];
+    if (Object.keys(slots).length) tx.set(ref, { slots, day: dayOfPath(ref.path) });
     else if (exists.get(ref.path)) tx.delete(ref);
   });
 }
@@ -97,12 +106,18 @@ type LockableSession = {
   venueId?: string | null; locationId?: string | null; roomId?: string | null; instructorId?: string | null;
 };
 
-/** The slots a course should hold: none unless it is published, and only for sessions still scheduled. */
+/**
+ * The slots a course should hold: none unless it is published, and only for sessions still scheduled.
+ * With `since`, sessions that ended at or before it are left out (callers adding slots pass now; callers diffing
+ * what is stored omit it, so a past slot that is still on disk gets removed).
+ */
 export function slotsOf(
-  courseId: string, course: { state: string; name: string }, sessions: { id: string; data: LockableSession }[]
+  courseId: string, course: { state: string; name: string }, sessions: { id: string; data: LockableSession }[],
+  since?: Date
 ): LockSlot[] {
   if (course.state !== "published") return [];
-  return sessions.filter(({ data }) => data.state === "scheduled").map(({ id, data }) => ({
+  return sessions.filter(({ data }) => data.state === "scheduled" &&
+    (!since || data.endsAt.toDate().getTime() > since.getTime())).map(({ id, data }) => ({
     id: `${courseId}_${id}`, courseName: course.name, venueId: data.venueId ?? null,
     locationId: data.locationId ?? null,
     roomId: data.roomId ?? null, instructorId: data.instructorId ?? null,

@@ -125,6 +125,15 @@ describe("slotsOf", () => {
     expect(only).toMatchObject({ venueId: null, locationId: null, roomId: null, instructorId: null });
   });
 
+  it("leaves out sessions that ended at or before `since`, and keeps a lesson that is still running", () => {
+    const sessions = [session("past", "2099-10-12T10:00:00Z"), session("ends-now", "2099-10-12T11:00:00Z"),
+      session("running", "2099-10-12T11:30:00Z"), session("future", "2099-10-12T13:00:00Z")];
+    const since = new Date("2099-10-12T12:00:00Z");
+    expect(slotsOf("c", { state: "published", name: "K" }, sessions, since).map((s) => s.id))
+      .toEqual(["c_running", "c_future"]);
+    expect(slotsOf("c", { state: "published", name: "K" }, sessions)).toHaveLength(4);
+  });
+
   it("exports the session cap", () => {
     expect(MAX_LOCKED_SESSIONS).toBe(400);
   });
@@ -244,6 +253,67 @@ describe("updateScheduleLocks (emulator)", () => {
     ]);
     expect(Object.keys((await db.doc(`courseScheduleLocks/room:v:l:r|${day}`).get()).data()!.slots).sort())
       .toEqual(["c1_s1", "c2_s1", "c3_s1"]);
+  });
+
+  it("an elapsed stored slot never blocks a new one, and is pruned when its document is rewritten", async () => {
+    const old = room("c1_s1", "2020-01-01T10:00:00Z", "2020-01-01T11:00:00Z", { instructorId: null });
+    await db.doc("courseScheduleLocks/room:v:l:r|2020-01-01").set({ day: "2020-01-01",
+      slots: { c1_s1: { start: old.startsAt.getTime(), end: old.endsAt.getTime(), courseName: "Old" } } });
+    await run([], [room("c2_s1", "2020-01-01T10:30:00Z", "2020-01-01T11:30:00Z", { instructorId: null })]);
+    expect(Object.keys((await db.doc("courseScheduleLocks/room:v:l:r|2020-01-01").get()).data()!.slots))
+      .toEqual(["c2_s1"]);
+  });
+
+  it("stores the UTC day of the document next to the slots", async () => {
+    await run([], [room("c1_s1", `${day}T23:30:00Z`, "2099-10-13T00:30:00Z", { instructorId: null })]);
+    expect((await db.doc(`courseScheduleLocks/room:v:l:r|${day}`).get()).data()!.day).toBe(day);
+    expect((await db.doc("courseScheduleLocks/room:v:l:r|2099-10-13").get()).data()!.day).toBe("2099-10-13");
+  });
+
+  describe("the invariant oracle", () => {
+    const ts = (iso: string) => Timestamp.fromDate(new Date(iso));
+    const data = { startsAt: ts(`${day}T16:00:00Z`), endsAt: ts(`${day}T17:00:00Z`), state: "scheduled",
+      venueId: "v", locationId: "l", roomId: "r", instructorId: null };
+    const key = (c: string) => `${c}_s1`;
+    const put = (path: string, id: string, start: string, end: string) => db.doc(path).set({ day,
+      slots: { [id]: { start: Date.parse(start), end: Date.parse(end), courseName: "Karate" } } });
+    beforeEach(async () => {
+      await db.doc("courses/c").set({ name: "Karate", state: "published" });
+      await db.doc("courses/c/sessions/s1").set(data);
+      await put(`courseScheduleLocks/room:v:l:r|${day}`, key("c"), `${day}T16:00:00Z`, `${day}T17:00:00Z`);
+    });
+    it("accepts a slot whose start, end and document match", async () => {
+      await assertLockInvariant(db);
+    });
+    it("flags a stored end that differs from the session", async () => {
+      await put(`courseScheduleLocks/room:v:l:r|${day}`, key("c"), `${day}T16:00:00Z`, `${day}T17:30:00Z`);
+      await expect(assertLockInvariant(db)).rejects.toThrow();
+    });
+    it("flags a stored start that differs from the session", async () => {
+      await put(`courseScheduleLocks/room:v:l:r|${day}`, key("c"), `${day}T15:30:00Z`, `${day}T17:00:00Z`);
+      await expect(assertLockInvariant(db)).rejects.toThrow();
+    });
+    it("flags a slot stored under the wrong day document", async () => {
+      await db.recursiveDelete(db.collection("courseScheduleLocks"));
+      await put("courseScheduleLocks/room:v:l:r|2099-10-13", key("c"), `${day}T16:00:00Z`, `${day}T17:00:00Z`);
+      await expect(assertLockInvariant(db)).rejects.toThrow();
+    });
+    it("flags an elapsed slot that is still stored", async () => {
+      await put("courseScheduleLocks/room:v:l:r|2020-01-01", "gone_s1", "2020-01-01T10:00:00Z", "2020-01-01T11:00:00Z");
+      await expect(assertLockInvariant(db)).rejects.toThrow(/elapsed/);
+    });
+    it("flags two overlapping slots in one document", async () => {
+      await db.doc("courses/c2").set({ name: "Judo", state: "published" });
+      await db.doc("courses/c2/sessions/s1").set({ ...data, startsAt: ts(`${day}T16:30:00Z`), endsAt: ts(`${day}T17:30:00Z`) });
+      await db.doc(`courseScheduleLocks/room:v:l:r|${day}`).set({ day, slots: {
+        c_s1: { start: Date.parse(`${day}T16:00:00Z`), end: Date.parse(`${day}T17:00:00Z`) },
+        c2_s1: { start: Date.parse(`${day}T16:30:00Z`), end: Date.parse(`${day}T17:30:00Z`) } } });
+      await expect(assertLockInvariant(db)).rejects.toThrow(/overlapping/);
+    });
+    it("flags an empty lock document", async () => {
+      await db.doc("courseScheduleLocks/room:v:l:x|2099-10-12").set({ day, slots: {} });
+      await expect(assertLockInvariant(db)).rejects.toThrow();
+    });
   });
 
   it("the invariant oracle accepts matching locks and flags missing or stray ones", async () => {

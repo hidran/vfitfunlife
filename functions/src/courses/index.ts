@@ -168,7 +168,8 @@ export const saveCourse = onCall({ region }, async (req) => {
       });
       // The lock documents are read here, so this comes before the first write.
       const before = old ? slotsOf(id, old, existing.docs.map((d) => ({ id: d.id, data: d.data() as Session }))) : [];
-      const after = slotsOf(id, input, written);
+      // Stored slots of elapsed lessons are removed (before has them), but no new ones are taken for the past.
+      const after = slotsOf(id, input, written, new Date());
       if (after.filter((slot) => lockPaths(slot).length).length > MAX_LOCKED_SESSIONS) {
         throw new HttpsError("failed-precondition", "locked_schedule_too_long", { fields: ["startDate", "endDate"] });
       }
@@ -217,7 +218,7 @@ async function lockConflicts(
   const slots = slotsOf(courseId ?? "preview", { state: "published", name: input.name }, sessions.map((s) => ({
     id: s.id, data: { startsAt: stamp(s.startsAt), endsAt: stamp(s.endsAt), state: "scheduled", venueId: input.venueId,
       locationId: input.locationId, roomId: input.roomId, instructorId: input.instructorId },
-  })));
+  })), new Date());
   const paths = [...new Set(slots.flatMap(lockPaths))];
   if (!paths.length) return [];
   const docs = new Map((await db.getAll(...paths.map((path) => db.doc(path))))
@@ -231,7 +232,7 @@ async function lockConflicts(
     for (const path of lockPaths(slot)) {
       const kind = path.includes("/room:") ? "room" : "instructor";
       if (kinds.has(kind)) continue;
-      const clash = Object.entries(docs.get(path) ?? {}).find(([id, other]) => !own(id) &&
+      const clash = Object.entries(docs.get(path) ?? {}).find(([id, other]) => !own(id) && other.end > Date.now() &&
         other.start < slot.endsAt.getTime() && other.end > slot.startsAt.getTime());
       if (!clash) continue;
       kinds.add(kind);

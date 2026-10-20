@@ -594,6 +594,94 @@ describe("saveCourse lock lifecycle", () => {
   }, 60000);
 });
 
+describe("past lock slots", () => {
+  const venueInput = { ...input, venueId: "v", locationId: "l1", roomId: "r1", instructorId: "p" };
+  const save = (uid: string, course: Record<string, unknown>, courseId?: string) =>
+    api.saveCourse.run(request(uid, { course, ...(courseId ? { courseId } : {}) }));
+  const slotsIn = async (path: string) => Object.keys((await db.doc(path).get()).data()?.slots ?? {});
+  const lockDocs = async () => (await db.collection("courseScheduleLocks").get()).size;
+  const at = (iso: string) => vi.useFakeTimers({ toFake: ["Date"], now: new Date(iso) });
+  beforeEach(async () => {
+    await db.doc("venues/v/instructors/p").set({ isActive: true, name: "Anna" });
+    await db.doc("venues/v/instructors/p2").set({ isActive: true, name: "Paola" });
+    await db.doc("instructors/p2").set({ fullName: "Paola", isActive: true, applicationStatus: "approved",
+      providerProfile: { isVerified: true } });
+    await db.doc("venues/v/locations/l1/rooms/r3").set({ name: "Sala 3", isActive: true });
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it("does not raise room_overlap against slots of lessons that already ended", async () => {
+    const a = await save("biz", venueInput);
+    const b = await save("biz", { ...venueInput, name: "Judo", roomId: "r3", instructorId: "p2", endDate: "2099-10-14" });
+    at("2099-10-13T20:00:00Z");
+    // Judo's first two lessons overlap Karate's, but both ended; only the third lesson moves into the room.
+    await save("biz", { ...venueInput, name: "Judo", roomId: "r1", instructorId: "p2", endDate: "2099-10-14" }, b.courseId);
+    expect(await slotsIn("courseScheduleLocks/room:v:l1:r1|2099-10-14")).toEqual([`${b.courseId}_2099-10-14`]);
+    expect(await slotsIn("courseScheduleLocks/room:v:l1:r1|2099-10-12")).toEqual([`${a.courseId}_2099-10-12`]);
+    await api.sweepElapsedLocks(new Date());
+    await assertLockInvariant(db);
+  });
+
+  it("counts only lessons that have not ended towards the 400 cap", async () => {
+    const { courseId } = await save("biz", { ...venueInput, endDate: "2100-10-12" });
+    expect(await lockDocs()).toBe(732);
+    at("2100-10-13T00:00:00Z");
+    // 731 lessons in total, 365 of them still to come.
+    await save("biz", { ...venueInput, endDate: "2101-10-12" }, courseId);
+    await api.sweepElapsedLocks(new Date(), 500, 10);
+    expect(await lockDocs()).toBe(730);
+    await assertLockInvariant(db);
+  }, 120000);
+
+  it("still rejects a course with more than 400 lessons to come", async () => {
+    await expect(save("biz", { ...venueInput, endDate: "2101-10-12" })).rejects.toThrow("locked_schedule_too_long");
+  });
+
+  it("releases the stored slots of ended lessons when the course is archived", async () => {
+    const { courseId } = await save("biz", venueInput);
+    at("2099-10-12T20:00:00Z");
+    await save("biz", { ...venueInput, state: "archived" }, courseId);
+    expect(await lockDocs()).toBe(0);
+    await assertLockInvariant(db);
+  });
+
+  describe("sweepElapsedLocks", () => {
+    const put = (path: string, slots: Record<string, [string, string]>) => db.doc(path).set({
+      day: path.slice(-10), slots: Object.fromEntries(Object.entries(slots).map(([id, [start, end]]) =>
+        [id, { start: Date.parse(start), end: Date.parse(end), courseName: id }])) });
+    it("deletes elapsed slots and emptied documents, and keeps lessons still to come", async () => {
+      const now = new Date("2099-10-12T12:00:00Z");
+      await put("courseScheduleLocks/room:v:l1:r1|2099-10-11", { a_1: ["2099-10-11T10:00:00Z", "2099-10-11T11:00:00Z"] });
+      await put("courseScheduleLocks/room:v:l1:r1|2099-10-12", { b_1: ["2099-10-12T10:00:00Z", "2099-10-12T11:00:00Z"],
+        c_1: ["2099-10-12T13:00:00Z", "2099-10-12T14:00:00Z"] });
+      await put("courseScheduleLocks/room:v:l1:r1|2099-10-13", { d_1: ["2099-10-13T10:00:00Z", "2099-10-13T11:00:00Z"] });
+      await db.doc("courseScheduleLocks/instructor:p|2099-10-11").set({ day: "2099-10-11", slots: {} });
+      expect(await api.sweepElapsedLocks(now)).toBe(3);
+      expect((await db.doc("courseScheduleLocks/room:v:l1:r1|2099-10-11").get()).exists).toBe(false);
+      expect((await db.doc("courseScheduleLocks/instructor:p|2099-10-11").get()).exists).toBe(false);
+      expect(await slotsIn("courseScheduleLocks/room:v:l1:r1|2099-10-12")).toEqual(["c_1"]);
+      expect(await slotsIn("courseScheduleLocks/room:v:l1:r1|2099-10-13")).toEqual(["d_1"]);
+    });
+    it("keeps a lesson that started yesterday and is still running past midnight", async () => {
+      await put("courseScheduleLocks/room:v:l1:r1|2099-10-11", { n_1: ["2099-10-11T23:30:00Z", "2099-10-12T00:30:00Z"] });
+      await api.sweepElapsedLocks(new Date("2099-10-12T00:10:00Z"));
+      expect(await slotsIn("courseScheduleLocks/room:v:l1:r1|2099-10-11")).toEqual(["n_1"]);
+      await api.sweepElapsedLocks(new Date("2099-10-12T00:40:00Z"));
+      expect((await db.doc("courseScheduleLocks/room:v:l1:r1|2099-10-11").get()).exists).toBe(false);
+    });
+    it("works through the backlog in bounded pages across runs", async () => {
+      for (let i = 1; i <= 5; i++) {
+        await put(`courseScheduleLocks/room:v:l1:r${i}|2099-10-11`, { [`o${i}_1`]: ["2099-10-11T10:00:00Z", "2099-10-11T11:00:00Z"] });
+      }
+      const now = new Date("2099-10-12T12:00:00Z");
+      expect(await api.sweepElapsedLocks(now, 2, 1)).toBe(2);
+      expect(await lockDocs()).toBe(3);
+      expect(await api.sweepElapsedLocks(now, 2, 5)).toBe(3);
+      expect(await lockDocs()).toBe(0);
+    });
+  });
+});
+
 describe("previewCourse conflicts", () => {
   const one = { ...input, venueId: "v", locationId: "l1", roomId: "r1", instructorId: "p", recurrence: "none" };
   const preview = (uid: string, course: Record<string, unknown>, courseId?: string) =>
