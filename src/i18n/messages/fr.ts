@@ -3528,4 +3528,6 @@ export const frMessages: Messages = {
   'courses.onWaitlist': "En liste d'attente · position {{position}}",
   'courses.waitlistFull': "Liste d'attente complète",
   'courses.leaveWaitlist': "Quitter la liste d'attente",
+  'venue.nextLessons': "Prochains cours",
+  'venue.fullTimetable': "Planning complet",
 };

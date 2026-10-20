@@ -3526,4 +3526,6 @@ export const deMessages: Messages = {
   'courses.onWaitlist': "Auf der Warteliste · Position {{position}}",
   'courses.waitlistFull': "Warteliste voll",
   'courses.leaveWaitlist': "Warteliste verlassen",
+  'venue.nextLessons': "Nächste Kurse",
+  'venue.fullTimetable': "Kompletter Wochenplan",
 };

@@ -3519,4 +3519,6 @@ export const esMessages: Messages = {
   'courses.onWaitlist': "En lista de espera · posición {{position}}",
   'courses.waitlistFull': "Lista de espera completa",
   'courses.leaveWaitlist': "Salir de la lista de espera",
+  'venue.nextLessons': "Próximas clases",
+  'venue.fullTimetable': "Horario completo",
 };

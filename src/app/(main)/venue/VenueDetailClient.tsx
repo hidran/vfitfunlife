@@ -5,15 +5,14 @@ import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ChevronLeft, Clock, MapPin, Star } from 'lucide-react';
 import { cn, formatDecimal, formatPrice } from '@/lib/utils';
-import { useVenue, useVenueServices, useVenueCourses } from '@/hooks/useVenues';
+import { useVenue, useVenueServices } from '@/hooks/useVenues';
+import { usePublishedVenueCourses, useVenueNextLessons } from '@/hooks/useCourses';
 import { amenityIcon } from '@/lib/icons/amenityIcons';
 import { VenueNotFound } from '@/components/venue/VenueNotFound';
 import { Spinner } from '@/components/ui/Spinner';
 import { PhotoGallery } from '@/components/gallery/PhotoGallery';
 import { useI18n } from '@/hooks/useI18n';
 import { hostsCourses } from '@/types/venue';
-
-type TabOption = 'services' | 'classes';
 
 export default function VenueDetailClient() {
   const searchParams = useSearchParams();
@@ -22,12 +21,15 @@ export default function VenueDetailClient() {
 
   const venueQuery = useVenue(id);
   const servicesQuery = useVenueServices(id);
-  const coursesQuery = useVenueCourses(id);
+  // The lesson queries are only allowed (and only useful) for an active partner venue that hosts courses.
+  const listsCourses = !!venueQuery.data && hostsCourses(venueQuery.data.type) &&
+    venueQuery.data.partnerStatus === 'active' && venueQuery.data.isActive !== false;
+  const nextLessons = useVenueNextLessons(listsCourses ? id : undefined, 3);
+  const publishedCourses = usePublishedVenueCourses(listsCourses ? id : undefined);
 
   const [activeSlide, setActiveSlide] = useState(0);
   const [showAllHours, setShowAllHours] = useState(false);
   const [showDescription, setShowDescription] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabOption>('services');
 
   if (!id) {
     return <VenueNotFound message={t('venueDetail.error.noId')} />;
@@ -48,7 +50,8 @@ export default function VenueDetailClient() {
 
   const slides = venue.heroGradients ?? [];
   const services = servicesQuery.data ?? [];
-  const courses = coursesQuery.data ?? [];
+  const courseNames = new Map((publishedCourses.data ?? []).map((c) => [c.id, c]));
+  const lessons = (nextLessons.data ?? []).filter((l) => l.courseId && courseNames.has(l.courseId));
   const hours = venue.hours ?? [];
   const visibleHours = showAllHours ? hours : hours.slice(0, 1);
 
@@ -159,35 +162,11 @@ export default function VenueDetailClient() {
           {t('gym.timetable')}
         </Link>}
 
-        <div className="mt-6 flex gap-2 border-b border-hairline">
-          <button
-            type="button"
-            onClick={() => setActiveTab('services')}
-            className={cn(
-              'border-b-2 px-3 py-2 text-sm font-medium',
-              activeTab === 'services'
-                ? 'border-vfit-accent text-vfit-accent light:text-violet-700'
-                : 'border-transparent text-content-muted'
-            )}
-          >
+        <section className="mt-6 space-y-3" aria-label={t('venueDetail.tab.services')}>
+          <h2 className="border-b border-hairline pb-2 text-sm font-semibold text-vfit-accent light:text-violet-700">
             {t('venueDetail.tab.services')}
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('classes')}
-            className={cn(
-              'border-b-2 px-3 py-2 text-sm font-medium',
-              activeTab === 'classes'
-                ? 'border-vfit-accent text-vfit-accent light:text-violet-700'
-                : 'border-transparent text-content-muted'
-            )}
-          >
-            {t('venueDetail.tab.classes')}
-          </button>
-        </div>
-
-        {activeTab === 'services' && (
-          <ul className="mt-3 space-y-2">
+          </h2>
+          <ul className="space-y-2">
             {servicesQuery.isLoading && <Spinner size="sm" />}
             {services.map((s) => (
               <li
@@ -202,29 +181,42 @@ export default function VenueDetailClient() {
               <li className="text-sm text-content-muted">{t('venueDetail.services.empty')}</li>
             )}
           </ul>
-        )}
+        </section>
 
-        {activeTab === 'classes' && (
-          <ul className="mt-3 space-y-2">
-            {coursesQuery.isLoading && <Spinner size="sm" />}
-            {courses.map((c) => (
-              <li
-                key={c.id}
-                className="flex items-center justify-between rounded-xl border border-hairline bg-surface p-3"
-              >
-                <div>
-                  <p className="text-sm font-semibold text-content">{c.name}</p>
-                  <p className="text-xs text-content-muted">
-                    {c.time} · {c.coach}
-                  </p>
-                </div>
-                <span className="text-xs font-medium text-content/80">{t('venueDetail.classes.spots', { count: c.spots })}</span>
-              </li>
-            ))}
-            {!coursesQuery.isLoading && courses.length === 0 && (
-              <li className="text-sm text-content-muted">{t('venueDetail.classes.empty')}</li>
-            )}
-          </ul>
+        {listsCourses && (lessons.length > 0 || (publishedCourses.data ?? []).length > 0) && (
+          <section className="mt-6 space-y-3" aria-label={t('venue.nextLessons')}>
+            <h2 className="border-b border-hairline pb-2 text-sm font-semibold text-vfit-accent light:text-violet-700">
+              {t('venue.nextLessons')}
+            </h2>
+            <ul className="space-y-2">
+              {lessons.map((l) => {
+                const course = courseNames.get(l.courseId!)!;
+                return (
+                  <li key={`${l.courseId}_${l.id}`}>
+                    <Link
+                      href={`/courses?id=${encodeURIComponent(course.id)}&lesson=${encodeURIComponent(l.id)}`}
+                      className="flex min-h-11 flex-col rounded-xl border border-hairline bg-surface p-3"
+                    >
+                      <span className="text-sm font-semibold text-content">{course.name}</span>
+                      <span className="text-xs text-content-muted">
+                        {new Intl.DateTimeFormat(locale, {
+                          weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+                          timeZone: course.timezone,
+                        }).format(l.startsAt.toDate())}
+                        {(l.instructorName || l.instructor) ? ` · ${l.instructorName || l.instructor}` : ''}
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+            <Link
+              href={`/fit/gyms/timetable?id=${encodeURIComponent(venue.id)}`}
+              className="inline-flex min-h-11 items-center text-sm font-semibold text-vfit-accent light:text-violet-700"
+            >
+              {t('venue.fullTimetable')}
+            </Link>
+          </section>
         )}
       </div>
     </div>

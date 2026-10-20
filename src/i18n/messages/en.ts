@@ -3546,4 +3546,6 @@ export const enMessages: Messages = {
   'courses.onWaitlist': "On the waitlist · position {{position}}",
   'courses.waitlistFull': "Waitlist full",
   'courses.leaveWaitlist': "Leave waitlist",
+  'venue.nextLessons': "Next lessons",
+  'venue.fullTimetable': "Full timetable",
 };
