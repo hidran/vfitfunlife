@@ -14,16 +14,21 @@ import {
 const ORIGIN = 'https://vfit-funlife.web.app';
 
 /** Evaluates the rendered worker with a stub `self` and returns its pure helpers. */
-function loadWorker(urls: string[] = ['/', '/offline.html', '/manifest.json']) {
+function loadWorker(
+  urls: string[] = ['/', '/offline.html', '/manifest.json'],
+  globals: Record<string, unknown> = {}
+) {
   const code = renderServiceWorker(fs.readFileSync(TEMPLATE_PATH, 'utf8'), { version: 'test', urls });
   const listeners: Record<string, unknown> = {};
   const context = vm.createContext({
     self: { addEventListener: (type: string, fn: unknown) => (listeners[type] = fn), location: { origin: ORIGIN } },
     URL,
     console,
+    ...globals,
   });
   vm.runInContext(code, context);
   return {
+    context,
     listeners,
     routeFor: context.routeFor as (m: string, u: string, mode: string, o: string) => string | null,
     pageKey: context.pageKey as (u: string) => string,
@@ -150,5 +155,137 @@ describe('generate-sw precache manifest', () => {
     expect(sw).toContain(`const SW_VERSION = "abc";`);
     expect(sw).toContain(`const PRECACHE_URLS = ["/","/offline.html"];`);
     expect(() => renderServiceWorker('nothing', { version: 'x', urls: [] })).toThrow(/markers/);
+  });
+});
+
+/** A response as the worker sees it: only the fields its cache rules read. */
+function res(contentType: string | null, extra: Record<string, unknown> = {}) {
+  return {
+    status: 200,
+    type: 'basic',
+    redirected: false,
+    headers: { get: (name: string) => (name.toLowerCase() === 'content-type' ? contentType : null) },
+    clone() {
+      return this;
+    },
+    ...extra,
+  };
+}
+
+describe('static asset caching (D1: an HTML fallback must never be cached under a chunk URL)', () => {
+  const { context } = loadWorker();
+  const typeMatches = context.staticTypeMatches as (p: string, ct: string | null) => boolean;
+  const cacheable = context.isCacheableStatic as (p: string, r: unknown) => boolean;
+
+  it('accepts the content types real assets are served with', () => {
+    expect(typeMatches('/_next/static/chunks/a.js', 'text/javascript; charset=UTF-8')).toBe(true);
+    expect(typeMatches('/_next/static/chunks/a.js', 'application/javascript')).toBe(true);
+    expect(typeMatches('/_next/static/chunks/a.css', 'text/css')).toBe(true);
+    expect(typeMatches('/_next/static/media/f.woff2', 'font/woff2')).toBe(true);
+    expect(typeMatches('/_next/static/media/f.woff2', 'application/octet-stream')).toBe(true);
+    expect(typeMatches('/icons/i.png', 'image/png')).toBe(true);
+    expect(typeMatches('/icon.svg', 'image/svg+xml')).toBe(true);
+    expect(typeMatches('/favicon.ico', 'image/x-icon')).toBe(true);
+  });
+
+  it('refuses text/html for every static asset, whatever the extension, and a missing type for known ones', () => {
+    for (const p of ['/_next/static/chunks/a.js', '/_next/static/chunks/a.css', '/_next/static/media/f.woff2', '/icons/i.png', '/landing/x', '/favicon.ico']) {
+      expect(typeMatches(p, 'text/html; charset=utf-8')).toBe(false);
+      expect(typeMatches(p, 'application/xhtml+xml')).toBe(false);
+    }
+    expect(typeMatches('/_next/static/chunks/a.js', null)).toBe(false);
+    expect(typeMatches('/_next/static/chunks/a.js', 'text/css')).toBe(false);
+    expect(typeMatches('/_next/static/chunks/a.css', 'text/javascript')).toBe(false);
+    expect(typeMatches('/icons/i.png', 'text/plain')).toBe(false);
+  });
+
+  it('caches only a 200, same-origin, non-redirected response of the right type', () => {
+    expect(cacheable('/_next/static/chunks/a.js', res('text/javascript'))).toBe(true);
+    expect(cacheable('/_next/static/chunks/a.js', res('text/html'))).toBe(false);
+    expect(cacheable('/_next/static/chunks/a.js', res('text/javascript', { status: 404 }))).toBe(false);
+    expect(cacheable('/_next/static/chunks/a.js', res('text/javascript', { type: 'opaque' }))).toBe(false);
+    expect(cacheable('/_next/static/chunks/a.js', res('text/javascript', { redirected: true }))).toBe(false);
+    expect(cacheable('/_next/static/chunks/a.js', null)).toBe(false);
+  });
+
+  /** A minimal CacheStorage over Maps, enough for handleStatic. */
+  function fakeCaches(initial: Record<string, Record<string, unknown>>) {
+    const stores = new Map(Object.entries(initial).map(([name, entries]) => [name, new Map(Object.entries(entries))]));
+    const bare = (r: { url?: string } | string) => (typeof r === 'string' ? r : (r.url as string)).split('?')[0];
+    const open = async (name: string) => {
+      if (!stores.has(name)) stores.set(name, new Map());
+      const store = stores.get(name)!;
+      return {
+        put: async (r: { url: string }, response: unknown) => void store.set(bare(r), response),
+        delete: async (r: { url: string }) => store.delete(bare(r)),
+        keys: async () => [...store.keys()].map((url) => ({ url })),
+      };
+    };
+    return {
+      stores,
+      keys: async () => [...stores.keys()],
+      open,
+      match: async (r: { url: string }) => {
+        for (const store of stores.values()) if (store.has(bare(r))) return store.get(bare(r));
+        return undefined;
+      },
+    };
+  }
+
+  const request = { url: `${ORIGIN}/_next/static/chunks/6b173.js` };
+  const key = `${ORIGIN}/_next/static/chunks/6b173`.concat('.js');
+  const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+  it('evicts an HTML response found under a script URL and serves the network copy instead', async () => {
+    const html = res('text/html');
+    const js = res('text/javascript');
+    const caches = fakeCaches({ 'vfit-runtime': { [key]: html } });
+    const worker = loadWorker(undefined, { caches, fetch: async () => js });
+    const handleStatic = worker.context.handleStatic as (r: unknown) => Promise<unknown>;
+
+    expect(await handleStatic(request)).toBe(js);
+    await flush();
+    expect(caches.stores.get('vfit-runtime')?.get(key)).toBeUndefined();
+    // ...and the good copy was stored, in the current runtime cache.
+    expect(caches.stores.get('vfit-runtime-v2')?.get(key)).toBe(js);
+  });
+
+  it('serves a good cached copy without touching the network', async () => {
+    const js = res('text/javascript');
+    const caches = fakeCaches({ 'vfit-runtime-v2': { [key]: js } });
+    const fetchSpy = async () => {
+      throw new Error('network not expected');
+    };
+    const worker = loadWorker(undefined, { caches, fetch: fetchSpy });
+    expect(await (worker.context.handleStatic as (r: unknown) => Promise<unknown>)(request)).toBe(js);
+  });
+
+  it('does not store what the network answers with HTML (the SPA fallback for a missing chunk) or a 404', async () => {
+    for (const bad of [res('text/html'), res('text/javascript', { status: 404 }), res('text/javascript', { redirected: true })]) {
+      const caches = fakeCaches({});
+      const worker = loadWorker(undefined, { caches, fetch: async () => bad });
+      expect(await (worker.context.handleStatic as (r: unknown) => Promise<unknown>)(request)).toBe(bad);
+      await flush();
+      expect(caches.stores.get('vfit-runtime-v2')?.size ?? 0).toBe(0);
+    }
+  });
+
+  it('activate drops the old runtime cache and shell caches of other versions, keeps the current ones', async () => {
+    const caches = fakeCaches({
+      'vfit-runtime': { a: 1 },
+      'vfit-runtime-v2': { b: 1 },
+      'vfit-shell-old': { c: 1 },
+      'vfit-shell-test': { d: 1 },
+      'unrelated': { e: 1 },
+    });
+    let done: Promise<unknown> = Promise.resolve();
+    const worker = loadWorker(undefined, {
+      caches: { ...caches, delete: async (name: string) => caches.stores.delete(name) },
+    });
+    (worker.context.self as { registration: unknown; clients: unknown }).registration = {};
+    (worker.context.self as { registration: unknown; clients: unknown }).clients = { claim: async () => undefined };
+    (worker.listeners.activate as (e: { waitUntil: (p: Promise<unknown>) => void }) => void)({ waitUntil: (p) => (done = p) });
+    await done;
+    expect([...caches.stores.keys()].sort()).toEqual(['unrelated', 'vfit-runtime-v2', 'vfit-shell-test']);
   });
 });

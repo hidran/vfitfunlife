@@ -12,7 +12,10 @@
 // Strategies
 //   navigations (HTML)          network-first (timeout) → cached route → /offline.html
 //   RSC payloads (*.txt)        network-first → cache (same versioned cache as the HTML)
-//   /_next/static, icons, …     cache-first (content-hashed or immutable)
+//   /_next/static, icons, …     cache-first (content-hashed or immutable), but only ever a
+//                               response whose type matches the file (isCacheableStatic): an HTML
+//                               fallback served for a missing chunk must not be stored, and one
+//                               found in a cache is evicted and fetched again (D1, 2026-10-20)
 //   everything else             not intercepted — in particular every cross-origin request
 //                               (Firestore, Functions, Google APIs, Stripe, gstatic) and
 //                               Firebase Hosting's reserved /__/ URLs (auth handler).
@@ -22,7 +25,10 @@ const PRECACHE_URLS = /*__PRECACHE_MANIFEST__*/ [];
 
 const SHELL_CACHE_PREFIX = 'vfit-shell-';
 const SHELL_CACHE = SHELL_CACHE_PREFIX + SW_VERSION;
-const RUNTIME_CACHE = 'vfit-runtime';
+// Versioned name: bump it when the caching rules change so activate drops caches filled under
+// the old ones. v1 ('vfit-runtime') could hold an HTML app shell stored under a JS chunk URL.
+const RUNTIME_CACHE_PREFIX = 'vfit-runtime';
+const RUNTIME_CACHE = RUNTIME_CACHE_PREFIX + '-v2';
 const RUNTIME_MAX_ENTRIES = 250;
 const OFFLINE_URL = '/offline.html';
 const REQUIRED_URLS = ['/', OFFLINE_URL];
@@ -74,6 +80,41 @@ function isCacheable(response) {
   return !!response && response.status === 200 && response.type === 'basic';
 }
 
+/**
+ * Whether `contentType` is plausible for the file at `pathname`. text/html never is for a static
+ * asset: Firebase Hosting answers a missing file with the SPA shell (200, text/html), and a script
+ * tag that gets it throws "Unexpected token '<'". Known extensions need their own family of types;
+ * an unknown extension only has to be non-HTML. Pure (unit-tested).
+ */
+function staticTypeMatches(pathname, contentType) {
+  const ct = String(contentType || '').split(';')[0].trim().toLowerCase();
+  if (ct === 'text/html' || ct === 'application/xhtml+xml') return false;
+  const m = /\.([a-z0-9]+)$/i.exec(pathname);
+  const ext = m ? m[1].toLowerCase() : '';
+  if (ext === 'js' || ext === 'mjs') return ct.indexOf('javascript') !== -1 || ct.indexOf('ecmascript') !== -1;
+  if (ext === 'css') return ct === 'text/css';
+  if (ext === 'json' || ext === 'map') return ct.indexOf('json') !== -1;
+  if (ext === 'woff' || ext === 'woff2' || ext === 'ttf' || ext === 'otf') {
+    return ct.indexOf('font') !== -1 || ct === 'application/octet-stream';
+  }
+  if (/^(png|jpe?g|gif|svg|webp|avif|ico)$/.test(ext)) {
+    return ct.indexOf('image/') === 0 || (ext === 'ico' && ct === 'application/octet-stream');
+  }
+  return ct !== '';
+}
+
+/**
+ * A static-asset response worth storing: 200, same-origin, not the result of a redirect (a
+ * rewrite or login redirect standing in for the file), and of a type that fits the file.
+ */
+function isCacheableStatic(pathname, response) {
+  return (
+    isCacheable(response) &&
+    !response.redirected &&
+    staticTypeMatches(pathname, response.headers.get('content-type'))
+  );
+}
+
 async function precache() {
   const cache = await caches.open(SHELL_CACHE);
   const results = await Promise.allSettled(
@@ -84,7 +125,8 @@ async function precache() {
       const response = await fetch(
         new Request(path, { cache: hashed ? 'default' : 'reload', credentials: 'same-origin' })
       );
-      if (!isCacheable(response)) throw new Error(path + ' → ' + response.status);
+      const ok = hashed ? isCacheableStatic(path, response) : isCacheable(response);
+      if (!ok) throw new Error(path + ' → ' + response.status + ' ' + response.headers.get('content-type'));
       await cache.put(path, response);
     })
   );
@@ -110,7 +152,11 @@ self.addEventListener('activate', (event) => {
       const keys = await caches.keys();
       await Promise.all(
         keys
-          .filter((key) => key.indexOf(SHELL_CACHE_PREFIX) === 0 && key !== SHELL_CACHE)
+          .filter(
+            (key) =>
+              (key.indexOf(SHELL_CACHE_PREFIX) === 0 && key !== SHELL_CACHE) ||
+              (key.indexOf(RUNTIME_CACHE_PREFIX) === 0 && key !== RUNTIME_CACHE)
+          )
           .map((key) => caches.delete(key))
       );
       if (self.registration.navigationPreload) {
@@ -171,12 +217,24 @@ async function trimRuntimeCache(cache) {
   for (let i = 0; i < excess; i++) await cache.delete(keys[i]);
 }
 
+/** Remove `request` from every cache (a stored response that must not be served again). */
+async function evictEverywhere(request) {
+  const names = await caches.keys();
+  await Promise.all(names.map((name) => caches.open(name).then((c) => c.delete(request, { ignoreSearch: true }))));
+}
+
 async function handleStatic(request) {
+  const pathname = new URL(request.url).pathname;
   // Any cache: a page still running the previous build may ask for its own chunks.
   const cached = await caches.match(request, { ignoreSearch: true });
-  if (cached) return cached;
+  if (cached) {
+    if (staticTypeMatches(pathname, cached.headers.get('content-type'))) return cached;
+    // Stored by an earlier worker (or a bad deploy window): HTML under a script URL. Never
+    // serve it again — evict it and go to the network.
+    await evictEverywhere(request).catch(() => {});
+  }
   const response = await fetch(request);
-  if (isCacheable(response)) {
+  if (isCacheableStatic(pathname, response)) {
     const cache = await caches.open(RUNTIME_CACHE);
     cache
       .put(request, response.clone())

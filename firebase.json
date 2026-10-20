@@ -46,7 +46,7 @@
         "destination": "/chat-legacy-redirect.html"
       },
       {
-        "source": "**",
+        "source": "!/_next/**",
         "destination": "/index.html"
       }
     ],
