@@ -69,8 +69,13 @@ describe('BusinessDetailsForm', () => {
       Array.from(field(/^Tipo di sede/).querySelectorAll('option')).map((o) => [o.value, o.textContent])
     ).toEqual([
       ['gym', 'Palestra'],
+      ['wellness_center', 'Centro benessere'],
+      ['spa', 'Spa'],
+      ['beauty_salon', 'Salone di bellezza'],
       ['school', 'Scuola'],
       ['studio', 'Studio'],
+      ['outdoor_space', 'Spazio outdoor'],
+      ['event_space', 'Spazio eventi'],
       ['none', 'Nessuna sede fissa'],
     ]);
   });

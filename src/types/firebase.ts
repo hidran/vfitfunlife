@@ -797,8 +797,11 @@ export type ProviderType = 'individual' | 'business';
 /** Legal form of a business provider. Absent on documents written before B3b ⇒ 'company'. */
 export type BusinessLegalForm = 'company' | 'sole_trader' | 'association' | 'other';
 
-/** What a business offers at its premises (B12); 'none' ⇒ no venue is created on approval. */
-export type BusinessVenueType = 'gym' | 'school' | 'studio' | 'none';
+/**
+ * What a business offers at its premises (B12): any venue type of the platform, or 'none'
+ * (no fixed premises ⇒ no venue is created on approval).
+ */
+export type BusinessVenueType = VenueType | 'none';
 
 /** `instructors/{uid}.business` — company details of a business provider. */
 export interface BusinessDetails {

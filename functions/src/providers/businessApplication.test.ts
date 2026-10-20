@@ -382,7 +382,8 @@ describe("the premises of a company (B12: venueType, address)", () => {
     expect(validateBusinessInput({ ...VALID, address: "Via Roma 1" })).toMatchObject({ venueType: "none", address: null });
   });
 
-  it.each(["gym", "school", "studio"])("accepts the venue type %s as given, with its city and address", (venueType) => {
+  it.each(["gym", "wellness_center", "spa", "beauty_salon", "school", "studio", "outdoor_space", "event_space"])(
+    "accepts the venue type %s as given, with its city and address", (venueType) => {
     expect(validateBusinessInput({ ...VALID, ...PREMISES, venueType })).toMatchObject({ venueType, ...PREMISES });
   });
 
@@ -390,12 +391,14 @@ describe("the premises of a company (B12: venueType, address)", () => {
     expect(validateBusinessInput({ ...VALID, venueType: "none" })).toMatchObject({ venueType: "none", city: "", address: null });
   });
 
-  it("offers exactly the course-hosting venue types plus none", () => {
-    expect([...BUSINESS_VENUE_TYPES]).toEqual(["gym", "school", "studio", "none"]);
+  it("offers every venue type plus none", () => {
+    expect([...BUSINESS_VENUE_TYPES]).toEqual([
+      "gym", "wellness_center", "spa", "beauty_salon", "school", "studio", "outdoor_space", "event_space", "none",
+    ]);
   });
 
   it("refuses an unknown venue type, in any other spelling or type, as invalid_venue_type", () => {
-    for (const venueType of ["", "Gym", " gym", "spa", "wellness_center", "outdoor_space", 1, true, {}, ["gym"]]) {
+    for (const venueType of ["", "Gym", " gym", "pool", "event-space", 1, true, {}, ["gym"]]) {
       expectHttpsError(
         () => validateBusinessInput({ ...VALID, venueType }),
         "invalid-argument",
@@ -405,7 +408,7 @@ describe("the premises of a company (B12: venueType, address)", () => {
   });
 
   it("requires a non-blank street address for every venue type that has premises", () => {
-    for (const venueType of ["gym", "school", "studio"]) {
+    for (const venueType of ["gym", "wellness_center", "spa", "beauty_salon", "school", "studio", "outdoor_space", "event_space"]) {
       for (const address of [undefined, null, "", "   "]) {
         expectHttpsError(
           () => validateBusinessInput({ ...VALID, venueType, city: "Milano", address }),
@@ -417,7 +420,7 @@ describe("the premises of a company (B12: venueType, address)", () => {
   });
 
   it("requires a non-blank city for every venue type that has premises", () => {
-    for (const venueType of ["gym", "school", "studio"]) {
+    for (const venueType of ["gym", "wellness_center", "spa", "beauty_salon", "school", "studio", "outdoor_space", "event_space"]) {
       for (const city of [undefined, null, "", "   "]) {
         expectHttpsError(
           () => validateBusinessInput({ ...VALID, venueType, city, address: "Via Roma 1" }),

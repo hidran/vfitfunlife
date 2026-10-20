@@ -193,7 +193,7 @@ interface Venue {
   updatedAt: Timestamp;
 }
 
-// Business venues. Approving a company (providerType 'business', business.venueType gym | school | studio)
+// Business venues. Approving a company (providerType 'business', business.venueType any venue type but 'none')
 // creates /venues/biz_<providerUid> INSIDE the approval transaction (commitProviderDecision, with
 // functions/src/providers/businessVenue.ts): a deterministic id written with `create`, so a racing second
 // approval fails instead of overwriting; `venue_exists` is raised only when a venue at that id belongs to
@@ -306,7 +306,7 @@ interface Instructor {
     website?: string | null;        // public website URL
     logoUrl?: string | null;        // public logo (Storage URL)
     city?: string;                  // public city
-    venueType?: 'gym' | 'school' | 'studio' | 'none'; // premises asked for at signup (absent => 'none'; 'none' => no venue on approval). Admin-reviewed, NOT owner-editable
+    venueType?: 'gym' | 'wellness_center' | 'spa' | 'beauty_salon' | 'school' | 'studio' | 'outdoor_space' | 'event_space' | 'none'; // premises asked for at signup (absent => 'none'; 'none' => no venue on approval). Admin-reviewed, NOT owner-editable
     address?: string | null;        // street address of the venue created on approval (required with a venue type other than 'none'); null for 'none'. NOT owner-editable
     venueId?: string | null;        // 'biz_<uid>', set only by the approval transaction. NOT owner-editable
   };

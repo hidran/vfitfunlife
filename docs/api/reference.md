@@ -690,7 +690,7 @@ POST /applyAsProvider
     description?: string;           // <= 1000
     website?: string | null;        // http(s) only, <= 200
     city?: string;                  // <= 80
-    venueType?: 'gym' | 'school' | 'studio' | 'none';  // absent => 'none' (no venue)
+    venueType?: 'gym' | 'wellness_center' | 'spa' | 'beauty_salon' | 'school' | 'studio' | 'outdoor_space' | 'event_space' | 'none';  // absent => 'none' (no venue)
     address?: string | null;        // <= 200; dropped when venueType is 'none'
   };
 }

@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import type { MessageKey } from '@/i18n/messages';
 import type { BusinessDetails, BusinessLegalForm, BusinessVenueType } from '@/types/firebase';
-import { COURSE_VENUE_TYPES } from '@/types/venue';
 import type { BusinessApplicationInput } from '@/lib/firebase/providerApplication';
 import { isValidItalianVat, normalizeVatNumber } from '@/lib/vatNumber';
 
@@ -32,20 +31,25 @@ export const LEGAL_FORM_LABEL: Record<BusinessLegalForm, MessageKey> = {
 };
 
 /**
- * The premises a company can declare (B12): a venue type that hosts courses, or 'none' (no
- * fixed premises, so approval creates no venue). The first is the default (as on the server).
- * Mirrors functions' BUSINESS_VENUE_TYPES.
+ * The premises a company can declare (B12): any venue type of the platform, or 'none' (no
+ * fixed premises, so approval creates no venue). A party venue, a beauty salon or a spa
+ * registers like a gym or a school; only gym, school and studio host courses. The first is
+ * the default (as on the server). Mirrors functions' BUSINESS_VENUE_TYPES.
  */
 export const BUSINESS_VENUE_TYPES = [
-  ...COURSE_VENUE_TYPES,
-  'none',
+  'gym', 'wellness_center', 'spa', 'beauty_salon', 'school', 'studio', 'outdoor_space', 'event_space', 'none',
 ] as const satisfies readonly BusinessVenueType[];
 
 /** The message key of each venue type's label: the one map every screen uses. */
 export const VENUE_TYPE_LABEL: Record<BusinessVenueType, MessageKey> = {
   gym: 'provider.business.venue.gym',
+  wellness_center: 'provider.business.venue.wellness_center',
+  spa: 'provider.business.venue.spa',
+  beauty_salon: 'provider.business.venue.beauty_salon',
   school: 'provider.business.venue.school',
   studio: 'provider.business.venue.studio',
+  outdoor_space: 'provider.business.venue.outdoor_space',
+  event_space: 'provider.business.venue.event_space',
   none: 'provider.business.venue.none',
 };
 

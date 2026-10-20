@@ -30,11 +30,13 @@ describe("businessVenueType", () => {
     expect(businessVenueType({})).toBe("none");
     expect(businessVenueType({ venueType: null })).toBe("none");
   });
-  it("passes the three hosting types and none through", () => {
-    for (const t of ["gym", "school", "studio", "none"]) expect(businessVenueType({ venueType: t })).toBe(t);
+  it("passes every venue type and none through", () => {
+    for (const t of ["gym", "wellness_center", "spa", "beauty_salon", "school", "studio", "outdoor_space", "event_space", "none"]) {
+      expect(businessVenueType({ venueType: t })).toBe(t);
+    }
   });
   it("treats anything else as none rather than inventing a venue type", () => {
-    expect(businessVenueType({ venueType: "spa" })).toBe("none");
+    expect(businessVenueType({ venueType: "pool" })).toBe("none");
     expect(businessVenueType({ venueType: 3 })).toBe("none");
   });
 });
@@ -78,9 +80,11 @@ describe("buildBusinessVenue", () => {
     });
   });
 
-  it("uses the venue type chosen on the application", () => {
+  it("uses the venue type chosen on the application, including a party venue or a salon", () => {
     expect(build({ business: { ...business, venueType: "school" } })?.type).toBe("school");
     expect(build({ business: { ...business, venueType: "studio" } })?.type).toBe("studio");
+    expect(build({ business: { ...business, venueType: "event_space" } })?.type).toBe("event_space");
+    expect(build({ business: { ...business, venueType: "beauty_salon" } })?.type).toBe("beauty_salon");
   });
 
   it("prefers the instructor's city and copies valid coordinates", () => {

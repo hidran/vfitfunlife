@@ -37,9 +37,13 @@ export interface VenueData {
   [key: string]: unknown;
 }
 
-// What a business offers at its premises; "none" ⇒ no venue is created on approval.
-export type BusinessVenueType = "gym" | "school" | "studio" | "none";
-export const BUSINESS_VENUE_TYPES: readonly BusinessVenueType[] = [...COURSE_VENUE_TYPES, "none"];
+// What a business offers at its premises; "none" ⇒ no venue is created on approval. Every
+// venue type of the platform is available (a party venue or a beauty salon registers like a
+// gym); only gym, school and studio host courses.
+export type BusinessVenueType = VenueType | "none";
+export const BUSINESS_VENUE_TYPES: readonly BusinessVenueType[] = [
+  "gym", "wellness_center", "spa", "beauty_salon", "school", "studio", "outdoor_space", "event_space", "none",
+];
 
 export interface ServiceData {
   name: string;

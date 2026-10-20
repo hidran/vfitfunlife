@@ -36,7 +36,9 @@ describe("COURSE_VENUE_TYPES", () => {
     expect(inRules.sort()).toEqual([...COURSE_VENUE_TYPES].sort());
   });
 
-  it("is what a business can choose, plus none", () => {
-    expect([...BUSINESS_VENUE_TYPES]).toEqual([...COURSE_VENUE_TYPES, "none"]);
+  it("is every venue type a business can choose, plus none", () => {
+    expect([...BUSINESS_VENUE_TYPES]).toEqual([
+      "gym", "wellness_center", "spa", "beauty_salon", "school", "studio", "outdoor_space", "event_space", "none",
+    ]);
   });
 });

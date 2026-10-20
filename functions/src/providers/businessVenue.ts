@@ -39,7 +39,8 @@ export function venueSlug(name: string, city: string): string {
  * The venue type a business asked for: absent ⇒ "none" (a company that predates the field,
  * or an old cached client, never asked for premises, so approval must not invent a gym), an
  * unknown value ⇒ "none" too, so a corrupt map never produces a venue of a type nobody chose.
- * Only an explicit gym / school / studio plans a venue.
+ * Any explicit venue type of the platform (gym, school, studio, event space, beauty salon, …)
+ * plans a venue; only gym, school and studio host courses.
  */
 export function businessVenueType(business: Record<string, unknown>): BusinessVenueType {
   const t = business.venueType;

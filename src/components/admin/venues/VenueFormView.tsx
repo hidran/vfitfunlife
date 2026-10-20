@@ -8,7 +8,7 @@ import type { Venue } from '@/types/firebase';
 
 const venueSchema = z.object({
   name: z.string().min(1),
-  type: z.enum(['gym', 'school', 'studio', 'wellness_center', 'beauty_salon', 'outdoor_space', 'event_space']),
+  type: z.enum(['gym', 'school', 'studio', 'wellness_center', 'spa', 'beauty_salon', 'outdoor_space', 'event_space']),
   street: z.string().min(1),
   city: z.string().min(1),
   zipCode: z.string().min(1),
@@ -81,6 +81,7 @@ export function VenueFormView({ mode, initial, onSubmit }: Props) {
           <option value="school">{t('admin.venues.filter.school')}</option>
           <option value="studio">{t('admin.venues.filter.studio')}</option>
           <option value="wellness_center">{t('admin.venues.filter.wellnessCenter')}</option>
+          <option value="spa">{t('admin.venues.filter.spa')}</option>
           <option value="beauty_salon">{t('admin.venues.filter.beautySalon')}</option>
           <option value="outdoor_space">{t('admin.venues.filter.outdoorSpace')}</option>
           <option value="event_space">{t('admin.venues.filter.eventSpace')}</option>

@@ -261,6 +261,7 @@ export function VenuesListView() {
               { value: "school", label: t('admin.venues.filter.school') },
               { value: "studio", label: t('admin.venues.filter.studio') },
               { value: "wellness_center", label: t('admin.venues.filter.wellnessCenter') },
+              { value: "spa", label: t('admin.venues.filter.spa') },
               { value: "beauty_salon", label: t('admin.venues.filter.beautySalon') },
               { value: "outdoor_space", label: t('admin.venues.filter.outdoorSpace') },
               { value: "event_space", label: t('admin.venues.filter.eventSpace') },

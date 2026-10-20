@@ -141,22 +141,25 @@ describe('businessDetailsSchema limits', () => {
 });
 
 describe('the premises of a company (B12: venueType, address, city)', () => {
-  it('offers the course-hosting venue types plus none, a gym first (the default)', () => {
-    expect([...BUSINESS_VENUE_TYPES]).toEqual(['gym', 'school', 'studio', 'none']);
+  it('offers every venue type plus none, a gym first (the default)', () => {
+    expect([...BUSINESS_VENUE_TYPES]).toEqual([
+      'gym', 'wellness_center', 'spa', 'beauty_salon', 'school', 'studio', 'outdoor_space', 'event_space', 'none',
+    ]);
     expect(EMPTY_BUSINESS_DETAILS.venueType).toBe('gym');
     expect(Object.keys(VENUE_TYPE_LABEL).sort()).toEqual([...BUSINESS_VENUE_TYPES].sort());
     for (const venueType of BUSINESS_VENUE_TYPES) expect(messagesFor('venueType', { venueType })).toEqual([]);
   });
 
   it('refuses an unknown or empty venue type when signing up', () => {
-    for (const venueType of ['', 'spa', 'wellness_center'] as const) {
+    for (const venueType of ['', 'pool', 'airport'] as const) {
       expect(messagesFor('venueType', { venueType: venueType as BusinessDetailsFormValues['venueType'] })).toEqual([
         BUSINESS_FORM_ERRORS.venueTypeInvalid,
       ]);
     }
   });
 
-  it.each(['gym', 'school', 'studio'] as const)('requires an address and a city for a %s', (venueType) => {
+  it.each(['gym', 'wellness_center', 'spa', 'beauty_salon', 'school', 'studio', 'outdoor_space', 'event_space'] as const)(
+    'requires an address and a city for a %s', (venueType) => {
     expect(messagesFor('address', { venueType, address: '   ' })).toEqual([BUSINESS_FORM_ERRORS.addressRequired]);
     expect(messagesFor('city', { venueType, city: '' })).toEqual([BUSINESS_FORM_ERRORS.cityRequired]);
   });
@@ -279,7 +282,7 @@ describe('company profile editing (B6)', () => {
       address: '',
     });
     expect(businessFormValues(base)).toMatchObject({ venueType: '', address: '' });
-    expect(businessFormValues({ ...base, venueType: 'spa' as never })).toMatchObject({ venueType: '' });
+    expect(businessFormValues({ ...base, venueType: 'pool' as never })).toMatchObject({ venueType: '' });
   });
 
   it('normalises display values the way they are stored', () => {

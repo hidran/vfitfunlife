@@ -12,6 +12,7 @@ describe('VenueFormView', () => {
       ['school', 'Scuola'],
       ['studio', 'Studio'],
       ['wellness_center', 'Centro benessere'],
+      ['spa', 'Spa'],
       ['beauty_salon', 'Salone di bellezza'],
       ['outdoor_space', 'Spazio outdoor'],
       ['event_space', 'Spazio eventi'],
