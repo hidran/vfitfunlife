@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { courseCall } from '@/lib/firebase/courses';
 import { useRefreshCourses } from '@/hooks/useCourses';
 import { courseErrorMessage } from '@/lib/courseErrors';
+import { useAuthStore } from '@/stores/authStore';
 import { useI18n } from '@/hooks/useI18n';
 import { Button } from '@/components/ui/button';
 import { InstructorPicker, type InstructorValue } from './InstructorPicker';
@@ -12,6 +13,7 @@ import type { Course, CourseSession } from '@/types/course';
 export function SubstituteInstructor({ course, session }: { course: Pick<Course, 'id' | 'venueId' | 'instructorId'>; session: Pick<CourseSession, 'id' | 'instructorId'> }) {
   const { t, locale } = useI18n();
   const refresh = useRefreshCourses();
+  const user = useAuthStore(s => s.user);
   const [open, setOpen] = useState(false);
   const [instructor, setInstructor] = useState<InstructorValue>({ instructorId: null, name: '' });
   const [reason, setReason] = useState('');
@@ -27,6 +29,10 @@ export function SubstituteInstructor({ course, session }: { course: Pick<Course,
     } catch (err) { setError(courseErrorMessage(err, t, locale)); }
     finally { setBusy(false); }
   }
+  // An independent course has no venue instructors to pick from and its owner can only name themselves: when they already
+  // teach the lesson the picker would be empty, so the action is a dead end. Only an admin can link anyone.
+  const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
+  if (!course.venueId && !isAdmin && (!user || user.uid === (session.instructorId ?? course.instructorId))) return null;
   if (!open) return <Button variant="outline" size="sm" className="min-h-11" onClick={() => setOpen(true)}>{t('courses.substitute')}</Button>;
   return <form className="space-y-3 rounded-xl border border-hairline p-4" onSubmit={e => { e.preventDefault(); void submit(); }}>
     <InstructorPicker mode="substitute" venueId={course.venueId ?? null} currentInstructorId={session.instructorId ?? course.instructorId}

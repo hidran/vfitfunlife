@@ -2,13 +2,13 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ call: vi.fn(), refresh: vi.fn(), links: [] as unknown[] }));
+const mocks = vi.hoisted(() => ({ call: vi.fn(), refresh: vi.fn(), links: [] as unknown[], role: 'provider' }));
 vi.mock('@/lib/firebase/courses', () => ({ courseCall: mocks.call }));
 vi.mock('@/hooks/useCourses', () => ({ useRefreshCourses: () => mocks.refresh }));
 vi.mock('@/lib/firebase/venueSpaces', () => ({ fetchVenueInstructorLinks: async () => mocks.links }));
 vi.mock('@/lib/firebookings', () => ({ searchProviders: vi.fn(async () => []) }));
 vi.mock('@/stores/authStore', () => ({
-  useAuthStore: (select: (s: unknown) => unknown) => select({ user: { uid: 'me', fullName: 'Me', role: 'provider' } }),
+  useAuthStore: (select: (s: unknown) => unknown) => select({ user: { uid: 'me', fullName: 'Me', role: mocks.role } }),
 }));
 vi.mock('@/hooks/useI18n', () => ({
   useI18n: () => ({ t: (key: string, values?: Record<string, unknown>) => values ? `${key}:${JSON.stringify(values)}` : key, locale: 'en' }),
@@ -26,6 +26,7 @@ const renderIt = (over: { course?: object; session?: object } = {}) => render(
 beforeEach(() => {
   mocks.call.mockReset(); mocks.call.mockResolvedValue({ success: true });
   mocks.refresh.mockReset(); mocks.refresh.mockResolvedValue(undefined);
+  mocks.role = 'provider';
   mocks.links = [{ id: 'a', name: 'Anna', isActive: true }, { id: 'b', name: 'Bruno', isActive: true }];
 });
 
@@ -35,6 +36,20 @@ async function open() {
 }
 
 describe('SubstituteInstructor', () => {
+  it('is not offered on an independent course the provider already teaches, unless an admin (it would be a dead end)', () => {
+    const { container, unmount } = renderIt({ course: { venueId: null, instructorId: 'me' }, session: { instructorId: 'me' } });
+    expect(container).toBeEmptyDOMElement();
+    unmount();
+    mocks.role = 'admin';
+    renderIt({ course: { venueId: null, instructorId: 'me' }, session: { instructorId: 'me' } });
+    expect(screen.getByRole('button', { name: 'courses.substitute' })).toBeInTheDocument();
+  });
+
+  it('is offered on a venue course to the venue staff', () => {
+    renderIt();
+    expect(screen.getByRole('button', { name: 'courses.substitute' })).toBeInTheDocument();
+  });
+
   it('offers the other venue instructors and posts substitute with the reason', async () => {
     renderIt(); await open();
     expect(screen.queryByRole('option', { name: 'Anna' })).toBeNull();
