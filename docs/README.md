@@ -18,7 +18,6 @@ Index of project documentation. Each file is the canonical source for its topic;
 | [user-journeys/venue-staff.md](user-journeys/venue-staff.md) | Venue staff and managers: Venue courses entry, courses on behalf of the owner, lesson actions, roster, payments, refunds |
 | [user-journeys/admin-business-and-venues.md](user-journeys/admin-business-and-venues.md) | Admin and superadmin: review companies, tax-id corrections, convert, venues and partner status, instructor links, staff records, user deletion effects, payment and course-checkout switches |
 | [user-journeys/business-signup-verification.md](user-journeys/business-signup-verification.md) · [business-reconciled-verification.md](user-journeys/business-reconciled-verification.md) | Browser-verification logs: main's superseded B10 run (D1-D16) and the 20 October 2026 run of the reconciled release |
-| [user-journeys/partner-gym-timetable.md](user-journeys/partner-gym-timetable.md) | Stub: the separate partner-gym flow is superseded by group courses and being removed |
 | [user-journeys/production-release-checklist.md](user-journeys/production-release-checklist.md) | Production test checklist of the 2026-10-06 business release |
 | [database-schema.md](database-schema.md) | Firestore collections, document shapes, indexes |
 | [design-system.md](design-system.md) | Brand identity, color tokens, typography, component inventory, Tailwind v4 patterns |

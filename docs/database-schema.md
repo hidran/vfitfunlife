@@ -746,10 +746,11 @@ interface StreamingSchedule {
 > - `status` + `completionReminderSentAt` + `scheduledEndAt` — `remindTrainerToComplete`
 > - `status` + `paymentConfirmation.clientResponse` + `paymentConfirmation.confirmedByTrainerAt` — `autoConfirmPayments`
 
-> **Update (business accounts and courses, reconciliation 2026-10-19):** `firestore.indexes.json` holds **68** indexes: the 53
-> deployed to production on 2026-10-06, 9 for courses and partner gyms that production has never had (`courses` x2,
-> `courseEnrollments`, `courseRefunds`, `sessions` collection-group x2, `gymSessions` x2, `gymBookings`; list in
-> [deployment/staging.md](deployment/staging.md#1-indexes-first-and-wait-for-ready)) and 6 for the unified courses model
+> **Update (business accounts and courses, reconciliation 2026-10-19):** `firestore.indexes.json` holds **72** indexes: the 53
+> deployed to production on 2026-10-06, 6 for courses that production has never had (`courses` x2,
+> `courseEnrollments`, `courseRefunds`, `sessions` collection-group x2; list in
+> [deployment/staging.md](deployment/staging.md#1-indexes-first-and-wait-for-ready)), 6 for the unified courses model and 7 newest-first
+> lists of enrollments and refunds. The three indexes of the removed partner-gym flow are gone from the file
 > (see "Indexes for courses" below). Four of the 53 are `users` composites for
 > the `/admin/providers` account-type filter: the four shapes the list already used, each with `providerKind` (derived by the
 > admin-index trigger, `functions/src/users/adminIndex.ts`) before `providerVerification`/`createdAt DESC`. They must be READY
@@ -1168,11 +1169,7 @@ Server-only day locks that make room and instructor overlaps impossible, written
 
 ### Indexes for courses
 
-Added with the unified model (`firestore.indexes.json` holds 68; see the update note under Indexes): `courses` (`venueId`, `state`, `nextStartsAt`) and (`venueId`, `state`, `providerEligible`, `nextStartsAt`); `sessions` collection group (`venueId`, `listed`, `state`, `startsAt`), (`instructorId`, `listed`, `state`, `startsAt`) and (`state`, `waitlisted`); `waitlist` collection group (`userId`, `createdAt`). The existing ones stay: `courses` (`state`, `providerEligible`, `nextStartsAt`) and (`state`, `nextStartsAt`), `courseEnrollments` (`state`, `holdExpiresAt`), `courseRefunds` (`paymentMode`, `status`), `sessions` group (`state`, `cancellationReconciled`) and (`state`, `startsAt`). The waitlist sweep falls back to scanning scheduled lessons through (`state`, `startsAt`) while the (`state`, `waitlisted`) index is not READY.
-
-### Superseded: the partner-gym collections
-
-`gymSessions`, `gymBookings`, `gymSeries`, `gymScheduleLocks`, `gymSessionMembers` and `gymNotifications` belong to the separate partner-gym timetable flow that the unified model replaces. They are not read by any of the above and are removed in the final task of the unified-courses plan (code, rules, indexes, and, on staging, the data); until then they remain deployed. Do not build on them.
+Added with the unified model (`firestore.indexes.json` holds 72; see the update note under Indexes): `courses` (`venueId`, `state`, `nextStartsAt`) and (`venueId`, `state`, `providerEligible`, `nextStartsAt`); `sessions` collection group (`venueId`, `listed`, `state`, `startsAt`), (`instructorId`, `listed`, `state`, `startsAt`) and (`state`, `waitlisted`); `waitlist` collection group (`userId`, `createdAt`). The existing ones stay: `courses` (`state`, `providerEligible`, `nextStartsAt`) and (`state`, `nextStartsAt`), `courseEnrollments` (`state`, `holdExpiresAt`), `courseRefunds` (`paymentMode`, `status`), `sessions` group (`state`, `cancellationReconciled`) and (`state`, `startsAt`). The waitlist sweep falls back to scanning scheduled lessons through (`state`, `startsAt`) while the (`state`, `waitlisted`) index is not READY.
 
 Course publication denormalizes `providerEligible`; an instructor-write trigger (`onCourseProviderEligibility`) keeps it, and every lesson's `listed`, synchronized with verification/active/application status. Enrollment independently rechecks eligibility inside its transaction. A transaction reads all selected sessions and unique participant IDs before changing capacity. Cancellation uses unique session IDs and records history; historical sessions cannot be removed through schedule editing.
 

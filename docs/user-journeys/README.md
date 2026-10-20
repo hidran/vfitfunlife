@@ -52,10 +52,6 @@ Language: guides are in English. Italian twins exist for the signup-to-booking g
 
 There is no public journey inside the app beyond the landing page, sign-in and registration, and the public provider pages (`/providers/detail`, `/book`). The Gyms & schools list, the venue pages, the weekly timetable and the course list are all behind sign-in: `src/app/(main)/layout.tsx` redirects a signed-out visitor to `/auth/login` (without a return address), so the signed-out views the components support (regular price, "sign in, then come back to this lesson") cannot be reached today. This is by code reading and has not been re-checked in a browser. A visitor starts with [signup to booking](signup-to-booking.md) (Part B) or [Register a company](business-signup.md).
 
-## Other
-
-- [Partner-gym timetable](partner-gym-timetable.md): stub; the old separate flow is superseded by group courses and is being removed.
-
 ## Screenshots status
 
 | Journey | State |

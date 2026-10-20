@@ -836,7 +836,7 @@ Included since the first release: timezone-aware previews (annual weekly/daily c
 
 Direct payment remains the default. Stripe-hosted course checkout is implemented behind both the global Stripe flag and a separate superadmin course-checkout flag; both default off. Signed webhooks, expiry reconciliation and refunds are supported. Escrow, automated provider payouts, subscriptions, memberships, packs, series waitlists, QR check-in, cancellation fees and multi-seat purchases are deferred.
 
-The separate partner-gym timetable flow (`gymSessions`, `gymBookings`, `bookGymClass` and the `/gym/manage` screens) is superseded by the model above and is being removed in the last task of the unified-courses plan; do not build on it.
+The earlier separate partner-gym timetable flow has been removed: gym, school and studio classes are courses like any other, managed under `/provider/courses?venue=<id>` and booked through the course screens.
 
 ### Provider-managed course participants
 

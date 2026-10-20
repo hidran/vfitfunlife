@@ -479,7 +479,7 @@ One engine for the group classes of individual providers and of gym, school and 
 - `node scripts/smoke-unified-courses-staging.mjs [--keep|--cleanup]` is the 25-check staging smoke (needs the demo accounts); `scripts/smoke-unified-courses-load-staging.mjs` runs the 400-lesson cancel and a 20-way waitlist burst against throwaway data.
 - Emulator tests run outside the sandbox: `cd functions && npx firebase emulators:exec --only firestore --project demo-vfit "npx vitest run src/courses test/courses-rules.test.ts test/unified-courses-rules.test.ts"`; `RACE_ITERATIONS` sets the repeat count of the race suite (default 3, 10 before a release). Pure suites run with `npx vitest run src/courses/pricing.test.ts` and similar.
 
-**The partner-gym module (`../../functions/src/partnerGyms/`) is superseded.** Its callables (`saveGymSchedule`, `updateGymSession`, `quoteGymBooking`, `quoteGymTimetable`, `bookGymClass`, `cancelGymBooking`, `recordGymPayment`, `confirmGymRefund`) and trigger (`onGymNotification`) are still exported and deployed on staging but nothing in the unified flow calls them; they are being removed in the last task of the unified-courses plan.
+**The partner-gym module is removed.** The separate gym schedule, booking, payment and refund callables, their notification trigger and the six `gym*` collections no longer exist in code, rules or indexes (`saveGymSpace` and `configureGymInstructor` live on in `../../functions/src/venues/spaces.ts`). Each environment drops the deployed functions with the next `firebase deploy --only functions --force`; staging's leftover documents are deleted by `scripts/cleanup-gym-collections.mjs` (staging only, dry run by default).
 
 ---
 
