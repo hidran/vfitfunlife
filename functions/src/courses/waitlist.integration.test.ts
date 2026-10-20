@@ -6,7 +6,8 @@ import type { CallableRequest } from "firebase-functions/v2/https";
 import { assertLockInvariant } from "./lockInvariant.testutil";
 import { retryEmulatorAbort, emulatorAborts, withTimeout } from "./raceRetry.testutil";
 process.env.FIRESTORE_EMULATOR_HOST = "127.0.0.1:8080";
-vi.mock("../lib/stripeClient", () => ({ getStripe: async () => ({}) }));
+const stripe = vi.hoisted(() => ({ checkout: { sessions: { expire: vi.fn() } } }));
+vi.mock("../lib/stripeClient", () => ({ getStripe: async () => stripe }));
 const auth = vi.hoisted(() => ({ generatePasswordResetLink: vi.fn() }));
 vi.mock("firebase-admin/auth", () => ({ getAuth: () => auth }));
 vi.mock("../lib/email", () => ({ EMAIL_SECRETS: [], sendEmail: vi.fn() }));
@@ -29,7 +30,10 @@ beforeAll(async () => {
   db = admin.firestore();
   api = await import("./index");
 });
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  stripe.checkout.sessions.expire.mockReset();
+});
 beforeEach(() => resetDb());
 const wipe = (names: string[]) => Promise.all(names.map((name) => db.recursiveDelete(db.collection(name))));
 // Full wipe and seed: once per test.
@@ -920,6 +924,93 @@ const promoteStandalone = async (courseId: string, id = SESSION) =>
   (await import("./waitlist")).promoteWaitlist(courseId, id);
 const sweep = async (options: Record<string, unknown> = {}) => (await import("./maintenance")).sweepWaitlists(options);
 const soon = () => admin.firestore.Timestamp.fromMillis(Date.now() + 3600000);
+
+describe("releasing a seat when the payment settings cannot be read", () => {
+  it("still cancels for the customer, and treats checkout as off: the Stripe entry is dropped, the direct one seated", async () => {
+    await stripeSwitch(true);
+    try {
+      const courseId = await course();
+      await stripeHold(courseId);
+      await join("u1", courseId, { paymentMode: "stripe" });
+      await join("u2", courseId);
+      const settings = await import("../payments/paymentSettingsCallables");
+      vi.spyOn(settings, "readPaymentSettings").mockRejectedValue(new Error("settings unavailable"));
+      await expect(cancel("h", holderEnrollment())).resolves.toEqual({ success: true });
+      expect(await enrollmentOf("h", `hold-h-${SESSION}`)).toMatchObject({ state: "cancelled" });
+      expect(await enrollmentOf("u1", "w-u1")).toBeUndefined();
+      expect(await reasonsOf("waitlist_removed")).toEqual({ u1: "payment_unavailable" });
+      expect(await enrollmentOf("u2", "w-u2")).toMatchObject({ state: "confirmed", paymentMode: "direct" });
+      await assertCounters(courseId);
+    } finally {
+      vi.restoreAllMocks();
+      await stripeSwitch(false);
+    }
+  });
+});
+
+describe("releasing a held Stripe seat expires its Checkout Session", () => {
+  const heldWithCheckout = async (checkoutSessionId: string | null = "cs_test_1") => {
+    await stripeSwitch(true);
+    const courseId = await course();
+    await stripeHold(courseId);
+    if (checkoutSessionId) await db.doc(`courseEnrollments/${holderEnrollment()}`).update({ checkoutSessionId });
+    return courseId;
+  };
+  const expire = () => stripe.checkout.sessions.expire;
+  afterEach(() => stripeSwitch(false));
+
+  it("when the customer cancels the hold", async () => {
+    const courseId = await heldWithCheckout();
+    await cancel("h", holderEnrollment());
+    expect(expire()).toHaveBeenCalledTimes(1);
+    expect(expire()).toHaveBeenCalledWith("cs_test_1");
+    expect(await sessionOf(courseId)).toMatchObject({ held: 0 });
+    await assertCounters(courseId);
+  });
+  it("when staff remove the participant", async () => {
+    const courseId = await heldWithCheckout();
+    await manage("p", { courseId, action: "removeParticipant", userId: "h", reason: "Duplicate" });
+    expect(expire()).toHaveBeenCalledWith("cs_test_1");
+    expect(await sessionOf(courseId)).toMatchObject({ held: 0 });
+  });
+  it("when the lesson is cancelled", async () => {
+    const courseId = await heldWithCheckout();
+    await manage("p", { courseId, action: "cancel", reason: "Sick" });
+    expect(expire()).toHaveBeenCalledWith("cs_test_1");
+  });
+  it("not for a hold without a Checkout Session, a paid seat, or a hold that simply ran out", async () => {
+    let courseId = await heldWithCheckout(null);
+    await cancel("h", holderEnrollment());
+    expect(expire()).not.toHaveBeenCalled();
+    await resetDb();
+    await stripeSwitch(false);
+    courseId = await fullCourse();
+    await cancel("h", holderEnrollment());
+    expect(expire()).not.toHaveBeenCalled();
+    await resetDb();
+    courseId = await heldWithCheckout();
+    await db.doc(`courseEnrollments/${holderEnrollment()}`).update({ holdExpiresAt: past() });
+    await maintain();
+    expect(await enrollmentOf("h", `hold-h-${SESSION}`)).toMatchObject({ state: "expired" });
+    expect(expire()).not.toHaveBeenCalled();
+    await assertCounters(courseId);
+  });
+  it("swallows a Stripe failure: the seat is released and the next customer promoted", async () => {
+    const courseId = await heldWithCheckout();
+    await join("u1", courseId, { paymentMode: "stripe" });
+    expire().mockRejectedValue(new Error("No such checkout.session"));
+    await expect(cancel("h", holderEnrollment())).resolves.toEqual({ success: true });
+    expect(expire()).toHaveBeenCalledTimes(1);
+    expect(await enrollmentOf("h", `hold-h-${SESSION}`)).toMatchObject({ state: "cancelled" });
+    expect(await enrollmentOf("u1", "w-u1")).toMatchObject({ state: "held" });
+    await assertCounters(courseId);
+  });
+  it("does not call Stripe when the cancellation is refused", async () => {
+    await heldWithCheckout();
+    await expect(cancel("u1", holderEnrollment())).rejects.toBeDefined();
+    expect(expire()).not.toHaveBeenCalled();
+  });
+});
 
 describe("promoteWaitlist", () => {
   it("seats as many customers as there are free seats and leaves the rest waiting; a replay seats nobody", async () => {

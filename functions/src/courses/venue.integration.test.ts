@@ -1287,7 +1287,6 @@ describe("cancellation releases lock slots", () => {
   const lockDocs = async () => (await db.collection("courseScheduleLocks").get()).size;
   const snapshot = async () => Object.fromEntries((await db.collection("courseScheduleLocks").get()).docs
     .map((d) => [d.id, d.data()]));
-  const paymentSettings = async () => import("../payments/paymentSettingsCallables");
   beforeEach(async () => {
     await db.doc("venues/v/instructors/p").set({ isActive: true, name: "Anna" });
   });
@@ -1356,7 +1355,8 @@ describe("cancellation releases lock slots", () => {
     const { courseId } = await save("biz", venueInput);
     const enrollmentId = await book(courseId, "u1");
     // The cancellation commits, then releasing the participants fails (the caller's connection dies).
-    const spy = vi.spyOn(await paymentSettings(), "readPaymentSettings").mockRejectedValueOnce(new Error("crash"));
+    // (An unreadable payment config no longer fails a release, so the crash is the promotion planner's read.)
+    const spy = vi.spyOn(await import("./waitlist"), "planPromotions").mockRejectedValueOnce(new Error("crash"));
     await expect(cancel("s", courseId)).rejects.toThrow();
     spy.mockRestore();
     expect(await sessionOf(courseId)).toMatchObject({ state: "cancelled", cancellationReconciled: false, occupied: 1 });

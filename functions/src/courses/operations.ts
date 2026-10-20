@@ -2,6 +2,7 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions";
 import { FieldValue, Timestamp, type Transaction } from "firebase-admin/firestore";
 import { region } from "../lib/runtimeOptions";
+import { getStripe } from "../lib/stripeClient";
 import { readPaymentSettings } from "../payments/paymentSettingsCallables";
 import { checkoutActive } from "./core";
 import {
@@ -28,9 +29,18 @@ export async function releaseEnrollment(
   enrollmentId: string, actor: ReleaseActor, selected?: string[], reason = "", expired = false,
   opts: { markLate?: boolean } = {}
 ): Promise<void> {
-  // Read once, outside the transaction: promoted Stripe entries are only held while checkout is on.
-  const checkoutOn = checkoutActive(await readPaymentSettings());
-  await db.runTransaction(async (tx) => {
+  // Read once, outside the transaction: promoted Stripe entries are only held while checkout is on. A customer's
+  // cancellation never waits on a settings read: when it fails, checkout counts as off (Stripe entries are dropped
+  // with a notice instead of being held, and the sweep serves anything left).
+  let checkoutOn = false;
+  try {
+    checkoutOn = checkoutActive(await readPaymentSettings());
+  } catch (error) {
+    logger.warn("payment settings unreadable while releasing an enrollment; treating checkout as off",
+      { enrollmentId, error: String(error) });
+  }
+  // The open Stripe Checkout Session of a released hold, to be expired once the release has committed.
+  const openCheckout = await db.runTransaction(async (tx): Promise<string | undefined> => {
     const ref = db.doc(`courseEnrollments/${enrollmentId}`);
     const enrollment = (await tx.get(ref)).data() as Enrollment | undefined;
     if (!enrollment) throw new HttpsError("not-found", "enrollment_not_found");
@@ -104,10 +114,23 @@ export async function releaseEnrollment(
         { name: enrollment.courseName }, undefined, reason);
     }
     promotion.apply();
+    // Stripe expires its own sessions at the hold's deadline, so only a hold released early needs the call.
+    return enrollment.state === "held" && !expired && enrollment.paymentMode === "stripe" ?
+      enrollment.checkoutSessionId : undefined;
   });
+  if (openCheckout) {
+    // Best-effort: the seat is already free, and a customer who still pays on the stale page is refunded by
+    // fulfillCourseCheckout's late-payment branch.
+    try {
+      await (await getStripe()).checkout.sessions.expire(openCheckout);
+    } catch (error) {
+      logger.warn("could not expire the Checkout Session of a released hold", { enrollmentId, openCheckout,
+        error: String(error) });
+    }
+  }
 }
 
-export const cancelCourseEnrollment = onCall({ region }, async (req) => {
+export const cancelCourseEnrollment = onCall({ region, secrets: ["STRIPE_SECRET_KEY"] }, async (req) => {
   const uid = uidOf(req.auth);
   try {
     const selected = req.data.sessionIds;
@@ -330,7 +353,7 @@ async function changeCapacity(a: SessionAction): Promise<void> {
   }
 }
 
-export const manageCourseSession = onCall({ region }, async (req) => {
+export const manageCourseSession = onCall({ region, secrets: ["STRIPE_SECRET_KEY"] }, async (req) => {
   const uid = uidOf(req.auth);
   const courseId = safeId(req.data.courseId);
   const sessionId = safeId(req.data.sessionId);
@@ -418,7 +441,7 @@ export const confirmCourseRefund = onCall({ region }, async (req) => {
   return { success: true };
 });
 
-export const cancelRemainingCourse = onCall({ region }, async (req) => {
+export const cancelRemainingCourse = onCall({ region, secrets: ["STRIPE_SECRET_KEY"] }, async (req) => {
   const uid = uidOf(req.auth);
   const courseId = safeId(req.data.courseId);
   const reason = String(req.data.reason ?? "").trim().slice(0, 500);
