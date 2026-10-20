@@ -41,7 +41,7 @@ const BYPASS_FILES = ['/sw.js', '/firebase-messaging-sw.js'];
 
 /**
  * How a request is handled: 'navigate' | 'rsc' | 'static' | 'shell' | null (not intercepted).
- * Pure, so it can be unit-tested (scripts/sw/app-shell-sw.test.mjs).
+ * Pure, so it can be unit-tested (scripts/sw/app-shell-sw.test.ts).
  */
 function routeFor(method, url, mode, origin) {
   if (method !== 'GET') return null;
@@ -115,19 +115,37 @@ function isCacheableStatic(pathname, response) {
   );
 }
 
+/** HTML documents (routes, offline page): judged as pages, not as typed assets. */
+function isHtmlPath(path) {
+  return /\/$/.test(path) || /\.html$/.test(path);
+}
+
+/**
+ * Fetch `path` for the precache: the shell and every typed asset must be a response that fits
+ * the file (isCacheableStatic; HTML pages only need to be a plain 200). Content-hashed build
+ * assets may come from the HTTP cache (the page just loaded them), everything else bypasses it
+ * so the shell matches this build. A response that does not fit is fetched ONCE more with
+ * `cache: 'reload'`: the first one may be a wrong answer sitting in the HTTP cache (the hosting
+ * headers make assets immutable), and only the network can tell.
+ */
+async function fetchForPrecache(path) {
+  const hashed = path.indexOf('/_next/static/') === 0;
+  const fits = (response) => (isHtmlPath(path) ? isCacheable(response) : isCacheableStatic(path, response));
+  let response = await fetch(new Request(path, { cache: hashed ? 'default' : 'reload', credentials: 'same-origin' }));
+  if (!fits(response) && hashed) {
+    response = await fetch(new Request(path, { cache: 'reload', credentials: 'same-origin' }));
+  }
+  if (!fits(response)) {
+    throw new Error(path + ' → ' + response.status + ' ' + response.headers.get('content-type'));
+  }
+  return response;
+}
+
 async function precache() {
   const cache = await caches.open(SHELL_CACHE);
   const results = await Promise.allSettled(
     PRECACHE_URLS.map(async (path) => {
-      // Content-hashed build assets may come from the HTTP cache (the page just loaded
-      // them); everything else must bypass it so the shell matches this build.
-      const hashed = path.indexOf('/_next/static/') === 0;
-      const response = await fetch(
-        new Request(path, { cache: hashed ? 'default' : 'reload', credentials: 'same-origin' })
-      );
-      const ok = hashed ? isCacheableStatic(path, response) : isCacheable(response);
-      if (!ok) throw new Error(path + ' → ' + response.status + ' ' + response.headers.get('content-type'));
-      await cache.put(path, response);
+      await cache.put(path, await fetchForPrecache(path));
     })
   );
   const failed = results
@@ -227,13 +245,21 @@ async function handleStatic(request) {
   const pathname = new URL(request.url).pathname;
   // Any cache: a page still running the previous build may ask for its own chunks.
   const cached = await caches.match(request, { ignoreSearch: true });
+  let forceFresh = false;
   if (cached) {
     if (staticTypeMatches(pathname, cached.headers.get('content-type'))) return cached;
     // Stored by an earlier worker (or a bad deploy window): HTML under a script URL. Never
-    // serve it again — evict it and go to the network.
+    // serve it again — evict it and go to the network, past the HTTP cache too (the same wrong
+    // answer may be sitting there, the hosting headers having made it immutable).
     await evictEverywhere(request).catch(() => {});
+    forceFresh = true;
   }
-  const response = await fetch(request);
+  const reload = () => new Request(request, { cache: 'reload' });
+  let response = await fetch(forceFresh ? reload() : request);
+  // A wrong-typed or failed answer may come from the HTTP cache: ask the network once more.
+  if (!forceFresh && !isCacheableStatic(pathname, response) && request.cache !== 'reload') {
+    response = await fetch(reload());
+  }
   if (isCacheableStatic(pathname, response)) {
     const cache = await caches.open(RUNTIME_CACHE);
     cache

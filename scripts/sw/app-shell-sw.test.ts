@@ -13,6 +13,16 @@ import {
 
 const ORIGIN = 'https://vfit-funlife.web.app';
 
+/** The bits of Request the worker reads: url and cache mode (init wins over an existing request). */
+class FakeRequest {
+  url: string;
+  cache: string;
+  constructor(input: string | { url: string; cache?: string }, init: { cache?: string } = {}) {
+    this.url = typeof input === 'string' ? new URL(input, ORIGIN).href : input.url;
+    this.cache = init.cache ?? (typeof input === 'string' ? 'default' : input.cache ?? 'default');
+  }
+}
+
 /** Evaluates the rendered worker with a stub `self` and returns its pure helpers. */
 function loadWorker(
   urls: string[] = ['/', '/offline.html', '/manifest.json'],
@@ -24,6 +34,7 @@ function loadWorker(
     self: { addEventListener: (type: string, fn: unknown) => (listeners[type] = fn), location: { origin: ORIGIN } },
     URL,
     console,
+    Request: FakeRequest,
     ...globals,
   });
   vm.runInContext(code, context);
@@ -152,9 +163,20 @@ describe('generate-sw precache manifest', () => {
 
   it('injects version and manifest into the template', () => {
     const sw = renderServiceWorker(fs.readFileSync(TEMPLATE_PATH, 'utf8'), { version: 'abc', urls: ['/', '/offline.html'] });
-    expect(sw).toContain(`const SW_VERSION = "abc";`);
+    expect(sw).toMatch(/const SW_VERSION = "[0-9a-f]{16}";/);
     expect(sw).toContain(`const PRECACHE_URLS = ["/","/offline.html"];`);
     expect(() => renderServiceWorker('nothing', { version: 'x', urls: [] })).toThrow(/markers/);
+  });
+
+  it("folds the worker template's own hash into the version: new caching rules mean a new shell cache", () => {
+    const template = fs.readFileSync(TEMPLATE_PATH, 'utf8');
+    const input = { version: 'abc', urls: ['/'] };
+    const version = (t: string) => /const SW_VERSION = "([0-9a-f]{16})"/.exec(renderServiceWorker(t, input))?.[1];
+    expect(version(template)).toBe(version(template));
+    expect(version(template + '\n// a changed rule')).not.toBe(version(template));
+    expect(version(template)).not.toBe(
+      /const SW_VERSION = "([0-9a-f]{16})"/.exec(renderServiceWorker(template, { ...input, version: 'other' }))?.[1]
+    );
   });
 });
 
@@ -271,11 +293,12 @@ describe('static asset caching (D1: an HTML fallback must never be cached under 
   });
 
   it('activate drops the old runtime cache and shell caches of other versions, keeps the current ones', async () => {
+    const shellName = vm.runInContext('SHELL_CACHE', loadWorker().context); // 'vfit-shell-' + the hashed version
     const caches = fakeCaches({
       'vfit-runtime': { a: 1 },
       'vfit-runtime-v2': { b: 1 },
       'vfit-shell-old': { c: 1 },
-      'vfit-shell-test': { d: 1 },
+      [shellName]: { d: 1 },
       'unrelated': { e: 1 },
     });
     let done: Promise<unknown> = Promise.resolve();
@@ -286,6 +309,144 @@ describe('static asset caching (D1: an HTML fallback must never be cached under 
     (worker.context.self as { registration: unknown; clients: unknown }).clients = { claim: async () => undefined };
     (worker.listeners.activate as (e: { waitUntil: (p: Promise<unknown>) => void }) => void)({ waitUntil: (p) => (done = p) });
     await done;
-    expect([...caches.stores.keys()].sort()).toEqual(['unrelated', 'vfit-runtime-v2', 'vfit-shell-test']);
+    expect([...caches.stores.keys()].sort()).toEqual(['unrelated', 'vfit-runtime-v2', shellName].sort());
+  });
+});
+
+describe('HTTP-cache poison: a wrong answer in the browser cache is retried once with cache: "reload" (R11)', () => {
+  const HTML = () => res('text/html');
+  const JS = () => res('text/javascript');
+  const request = new FakeRequest(`${ORIGIN}/_next/static/chunks/6b173.js`);
+
+  /** A network whose `default` mode answers from a poisoned HTTP cache and `reload` tells the truth. */
+  function poisonedNetwork(truth: unknown, poisoned: unknown) {
+    const seen: string[] = [];
+    return {
+      seen,
+      fetch: async (r: { cache: string }) => {
+        seen.push(r.cache);
+        return r.cache === 'reload' ? truth : poisoned;
+      },
+    };
+  }
+  const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+  /** Same minimal CacheStorage as above, but small enough to stay local. */
+  function caches() {
+    const stores = new Map<string, Map<string, unknown>>();
+    const bare = (r: { url: string } | string) => (typeof r === 'string' ? r : r.url).split('?')[0];
+    return {
+      stores,
+      keys: async () => [...stores.keys()],
+      open: async (name: string) => {
+        if (!stores.has(name)) stores.set(name, new Map());
+        const store = stores.get(name)!;
+        return {
+          put: async (r: { url: string } | string, response: unknown) => void store.set(bare(r), response),
+          delete: async (r: { url: string }) => store.delete(bare(r)),
+          keys: async () => [...store.keys()].map((url) => ({ url })),
+        };
+      },
+      match: async (r: { url: string }) => {
+        for (const store of stores.values()) if (store.has(bare(r))) return store.get(bare(r));
+        return undefined;
+      },
+    };
+  }
+
+  it('handleStatic: HTML from the default mode is not served; the reload answer is, and is the one cached', async () => {
+    const good = JS();
+    const net = poisonedNetwork(good, HTML());
+    const c = caches();
+    const { context } = loadWorker(undefined, { caches: c, fetch: net.fetch });
+    expect(await (context.handleStatic as (r: unknown) => Promise<unknown>)(request)).toBe(good);
+    await flush();
+    expect(net.seen).toEqual(['default', 'reload']);
+    expect(c.stores.get('vfit-runtime-v2')?.get(request.url)).toBe(good);
+  });
+
+  it('handleStatic: after evicting a bad cached entry it goes straight to the network with reload', async () => {
+    const good = JS();
+    const net = poisonedNetwork(good, HTML());
+    const c = caches();
+    (await c.open('vfit-runtime')).put(request, HTML());
+    const { context } = loadWorker(undefined, { caches: c, fetch: net.fetch });
+    expect(await (context.handleStatic as (r: unknown) => Promise<unknown>)(request)).toBe(good);
+    expect(net.seen).toEqual(['reload']);
+  });
+
+  it('handleStatic: a genuine 404 is asked for twice at most and is never stored', async () => {
+    const missing = res('text/html', { status: 404 });
+    const net = poisonedNetwork(missing, missing);
+    const c = caches();
+    const { context } = loadWorker(undefined, { caches: c, fetch: net.fetch });
+    expect(await (context.handleStatic as (r: unknown) => Promise<unknown>)(request)).toBe(missing);
+    await flush();
+    expect(net.seen).toEqual(['default', 'reload']);
+    expect(c.stores.get('vfit-runtime-v2')?.size ?? 0).toBe(0);
+  });
+
+  const URLS = ['/', '/offline.html', '/_next/static/chunks/a.js', '/icons/i.png', '/manifest.json', '/favicon.ico'];
+  const good: Record<string, unknown> = {
+    '/': res('text/html'),
+    '/offline.html': res('text/html'),
+    '/_next/static/chunks/a.js': res('text/javascript'),
+    '/icons/i.png': res('image/png'),
+    '/manifest.json': res('application/manifest+json'),
+    '/favicon.ico': res('image/x-icon'),
+  };
+
+  /** Runs the install handler over a network described per path: [first answer, answer to reload]. */
+  async function install(answers: Record<string, [unknown, unknown?]>) {
+    const c = caches();
+    const seen: Record<string, string[]> = {};
+    const fetchFn = async (r: { url: string; cache: string }) => {
+      const path = new URL(r.url).pathname;
+      (seen[path] ??= []).push(r.cache);
+      const [first, onReload] = answers[path] ?? [good[path]];
+      return r.cache === 'reload' && onReload !== undefined ? onReload : first;
+    };
+    const worker = loadWorker(URLS, { caches: c, fetch: fetchFn });
+    let done: Promise<unknown> = Promise.resolve();
+    const skipWaiting = () => undefined;
+    (worker.context.self as { skipWaiting: () => void }).skipWaiting = skipWaiting;
+    (worker.listeners.install as (e: { waitUntil: (p: Promise<unknown>) => void }) => void)({ waitUntil: (p) => (done = p) });
+    return { c, seen, done: () => done };
+  }
+
+  it('install: a hashed asset that is HTML in the HTTP cache is refetched with reload and precached', async () => {
+    const js = res('text/javascript');
+    const { c, seen, done } = await install({ '/_next/static/chunks/a.js': [HTML(), js] });
+    await done();
+    expect(seen['/_next/static/chunks/a.js']).toEqual(['default', 'reload']);
+    const shell = [...c.stores.values()][0];
+    expect(shell.get('/_next/static/chunks/a.js')).toBe(js);
+  });
+
+  it('install: a hashed asset that stays wrong is skipped (a miss, not a failed install)', async () => {
+    const { c, done } = await install({ '/_next/static/chunks/a.js': [HTML(), HTML()] });
+    await expect(done()).resolves.toBeUndefined();
+    const shell = [...c.stores.values()][0];
+    expect(shell.has('/_next/static/chunks/a.js')).toBe(false);
+    expect(shell.has('/')).toBe(true);
+  });
+
+  it('install: icons, the manifest and the favicon must fit their type too', async () => {
+    const { c, done } = await install({
+      '/icons/i.png': [HTML()],
+      '/manifest.json': [HTML()],
+      '/favicon.ico': [HTML()],
+    });
+    await done();
+    const shell = [...c.stores.values()][0];
+    for (const path of ['/icons/i.png', '/manifest.json', '/favicon.ico']) expect(shell.has(path)).toBe(false);
+    expect(shell.has('/_next/static/chunks/a.js')).toBe(true);
+  });
+
+  it('install: a required entry (/ or /offline.html) that fails aborts the install', async () => {
+    for (const path of ['/', '/offline.html']) {
+      const { done } = await install({ [path]: [res('text/html', { status: 500 })] });
+      await expect(done()).rejects.toThrow(/required precache entry failed/);
+    }
   });
 });

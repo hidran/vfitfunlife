@@ -46,7 +46,7 @@
         "destination": "/chat-legacy-redirect.html"
       },
       {
-        "source": "!/_next/**",
+        "regex": "^(.*/)?[^./]*/?$",
         "destination": "/index.html"
       }
     ],
@@ -61,7 +61,7 @@
         ]
       },
       {
-        "source": "**/*.@(jpg|jpeg|gif|png|svg|webp|ico)",
+        "source": "/_next/static/**",
         "headers": [
           {
             "key": "Cache-Control",
@@ -70,7 +70,7 @@
         ]
       },
       {
-        "source": "**/*.@(js|css)",
+        "source": "/@(icons|landing)/**",
         "headers": [
           {
             "key": "Cache-Control",

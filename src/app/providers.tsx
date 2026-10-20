@@ -12,6 +12,7 @@ import { ProfilePreferencesSync } from '@/hooks/useProfilePreferencesSync';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { initializeCapacitor } from '@/lib/capacitor';
 import { scheduleAppShellRegistration } from '@/lib/sw/appShell';
+import { installChunkReloadGuard } from '@/lib/sw/chunkReload';
 import { PushRegistrar } from '@/components/push/PushRegistrar';
 import { StagingGate } from '@/components/staging/StagingGate';
 import { useAssistantStore } from '@/stores/assistantStore';
@@ -50,6 +51,8 @@ export function Providers({ children }: { children: ReactNode }) {
     });
     // Offline app shell (web only; no-op on native and in dev).
     scheduleAppShellRegistration();
+    // One reload when a build chunk is gone or came back as HTML (a deploy happened under this tab).
+    return installChunkReloadGuard();
   }, []);
 
   return (

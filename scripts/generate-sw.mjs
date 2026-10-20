@@ -10,8 +10,8 @@
  * /admin area, every /_next/static file those pages reference (first-load JS, CSS,
  * preloaded latin fonts), the manifest, icons and /offline.html. Lazily loaded chunks,
  * other font subsets and admin pages are cached at runtime by the worker on first use. The version is a hash over every precached file's
- * path and bytes, so any deploy that changes the shell installs a new worker and drops
- * the old cache; an identical rebuild yields a byte-identical sw.js (no needless update).
+ * path and bytes (and the worker template's own hash), so any deploy that changes the shell
+ * or the worker's rules installs a new worker and drops the old cache; an identical rebuild yields a byte-identical sw.js (no needless update).
  */
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -90,8 +90,12 @@ export function renderServiceWorker(template, { version, urls }) {
   if (!template.includes(marker) || !template.includes("'__SW_VERSION__'")) {
     throw new Error('generate-sw: template markers not found in scripts/sw/app-shell-sw.js');
   }
+  // The worker's own logic is part of the version: a change to its caching rules installs a new
+  // worker with a new shell cache, even when no precached file changed.
+  const templateHash = crypto.createHash('sha256').update(template).digest('hex');
+  const swVersion = crypto.createHash('sha256').update(`${version}\0${templateHash}`).digest('hex').slice(0, 16);
   return template
-    .replace("'__SW_VERSION__'", JSON.stringify(version))
+    .replace("'__SW_VERSION__'", JSON.stringify(swVersion))
     .replace(marker, JSON.stringify(urls, null, 0));
 }
 
