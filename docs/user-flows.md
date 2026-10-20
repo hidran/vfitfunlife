@@ -11,6 +11,7 @@
 - [Profile Management Flow](#profile-management-flow)
 - [Payment Flow](#payment-flow)
 - [Cancellation & Refund Flow](#cancellation--refund-flow)
+- [Group courses, venues and companies](#group-courses-venues-and-companies)
 
 ---
 
@@ -33,6 +34,8 @@ graph TD
     J --> L[Leave Review]
     K --> M[Get Paid]
 ```
+
+**Step-by-step journeys per actor** (customer, individual provider, company owner, venue staff, admin) with the exact screens, error texts, edge cases and known limitations live in [user-journeys/README.md](user-journeys/README.md). This document keeps the generic flows; the journeys are the detailed, code-checked version for group courses, companies and venues.
 
 ---
 
@@ -810,3 +813,13 @@ flowchart TD
 ## Provider-managed group participants
 
 Manage courses → Participants → choose a future lesson → search linked clients or add a new person (full name/email required; surname/phone optional) → choose lesson/full course → reserve with direct provider payment → optionally notify by email or open SMS/WhatsApp. New participants complete private email password setup and sign in with the same account. The participant remains linked to all their providers. See [group course user journey](user-journeys/group-courses.md#provider-adds-participants).
+
+## Group courses, venues and companies
+
+Short maps; each line links to the journey with the full steps.
+
+- **Customer:** Gyms & schools or venue page or course list → lesson → **Book lesson** → review (regular price, benefits, **Your price**) → **Confirm booking** → My course bookings. A full lesson offers **Join waitlist**; a freed seat books the first person in line (direct: confirmed; online: 30-minute hold). Cancel before the deadline. [Find a lesson](user-journeys/group-courses.md#a1-find-a-lesson) · [reserve](user-journeys/group-courses.md#a2-reserve-one-lesson) · [waitlist](user-journeys/group-courses.md#a5-join-the-waitlist-and-get-promoted) · [cancel](user-journeys/group-courses.md#a6-my-course-bookings-and-cancelling) · [Italiano](user-journeys/group-courses.it.md)
+- **Individual provider:** register → approval → Manage courses → Create course (no venue) → Preview lessons → Published → roster, attendance, record payment, refunds. [Part B](user-journeys/group-courses.md#part-b-individual-provider)
+- **Company owner:** register as company → pending → admin **Verify** → venue created → location → locations and rooms → admin sets partner status → publish venue courses. [Company owner journey](user-journeys/company-owner-venue.md) · [Italiano](user-journeys/company-owner-venue.it.md) · [company signup](user-journeys/business-signup.md)
+- **Venue staff:** admin creates the staff record → Venue courses tab → manage courses and lessons for the owner. [Venue staff journey](user-journeys/venue-staff.md)
+- **Admin:** review company (approve what you saw) → corrections (tax id, release claim, convert) → venue partner status and discounts → instructor links. [Admin journey](user-journeys/admin-business-and-venues.md)

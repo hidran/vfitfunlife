@@ -501,7 +501,7 @@ Source: `functions/src/courses/authority.ts` (server) and `firestore.rules` (`ma
 - Venue staff create courses **on the owner's behalf**: the course's `providerId` is the venue's owner (`venue_owner_required` if the venue has none) and the owner is the payee. On edit `providerId` never changes.
 - Venue people and admins can: edit/publish/archive, add and remove participants, mark attendance, record payments, confirm refunds, reschedule/cancel/substitute a lesson, change a lesson's capacity, remove waitlist entries, cancel the remaining course and send participant notices (which act for the provider of record). Only admins link instructors to a venue (`configureGymInstructor`) and pick the partner status.
 - Reads (`firestore.rules`): courses, enrollments and refunds are readable by venue managers through their `venueId` field, so list queries must constrain `venueId`; rosters (`participants`, `waitlist`, `customers`) through `managesCourse()`. A customer reads only their own participant, waitlist and enrollment documents. Lock and sweep documents are closed to every client.
-- The public weekly timetable needs no sign-in: it reads `listed` lessons of an active partner venue only.
+- The weekly timetable data needs no sign-in at the rules level: it reads `listed` lessons of an active partner venue only. The app page `/fit/gyms/timetable` itself sits under the signed-in `(main)` layout, so a visitor is sent to the login page (see the [journeys index](../user-journeys/README.md#visitor)).
 
 
 ## Firestore Security Rules
