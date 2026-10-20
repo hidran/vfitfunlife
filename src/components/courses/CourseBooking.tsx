@@ -129,6 +129,8 @@ export function CourseBooking({ course, sessions, checkoutEnabled, uid, initialS
           const fresh = await quoteCourse(course.id, review.scope === 'lesson' ? [review.sessionId!] : [], review.scope === 'series');
           setReview({ ...review, ...reviewOf(fresh, review.scope, review.sessionId),
             notice: details?.reason === 'availability' ? 'availability' : 'price', error: undefined, waitlistOffer: undefined });
+          // The lesson buttons behind the sheet still show the old price or seat count: refresh them too.
+          void refresh().catch(() => undefined);
         } catch (refetchError) { setReview({ ...review, error: courseErrorMessage(refetchError, t, locale) }); }
       } else {
         setReview({ ...review, notice: undefined, error: courseErrorMessage(err, t, locale),

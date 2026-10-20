@@ -343,14 +343,14 @@ describe('CourseBooking', () => {
     expect(mocks.refresh).toHaveBeenCalledTimes(1);
   });
 
-  it('does not re-quote the list after price_changed: the review already holds the fresh numbers', async () => {
+  it('refreshes the lesson list behind the sheet after price_changed, so it shows the new price too', async () => {
     mocks.call.mockRejectedValueOnce(rejection('price_changed', { reason: 'price' }));
     mocks.quote.mockResolvedValue(quoteOf([lessonQuote('s2')]));
     renderBooking();
     fireEvent.click(screen.getAllByRole('button', { name: /courses.bookLesson/ })[1]);
     fireEvent.click(within(await screen.findByRole('region', { name: 'courses.review' })).getByRole('button', { name: 'courses.confirm' }));
     await screen.findByText('courses.priceChanged');
-    expect(mocks.refetch).not.toHaveBeenCalled();
+    expect(mocks.refresh).toHaveBeenCalledTimes(1);
   });
 
   it('disables the series when any lesson is full', () => {
