@@ -16,7 +16,7 @@ Se il numero appartiene a un altro account, compare un errore sul campo fiscale.
 
 ## Verifica dell’amministratore
 
-Un amministratore apre **Admin → Provider**, filtra le attività e apre la richiesta. Controlla ragione sociale, numero fiscale, forma giuridica e affiliazione rispetto ai dati del richiedente. Approva o rifiuta con le azioni mostrate. Se i dati verificati sono cambiati mentre la pagina era aperta, ricarica e ricontrollali prima di approvare.
+Un amministratore apre **Admin → Provider**, filtra le attività e apre la richiesta. Controlla ragione sociale, numero fiscale, forma giuridica e affiliazione rispetto ai dati del richiedente. Premi **Verifica** per approvare o **Rifiuta** (con un motivo) per respingere la richiesta. Se i dati verificati sono cambiati mentre la pagina era aperta, ricarica e ricontrollali prima di approvare.
 
 L’approvazione abilita l’area professionista e la presenza pubblica. Il titolare deve impostare un prezzo, attivare almeno un servizio e controllare la disponibilità. Imposta una posizione per comparire nelle ricerche nelle vicinanze. I servizi creati automaticamente sono bozze non attive.
 
@@ -30,13 +30,27 @@ Per le correzioni, gli amministratori usano le azioni dell’attività nella pag
 
 ## Cercare e prenotare
 
-Un cliente apre **Prenota un servizio**, cerca il nome pubblico o la ragione sociale e apre l’attività con il badge **Azienda**. Sceglie un servizio attivo, una data e un orario disponibile, accetta i termini e invia la richiesta. Richiesta e dettaglio della prenotazione mostrano il nome pubblico aziendale. Conferma e pagamenti seguono il percorso descritto in [signup-to-booking.it.md](signup-to-booking.it.md).
+Un cliente apre **Prenota un servizio**, cerca il nome pubblico o la ragione sociale e apre l’attività con il badge **Azienda** (in inglese *Business*; la sede in Palestre e scuole non ha questo badge). Sceglie un servizio attivo, una data e un orario disponibile, accetta i termini e invia la richiesta. Richiesta e dettaglio della prenotazione mostrano il nome pubblico aziendale. Conferma e pagamenti seguono il percorso descritto in [signup-to-booking.it.md](signup-to-booking.it.md).
 
 ## Modificare il profilo dell’attività
 
 Apri **Profilo → Modifica → Professionale**. Modifica nome pubblico, descrizione, città o sito, oppure carica, cambia o rimuovi il logo. Salva i dati dell’attività: il logo scelto viene pubblicato solo dopo il salvataggio. La ricerca riflette il nuovo nome quando l’indice si aggiorna.
 
 Ragione sociale, numero fiscale, forma giuridica e affiliazione sono in sola lettura per il titolare. Per correggerli contatta il supporto. Modificare il nome personale del titolare non cambia il nome pubblico dell’attività.
+
+## Cosa viene dopo
+
+Un’azienda con sede prosegue in [company-owner-venue.it.md](company-owner-venue.it.md) (sedi e sale, stato partner, istruttori, corsi della struttura, personale, cosa succede se l’azienda viene rifiutata o convertita); il lato amministratore è in [admin-business-and-venues.md](admin-business-and-venues.md) (in inglese). Tutti i percorsi: [indice](README.md).
+
+## Limiti noti
+
+- Ragione sociale, P.IVA, forma giuridica, numero di affiliazione, tipo di sede e indirizzo sono fissi per il titolare dopo la registrazione; le correzioni passano dal supporto e da un amministratore.
+- Un’azienda rifiutata mantiene la P.IVA riservata finché un amministratore non la libera; un’azienda convertita in singolo professionista non può candidarsi di nuovo come azienda se prima un amministratore non rifiuta l’account (`provider_type_locked`).
+- La sede creata all’approvazione è *in attesa* e non partner; con le coordinate è già pubblica in Palestre e scuole e, senza posizione nota, `/fit/gyms` mostra solo le 50 strutture con la valutazione migliore, quindi una sede nuova compare con **Vicino a me**.
+- Il dettaglio della prenotazione legge il profilo pubblico del fornitore, quindi badge e logo spariscono se il profilo non è leggibile (da sistemare).
+- Il selettore dei servizi stampa «1 servizi selezionati» (mancano le forme del plurale, D9).
+- Limiti dei campi: nomi 120, città 80, indirizzo 200, sito web 200, descrizione 1000, numero di affiliazione 40 caratteri.
+- Alla fine della verifica al titolare non viene inviata nessuna notifica (lettura del codice); lo stato si vede nel profilo.
 
 ## Registro delle verifiche
 

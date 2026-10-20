@@ -7,7 +7,7 @@ This guide covers a business with one owner account in Italy. A company and an a
 ## Register the owner and the business
 
 1. Open **Register**, choose email and password (or another supported sign-up method), and enter the owner's personal account details. The owner's name is separate from the public business name.
-2. Select **I also want to offer services as a professional**, then **Company / Association**.
+2. Select **I also want to offer services as a professional**, then **Company or association**.
 3. Enter the legal name and the 11-digit Italian VAT number. An association without a VAT number enters its organisation's 11-digit tax code. Spaces and an `IT` prefix are accepted; an invalid checksum produces an inline error.
 4. Choose the legal form. An affiliation or registration number is optional. Enter a public name and website if wanted; leaving the public name blank uses the legal name. Choose the **venue type** (Gym, School, Studio, or No fixed premises). For Gym, School and Studio the **street address** and the **city** are required; with No fixed premises no venue is created. Select at least one service category.
 5. Accept the terms and privacy policy, then create the account. The application stays **under review** while the team checks the tax ID. It does not appear in public search yet, even when individual providers are approved automatically.
@@ -16,7 +16,7 @@ If the number belongs to another account, the tax-ID field shows an error. Corre
 
 ## Admin review
 
-An administrator opens **Admin → Providers**, selects the company filter and opens the application. Check legal name, tax ID, legal form and affiliation against the applicant's information. Approve or reject using the displayed actions. If reviewed details changed while the page was open, reload and review them again before approving.
+An administrator opens **Admin → Providers**, selects the company filter and opens the application. Check legal name, tax ID, legal form and affiliation against the applicant's information. Press **Verify** to approve, or **Reject** (with a reason) to turn the application down. If reviewed details changed while the page was open, reload and review them again before approving.
 
 Approval enables the provider area and public listing. The owner must set a price, activate at least one service and review availability. Set a location to appear in nearby searches. Automatically created services start as inactive drafts.
 
@@ -30,13 +30,27 @@ For corrections, administrators use the business actions on the detail page. Cha
 
 ## Search and book
 
-A customer opens **Book a service**, searches the public or legal name and opens the company marked with the business badge. Select an active service, date and available time, accept the terms and submit the booking. The request and booking details show the company's public name. Confirmation and payments follow the existing provider booking flow described in [signup-to-booking.md](signup-to-booking.md).
+A customer opens **Book a service**, searches the public or legal name and opens the company marked with the **Business** badge (Italian *Azienda*; the venue itself in Gyms & schools carries no such badge). Select an active service, date and available time, accept the terms and submit the booking. The request and booking details show the company's public name. Confirmation and payments follow the existing provider booking flow described in [signup-to-booking.md](signup-to-booking.md).
 
 ## Edit the business profile
 
 Open **Profile → Edit → Professional**. Change the public name, description, city or website, or upload/change/remove the logo. Save the business details; a selected logo is published only after saving. Search reflects the new name after its index updates.
 
 Legal name, tax ID, legal form and affiliation are read-only for the owner. Contact support for corrections. Changing the owner's personal account name does not change the company's public name.
+
+## What comes next
+
+A company with a venue continues in [company-owner-venue.md](company-owner-venue.md) (locations and rooms, partner status, instructors, venue courses, staff, what happens when the company is rejected or converted); the admin side is in [admin-business-and-venues.md](admin-business-and-venues.md). All journeys: [index](README.md).
+
+## Known limitations
+
+- Legal name, tax id, legal form, affiliation number, venue type and address are fixed for the owner after signup; corrections go through support and an admin.
+- A rejected company keeps its tax id reserved until an admin releases it; a company converted to an individual cannot apply as a company again unless an admin first rejects the account (`provider_type_locked`).
+- A venue created on approval is `pending` and non-partner; with coordinates it is already public in Gyms & schools, and without a known location `/fit/gyms` lists only the 50 best-rated venues, so a new venue appears with **Near me**.
+- The booking detail reads the provider's public profile, so the Business badge and logo disappear there if the profile is not readable (open follow-up).
+- The service picker prints "1 services selected" (no plural forms yet, follow-up D9).
+- Field limits: names 120, city 80, address 200, website 200, description 1000, affiliation number 40 characters.
+- No notification is sent to the owner when the review ends (by code reading); the profile shows the state.
 
 ## Verification record
 
