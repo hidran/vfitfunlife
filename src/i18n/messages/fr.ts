@@ -3087,6 +3087,7 @@ export const frMessages: Messages = {
   'providerProfile.experience.years': 'ans',
   'providerProfile.experience.suffix': 'd\'expérience',
   'providerProfile.bookNow': 'Réserver',
+  'providerProfile.bookService': 'Réserver',
   'providerProfile.contact': 'Contacter',
   'providerProfile.specialties': 'Spécialités',
   'providerProfile.services': 'Services',

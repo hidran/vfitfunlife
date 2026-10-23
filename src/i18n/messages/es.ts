@@ -3078,6 +3078,7 @@ export const esMessages: Messages = {
   'providerProfile.experience.years': 'años',
   'providerProfile.experience.suffix': 'de experiencia',
   'providerProfile.bookNow': 'Reservar ahora',
+  'providerProfile.bookService': 'Reservar',
   'providerProfile.contact': 'Contactar',
   'providerProfile.specialties': 'Especialidades',
   'providerProfile.services': 'Servicios',

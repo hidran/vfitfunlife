@@ -3085,6 +3085,7 @@ export const deMessages: Messages = {
   'providerProfile.experience.years': 'Jahre',
   'providerProfile.experience.suffix': 'Erfahrung',
   'providerProfile.bookNow': 'Jetzt buchen',
+  'providerProfile.bookService': 'Buchen',
   'providerProfile.contact': 'Kontakt',
   'providerProfile.specialties': 'Spezialgebiete',
   'providerProfile.services': 'Leistungen',

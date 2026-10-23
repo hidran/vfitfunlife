@@ -3104,6 +3104,7 @@ export const itMessages = {
   'providerProfile.experience.years': 'anni',
   'providerProfile.experience.suffix': 'di esperienza',
   'providerProfile.bookNow': 'Prenota ora',
+  'providerProfile.bookService': 'Prenota',
   'providerProfile.contact': 'Contatta',
   'providerProfile.specialties': 'Specializzazioni',
   'providerProfile.services': 'Servizi',

@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { chatHref, readIdParam } from '@/lib/routes';
+import { chatHref, providerProfileHref, readIdParam } from '@/lib/routes';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
 import {
@@ -30,10 +30,32 @@ import { Spinner } from '@/components/ui/Spinner';
 import { Badge } from '@/components/ui/Badge';
 import { Rating } from '@/components/ui/Rating';
 import { BusinessBadge, BusinessWebsiteLink } from '@/components/provider/BusinessBadge';
+import { BookServiceSheet } from '@/components/booking/BookServiceSheet';
 import { Timestamp } from 'firebase/firestore';
 import { ProviderNotFoundError, useProviderPublicProfile } from '@/hooks/useProviderPublicProfile';
+import { useAuthStore } from '@/stores/authStore';
 import { socialLinkHref } from '@/lib/socialLinks';
 import { courseHref } from '@/lib/courseFormat';
+import type { ProviderSearchResult, Service } from '@/types/booking';
+
+/** One `servicePricing` entry as the booking flow reads it (`Service`). */
+function toBookingService(service: {
+  id: string;
+  serviceName: string;
+  description?: string;
+  price: number;
+  durationMinutes: number;
+  isActive: boolean;
+}): Service {
+  return {
+    id: service.id,
+    name: service.serviceName,
+    description: service.description ?? '',
+    price: service.price,
+    durationMinutes: service.durationMinutes,
+    isActive: service.isActive,
+  };
+}
 
 const SOCIAL_PILL_CLASS =
   'flex items-center gap-2 px-4 py-2 rounded-lg bg-background-secondary/10 text-text-secondary';
@@ -74,11 +96,17 @@ function SocialPill({
 export default function ProviderProfileClient() {
   const { t, locale } = useI18n();
   const router = useRouter();
+  const searchParams = useSearchParams();
   // Served from /providers/detail?id=<providerId> — see src/lib/routes.ts.
-  const providerId = readIdParam(useSearchParams()) ?? undefined;
+  const providerId = readIdParam(searchParams) ?? undefined;
+  // `&service=` is added by the sign-in notice: it brings the customer back to the sheet.
+  const serviceParam = searchParams?.get('service') ?? null;
 
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isLiked, setIsLiked] = useState(false);
+  // The service whose booking sheet is open; it is booked here, without going to /book.
+  const [bookingService, setBookingService] = useState<Service | null>(null);
+  const firebaseUser = useAuthStore((state) => state.firebaseUser);
 
   const { data: profile, isLoading, error: queryError } = useProviderPublicProfile(providerId);
   const portfolioImages = profile?.portfolioImages ?? [];
@@ -87,6 +115,44 @@ export default function ProviderProfileClient() {
       ? t('providerProfile.error.notFound')
       : t('providerProfile.error.loadFailed')
     : null;
+
+  // `/providers/detail?id=…` in the shape the booking flow (and its confirm page) reads.
+  const bookingProvider = useMemo<ProviderSearchResult | null>(() => {
+    if (!profile) return null;
+    const providerData = profile.providerProfile;
+    return {
+      id: profile.id,
+      fullName: profile.fullName,
+      avatarUrl: profile.avatarUrl ?? undefined,
+      ...(profile.business
+        ? {
+            isBusiness: true,
+            business: profile.business,
+            ...(profile.business.logoUrl ? { logoUrl: profile.business.logoUrl } : {}),
+          }
+        : {}),
+      rating: providerData?.rating ?? 0,
+      reviewCount: providerData?.reviewCount ?? 0,
+      isVerified: providerData?.isVerified ?? false,
+      specialties: providerData?.specialties ?? [],
+      yearsOfExperience: providerData?.yearsOfExperience ?? 0,
+      languages: providerData?.languages ?? [],
+      services: [],
+    };
+  }, [profile]);
+
+  // Coming back from sign-in with `&service=`: reopen the sheet for the service they picked.
+  // Derived rather than pushed into state from an effect, and the close button dismisses it
+  // for the rest of this page view (`?service=` stays in the URL).
+  const [dismissedQueryService, setDismissedQueryService] = useState(false);
+  const queryService = useMemo<Service | null>(() => {
+    if (!serviceParam || !firebaseUser || !profile) return null;
+    const service = (profile.providerProfile?.servicePricing ?? []).find(
+      (candidate) => candidate.isActive && !candidate.courseId && candidate.id === serviceParam,
+    );
+    return service ? toBookingService(service) : null;
+  }, [serviceParam, firebaseUser, profile]);
+  const openService = bookingService ?? (dismissedQueryService ? null : queryService);
 
   const handleBookNow = () => {
     router.push(`/book?providerId=${providerId}`);
@@ -140,6 +206,11 @@ export default function ProviderProfileClient() {
 
   const providerData = profile.providerProfile;
   const publicServices = providerData?.servicePricing.filter((service) => service.isActive) ?? [];
+  // A provider cannot book their own services (the /book page refuses too).
+  const isOwnProvider = firebaseUser?.uid === profile.id;
+  const bookingReturnTo = `${providerProfileHref(profile.id)}${
+    openService ? `&service=${encodeURIComponent(openService.id)}` : ''
+  }`;
   // A company's logo stands in for the avatar when it has one.
   const headerImage = profile.business?.logoUrl ?? profile.avatarUrl;
   const initials = profile.fullName
@@ -323,6 +394,17 @@ export default function ProviderProfileClient() {
                     <p className="text-xl font-bold text-section-primary">
                       {formatPrice(service.price, locale)}
                     </p>
+                    {/* Group services are courses: they open their own page instead. */}
+                    {!isOwnProvider && !service.courseId && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="mt-2"
+                        onClick={() => setBookingService(toBookingService(service))}
+                      >
+                        {t('providerProfile.bookService')}
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -522,6 +604,19 @@ export default function ProviderProfileClient() {
             onClick={(e) => e.stopPropagation()}
           />
         </div>
+      )}
+
+      {/* Booking a service, right here: day, time, then the confirm screen. */}
+      {bookingProvider && openService && (
+        <BookServiceSheet
+          provider={bookingProvider}
+          service={openService}
+          returnToPath={bookingReturnTo}
+          onClose={() => {
+            setBookingService(null);
+            setDismissedQueryService(true);
+          }}
+        />
       )}
     </div>
   );

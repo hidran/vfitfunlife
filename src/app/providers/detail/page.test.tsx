@@ -1,6 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ProviderProfilePage from './page';
+import { itMessages } from '@/i18n/messages/it';
+import { useBookingStore } from '@/stores/bookingStore';
 
 let mockSearchParams = new URLSearchParams();
 vi.mock('next/navigation', () => ({
@@ -12,6 +14,30 @@ const mockUseProfile = vi.fn();
 vi.mock('@/hooks/useProviderPublicProfile', () => ({
   ProviderNotFoundError: class extends Error {},
   useProviderPublicProfile: (id: string | undefined) => mockUseProfile(id),
+}));
+
+let mockFirebaseUser: { uid: string } | null = { uid: 'customer-1' };
+vi.mock('@/stores/authStore', () => ({
+  useAuthStore: (selector: (state: { firebaseUser: unknown; isInitialized: boolean }) => unknown) =>
+    selector({ firebaseUser: mockFirebaseUser, isInitialized: true }),
+}));
+
+// The booking sheet reads slots through the store, which imports these at module scope.
+vi.mock('@/lib/firebookings', () => ({
+  searchProviders: vi.fn(),
+  getProviderAvailability: vi.fn(),
+  createBooking: vi.fn(),
+  getUserBookings: vi.fn(),
+  getBooking: vi.fn(),
+  cancelBooking: vi.fn(),
+  rescheduleBooking: vi.fn(),
+  applyPromoCode: vi.fn(),
+}));
+vi.mock('@/hooks/useBookableDays', () => ({
+  useBookableDays: () => ({ data: undefined, isFetching: false }),
+}));
+vi.mock('@/components/booking/AvailabilityPicker', () => ({
+  AvailabilityPicker: () => <div data-testid="availability-picker" />,
 }));
 
 describe('/providers/detail?id=', () => {
@@ -181,5 +207,119 @@ describe('/providers/detail social links', () => {
     render(<ProviderProfilePage />);
     expect(screen.queryByRole('link', { name: 'Instagram' })).toBeNull();
     expect(screen.getByText('https://instagram.com.evil.example/anna').closest('a')).toBeNull();
+  });
+});
+
+describe('/providers/detail service booking', () => {
+  const profileWithServices = () => ({
+    data: {
+      id: 'prov-42',
+      fullName: 'Anna Verdi',
+      avatarUrl: null,
+      bio: null,
+      providerProfile: {
+        isVerified: true,
+        rating: 0,
+        reviewCount: 0,
+        yearsOfExperience: 0,
+        servicePricing: [
+          {
+            id: 'active-service',
+            serviceName: 'Personal coaching',
+            description: 'Sessione individuale',
+            durationMinutes: 60,
+            price: 45,
+            isActive: true,
+          },
+          {
+            id: 'inactive-service',
+            serviceName: 'Servizio bozza',
+            description: '',
+            durationMinutes: 30,
+            price: 10,
+            isActive: false,
+          },
+          {
+            id: 'group-service',
+            serviceName: 'Lezione di gruppo',
+            description: '',
+            durationMinutes: 60,
+            price: 15,
+            isActive: true,
+            kind: 'group',
+            courseId: 'course-1',
+          },
+        ],
+      },
+      socialLinks: null,
+      isProvider: true,
+      portfolioImages: [],
+    },
+    isLoading: false,
+    error: null,
+  });
+
+  beforeEach(() => {
+    window.history.replaceState(null, '', '/providers/detail/');
+    mockSearchParams = new URLSearchParams('id=prov-42');
+    mockFirebaseUser = { uid: 'customer-1' };
+    useBookingStore.setState({
+      selectedProvider: null,
+      selectedService: null,
+      selectedDate: null,
+      selectedTime: null,
+      availability: [],
+      availabilityError: null,
+    });
+  });
+
+  it('books a service from its own card, without going through /book', () => {
+    mockUseProfile.mockReturnValue(profileWithServices());
+    render(<ProviderProfilePage />);
+
+    // Only the active, individually-booked service: a draft one is not offered and a group
+    // service (a course) keeps its link to the course page.
+    const bookButtons = screen.getAllByRole('button', {
+      name: itMessages['providerProfile.bookService'],
+    });
+    expect(bookButtons).toHaveLength(1);
+    expect(screen.getByRole('link', { name: itMessages['courses.sessions'] })).toHaveAttribute(
+      'href',
+      expect.stringContaining('course-1'),
+    );
+
+    fireEvent.click(bookButtons[0]);
+
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('heading', { name: 'Personal coaching' })).toBeInTheDocument();
+    expect(within(dialog).getByTestId('availability-picker')).toBeInTheDocument();
+    // The confirm page reads this selection.
+    expect(useBookingStore.getState().selectedProvider?.id).toBe('prov-42');
+    expect(useBookingStore.getState().selectedService).toMatchObject({
+      id: 'active-service',
+      name: 'Personal coaching',
+      price: 45,
+      durationMinutes: 60,
+    });
+  });
+
+  it('does not offer booking on the provider own page', () => {
+    mockFirebaseUser = { uid: 'prov-42' };
+    mockUseProfile.mockReturnValue(profileWithServices());
+    render(<ProviderProfilePage />);
+
+    expect(
+      screen.queryByRole('button', { name: itMessages['providerProfile.bookService'] }),
+    ).toBeNull();
+  });
+
+  it('reopens the service picked before signing in (…&service=)', () => {
+    mockSearchParams = new URLSearchParams('id=prov-42&service=active-service');
+    mockUseProfile.mockReturnValue(profileWithServices());
+    render(<ProviderProfilePage />);
+
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('heading', { name: 'Personal coaching' })).toBeInTheDocument();
+    expect(useBookingStore.getState().selectedService?.id).toBe('active-service');
   });
 });

@@ -3105,6 +3105,7 @@ export const enMessages: Messages = {
   'providerProfile.experience.years': 'years',
   'providerProfile.experience.suffix': 'experience',
   'providerProfile.bookNow': 'Book Now',
+  'providerProfile.bookService': 'Book',
   'providerProfile.contact': 'Contact',
   'providerProfile.specialties': 'Specialties',
   'providerProfile.services': 'Services',
