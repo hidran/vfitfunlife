@@ -8,6 +8,7 @@ import { buildSystemPrompt } from "./prompt";
 import { reserveQuota, recordTokens, releaseQuota } from "./quota";
 import { ResultCard, AiStreamChunk } from "./types";
 import { hotCallableOptions } from "../lib/runtimeOptions";
+import { isAuthorizedWarmupPing } from "../lib/warmupKey";
 
 interface ChatRequest {
   chatId?: string;
@@ -18,6 +19,10 @@ interface ChatRequest {
 export const chatWithAssistant = onCall<ChatRequest>(
   hotCallableOptions<ChatRequest>({ secrets: AI_SECRETS }),
   async (request: CallableRequest<ChatRequest>, response?: CallableResponse<AiStreamChunk>) => {
+    // keepWarm ping: return before auth/AI work. Keep billed to the ping only.
+    if (isAuthorizedWarmupPing(request.data)) {
+      return { chatId: "", messageId: "", text: "", cards: [] };
+    }
     if (!request.auth) throw new HttpsError("unauthenticated", "Must be authenticated");
     const uid = request.auth.uid;
     const db = admin.firestore();

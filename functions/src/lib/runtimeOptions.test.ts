@@ -1,37 +1,25 @@
 import { describe, expect, it, vi } from "vitest";
 
 describe("runtime options", () => {
-  it("keeps hot functions at zero warm instances outside production", async () => {
-    vi.stubEnv("GCLOUD_PROJECT", "vfit-app-staging");
-    vi.stubEnv("FUNCTIONS_HOT_MIN_INSTANCES", "");
+  it("never pins warm instances for hot callables — keepWarm pings them instead", async () => {
+    vi.stubEnv("GCLOUD_PROJECT", "vfit-funlife");
     vi.resetModules();
 
-    const { hotFunctionMinInstances } = await import("./runtimeOptions");
+    const { hotCallableOptions } = await import("./runtimeOptions");
 
-    expect(hotFunctionMinInstances()).toBe(0);
+    // minInstances must stay absent: even production must scale to zero so no
+    // idle instance time is billed. See scheduled/keepWarm.ts for the warming.
+    expect(hotCallableOptions()).not.toHaveProperty("minInstances");
+    expect(hotCallableOptions({ cors: true })).not.toHaveProperty("minInstances");
   });
 
-  it("warms one hot instance in production by default", async () => {
-    vi.stubEnv("GCLOUD_PROJECT", "vfit-funlife");
-    vi.stubEnv("FUNCTIONS_HOT_MIN_INSTANCES", "");
+  it("still applies the shared region and keeps caller options", async () => {
     vi.resetModules();
 
-    const { hotFunctionMinInstances } = await import("./runtimeOptions");
+    const { hotCallableOptions } = await import("./runtimeOptions");
 
-    expect(hotFunctionMinInstances()).toBe(1);
-  });
-
-  it("allows an explicit hot instance override for deployments", async () => {
-    vi.stubEnv("GCLOUD_PROJECT", "vfit-funlife");
-    vi.stubEnv("FUNCTIONS_HOT_MIN_INSTANCES", "2");
-    vi.resetModules();
-
-    const { hotFunctionMinInstances, hotCallableOptions } = await import("./runtimeOptions");
-
-    expect(hotFunctionMinInstances()).toBe(2);
     expect(hotCallableOptions({ cors: true })).toMatchObject({
       region: "europe-west1",
-      minInstances: 2,
       cors: true,
     });
   });

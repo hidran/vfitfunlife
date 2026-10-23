@@ -14,6 +14,7 @@ import {
 } from "./validate";
 
 import { region, hotCallableOptions } from "../lib/runtimeOptions";
+import { isAuthorizedWarmupPing } from "../lib/warmupKey";
 
 /**
  * Whether this caller may point getProviderSlots at that booking.
@@ -39,9 +40,13 @@ async function canExcludeBooking(db: Firestore, uid: string, bookingId: string):
  * Europe/Rome arithmetic in the browser.
  */
 // P2-1: the hottest user-facing read in the booking flow (every calendar/date
-// pick calls it, far more often than createBooking itself) — worth keeping
-// warm in prod. See lib/runtimeOptions.ts; no-op in non-prod projects.
+// pick calls it, far more often than createBooking itself) — kept warm by the
+// keepWarm scheduler (scheduled/keepWarm.ts) instead of minInstances.
 export const getProviderSlots = onCall(hotCallableOptions(), async (req) => {
+  // keepWarm ping: return before auth/Firestore work. Keep billed to the ping only.
+  if (isAuthorizedWarmupPing(req.data)) {
+    return { slots: [] };
+  }
   if (!req.auth) throw new HttpsError("unauthenticated", "Sign in required");
   const { instructorId, serviceId, date, excludeBookingId } = validateSlotsRequest(req.data);
 

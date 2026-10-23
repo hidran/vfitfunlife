@@ -487,3 +487,6 @@ export const updateChallengeProgress = onDocumentUpdated(
     ));
   }
 );
+
+// Keep-warm pings for the latency-sensitive callables (see keepWarm.ts).
+export { keepWarm } from "./keepWarm";

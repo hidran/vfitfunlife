@@ -25,6 +25,7 @@ import {
   shouldAutoApprove,
 } from "./onboardingSettings";
 import { hotCallableOptions } from "../lib/runtimeOptions";
+import { isAuthorizedWarmupPing } from "../lib/warmupKey";
 import { cachedDocRead } from "../lib/cachedDoc";
 
 interface ApplyAsProviderData {
@@ -115,6 +116,10 @@ async function readOnboardingSettings(): Promise<ProviderOnboardingSettings> {
 export const applyAsProvider = onCall<ApplyAsProviderData>(
   hotCallableOptions<ApplyAsProviderData>(),
   async (req) => {
+    // keepWarm ping: return before auth/Firestore work. Keep billed to the ping only.
+    if (isAuthorizedWarmupPing(req.data)) {
+      return { success: true, providerId: "", draftServicesSeeded: 0 };
+    }
     const callerUid = req.auth?.uid;
     if (!callerUid) {
       throw new HttpsError("unauthenticated", "Sign in required");

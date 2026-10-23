@@ -2,27 +2,25 @@ import type { CallableOptions } from "firebase-functions/v2/https";
 
 export const region = process.env.FIREBASE_REGION || "europe-west1";
 
-const PRODUCTION_PROJECT_ID = "vfit-funlife";
-const DEFAULT_PRODUCTION_HOT_MIN_INSTANCES = 1;
-
-function nonNegativeInteger(value: string | undefined): number | null {
-  if (!value) return null;
-  const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed >= 0 ? parsed : null;
-}
-
-export function hotFunctionMinInstances(env: NodeJS.ProcessEnv = process.env): number {
-  const explicit = nonNegativeInteger(env.FUNCTIONS_HOT_MIN_INSTANCES);
-  if (explicit !== null) return explicit;
-  return env.GCLOUD_PROJECT === PRODUCTION_PROJECT_ID ? DEFAULT_PRODUCTION_HOT_MIN_INSTANCES : 0;
-}
-
+/**
+ * Options for the latency-sensitive callables the keep-warm scheduler pings.
+ *
+ * These functions intentionally set NO `minInstances`. A warm instance bills
+ * idle instance time 24/7 (roughly $8 per instance per month at 1 vCPU /
+ * 256MiB), which is by far the largest Cloud Run cost in this project; at the
+ * current traffic level it bought a handful of avoided cold starts a month.
+ * Instead, `scheduled/keepWarm.ts` pings each target every 5 minutes with a
+ * `WARMUP_KEY`-gated payload, and the callable returns before doing any work —
+ * keeping one instance alive for ~100ms of billed time per ping.
+ *
+ * Every callable listed in `WARM_TARGETS` (scheduled/keepWarm.ts) must use
+ * these options and must start its handler with `isAuthorizedWarmupPing()`.
+ */
 export function hotCallableOptions<T = unknown>(
   options: CallableOptions<T> = {}
 ): CallableOptions<T> {
   return {
     region,
-    minInstances: hotFunctionMinInstances(),
     ...options,
   };
 }

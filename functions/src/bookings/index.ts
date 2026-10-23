@@ -12,6 +12,7 @@ import { bookingDayRef, readDayDocs } from "../availability/dayReads";
 import { decideBookingStart, romeDateOf } from "../availability/slots";
 import { validateServiceDuration } from "../availability/validate";
 import { hotCallableOptions, region } from "../lib/runtimeOptions";
+import { isAuthorizedWarmupPing } from "../lib/warmupKey";
 import { logger } from "firebase-functions";
 import { EMAIL_SECRETS } from "../lib/email";
 import { notifyTransition } from "./notify";
@@ -227,6 +228,10 @@ async function calculateBookingFinancials(
 export const createBooking = onCall<BookingData>(
   hotCallableOptions<BookingData>({ secrets: EMAIL_SECRETS }),
   async (request: CallableRequest<BookingData>) => {
+    // keepWarm ping: return before auth/Firestore work. Keep billed to the ping only.
+    if (isAuthorizedWarmupPing(request.data)) {
+      return { bookingId: "", finalPrice: 0, depositAmount: 0, pointsUsed: 0, pointsEarned: 0 };
+    }
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Must be authenticated");
     }

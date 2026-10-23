@@ -206,6 +206,18 @@ Cloud Functions for V Fitness handle server-side business logic including:
 - **Trigger:** Firestore update on `/bookings/{bookingId}`
 - **Description:** Updates challenge progress when booking completes
 
+#### `keepWarm` (`/functions/src/scheduled/keepWarm.ts`)
+- **Schedule:** Every 5 minutes
+- **Description:** Pings the latency-sensitive callables (`createBooking`, `getProviderSlots`,
+  `chatWithAssistant`, `applyAsProvider`) with a `WARMUP_KEY`-gated
+  `{ data: { __warmup: true, __warmup_key } }` payload. Each target returns before auth or
+  Firestore work, so a warm instance is kept alive for the ~100ms the ping takes instead of
+  paying for `minInstances` idle time 24/7. Targets must start with
+  `isAuthorizedWarmupPing()` and use `hotCallableOptions()`.
+- **Deploy requirement:** `functions/.env` must contain `WARMUP_KEY` (see
+  `functions/.env.example`). Without it the targets fail closed and the scheduler skips its
+  pings, and the hot callables take cold starts again.
+
 ---
 
 ## Additional Functions (Audit Sync 2026-05)
