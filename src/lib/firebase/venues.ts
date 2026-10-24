@@ -2,11 +2,13 @@ import {
   collection,
   deleteDoc,
   doc,
+  documentId,
   getDoc,
   getDocs,
   query,
   serverTimestamp,
   setDoc,
+  startAfter,
   updateDoc,
   where,
   limit as limitQuery,
@@ -70,6 +72,57 @@ export async function fetchVenues(opts: VenueListOptions = {}): Promise<Venue[]>
   } catch (error) {
     console.error('[fetchVenues]', opts, error);
     return [];
+  }
+}
+
+/** Position of the last venue of a page in the (rating desc, id desc) order: the `startAfter` of the next page. */
+export interface VenuePageCursor {
+  rating: number;
+  id: string;
+}
+
+export interface VenuePage {
+  venues: Venue[];
+  /** Null once the last page is read. */
+  nextCursor: VenuePageCursor | null;
+}
+
+/** Venues per page of the location-less list (`useNearbyVenues` fallback, "Load more" on /fit/gyms). */
+export const VENUE_PAGE_SIZE = 24;
+
+/**
+ * One page of the location-less list: highest-rated first, the document id breaking ties so the cursor is
+ * unambiguous. `orderBy(documentId(), 'desc')` is explicit because a cursor needs it, and it is `desc` because
+ * Firestore appends `__name__` to a composite index in the direction of its last field, so the existing
+ * (type asc, rating desc) index already covers (type asc, rating desc, __name__ desc); an ascending id would
+ * need a new index. Reads `pageSize + 1` to know whether a next page exists without an empty trailing page.
+ */
+export async function fetchTopRatedVenuesPage(opts: {
+  type?: VenueType;
+  types?: readonly VenueType[];
+  cursor?: VenuePageCursor | null;
+  pageSize?: number;
+}): Promise<VenuePage> {
+  const pageSize = opts.pageSize ?? VENUE_PAGE_SIZE;
+  try {
+    const typeConstraints = typeFilter(opts);
+    if (!typeConstraints) return { venues: [], nextCursor: null };
+    const constraints: QueryConstraint[] = [
+      ...typeConstraints,
+      orderBy('rating', 'desc'),
+      orderBy(documentId(), 'desc'),
+      ...(opts.cursor ? [startAfter(opts.cursor.rating, opts.cursor.id)] : []),
+      limitQuery(pageSize + 1),
+    ];
+    const snap = await getDocs(query(collection(db, 'venues'), ...constraints));
+    const docs = snap.docs.slice(0, pageSize);
+    const venues = docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Venue, 'id'>) }));
+    const last = venues[venues.length - 1];
+    const nextCursor = snap.docs.length > pageSize && last ? { rating: last.rating ?? 0, id: last.id } : null;
+    return { venues, nextCursor };
+  } catch (error) {
+    console.error('[fetchTopRatedVenuesPage]', opts, error);
+    return { venues: [], nextCursor: null };
   }
 }
 

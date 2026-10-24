@@ -15,7 +15,7 @@
 > | D1 duplicate tax id then fix and resubmit | **Resolved in code**: `RegisterClient.tsx` keeps the created account (`createdAccount`) and re-sends only the application on retry; account fields are locked meanwhile (the cosmetic double message may remain) |
 > | D2 admin page not refreshed after Verify | **Resolved in code**: branch commit `b465288` (refresh after approval/rejection in `ProviderDetailView`, with a test) |
 > | D3 admin detail overflow (tab strip, long email) | **Resolved in code** by R6 `e41e796` (`EntityDetailLayout` wrapping, scrolling tab strip with focus-ring padding); re-check at 320/390 |
-> | D4 `/fit/gyms` top-50 without location | **Open** (`NEARBY_FALLBACK_LIMIT = 50`) |
+> | D4 `/fit/gyms` top-50 without location | **Closed 2026-10-24** (cursor pagination, 24 per page, `fetchTopRatedVenuesPage`) |
 > | D5 a11y of the type toggle and required fields | **Resolved in code**: native radio group in `ProviderTypeChoice.tsx`, `aria-required` on required company fields, logo file input is `hidden` (not exposed) |
 > | D6 Company badge on `/book` | **Resolved in code** by R8 `1abdfb2` |
 > | D7 stale form-level banner | **Not applicable in code**: the branch's company form has no form-level "Check the highlighted company details" banner; re-check |

@@ -5,7 +5,9 @@ import {
   fetchVenueServices,
   fetchManagedVenues,
   fetchVenuesNear,
+  fetchTopRatedVenuesPage,
   typeFilter,
+  VENUE_PAGE_SIZE,
 } from './venues';
 
 vi.mock('./config', () => ({ db: {} }));
@@ -22,11 +24,13 @@ vi.mock('firebase/firestore', () => ({
   limit: vi.fn(),
   orderBy: vi.fn((field, dir) => ({ orderBy: [field, dir] })),
   startAt: vi.fn(),
+  startAfter: vi.fn((...args) => ({ startAfter: args })),
+  documentId: vi.fn(() => '__name__'),
   endAt: vi.fn(),
   Timestamp: { now: () => ({ seconds: 0, nanoseconds: 0 }) },
 }));
 
-import { getDoc, getDocs, orderBy, limit, where } from 'firebase/firestore';
+import { getDoc, getDocs, orderBy, limit, startAfter, where } from 'firebase/firestore';
 
 const mockGetDoc = vi.mocked(getDoc);
 const mockGetDocs = vi.mocked(getDocs);
@@ -191,5 +195,50 @@ describe('fetchManagedVenues', () => {
     mockGetDoc.mockResolvedValueOnce({ exists: () => false } as never);
     await fetchManagedVenues('u1');
     expect(vi.mocked(where)).toHaveBeenCalledWith('ownerId', '==', 'u1');
+  });
+});
+
+describe('fetchTopRatedVenuesPage', () => {
+  const venueDoc = (id: string, rating: number) => ({ id, data: () => ({ name: id, type: 'gym', rating }) });
+
+  it('orders by rating desc then document id desc (the direction the (type, rating desc) index implies) and reads one extra', async () => {
+    mockGetDocs.mockResolvedValueOnce({ docs: [] } as never);
+    await fetchTopRatedVenuesPage({ types: ['gym', 'school', 'studio'] });
+    expect(where).toHaveBeenCalledWith('type', 'in', ['gym', 'school', 'studio']);
+    expect(vi.mocked(orderBy).mock.calls).toEqual([['rating', 'desc'], ['__name__', 'desc']]);
+    expect(limit).toHaveBeenCalledWith(VENUE_PAGE_SIZE + 1);
+    expect(startAfter).not.toHaveBeenCalled();
+  });
+
+  it('pages at 24 by default', () => {
+    expect(VENUE_PAGE_SIZE).toBe(24);
+  });
+
+  it('returns a full page with a cursor on its last venue when more exist', async () => {
+    const docs = Array.from({ length: 4 }, (_, i) => venueDoc(`v${i}`, 5 - i * 0.5));
+    mockGetDocs.mockResolvedValueOnce({ docs } as never);
+    const page = await fetchTopRatedVenuesPage({ type: 'gym', pageSize: 3 });
+    expect(page.venues.map((v) => v.id)).toEqual(['v0', 'v1', 'v2']);
+    expect(page.nextCursor).toEqual({ rating: 4, id: 'v2' });
+  });
+
+  it('returns no cursor on the last page', async () => {
+    mockGetDocs.mockResolvedValueOnce({ docs: [venueDoc('a', 4.5), venueDoc('b', 4.5)] } as never);
+    const page = await fetchTopRatedVenuesPage({ type: 'gym', pageSize: 3 });
+    expect(page.venues).toHaveLength(2);
+    expect(page.nextCursor).toBeNull();
+  });
+
+  it('starts the next page after the cursor (rating, id)', async () => {
+    mockGetDocs.mockResolvedValueOnce({ docs: [] } as never);
+    await fetchTopRatedVenuesPage({ type: 'gym', cursor: { rating: 4, id: 'v2' } });
+    expect(startAfter).toHaveBeenCalledWith(4, 'v2');
+  });
+
+  it('matches nothing for an empty types list and swallows read errors', async () => {
+    expect(await fetchTopRatedVenuesPage({ types: [] })).toEqual({ venues: [], nextCursor: null });
+    expect(mockGetDocs).not.toHaveBeenCalled();
+    mockGetDocs.mockRejectedValueOnce(new Error('network'));
+    expect(await fetchTopRatedVenuesPage({ type: 'gym' })).toEqual({ venues: [], nextCursor: null });
   });
 });

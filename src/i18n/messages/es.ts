@@ -1330,6 +1330,7 @@ export const esMessages: Messages = {
   'fit.gyms.sort.price': 'Precio',
   'fit.gyms.partner': 'Partner',
   'fit.gyms.reviews': '{{count}} resenas',
+  'fit.gyms.loadMore': 'Cargar más gimnasios',
   'fit.gyms.nearby': '{{count}} gimnasios cercanos',
 
   'profile.defaultUser': 'Usuario VFit',

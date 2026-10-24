@@ -1446,6 +1446,7 @@ export const itMessages = {
   'fit.gyms.sort.price': 'Prezzo',
   'fit.gyms.partner': 'Partner',
   'fit.gyms.reviews': '{{count}} recensioni',
+  'fit.gyms.loadMore': 'Carica altre palestre',
   'fit.gyms.nearby': '{{count}} palestre vicine',
 
   'profile.defaultUser': 'Utente VFit',

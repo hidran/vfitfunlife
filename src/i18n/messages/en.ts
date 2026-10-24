@@ -1447,6 +1447,7 @@ export const enMessages: Messages = {
   'fit.gyms.sort.price': 'Price',
   'fit.gyms.partner': 'Partner',
   'fit.gyms.reviews': '{{count}} reviews',
+  'fit.gyms.loadMore': 'Load more gyms',
   'fit.gyms.nearby': '{{count}} nearby gyms',
 
   'profile.defaultUser': 'VFit User',

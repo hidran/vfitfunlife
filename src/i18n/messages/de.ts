@@ -1334,6 +1334,7 @@ export const deMessages: Messages = {
   'fit.gyms.sort.price': 'Preis',
   'fit.gyms.partner': 'Partner',
   'fit.gyms.reviews': '{{count}} Bewertungen',
+  'fit.gyms.loadMore': 'Weitere Studios laden',
   'fit.gyms.nearby': '{{count}} Studios in der Nähe',
 
   'profile.defaultUser': 'VFit Nutzer',

@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import {
+  fetchTopRatedVenuesPage,
   fetchVenue,
   fetchVenues,
   fetchVenuesNear,
   fetchVenueServices,
+  type VenuePageCursor,
 } from '@/lib/firebase/venues';
 import type { Venue, VenueListOptions, VenueType } from '@/types/venue';
 import { annotateAndSortByDistance, coordsOf, roundLocation, type LatLng } from '@/lib/geo';
@@ -29,21 +31,25 @@ export function useVenues(opts: VenueListOptions = {}) {
   });
 }
 
-/**
- * Size of the location-less list: the top-rated venues, never the whole collection. 200 so that
- * venues with no reviews yet (rating 0, which sort last) are still listed; ordering stays on
- * `rating` alone because adding `name` would need a new composite index. The real fix for a
- * catalogue that keeps growing is cursor pagination of this list.
- */
-export const NEARBY_FALLBACK_LIMIT = 200;
-
 export type VenueWithDistance = Venue & { distanceKm?: number };
+
+export interface NearbyVenuesResult {
+  data: VenueWithDistance[] | undefined;
+  isLoading: boolean;
+  /** Location-less list only: another page of top-rated venues can be loaded. */
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  fetchNextPage: () => void;
+}
+
+const noop = () => undefined;
 
 /**
  * The venue list for a "near me" screen, always a bounded read:
  *  - location + radius: geohash range search, only venues inside the radius, nearest-first;
- *  - otherwise: the top-rated `NEARBY_FALLBACK_LIMIT` venues, sorted by distance when the
- *    location is known (radius "Tutti") and by rating when it isn't.
+ *  - otherwise: the top-rated venues, `VENUE_PAGE_SIZE` at a time with a (rating, id) cursor
+ *    (`fetchTopRatedVenuesPage`), sorted by distance over the loaded pages when the location
+ *    is known (radius "Tutti") and by rating when it isn't.
  */
 export function useNearbyVenues(opts: {
   type?: VenueType;
@@ -51,7 +57,7 @@ export function useNearbyVenues(opts: {
   types?: readonly VenueType[];
   userLocation: LatLng | null;
   radiusKm: number | null;
-}) {
+}): NearbyVenuesResult {
   const { type, types, userLocation, radiusKm } = opts;
   const center = userLocation ? roundLocation(userLocation) : null;
   const geo = center && radiusKm != null;
@@ -63,22 +69,38 @@ export function useNearbyVenues(opts: {
     staleTime: STALE_5_MIN,
   });
 
-  const listOpts: VenueListOptions = { type, types, orderByRating: true, limit: NEARBY_FALLBACK_LIMIT };
-  const topQuery = useQuery({
-    queryKey: ['venues', listOpts],
-    queryFn: () => fetchVenues(listOpts),
+  const topQuery = useInfiniteQuery({
+    queryKey: ['venues', 'top-rated', type ?? null, types ?? null],
+    queryFn: ({ pageParam }) => fetchTopRatedVenuesPage({ type, types, cursor: pageParam }),
+    initialPageParam: null as VenuePageCursor | null,
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
     enabled: !geo,
     staleTime: STALE_5_MIN,
   });
 
-  const topData = topQuery.data;
-  const annotatedTop = useMemo<VenueWithDistance[] | undefined>(
-    () => (topData && userLocation ? annotateAndSortByDistance(topData, userLocation, coordsOf) : topData),
-    [topData, userLocation]
-  );
+  const topPages = topQuery.data?.pages;
+  const annotatedTop = useMemo<VenueWithDistance[] | undefined>(() => {
+    if (!topPages) return undefined;
+    const loaded = topPages.flatMap((page) => page.venues);
+    return userLocation ? annotateAndSortByDistance(loaded, userLocation, coordsOf) : loaded;
+  }, [topPages, userLocation]);
 
-  if (geo) return { data: nearQuery.data as VenueWithDistance[] | undefined, isLoading: nearQuery.isLoading };
-  return { data: annotatedTop, isLoading: topQuery.isLoading };
+  if (geo) {
+    return {
+      data: nearQuery.data as VenueWithDistance[] | undefined,
+      isLoading: nearQuery.isLoading,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      fetchNextPage: noop,
+    };
+  }
+  return {
+    data: annotatedTop,
+    isLoading: topQuery.isLoading,
+    hasNextPage: topQuery.hasNextPage,
+    isFetchingNextPage: topQuery.isFetchingNextPage,
+    fetchNextPage: () => { void topQuery.fetchNextPage(); },
+  };
 }
 
 export function useVenueServices(venueId: string | undefined) {

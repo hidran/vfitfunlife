@@ -1336,6 +1336,7 @@ export const frMessages: Messages = {
   'fit.gyms.sort.price': 'Prix',
   'fit.gyms.partner': 'Partenaire',
   'fit.gyms.reviews': '{{count}} avis',
+  'fit.gyms.loadMore': 'Afficher plus de salles',
   'fit.gyms.nearby': '{{count}} salles proches',
 
   'profile.defaultUser': 'Utilisateur VFit',

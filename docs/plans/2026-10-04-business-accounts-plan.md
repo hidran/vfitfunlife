@@ -721,7 +721,7 @@ derived `providerKind`), `scripts/backfill-provider-type.mjs` (deleted, not need
 
 | ID | Follow-up | Status on the reconciled branch |
 |---|---|---|
-| D4 | `/fit/gyms` without a known location lists only the 50 best-rated venues (`NEARBY_FALLBACK_LIMIT = 50` in `src/hooks/useVenues.ts`), so a new, unrated company venue is missing until "Near me". Product question. | **Open** |
+| D4 | `/fit/gyms` without a known location lists only the 50 best-rated venues (`NEARBY_FALLBACK_LIMIT = 50` in `src/hooks/useVenues.ts`), so a new, unrated company venue is missing until "Near me". Product question. | **Closed 2026-10-24**: the list pages through every venue, 24 at a time by rating (`fetchTopRatedVenuesPage`, "Load more") |
 | D8 | `/booking` search matches a multi-word query only as a phrase prefix of an indexed term (`Torino Centro` misses *Journey Fitness Torino Centro*). Probably pre-existing. | **Open** (not re-tested) |
 | D9 | Plural copy *1 services selected* / *1 servizi selezionati* (`provider.optIn.selectedCount` is `'{{count}} services selected'`); needs plural keys in all five locales. | **Open** |
 | D10 | `/profile` at 320 px overflows by 6 px from the amber `text-warning` row. | **Open** (not re-tested on the reconciled build) |

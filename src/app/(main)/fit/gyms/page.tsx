@@ -11,6 +11,7 @@ import { useI18n } from '@/hooks/useI18n';
 import type { MessageKey } from '@/i18n/messages';
 import { useNearbyVenues, type VenueWithDistance } from '@/hooks/useVenues';
 import { Spinner } from '@/components/ui/Spinner';
+import { Button } from '@/components/ui/button';
 import { PhotoCover } from '@/components/gallery/PhotoCover';
 import { useNearMe } from '@/hooks/useNearMe';
 import { useCustomerSearchLocation } from '@/hooks/useCustomerSearchLocation';
@@ -45,7 +46,8 @@ export default function GymsPage() {
 
   // Bounded read either way: a geohash radius search when located, else the top-rated venues.
   // Results arrive already distance-sorted (and radius-filtered) when a location is known.
-  const { data: gyms = NO_GYMS, isLoading: gymsLoading } = useNearbyVenues({ types: COURSE_VENUE_TYPES, userLocation, radiusKm });
+  const { data: gyms = NO_GYMS, isLoading: gymsLoading, hasNextPage, isFetchingNextPage, fetchNextPage } =
+    useNearbyVenues({ types: COURSE_VENUE_TYPES, userLocation, radiusKm });
 
   const handleGymSelect = useCallback((gymId: string) => {
     router.push(`/venue?id=${gymId}`);
@@ -259,6 +261,20 @@ export default function GymsPage() {
               ))}
             </div>
           </div>
+        )}
+
+        {/* Location-less list only (the radius search is bounded by the radius): the next page of top-rated venues. */}
+        {!gymsLoading && hasNextPage && (
+          <Button
+            type="button"
+            variant="outline"
+            fullWidth
+            isLoading={isFetchingNextPage}
+            onClick={fetchNextPage}
+            data-testid="gyms-load-more"
+          >
+            {t('fit.gyms.loadMore')}
+          </Button>
         )}
       </div>
     </div>
