@@ -297,20 +297,22 @@ async function seedVenues(count = 10) {
     const venueId = `venue_${i + 1}`;
     const venueRef = doc(db, 'venues', venueId);
     
+    // Canonical venue shape (functions/src/venues/venueSchema.ts, src/types/venue.ts): string
+    // address, top-level city/zipCode/country, flat lat/lng, a VenueType, hours as a list.
+    const city = randomItem(CITIES);
+    const slug = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
     const venueData = {
       id: venueId,
       name,
-      type: isFitness ? 'fitness' : 'wellness',
+      slug,
+      type: isFitness ? 'gym' : 'wellness_center',
       description: `${name} offre servizi professionali ${isFitness ? 'di fitness e allenamento' : 'di benessere e bellezza'} nel cuore della città.`,
-      address: {
-        street: `Via ${randomItem(['Roma', 'Milano', 'Torino', 'Napoli', 'Firenze'])}, ${randomInt(1, 200)}`,
-        city: randomItem(CITIES),
-        neighborhood: randomItem(NEIGHBORHOODS),
-        zipCode: `${randomInt(10000, 99999)}`,
-        country: 'Italia',
-        latitude: randomFloat(45.4, 45.5, 6),
-        longitude: randomFloat(9.1, 9.3, 6),
-      },
+      address: `Via ${randomItem(['Roma', 'Milano', 'Torino', 'Napoli', 'Firenze'])} ${randomInt(1, 200)}`,
+      city,
+      zipCode: `${randomInt(10000, 98999)}`,
+      country: 'IT',
+      lat: randomFloat(45.4, 45.5, 6),
+      lng: randomFloat(9.1, 9.3, 6),
       phone: generatePhone(),
       email: `info@${name.toLowerCase().replace(/\s+/g, '')}.it`,
       website: `https://www.${name.toLowerCase().replace(/\s+/g, '')}.it`,
@@ -318,19 +320,16 @@ async function seedVenues(count = 10) {
       reviewCount: randomInt(10, 300),
       isActive: true,
       isPartner: Math.random() > 0.3,
-      amenities: isFitness 
-        ? ['WiFi', 'Spogliatoi', 'Docce', 'Aria Condizionata', 'Parcheggio', 'Sauna'].filter(() => Math.random() > 0.3)
-        : ['WiFi', 'Spogliatoi', 'Docce', 'Aria Condizionata', 'Relax Area', 'Tisane'],
-      openingHours: {
-        monday: { open: '07:00', close: '22:00' },
-        tuesday: { open: '07:00', close: '22:00' },
-        wednesday: { open: '07:00', close: '22:00' },
-        thursday: { open: '07:00', close: '22:00' },
-        friday: { open: '07:00', close: '22:00' },
-        saturday: { open: '08:00', close: '20:00' },
-        sunday: { open: '09:00', close: '14:00' },
-      },
-      images: [],
+      heroGradients: ['from-vfit-primary/35 via-vfit-accent/25 to-transparent'],
+      amenities: (isFitness
+        ? ['weights', 'cardio', 'showers', 'lockers', 'wifi', 'parking', 'sauna'].filter(() => Math.random() > 0.3)
+        : ['sauna', 'pool', 'spa', 'showers', 'wifi', 'parking']).map((kind) => ({ kind })),
+      hours: [
+        { day: 'Lun - Ven', time: '07:00 - 22:00' },
+        { day: 'Sabato', time: '08:00 - 20:00' },
+        { day: 'Domenica', time: '09:00 - 14:00' },
+      ],
+      photoUrls: [],
       createdAt: generateDate(600),
       updatedAt: Timestamp.now(),
     };
@@ -348,7 +347,7 @@ async function seedClasses(count = 30) {
   
   // Get venues
   const venuesSnapshot = await getDocs(collection(db, 'venues'));
-  const venueIds = venuesSnapshot.docs.filter(d => d.data().type === 'fitness').map(d => d.id);
+  const venueIds = venuesSnapshot.docs.filter(d => ['gym', 'school', 'studio'].includes(d.data().type)).map(d => d.id);
   
   // Get providers
   const providersSnapshot = await getDocs(query(collection(db, 'users'), where('role', '==', 'provider')));

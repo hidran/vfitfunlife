@@ -21,6 +21,19 @@ import {
   type SpecialtyServiceDef,
 } from "./demoProviderServices";
 import { resolveSeedParts, type DemoSeedPart } from "./seedParts";
+import {
+  DEMO_CITIES,
+  DEMO_VENUE_SLOTS,
+  GYM_NAMES,
+  SAMPLE_VENUES,
+  demoVenueDoc,
+  demoVenueId,
+  demoVenueServices,
+  randomVenueDoc,
+  sampleVenueDoc,
+  toSlug,
+} from "./seedVenues";
+import { COURSE_VENUE_TYPES } from "../types";
 import { region } from "../lib/runtimeOptions";
 
 const db = getFirestore();
@@ -36,40 +49,14 @@ const LAST_NAMES = [
   "Fontana", "Conti", "Esposito", "Ricci", "Marino", "Greco",
   "Bruno", "Moretti", "Marchetti", "Rinaldi",
 ];
-const GYM_NAMES = [
-  "Carosello Fitness", "Urban Core Gym", "Village Fit Club",
-  "Olympic Gym", "Body Center", "Fit Space", "Wellness Hub",
-  "Energy Fitness", "Power Gym", "FitLab",
-];
-const WELLNESS_CENTER_NAMES = [
-  "Wellness Spa Milano", "Centro Benessere Navigli",
-  "Beauty & Wellness Hub", "Oasi del Relax",
-  "Spa Metropolitan", "Centro Armonia", "Benessere & Co",
-];
 const CLASS_NAMES = [
   "HIIT Power", "Pilates Flow", "Yoga Morning",
   "Functional 360", "Boxe Fit", "Spinning Class",
   "Body Pump", "Zumba Dance", "Core Blast", "Stretch & Relax",
 ];
 const CITIES = ["Milano", "Roma", "Torino", "Bologna", "Firenze", "Napoli"];
-const NEIGHBORHOODS = [
-  "Centro", "Navigli", "Porta Nuova", "Brera", "Isola",
-  "Porta Venezia", "Garibaldi", "Loreto", "Corso Como", "Ticinese",
-];
-const DEMO_CITY_COORDS: { name: string; lat: number; lng: number }[] = [
-  { name: "Milano", lat: 45.4642, lng: 9.19 },
-  { name: "Roma", lat: 41.9028, lng: 12.4964 },
-  { name: "Torino", lat: 45.0703, lng: 7.6869 },
-  { name: "Bologna", lat: 44.4949, lng: 11.3426 },
-  { name: "Firenze", lat: 43.7696, lng: 11.2558 },
-  { name: "Napoli", lat: 40.8518, lng: 14.2681 },
-  { name: "Venezia", lat: 45.4408, lng: 12.3155 },
-  { name: "Verona", lat: 45.4384, lng: 10.9916 },
-  { name: "Genova", lat: 44.4056, lng: 8.9463 },
-  { name: "Bari", lat: 41.1171, lng: 16.8719 },
-  { name: "Palermo", lat: 38.1157, lng: 13.3615 },
-  { name: "Catania", lat: 37.5079, lng: 15.083 },
-];
+/** The demo cities (one list, in seedVenues.ts); kept under this name for the readers below. */
+const DEMO_CITY_COORDS = DEMO_CITIES;
 
 // Helper functions
 const randomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
@@ -327,58 +314,10 @@ async function seedVenues(count: number): Promise<SeedingResult> {
     const batch = db.batch();
 
     for (let i = 0; i < count; i++) {
-      const isFitness = Math.random() > 0.4;
-      const name = isFitness ?
-        randomItem(GYM_NAMES) + (Math.random() > 0.5 ?
-          "" : ` ${randomItem(NEIGHBORHOODS)}`) :
-        randomItem(WELLNESS_CENTER_NAMES);
-
+      // Canonical shape (venues/venueSchema.ts): string address, flat city/zipCode/country and
+      // lat/lng, a VenueType — never the old `fitness`/`wellness` type or an address object.
       const venueId = `venue_${Date.now()}_${i}`;
-      const venueRef = db.collection("venues").doc(venueId);
-
-      const venueData = {
-        id: venueId,
-        name,
-        type: isFitness ? "fitness" : "wellness",
-        description: `${name} offre servizi professionali ${
-          isFitness ? "di fitness e allenamento" : "di benessere e bellezza"
-        } nel cuore della città.`,
-        address: {
-          street: `Via ${randomItem(["Roma", "Milano", "Torino", "Napoli", "Firenze"])}, ${randomInt(1, 200)}`,
-          city: randomItem(CITIES),
-          neighborhood: randomItem(NEIGHBORHOODS),
-          zipCode: `${randomInt(10000, 99999)}`,
-          country: "Italia",
-          latitude: randomFloat(45.4, 45.5, 6),
-          longitude: randomFloat(9.1, 9.3, 6),
-        },
-        phone: `+39 02 ${randomInt(1000, 9999)} ${randomInt(1000, 9999)}`,
-        email: `info@${name.toLowerCase().replace(/\s+/g, "")}.it`,
-        website: `https://www.${name.toLowerCase().replace(/\s+/g, "")}.it`,
-        rating: randomFloat(3.5, 5.0),
-        reviewCount: randomInt(10, 300),
-        isActive: true,
-        isPartner: Math.random() > 0.3,
-        amenities: isFitness ?
-          ["WiFi", "Spogliatoi", "Docce", "Aria Condizionata",
-            "Parcheggio", "Sauna"].filter(() => Math.random() > 0.3) :
-          ["WiFi", "Spogliatoi", "Docce", "Aria Condizionata",
-            "Relax Area", "Tisane"],
-        openingHours: {
-          monday: { open: "07:00", close: "22:00" },
-          tuesday: { open: "07:00", close: "22:00" },
-          wednesday: { open: "07:00", close: "22:00" },
-          thursday: { open: "07:00", close: "22:00" },
-          friday: { open: "07:00", close: "22:00" },
-          saturday: { open: "08:00", close: "20:00" },
-          sunday: { open: "09:00", close: "14:00" },
-        },
-        images: [],
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
-      };
-
-      batch.set(venueRef, venueData);
+      batch.set(db.collection("venues").doc(venueId), randomVenueDoc(venueId, Timestamp.now()));
     }
 
     await batch.commit();
@@ -394,8 +333,8 @@ async function seedVenues(count: number): Promise<SeedingResult> {
  */
 async function seedClasses(count: number): Promise<SeedingResult> {
   try {
-    // Get fitness venues
-    const venuesSnapshot = await db.collection("venues").where("type", "==", "fitness").limit(10).get();
+    // Venues that host courses (gym / school / studio): the seeded venues carry canonical types.
+    const venuesSnapshot = await db.collection("venues").where("type", "in", [...COURSE_VENUE_TYPES]).limit(10).get();
     const venueIds = venuesSnapshot.docs.map((d) => d.id);
 
     // Get providers
@@ -613,171 +552,6 @@ async function seedReviews(count: number): Promise<SeedingResult> {
   }
 }
 
-// ===== Sample venue seed data =====
-
-interface SampleVenueData {
-  id: string;
-  name: string;
-  slug: string;
-  type: "gym" | "wellness_center" | "spa" | "beauty_salon";
-  city: string;
-  address: string;
-  lat: number;
-  lng: number;
-  rating: number;
-  reviewCount: number;
-  isPartner: boolean;
-  isActive: boolean;
-  description: string;
-  heroGradients: string[];
-  amenities: { kind: string }[];
-  hours: { day: string; time: string }[];
-  services: { id: string; name: string; price: number; durationMinutes?: number; isActive: boolean }[];
-}
-
-const SAMPLE_VENUES: SampleVenueData[] = [
-  {
-    id: "carosello",
-    name: "Carosello Fitness",
-    slug: "carosello-fitness",
-    type: "gym",
-    city: "Milano",
-    address: "Via Torino 21, Milano",
-    lat: 45.4642,
-    lng: 9.19,
-    rating: 4.8,
-    reviewCount: 124,
-    isPartner: true,
-    isActive: true,
-    description:
-      "Un centro fitness moderno con spazi ampi, area functional e sale corsi dedicate.",
-    heroGradients: [
-      "from-vfit-secondary/40 via-vfit-primary/30 to-transparent",
-      "from-vfit-primary/35 via-vfit-accent/25 to-transparent",
-      "from-vfit-secondary/30 via-vfit-accent/25 to-transparent",
-    ],
-    amenities: [
-      { kind: "weights" }, { kind: "wifi" }, { kind: "parking" }, { kind: "showers" },
-    ],
-    hours: [
-      { day: "Lun - Ven", time: "06:00 - 22:00" },
-      { day: "Sabato", time: "08:00 - 20:00" },
-      { day: "Domenica", time: "09:00 - 18:00" },
-    ],
-    services: [
-      { id: "svc-1", name: "Accesso giornaliero", price: 18, isActive: true },
-      { id: "svc-2", name: "Abbonamento mensile", price: 59, isActive: true },
-      { id: "svc-3", name: "Personal training", price: 45, durationMinutes: 60, isActive: true },
-    ],
-  },
-  {
-    id: "urban-core",
-    name: "Urban Core Gym",
-    slug: "urban-core-gym",
-    type: "gym",
-    city: "Milano",
-    address: "Viale Liberazione 12, Milano",
-    lat: 45.4789,
-    lng: 9.1965,
-    rating: 4.9,
-    reviewCount: 98,
-    isPartner: false,
-    isActive: true,
-    description:
-      "Allenamenti ad alta intensita in un ambiente urbano con coach dedicati e attrezzatura premium.",
-    heroGradients: [
-      "from-vfit-primary/40 via-vfit-secondary/30 to-transparent",
-      "from-vfit-accent/35 via-vfit-primary/25 to-transparent",
-    ],
-    amenities: [{ kind: "weights" }, { kind: "wifi" }, { kind: "showers" }],
-    hours: [
-      { day: "Lun - Ven", time: "06:30 - 23:00" },
-      { day: "Sabato", time: "08:00 - 21:00" },
-      { day: "Domenica", time: "09:00 - 17:00" },
-    ],
-    services: [
-      { id: "svc-1", name: "Accesso giornaliero", price: 22, isActive: true },
-      { id: "svc-2", name: "Mensile All-in", price: 75, isActive: true },
-    ],
-  },
-  {
-    id: "village-fit",
-    name: "Village Fit Club",
-    slug: "village-fit-club",
-    type: "gym",
-    city: "Milano",
-    address: "Navigli, Milano",
-    lat: 45.4523,
-    lng: 9.1756,
-    rating: 4.7,
-    reviewCount: 142,
-    isPartner: true,
-    isActive: true,
-    description: "Club fitness con focus su yoga e spa.",
-    heroGradients: ["from-vfit-secondary/30 via-vfit-primary/20 to-transparent"],
-    amenities: [{ kind: "yoga" }, { kind: "spa" }],
-    hours: [{ day: "Lun - Dom", time: "07:00 - 22:00" }],
-    services: [{ id: "svc-1", name: "Drop-in", price: 20, isActive: true }],
-  },
-  {
-    id: "pulse-studio",
-    name: "Pulse Studio",
-    slug: "pulse-studio",
-    type: "gym",
-    city: "Milano",
-    address: "Isola, Milano",
-    lat: 45.4834,
-    lng: 9.1856,
-    rating: 4.6,
-    reviewCount: 67,
-    isPartner: false,
-    isActive: true,
-    description: "Studio specializzato in Pilates e HIIT.",
-    heroGradients: ["from-vfit-accent/30 via-vfit-primary/20 to-transparent"],
-    amenities: [{ kind: "pilates" }, { kind: "cardio" }],
-    hours: [{ day: "Lun - Sab", time: "08:00 - 21:00" }],
-    services: [{ id: "svc-1", name: "Lezione Pilates", price: 25, durationMinutes: 55, isActive: true }],
-  },
-  {
-    id: "elite-fitness",
-    name: "Elite Fitness Center",
-    slug: "elite-fitness-center",
-    type: "gym",
-    city: "Milano",
-    address: "Brera, Milano",
-    lat: 45.4701,
-    lng: 9.1854,
-    rating: 4.9,
-    reviewCount: 215,
-    isPartner: true,
-    isActive: true,
-    description: "Centro premium con piscina e campi da tennis.",
-    heroGradients: ["from-vfit-secondary/40 via-vfit-accent/30 to-transparent"],
-    amenities: [{ kind: "pool" }, { kind: "tennis" }, { kind: "spa" }],
-    hours: [{ day: "Lun - Dom", time: "06:00 - 23:00" }],
-    services: [{ id: "svc-1", name: "Day pass", price: 35, isActive: true }],
-  },
-  {
-    id: "power-gym",
-    name: "Power Gym Milano",
-    slug: "power-gym-milano",
-    type: "gym",
-    city: "Milano",
-    address: "Porta Romana, Milano",
-    lat: 45.4456,
-    lng: 9.2056,
-    rating: 4.5,
-    reviewCount: 89,
-    isPartner: false,
-    isActive: true,
-    description: "Sala pesi essenziale con focus su forza e cardio.",
-    heroGradients: ["from-vfit-primary/30 via-vfit-accent/20 to-transparent"],
-    amenities: [{ kind: "weights" }, { kind: "cardio" }],
-    hours: [{ day: "Lun - Dom", time: "06:00 - 22:00" }],
-    services: [{ id: "svc-1", name: "Mensile", price: 39, isActive: true }],
-  },
-];
-
 /**
  * Seeds the deterministic sample venues used by the app's seeded demo flows.
  * Idempotent via merge: safe to run repeatedly.
@@ -789,13 +563,8 @@ export async function seedSampleVenues(): Promise<SeedingResult> {
 
     for (const v of SAMPLE_VENUES) {
       const venueRef = db.collection("venues").doc(v.id);
-      const { services, ...venueDoc } = v;
-      batch.set(
-        venueRef,
-        { ...venueDoc, createdAt: now, updatedAt: now },
-        { merge: true }
-      );
-      for (const s of services) {
+      batch.set(venueRef, sampleVenueDoc(v, now), { merge: true });
+      for (const s of v.services) {
         batch.set(venueRef.collection("services").doc(s.id), s, { merge: true });
       }
     }
@@ -928,121 +697,10 @@ export async function seedSampleInstructors(): Promise<SeedingResult> {
 // Demo data seeder — 20 trainers per specialty + 120 venues across 12 cities
 // ============================================================================
 
-/**
- * Converts a string to a URL-safe kebab-case ASCII slug.
- * e.g. "Personal Training" → "personal-training"
- *      "Boxe" → "boxe"
- */
-function toSlug(s: string): string {
-  return s
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "") // strip combining diacritics
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
 export async function generateDemoData(): Promise<SeedingResult[]> {
   const results: SeedingResult[] = [];
 
   // ── Inline constants (local only, don't pollute file scope) ──────────────
-
-  const DEMO_CITIES: { name: string; lat: number; lng: number }[] = [
-    { name: "Milano", lat: 45.4642, lng: 9.19 },
-    { name: "Roma", lat: 41.9028, lng: 12.4964 },
-    { name: "Torino", lat: 45.0703, lng: 7.6869 },
-    { name: "Bologna", lat: 44.4949, lng: 11.3426 },
-    { name: "Firenze", lat: 43.7696, lng: 11.2558 },
-    { name: "Napoli", lat: 40.8518, lng: 14.2681 },
-    { name: "Venezia", lat: 45.4408, lng: 12.3155 },
-    { name: "Verona", lat: 45.4384, lng: 10.9916 },
-    { name: "Genova", lat: 44.4056, lng: 8.9463 },
-    { name: "Bari", lat: 41.1171, lng: 16.8719 },
-    { name: "Palermo", lat: 38.1157, lng: 13.3615 },
-    { name: "Catania", lat: 37.5079, lng: 15.083 },
-  ];
-
-  const STREETS = [
-    "Via Roma", "Via Garibaldi", "Corso Italia", "Via Mazzini",
-    "Viale della Liberta", "Via Dante", "Corso Vittorio", "Via Cavour",
-  ];
-
-  const HERO_GRADIENTS = [
-    "from-vfit-secondary/40 via-vfit-primary/30 to-transparent",
-    "from-vfit-primary/35 via-vfit-accent/25 to-transparent",
-    "from-vfit-secondary/30 via-vfit-accent/25 to-transparent",
-    "from-vfit-accent/30 via-vfit-primary/20 to-transparent",
-  ];
-
-  const SPA_NAMES = ["Oasi Spa", "Zen Spa", "Aurora Spa", "Lumina Spa", "Pure Spa"];
-  const BEAUTY_NAMES = ["Belle Beauty", "Glow Studio", "Lumiere Beauty", "Charme Salon"];
-
-  type AmenityKind =
-    | "weights" | "wifi" | "parking" | "showers" | "lockers"
-    | "bar" | "sauna" | "pool" | "crossfit" | "boxing" | "yoga"
-    | "pilates" | "spa" | "tennis" | "cardio";
-
-  const GYM_AMENITIES: AmenityKind[] = [
-    "weights", "cardio", "crossfit", "showers", "lockers", "wifi", "parking", "boxing",
-  ];
-  const WELLNESS_AMENITIES: AmenityKind[] = ["sauna", "pool", "yoga", "pilates", "showers", "wifi", "parking", "spa"];
-  const SPA_AMENITIES: AmenityKind[] = ["sauna", "pool", "spa", "showers", "wifi", "parking", "bar"];
-  const BEAUTY_AMENITIES: AmenityKind[] = ["wifi", "parking", "lockers"];
-
-  const GYM_DESCRIPTIONS = [
-    "Centro fitness moderno con spazi ampi, area functional e sale corsi dedicate.",
-    "Palestra di ultima generazione con attrezzatura premium e staff qualificato.",
-    "Ambiente dinamico per allenamenti efficaci, dal cardio alla forza.",
-    "Spazio fitness curato, ideale per chi vuole allenarsi con serietà.",
-    "Palestra urban con coach dedicati e programmi personalizzati.",
-  ];
-  const WELLNESS_DESCRIPTIONS = [
-    "Centro benessere con trattamenti olistici e spazi relax di alto livello.",
-    "Oasi di equilibrio tra corpo e mente con programmi wellness integrati.",
-    "Ambiente armonioso dedicato al benessere fisico e mentale.",
-    "Centro specializzato in trattamenti rigenerativi e attività mindfulness.",
-  ];
-  const SPA_DESCRIPTIONS = [
-    "Spa esclusiva con cabine trattamento, sauna e area relax.",
-    "Rifugio di lusso per rituali benessere e massaggi professionali.",
-    "Centro termale urbano con piscina, sauna e percorsi relax.",
-    "Spa boutique con trattamenti personalizzati e atmosfera unica.",
-  ];
-  const BEAUTY_DESCRIPTIONS = [
-    "Salone di bellezza specializzato in trattamenti viso e corpo.",
-    "Studio estetico con le ultime tecnologie per la cura della persona.",
-    "Centro estetico professionale con trattamenti su misura.",
-  ];
-
-  // Per-type service templates
-  const GYM_SERVICES = [
-    { name: "Accesso giornaliero", price: 18, isActive: true },
-    { name: "Abbonamento mensile", price: 59, isActive: true },
-    { name: "Abbonamento trimestrale", price: 149, isActive: true },
-    { name: "Personal training", price: 50, durationMinutes: 60, isActive: true },
-    { name: "Lezione di gruppo", price: 20, durationMinutes: 55, isActive: true },
-  ];
-  const WELLNESS_SERVICES = [
-    { name: "Sessione Yoga", price: 25, durationMinutes: 60, isActive: true },
-    { name: "Sessione Pilates", price: 30, durationMinutes: 55, isActive: true },
-    { name: "Pacchetto wellness mensile", price: 90, isActive: true },
-    { name: "Consulenza benessere", price: 45, durationMinutes: 45, isActive: true },
-    { name: "Accesso giornaliero", price: 22, isActive: true },
-  ];
-  const SPA_SERVICES = [
-    { name: "Massaggio rilassante 60min", price: 65, durationMinutes: 60, isActive: true },
-    { name: "Massaggio decontratturante", price: 75, durationMinutes: 60, isActive: true },
-    { name: "Pacchetto wellness coppia", price: 140, durationMinutes: 90, isActive: true },
-    { name: "Percorso spa completo", price: 110, durationMinutes: 120, isActive: true },
-    { name: "Trattamento viso premium", price: 80, durationMinutes: 75, isActive: true },
-  ];
-  const BEAUTY_SERVICES = [
-    { name: "Manicure", price: 25, durationMinutes: 45, isActive: true },
-    { name: "Pedicure", price: 30, durationMinutes: 50, isActive: true },
-    { name: "Trattamento viso", price: 55, durationMinutes: 60, isActive: true },
-    { name: "Colorazione capelli", price: 70, durationMinutes: 90, isActive: true },
-    { name: "Ceretta completa", price: 40, durationMinutes: 60, isActive: true },
-  ];
 
   // Per-specialty service name library (name + description pairs)
   const SPECIALTY_SERVICES: Record<string, SpecialtyServiceDef[]> = {
@@ -1189,28 +847,6 @@ export async function generateDemoData(): Promise<SeedingResult[]> {
     { name: `Pacchetto 5 sessioni ${specialty}`, description: "Cinque incontri con progressione monitorata." },
     { name: `Consulenza ${specialty}`, description: "Consulenza iniziale e definizione degli obiettivi." },
     { name: `${specialty} online`, description: "Sessione live via video con coaching in tempo reale." },
-  ];
-
-  // Hours variants
-  const HOURS_VARIANTS = [
-    [
-      { day: "Lun - Ven", time: "07:00 - 22:00" },
-      { day: "Sabato", time: "08:00 - 21:00" },
-      { day: "Domenica", time: "09:00 - 18:00" },
-    ],
-    [
-      { day: "Lun - Ven", time: "06:30 - 23:00" },
-      { day: "Sabato", time: "08:00 - 20:00" },
-      { day: "Domenica", time: "09:00 - 17:00" },
-    ],
-    [
-      { day: "Lun - Ven", time: "07:30 - 21:30" },
-      { day: "Sabato", time: "09:00 - 21:00" },
-      { day: "Domenica", time: "10:00 - 19:00" },
-    ],
-    [
-      { day: "Lun - Dom", time: "07:00 - 22:00" },
-    ],
   ];
 
   // ── Batched writer ────────────────────────────────────────────────────────
@@ -1383,116 +1019,15 @@ export async function generateDemoData(): Promise<SeedingResult[]> {
     let venueSvcCount = 0;
     const now = Timestamp.now();
 
-    type VenueType = "gym" | "wellness_center" | "spa" | "beauty_salon";
-
-    interface VenueSlot {
-      type: VenueType;
-      index: number; // within this type for this city
-    }
-
-    for (const city of DEMO_CITIES) {
-      const citySlug = toSlug(city.name);
-
-      const slots: VenueSlot[] = [
-        ...Array.from({ length: 5 }, (_, i) => ({ type: "gym" as VenueType, index: i + 1 })),
-        ...Array.from({ length: 2 }, (_, i) => ({ type: "wellness_center" as VenueType, index: i + 1 })),
-        ...Array.from({ length: 2 }, (_, i) => ({ type: "spa" as VenueType, index: i + 1 })),
-        { type: "beauty_salon" as VenueType, index: 1 },
-      ];
-
-      for (const slot of slots) {
-        const { type, index } = slot;
-        const id = `demo-venue-${citySlug}-${type.replace("_", "-")}-${index}`;
-
-        // Resolve name
-        let baseName: string;
-        if (type === "gym") {
-          baseName = `${GYM_NAMES[(index - 1) % GYM_NAMES.length]} ${city.name}`;
-        } else if (type === "wellness_center") {
-          const wcBaseName = WELLNESS_CENTER_NAMES[(index - 1) % WELLNESS_CENTER_NAMES.length].split(" ")[0];
-          baseName = `${wcBaseName} Wellness ${city.name}`;
-        } else if (type === "spa") {
-          baseName = `${SPA_NAMES[(index - 1) % SPA_NAMES.length]} ${city.name}`;
-        } else {
-          baseName = `${BEAUTY_NAMES[(index - 1) % BEAUTY_NAMES.length]} ${city.name}`;
-        }
-
-        const slug = toSlug(baseName);
-
-        // Address
-        const street = `${STREETS[(index + DEMO_CITIES.indexOf(city)) % STREETS.length]} ${randomInt(1, 150)}`;
-        const address = `${street}, ${city.name}`;
-
-        // Coordinates with jitter
-        const jitterLat = (Math.random() - 0.5) * 0.04; // ±0.02
-        const jitterLng = (Math.random() - 0.5) * 0.04;
-        const lat = parseFloat((city.lat + jitterLat).toFixed(6));
-        const lng = parseFloat((city.lng + jitterLng).toFixed(6));
-
-        // Amenities
-        let amenityPool: AmenityKind[];
-        if (type === "gym") amenityPool = GYM_AMENITIES;
-        else if (type === "wellness_center") amenityPool = WELLNESS_AMENITIES;
-        else if (type === "spa") amenityPool = SPA_AMENITIES;
-        else amenityPool = BEAUTY_AMENITIES;
-
-        const amenityCount = type === "beauty_salon" ? Math.min(randomInt(2, 3), amenityPool.length) : randomInt(3, 6);
-        const amenities = randomItems(amenityPool, amenityCount).map((k) => ({ kind: k }));
-
-        // Description
-        let description: string;
-        if (type === "gym") description = randomItem(GYM_DESCRIPTIONS);
-        else if (type === "wellness_center") description = randomItem(WELLNESS_DESCRIPTIONS);
-        else if (type === "spa") description = randomItem(SPA_DESCRIPTIONS);
-        else description = randomItem(BEAUTY_DESCRIPTIONS);
-
-        // heroGradients: 1-3
-        const gradientCount = randomInt(1, 3);
-        const heroGradients = randomItems(HERO_GRADIENTS, gradientCount);
-
-        // Hours
-        const hours = HOURS_VARIANTS[(index - 1) % HOURS_VARIANTS.length];
-
-        // isPartner: 35% chance
-        const isPartner = Math.random() < 0.35;
-
-        const venueDoc: Record<string, unknown> = {
-          name: baseName,
-          slug,
-          type,
-          city: city.name,
-          address,
-          lat,
-          lng,
-          rating: randomFloat(4.2, 5.0, 1),
-          reviewCount: randomInt(20, 280),
-          isPartner,
-          isActive: true,
-          description,
-          heroGradients,
-          amenities,
-          hours,
-          createdAt: now,
-          updatedAt: now,
-        };
-
-        const venueRef = db.collection("venues").doc(id);
-        await queueWrite(venueRef, venueDoc);
+    for (const [cityIndex, city] of DEMO_CITIES.entries()) {
+      for (const slot of DEMO_VENUE_SLOTS) {
+        const venueRef = db.collection("venues").doc(demoVenueId(city, slot));
+        await queueWrite(venueRef, demoVenueDoc(city, cityIndex, slot, now) as Record<string, unknown>);
         venueCount++;
 
         // Services subcollection: 2–5 services
-        let serviceTemplates: { name: string; price: number; durationMinutes?: number; isActive: boolean }[];
-        if (type === "gym") serviceTemplates = GYM_SERVICES;
-        else if (type === "wellness_center") serviceTemplates = WELLNESS_SERVICES;
-        else if (type === "spa") serviceTemplates = SPA_SERVICES;
-        else serviceTemplates = BEAUTY_SERVICES;
-
-        const svcCount = randomInt(2, Math.min(5, serviceTemplates.length));
-        const selectedSvcs = randomItems(serviceTemplates, svcCount);
-        for (let si = 0; si < selectedSvcs.length; si++) {
-          const svc = selectedSvcs[si];
-          const svcId = `svc-${si + 1}`;
-          await queueWrite(venueRef.collection("services").doc(svcId), { ...svc } as Record<string, unknown>);
+        for (const svc of demoVenueServices(slot.type)) {
+          await queueWrite(venueRef.collection("services").doc(svc.id), { ...svc.data } as Record<string, unknown>);
           venueSvcCount++;
         }
       }
