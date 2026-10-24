@@ -312,7 +312,7 @@ describe("convertToIndividualPatches", () => {
       now: NOW,
       remove: REMOVE,
     });
-    expect(patches.user).toEqual({ providerType: REMOVE, updatedAt: NOW });
+    expect(patches.user).toEqual({ providerType: REMOVE, businessConvertedAt: NOW, updatedAt: NOW });
     expect(patches.instructor).toEqual({ business: REMOVE, name: "Mario Rossi", fullName: "Mario Rossi", updatedAt: NOW });
     expect(patches.publicName).toBe("Mario Rossi");
     expect(dottedKeys(patches)).toEqual([]);
@@ -361,7 +361,7 @@ describe("convertToIndividualPatches", () => {
       remove: REMOVE,
     });
     expect(noDoc.instructor).toBeNull();
-    expect(noDoc.user).toEqual({ providerType: REMOVE, updatedAt: NOW });
+    expect(noDoc.user).toEqual({ providerType: REMOVE, businessConvertedAt: NOW, updatedAt: NOW });
   });
 });
 

@@ -285,7 +285,7 @@ export function convertToIndividualPatches<Now, Remove>(opts: {
   now: Now;
   remove: Remove;
 }): {
-  user: { providerType: Remove; updatedAt: Now };
+  user: { providerType: Remove; businessConvertedAt: Now; updatedAt: Now };
   instructor: Record<string, Remove | Now | string> | null;
   publicName: string | null;
 } {
@@ -293,7 +293,10 @@ export function convertToIndividualPatches<Now, Remove>(opts: {
   const personal = typeof user.fullName === "string" ? user.fullName.trim() : "";
   const publicName = personal || null;
   return {
-    user: { providerType: remove, updatedAt: now },
+    // `businessConvertedAt`: the account WAS a company, so applyAsProvider lets it apply as one
+    // again without an admin rejecting it first (isConvertedBusiness); the approval of that
+    // application clears it. Set on every conversion, so a second conversion reopens the path too.
+    user: { providerType: remove, businessConvertedAt: now, updatedAt: now },
     instructor: instructor ?
       {
         business: remove,

@@ -24,6 +24,10 @@ export const APPLICATION_REJECTED = "application_rejected";
 /** gRPC status code: a `create` hit a document that already exists. */
 const ALREADY_EXISTS = 6;
 
+/** The instructors doc describes a company (it carries the `business` map). */
+const isBusinessDoc = (instructor: Record<string, unknown>): boolean =>
+  !!instructor.business && typeof instructor.business === "object";
+
 /** Who the audit entry should name as responsible for the decision. */
 export interface DecisionActor {
   uid: string;
@@ -172,8 +176,7 @@ export async function commitProviderDecision(
 
       // B12: the company's venue (read here, with the other reads). Only a company has one.
       const venueRef = db.collection("venues").doc(businessVenueId(providerId));
-      const hasBusiness = !!instructor.business && typeof instructor.business === "object";
-      const venueSnap = hasBusiness ? await tx.get(venueRef) : null;
+      const venueSnap = isBusinessDoc(instructor) ? await tx.get(venueRef) : null;
 
       // --- Pure computation ---
       const now = FieldValue.serverTimestamp();
@@ -187,6 +190,11 @@ export async function commitProviderDecision(
 
       // update() resolves the dotted "providerProfile.isVerified" path, leaving the rest of the
       // users-side providerProfile map alone.
+      // Approving a company consumes `businessConvertedAt`, the marker convertBusinessToIndividual
+      // left so the account could apply as a company again (isConvertedBusiness): once it is a
+      // company once more the path is closed until the next conversion. A rejection keeps it, so
+      // the account can try again. Top-level field on an update(): a plain delete sentinel.
+      const consumeMarker = verified && isBusinessDoc(instructor) && user.businessConvertedAt !== undefined;
       const userPatch = {
         "providerStatus": decision,
         "isVerified": verified,
@@ -196,6 +204,7 @@ export async function commitProviderDecision(
         "verificationNotes": notes ?? null,
         "updatedAt": now,
         ...(rolePatch ?? {}),
+        ...(consumeMarker ? { businessConvertedAt: FieldValue.delete() } : {}),
       };
 
       const locale = (user.preferredLanguage as string) ?? "it";

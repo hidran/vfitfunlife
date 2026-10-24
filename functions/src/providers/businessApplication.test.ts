@@ -18,6 +18,7 @@ import {
   parseProviderType,
   parseVatNumber,
   validateBusinessInput,
+  isConvertedBusiness,
 } from "./businessApplication";
 
 /** The error a synchronous call throws, so its code and stable message can be asserted. */
@@ -683,6 +684,21 @@ describe("assertNotVerifiedIndividual", () => {
     expect(() =>
       assertNotVerifiedIndividual({ providerType: "business" }, { applicationStatus: "verified", business: company }),
     ).not.toThrow();
+  });
+
+  it("lets a verified individual that WAS a company (users.businessConvertedAt) apply as a company again", () => {
+    // convertBusinessToIndividual leaves a verified individual; without the marker it would be locked.
+    const converted = { providerStatus: "verified", businessConvertedAt: { seconds: 1, nanoseconds: 0 } };
+    expect(() => assertNotVerifiedIndividual(converted, { applicationStatus: "verified", name: "Mario Rossi" })).not.toThrow();
+    expect(isConvertedBusiness(converted)).toBe(true);
+    // The marker must be a value, not a leftover null/empty from a bad write.
+    for (const marker of [null, undefined, "", 0, false]) {
+      expect(isConvertedBusiness({ providerStatus: "verified", businessConvertedAt: marker })).toBe(false);
+      expectHttpsError(
+        () => assertNotVerifiedIndividual({ providerStatus: "verified", businessConvertedAt: marker }, undefined),
+        "failed-precondition", "provider_type_locked",
+      );
+    }
   });
 });
 

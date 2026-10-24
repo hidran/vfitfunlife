@@ -303,7 +303,7 @@ describe("admin callables on a business (handler)", () => {
         ["set", expect.stringMatching(/^audit_logs\//)],
       ]);
       const [userWrite, instructorWrite] = h.ops;
-      expect(userWrite[2]).toEqual({ providerType: h.DELETE, updatedAt: "NOW" });
+      expect(userWrite[2]).toEqual({ providerType: h.DELETE, businessConvertedAt: "NOW", updatedAt: "NOW" });
       expect(instructorWrite[2]).toEqual({
         business: h.DELETE,
         name: "Mario Rossi",

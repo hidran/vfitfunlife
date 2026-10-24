@@ -56,6 +56,7 @@ const reject = (providerId: string) =>
   admin(decideProviderApplication, { providerId, decision: "rejected", notes: "not the owner" });
 
 const instructor = (uid: string) => fake.read(`instructors/${uid}`) as Data | undefined;
+const user = (uid: string) => fake.read(`users/${uid}`) as Data | undefined;
 const isListed = (uid: string) =>
   (instructor(uid)?.providerProfile as { isVerified?: boolean } | undefined)?.isVerified === true;
 const claimHolder = (vat: string) => (fake.read(`businessVat/${vat}`) as { uid?: string } | undefined)?.uid;
@@ -309,7 +310,7 @@ describe("business lifecycle (multi-call sequences)", () => {
       expect(instructor("b")).toMatchObject({ business: { venueId: "biz_b" } });
     });
 
-    it("convert → (an admin lifts the verification) → re-apply as a company → approve reactivates the same venue instead of failing venue_exists", async () => {
+    it("convert → re-apply as a company (no admin reject needed) → pending → approve reactivates the same venue and clears the marker", async () => {
       await applyAsCompany("b", GYM);
       await approveVenue("b");
       fake.put("venues/biz_b", { ...venue("b"), name: "Palestra Rossi Centro", amenities: ["Sauna"] });
@@ -319,17 +320,61 @@ describe("business lifecycle (multi-call sequences)", () => {
       expect(venue("b")).toMatchObject({ isActive: false, ownerId: "b", name: "Palestra Rossi Centro" });
       const audit = [...fake.docs.entries()].filter(([path]) => path.startsWith("audit_logs/")).map(([, d]) => d).at(-1) as { after: Data };
       expect(audit.after).toMatchObject({ venueId: "biz_b", venueDeactivated: true });
+      // The conversion leaves a verified individual carrying the marker that reopens the company path.
+      expect(user("b")).toMatchObject({ providerStatus: "verified", businessConvertedAt: "NOW" });
+      expect(user("b")).not.toHaveProperty("providerType");
+      expect(claimHolder(X)).toBeUndefined();
 
-      // S-1: the converted account is a verified individual, and a verified individual cannot
-      // become a company by applying — only after an admin rejects it is the way open again.
-      await expect(applyAsCompany("b", GYM)).rejects.toMatchObject({ code: "failed-precondition", message: "provider_type_locked" });
-      expect(instructor("b")).not.toHaveProperty("business");
-      await reject("b");
-      await applyAsCompany("b", GYM);
+      // S-1 relaxed for a converted account: it may apply as a company again, and goes PENDING
+      // like every company (never auto-approved), re-claiming its tax id.
+      await expect(applyAsCompany("b", GYM)).resolves.toMatchObject({ success: true, autoApproved: false });
+      expect(user("b")).toMatchObject({ providerStatus: "pending", providerType: "business", businessConvertedAt: "NOW" });
+      expect(instructor("b")).toMatchObject({ applicationStatus: "pending", business: { vatNumber: X } });
+      expect(isListed("b")).toBe(false);
+      expect(claimHolder(X)).toBe("b");
+
       await expect(approveVenue("b")).resolves.toMatchObject({ success: true, venueId: "biz_b" });
       expect(venueDocs()).toEqual(["venues/biz_b"]);
       expect(venue("b")).toMatchObject({ isActive: true, name: "Palestra Rossi Centro", amenities: ["Sauna"], ownerId: "b" });
       expect(instructor("b")).toMatchObject({ business: { venueId: "biz_b" } });
+      expect(isListed("b")).toBe(true);
+      // Approval of the new company application consumes the marker (same transaction).
+      expect(user("b")).not.toHaveProperty("businessConvertedAt");
+      expectOneHolderPerTaxId();
+    });
+
+    it("the conversion marker is single-use: approved as a company, converted again, it is set again; a never-converted verified individual stays locked", async () => {
+      await applyAsCompany("b", GYM);
+      await approveVenue("b");
+      await admin(convertBusinessToIndividual, { providerId: "b" });
+      await applyAsCompany("b", GYM);
+      await approveVenue("b");
+      expect(user("b")).not.toHaveProperty("businessConvertedAt");
+      // A second conversion writes the marker afresh; without it the account would be locked again.
+      await admin(convertBusinessToIndividual, { providerId: "b" });
+      expect(user("b")).toMatchObject({ businessConvertedAt: "NOW" });
+      expect(venue("b")).toMatchObject({ isActive: false });
+
+      // S-1 still holds for an individual who was never a company (auto-approved individual).
+      await as("a", applyAsProvider, { categoryIds: ["hiit"] });
+      expect(isListed("a")).toBe(true);
+      await expect(applyAsCompany("a", { ...GYM, vatNumber: Y })).rejects.toMatchObject({
+        code: "failed-precondition", message: "provider_type_locked",
+      });
+      expect(user("a")).not.toHaveProperty("providerType");
+      expect(claimHolder(Y)).toBeUndefined();
+    });
+
+    it("a rejected re-application keeps the marker, so the account can apply as a company once more", async () => {
+      await applyAsCompany("b", GYM);
+      await approveVenue("b");
+      await admin(convertBusinessToIndividual, { providerId: "b" });
+      await applyAsCompany("b", GYM);
+      await reject("b");
+      expect(user("b")).toMatchObject({ providerStatus: "rejected", businessConvertedAt: "NOW" });
+      await expect(applyAsCompany("b", GYM)).resolves.toMatchObject({ success: true, autoApproved: false });
+      await expect(approveVenue("b")).resolves.toMatchObject({ success: true, venueId: "biz_b" });
+      expect(user("b")).not.toHaveProperty("businessConvertedAt");
     });
 
     it("converting a company with no venue, or whose venue belongs to someone else, writes nothing to venues", async () => {

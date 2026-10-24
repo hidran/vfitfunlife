@@ -50,6 +50,7 @@ interface User {
   isActive: boolean;                // soft-deactivation flag enforced by admin tooling
   isVerified: boolean;              // top-level verification (mirrors providerProfile.isVerified for providers)
   providerType?: 'individual' | 'business'; // kind of provider account; absent => 'individual'. 'business' = a company or association (P.IVA / codice fiscale holder), always approved manually; its company data lives in instructors/{uid}.business
+  businessConvertedAt?: Timestamp;  // set by convertBusinessToIndividual (admin turned the company back into an individual); lets the account apply as a company again without an admin reject (applyAsProvider), deleted by the approval of that company application (commitProviderDecision). Never owner-writable.
   // Derived admin-index fields, written only by the onUserWriteAdminIndex trigger (and
   // scripts/backfill-search-tokens.mjs) — see src/lib/admin/adminIndex.ts: searchTokens,
   // adminHidden, providerVerification ('verified' | 'pending' | 'rejected' | null) and

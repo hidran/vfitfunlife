@@ -255,9 +255,26 @@ export function isRejectedAccount(
 }
 
 /**
+ * An admin turned this company back into an individual (convertBusinessToIndividual stamps
+ * `users/{uid}.businessConvertedAt`) and no company application of it has been approved since
+ * (commitProviderDecision clears the marker on that approval). The owner cannot write the field
+ * (it is in neither isValidUserCreate nor isValidUserUpdate in firestore.rules), so only the
+ * conversion sets it. Any value counts except the empties a bad write could leave (null, "", 0).
+ */
+export function isConvertedBusiness(user: Record<string, unknown> | undefined): boolean {
+  return !!user?.businessConvertedAt;
+}
+
+/**
  * Refuse a company application from a verified INDIVIDUAL (`failed-precondition` /
  * `provider_type_locked`). Becoming a company would drop a listed professional back to pending,
  * so it is not a self-service move; the other direction is the admin's convertBusinessToIndividual.
+ *
+ * Except for an account that conversion produced (isConvertedBusiness): it WAS a company, an
+ * admin made it an individual, and it may ask to be a company again without an admin rejecting
+ * it first. It then takes the pending branch like every company (never auto-approved) and the
+ * tax-id claim runs again; the approval reactivates its venue (`biz_<uid>`) and clears the marker.
+ *
  * A verified COMPANY is not this guard's business: assertNotApprovedBusiness refuses it with
  * `business_already_approved`.
  */
@@ -265,6 +282,7 @@ export function assertNotVerifiedIndividual(
   user: Record<string, unknown> | undefined,
   instructor: Record<string, unknown> | undefined,
 ): void {
+  if (isConvertedBusiness(user)) return;
   if (!isExistingBusiness(user, instructor) && isVerifiedAccount(user, instructor)) {
     throw new HttpsError("failed-precondition", "provider_type_locked");
   }
