@@ -16,6 +16,13 @@ vi.mock('firebase/firestore', () => ({
   serverTimestamp: () => 'ts',
 }));
 vi.mock('@googlemaps/js-api-loader', () => ({ Loader: vi.fn() }));
+vi.mock('@/lib/firebase/venues', () => ({
+  fetchVenueStaff: vi.fn(async () => []),
+  fetchVenueStaffLink: vi.fn(async () => null),
+  setVenueStaff: vi.fn(),
+  removeVenueStaff: vi.fn(),
+}));
+vi.mock('@/lib/firebase/admin', () => ({ getUsers: vi.fn(async () => ({ users: [], total: 0, cursors: new Map() })) }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
 vi.mock('@/components/admin/auditLog', () => ({ recordAudit: vi.fn(async () => undefined) }));
 vi.mock('@/hooks/useFirestoreDocQuery', () => ({

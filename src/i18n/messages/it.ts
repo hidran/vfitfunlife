@@ -811,6 +811,14 @@ export const itMessages = {
   'admin.venues.location.notFound': 'Indirizzo non trovato. Tocca la mappa o inserisci le coordinate.',
   'admin.venues.location.mapUnavailable': 'Mappa non disponibile: inserisci latitudine e longitudine.',
   'admin.venues.location.markerTitle': 'Posizione della sede',
+  'admin.venues.staff.title': 'Staff della sede',
+  'admin.venues.staff.hint': 'Lo staff gestisce sedi, sale e corsi di questa struttura insieme al titolare. Un account può essere staff di una sola sede.',
+  'admin.venues.staff.search': 'Aggiungi un utente allo staff',
+  'admin.venues.staff.searchPlaceholder': 'Nome o email dell’utente…',
+  'admin.venues.staff.noUsersFound': 'Nessun utente trovato',
+  'admin.venues.staff.empty': 'Nessun membro dello staff per questa sede.',
+  'admin.venues.staff.alreadyElsewhere': 'Questo account è già staff di un’altra sede ({{venueId}}): rimuovilo da lì prima di aggiungerlo qui.',
+  'admin.venues.staff.error': 'Impossibile aggiornare lo staff. Riprova.',
 
   // ─── Admin: Data Management page ─────────────────────────────────────
   'admin.data.title': 'Gestione dati',

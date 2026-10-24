@@ -813,6 +813,14 @@ export const enMessages: Messages = {
   'admin.venues.location.notFound': 'Address not found. Tap the map or enter the coordinates.',
   'admin.venues.location.mapUnavailable': 'Map unavailable: enter latitude and longitude.',
   'admin.venues.location.markerTitle': 'Venue location',
+  'admin.venues.staff.title': 'Venue staff',
+  'admin.venues.staff.hint': 'Staff manage this venue’s locations, rooms and courses alongside the owner. An account can staff one venue only.',
+  'admin.venues.staff.search': 'Add a user to the staff',
+  'admin.venues.staff.searchPlaceholder': 'User name or email…',
+  'admin.venues.staff.noUsersFound': 'No user found',
+  'admin.venues.staff.empty': 'No staff for this venue yet.',
+  'admin.venues.staff.alreadyElsewhere': 'This account already staffs another venue ({{venueId}}): remove it there before adding it here.',
+  'admin.venues.staff.error': 'Could not update the staff. Please try again.',
 
   // ─── Admin: Data Management page ─────────────────────────────────────
   'admin.data.title': 'Data Management',

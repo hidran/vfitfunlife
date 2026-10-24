@@ -1,9 +1,12 @@
 import {
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
   query,
+  serverTimestamp,
+  setDoc,
   updateDoc,
   where,
   limit as limitQuery,
@@ -134,4 +137,62 @@ export async function fetchManagedVenues(uid: string): Promise<Venue[]> {
 
 export async function updateVenuePhotos(venueId: string, photoUrls: string[]): Promise<void> {
   await updateDoc(doc(db, 'venues', venueId), { photoUrls });
+}
+
+// ─── Venue staff (admin) ──────────────────────────────────────────────────────────────────
+// `venueStaff/{uid}` = { venueId, isActive }: one document per account, so an account staffs
+// at most one venue. The `managesVenue` rule and functions/src/courses/authority.ts compare
+// `venueStaff/{uid}.venueId` with the venue; firestore.rules lets admins write the collection,
+// which is the path these helpers take.
+
+/** A staff link with the account's name and email resolved from `users/{uid}`. */
+export interface VenueStaffMember {
+  uid: string;
+  venueId: string;
+  isActive: boolean;
+  name: string;
+  email: string;
+  avatarUrl: string | null;
+}
+
+/** The venue an account currently staffs, or null when it staffs none. */
+export async function fetchVenueStaffLink(uid: string): Promise<{ venueId: string; isActive: boolean } | null> {
+  const snap = await getDoc(doc(db, 'venueStaff', uid));
+  const data = snap.exists() ? (snap.data() as { venueId?: unknown; isActive?: unknown }) : null;
+  if (!data || typeof data.venueId !== 'string') return null;
+  return { venueId: data.venueId, isActive: data.isActive !== false };
+}
+
+/** The staff of a venue, name and email joined from `users` (a deleted account keeps its uid as name). */
+export async function fetchVenueStaff(venueId: string): Promise<VenueStaffMember[]> {
+  const snap = await getDocs(query(collection(db, 'venueStaff'), where('venueId', '==', venueId)));
+  return Promise.all(
+    snap.docs.map(async (d) => {
+      const link = d.data() as { isActive?: unknown };
+      let user: { fullName?: unknown; email?: unknown; avatarUrl?: unknown } = {};
+      try {
+        user = (await getDoc(doc(db, 'users', d.id))).data() ?? {};
+      } catch {
+        // The link is still listed; only the name/email are missing.
+      }
+      return {
+        uid: d.id,
+        venueId,
+        isActive: link.isActive !== false,
+        name: typeof user.fullName === 'string' && user.fullName ? user.fullName : d.id,
+        email: typeof user.email === 'string' ? user.email : '',
+        avatarUrl: typeof user.avatarUrl === 'string' ? user.avatarUrl : null,
+      };
+    }),
+  );
+}
+
+/** Add an account to a venue's staff, or change its active flag (the document is keyed by uid). */
+export async function setVenueStaff(uid: string, venueId: string, isActive: boolean): Promise<void> {
+  await setDoc(doc(db, 'venueStaff', uid), { venueId, isActive, updatedAt: serverTimestamp() });
+}
+
+/** Remove an account from venue staff altogether. */
+export async function removeVenueStaff(uid: string): Promise<void> {
+  await deleteDoc(doc(db, 'venueStaff', uid));
 }

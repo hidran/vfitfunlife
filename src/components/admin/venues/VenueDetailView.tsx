@@ -17,6 +17,7 @@ import type { Venue } from '@/types/firebase';
 import { useI18n } from '@/hooks/useI18n';
 import { venueLocationFields } from '@/lib/venueAddress';
 import { GymInstructorPanel } from './GymInstructorPanel';
+import { VenueStaffPanel } from './VenueStaffPanel';
 import { VenueSpacesPanel } from '@/components/venues/VenueSpacesPanel';
 
 export function VenueDetailView({ venueId }: { venueId: string }) {
@@ -121,6 +122,7 @@ export function VenueDetailView({ venueId }: { venueId: string }) {
       </EntityDetailLayout>
       {hostsCourses(venue.type) && <div className="m-4"><VenueSpacesPanel venueId={venueId} /></div>}
       {hostsCourses(venue.type) && <GymInstructorPanel venueId={venueId} />}
+      <VenueStaffPanel venueId={venueId} />
       <ConfirmDeleteDialog
         open={confirmOpen}
         entityLabel={t('admin.venues.entityLabel')}
