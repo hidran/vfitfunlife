@@ -1,5 +1,5 @@
 import type { BusinessDetails, BusinessLegalForm } from '@/types/firebase';
-import { BUSINESS_LEGAL_FORMS } from '@/lib/businessDetails';
+import { BUSINESS_LEGAL_FORMS } from '@/lib/businessTaxonomy';
 
 /**
  * Defensive reader for the `business` map of a public `instructors/{id}` document.

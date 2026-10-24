@@ -5,11 +5,11 @@ import { useRouter } from "next/navigation";
 import { useAdminStore } from "@/stores/adminStore";
 import { useShallow } from "zustand/react/shallow";
 import { useAuthStore } from "@/stores/authStore";
-import {
-  StatCard,
-  StatsGrid,
-  ActivityFeed,
-} from "@/components/admin";
+// Direct imports, not the "@/components/admin" barrel: Turbopack does not tree-shake it here,
+// so the barrel put SeedDataPanel, VerificationQueue and the business review components
+// (~110 KB raw) in the dashboard's first load (scripts/check-bundle-budget.mjs).
+import { StatCard, StatsGrid } from "@/components/admin/StatCard";
+import { ActivityFeed } from "@/components/admin/ActivityFeed";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/utils";
 import { useI18n } from "@/hooks/useI18n";

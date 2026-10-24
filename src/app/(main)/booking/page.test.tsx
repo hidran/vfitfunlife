@@ -44,11 +44,19 @@ vi.mock('@/stores/bookingStore', () => ({
 }));
 vi.mock('@/hooks/useCourses', () => ({ useCourses: () => ({ data: { pages: [{ courses: mocks.courses }] }, isLoading: false }) }));
 vi.mock('@tanstack/react-query', () => ({ useQuery: () => ({ data: [], isLoading: false }) }));
-vi.mock('@/lib/firebookings', () => ({
+vi.mock('@/lib/providerSearch', () => ({
   searchProviders: mocks.searchProviders,
   searchProvidersNear: vi.fn(async () => []),
   applyProviderSearchFilters: (items: unknown[]) => items,
 }));
+// The animation feature pack is fetched after mount (src/lib/motionFeatures.ts); the spy lets
+// the lazy-boundary test below assert the page works before and after it resolves.
+const motionFeatures = vi.hoisted(() => ({ loads: 0 }));
+vi.mock('@/lib/motionFeatures', async () => {
+  const { domAnimation } = await vi.importActual<typeof import('framer-motion')>('framer-motion');
+  motionFeatures.loads += 1;
+  return { default: domAnimation };
+});
 vi.mock('@/lib/geo', () => ({ annotateAndSortByDistance: (items: unknown[]) => items, roundLocation: (value: unknown) => value }));
 vi.mock('@/components/map/GoogleMap', () => ({ GoogleMap: () => null }));
 vi.mock('@/components/map/MapPlaceholder', () => ({ MapPlaceholder: () => null }));
@@ -93,4 +101,21 @@ it('shows matching group courses in general search even without provider results
   expect(screen.queryByText('booking.noResults.title')).not.toBeInTheDocument();
   expect(screen.getByRole('link', { name: 'courses.sessions' })).toHaveAttribute('href', '/courses/detail?id=karate');
   mocks.courses = [];
+});
+
+describe('lazily loaded animation features', () => {
+  it('opens the filters panel immediately and keeps it once the feature pack has loaded', async () => {
+    render(<BookingPage />);
+    const toggle = screen.getByRole('button', { name: 'booking.filters.title' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+
+    fireEvent.click(toggle);
+    // The panel is an m.div: it renders before framer's domAnimation chunk arrives...
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('heading', { name: 'booking.filters.title' })).toBeInTheDocument();
+
+    // ...and is still there after LazyMotion has resolved the feature pack.
+    await waitFor(() => expect(motionFeatures.loads).toBeGreaterThan(0));
+    expect(screen.getByRole('heading', { name: 'booking.filters.title' })).toBeInTheDocument();
+  });
 });

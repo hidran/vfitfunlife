@@ -16,7 +16,10 @@ import {
   X,
   Clock,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+// `m` + LazyMotion instead of `motion`: the same animations (domAnimation covers initial/animate/
+// exit) without the drag, pan and layout code `motion` always bundles, and the feature pack
+// itself loaded after mount (src/lib/motionFeatures.ts). Measured by scripts/check-bundle-budget.mjs.
+import { AnimatePresence, LazyMotion, m } from 'framer-motion';
 import { cn, formatDecimal, formatDistance, formatPrice } from '@/lib/utils';
 import { useBookingStore } from '@/stores/bookingStore';
 import { Input } from '@/components/ui/input';
@@ -33,7 +36,7 @@ import { RadiusFilter } from '@/components/map/RadiusFilter';
 import { useQuery } from '@tanstack/react-query';
 import { annotateAndSortByDistance, roundLocation, type LatLng } from '@/lib/geo';
 import { BusinessBadge } from '@/components/provider/BusinessBadge';
-import { applyProviderSearchFilters, searchProvidersNear } from '@/lib/firebookings';
+import { applyProviderSearchFilters, searchProvidersNear } from '@/lib/providerSearch';
 import { useServiceCategoryGroups } from '@/hooks/useServiceCategories';
 import { useI18n } from '@/hooks/useI18n';
 import { toLocaleTag } from '@/types/locale';
@@ -46,6 +49,8 @@ const GoogleMap = dynamic(() => import('@/components/map/GoogleMap').then((mod) 
   ssr: false,
   loading: () => <MapPlaceholder className="h-full" />,
 });
+
+const loadMotionFeatures = () => import('@/lib/motionFeatures').then((mod) => mod.default);
 
 export default function BookingPage() {
   const { t, locale } = useI18n();
@@ -167,6 +172,8 @@ export default function BookingPage() {
   };
 
   return (
+    // Loads the animation features the m.* elements below use; see the framer-motion import.
+    <LazyMotion features={loadMotionFeatures}>
     <div className="min-h-screen bg-background-dark">
       <div className="px-4 pt-4"><Link href="/courses" className="inline-flex rounded-xl border border-hairline px-4 py-3 font-semibold text-section-primary">{t('courses.title')}</Link></div>
       <CustomerLocationPrompt open={showLocationPrompt} onDismiss={dismissLocationPrompt} />
@@ -233,6 +240,8 @@ export default function BookingPage() {
               size="md"
               onClick={() => setShowFilters(!showFilters)}
               className={showFilters ? 'bg-[var(--section-primary)]/20' : ''}
+              aria-label={t('booking.filters.title')}
+              aria-expanded={showFilters}
             >
               <Filter className="w-5 h-5" />
             </Button>
@@ -287,7 +296,7 @@ export default function BookingPage() {
       {/* Filters Panel */}
       <AnimatePresence>
         {showFilters && (
-          <motion.div
+          <m.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
@@ -409,7 +418,7 @@ export default function BookingPage() {
                 </div>
               </div>
             </div>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
 
@@ -460,7 +469,7 @@ export default function BookingPage() {
               </div>
             ) : (
               displayedProviders.map((provider) => (
-                <motion.div
+                <m.div
                   key={provider.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -580,12 +589,13 @@ export default function BookingPage() {
                       </div>
                     </div>
                   </Link>
-                </motion.div>
+                </m.div>
               ))
             )}
           </div>
         )}
       </div>
     </div>
+    </LazyMotion>
   );
 }

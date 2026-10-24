@@ -8,8 +8,6 @@ import {
   BUSINESS_VENUE_TYPES,
   EMPTY_BUSINESS_DETAILS,
   VENUE_TYPE_LABEL,
-  businessDetailsSchema,
-  businessEditSchema,
   businessFormValues,
   isAcceptableLogoUrl,
   normalizeWebsite,
@@ -18,6 +16,7 @@ import {
   type BusinessDetailsFormValues,
   type BusinessField,
 } from './businessDetails';
+import { businessDetailsSchema, businessEditSchema } from './businessDetailsSchema';
 
 // A company with premises (the default venue type is a gym): address and city are required.
 const VALID: BusinessDetailsFormValues = {

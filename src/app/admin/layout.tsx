@@ -4,7 +4,8 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useShallow } from "zustand/react/shallow";
 import { useAuthStore } from "@/stores/authStore";
-import { Sidebar } from "@/components/admin";
+// Not the barrel: see src/app/admin/page.tsx (first-load bundle budget).
+import { Sidebar } from "@/components/admin/Sidebar";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/hooks/useI18n";
 

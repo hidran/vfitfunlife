@@ -33,7 +33,7 @@ import { useProviders } from '@/hooks/useProviders';
 import { useCustomerSearchLocation } from '@/hooks/useCustomerSearchLocation';
 import { useNearbyVenues, type VenueWithDistance } from '@/hooks/useVenues';
 import { useNearMe } from '@/hooks/useNearMe';
-import { searchProvidersNear } from '@/lib/firebookings';
+import { searchProvidersNear } from '@/lib/providerSearch';
 import type { LatLng } from '@/lib/geo';
 import { useQuery } from '@tanstack/react-query';
 import { useTodayClasses, useTestimonials } from '@/hooks';

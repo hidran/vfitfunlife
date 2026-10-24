@@ -25,14 +25,13 @@ import {
   LEGAL_FORM_LABEL,
   VENUE_TYPE_LABEL,
   EMPTY_BUSINESS_DETAILS,
-  businessDetailsSchema,
-  businessEditSchema,
   toBusinessApplication,
   toBusinessDisplayFields,
   type BusinessDetailsFormValues,
   type BusinessDisplayFields,
   type BusinessField,
 } from '@/lib/businessDetails';
+import { businessDetailsSchema, businessEditSchema } from '@/lib/businessDetailsSchema';
 import {
   PROVIDER_APPLICATION_ERRORS,
   type ProviderApplicationErrorCode,
