@@ -5,28 +5,52 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useI18n } from '@/hooks/useI18n';
 import type { Venue } from '@/types/firebase';
+import { isValidLatLng } from '@/lib/providerLocation';
+import { VenueLocationPicker } from './VenueLocationPicker';
 
-const venueSchema = z.object({
-  name: z.string().min(1),
-  type: z.enum(['gym', 'school', 'studio', 'wellness_center', 'spa', 'beauty_salon', 'outdoor_space', 'event_space']),
-  street: z.string().min(1),
-  city: z.string().min(1),
-  zipCode: z.string().min(1),
-  country: z.string().min(1),
-  isActive: z.boolean(),
-  partnerStatus: z.enum(['pending', 'active', 'suspended']),
-  memberDiscountPercent: z.number().int().min(0).max(100),
-  partnerInstructorExtraPercent: z.number().int().min(0).max(100),
-  ownerId: z.string().trim().max(128),
-});
+/** Error message the location refine raises; the form translates it (zod messages are plain strings). */
+const LOCATION_REQUIRED = 'location_required';
+
+const venueSchema = z
+  .object({
+    name: z.string().min(1),
+    type: z.enum(['gym', 'school', 'studio', 'wellness_center', 'spa', 'beauty_salon', 'outdoor_space', 'event_space']),
+    street: z.string().min(1),
+    city: z.string().min(1),
+    zipCode: z.string().min(1),
+    country: z.string().min(1),
+    // Nullable, not optional: the refine below is what refuses a venue without a pin, with
+    // one message on one field instead of two "expected number" errors.
+    lat: z.number().nullable(),
+    lng: z.number().nullable(),
+    isActive: z.boolean(),
+    partnerStatus: z.enum(['pending', 'active', 'suspended']),
+    memberDiscountPercent: z.number().int().min(0).max(100),
+    partnerInstructorExtraPercent: z.number().int().min(0).max(100),
+    ownerId: z.string().trim().max(128),
+  })
+  .superRefine((data, ctx) => {
+    if (!isValidLatLng({ lat: data.lat, lng: data.lng })) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['lat'], message: LOCATION_REQUIRED });
+    }
+  });
 
 export type VenueFormData = z.infer<typeof venueSchema>;
+
+/** Coordinates of a submitted form: the refine guarantees they are valid numbers by then. */
+export function venueCoordinates(data: VenueFormData): { lat: number; lng: number } {
+  return { lat: data.lat as number, lng: data.lng as number };
+}
 
 interface Props {
   mode: 'view' | 'edit' | 'create';
   initial?: Partial<Venue>;
   onSubmit: (data: VenueFormData) => void;
 }
+
+/** A text field's value as a coordinate: empty is "none", anything non-numeric is NaN (refused by the refine). */
+const asCoordinate = (v: unknown): number | null =>
+  v === '' || v === null || v === undefined ? null : typeof v === 'number' ? v : Number(v);
 
 export function VenueFormView({ mode, initial, onSubmit }: Props) {
   const { t } = useI18n();
@@ -38,7 +62,12 @@ export function VenueFormView({ mode, initial, onSubmit }: Props) {
     rawAddress && typeof rawAddress === 'object'
       ? (rawAddress as { street?: string; city?: string; zipCode?: string; country?: string })
       : null;
-  const flat = (initial ?? {}) as { city?: string; zipCode?: string; country?: string };
+  // `lat`/`lng` are on the stored document (src/types/venue.ts) but not on the older Venue type
+  // the admin views import from types/firebase, hence the cast.
+  const flat = (initial ?? {}) as { city?: string; zipCode?: string; country?: string; lat?: unknown; lng?: unknown };
+  const initialCoords = isValidLatLng({ lat: flat.lat, lng: flat.lng })
+    ? { lat: flat.lat as number, lng: flat.lng as number }
+    : { lat: null, lng: null };
   const defaults: VenueFormData = {
     name: initial?.name ?? '',
     type: (initial?.type as VenueFormData['type']) ?? 'gym',
@@ -46,6 +75,7 @@ export function VenueFormView({ mode, initial, onSubmit }: Props) {
     city: flat.city || addrObj?.city || '',
     zipCode: flat.zipCode || addrObj?.zipCode || '',
     country: flat.country || addrObj?.country || 'IT',
+    ...initialCoords,
     isActive: initial?.isActive ?? true,
     partnerStatus: initial?.partnerStatus ?? 'pending',
     memberDiscountPercent: initial?.memberDiscountPercent ?? 0,
@@ -56,6 +86,10 @@ export function VenueFormView({ mode, initial, onSubmit }: Props) {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
+    getValues,
+    clearErrors,
     formState: { errors },
   } = useForm<VenueFormData>({
     resolver: zodResolver(venueSchema),
@@ -66,6 +100,9 @@ export function VenueFormView({ mode, initial, onSubmit }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initial]);
   const readonly = mode === 'view';
+  const [street, city, zipCode, country, lat, lng] = watch(['street', 'city', 'zipCode', 'country', 'lat', 'lng']);
+  const addressQuery = [street, [zipCode, city].filter(Boolean).join(' '), country].filter(Boolean).join(', ');
+  const locationError = errors.lat?.message === LOCATION_REQUIRED ? t('admin.venues.field.locationRequired') : undefined;
   return (
     <form
       id="venue-form"
@@ -99,6 +136,43 @@ export function VenueFormView({ mode, initial, onSubmit }: Props) {
       <Field label={t('admin.venues.field.country')} error={errors.country?.message}>
         <input {...register('country')} disabled={readonly} className="admin-input" />
       </Field>
+
+      <fieldset className="space-y-3 md:col-span-2">
+        <legend className="text-xs text-content-muted">{t('admin.venues.field.location')}</legend>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label={t('admin.venues.field.lat')}>
+            <input
+              type="text"
+              inputMode="decimal"
+              {...register('lat', { setValueAs: asCoordinate })}
+              disabled={readonly}
+              className="admin-input min-h-[44px]"
+            />
+          </Field>
+          <Field label={t('admin.venues.field.lng')}>
+            <input
+              type="text"
+              inputMode="decimal"
+              {...register('lng', { setValueAs: asCoordinate })}
+              disabled={readonly}
+              className="admin-input min-h-[44px]"
+            />
+          </Field>
+        </div>
+        <VenueLocationPicker
+          value={{ lat, lng }}
+          addressQuery={addressQuery}
+          readonly={readonly}
+          error={locationError}
+          onChange={(point, geocodedCity) => {
+            setValue('lat', point.lat, { shouldDirty: true });
+            setValue('lng', point.lng, { shouldDirty: true });
+            clearErrors('lat');
+            if (geocodedCity && !getValues('city').trim()) setValue('city', geocodedCity, { shouldDirty: true });
+          }}
+        />
+      </fieldset>
+
       <Field label={t('admin.venues.field.isActive')}>
         <label className="flex items-center gap-2 text-content">
           <input type="checkbox" {...register('isActive')} disabled={readonly} />

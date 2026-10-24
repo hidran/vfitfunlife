@@ -1,6 +1,11 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { VenueFormView } from './VenueFormView';
+
+vi.mock('@googlemaps/js-api-loader', () => ({ Loader: vi.fn() }));
+beforeEach(() => {
+  delete process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+});
 
 describe('VenueFormView', () => {
   it('offers every venue type, labelled with the shared admin.venues.filter.* messages', () => {
@@ -54,5 +59,23 @@ describe('VenueFormView location defaults', () => {
     expect(screen.getByLabelText('Via')).toHaveValue('Via Po 2');
     expect(screen.getByLabelText('Città')).toHaveValue('Torino');
     expect(screen.getByLabelText('CAP')).toHaveValue('10100');
+  });
+});
+
+describe('VenueFormView coordinates', () => {
+  it('pre-fills lat/lng from the document and reports the selected position', () => {
+    render(
+      <VenueFormView mode="edit" initial={{ name: 'Gym', lat: 45.0703, lng: 7.6869 } as never} onSubmit={() => undefined} />,
+    );
+    expect(screen.getByLabelText('Latitudine')).toHaveValue('45.0703');
+    expect(screen.getByLabelText('Longitudine')).toHaveValue('7.6869');
+    expect(screen.getByText('Posizione selezionata: 45.07030, 7.68690')).toBeInTheDocument();
+  });
+
+  it('starts empty, with no position, for a venue without coordinates', () => {
+    render(<VenueFormView mode="create" onSubmit={() => undefined} />);
+    expect(screen.getByLabelText('Latitudine')).toHaveValue('');
+    expect(screen.getByText('Nessuna posizione impostata')).toBeInTheDocument();
+    expect(screen.getByText(/Mappa non disponibile/)).toBeInTheDocument();
   });
 });

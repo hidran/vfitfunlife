@@ -790,6 +790,14 @@ export const itMessages = {
   'admin.venues.field.country': 'Paese',
   'admin.venues.field.isActive': 'Attivo',
   'admin.venues.field.isPartner': 'Partner',
+  'admin.venues.field.location': 'Posizione sulla mappa',
+  'admin.venues.field.lat': 'Latitudine',
+  'admin.venues.field.lng': 'Longitudine',
+  'admin.venues.field.locationRequired': 'Imposta la posizione della sede: cerca l’indirizzo sulla mappa, tocca la mappa o inserisci le coordinate.',
+  'admin.venues.location.findOnMap': 'Trova l’indirizzo sulla mappa',
+  'admin.venues.location.notFound': 'Indirizzo non trovato. Tocca la mappa o inserisci le coordinate.',
+  'admin.venues.location.mapUnavailable': 'Mappa non disponibile: inserisci latitudine e longitudine.',
+  'admin.venues.location.markerTitle': 'Posizione della sede',
 
   // ─── Admin: Data Management page ─────────────────────────────────────
   'admin.data.title': 'Gestione dati',

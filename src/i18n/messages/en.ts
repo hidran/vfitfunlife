@@ -792,6 +792,14 @@ export const enMessages: Messages = {
   'admin.venues.field.country': 'Country',
   'admin.venues.field.isActive': 'Active',
   'admin.venues.field.isPartner': 'Partner',
+  'admin.venues.field.location': 'Map location',
+  'admin.venues.field.lat': 'Latitude',
+  'admin.venues.field.lng': 'Longitude',
+  'admin.venues.field.locationRequired': 'Set the venue location: find the address on the map, tap the map or enter the coordinates.',
+  'admin.venues.location.findOnMap': 'Find the address on the map',
+  'admin.venues.location.notFound': 'Address not found. Tap the map or enter the coordinates.',
+  'admin.venues.location.mapUnavailable': 'Map unavailable: enter latitude and longitude.',
+  'admin.venues.location.markerTitle': 'Venue location',
 
   // ─── Admin: Data Management page ─────────────────────────────────────
   'admin.data.title': 'Data Management',

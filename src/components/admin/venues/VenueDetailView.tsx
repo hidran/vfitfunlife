@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { hostsCourses } from '@/types/venue';
 import {
@@ -12,7 +12,7 @@ import {
 } from '@/components/admin';
 import { useFirestoreDocQuery } from '@/hooks/useFirestoreDocQuery';
 import { queryKeys } from '@/lib/queryKeys';
-import { VenueFormView, type VenueFormData } from './VenueFormView';
+import { VenueFormView, venueCoordinates, type VenueFormData } from './VenueFormView';
 import type { Venue } from '@/types/firebase';
 import { useI18n } from '@/hooks/useI18n';
 import { venueLocationFields } from '@/lib/venueAddress';
@@ -45,6 +45,8 @@ export function VenueDetailView({ venueId }: { venueId: string }) {
         partnerInstructorExtraPercent: data.partnerInstructorExtraPercent,
         ownerId: data.ownerId,
         ...venueLocationFields(data),
+        ...venueCoordinates(data),
+        updatedAt: serverTimestamp(),
       };
       await updateDoc(doc(db, 'venues', venueId), patch);
     },
@@ -70,6 +72,7 @@ export function VenueDetailView({ venueId }: { venueId: string }) {
               partnerInstructorExtraPercent: data.partnerInstructorExtraPercent,
               ownerId: data.ownerId,
               ...venueLocationFields(data),
+              ...venueCoordinates(data),
             } as unknown as Venue)
           : prev,
       );

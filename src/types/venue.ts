@@ -23,6 +23,14 @@ export function hostsCourses(type: VenueType): boolean {
   return (COURSE_VENUE_TYPES as readonly VenueType[]).includes(type);
 }
 
+/**
+ * The hero slides a venue gets until an admin or its owner dresses it: the same palette the
+ * seeders use and the one slide functions/src/providers/businessVenue.ts gives a business venue.
+ */
+export const DEFAULT_VENUE_HERO_GRADIENTS: readonly string[] = [
+  'from-vfit-secondary/40 via-vfit-primary/30 to-transparent',
+];
+
 export type AmenityKind =
   | 'weights'
   | 'wifi'
