@@ -45,9 +45,11 @@ interface HeaderProps {
   onMenuClick: () => void;
   notificationCount?: number;
   userAvatarUrl?: string | null;
+  /** Where a visitor's sign-in CTA goes (`/auth/login?next=<this page>`); the CTA shows when signed out. */
+  signInHref?: string;
 }
 
-export function Header({ onMenuClick, notificationCount = 0, userAvatarUrl }: HeaderProps) {
+export function Header({ onMenuClick, notificationCount = 0, userAvatarUrl, signInHref }: HeaderProps) {
   const { section } = useSection();
   const { t } = useI18n();
   const brand = sectionBranding[section];
@@ -125,6 +127,16 @@ export function Header({ onMenuClick, notificationCount = 0, userAvatarUrl }: He
           </div>
 
           <div className="flex items-center gap-2">
+            {!signedIn && (
+              // Visitor on a public page: one CTA in place of the bell and the profile avatar.
+              <Link
+                href={signInHref ?? '/auth/login'}
+                className="touch-target inline-flex items-center justify-center rounded-full bg-section-gradient px-4 text-sm font-semibold text-section-on-gradient shadow-sm transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--section-primary)] focus-visible:ring-offset-2"
+                data-testid="header-sign-in"
+              >
+                {t('auth.common.login')}
+              </Link>
+            )}
             {signedIn && (
               // Hidden below 360px: with the provider shortcut the bar has no room left there;
               // the side drawer has the same entry.
@@ -142,6 +154,7 @@ export function Header({ onMenuClick, notificationCount = 0, userAvatarUrl }: He
                 <Sparkles size={20} className="text-[#00C9FF] light:text-vfit-secondary" />
               </button>
             )}
+            {signedIn && (
             <Link
               href="/notifications"
               className={cn(
@@ -166,7 +179,9 @@ export function Header({ onMenuClick, notificationCount = 0, userAvatarUrl }: He
                 </span>
               )}
             </Link>
+            )}
 
+            {signedIn && (
             <Link
               href="/profile"
               className={cn(
@@ -191,6 +206,7 @@ export function Header({ onMenuClick, notificationCount = 0, userAvatarUrl }: He
                 </div>
               )}
             </Link>
+            )}
           </div>
         </div>
       </div>

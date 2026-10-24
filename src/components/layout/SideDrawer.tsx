@@ -35,6 +35,7 @@ import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import { useAuthStore } from '@/stores/authStore';
 import { useAssistantStore } from '@/stores/assistantStore';
 import { DashboardModeSwitch } from '@/components/layout/DashboardModeSwitch';
+import { isPublicMainRoute } from '@/lib/auth/publicRoutes';
 import type { MessageKey } from '@/i18n/messages';
 
 interface SideDrawerProps {
@@ -45,6 +46,8 @@ interface SideDrawerProps {
   userAvatarUrl?: string | null;
   pointsBalance?: number;
   walletBalance?: number;
+  /** Where a visitor's sign-in button goes (`/auth/login?next=<this page>`); shown in place of logout. */
+  signInHref?: string;
 }
 
 interface DrawerLinkItem {
@@ -107,6 +110,7 @@ export function SideDrawer({
   userAvatarUrl,
   pointsBalance = 0,
   walletBalance = 0,
+  signInHref,
 }: SideDrawerProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -237,7 +241,7 @@ export function SideDrawer({
                 <div className="relative">
                   <div className="rounded-full bg-gradient-to-r from-[#8A4FFF] to-[#FFA96B] p-[2px]">
                     <Avatar
-                      name={userName || t('profile.defaultUser')}
+                      name={signedIn ? userName || t('profile.defaultUser') : t('drawer.visitor.name')}
                       src={userAvatarUrl || undefined}
                       size="lg"
                       className="border-2 border-background-dark"
@@ -247,9 +251,11 @@ export function SideDrawer({
                 </div>
                 <div className="min-w-0">
                   <p className="truncate text-xl font-bold text-content">
-                    {userName || t('profile.defaultUser')}
+                    {signedIn ? userName || t('profile.defaultUser') : t('drawer.visitor.name')}
                   </p>
-                  <p className="truncate text-sm text-content-muted">{userEmail || ''}</p>
+                  <p className="truncate text-sm text-content-muted">
+                    {signedIn ? userEmail || '' : t('drawer.visitor.hint')}
+                  </p>
                 </div>
               </div>
               <button
@@ -262,18 +268,31 @@ export function SideDrawer({
               </button>
             </div>
 
-            <DashboardModeSwitch
-              mode={pathname?.startsWith('/provider') || pathname?.startsWith('/admin') ? 'professional' : 'customer'}
-              customerLabelKey="profile.mode.private"
-              professionalLabelKey="profile.mode.professional"
-              className="mt-4"
-              onNavigate={onClose}
-            />
+            {signedIn ? (
+              <DashboardModeSwitch
+                mode={pathname?.startsWith('/provider') || pathname?.startsWith('/admin') ? 'professional' : 'customer'}
+                customerLabelKey="profile.mode.private"
+                professionalLabelKey="profile.mode.professional"
+                className="mt-4"
+                onNavigate={onClose}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => handleNavigate(signInHref ?? '/auth/login')}
+                className="mt-4 flex w-full min-h-11 items-center justify-center gap-2 rounded-xl bg-section-gradient py-3 text-sm font-semibold text-section-on-gradient shadow-sm transition-opacity hover:opacity-90"
+                data-testid="drawer-sign-in"
+              >
+                <User className="h-4 w-4" />
+                <span>{t('auth.common.login')}</span>
+              </button>
+            )}
           </div>
 
           <div className="flex-1 overflow-y-auto p-4">
             <div className="space-y-2">
-              {accountItems.map((item) => {
+              {/* Points, wallet, promo, challenges: account features, hidden from a visitor. */}
+              {signedIn && accountItems.map((item) => {
                 const Icon = item.icon;
                 return (
                   <button
@@ -357,7 +376,8 @@ export function SideDrawer({
                   <span className="text-sm font-medium">{t('assistant.title')}</span>
                 </button>
               )}
-              {drawerLinks.map((item) => {
+              {/* A visitor sees only the links that open without sign-in (src/lib/auth/publicRoutes.ts). */}
+              {drawerLinks.filter((item) => signedIn || isPublicMainRoute(item.href)).map((item) => {
                 const Icon = item.icon;
                 const isActive =
                   pathname === item.href || (item.href !== '/home' && pathname?.startsWith(`${item.href}/`));
@@ -392,6 +412,7 @@ export function SideDrawer({
               <ThemeToggle compact />
             </div>
 
+            {signedIn && (
             <button
               type="button"
               onClick={handleLogout}
@@ -401,6 +422,7 @@ export function SideDrawer({
               <LogOut className="h-4 w-4" />
               <span>{t('profile.logout.action')}</span>
             </button>
+            )}
 
             <div className="mt-4 flex items-center justify-center gap-3 pb-2">
               <a

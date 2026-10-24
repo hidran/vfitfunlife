@@ -10,7 +10,7 @@ Terms: a **course** is the template (name, schedule, prices, capacity, policies)
 
 **Screenshots.** None is embedded yet. A capture run was in progress when this was written (untracked `courses-NN-*.png` files under `screenshots/` and `screenshots-it/`; see the [index](README.md#screenshots-status)). Labels below are the English UI texts from `src/i18n/messages/en.ts`.
 
-**Signed-in only.** Every customer screen of this guide (`/courses`, `/venue`, `/fit/gyms`, `/fit/gyms/timetable`) sits under the `(main)` layout, which sends a signed-out visitor to `/auth/login` (the redirect does not carry a return address). The components do handle a signed-out viewer (regular price, "sign in first, then come back to this lesson" through `?next=`), but that path cannot be reached in the shipped app by code reading (`src/app/(main)/layout.tsx`); it was not re-checked in a browser. Firestore itself allows the public reads, so the data is not secret, only the pages are behind sign-in.
+**Open to visitors.** Every customer screen of this guide (`/courses`, `/courses/detail`, `/venue`, `/fit/gyms`, `/fit/gyms/timetable`) is on the public allowlist of the `(main)` layout (`src/lib/auth/publicRoutes.ts`), so a signed-out visitor can browse them: the header shows **Sign in** instead of the bell and the avatar, the drawer shows a guest header with a **Sign in** button and only the public links, prices are the regular ones (the member discount is quoted only to a signed-in customer), and **Book** / **Join waitlist** send to `/auth/login?next=/courses/detail?id=…&lesson=…`, which returns to the same lesson after sign-in. Booking itself, My course bookings and every other page still need an account; those redirect to sign-in carrying the page as `?next=`. Firestore serves the published courses, sessions and venues publicly.
 
 ---
 
@@ -151,7 +151,7 @@ Direct payment is the default. When a superadmin has switched on both **Stripe p
 
 ### Known limitations (customer)
 
-- Signed-out visitors cannot open any of these pages (see the note at the top).
+- A signed-out visitor sees the regular prices only; the member discount appears after sign-in. The bookings tab of `/courses` shows a sign-in prompt to a visitor.
 - A series is not available (disabled, no explanation) when any single lesson is full, cancelled or inside the notice window, and a series cannot be waitlisted.
 - Past the cancellation deadline the **Cancel booking** button disappears without a message.
 - The cancel confirmation button is labelled **Confirm booking**.

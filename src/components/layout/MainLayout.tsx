@@ -15,6 +15,8 @@ interface MainLayoutProps {
   userEmail?: string;
   pointsBalance?: number;
   walletBalance?: number;
+  /** Set for a signed-out visitor on a public page: the header and drawer show a sign-in CTA that returns here. */
+  signInHref?: string;
 }
 
 export function MainLayout({
@@ -25,6 +27,7 @@ export function MainLayout({
   userEmail,
   pointsBalance = 0,
   walletBalance = 0,
+  signInHref,
 }: MainLayoutProps) {
   const { section } = useSection();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -47,6 +50,7 @@ export function MainLayout({
         onMenuClick={openDrawer}
         notificationCount={notificationCount}
         userAvatarUrl={userAvatarUrl}
+        signInHref={signInHref}
       />
 
       <SideDrawer
@@ -57,6 +61,7 @@ export function MainLayout({
         userAvatarUrl={userAvatarUrl}
         pointsBalance={pointsBalance}
         walletBalance={walletBalance}
+        signInHref={signInHref}
       />
 
       {/* Main Content Area */}

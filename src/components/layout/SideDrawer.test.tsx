@@ -69,3 +69,32 @@ describe('SideDrawer dashboard mode switch', () => {
     expect(screen.queryByRole('link', { name: 'profile.mode.professional' })).not.toBeInTheDocument();
   });
 });
+
+describe('SideDrawer for a signed-out visitor', () => {
+  it('shows a guest header with a sign-in button that returns to the page, and no logout or mode switch', () => {
+    mocks.user = null;
+    const onClose = vi.fn();
+    render(<SideDrawer isOpen onClose={onClose} signInHref="/auth/login?next=%2Ffit%2Fgyms" />);
+
+    expect(screen.getByText('drawer.visitor.name')).toBeInTheDocument();
+    expect(screen.getByText('drawer.visitor.hint')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('drawer-sign-in'));
+    expect(mocks.push).toHaveBeenCalledWith('/auth/login?next=%2Ffit%2Fgyms');
+    expect(onClose).toHaveBeenCalled();
+    expect(screen.queryByText('profile.logout.action')).toBeNull();
+    expect(screen.queryByRole('link', { name: 'profile.mode.private' })).toBeNull();
+    expect(screen.queryByTestId('drawer-assistant')).toBeNull();
+  });
+
+  it('lists only the public links and no account items', () => {
+    mocks.user = null;
+    render(<SideDrawer isOpen onClose={vi.fn()} />);
+
+    expect(screen.getByText('courses.title')).toBeInTheDocument();
+    expect(screen.queryByText('common.bookings')).toBeNull();
+    expect(screen.queryByText('common.profile')).toBeNull();
+    expect(screen.queryByText('profile.stats.points')).toBeNull();
+    // Categories (gyms, …) stay: they lead to public pages.
+    expect(screen.getByText('drawer.category.gyms')).toBeInTheDocument();
+  });
+});

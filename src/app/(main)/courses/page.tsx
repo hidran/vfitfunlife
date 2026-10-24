@@ -10,6 +10,7 @@ import { useI18n } from '@/hooks/useI18n';
 import { Button } from '@/components/ui/button';
 import { courseHref, coursePrice } from '@/lib/courseFormat';
 import { CourseEnrollments } from '@/components/courses/CourseEnrollments';
+import { loginHref } from '@/lib/auth/returnTo';
 
 export default function CoursesPage() {
   return <Suspense><CoursesContent /></Suspense>;
@@ -50,7 +51,9 @@ function CoursesContent() {
       <div className="flex gap-2"><Button variant={tab === 'browse' ? 'primary' : 'outline'} onClick={() => setTab('browse')}>{t('courses.browse')}</Button>
         <Button variant={tab === 'bookings' ? 'primary' : 'outline'} onClick={() => setTab('bookings')}>{t('courses.myBookings')}</Button></div></header>
     {justBooked && tab === 'bookings' && <p role="status" className="text-success">{t('courses.booked')}</p>}
-    {tab === 'bookings' ? <CourseEnrollments uid={uid} /> : <>
+    {tab === 'bookings' ? (uid ? <CourseEnrollments uid={uid} /> :
+      <p className="text-content-muted">{t('courses.visitorBookings')}{' '}
+        <Link href={loginHref('/courses?tab=bookings')} className="font-semibold text-section-ink underline">{t('auth.common.login')}</Link></p>) : <>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <label className="text-sm space-y-1">{t('courses.category')}<select className={field} value={category} onChange={e => setCategory(e.target.value)}>
           <option value="">{t('courses.allCategories')}</option>{categories.map(c => <option value={c.id} key={c.id}>{c.name}</option>)}</select></label>

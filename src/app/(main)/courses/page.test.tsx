@@ -3,14 +3,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const ts = (ms: number) => ({ toMillis: () => ms, toDate: () => new Date(ms) });
-const mocks = vi.hoisted(() => ({ search: '' as string, replace: vi.fn(), push: vi.fn(), courses: [] as unknown[] }));
+const mocks = vi.hoisted(() => ({ search: '' as string, replace: vi.fn(), push: vi.fn(), courses: [] as unknown[], visitor: false }));
 
 vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(mocks.search),
   useRouter: () => ({ replace: mocks.replace, push: mocks.push }),
 }));
 vi.mock('@/hooks/useI18n', () => ({ useI18n: () => ({ t: (key: string) => key, locale: 'en' }) }));
-vi.mock('@/stores/authStore', () => ({ useAuthStore: (select: (s: unknown) => unknown) => select({ firebaseUser: { uid: 'u1' } }) }));
+vi.mock('@/stores/authStore', () => ({ useAuthStore: (select: (s: unknown) => unknown) => select({ firebaseUser: mocks.visitor ? null : { uid: 'u1' } }) }));
 vi.mock('@/hooks/useServiceCategories', () => ({ useServiceCategoryLeaves: () => [] }));
 vi.mock('@/hooks/useCourses', () => ({
   useCourses: () => ({ data: { pages: [{ courses: mocks.courses }] }, isLoading: false, isError: false, hasNextPage: false }),
@@ -29,7 +29,7 @@ const renderPage = () => render(
 
 beforeEach(() => {
   mocks.replace.mockReset(); mocks.push.mockReset();
-  mocks.search = ''; mocks.courses = [course()];
+  mocks.search = ''; mocks.courses = [course()]; mocks.visitor = false;
 });
 
 describe('course list', () => {
@@ -55,5 +55,23 @@ describe('course list', () => {
     renderPage();
     expect(await screen.findByRole('status')).toHaveTextContent('courses.booked');
     expect(screen.getByTestId('enrollments')).toBeInTheDocument();
+  });
+});
+
+describe('course list for a visitor', () => {
+  it('prompts a visitor to sign in on the bookings tab, returning to it', async () => {
+    mocks.search = 'tab=bookings';
+    mocks.visitor = true;
+    renderPage();
+    expect(await screen.findByText(/courses.visitorBookings/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'auth.common.login' })).toHaveAttribute('href', `/auth/login?next=${encodeURIComponent('/courses?tab=bookings')}`);
+    expect(screen.queryByTestId('enrollments')).toBeNull();
+  });
+
+  it('shows a visitor the regular prices of the public list', async () => {
+    mocks.visitor = true;
+    renderPage();
+    expect(await screen.findByText(/courses.lesson/)).toHaveTextContent('25');
+    expect(screen.getByRole('link', { name: 'courses.sessions' })).toHaveAttribute('href', '/courses/detail?id=c1');
   });
 });
