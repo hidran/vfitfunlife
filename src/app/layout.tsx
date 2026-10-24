@@ -16,50 +16,85 @@ const poppins = Poppins({
   display: 'swap',
 });
 
+const SITE_URL = 'https://vfit-funlife.web.app';
+const SITE_NAME = 'Vfitfunlife';
+const SITE_DESCRIPTION =
+  'Prenota palestre, corsi, personal trainer, eventi, spa e trattamenti di bellezza. ' +
+  'Vfitfunlife è il marketplace italiano di fitness, divertimento e benessere.';
+const SITE_TITLE = 'Vfitfunlife | Palestre, personal trainer, eventi e benessere';
+const googleSiteVerification = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION;
+
 export const metadata: Metadata = {
-  metadataBase: new URL('https://vfit-funlife.web.app'),
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: 'Vfitfunlife | Fitness, Fun & Life',
+    default: SITE_TITLE,
     template: '%s | Vfitfunlife',
   },
-  description:
-    'Vfitfunlife connects customers with fitness, events, wellness and beauty services across VFit, VFun and VLife.',
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  category: 'fitness',
   keywords: [
+    // Brand, including the spellings people actually type.
     'Vfitfunlife',
+    'Vfit Fun Life',
+    'vfit-funlife',
     'VFit',
     'VFun',
     'VLife',
-    'fitness services',
-    'wellness services',
-    'events and experiences',
-    'providers and bookings',
+    // Italian discovery terms the product is built around.
+    'palestre',
+    'corsi fitness',
+    'lezioni di gruppo',
+    'personal trainer',
+    'allenamento a domicilio',
+    'fitness online',
+    'eventi',
+    'feste',
+    'esperienze VR',
+    'spa',
+    'benessere',
+    'massaggi',
+    'estetica',
+    'centri estetici',
+    'prenotazione servizi fitness',
+    'marketplace fitness Italia',
+    'app fitness Italia',
   ],
-  alternates: {
-    canonical: '/',
-    languages: {
-      'it-IT': '/',
-      'en-US': '/',
-      'es-ES': '/',
-      'fr-FR': '/',
-      'de-DE': '/',
+  authors: [{ name: SITE_NAME, url: SITE_URL }],
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+      'max-video-preview': -1,
     },
   },
+  // No `alternates.canonical` here: metadata is inherited by every route, so a"/" here
+  // made every page canonicalise to the homepage (the category pages were duplicates
+  // of `/`). Public pages declare their own canonical; the rest use the URL Google finds.
   openGraph: {
     type: 'website',
-    url: '/',
-    siteName: 'Vfitfunlife',
-    title: 'Vfitfunlife | Fitness, Fun & Life',
-    description:
-      'Discover and book fitness, events, wellness and beauty services in one place.',
+    siteName: SITE_NAME,
+    locale: 'it_IT',
+    alternateLocale: ['en_US', 'es_ES', 'fr_FR', 'de_DE'],
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
     images: [{ url: '/landing/home.png', width: 414, height: 896, alt: 'Vfitfunlife app preview' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Vfitfunlife | Fitness, Fun & Life',
-    description:
-      'Discover and book fitness, events, wellness and beauty services in one place.',
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
     images: ['/landing/home.png'],
   },
+  // Set NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION from Search Console to emit the meta tag;
+  // without it the tag is simply absent (see .env.example).
+  ...(googleSiteVerification ? { verification: { google: googleSiteVerification } } : {}),
   manifest: '/manifest.json',
   // Generated from resources/brand/vfit-mark.svg by scripts/generate-brand-assets.mjs.
   icons: {

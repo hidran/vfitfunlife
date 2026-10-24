@@ -1,23 +1,57 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Only pages a signed-out crawler can actually read. The app itself (/fit/*, /fun/*, /life/*,
+  /search, /bookings, /provider/*, ...) is behind the auth gate in src/app/(main)/layout.tsx,
+  so listing those URLs reported "Page with redirect" and wasted crawl budget; two of them
+  (/fun/events, /life/home-services) did not exist at all and returned 404.
+-->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://vfit-funlife.web.app/</loc>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://vfit-funlife.web.app/fit/classes</loc>
+    <loc>https://vfit-funlife.web.app/palestre-torino/</loc>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://vfit-funlife.web.app/personal-trainer-torino/</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://vfit-funlife.web.app/spa-benessere-torino/</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://vfit-funlife.web.app/eventi-torino/</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://vfit-funlife.web.app/diventa-trainer/</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://vfit-funlife.web.app/fun/events</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <loc>https://vfit-funlife.web.app/privacy/</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://vfit-funlife.web.app/life/home-services</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <loc>https://vfit-funlife.web.app/terms/</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
   </url>
 </urlset>

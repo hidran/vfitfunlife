@@ -45,6 +45,12 @@ Index of project documentation. Each file is the canonical source for its topic;
 |---|---|
 | [mobile/capacitor-guide.md](mobile/capacitor-guide.md) | Capacitor setup, iOS/Android build, plugins, native config |
 
+## Growth
+
+| Doc | What's in it |
+|---|---|
+| [seo.md](seo.md) | Keyword map per URL, public landing page rules, Search Console setup, the custom-domain issue |
+
 ## Deployment
 
 | Doc | What's in it |

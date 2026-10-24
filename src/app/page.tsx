@@ -28,6 +28,7 @@ import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { useI18n } from '@/hooks/useI18n';
 import { landingCopy } from '@/i18n/landing';
+import { TORINO_LANDINGS } from '@/lib/seo/torinoLandings';
 
 const worldMeta = {
   VFit: { href: '/fit/classes', icon: Dumbbell, color: 'from-[#00C9FF] to-[#0066FF]', surface: 'bg-[#EAF8FF]', textColor: 'text-[#0056D6]' },
@@ -97,23 +98,35 @@ export default function LandingPage() {
   const stats = ['3', '1', '+39'].map((value, index) => ({ value, label: copy.stats[index] }));
 
   return (
-    <main className="landing-page min-h-screen bg-[#F6FAFF] text-[#111827]">
-      <script
+    <main className="landing-page min-h-screen bg-[#F6FAFF] text-[#111827]">        <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             '@context': 'https://schema.org',
-            '@type': 'WebSite',
-            name: 'Vfitfunlife',
-            alternateName: ['VFit', 'VFun', 'VLife'],
-            url: 'https://vfit-funlife.web.app/',
-            description:
-              'A marketplace for fitness, events, wellness and beauty services.',
-            potentialAction: {
-              '@type': 'SearchAction',
-              target: 'https://vfit-funlife.web.app/search?query={search_term_string}',
-              'query-input': 'required name=search_term_string',
-            },
+            '@graph': [
+              {
+                '@type': 'Organization',
+                '@id': 'https://vfit-funlife.web.app/#organization',
+                name: 'Vfitfunlife',
+                alternateName: ['VFit Fun Life', 'Vfit Fun Life', 'VFit', 'VFun', 'VLife'],
+                url: 'https://vfit-funlife.web.app/',
+                logo: 'https://vfit-funlife.web.app/icons/app-icon-512.png',
+                description:
+                  'Marketplace italiano per prenotare servizi di fitness, eventi, benessere e bellezza.',
+                areaServed: { '@type': 'Country', name: 'Italia' },
+              },
+              {
+                '@type': 'WebSite',
+                '@id': 'https://vfit-funlife.web.app/#website',
+                name: 'Vfitfunlife',
+                alternateName: ['VFit Fun Life', 'Vfit Fun Life'],
+                url: 'https://vfit-funlife.web.app/',
+                inLanguage: 'it-IT',
+                description:
+                  'Prenota palestre, corsi, personal trainer, eventi, spa e trattamenti di bellezza in Italia.',
+                publisher: { '@id': 'https://vfit-funlife.web.app/#organization' },
+              },
+            ],
           }),
         }}
       />
@@ -151,13 +164,17 @@ export default function LandingPage() {
       <section className="landing-light-surface relative overflow-hidden border-b border-[#DCE8F7] bg-white">
         <div className="mx-auto grid min-h-[calc(100svh-4rem)] w-full max-w-7xl items-center gap-12 px-4 py-12 sm:px-6 lg:grid-cols-[0.94fr_1.06fr] lg:px-8">
           <div className="max-w-3xl">
-            <div className="mb-7">
-              <BrandMark idSuffix="hero" />
-              <p className="mt-3 text-sm font-bold text-[#697386]">{copy.tagline}</p>
-            </div>
-
+            {/* The brand wordmark sits inside the h1 on purpose: "Vfitfunlife" is the exact
+                query the site has to rank for, and the heading is the strongest on-page signal
+                for it. The layout is unchanged — same markup, same spacing. */}
             <h1 className="max-w-3xl font-display text-5xl font-black leading-[0.98] text-[#111827] sm:text-6xl lg:text-7xl">
-              {copy.heroTitle}
+              <span className="flex">
+                <BrandMark idSuffix="hero" />
+              </span>
+              <span className="mt-3 block font-sans text-sm font-bold leading-normal text-[#697386]">
+                {copy.tagline}
+              </span>
+              <span className="mt-7 block">{copy.heroTitle}</span>
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-[#475569] sm:text-xl">
               {copy.heroText}
@@ -388,6 +405,20 @@ export default function LandingPage() {
             </Link>
           </div>
         </div>
+
+        {/* Static links to the public Torino landing pages: the crawler needs a path to them
+            from the one page that already has equity, and so does a visitor who arrives here
+            looking for a service rather than a sign-up form. */}
+        <nav
+          aria-label="Categorie a Torino"
+          className="mx-auto mt-6 flex max-w-7xl flex-wrap gap-x-5 gap-y-2 border-t border-[#E5E7EB] pt-5 text-sm text-[#475569]"
+        >
+          {TORINO_LANDINGS.map((page) => (
+            <Link key={page.slug} href={`/${page.slug}/`} className="hover:text-[#111827] hover:underline">
+              {page.h1}
+            </Link>
+          ))}
+        </nav>
       </section>
     </main>
   );

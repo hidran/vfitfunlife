@@ -17,24 +17,32 @@ import { TrainerLeadForm } from './TrainerLeadForm';
  */
 
 const URL = 'https://vfit-funlife.web.app/diventa-trainer';
-const TITLE = 'Diventa Trainer Fondatore — V Fitness';
+// The root template appends "| Vfitfunlife", so the brand must not be repeated here, and the
+// retired "V Fitness" name is gone: a second brand name splits the entity Google is trying to learn.
+const TITLE = 'Diventa personal trainer a Torino: zero canone';
 const DESCRIPTION =
-  'Zero canone per i Trainer Fondatori. Prenotazioni e pagamenti tracciati, ' +
-  'commissione solo sulle sessioni portate dalla piattaforma. Candidati per il pilota di Torino.';
+  'Vfitfunlife seleziona 20 personal trainer a Torino: zero canone, prenotazioni e pagamenti ' +
+  'tracciati, commissione solo sulle sessioni portate dalla piattaforma. Candidati al pilota.';
 
 export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
   keywords: [
-    'personal trainer Torino', 'lavoro personal trainer', 'trainer fondatore',
-    'app fitness Torino', 'clienti personal trainer',
+    'Vfitfunlife',
+    'personal trainer Torino',
+    'diventa personal trainer',
+    'lavoro personal trainer Torino',
+    'trainer fondatore',
+    'app fitness Torino',
+    'clienti personal trainer',
+    'prenotazioni personal trainer',
   ],
   alternates: { canonical: URL },
   openGraph: {
     title: TITLE,
     description: DESCRIPTION,
     url: URL,
-    siteName: 'V Fitness & Wellness',
+    siteName: 'Vfitfunlife',
     locale: 'it_IT',
     type: 'website',
   },
