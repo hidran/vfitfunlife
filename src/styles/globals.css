@@ -149,7 +149,12 @@
   --section-primary-dark: var(--color-vfit-secondary);
   --section-secondary: var(--color-vfit-secondary);
   --section-accent: var(--color-vfit-accent);
-  --section-gradient: linear-gradient(135deg, #00C9FF 0%, #0066FF 50%, #7B61FF 100%);
+  --section-gradient: linear-gradient(135deg, #00C9FF 0%, #2D8CFF 50%, #8F7CFF 100%);
+  /* Text and icons on `bg-section-gradient` (Tailwind `text-section-on-gradient`): a fixed dark ink, the same on
+     both themes. White fails AA on the VLife and VFun stops, so the label darkens instead of the brand hues.
+     The stops and the ink are mirrored in src/styles/sectionTokens.ts, whose test pins both to the same values
+     and checks every stop at >= 4.5:1 against the ink. */
+  --section-on-gradient: #1A1D29;
 
   /* Timing */
   --duration-fast: 150ms;
@@ -204,7 +209,8 @@
   --section-primary-dark: var(--color-vfit-secondary);
   --section-secondary: var(--color-vfit-secondary);
   --section-accent: var(--color-vfit-accent);
-  --section-gradient: linear-gradient(135deg, #00C9FF 0%, #0066FF 50%, #7B61FF 100%);
+  /* Lifted blue/violet (not the secondary/accent tokens): #0066FF and #7B61FF are 3.5:1 / 4.0:1 under the ink. */
+  --section-gradient: linear-gradient(135deg, #00C9FF 0%, #2D8CFF 50%, #8F7CFF 100%);
 }
 
 /* VFun Theme */
@@ -229,6 +235,7 @@
    on nested wrappers), enabling ring-section-primary, bg-section-primary/20 … */
 @theme inline {
   --color-section-primary: var(--section-primary);
+  --color-section-on-gradient: var(--section-on-gradient);
 }
 
 @theme {

@@ -32,7 +32,9 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       'inline-flex items-center justify-center font-semibold transition-all duration-200 touch-target rounded-xl focus-ring disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]';
 
     const variants = {
-      primary: 'bg-section-gradient text-white shadow-lg hover:opacity-90',
+      // Dark ink on the gradient: the cyan/green/yellow stops are ~2:1 under white. `text-section-on-gradient`
+      // is a fixed ink (globals.css) that every stop of every section meets at AA (src/styles/sectionTokens.ts).
+      primary: 'bg-section-gradient text-section-on-gradient shadow-lg hover:opacity-90',
       // Tinted with the `content` token: white-alpha on dark (identical to the
       // old bg-white/10 etc.), ink-alpha on light.
       secondary: 'bg-content/10 text-content hover:bg-content/20 border border-content/20',

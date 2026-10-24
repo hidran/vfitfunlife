@@ -244,7 +244,8 @@ className="group rounded-2xl border border-white/10 bg-white/5 p-4
 ### Button Patterns
 
 ```tsx
-// Primary button (uses section gradient)
+// Primary button (section gradient with the dark on-gradient ink: white is ~2:1 on the
+// cyan/green/yellow stops; see src/styles/sectionTokens.ts for the AA-checked stops)
 <Button variant="primary" size="md">
 
 // Secondary/outline button
