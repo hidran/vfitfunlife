@@ -5,6 +5,7 @@ import { ResultCard } from "../types";
 import { matchesAvailability, formatSlotLabel } from "../search/match";
 import { normalizeAvailability } from "../search/normalize";
 import { instructorDocToCard } from "../search/mapCards";
+import { venueAddressText } from "../../venues/venueAddress";
 
 const DEFAULT_LIMIT = 8;
 
@@ -165,7 +166,7 @@ export function createAiTools() {
           kind: "venue",
           id: doc.id,
           title: asString(data.name) ?? "Venue",
-          subtitle: asString(data.address),
+          subtitle: venueAddressText(data.address) ?? undefined,
           imageUrl: asString(data.imageUrl) ?? asString(data.coverImageUrl),
           bookingHref: `/venue?id=${doc.id}`,
         });

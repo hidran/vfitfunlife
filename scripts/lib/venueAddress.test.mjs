@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { addressLine, venueAddressPatch } from "./venueAddress.mjs";
+import { addressLine, venueAddressPatch, venueAddressText } from "./venueAddress.mjs";
 
 describe("addressLine", () => {
   it("is street, then zip and city", () => {
@@ -71,5 +71,16 @@ describe("venueAddressPatch", () => {
     const data = { address: { street: "Via Po 2", city: "Torino", zipCode: "10100", country: "IT" } };
     const { patch } = venueAddressPatch(data);
     expect(venueAddressPatch({ ...data, ...patch })).toBeNull();
+  });
+});
+
+describe("venueAddressText", () => {
+  it("reads a string or a legacy object as one line, anything else as null", () => {
+    expect(venueAddressText(" Via Po 2 ")).toBe("Via Po 2");
+    expect(venueAddressText({ street: "Via Po 2", city: "Torino", zipCode: "10100" })).toBe("Via Po 2, 10100 Torino");
+    expect(venueAddressText("")).toBeNull();
+    expect(venueAddressText({})).toBeNull();
+    expect(venueAddressText(undefined)).toBeNull();
+    expect(venueAddressText(42)).toBeNull();
   });
 });

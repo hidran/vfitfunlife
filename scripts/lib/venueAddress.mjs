@@ -1,4 +1,6 @@
 // Pure transformation behind scripts/migrate-venue-address.mjs (tested in venueAddress.test.mjs).
+// JavaScript twin of functions/src/venues/venueAddress.ts: functions/src/venues/venueAddress.test.ts
+// runs both on the same fixtures, so a change here must land there too (and vice versa).
 //
 // Canonical venue shape: `address` is a street-line STRING and `city` / `zipCode` / `country` are
 // top-level fields (src/types/venue.ts, seeds, businessVenue.ts). The old admin venue form wrote
@@ -12,6 +14,16 @@ const isPlainObject = (v) => v !== null && typeof v === "object" && !Array.isArr
 export function addressLine(obj) {
   const zipCity = [text(obj.zipCode), text(obj.city)].filter(Boolean).join(" ");
   return [text(obj.street), zipCity].filter(Boolean).join(", ");
+}
+
+/**
+ * The address of a venue document as text: a string is trimmed, a legacy object is joined with
+ * addressLine, anything else is null — never an object.
+ */
+export function venueAddressText(address) {
+  if (typeof address === "string") return address.trim() || null;
+  if (isPlainObject(address)) return addressLine(address) || null;
+  return null;
 }
 
 /**

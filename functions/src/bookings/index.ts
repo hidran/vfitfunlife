@@ -3,6 +3,7 @@ import * as admin from "firebase-admin";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { addMinutes } from "date-fns";
 import { UserData, VenueData, ServiceData, InstructorData, PromotionData } from "../types";
+import { venueAddressText } from "../venues/venueAddress";
 import { getUserRoleInfo, requirePermission, checkIsAdmin } from "../utils/roles";
 import { writeAuditLog } from "../lib/audit";
 import { BOOKING_STATUSES, type BookingStatus, type StatusActorRole } from "./types";
@@ -307,7 +308,9 @@ export const createBooking = onCall<BookingData>(
       userPhone: userData.phone ?? null,
       userEmail: userData.email ?? null,
       venueName: venue?.name ?? null,
-      venueAddress: venue?.address ?? null,
+      // Always text: an un-migrated venue still carries the legacy `address` object, and copying
+      // it raw would store that object in the booking (venueAddressText joins it into one line).
+      venueAddress: venueAddressText(venue?.address),
       serviceName: service.name,
       instructorName: instructor?.fullName || null,
 
