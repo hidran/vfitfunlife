@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   search: '' as string, push: vi.fn(), replace: vi.fn(), call: vi.fn(), refresh: vi.fn(),
   role: 'provider', providerStatus: 'verified', venues: [] as { id: string; name: string }[], venuesLoading: false,
   providerCourses: [] as unknown[], venueCourses: [] as unknown[], enrollments: [] as unknown[], refunds: [] as unknown[],
+  venueError: null as unknown,
   seen: { courses: [] as unknown[][], venueCourses: [] as unknown[][], enrollments: [] as unknown[][], venueEnrollments: [] as unknown[][] },
 }));
 
@@ -20,7 +21,10 @@ vi.mock('@/stores/authStore', () => ({
   useAuthStore: (select: (s: unknown) => unknown) => select({
     firebaseUser: { uid: 'me' }, user: { uid: 'me', role: mocks.role, providerStatus: mocks.providerStatus, fullName: 'Me' } }),
 }));
-vi.mock('@/hooks/useManagedVenues', () => ({ useManagedVenues: () => ({ venues: mocks.venues, isLoading: mocks.venuesLoading }) }));
+vi.mock('@/hooks/useManagedVenues', () => ({
+  MANAGED_VENUES_KEY: ['managed-venues'],
+  useManagedVenues: () => ({ venues: mocks.venues, isLoading: mocks.venuesLoading }),
+}));
 vi.mock('@/hooks/useCourses', () => ({
   useCourses: (...args: unknown[]) => {
     mocks.seen.courses.push(args);
@@ -28,6 +32,7 @@ vi.mock('@/hooks/useCourses', () => ({
   },
   useManagedVenueCourses: (...args: unknown[]) => {
     mocks.seen.venueCourses.push(args);
+    if (args[0] && mocks.venueError) return { data: undefined, isLoading: false, isError: true, error: mocks.venueError };
     return { data: args[0] ? mocks.venueCourses : undefined, isLoading: false, isError: false };
   },
   useCourseEnrollments: (...args: unknown[]) => { mocks.seen.enrollments.push(args); return { data: args[0] ? mocks.enrollments : undefined }; },
@@ -52,7 +57,8 @@ beforeEach(() => {
   mocks.call.mockResolvedValue({ success: true });
   mocks.refresh.mockResolvedValue(undefined);
   Object.assign(mocks, { search: '', role: 'provider', providerStatus: 'verified', venues: [], venuesLoading: false,
-    providerCourses: [course({ venueId: null, locationId: null, roomId: null })], venueCourses: [course()], enrollments: [], refunds: [] });
+    providerCourses: [course({ venueId: null, locationId: null, roomId: null })], venueCourses: [course()], enrollments: [], refunds: [],
+    venueError: null });
   for (const list of Object.values(mocks.seen)) list.length = 0;
 });
 
@@ -160,5 +166,38 @@ describe('refunds', () => {
     expect(await screen.findByText(/Ada/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'courses.confirmRefund' }));
     await waitFor(() => expect(mocks.call).toHaveBeenCalledWith('confirmCourseRefund', { refundId: 'r1' }));
+  });
+});
+
+describe('revoked venue access', () => {
+  const denied = Object.assign(new Error('Missing or insufficient permissions.'), { code: 'permission-denied' });
+  function renderWithClient() {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    client.setQueryData(['managed-venues', 'me'], [{ id: 'v1', name: 'Smoke Gym' }]);
+    const invalidate = vi.spyOn(client, 'invalidateQueries');
+    render(<QueryClientProvider client={client}><ProviderCourses /></QueryClientProvider>);
+    return { client, invalidate };
+  }
+
+  it('sends a venue-only manager to the profile and drops the cached venue list when the rules refuse the venue read', async () => {
+    Object.assign(mocks, { search: 'venue=v1', role: 'customer', providerStatus: 'none', venues: [{ id: 'v1', name: 'Smoke Gym' }], venueError: denied });
+    const { client, invalidate } = renderWithClient();
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith('/profile'));
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['managed-venues'] });
+    expect(client.getQueryState(['managed-venues', 'me'])?.isInvalidated).toBe(true);
+  });
+
+  it('sends a provider back to their own courses instead', async () => {
+    Object.assign(mocks, { search: 'venue=v1', venues: [{ id: 'v1', name: 'Smoke Gym' }], venueError: denied });
+    renderWithClient();
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith('/provider/courses'));
+  });
+
+  it('treats any other venue load failure as a plain load error, keeping the page', async () => {
+    Object.assign(mocks, { search: 'venue=v1', venues: [{ id: 'v1', name: 'Smoke Gym' }], venueError: new Error('network') });
+    const { invalidate } = renderWithClient();
+    expect(await screen.findByText('courses.loadError')).toBeInTheDocument();
+    expect(mocks.replace).not.toHaveBeenCalled();
+    expect(invalidate).not.toHaveBeenCalled();
   });
 });

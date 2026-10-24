@@ -6,7 +6,9 @@ import {
   useCourses, useManagedVenueCourses, useCourseEnrollments, useVenueEnrollments,
   useCourseRefunds, useVenueRefunds, useRefreshCourses,
 } from '@/hooks/useCourses';
-import { useManagedVenues } from '@/hooks/useManagedVenues';
+import { MANAGED_VENUES_KEY, useManagedVenues } from '@/hooks/useManagedVenues';
+import { useQueryClient } from '@tanstack/react-query';
+import { isPermissionDenied } from '@/lib/permissionDenied';
 import { courseCall } from '@/lib/firebase/courses';
 import { courseErrorMessage } from '@/lib/courseErrors';
 import { isProviderAreaUser } from '@/lib/providerStatus';
@@ -24,6 +26,7 @@ export const rosterHref = (courseId: string, venueId?: string, sessionId?: strin
 export function ProviderCourses() {
   const { t, locale } = useI18n();
   const router = useRouter();
+  const qc = useQueryClient();
   const params = useSearchParams();
   const requestedVenue = params.get('venue') || undefined;
   const uid = useAuthStore(s => s.firebaseUser?.uid);
@@ -55,6 +58,15 @@ export function ProviderCourses() {
   const venue = venues.find(v => v.id === venueId);
   const field = 'rounded-xl border border-hairline bg-surface text-content p-3 w-full min-h-11';
   const createHref = `/provider/courses/create${venueId ? `?venue=${encodeURIComponent(venueId)}` : ''}`;
+
+  // The rules refusing a venue-scoped read means this user no longer manages the venue (an admin removed or deactivated
+  // their venueStaff link): drop the cached venue list and leave, as the layout would once the list is refetched.
+  const revoked = !!venueId && !staff && [atVenue, venueRefunds].some(q => q.isError && isPermissionDenied(q.error));
+  useEffect(() => {
+    if (!revoked) return;
+    void qc.invalidateQueries({ queryKey: MANAGED_VENUES_KEY });
+    router.replace(providerUser ? '/provider/courses' : '/profile');
+  }, [revoked, providerUser, qc, router]);
 
   // Someone who only manages a venue has no courses of their own: land on the venue.
   useEffect(() => {

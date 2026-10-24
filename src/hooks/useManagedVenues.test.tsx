@@ -53,4 +53,16 @@ describe('useManagedVenues', () => {
     await waitFor(() => expect(result.current.isError).toBe(true), { timeout: 1500 });
     expect(state.fetch).toHaveBeenCalledTimes(1);
   });
+
+  it('goes stale after a minute and refetches on focus, so a revoked staff member loses the venue quickly', async () => {
+    state.fetch.mockResolvedValue([{ id: 'v1' }]);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const withClient = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+    const { result } = renderHook(() => useManagedVenues(), { wrapper: withClient });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    const options = client.getQueryCache().find({ queryKey: ['managed-venues', 'u1'] })?.options as
+      { staleTime?: number; refetchOnWindowFocus?: boolean } | undefined;
+    expect(options?.staleTime).toBe(60_000);
+    expect(options?.refetchOnWindowFocus).toBe(true);
+  });
 });
